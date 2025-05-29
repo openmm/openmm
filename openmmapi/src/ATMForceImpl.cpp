@@ -9,7 +9,7 @@
  * https://github.com/Gallicchio-Lab/openmm-atmmetaforce-plugin               *
  * with support from the National Science Foundation CAREER 1750511           *
  *                                                                            *
- * Portions copyright (c) 2021-2023 by the Authors                            *
+ * Portions copyright (c) 2021-2024 by the Authors                            *
  * Authors: Emilio Gallicchio                                                 *
  * Contributors: Peter Eastman                                                *
  *                                                                            *
@@ -47,6 +47,7 @@
 #include "lepton/ParsedExpression.h"
 #include "lepton/Parser.h"
 #include <cmath>
+#include <limits>
 #include <map>
 #include <set>
 #include <sstream>
@@ -56,7 +57,8 @@
 using namespace OpenMM;
 using namespace std;
 
-ATMForceImpl::ATMForceImpl(const ATMForce& owner) : owner(owner), innerIntegrator0(1.0), innerIntegrator1(1.0) {
+ATMForceImpl::ATMForceImpl(const ATMForce& owner) : owner(owner), innerIntegrator0(1.0), innerIntegrator1(1.0),
+        innerContext0(NULL), innerContext1(NULL) {
     Lepton::ParsedExpression expr = Lepton::Parser::parse(owner.getEnergyFunction()).optimize();
     energyExpression = expr.createCompiledExpression();
     u0DerivExpression = expr.differentiate("u0").createCompiledExpression();
@@ -81,6 +83,10 @@ ATMForceImpl::ATMForceImpl(const ATMForce& owner) : owner(owner), innerIntegrato
 }
 
 ATMForceImpl::~ATMForceImpl() {
+    if (innerContext0 != NULL)
+        delete innerContext0;
+    if (innerContext1 != NULL)
+        delete innerContext1;
 }
 
 void ATMForceImpl::copySystem(ContextImpl& context, const OpenMM::System& system, OpenMM::System& innerSystem) {
@@ -110,9 +116,6 @@ void ATMForceImpl::initialize(ContextImpl& context) {
 
     innerContext0 = context.createLinkedContext(innerSystem0, innerIntegrator0);
     innerContext1 = context.createLinkedContext(innerSystem1, innerIntegrator1);
-    vector<Vec3> positions(system.getNumParticles(), Vec3());
-    innerContext0->setPositions(positions);
-    innerContext1->setPositions(positions);
 
     // Create the kernel.
 
@@ -136,19 +139,33 @@ double ATMForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForce
     state0Energy = innerContextImpl0.calcForcesAndEnergy(includeForces, true);
     state1Energy = innerContextImpl1.calcForcesAndEnergy(includeForces, true);
 
-    // Compute the alchemical energy and forces.
+    // set global parameters for energy expression
 
     for (int i = 0; i < globalParameterNames.size(); i++)
         globalValues[i] = context.getParameter(globalParameterNames[i]);
+
+    // Protect against overflow when the hybrid potential function does
+    // not depend on u0 or u1 and their values are unbounded; typically at the endstates
+
+    double dEdu0 = u0DerivExpression.evaluate();
+    double dEdu1 = u1DerivExpression.evaluate();
+    double epsi = std::numeric_limits<float>::min();
+    double maxEnergy = std::numeric_limits<float>::max();
+    if(fabs(dEdu0) < epsi && (isnan(state0Energy) || isinf(state0Energy)))
+	state0Energy = maxEnergy;
+    if(fabs(dEdu1) < epsi && (isnan(state1Energy) || isinf(state1Energy)))
+	state1Energy = maxEnergy;
+
+    // Compute the alchemical energy and forces.
+
     combinedEnergy = energyExpression.evaluate();
     if (includeForces) {
-        double dEdu0 = u0DerivExpression.evaluate();
-        double dEdu1 = u1DerivExpression.evaluate();
         map<string, double> energyParamDerivs;
         for (int i = 0; i < paramDerivExpressions.size(); i++)
             energyParamDerivs[paramDerivNames[i]] += paramDerivExpressions[i].evaluate();
         kernel.getAs<CalcATMForceKernel>().applyForces(context, innerContextImpl0, innerContextImpl1, dEdu0, dEdu1, energyParamDerivs);
     }
+
     return (includeEnergy ? combinedEnergy : 0.0);
 }
 

@@ -33,5 +33,7 @@
 #include "TestCustomCPPForce.h"
 
 void runPlatformTests() {
+    platform.setPropertyDefaultValue("DeviceIndex", "0,0");
+    testForce();
 }
 

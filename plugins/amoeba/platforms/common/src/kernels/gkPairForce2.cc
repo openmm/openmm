@@ -534,7 +534,8 @@
         torque->y = trq2;
         torque->z = trq3;
 
-    } else {
+    }
+    else {
         torque->x = 0;
         torque->y = 0;
         torque->z = 0;
@@ -579,9 +580,9 @@
         force->x = dedx;
         force->y = dedy;
         force->z = dedz;
-    } else {
-        force->x = force->y = force->z = 0;
     }
+    else
+        force->x = force->y = force->z = 0;
 
 #endif
 

@@ -26,6 +26,7 @@
 #define __ReferenceDynamics_H__
 
 #include "ReferenceConstraintAlgorithm.h"
+#include "ReferenceVirtualSites.h"
 #include "openmm/System.h"
 #include <cstddef>
 #include <vector>
@@ -52,8 +53,8 @@ class OPENMM_EXPORT ReferenceDynamics {
       double _deltaT;
       double _temperature;
 
-      int _ownReferenceConstraint;
       ReferenceConstraintAlgorithm* _referenceConstraint;
+      const ReferenceVirtualSites* virtualSites;
       
    public:
 
@@ -137,6 +138,14 @@ class OPENMM_EXPORT ReferenceDynamics {
 
       /**---------------------------------------------------------------------------------------
       
+         Set the temperature
+      
+         --------------------------------------------------------------------------------------- */
+    
+      void setTemperature(double temperature);
+
+      /**---------------------------------------------------------------------------------------
+      
          Update
       
          @param system              the System to be integrated
@@ -170,6 +179,16 @@ class OPENMM_EXPORT ReferenceDynamics {
          --------------------------------------------------------------------------------------- */
       
       void setReferenceConstraintAlgorithm(ReferenceConstraintAlgorithm* referenceConstraint);
+      
+      /**
+       * Get the object used to compute virtual sites.
+       */
+      const ReferenceVirtualSites& getVirtualSites() const;
+
+      /**
+       * Set the object used to compute virtual sites.
+       */
+      void setVirtualSites(const ReferenceVirtualSites& sites);
 };
 
 } // namespace OpenMM

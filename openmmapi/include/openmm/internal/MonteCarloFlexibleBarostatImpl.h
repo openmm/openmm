@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -57,7 +57,10 @@ public:
     }
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
+    void computeCurrentPressure(ContextImpl& context, std::vector<double>& pressure);
 private:
+    double computePressureComponent(ContextImpl& context, double delta, int component);
+    void setBoxVectors(ContextImpl& context, Vec3 a, Vec3 b, Vec3 c);
     const MonteCarloFlexibleBarostat& owner;
     int step, numAttempted, numAccepted;
     double lengthScale;

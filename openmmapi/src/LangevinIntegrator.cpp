@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,65 +30,9 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/LangevinIntegrator.h"
-#include "openmm/Context.h"
-#include "openmm/OpenMMException.h"
-#include "openmm/internal/ContextImpl.h"
-#include "openmm/kernels.h"
-#include <string>
 
 using namespace OpenMM;
-using std::string;
-using std::vector;
 
-LangevinIntegrator::LangevinIntegrator(double temperature, double frictionCoeff, double stepSize) {
-    setTemperature(temperature);
-    setFriction(frictionCoeff);
-    setStepSize(stepSize);
-    setConstraintTolerance(1e-5);
-    setRandomNumberSeed(0);
-}
-
-void LangevinIntegrator::initialize(ContextImpl& contextRef) {
-    if (owner != NULL && &contextRef.getOwner() != owner)
-        throw OpenMMException("This Integrator is already bound to a context");
-    context = &contextRef;
-    owner = &contextRef.getOwner();
-    kernel = context->getPlatform().createKernel(IntegrateLangevinStepKernel::Name(), contextRef);
-    kernel.getAs<IntegrateLangevinStepKernel>().initialize(contextRef.getSystem(), *this);
-}
-
-void LangevinIntegrator::setTemperature(double temp) {
-    if (temp < 0)
-        throw OpenMMException("Temperature cannot be negative");
-    temperature = temp;
-}
-
-void LangevinIntegrator::setFriction(double coeff) {
-    if (coeff < 0)
-        throw OpenMMException("Friction cannot be negative");
-    friction = coeff;
-}
-
-void LangevinIntegrator::cleanup() {
-    kernel = Kernel();
-}
-
-vector<string> LangevinIntegrator::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(IntegrateLangevinStepKernel::Name());
-    return names;
-}
-
-double LangevinIntegrator::computeKineticEnergy() {
-    return kernel.getAs<IntegrateLangevinStepKernel>().computeKineticEnergy(*context, *this);
-}
-
-void LangevinIntegrator::step(int steps) {
-    if (context == NULL)
-        throw OpenMMException("This Integrator is not bound to a context!");  
-    for (int i = 0; i < steps; ++i) {
-        context->updateContextState();
-        context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
-        kernel.getAs<IntegrateLangevinStepKernel>().execute(*context, *this);
-    }
+LangevinIntegrator::LangevinIntegrator(double temperature, double frictionCoeff, double stepSize) :
+        LangevinMiddleIntegrator(temperature, frictionCoeff, stepSize) {
 }

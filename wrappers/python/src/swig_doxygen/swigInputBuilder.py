@@ -17,7 +17,8 @@ except ImportError:
     from HTMLParser import HTMLParser
 
 INDENT = "   "
-docTags = {'emphasis':'i', 'bold':'b', 'itemizedlist':'ul', 'listitem':'li', 'preformatted':'pre', 'computeroutput':'tt', 'subscript':'sub', 'verbatim': 'verbatim'}
+docTags = {'emphasis':'i', 'bold':'b', 'itemizedlist':'ul', 'listitem':'li', 'preformatted':'pre', 'computeroutput':'tt', 
+           'superscript': 'sup', 'subscript':'sub', 'verbatim': 'verbatim'}
 
 def is_method_abstract(argstring):
     return argstring.split(")")[-1].find("=0") >= 0

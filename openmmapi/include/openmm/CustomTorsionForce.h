@@ -276,6 +276,7 @@ private:
     std::vector<TorsionInfo> torsions;
     std::vector<int> energyParameterDerivatives;
     bool usePeriodic;
+    mutable int numContexts, firstChangedTorsion, lastChangedTorsion;
 };
 
 /**

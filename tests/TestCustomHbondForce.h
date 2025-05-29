@@ -34,6 +34,7 @@
 #include "openmm/CustomHbondForce.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
+#include "openmm/NonbondedForce.h"
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
@@ -309,10 +310,17 @@ void testParameters() {
     ASSERT_EQUAL_TOL(2*(2*1.8+2.1)+2*(2*1.5+2.1), state.getPotentialEnergy(), TOL);
 }
 
-void testLargeSystem() {
+void testLargeSystem(CustomHbondForce::NonbondedMethod method) {
     int numParticles = 5000;
+    double boxSize = 3.0;
+    double cutoff = 1.0;
     System system;
-    CustomHbondForce* custom = new CustomHbondForce("distance(d1,a1)^2");
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    CustomHbondForce* custom = new CustomHbondForce("(distance(d1,a1)-1)^2");
+    custom->setNonbondedMethod(method);
+    custom->setCutoffDistance(cutoff);
+    NonbondedForce* nb = new NonbondedForce(); // So that atom reordering will be done
+    nb->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     vector<Vec3> positions(numParticles);
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
@@ -322,28 +330,34 @@ void testLargeSystem() {
             custom->addDonor(i, -1, -1);
         else
             custom->addAcceptor(i, -1, -1);
-        positions[i] = Vec3(3.0*genrand_real2(sfmt), 3.0*genrand_real2(sfmt), 3.0*genrand_real2(sfmt));
+        positions[i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+        nb->addParticle(0.0, 1.0, 0.0);
     }
     system.addForce(custom);
+    system.addForce(nb);
     VerletIntegrator integrator(0.01);
     Context context(system, integrator, platform);
     context.setPositions(positions);
     State state = context.getState(State::Energy | State::Forces);
     double expectedEnergy = 0;
     for (int i = 0; i < numParticles; i += 2) {
+        Vec3 expectedForce;
         for (int j = 1; j < numParticles; j += 2) {
             Vec3 d = positions[i]-positions[j];
+            if (method == CustomHbondForce::CutoffPeriodic) {
+                d[0] -= round(d[0]/boxSize)*boxSize;
+                d[1] -= round(d[1]/boxSize)*boxSize;
+                d[2] -= round(d[2]/boxSize)*boxSize;
+            }
             double r = sqrt(d.dot(d));
-            expectedEnergy += r*r;
+            if (method == CustomHbondForce::NoCutoff || r < cutoff) {
+                expectedEnergy += (r-1)*(r-1);
+                expectedForce -= 2*(r-1)*d/r;
+            }
         }
-    }
-    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-5);
-    for (int i = 0; i < numParticles; i += 2) {
-        Vec3 expectedForce;
-        for (int j = 1; j < numParticles; j += 2)
-            expectedForce += 2*(positions[j]-positions[i]);
         ASSERT_EQUAL_VEC(expectedForce, state.getForces()[i], 1e-5);
     }
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-5);
 }
 
 void runPlatformTests();
@@ -358,7 +372,9 @@ int main(int argc, char* argv[]) {
         test2DFunction();
         testIllegalVariable();
         testParameters();
-        testLargeSystem();
+        testLargeSystem(CustomHbondForce::NoCutoff);
+        testLargeSystem(CustomHbondForce::CutoffNonPeriodic);
+        testLargeSystem(CustomHbondForce::CutoffPeriodic);
         runPlatformTests();
     }
     catch(const exception& e) {

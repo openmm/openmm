@@ -10,11 +10,7 @@ typedef struct {
  */
 
 __kernel void computeNonbonded(
-#ifdef SUPPORTS_64_BIT_ATOMICS
         __global long* restrict forceBuffers,
-#else
-        __global real4* restrict forceBuffers,
-#endif
         __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const unsigned int* restrict exclusions,
         __global const int2* restrict exclusionTiles, unsigned int startTileIndex, unsigned long numTileIndices
 #ifdef USE_CUTOFF
@@ -102,14 +98,9 @@ __kernel void computeNonbonded(
 
                 // Write results.
 
-#ifdef SUPPORTS_64_BIT_ATOMICS
                 ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) realToFixedPoint(force.x));
                 ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.y));
                 ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.z));
-#else
-                unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
-                forceBuffers[offset].xyz = forceBuffers[offset].xyz+force.xyz;
-#endif
             }
         }
         else {
@@ -178,32 +169,18 @@ __kernel void computeNonbonded(
 
                // Write results for atom1.
 
-#ifdef SUPPORTS_64_BIT_ATOMICS
                 ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) realToFixedPoint(force.x));
                 ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.y));
                 ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.z));
-#else
-                unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
-                forceBuffers[offset].xyz = forceBuffers[offset].xyz+force.xyz;
-#endif
             }
 
             // Write results.
 
             for (int tgx = 0; tgx < TILE_SIZE; tgx++) {
-#ifdef SUPPORTS_64_BIT_ATOMICS
                 unsigned int offset = y*TILE_SIZE + tgx;
                 ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(localData[tgx].fx));
                 ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[tgx].fy));
                 ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[tgx].fz));
-#else
-                unsigned int offset = y*TILE_SIZE+tgx + get_group_id(0)*PADDED_NUM_ATOMS;
-                real4 f = forceBuffers[offset];
-                f.x += localData[tgx].fx;
-                f.y += localData[tgx].fy;
-                f.z += localData[tgx].fz;
-                forceBuffers[offset] = f;
-#endif
             }
         }
     }
@@ -337,14 +314,9 @@ __kernel void computeNonbonded(
 
                    // Write results for atom1.
 
-#ifdef SUPPORTS_64_BIT_ATOMICS
                     ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) realToFixedPoint(force.x));
                     ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.y));
                     ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.z));
-#else
-                    unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
-                    forceBuffers[offset].xyz = forceBuffers[offset].xyz+force.xyz;
-#endif
                 }
             }
             else
@@ -404,14 +376,9 @@ __kernel void computeNonbonded(
 
                     // Write results for atom1.
 
-#ifdef SUPPORTS_64_BIT_ATOMICS
                     ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) realToFixedPoint(force.x));
                     ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.y));
                     ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.z));
-#else
-                    unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
-                    forceBuffers[offset].xyz = forceBuffers[offset].xyz+force.xyz;
-#endif
                 }
             }
 
@@ -424,18 +391,9 @@ __kernel void computeNonbonded(
                 unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
                 if (atom2 < PADDED_NUM_ATOMS) {
-#ifdef SUPPORTS_64_BIT_ATOMICS
                     ATOMIC_ADD(&forceBuffers[atom2], (mm_ulong) realToFixedPoint(localData[tgx].fx));
                     ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[tgx].fy));
                     ATOMIC_ADD(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[tgx].fz));
-#else
-                    unsigned int offset = atom2 + get_group_id(0)*PADDED_NUM_ATOMS;
-                    real4 f = forceBuffers[offset];
-                    f.x += localData[tgx].fx;
-                    f.y += localData[tgx].fy;
-                    f.z += localData[tgx].fz;
-                    forceBuffers[offset] = f;
-#endif
                 }
             }
         }

@@ -88,9 +88,7 @@ class OPENMM_EXPORT ReferenceLangevinMiddleDynamics : public ReferenceDynamics {
                   std::vector<OpenMM::Vec3>& velocities, std::vector<double>& masses, double tolerance, const Vec3* boxVectors);
      
       /**---------------------------------------------------------------------------------------
-      
-         First update; based on code in update.c do_update_sd() Gromacs 3.1.4
-      
+            
          @param numberOfAtoms       number of atoms
          @param velocities          velocities
          @param forces              forces

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -158,6 +158,7 @@ void CommonCalcDrudeForceKernel::initialize(const System& system, const DrudeFor
         }
         pairParams.upload(paramVector);
         map<string, string> replacements;
+        replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
         replacements["PARAMS"] = cc.getBondedUtilities().addArgument(pairParams, "float2");
         cc.getBondedUtilities().addInteraction(atoms, cc.replaceStrings(CommonDrudeKernelSources::drudePairForce, replacements), force.getForceGroup());
     }
@@ -375,36 +376,43 @@ double CommonIntegrateDrudeLangevinStepKernel::computeKineticEnergy(ContextImpl&
 }
 
 CommonIntegrateDrudeSCFStepKernel::~CommonIntegrateDrudeSCFStepKernel() {
-    if (minimizerPos != NULL)
-        lbfgs_free(minimizerPos);
 }
 
 void CommonIntegrateDrudeSCFStepKernel::initialize(const System& system, const DrudeSCFIntegrator& integrator, const DrudeForce& force) {
     cc.initializeContexts();
     ContextSelector selector(cc);
-
-    // Identify Drude particles.
-    
-    for (int i = 0; i < force.getNumParticles(); i++) {
+    int numDrude = force.getNumParticles();
+    drudeParams.initialize<mm_float4>(cc, numDrude, "drudeParams");
+    drudeIndices.initialize<int>(cc, numDrude, "drudeIndices");
+    drudeParents.initialize<mm_int4>(cc, numDrude, "drudeParents");
+    vector<mm_float4> paramVec(numDrude);
+    vector<mm_int4> parentVec(numDrude);
+    drudeIndexVec.resize(numDrude);
+    for (int i = 0; i < numDrude; i++) {
         int p, p1, p2, p3, p4;
         double charge, polarizability, aniso12, aniso34;
         force.getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
-        drudeParticles.push_back(p);
+        double a1 = (p2 == -1 ? 1 : aniso12);
+        double a2 = (p3 == -1 || p4 == -1 ? 1 : aniso34);
+        double a3 = 3-a1-a2;
+        double k3 = ONE_4PI_EPS0*charge*charge/(polarizability*a3);
+        double k1 = ONE_4PI_EPS0*charge*charge/(polarizability*a1) - k3;
+        double k2 = ONE_4PI_EPS0*charge*charge/(polarizability*a2) - k3;
+        paramVec[i] = mm_float4((float) k1, (float) k2, (float) k3, 0.0f);
+        drudeIndexVec[i] = p;
+        parentVec[i] = mm_int4(p1, p2, p3, p4);
     }
-    
-    // Initialize the energy minimizer.
-    
-    minimizerPos = lbfgs_malloc(drudeParticles.size()*3);
-    if (minimizerPos == NULL)
-        throw OpenMMException("DrudeSCFIntegrator: Failed to allocate memory");
-    lbfgs_parameter_init(&minimizerParams);
-    minimizerParams.linesearch = LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE;    
+    drudeParams.upload(paramVec);
+    drudeIndices.upload(drudeIndexVec);
+    drudeParents.upload(parentVec);
 
     // Create the kernels.
     
     ComputeProgram program = cc.compileProgram(CommonKernelSources::verlet);
     kernel1 = program->createKernel("integrateVerletPart1");
     kernel2 = program->createKernel("integrateVerletPart2");
+    program = cc.compileProgram(CommonDrudeKernelSources::drudeSCF);
+    minimizeKernel = program->createKernel("minimizeDrudePositions");
     prevStepSize = -1.0;
 }
 
@@ -431,6 +439,14 @@ void CommonIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const Drud
         kernel2->addArg(integration.getPosDelta());
         if (cc.getUseMixedPrecision())
             kernel2->addArg(cc.getPosqCorrection());
+        minimizeKernel->addArg((int) drudeParams.getSize());
+        minimizeKernel->addArg(cc.getPaddedNumAtoms());
+        minimizeKernel->addArg();
+        minimizeKernel->addArg(cc.getPosq());
+        minimizeKernel->addArg(cc.getLongForceBuffer());
+        minimizeKernel->addArg(drudeParams);
+        minimizeKernel->addArg(drudeIndices);
+        minimizeKernel->addArg(drudeParents);
     }
     if (dt != prevStepSize) {
         if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
@@ -480,96 +496,24 @@ double CommonIntegrateDrudeSCFStepKernel::computeKineticEnergy(ContextImpl& cont
     return cc.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
 
-struct MinimizerData {
-    ContextImpl& context;
-    ComputeContext& cc;
-    vector<int>& drudeParticles;
-    MinimizerData(ContextImpl& context, ComputeContext& cc, vector<int>& drudeParticles) : context(context), cc(cc), drudeParticles(drudeParticles) {}
-};
-
-static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsfloatval_t *g, const int n, const lbfgsfloatval_t step) {
-    MinimizerData* data = reinterpret_cast<MinimizerData*>(instance);
-    ContextImpl& context = data->context;
-    ComputeContext& cc = data->cc;
-    vector<int>& drudeParticles = data->drudeParticles;
-    int numDrudeParticles = drudeParticles.size();
-
-    // Set the particle positions.
-    
-    cc.getPosq().download(cc.getPinnedBuffer());
-    if (cc.getUseDoublePrecision()) {
-        mm_double4* posq = (mm_double4*) cc.getPinnedBuffer();
-        for (int i = 0; i < numDrudeParticles; ++i) {
-            mm_double4& p = posq[drudeParticles[i]];
-            p.x = x[3*i];
-            p.y = x[3*i+1];
-            p.z = x[3*i+2];
-        }
-    }
-    else {
-        mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
-        for (int i = 0; i < numDrudeParticles; ++i) {
-            mm_float4& p = posq[drudeParticles[i]];
-            p.x = x[3*i];
-            p.y = x[3*i+1];
-            p.z = x[3*i+2];
-        }
-    }
-    cc.getPosq().upload(cc.getPinnedBuffer());
-
-    // Compute the forces and energy for this configuration.
-
-    double energy = context.calcForcesAndEnergy(true, true, context.getIntegrator().getIntegrationForceGroups());
-    long long* force = (long long*) cc.getPinnedBuffer();
-    cc.getLongForceBuffer().download(force);
-    double forceScale = -1.0/0x100000000;
-    int paddedNumAtoms = cc.getPaddedNumAtoms();
-    for (int i = 0; i < numDrudeParticles; ++i) {
-        int index = drudeParticles[i];
-        g[3*i] = forceScale*force[index];
-        g[3*i+1] = forceScale*force[index+paddedNumAtoms];
-        g[3*i+2] = forceScale*force[index+paddedNumAtoms*2];
-    }
-    return energy;
-}
-
 void CommonIntegrateDrudeSCFStepKernel::minimize(ContextImpl& context, double tolerance) {
-    // Record the initial positions.
-
-    int numDrudeParticles = drudeParticles.size();
-    cc.getPosq().download(cc.getPinnedBuffer());
-    if (cc.getUseDoublePrecision()) {
-        mm_double4* posq = (mm_double4*) cc.getPinnedBuffer();
-        for (int i = 0; i < numDrudeParticles; ++i) {
-            mm_double4 p = posq[drudeParticles[i]];
-            minimizerPos[3*i] = p.x;
-            minimizerPos[3*i+1] = p.y;
-            minimizerPos[3*i+2] = p.z;
+    minimizeKernel->setArg(2, (float) tolerance);
+    long long* forces = (long long*) cc.getPinnedBuffer();
+    double scale = 1/(double) 0x100000000;
+    double lastForce = 0;
+    int numDrude = drudeParams.getSize();
+    int paddedNumAtoms = cc.getPaddedNumAtoms();
+    for (int iteration = 0; iteration < 50; iteration++) {
+        context.calcForcesAndEnergy(true, false, context.getIntegrator().getIntegrationForceGroups());
+        minimizeKernel->execute(drudeParams.getSize());
+        cc.getLongForceBuffer().download(forces);
+        double totalForce = 0;
+        for (int i : drudeIndexVec) {
+            Vec3 f(scale*forces[i], scale*forces[i+paddedNumAtoms], scale*forces[i+paddedNumAtoms*2]);
+            totalForce += f.dot(f);
         }
+        if (sqrt(totalForce/(3*numDrude)) < tolerance || (iteration > 0 && totalForce > 0.9*lastForce)) 
+            break;
+        lastForce = totalForce;
     }
-    else {
-        mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
-        for (int i = 0; i < numDrudeParticles; ++i) {
-            mm_float4 p = posq[drudeParticles[i]];
-            minimizerPos[3*i] = p.x;
-            minimizerPos[3*i+1] = p.y;
-            minimizerPos[3*i+2] = p.z;
-        }
-        minimizerParams.xtol = 1e-7;
-    }
-    
-    // Determine a normalization constant for scaling the tolerance.
-    
-    double norm = 0.0;
-    for (int i = 0; i < 3*numDrudeParticles; i++)
-        norm += minimizerPos[i]*minimizerPos[i];
-    norm /= numDrudeParticles;
-    norm = (norm < 1 ? 1 : sqrt(norm));
-    minimizerParams.epsilon = tolerance/norm;
-    
-    // Perform the minimization.
-
-    lbfgsfloatval_t fx;
-    MinimizerData data(context, cc, drudeParticles);
-    lbfgs(numDrudeParticles*3, minimizerPos, &fx, evaluate, NULL, &data, &minimizerParams);
 }

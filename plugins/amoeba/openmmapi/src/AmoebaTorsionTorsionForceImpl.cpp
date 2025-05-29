@@ -141,7 +141,8 @@ void AmoebaTorsionTorsionForceImpl::reorderGrid(const TorsionTorsionGrid& grid, 
                         (void) sprintf(buffer, "AmoebaTorsionTorsionForceImpl::reorderGrid: error detected with map iterators.\n");
                         throw OpenMMException(buffer);
                     }
-                } else {
+                }
+                else {
                     map_Double_IntPair  = mapII->second;
                     mapJJ               = map_Double_IntPair.begin();
                 }

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -122,6 +122,10 @@ vector<Vec3> assignDrudeVelocities(const System &system, double temperature, dou
             Vec3 relVelocity = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*sqrt(BOLTZ*drudeTemperature/redMass);
             velocities[atom1] = comVelocity - fracM2 * relVelocity;
             velocities[atom2] = comVelocity + fracM1 * relVelocity;
+        }
+        else if (mass2 != 0) {
+            double velocityScale = sqrt(BOLTZ*temperature/mass2);
+            velocities[atom2] = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*velocityScale;
         }
     }
     return velocities;

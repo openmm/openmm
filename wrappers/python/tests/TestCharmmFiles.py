@@ -4,6 +4,7 @@ from openmm.app import *
 from openmm import *
 from openmm.unit import *
 import openmm.app.element as elem
+import itertools
 import math
 import os
 import tempfile
@@ -139,7 +140,7 @@ class TestCharmmFiles(unittest.TestCase):
             a.charge = 0.0
 
         # Now compute the full energy
-        plat = Platform.getPlatformByName('Reference')
+        plat = Platform.getPlatform('Reference')
         system = psf.createSystem(params, nonbondedMethod=PME,
                                   nonbondedCutoff=8*angstroms)
 
@@ -168,7 +169,7 @@ class TestCharmmFiles(unittest.TestCase):
                 f.setForceGroup(1)
             else:
                 f.setForceGroup(0)
-        context = Context(system, VerletIntegrator(2*femtoseconds), Platform.getPlatformByName('Reference'))
+        context = Context(system, VerletIntegrator(2*femtoseconds), Platform.getPlatform('Reference'))
         context.setPositions(crd.positions)
         state = context.getState(getEnergy=True, groups={1})
         energy = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
@@ -184,7 +185,7 @@ class TestCharmmFiles(unittest.TestCase):
         psf.setBox(30.0*angstroms, 30.0*angstroms, 30.0*angstroms)
 
         # Now compute the full energy
-        plat = Platform.getPlatformByName('Reference')
+        plat = Platform.getPlatform('Reference')
         system = psf.createSystem(params, nonbondedMethod=PME, ewaldErrorTolerance=0.00005)
         integrator = DrudeLangevinIntegrator(300*kelvin, 1.0/picosecond, 1*kelvin, 10/picosecond, 0.001*picoseconds)
         con = Context(system, integrator, plat)
@@ -234,7 +235,7 @@ class TestCharmmFiles(unittest.TestCase):
         psf.setBox(33.2*angstroms, 33.2*angstroms, 33.2*angstroms)
 
         # Now compute the full energy
-        plat = Platform.getPlatformByName('Reference')
+        plat = Platform.getPlatform('Reference')
         system = psf.createSystem(params, nonbondedMethod=PME, ewaldErrorTolerance=0.00005)
         integrator = DrudeLangevinIntegrator(300*kelvin, 1.0/picosecond, 1*kelvin, 10/picosecond, 0.001*picoseconds)
         con = Context(system, integrator, plat)
@@ -251,7 +252,7 @@ class TestCharmmFiles(unittest.TestCase):
         crd = CharmmCrdFile('systems/chlb_cgenff.crd')
         params = CharmmParameterSet('systems/top_all36_cgenff.rtf',
                                     'systems/par_all36_cgenff.prm')
-        plat = Platform.getPlatformByName('Reference')
+        plat = Platform.getPlatform('Reference')
         system = psf.createSystem(params)
         con = Context(system, VerletIntegrator(2*femtoseconds), plat)
         con.setPositions(crd.positions)
@@ -310,7 +311,7 @@ class TestCharmmFiles(unittest.TestCase):
         for i in range(5):
             system = self.psf_c.createSystem(self.params, implicitSolvent=solventType[i], nonbondedMethod=nonbondedMethod[i], implicitSolventSaltConc=salt[i])
             integrator = VerletIntegrator(0.001)
-            context = Context(system, integrator, Platform.getPlatformByName("Reference"))
+            context = Context(system, integrator, Platform.getPlatform("Reference"))
             context.setPositions(self.pdb.positions)
             state1 = context.getState(getForces=True)
             #out = open('systems/ala-ala-ala-implicit-forces/'+file[i]+'.xml', 'w')
@@ -338,7 +339,7 @@ class TestCharmmFiles(unittest.TestCase):
             a.charge = 0.0
 
         # Now compute the full energy
-        plat = Platform.getPlatformByName('Reference')
+        plat = Platform.getPlatform('Reference')
 
         system_strict     = psf.createSystem(params_strict    , nonbondedMethod=PME,
                                   nonbondedCutoff=8*angstroms)
@@ -365,7 +366,7 @@ class TestCharmmFiles(unittest.TestCase):
         force = [f for f in system.getForces() if isinstance(f, CustomTorsionForce)][0]
         group = force.getForceGroup()
         integrator = VerletIntegrator(0.001)
-        context = Context(system, integrator, Platform.getPlatformByName("Reference"))
+        context = Context(system, integrator, Platform.getPlatform("Reference"))
         angle = 0.1
         pos1 = [Vec3(0,0,0), Vec3(1,0,0), Vec3(1,1,0), Vec3(0,1,math.tan(angle))] # theta = angle
         pos2 = [Vec3(0,0,0), Vec3(1,0,0), Vec3(1,1,0), Vec3(2,1,math.tan(angle))] # theta = pi-angle
@@ -381,6 +382,122 @@ class TestCharmmFiles(unittest.TestCase):
                 else:
                     dtheta = math.pi-angle
                 self.assertAlmostEqual(energy, dtheta**2, delta=1e-5)
+
+    def test_TorsionWildcards(self):
+        """Test matching of dihedrals and impropers with wildcards."""
+        for test_improper, wild_1, wild_2, wild_3, wild_4, reverse, want_mismatch in itertools.product((False, True), repeat=7):
+            # Test with up to 3 wildcards.
+            if wild_1 and wild_2 and wild_3 and wild_4:
+                continue
+
+            # Test both dihedrals and impropers.  If want_mismatch is set, make
+            # sure that the non-wildcard atoms ensure no match to the torsion.
+            prm_header = 'IMPH' if test_improper else 'DIHE'
+            type_1 = 'X' if wild_1 else ('C2' if want_mismatch else 'C1')
+            type_2 = 'X' if wild_2 else ('C1' if want_mismatch else 'C2')
+            type_3 = 'X' if wild_3 else ('C4' if want_mismatch else 'C3')
+            type_4 = 'X' if wild_4 else ('C3' if want_mismatch else 'C4')
+
+            if reverse:
+                type_1, type_2, type_3, type_4 = type_4, type_3, type_2, type_1
+
+            psf_dihedral = '' if test_improper else f'{1:10}{2:10}{3:10}{4:10}'
+            psf_improper = f'{1:10}{2:10}{3:10}{4:10}' if test_improper else ''
+
+            with tempfile.TemporaryDirectory() as temp_path:
+                prm_path = os.path.join(temp_path, 'test.prm')
+                psf_path = os.path.join(temp_path, 'test.psf')
+
+                # Write a sample PRM file.
+                with open(prm_path, 'w') as prm_file:
+                    print(f"""*TEST
+*
+
+ATOMS
+MASS -1 C1 12.0110
+MASS -1 C2 12.0110
+MASS -1 C3 12.0110
+MASS -1 C4 12.0110
+
+BOND
+C1 C2 1 1
+C{1 if test_improper else 2} C3 1 1
+C{1 if test_improper else 3} C4 1 1
+
+{prm_header}
+{type_1} {type_2} {type_3} {type_4} 1 1 0
+
+NBON
+C1 0 0 1
+C2 0 0 1
+C3 0 0 1
+C4 0 0 1
+
+END""", file=prm_file)
+
+                # Write a sample PSF file.
+                with open(psf_path, 'w') as psf_file:
+                    print(f"""PSF EXT CMAP CHEQ XPLOR
+
+         1 !NTITLE
+* TEST
+
+         4 !NATOM
+         1 TEST     1        TEST1    C1       C1       0.000000       12.0110           0
+         2 TEST     1        TEST1    C2       C2       0.000000       12.0110           0
+         3 TEST     1        TEST1    C3       C3       0.000000       12.0110           0
+         4 TEST     1        TEST1    C4       C4       0.000000       12.0110           0
+
+         3 !NBOND: bonds
+{1:10}{2:10}{1 if test_improper else 2:10}{3:10}{1 if test_improper else 3:10}{4:10}
+
+         0 !NTHETA: angles
+
+
+{0 if test_improper else 1:10} !NPHI: dihedrals
+{psf_dihedral}
+
+{1 if test_improper else 0:10} !NIMPHI: impropers
+{psf_improper}
+
+         0 !NDON: donors
+
+
+         0 !NACC: acceptors
+
+
+         0 !NNB
+
+         0         0         0         0
+
+         1         0 !NGRP NST2
+         0         0         0
+
+         1 !MOLNT
+         1         1         1         1
+
+         0         0 !NUMLP NUMLPH
+
+         0 !NCRTERM
+
+
+""", file=psf_file)
+
+                prm = CharmmParameterSet(prm_path)
+                psf = CharmmPsfFile(psf_path)
+
+                if want_mismatch:
+                    # Make sure that the system doesn't get parameterized.
+                    with self.assertRaises(internal.charmm.exceptions.MissingParameter):
+                        system = psf.createSystem(prm)
+
+                else:
+                    # Make sure that one dihedral or improper gets added.
+                    system = psf.createSystem(prm)
+                    force_type = CustomTorsionForce if test_improper else PeriodicTorsionForce
+                    force, = (force for force in system.getForces() if isinstance(force, force_type))
+                    self.assertEqual(force.getNumTorsions(), 1)
+                    self.assertEqual(force.getTorsionParameters(0)[:4], [0, 1, 2, 3])
 
     def test_Residues(self):
         """Test that residues are read correctly, even if they have the same RESID while being in separate segments."""
@@ -448,7 +565,7 @@ class TestCharmmFiles(unittest.TestCase):
                 params = CharmmParameterSet('systems/charmm22.rtf', parfile.name)
                 os.remove(parfile.name)
             system = self.psf_c.createSystem(params, nonbondedMethod=NoCutoff)
-            context = Context(system, VerletIntegrator(1*femtoseconds), Platform.getPlatformByName('Reference'))
+            context = Context(system, VerletIntegrator(1*femtoseconds), Platform.getPlatform('Reference'))
             context.setPositions(crd.positions)
             energy = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilocalories_per_mole)
             self.assertAlmostEqual(energy, modeEnergy[abs(nbxmod)], delta=1e-3*abs(energy))
@@ -459,7 +576,7 @@ class TestCharmmFiles(unittest.TestCase):
         pdb = PDBFile('systems/MoS2.pdb')
         params = CharmmParameterSet('systems/MoS2.prm')
         system = psf.createSystem(params, nonbondedMethod=NoCutoff)
-        context = Context(system, VerletIntegrator(1*femtoseconds), Platform.getPlatformByName('Reference'))
+        context = Context(system, VerletIntegrator(1*femtoseconds), Platform.getPlatform('Reference'))
         context.setPositions(pdb.positions)
         energy = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         # Compare with value computed with NAMD.
@@ -507,7 +624,7 @@ class TestCharmmFiles(unittest.TestCase):
         crd = CharmmCrdFile('systems/ala3_solv.crd')
         params = CharmmParameterSet('systems/par_all36_prot.prm',
                                     'systems/toppar_water_ions.str')
-        plat = Platform.getPlatformByName('Reference')
+        plat = Platform.getPlatform('Reference')
         system_charmm = psf.createSystem(params, nonbondedMethod=PME,
                                   nonbondedCutoff=8 * angstroms)
         topology = psf.topology

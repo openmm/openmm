@@ -125,7 +125,7 @@ Both of these classes should be packaged into a dynamic library (.so on Linux,
 must also implement the two functions from PluginInitializer.h.
 :code:`registerPlatforms()` will do nothing, since this plugin does not
 implement any new Platforms.  :code:`registerKernelFactories()` should call
-\ :code:`Platform::getPlatformByName("OpenCL")` to get the OpenCL Platform,
+\ :code:`Platform::getPlatform("OpenCL")` to get the OpenCL Platform,
 then create a new OpenCLStringForceKernelFactory and call
 :code:`registerKernelFactory()` on the Platform to register it.  If the OpenCL
 Platform is not available, you should catch the exception then return without

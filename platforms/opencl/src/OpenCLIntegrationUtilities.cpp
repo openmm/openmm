@@ -160,10 +160,13 @@ void OpenCLIntegrationUtilities::distributeForcesFromVirtualSites() {
             vsiteForceKernel->setArg(22, recipBoxVectorsFloat[1]);
             vsiteForceKernel->setArg(23, recipBoxVectorsFloat[2]);
         }
-        vsiteForceKernel->setArg(2, context.getLongForceBuffer());
-        vsiteForceKernel->execute(numVsites);
-        vsiteSaveForcesKernel->setArg(0, context.getLongForceBuffer());
-        vsiteSaveForcesKernel->setArg(1, context.getForceBuffers());
-        vsiteSaveForcesKernel->execute(context.getNumAtoms());
-   }
+        for (int i = numVsiteStages-1; i >= 0; i--) {
+            vsiteForceKernel->setArg(2, context.getLongForceBuffer());
+            vsiteForceKernel->setArg(25, i);
+            vsiteForceKernel->execute(numVsites);
+            vsiteSaveForcesKernel->setArg(0, context.getLongForceBuffer());
+            vsiteSaveForcesKernel->setArg(1, context.getForceBuffers());
+            vsiteSaveForcesKernel->execute(context.getNumAtoms());
+       }
+    }
 }

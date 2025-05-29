@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -304,7 +304,7 @@ void testTriclinic2() {
     Context context1(system, integ1, platform);
     context1.setPositions(positions);
     VerletIntegrator integ2(0.001);
-    Context context2(system, integ2, Platform::getPlatformByName("Reference"));
+    Context context2(system, integ2, Platform::getPlatform("Reference"));
     context2.setPositions(positions);
     State state1 = context1.getState(State::Forces | State::Energy, false, 2);
     State state2 = context2.getState(State::Forces | State::Energy, false, 2);
@@ -425,6 +425,51 @@ void testPMEParameters() {
     ASSERT(fabs((energy1-energy2)/energy1) > 1e-5);
 }
 
+void testNeutralizingPlasmaCorrection(NonbondedForce::NonbondedMethod method, bool includeOffset) {
+    // Verify that the energy of a system with nonzero charge doesn't depend on alpha.
+
+    System system;
+    NonbondedForce* force = new NonbondedForce();
+    force->setNonbondedMethod(method);
+    system.addForce(force);
+    for (int i = 0; i < 2; i++) {
+        system.addParticle(1.0);
+        force->addParticle(1.0, 0.3, 1.0);
+    }
+    if (includeOffset) {
+        force->addGlobalParameter("a", 0.1);
+        force->addParticleParameterOffset("a", 0, 1.0, 0.1, 0.1);
+    }
+    vector<Vec3> positions(2);
+    positions[0] = Vec3();
+    positions[1] = Vec3(0.3, 0.4, 0.0);
+
+    // Compute the energy.
+
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    double energy1 = context.getState(State::Energy).getPotentialEnergy();
+
+    // Change the cutoff distance, which will change alpha, and see if the energy is the same.
+
+    force->setCutoffDistance(0.7);
+    context.reinitialize(true);
+    double energy2 = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(energy1, energy2, 1e-4);
+
+    // Try changing a particle charge with updateParametersInContext() and make sure the
+    // energy changes by the correct amount.
+
+    force->setParticleParameters(0, 2.0, 0.3, 1.0);
+    force->updateParametersInContext(context);
+    double energy3 = context.getState(State::Energy).getPotentialEnergy();
+    force->setCutoffDistance(1.0);
+    context.reinitialize(true);
+    double energy4 = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(energy3, energy4, 1e-4);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -438,6 +483,11 @@ int main(int argc, char* argv[]) {
         testErrorTolerance(NonbondedForce::Ewald);
         testErrorTolerance(NonbondedForce::PME);
         testPMEParameters();
+        for (bool offset : {false, true}) {
+            testNeutralizingPlasmaCorrection(NonbondedForce::Ewald, offset);
+            testNeutralizingPlasmaCorrection(NonbondedForce::PME, offset);
+            testNeutralizingPlasmaCorrection(NonbondedForce::LJPME, offset);
+        }
         runPlatformTests();
     }
     catch(const exception& e) {

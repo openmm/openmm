@@ -22,7 +22,7 @@ class TestNumpyCompatibility(unittest.TestCase):
         integrator = mm.LangevinIntegrator(300*unit.kelvin, 1.0/unit.picoseconds,
                                            2.0*unit.femtoseconds)
         self.simulation = app.Simulation(prmtop.topology, system, integrator,
-                                    mm.Platform.getPlatformByName('Reference'))
+                                    mm.Platform.getPlatform('Reference'))
 
 
     def test_setPositions(self):

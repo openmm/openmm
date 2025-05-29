@@ -56,9 +56,9 @@ class XTCFile(object):
                 raise FileNotFoundError(f"The file '{self._filename}' does not exist.")
             self._modelCount = get_xtc_nframes(self._filename.encode("utf-8"))
             natoms = get_xtc_natoms(self._filename.encode("utf-8"))
-            if natoms != len(list(topology.atoms())):
+            if natoms != topology.getNumAtoms():
                 raise ValueError(
-                    f"The number of atoms in the topology ({len(list(topology.atoms()))}) does not match the number of atoms in the XTC file ({natoms})"
+                    f"The number of atoms in the topology ({topology.getNumAtoms()}) does not match the number of atoms in the XTC file ({natoms})"
                 )
         else:
             if os.path.isfile(self._filename) and os.path.getsize(self._filename) > 0:
@@ -91,6 +91,7 @@ class XTCFile(object):
         if is_quantity(positions):
             positions = positions.value_in_unit(nanometers)
         import numpy as np
+        positions = np.asarray(positions)
         if np.isnan(positions).any():
             raise ValueError(
                 "Particle position is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan"
@@ -99,6 +100,8 @@ class XTCFile(object):
             raise ValueError(
                 "Particle position is infinite.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan"
             )
+        if (np.abs(positions * 1000) > (2 ** 31 - 1)).any():
+            raise ValueError("Particle position is too large for XTC format")
 
         self._modelCount += 1
         if (

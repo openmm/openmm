@@ -43,7 +43,7 @@ namespace OpenMM {
  * This is the internal implementation of AmoebaGeneralizedKirkwoodForce.
  */
 
-class AmoebaGeneralizedKirkwoodForceImpl : public ForceImpl {
+class OPENMM_EXPORT_AMOEBA AmoebaGeneralizedKirkwoodForceImpl : public ForceImpl {
 public:
     AmoebaGeneralizedKirkwoodForceImpl(const AmoebaGeneralizedKirkwoodForce& owner);
     void initialize(ContextImpl& context);
@@ -62,6 +62,54 @@ public:
         return kernel;
     }
     void updateParametersInContext(ContextImpl& context);
+
+    /**
+     * Compute a "neck" descreening contribution.
+     * <p>
+     * Using the tabulated Aij and Bij values, compute the neck integral
+     * using Equations 13 and 14 from Aguilar, Shadrach and Onufriev (10.1021/ct100392h).
+     *
+     * @param r separation distance.
+     * @param radius Radius of the current atom.
+     * @param radiusK Radius of the descreening atom.
+     * @param sneck The neck scale factor.
+     * @return The integral value.
+     */
+    static double neckDescreen(double r, double radius, double radiusK, double sneck);
+
+    /**
+     * Get Neck Aij and Bij constants.
+     *
+     * Based on the radii of two input atoms ("radius" for the atom being descreened
+     * and "radiusK" for the descreening atom), the neck parameters Aij and Bij are
+     * interpolated from tabulated values. The definitions of Aij and Bij are defined by
+     * Eq. 11 from Corrigan et al. (10.1063/5.0158914) while Figure 2 describes
+     * a neck descreening region.
+     *
+     * @param radius Radius of the current atom.
+     * @param radiusK Radius of the descreening atom.
+     * @param aij The Aij neck constant.
+     * @param bij the Bij neck constant.
+     */
+    static void getNeckConstants(double radius, double radiusK, double &aij, double &bij);
+
+     /**
+      * The array of neck tabulated radii values.
+      */
+    static const std::vector<float>& getNeckRadii();
+
+    const static int NUM_NECK_RADII = 45;
+
+    /**
+     * The tabulated Aij parameters.
+     */
+    const static float (&getAij())[NUM_NECK_RADII][NUM_NECK_RADII];
+
+     /**
+      * The tabulated Bij parameters.
+      */
+     const static float (&getBij())[NUM_NECK_RADII][NUM_NECK_RADII];
+
 private:
     const AmoebaGeneralizedKirkwoodForce& owner;
     Kernel kernel;

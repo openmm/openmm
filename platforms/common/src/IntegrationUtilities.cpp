@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -101,6 +101,7 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         posDelta.upload(deltas);
         stepSize.initialize<mm_double2>(context, 1, "stepSize");
         stepSize.upload(&lastStepSize);
+        kineticEnergy.initialize<double>(context, 1, "kineticEnergy");
     }
     else {
         posDelta.initialize<mm_float4>(context, context.getPaddedNumAtoms(), "posDelta");
@@ -109,7 +110,11 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         stepSize.initialize<mm_float2>(context, 1, "stepSize");
         mm_float2 lastStepSizeFloat = mm_float2(0.0f, 0.0f);
         stepSize.upload(&lastStepSizeFloat);
+        kineticEnergy.initialize<float>(context, 1, "kineticEnergy");
     }
+    keWorkGroupSize = context.getMaxThreadBlockSize();
+    if (keWorkGroupSize > 512)
+        keWorkGroupSize = 512;
 
     // Record the set of constraints and how many constraints each atom is involved in.
 
@@ -559,6 +564,39 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         if (atomCounts[i] > 1)
             hasOverlappingVsites = true;
 
+    // Divide virtual sites into stages to resolve dependencies between them.
+
+    set<int> sites;
+    vector<int> vsiteStageVec(numAtoms, -1);
+    for (int i = 0; i < numAtoms; i++)
+        if (system.isVirtualSite(i)) {
+            sites.insert(i);
+            vsiteStageVec[i] = numAtoms;
+        }
+    numVsiteStages = 0;
+    int remainingSites = 0;
+    while (sites.size() > 0) {
+        if (sites.size() == remainingSites)
+            throw OpenMMException("Virtual site definitions are circular");
+        remainingSites = sites.size();
+        for (auto index = sites.begin(); index != sites.end();) {
+            const VirtualSite& site = system.getVirtualSite(*index);
+            bool canCompute = true;
+            for (int i = 0; i < site.getNumParticles(); i++)
+                if (vsiteStageVec[site.getParticle(i)] >= numVsiteStages)
+                    canCompute = false;
+            if (canCompute) {
+                vsiteStageVec[*index] = numVsiteStages;
+                index = sites.erase(index);
+            }
+            else
+                ++index;
+        }
+        numVsiteStages++;
+    }
+    vsiteStage.initialize<int>(context, vsiteStageVec.size(), "vsiteStages");
+    vsiteStage.upload(vsiteStageVec);
+
     // Create the kernels used by this class.
 
     map<string, string> defines;
@@ -571,8 +609,11 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     defines["NUM_LOCAL_COORDS"] = context.intToString(numLocalCoords);
     defines["NUM_SYMMETRY"] = context.intToString(numSymmetry);
     defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
+    defines["KE_WORK_GROUP_SIZE"] = context.intToString(keWorkGroupSize);
     if (hasOverlappingVsites)
         defines["HAS_OVERLAPPING_VSITES"] = "1";
+    if (numVsiteStages > 1)
+        defines["MULTIPLE_VSITE_STAGES"] = "1";
     ComputeProgram program = context.compileProgram(CommonKernelSources::integrationUtilities, defines);
     settlePosKernel = program->createKernel("applySettleToPositions");
     settleVelKernel = program->createKernel("applySettleToVelocities");
@@ -589,6 +630,7 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     vsiteSaveForcesKernel = program->createKernel("saveDistributedForces");
     randomKernel = program->createKernel("generateRandomNumbers");
     timeShiftKernel = program->createKernel("timeShiftVelocities");
+    kineticEnergyKernel = program->createKernel("computeKineticEnergy");
 
     // Set arguments for virtual site kernels.
 
@@ -614,6 +656,8 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     vsitePositionKernel->addArg(vsiteSymmetryUseBox);
     for (int i = 0; i < 6; i++)
         vsitePositionKernel->addArg(); // Arguments for periodic box
+    vsitePositionKernel->addArg(vsiteStage);
+    vsitePositionKernel->addArg();
     vsiteForceKernel->addArg(context.getPosq());
     if (context.getUseMixedPrecision())
         vsiteForceKernel->addArg(context.getPosqCorrection());
@@ -637,6 +681,8 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     vsiteForceKernel->addArg(vsiteSymmetryUseBox);
     for (int i = 0; i < 6; i++)
         vsiteForceKernel->addArg(); // Arguments for periodic box
+    vsiteForceKernel->addArg(vsiteStage);
+    vsiteForceKernel->addArg();
     for (int i = 0; i < 3; i++)
         vsiteSaveForcesKernel->addArg();
 
@@ -744,6 +790,11 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     
     for (int i = 0; i < 3; i++)
         timeShiftKernel->addArg();
+
+    // Set arguments of kinetic energy kernel.
+
+    kineticEnergyKernel->addArg(context.getVelm());
+    kineticEnergyKernel->addArg(kineticEnergy);
 }
 
 void IntegrationUtilities::setNextStepSize(double size) {
@@ -808,7 +859,10 @@ void IntegrationUtilities::computeVirtualSites() {
             vsitePositionKernel->setArg(21, recipBoxVectorsFloat[1]);
             vsitePositionKernel->setArg(22, recipBoxVectorsFloat[2]);
         }
-        vsitePositionKernel->execute(numVsites);
+        for (int i = 0; i < numVsiteStages; i++) {
+            vsitePositionKernel->setArg(24, i);
+            vsitePositionKernel->execute(numVsites);
+        }
     }
 }
 
@@ -905,31 +959,22 @@ double IntegrationUtilities::computeKineticEnergy(double timeShift) {
     
     // Compute the kinetic energy.
     
-    double energy = 0.0;
-    if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
-        auto velm = (mm_double4*)context.getPinnedBuffer();
-        context.getVelm().download(velm);
-        for (int i = 0; i < numParticles; i++) {
-            mm_double4 v = velm[i];
-            if (v.w != 0)
-                energy += (v.x*v.x+v.y*v.y+v.z*v.z)/v.w;
-        }
-    }
-    else {
-        auto velm = (mm_float4*)context.getPinnedBuffer();
-        context.getVelm().download(velm);
-        for (int i = 0; i < numParticles; i++) {
-            mm_float4 v = velm[i];
-            if (v.w != 0)
-                energy += (v.x*v.x+v.y*v.y+v.z*v.z)/v.w;
-        }
-    }
+    kineticEnergyKernel->execute(keWorkGroupSize, keWorkGroupSize);
     
     // Restore the velocities.
     
     if (timeShift != 0)
         posDelta.copyTo(context.getVelm());
-    return 0.5*energy;
+    if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
+        double energy;
+        kineticEnergy.download(&energy);
+        return energy;
+    }
+    else {
+        float energy;
+        kineticEnergy.download(&energy);
+        return energy;
+    }
 }
 
 void IntegrationUtilities::computeShiftedVelocities(double timeShift, vector<Vec3>& velocities) {

@@ -69,14 +69,15 @@ void testVdw() {
         if (ii == 0 || ii == 3) {
             mass        = 16.0;
             indexIV     = ii;
-            sigma       = 1.70250E+00;
-            epsilon     = 1.10000E-01;
+            sigma       = 1.70250;
+            epsilon     = 1.10000e-1;
             reduction   = 0.0;
-        } else {
+        }
+        else {
             mass        = 1.0;
             indexIV     = ii < 3 ? 0 : 3;
-            sigma       = 1.32750E+00;
-            epsilon     = 1.35000E-02;
+            sigma       = 1.32750;
+            epsilon     = 1.35000e-2;
             reduction   = 0.91;
         }
 
@@ -86,7 +87,8 @@ void testVdw() {
             exclusions.push_back (0);
             exclusions.push_back (1);
             exclusions.push_back (2);
-        } else {
+        }
+        else {
             exclusions.push_back (3);
             exclusions.push_back (4);
             exclusions.push_back (5);
@@ -121,7 +123,7 @@ void testVdw() {
     expectedForces[4]     = Vec3(  0.735772031E+03, -0.353310112E+04,  0.490066356E+03);
     expectedForces[5]     = Vec3( -0.295245970E+02, -0.306277797E+02,  0.260578506E+02);
 
-    expectedEnergy        = 0.740688488E+03;
+    expectedEnergy        = 0.740688488e+3;
 
     system.addForce(amoebaVdwForce);
     #define AngstromToNm 0.1    
@@ -133,12 +135,12 @@ void testVdw() {
     }
     for (int ii = 0; ii < amoebaVdwForce->getNumParticles();  ii++) {
         int indexIV, type;
-        double sigma, epsilon, reduction;
+        double sigma, epsilon, reduction, scaleFactor;
         bool isAlchemical;
-        amoebaVdwForce->getParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical, type);
+        amoebaVdwForce->getParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical, type, scaleFactor);
         sigma        *= AngstromToNm;
         epsilon      *= CalToJoule;
-        amoebaVdwForce->setParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical, type);
+        amoebaVdwForce->setParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical, type, scaleFactor);
     }
     Context context(system, integrator, platform);
 
@@ -153,7 +155,7 @@ void testVdw() {
         forces[ii][2] *= conversion;
     }    
     expectedEnergy *= CalToJoule;
-    double tolerance = 1.0e-03;
+    double tolerance = 1.0e-3;
     for (unsigned int ii = 0; ii < forces.size(); ii++) {
         ASSERT_EQUAL_VEC(expectedForces[ii], forces[ii], tolerance);
     }
@@ -163,10 +165,10 @@ void testVdw() {
     
     for (int i = 0; i < numberOfParticles; i++) {
         int indexIV, type;
-        double mass, sigma, epsilon, reduction;
+        double mass, sigma, epsilon, reduction, scaleFactor;
         bool isAlchemical;
-        amoebaVdwForce->getParticleParameters(i, indexIV, sigma, epsilon, reduction, isAlchemical, type);
-        amoebaVdwForce->setParticleParameters(i, indexIV, 0.9*sigma, 2.0*epsilon, 0.95*reduction, isAlchemical, type);
+        amoebaVdwForce->getParticleParameters(i, indexIV, sigma, epsilon, reduction, isAlchemical, type, scaleFactor);
+        amoebaVdwForce->setParticleParameters(i, indexIV, 0.9*sigma, 2.0*epsilon, 0.95*reduction, isAlchemical, type, scaleFactor);
     }
     LangevinIntegrator integrator2(0.0, 0.1, 0.01);
     Context context2(system, integrator2, platform);
@@ -225,29 +227,29 @@ void setupAndGetForcesEnergyVdwAmmonia2(const std::string& sigmaCombiningRule, c
 
     // addParticle: ivIndex, radius, epsilon, reductionFactor
 
-    system.addParticle(  1.4007000e+01);
-    amoebaVdwForce->addParticle(0,   1.8550000e-01,   4.3932000e-01,   0.0000000e+00);
+    system.addParticle(1.4007e+1);
+    amoebaVdwForce->addParticle(0, 1.855e-1, 4.3932e-1, 0.0);
 
-    system.addParticle(  1.0080000e+00);
-    amoebaVdwForce->addParticle(0,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01);
+    system.addParticle(1.008);
+    amoebaVdwForce->addParticle(0, 1.35e-1, 8.368e-2, 9.10e-1);
 
-    system.addParticle(  1.0080000e+00);
-    amoebaVdwForce->addParticle(0,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01);
+    system.addParticle(1.008);
+    amoebaVdwForce->addParticle(0, 1.35e-1, 8.368e-2, 9.10e-1);
 
-    system.addParticle(  1.0080000e+00);
-    amoebaVdwForce->addParticle(0,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01);
+    system.addParticle(1.008);
+    amoebaVdwForce->addParticle(0, 1.35e-1, 8.368e-2, 9.10e-1);
 
-    system.addParticle(  1.4007000e+01);
-    amoebaVdwForce->addParticle(4,   1.8550000e-01,   4.3932000e-01,   0.0000000e+00, alchemical);
+    system.addParticle(1.4007e+1);
+    amoebaVdwForce->addParticle(4, 1.855e-1, 4.3932e-1, 0.00, alchemical);
 
-    system.addParticle(  1.0080000e+00);
-    amoebaVdwForce->addParticle(4,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01, alchemical);
+    system.addParticle(1.008);
+    amoebaVdwForce->addParticle(4, 1.35e-1, 8.368e-2, 9.10e-1, alchemical);
 
-    system.addParticle(  1.0080000e+00);
-    amoebaVdwForce->addParticle(4,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01, alchemical);
+    system.addParticle(1.008);
+    amoebaVdwForce->addParticle(4, 1.35e-1, 8.368e-2, 9.10e-1, alchemical);
 
-    system.addParticle(  1.0080000e+00);
-    amoebaVdwForce->addParticle(4,   1.3500000e-01,   8.3680000e-02,   9.1000000e-01, alchemical);
+    system.addParticle(1.008);
+    amoebaVdwForce->addParticle(4, 1.35e-1, 8.368e-2, 9.10e-1, alchemical);
 
     // ParticleExclusions
 
@@ -372,7 +374,7 @@ void testVdwAmmoniaCubicMeanHhg() {
     setupAndGetForcesEnergyVdwAmmonia("CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
-    double expectedEnergy     =  4.8012258e+00;
+    double expectedEnergy     =  4.8012258;
 
     expectedForces[0]         = Vec3(  2.9265247e+02,  -1.4507808e-02,  -6.9562123e+00);
     expectedForces[1]         = Vec3( -2.2451693e+00,   4.8143073e-01,  -2.0041494e-01);
@@ -383,7 +385,7 @@ void testVdwAmmoniaCubicMeanHhg() {
     expectedForces[6]         = Vec3( -2.3412420e+02,   1.0754069e-02,   7.6287492e+00);
     expectedForces[7]         = Vec3(  1.6756544e+00,   3.2497316e-01,  -1.7906832e-01);
 
-    double tolerance          = 1.0e-04;
+    double tolerance          = 1.0e-4;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
@@ -403,7 +405,7 @@ void testVdwAmmoniaCubicMeanWH() {
     setupAndGetForcesEnergyVdwAmmonia("CUBIC-MEAN", "W-H", cutoff, boxDimension, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
-    double expectedEnergy     =  3.771794e+00;
+    double expectedEnergy     =  3.771794;
 
     expectedForces[0]         = Vec3( 2.3979839e+02,  -1.1829842e-02,  -5.3258772e+00);
     expectedForces[1]         = Vec3(-1.9942459e+00,   4.3142144e-01,  -1.7290171e-01);
@@ -414,7 +416,7 @@ void testVdwAmmoniaCubicMeanWH() {
     expectedForces[6]         = Vec3(-1.8544507e+02,   8.4027272e-03,   6.0950274e+00);
     expectedForces[7]         = Vec3( 1.4159723e+00,   2.7168386e-01,  -1.5376786e-01);
 
-    double tolerance          = 1.0e-04;
+    double tolerance          = 1.0e-4;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
@@ -435,7 +437,7 @@ void testVdwAlchemical(int power, double alpha, double lambda, AmoebaVdwForce::A
                                       method, power, alpha, lambda);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
-    double expectedEnergy     =  4.8012258e+00;
+    double expectedEnergy     =  4.8012258;
     expectedForces[0]         = Vec3( 2.9265247e+02,  -1.4507808e-02,  -6.9562123e+00);
     expectedForces[1]         = Vec3(-2.2451693e+00,   4.8143073e-01,  -2.0041494e-01);
     expectedForces[2]         = Vec3(-2.2440698e+00,  -4.7905450e-01,  -2.0125284e-01);
@@ -451,7 +453,7 @@ void testVdwAlchemical(int power, double alpha, double lambda, AmoebaVdwForce::A
         expectedForces[i] *= scale;
     }
 
-    double tolerance          = 1.0e-04;
+    double tolerance          = 1.0e-4;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
@@ -470,7 +472,7 @@ void testVdwAmmoniaArithmeticArithmetic() {
     setupAndGetForcesEnergyVdwAmmonia("ARITHMETIC", "ARITHMETIC", cutoff, boxDimension, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
-    double expectedEnergy     =  4.2252403e+00;
+    double expectedEnergy     =  4.2252403;
 
     expectedForces[0]         = Vec3(  3.0603839e+02,  -1.5550310e-02,  -7.2661707e+00);
     expectedForces[1]         = Vec3( -2.7801357e+00,   5.8805051e-01,  -2.5907269e-01);
@@ -481,7 +483,7 @@ void testVdwAmmoniaArithmeticArithmetic() {
     expectedForces[6]         = Vec3( -2.4790697e+02,   1.1419770e-02,   8.0629999e+00);
     expectedForces[7]         = Vec3(  2.3761408e+00,   4.6871961e-01,  -2.4731607e-01);
 
-    double tolerance          = 1.0e-04;
+    double tolerance          = 1.0e-4;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
@@ -499,7 +501,7 @@ void testVdwAmmoniaGeometricGeometric() {
     setupAndGetForcesEnergyVdwAmmonia("GEOMETRIC", "GEOMETRIC", cutoff, boxDimension, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
-    double expectedEnergy     =  2.5249914e+00;
+    double expectedEnergy     =  2.5249914;
 
     expectedForces[0]         = Vec3(  2.1169631e+02,  -1.0710925e-02,  -4.3728025e+00);
     expectedForces[1]         = Vec3( -2.2585621e+00,   4.8409995e-01,  -2.0188344e-01);
@@ -510,7 +512,7 @@ void testVdwAmmoniaGeometricGeometric() {
     expectedForces[6]         = Vec3( -1.6078365e+02,   7.2117601e-03,   5.3180261e+00);
     expectedForces[7]         = Vec3(  1.8109211e+00,   3.5273117e-01,  -1.9224723e-01);
 
-    double tolerance          = 1.0e-04;
+    double tolerance          = 1.0e-4;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
@@ -526,7 +528,7 @@ void testVdwAmmoniaCubicMeanHarmonic() {
     setupAndGetForcesEnergyVdwAmmonia("CUBIC-MEAN", "HARMONIC", cutoff, boxDimension, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
-    double expectedEnergy     =  4.1369069e+00;
+    double expectedEnergy     =  4.1369069;
 
     expectedForces[0]         = Vec3(  2.5854436e+02,  -1.2779529e-02,  -5.9041148e+00);
     expectedForces[1]         = Vec3( -2.0832419e+00,   4.4915831e-01,  -1.8266000e-01);
@@ -537,7 +539,7 @@ void testVdwAmmoniaCubicMeanHarmonic() {
     expectedForces[6]         = Vec3( -2.0271029e+02,   9.2367947e-03,   6.6389988e+00);
     expectedForces[7]         = Vec3(  1.5080748e+00,   2.9058422e-01,  -1.6274118e-01);
 
-    double tolerance          = 1.0e-04;
+    double tolerance          = 1.0e-4;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
@@ -558,7 +560,7 @@ void testVdwTaper() {
     setupAndGetForcesEnergyVdwAmmonia("CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
-    double expectedEnergy     =  3.5478444e+00;
+    double expectedEnergy     =  3.5478444;
 
     expectedForces[0]         = Vec3(  5.6710779e+02,  -2.7391004e-02,  -1.7867730e+01);
     expectedForces[1]         = Vec3( -0.0000000e+00,  -0.0000000e+00,  -0.0000000e+00);
@@ -569,7 +571,7 @@ void testVdwTaper() {
     expectedForces[6]         = Vec3( -5.1606809e+02,   2.4925813e-02,   1.6259634e+01);
     expectedForces[7]         = Vec3( -0.0000000e+00,  -0.0000000e+00,  -0.0000000e+00);
 
-    double tolerance          = 1.0e-04;
+    double tolerance          = 1.0e-4;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
@@ -588,7 +590,7 @@ void testVdwPBC() {
     setupAndGetForcesEnergyVdwAmmonia("CUBIC-MEAN", "HHG", cutoff, boxDimension, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
-    double expectedEnergy     =  1.4949141e+01;
+    double expectedEnergy     =  1.4949141e+1;
 
     expectedForces[0]         = Vec3(  5.1453069e+02,   4.9751912e-01,  -1.2759570e+01);
     expectedForces[1]         = Vec3( -2.5622586e+02,  -4.6524265e+01,   2.4281465e+01);
@@ -600,9 +602,9 @@ void testVdwPBC() {
     expectedForces[7]         = Vec3(  1.1112638e+02,   3.7829857e-01,   1.5187587e+00);
 
     // tolerance is higher here due to interpolation used in setting tapering coefficients;
-    // if tapering turned off, then absolute difference < 2.0e-05
+    // if tapering turned off, then absolute difference < 2.0e-5
 
-    double tolerance          = 5.0e-04;
+    double tolerance          = 5.0e-4;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 }
 
@@ -627,24 +629,24 @@ void setupAndGetForcesEnergyVdwWater(const std::string& sigmaCombiningRule, cons
         system.setDefaultPeriodicBoxVectors(a, b, c);
         amoebaVdwForce->setNonbondedMethod(AmoebaVdwForce::CutoffPeriodic);
         amoebaVdwForce->setUseDispersionCorrection(includeVdwDispersionCorrection);
-    } else {
+    }
+    else {
         amoebaVdwForce->setNonbondedMethod(AmoebaVdwForce::NoCutoff);
         amoebaVdwForce->setUseDispersionCorrection(0);
     }
 
     // addParticle: ivIndex, radius, epsilon, reductionFactor
 
-    int classIndex = 0;
     for (unsigned int ii = 0; ii < numberOfParticles; ii += 3) {
 
-       system.addParticle(  1.5995000e+01);
-       amoebaVdwForce->addParticle(ii, 1.7025000e-01,   4.6024000e-01,   0.0000000e+00);
+       system.addParticle(1.5995e+1);
+       amoebaVdwForce->addParticle(ii, 1.7025e-1, 4.6024e-1, 0.0);
 
-       system.addParticle(  1.0080000e+00);
-       amoebaVdwForce->addParticle(ii, 1.3275000e-01,   5.6484000e-02,   9.1000000e-01);
+       system.addParticle(1.008);
+       amoebaVdwForce->addParticle(ii, 1.3275e-1, 5.6484e-2, 9.1e-1);
 
-       system.addParticle(  1.0080000e+00);
-       amoebaVdwForce->addParticle(ii, 1.3275000e-01,   5.6484000e-02,   9.1000000e-01);
+       system.addParticle(1.008);
+       amoebaVdwForce->addParticle(ii, 1.3275e-1, 5.6484e-2, 9.1e-1);
    }
 
     // exclusions
@@ -1331,11 +1333,10 @@ void testVdwWater(int includeVdwDispersionCorrection) {
 
 
     std::string testName;
-    if (includeVdwDispersionCorrection) {
-        testName      = "testVdwWaterWithDispersionCorrection";
-    } else {
-        testName      = "testVdwWater";
-    }
+    if (includeVdwDispersionCorrection)
+        testName = "testVdwWaterWithDispersionCorrection";
+    else
+        testName = "testVdwWater";
 
     int numberOfParticles     = 648;
     double boxDimension       = 1.8643;
@@ -1349,11 +1350,10 @@ void testVdwWater(int includeVdwDispersionCorrection) {
     // initialize expected energy and forces
 
     double expectedEnergy;
-    if (includeVdwDispersionCorrection) {
-        expectedEnergy     = 4.0108819792e+03;
-    } else {
-        expectedEnergy     = 4.0349101e+03;
-    }
+    if (includeVdwDispersionCorrection)
+        expectedEnergy     = 4.0108819792e+3;
+    else
+        expectedEnergy     = 4.0349101e+3;
 
     expectedForces[0]         = Vec3(  2.3025909e+02,  -1.0422757e+01,  -2.1413965e+02);
     expectedForces[1]         = Vec3(  1.1261936e+02,   5.5882575e+02,   9.6539143e+01);
@@ -2005,9 +2005,9 @@ void testVdwWater(int includeVdwDispersionCorrection) {
     expectedForces[647]       = Vec3(  2.0868628e+02,   2.9747206e+02,   3.3931416e+02);
 
     // tolerance is higher here due to interpolation used in setting tapering coefficients;
-    // if tapering turned off, then absolute difference < 2.0e-05
+    // if tapering turned off, then absolute difference < 2.0e-5
 
-    double tolerance          = 5.0e-04;
+    double tolerance          = 5.0e-4;
     compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
 
     // test sigma/epsilon rules for dispersion correction
@@ -2020,15 +2020,15 @@ void testVdwWater(int includeVdwDispersionCorrection) {
 
          sigmaRules.push_back("ARITHMETIC");
          epsilonRules.push_back("ARITHMETIC");
-         expectedEnergies.push_back(6.2137988e+03);
+         expectedEnergies.push_back(6.2137988e+3);
 
          sigmaRules.push_back("GEOMETRIC");
          epsilonRules.push_back("GEOMETRIC");
-         expectedEnergies.push_back( 3.6358216e+03);
+         expectedEnergies.push_back(3.6358216e+3);
 
          sigmaRules.push_back("CUBIC-MEAN");
          epsilonRules.push_back("HARMONIC");
-         expectedEnergies.push_back(3.2774624e+03);
+         expectedEnergies.push_back(3.2774624e+3);
 
          for (unsigned int ii = 0; ii < sigmaRules.size(); ii++) {
              setupAndGetForcesEnergyVdwWater(sigmaRules[ii], epsilonRules[ii], cutoff, boxDimension, includeVdwDispersionCorrection, forces, energy);

@@ -7,7 +7,7 @@
     real tempForce = 0.0f;
     float2 pairSigmaEpsilon = sigmaEpsilon[atomType1+atomType2*NUM_TYPES];
     real sigma = pairSigmaEpsilon.x;
-    real epsilon = pairSigmaEpsilon.y;
+    real epsilon = pairSigmaEpsilon.y * scaleFactor1 * scaleFactor2;
     real softcore = 0.0f;
 #if VDW_ALCHEMICAL_METHOD == 1
     if (isAlchemical1 != isAlchemical2) { 

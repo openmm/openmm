@@ -1,4 +1,4 @@
-enum {VelScale, NoiseScale};
+enum {VelScale, NoiseScale, MaxParams};
 
 /**
  * Perform the first part of integration: velocity step.
@@ -87,4 +87,57 @@ KERNEL void integrateLangevinMiddlePart3(int numAtoms, GLOBAL real4* RESTRICT po
 #endif
         }
     }
+}
+
+/**
+ * Select the step size to use for the next step.
+ */
+
+KERNEL void selectLangevinStepSize(int numAtoms, int paddedNumAtoms, mixed maxStepSize, mixed errorTol, mixed friction, mixed kT, GLOBAL mixed2* RESTRICT dt,
+        GLOBAL const mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force, GLOBAL mixed* RESTRICT paramBuffer) {
+    // Calculate the error.
+
+    LOCAL mixed error[256];
+    LOCAL mixed params[MaxParams];
+    mixed err = 0;
+    const mixed scale = RECIP((mixed) 0x100000000);
+    for (int index = LOCAL_ID; index < numAtoms; index += LOCAL_SIZE) {
+        mixed3 f = make_mixed3(scale*force[index], scale*force[index+paddedNumAtoms], scale*force[index+paddedNumAtoms*2]);
+        mixed invMass = velm[index].w;
+        err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass*invMass;
+    }
+    error[LOCAL_ID] = err;
+    SYNC_THREADS;
+
+    // Sum the errors from all threads.
+
+    for (unsigned int offset = 1; offset < LOCAL_SIZE; offset *= 2) {
+        if (LOCAL_ID+offset < LOCAL_SIZE && (LOCAL_ID&(2*offset-1)) == 0)
+            error[LOCAL_ID] += error[LOCAL_ID+offset];
+        SYNC_THREADS;
+    }
+    if (GLOBAL_ID == 0) {
+        // Select the new step size.
+
+        mixed totalError = SQRT(error[0]/(numAtoms*3));
+        mixed newStepSize = SQRT(errorTol/totalError);
+        mixed oldStepSize = dt[0].y;
+        if (oldStepSize > 0.0f)
+            newStepSize = min(newStepSize, oldStepSize*2.0f); // For safety, limit how quickly dt can increase.
+        if (newStepSize > oldStepSize && newStepSize < 1.1f*oldStepSize)
+            newStepSize = oldStepSize; // Keeping dt constant between steps improves the behavior of the integrator.
+        if (newStepSize > maxStepSize)
+            newStepSize = maxStepSize;
+        dt[0].y = newStepSize;
+
+        // Recalculate the integration parameters.
+
+        mixed vscale = exp(-newStepSize*friction);
+        mixed noisescale = sqrt(kT*(1-vscale*vscale));
+        params[VelScale] = vscale;
+        params[NoiseScale] = noisescale;
+    }
+    SYNC_THREADS;
+    if (LOCAL_ID < MaxParams)
+        paramBuffer[LOCAL_ID] = params[LOCAL_ID];
 }

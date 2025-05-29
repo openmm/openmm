@@ -12,8 +12,6 @@
 #   libOpenMMRPMD_static.a
 #----------------------------------------------------
 
-#INCLUDE(Dart)
-
 # ----------------------------------------------------------------------------
 SET(CREATE_SERIALIZABLE_OPENMM_RPMD FALSE )
 # ----------------------------------------------------------------------------
@@ -129,6 +127,15 @@ ENDIF(OPENMM_BUILD_CUDA_LIB)
 IF(OPENMM_BUILD_RPMD_CUDA_LIB)
     ADD_SUBDIRECTORY(platforms/cuda)
 ENDIF(OPENMM_BUILD_RPMD_CUDA_LIB)
+
+IF(OPENMM_BUILD_HIP_LIB)
+    SET(OPENMM_BUILD_RPMD_HIP_LIB ON CACHE BOOL "Build RPMD implementation for HIP")
+ELSE(OPENMM_BUILD_HIP_LIB)
+    SET(OPENMM_BUILD_RPMD_HIP_LIB OFF CACHE BOOL "Build RPMD implementation for HIP")
+ENDIF(OPENMM_BUILD_HIP_LIB)
+IF(OPENMM_BUILD_RPMD_HIP_LIB)
+    ADD_SUBDIRECTORY(platforms/hip)
+ENDIF(OPENMM_BUILD_RPMD_HIP_LIB)
 
 INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib ${SHARED_RPMD_TARGET})
 IF( CREATE_SERIALIZABLE_OPENMM_RPMD )

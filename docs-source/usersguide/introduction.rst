@@ -34,10 +34,12 @@ Referencing OpenMM
 
 Any work that uses OpenMM should cite the following publication:
 
-P. Eastman, J. Swails, J. D. Chodera, R. T. McGibbon, Y. Zhao, K. A. Beauchamp,
-L.-P. Wang, A. C. Simmonett, M. P. Harrigan, C. D. Stern, R. P. Wiewiora,
-B. R. Brooks, and V. S. Pande. "OpenMM 7: Rapid development of high performance
-algorithms for molecular dynamics." PLOS Comp. Biol. 13(7): e1005659. (2017)
+P. Eastman, R. Galvelis, R. P. Peláez, C. R. A. Abreu, S. E. Farr, E. Gallicchio,
+A. Gorenko, M. M. Henry, F. Hu, J. Huang, A. Krämer, J. Michel, J. A. Mitchell,
+V. S. Pande, J. PGLM Rodrigues, J. Rodriguez-Guerra, A. C. Simmonett, S. Singh,
+J. Swails, P. Turner, Y. Wang, I. Zhang, J. D. Chodera, G. De Fabritiis, and
+T. E. Markland. "OpenMM 8: Molecular Dynamics Simulation with Machine Learning
+Potentials." J. Phys. Chem. B 128(1), pp. 109-116 (2023).
 
 We depend on academic research grants to fund the OpenMM development efforts;
 citations of our publication will help demonstrate the value of OpenMM.

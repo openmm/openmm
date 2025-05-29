@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -49,12 +49,12 @@
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/CustomManyParticleForce.h"
 #include "openmm/CustomTorsionForce.h"
+#include "openmm/DPDIntegrator.h"
 #include "openmm/GayBerneForce.h"
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/KernelImpl.h"
-#include "openmm/LangevinIntegrator.h"
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/RBTorsionForce.h"
@@ -324,8 +324,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the HarmonicBondForce to copy the parameters from
+     * @param firstBond  the index of the first bond whose parameters might have changed
+     * @param lastBond   the index of the last bond whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force, int firstBond, int lastBond) = 0;
 };
 
 /**
@@ -359,8 +361,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomBondForce to copy the parameters from
+     * @param firstBond  the index of the first bond whose parameters might have changed
+     * @param lastBond   the index of the last bond whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const CustomBondForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const CustomBondForce& force, int firstBond, int lastBond) = 0;
 };
 
 /**
@@ -394,8 +398,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the HarmonicAngleForce to copy the parameters from
+     * @param firstAngle the index of the first bond whose parameters might have changed
+     * @param lastAngle  the index of the last bond whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force, int firstAngle, int lastAngle) = 0;
 };
 
 /**
@@ -429,8 +435,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomAngleForce to copy the parameters from
+     * @param firstAngle the index of the first bond whose parameters might have changed
+     * @param lastAngle  the index of the last bond whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force, int firstAngle, int lastAngle) = 0;
 };
 
 /**
@@ -462,10 +470,12 @@ public:
     /**
      * Copy changed parameters over to a context.
      *
-     * @param context    the context to copy parameters to
-     * @param force      the PeriodicTorsionForce to copy the parameters from
+     * @param context      the context to copy parameters to
+     * @param force        the PeriodicTorsionForce to copy the parameters from
+     * @param firstTorsion the index of the first torsion whose parameters might have changed
+     * @param lastTorsion  the index of the last torsion whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force, int firstTorsion, int lastTorsion) = 0;
 };
 
 /**
@@ -567,10 +577,12 @@ public:
     /**
      * Copy changed parameters over to a context.
      *
-     * @param context    the context to copy parameters to
-     * @param force      the CustomTorsionForce to copy the parameters from
+     * @param context      the context to copy parameters to
+     * @param force        the CustomTorsionForce to copy the parameters from
+     * @param firstTorsion the index of the first torsion whose parameters might have changed
+     * @param lastTorsion  the index of the last torsion whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force, int firstTorsion, int lastTorsion) = 0;
 };
 
 /**
@@ -612,10 +624,14 @@ public:
     /**
      * Copy changed parameters over to a context.
      *
-     * @param context    the context to copy parameters to
-     * @param force      the NonbondedForce to copy the parameters from
+     * @param context        the context to copy parameters to
+     * @param force          the NonbondedForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
+     * @param firstException the index of the first exception whose parameters might have changed
+     * @param lastException  the index of the last exception whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const NonbondedForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) = 0;
     /**
      * Get the parameters being used for PME.
      *
@@ -672,8 +688,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomNonbondedForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle) = 0;
 };
 
 /**
@@ -780,10 +798,12 @@ public:
     /**
      * Copy changed parameters over to a context.
      *
-     * @param context    the context to copy parameters to
-     * @param force      the CustomExternalForce to copy the parameters from
+     * @param context        the context to copy parameters to
+     * @param force          the CustomExternalForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force, int firstParticle, int lastParticle) = 0;
 };
 
 /**
@@ -1105,10 +1125,8 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      * @param integrator the NoseHooverIntegrator this kernel is being used for
-     * @param forcesAreValid a reference to the parent integrator's boolean for keeping
-     *                       track of the validity of the current forces.
      */
-    virtual void execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid) = 0;
+    virtual void execute(ContextImpl& context, const NoseHooverIntegrator& integrator) = 0;
     /**
      * Compute the kinetic energy.
      * 
@@ -1175,39 +1193,6 @@ public:
      * @param velocities    element [i][j] contains the velocity of bead j for chain i
      */
     virtual void setChainStates(ContextImpl& context, const std::vector<std::vector<double> >& positions, const std::vector<std::vector<double> >& velocities) = 0;
-};
-
-/**
- * This kernel is invoked by LangevinIntegrator to take one time step.
- */
-class IntegrateLangevinStepKernel : public KernelImpl {
-public:
-    static std::string Name() {
-        return "IntegrateLangevinStep";
-    }
-    IntegrateLangevinStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
-    }
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param integrator the LangevinIntegrator this kernel will be used for
-     */
-    virtual void initialize(const System& system, const LangevinIntegrator& integrator) = 0;
-    /**
-     * Execute the kernel.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the LangevinIntegrator this kernel is being used for
-     */
-    virtual void execute(ContextImpl& context, const LangevinIntegrator& integrator) = 0;
-    /**
-     * Compute the kinetic energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the LangevinIntegrator this kernel is being used for
-     */
-    virtual double computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) = 0;
 };
 
 /**
@@ -1418,6 +1403,39 @@ public:
 };
 
 /**
+ * This kernel is invoked by DPDIntegrator to take one time step.
+ */
+class IntegrateDPDStepKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "IntegrateDPDStep";
+    }
+    IntegrateDPDStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the DPDIntegrator this kernel will be used for
+     */
+    virtual void initialize(const System& system, const DPDIntegrator& integrator) = 0;
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the DPDIntegrator this kernel is being used for
+     */
+    virtual void execute(ContextImpl& context, const DPDIntegrator& integrator) = 0;
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the DPDIntegrator this kernel is being used for
+     */
+    virtual double computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator) = 0;
+};
+
+/**
  * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
  */
 class ApplyAndersenThermostatKernel : public KernelImpl {
@@ -1458,8 +1476,10 @@ public:
      * @param system          the System this kernel will be applied to
      * @param barostat        the MonteCarloBarostat this kernel will be used for
      * @param rigidMolecules  whether molecules should be kept rigid while scaling coordinates
+     * @param components      the number of box components the barostat operates one (1 for isotropic scaling,
+     *                        3 for anisotropic, 6 for both lengths and angles)
      */
-    virtual void initialize(const System& system, const Force& barostat, bool rigidMolecules=true) = 0;
+    virtual void initialize(const System& system, const Force& barostat, int components, bool rigidMolecules=true) = 0;
     /**
      * Save the coordinates before attempting a Monte Carlo step.  This allows us to restore them
      * if the step is rejected.
@@ -1487,6 +1507,16 @@ public:
      * @param context    the context in which to execute this kernel
      */
     virtual void restoreCoordinates(ContextImpl& context) = 0;
+    /**
+     * Compute the kinetic energy of the system.  If initialize() was called with rigidMolecules=true, this
+     * should include only the translational center of mass motion of molecules.  Otherwise it should include
+     * the total kinetic energy of all particles.  This is used when computing instantaneous pressure.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param ke         a vector to store the kinetic energy components into.  On output, its length will
+     *                   equal the number of components passed to initialize().
+     */
+    virtual void computeKineticEnergy(ContextImpl& context, std::vector<double>& ke) = 0;
 };
 
 /**

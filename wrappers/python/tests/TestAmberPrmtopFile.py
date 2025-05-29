@@ -7,6 +7,7 @@ from openmm import *
 from openmm.unit import *
 import openmm.app.element as elem
 
+inpcrd1 = AmberInpcrdFile('systems/alanine-dipeptide-explicit.inpcrd')
 inpcrd3 = AmberInpcrdFile('systems/ff14ipq.rst7')
 inpcrd4 = AmberInpcrdFile('systems/Mg_water.inpcrd')
 inpcrd7 = AmberInpcrdFile('systems/18protein.rst7')
@@ -177,7 +178,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         integrator = VerletIntegrator(1.0*femtoseconds)
         # Use reference platform, since it should always be present and
         # 'working', and the system is plenty small so this won't be too slow
-        sim = Simulation(prmtop3.topology, system, integrator, Platform.getPlatformByName('Reference'))
+        sim = Simulation(prmtop3.topology, system, integrator, Platform.getPlatform('Reference'))
         # Check that the energy is about what we expect it to be
         sim.context.setPositions(inpcrd3.positions)
         ene = sim.context.getState(getEnergy=True, enforcePeriodicBox=True).getPotentialEnergy()
@@ -207,7 +208,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         integrator = VerletIntegrator(1.0*femtoseconds)
         # Use reference platform, since it should always be present and
         # 'working', and the system is plenty small so this won't be too slow
-        sim = Simulation(prmtop3.topology, system, integrator, Platform.getPlatformByName('Reference'))
+        sim = Simulation(prmtop3.topology, system, integrator, Platform.getPlatform('Reference'))
         # Check that the energy is about what we expect it to be
         sim.context.setPositions(inpcrd3.getPositions())
         ene = sim.context.getState(getEnergy=True, enforcePeriodicBox=True).getPotentialEnergy()
@@ -265,7 +266,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         integrator = VerletIntegrator(1.0*femtoseconds)
         # Use reference platform, since it should always be present and
         # 'working', and the system is plenty small so this won't be too slow
-        sim = Simulation(prmtop4.topology, system, integrator, Platform.getPlatformByName('Reference'))
+        sim = Simulation(prmtop4.topology, system, integrator, Platform.getPlatform('Reference'))
         # Check that the energy is about what we expect it to be
         sim.context.setPositions(inpcrd4.positions)
         ene = sim.context.getState(getEnergy=True, enforcePeriodicBox=True).getPotentialEnergy()
@@ -310,7 +311,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         for i in range(5):
             system = prmtop2.createSystem(implicitSolvent=solventType[i], nonbondedMethod=nonbondedMethod[i], implicitSolventSaltConc=salt[i])
             integrator = VerletIntegrator(0.001)
-            context = Context(system, integrator, Platform.getPlatformByName("Reference"))
+            context = Context(system, integrator, Platform.getPlatform("Reference"))
             context.setPositions(pdb.positions)
             state1 = context.getState(getForces=True)
             with open('systems/alanine-dipeptide-implicit-forces/'+file[i]+'.xml') as infile:
@@ -380,7 +381,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         for i,f in enumerate(system.getForces()):
             f.setForceGroup(i)
         integrator = VerletIntegrator(0.001)
-        context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+        context = Context(system, integrator, Platform.getPlatform('Reference'))
         context.setPositions(crd.positions)
         
         # Compare to energies computed with pytraj.energy_decomposition()
@@ -422,7 +423,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
                 if isinstance(f, CustomGBForce) or isinstance(f, GBSAOBCForce):
                     f.setForceGroup(1)
             integrator = VerletIntegrator(0.001)
-            context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+            context = Context(system, integrator, Platform.getPlatform('Reference'))
             context.setPositions(inpcrd.positions)
             energy = context.getState(getEnergy=True, groups={1}).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
             self.assertAlmostEqual(energy, expectedEnergy, delta=5e-4*abs(energy))
@@ -460,7 +461,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
             system = prmtop.createSystem(constraints=constraints)
             integrator = VerletIntegrator(0.001*picoseconds)
             # If a constraint was added to a massless particle, this will throw an exception.
-            context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+            context = Context(system, integrator, Platform.getPlatform('Reference'))
 
     def testWaterBonds(self):
         """Test that water molecules have the right set of bonds"""
@@ -472,6 +473,28 @@ class TestAmberPrmtopFile(unittest.TestCase):
                 for a1, a2 in bonds:
                     self.assertTrue(a1.element == elem.oxygen or a2.element == elem.oxygen)
                     self.assertTrue(a1.element == elem.hydrogen or a2.element == elem.hydrogen)
+
+    def testFlexibleConstraints(self):
+        """Test the flexibleConstraints option"""
+        energies = {}
+        forces = {}
+        for flexibleConstraints in [False, True]:
+            system = prmtop1.createSystem(nonbondedMethod=PME, constraints=HAngles, flexibleConstraints=flexibleConstraints)
+            for i, f in enumerate(system.getForces()):
+                f.setForceGroup(i)
+            integrator = VerletIntegrator(1.0*femtoseconds)
+            sim = Simulation(prmtop1.topology, system, integrator, Platform.getPlatform('Reference'))
+            sim.context.setPositions(inpcrd1.positions)
+            energies[flexibleConstraints] = {}
+            for i, f in enumerate(system.getForces()):
+                forces[i] = f
+                energies[flexibleConstraints][i] = sim.context.getState(getEnergy=True, groups={i}).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        for i, f in forces.items():
+            delta = 1e-5*abs(energies[True][i])
+            if isinstance(f, HarmonicBondForce) or isinstance(f, HarmonicAngleForce):
+                self.assertNotAlmostEqual(energies[True][i], energies[False][i], delta=delta)
+            else:
+                self.assertAlmostEqual(energies[True][i], energies[False][i], delta=delta)
 
 if __name__ == '__main__':
     unittest.main()

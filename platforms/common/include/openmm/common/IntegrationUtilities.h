@@ -145,7 +145,7 @@ protected:
     ComputeKernel ccmaDirectionsKernel, ccmaPosForceKernel, ccmaVelForceKernel;
     ComputeKernel ccmaMultiplyKernel, ccmaUpdateKernel, ccmaFullKernel;
     ComputeKernel vsitePositionKernel, vsiteForceKernel, vsiteSaveForcesKernel;
-    ComputeKernel randomKernel, timeShiftKernel;
+    ComputeKernel randomKernel, timeShiftKernel, kineticEnergyKernel;
     ComputeArray posDelta;
     ComputeArray settleAtoms;
     ComputeArray settleParams;
@@ -171,7 +171,9 @@ protected:
     ComputeArray vsiteLocalCoordsIndex, vsiteLocalCoordsAtoms, vsiteLocalCoordsWeights;
     ComputeArray vsiteLocalCoordsPos, vsiteLocalCoordsStartIndex;
     ComputeArray vsiteSymmetryAtoms, vsiteSymmetryMatrix, vsiteSymmetryOffset, vsiteSymmetryUseBox;
-    int randomPos, lastSeed, numVsites;
+    ComputeArray vsiteStage;
+    ComputeArray kineticEnergy;
+    int randomPos, lastSeed, numVsites, numVsiteStages, keWorkGroupSize;
     bool hasOverlappingVsites;
     mm_double2 lastStepSize;
     struct ShakeCluster;

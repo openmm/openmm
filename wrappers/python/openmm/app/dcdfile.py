@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012 Stanford University and the Authors.
+Portions copyright (c) 2012-2025 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -84,18 +84,23 @@ class DCDFile(object):
         if topology.getUnitCellDimensions() is not None:
             boxFlag = 1
         if append:
-            file.seek(8, os.SEEK_SET)
+            file.seek(0, os.SEEK_SET)
+            headerMagic = file.read(8)
+            if headerMagic[4:8] != b'CORD' or struct.unpack('<i', headerMagic[:4])[0] != 84:
+                raise ValueError('Cannot append to file with invalid DCD header')
             self._modelCount = struct.unpack('<i', file.read(4))[0]
-            file.seek(268, os.SEEK_SET)
+            file.seek(92, os.SEEK_SET)
+            commentsBytes = struct.unpack('<i', file.read(4))[0]
+            file.seek(104 + commentsBytes, os.SEEK_SET)
             numAtoms = struct.unpack('<i', file.read(4))[0]
-            if numAtoms != len(list(topology.atoms())):
-                raise ValueError('Cannot append to a DCD file that contains a different number of atoms')
+            if numAtoms != topology.getNumAtoms():
+                raise ValueError(f'Cannot append from system with {topology.getNumAtoms()} atoms to DCD file with {numAtoms} atoms')
         else:
             header = struct.pack('<i4c9if', 84, b'C', b'O', b'R', b'D', 0, firstStep, interval, 0, 0, 0, 0, 0, 0, dt)
-            header += struct.pack('<13i', boxFlag, 0, 0, 0, 0, 0, 0, 0, 0, 21, 84, 164, 2)
+            header += struct.pack('<13i', boxFlag, 0, 0, 0, 0, 0, 0, 0, 0, 24, 84, 164, 2)
             header += struct.pack('<80s', b'Created by OpenMM')
             header += struct.pack('<80s', b'Created '+time.asctime(time.localtime(time.time())).encode('ascii'))
-            header += struct.pack('<4i', 164, 4, len(list(topology.atoms())), 4)
+            header += struct.pack('<4i', 164, 4, topology.getNumAtoms(), 4)
             file.write(header)
 
     def writeModel(self, positions, unitCellDimensions=None, periodicBoxVectors=None):
@@ -122,6 +127,7 @@ class DCDFile(object):
         if is_quantity(positions):
             positions = positions.value_in_unit(nanometers)
         import numpy as np
+        positions = np.asarray(positions)
         if np.isnan(positions).any():
             raise ValueError('Particle position is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan')
         if np.isinf(positions).any():
@@ -144,8 +150,7 @@ class DCDFile(object):
         file.seek(8, os.SEEK_SET)
         file.write(struct.pack('<i', self._modelCount))
         file.seek(20, os.SEEK_SET)
-        file.write(struct.pack('<i', self._firstStep+self._modelCount*self._interval))
-
+        file.write(struct.pack('<i', self._firstStep+(self._modelCount-1)*self._interval))
         # Write the data.
 
         file.seek(0, os.SEEK_END)

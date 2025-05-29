@@ -27,6 +27,7 @@
 
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceDynamics.h"
+#include "openmm/OpenMMException.h"
 
 #include <cstdio>
 
@@ -45,11 +46,10 @@ using namespace OpenMM;
    --------------------------------------------------------------------------------------- */
 
 ReferenceDynamics::ReferenceDynamics(int numberOfAtoms,  double deltaT, double temperature) : 
-                  _numberOfAtoms(numberOfAtoms), _deltaT(deltaT), _temperature(temperature) {
+                  _numberOfAtoms(numberOfAtoms), _deltaT(deltaT), _temperature(temperature), virtualSites(NULL) {
 
    _timeStep = 0;
-   _ownReferenceConstraint = false;
-   _referenceConstraint    = NULL;
+   _referenceConstraint = NULL;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -59,9 +59,6 @@ ReferenceDynamics::ReferenceDynamics(int numberOfAtoms,  double deltaT, double t
    --------------------------------------------------------------------------------------- */
 
 ReferenceDynamics::~ReferenceDynamics() {
-   if (_ownReferenceConstraint) {
-      delete _referenceConstraint;
-   }
 }
 
 /**---------------------------------------------------------------------------------------
@@ -136,6 +133,16 @@ double ReferenceDynamics::getTemperature() const {
 
 /**---------------------------------------------------------------------------------------
 
+   Set the temperature
+
+   --------------------------------------------------------------------------------------- */
+
+void ReferenceDynamics::setTemperature(double temperature) {
+    _temperature = temperature;
+}
+
+/**---------------------------------------------------------------------------------------
+
    Get ReferenceConstraint
 
    @return ReferenceConstraint  object
@@ -155,14 +162,7 @@ ReferenceConstraintAlgorithm* ReferenceDynamics::getReferenceConstraintAlgorithm
    --------------------------------------------------------------------------------------- */
 
 void ReferenceDynamics::setReferenceConstraintAlgorithm(ReferenceConstraintAlgorithm* referenceConstraint) {
-   // delete if own
-
-   if (_referenceConstraint && _ownReferenceConstraint) {
-      delete _referenceConstraint;
-   }
-
    _referenceConstraint = referenceConstraint;
-   _ownReferenceConstraint = 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -181,4 +181,14 @@ void ReferenceDynamics::setReferenceConstraintAlgorithm(ReferenceConstraintAlgor
 
 void ReferenceDynamics::update(const OpenMM::System& system, vector<Vec3>& atomCoordinates,
                                vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& masses, double tolerance) {
+}
+
+const ReferenceVirtualSites& ReferenceDynamics::getVirtualSites() const {
+    if (virtualSites == NULL)
+        throw OpenMMException("ReferenceVirtualSites has not been set");
+    return *virtualSites;
+}
+
+void ReferenceDynamics::setVirtualSites(const ReferenceVirtualSites& sites) {
+    virtualSites = &sites;
 }

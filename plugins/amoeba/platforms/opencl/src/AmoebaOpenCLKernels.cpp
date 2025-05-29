@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Mark Friedrichs                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,61 +30,15 @@ using namespace OpenMM;
 using namespace std;
 
 /* -------------------------------------------------------------------------- *
- *                             AmoebaMultipole                                *
- * -------------------------------------------------------------------------- */
-
-OpenCLCalcAmoebaMultipoleForceKernel::~OpenCLCalcAmoebaMultipoleForceKernel() {
-    if (fft != NULL)
-        delete fft;
-}
-
-void OpenCLCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
-    CommonCalcAmoebaMultipoleForceKernel::initialize(system, force);
-    if (usePME)
-        fft = new OpenCLFFT3D(dynamic_cast<OpenCLContext&>(cc), gridSizeX, gridSizeY, gridSizeZ, false);
-}
-
-void OpenCLCalcAmoebaMultipoleForceKernel::computeFFT(bool forward) {
-    OpenCLArray& grid1 = dynamic_cast<OpenCLContext&>(cc).unwrap(pmeGrid1);
-    OpenCLArray& grid2 = dynamic_cast<OpenCLContext&>(cc).unwrap(pmeGrid2);
-    if (forward)
-        fft->execFFT(grid1, grid2, true);
-    else
-        fft->execFFT(grid2, grid1, false);
-}
-
-/* -------------------------------------------------------------------------- *
  *                           HippoNonbondedForce                              *
  * -------------------------------------------------------------------------- */
-
-OpenCLCalcHippoNonbondedForceKernel::~OpenCLCalcHippoNonbondedForceKernel() {
-    if (sort != NULL)
-        delete sort;
-    if (hasInitializedFFT) {
-        delete fftForward;
-        delete dfftForward;
-    }
-}
 
 void OpenCLCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
     CommonCalcHippoNonbondedForceKernel::initialize(system, force);
     if (usePME) {
         OpenCLContext& cl = dynamic_cast<OpenCLContext&>(cc);
-        sort = new OpenCLSort(cl, new SortTrait(), cc.getNumAtoms());
-        fftForward = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ, true);
-        dfftForward = new OpenCLFFT3D(cl, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
-        hasInitializedFFT = true;
+        sort = cl.createSort(new SortTrait(), cc.getNumAtoms());
     }
-}
-
-void OpenCLCalcHippoNonbondedForceKernel::computeFFT(bool forward, bool dispersion) {
-    OpenCLArray& grid1 = dynamic_cast<OpenCLContext&>(cc).unwrap(pmeGrid1);
-    OpenCLArray& grid2 = dynamic_cast<OpenCLContext&>(cc).unwrap(pmeGrid2);
-    OpenCLFFT3D* fft = (dispersion ? dfftForward : fftForward);
-    if (forward)
-        fft->execFFT(grid1, grid2, true);
-    else
-        fft->execFFT(grid2, grid1, false);
 }
 
 void OpenCLCalcHippoNonbondedForceKernel::sortGridIndex() {

@@ -811,12 +811,17 @@ KERNEL void computeVirtualSites(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTR
         GLOBAL const int* RESTRICT localCoordsStartIndex, GLOBAL const int2* RESTRICT symmetryAtoms,
         GLOBAL const real4* RESTRICT symmetryMatrix, GLOBAL const real4* RESTRICT symmetryOffset,
         GLOBAL const int* RESTRICT symmetryUseBox, real4 periodicBoxVecX, real4 periodicBoxVecY,
-        real4 periodicBoxVecZ, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
+        real4 periodicBoxVecZ, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ,
+        GLOBAL const int* RESTRICT vsiteStage, int currentStage) {
     
     // Two particle average sites.
     
     for (int index = GLOBAL_ID; index < NUM_2_AVERAGE; index += GLOBAL_SIZE) {
         int4 atoms = avg2Atoms[index];
+#ifdef MULTIPLE_VSITE_STAGES
+        if (vsiteStage[atoms.x] != currentStage)
+            continue;
+#endif
         real2 weights = avg2Weights[index];
         mixed4 pos = loadPos(posq, posqCorrection, atoms.x);
         mixed4 pos1 = loadPos(posq, posqCorrection, atoms.y);
@@ -831,6 +836,10 @@ KERNEL void computeVirtualSites(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTR
     
     for (int index = GLOBAL_ID; index < NUM_3_AVERAGE; index += GLOBAL_SIZE) {
         int4 atoms = avg3Atoms[index];
+#ifdef MULTIPLE_VSITE_STAGES
+        if (vsiteStage[atoms.x] != currentStage)
+            continue;
+#endif
         real4 weights = avg3Weights[index];
         mixed4 pos = loadPos(posq, posqCorrection, atoms.x);
         mixed4 pos1 = loadPos(posq, posqCorrection, atoms.y);
@@ -846,6 +855,10 @@ KERNEL void computeVirtualSites(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTR
     
     for (int index = GLOBAL_ID; index < NUM_OUT_OF_PLANE; index += GLOBAL_SIZE) {
         int4 atoms = outOfPlaneAtoms[index];
+#ifdef MULTIPLE_VSITE_STAGES
+        if (vsiteStage[atoms.x] != currentStage)
+            continue;
+#endif
         real4 weights = outOfPlaneWeights[index];
         mixed4 pos = loadPos(posq, posqCorrection, atoms.x);
         mixed4 pos1 = loadPos(posq, posqCorrection, atoms.y);
@@ -864,6 +877,10 @@ KERNEL void computeVirtualSites(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTR
     
     for (int index = GLOBAL_ID; index < NUM_LOCAL_COORDS; index += GLOBAL_SIZE) {
         int siteAtomIndex = localCoordsIndex[index];
+#ifdef MULTIPLE_VSITE_STAGES
+        if (vsiteStage[siteAtomIndex] != currentStage)
+            continue;
+#endif
         int start = localCoordsStartIndex[index];
         int end = localCoordsStartIndex[index+1];
         mixed3 origin = make_mixed3(0), xdir = make_mixed3(0), ydir = make_mixed3(0);
@@ -948,12 +965,17 @@ KERNEL void distributeVirtualSiteForces(GLOBAL const real4* RESTRICT posq, GLOBA
         GLOBAL const int* RESTRICT localCoordsStartIndex, GLOBAL const int2* RESTRICT symmetryAtoms,
         GLOBAL const real4* RESTRICT symmetryMatrix, GLOBAL const real4* RESTRICT symmetryOffset,
         GLOBAL const int* RESTRICT symmetryUseBox, real4 periodicBoxVecX, real4 periodicBoxVecY,
-        real4 periodicBoxVecZ, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
+        real4 periodicBoxVecZ, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ,
+        GLOBAL const int* RESTRICT vsiteStage, int currentStage) {
     
     // Two particle average sites.
     
     for (int index = GLOBAL_ID; index < NUM_2_AVERAGE; index += GLOBAL_SIZE) {
         int4 atoms = avg2Atoms[index];
+#ifdef MULTIPLE_VSITE_STAGES
+        if (vsiteStage[atoms.x] != currentStage)
+            continue;
+#endif
         real2 weights = avg2Weights[index];
         real3 f = loadForce(atoms.x, force);
         addForce(atoms.y, force, f*weights.x);
@@ -964,6 +986,10 @@ KERNEL void distributeVirtualSiteForces(GLOBAL const real4* RESTRICT posq, GLOBA
     
     for (int index = GLOBAL_ID; index < NUM_3_AVERAGE; index += GLOBAL_SIZE) {
         int4 atoms = avg3Atoms[index];
+#ifdef MULTIPLE_VSITE_STAGES
+        if (vsiteStage[atoms.x] != currentStage)
+            continue;
+#endif
         real4 weights = avg3Weights[index];
         real3 f = loadForce(atoms.x, force);
         addForce(atoms.y, force, f*weights.x);
@@ -975,6 +1001,10 @@ KERNEL void distributeVirtualSiteForces(GLOBAL const real4* RESTRICT posq, GLOBA
     
     for (int index = GLOBAL_ID; index < NUM_OUT_OF_PLANE; index += GLOBAL_SIZE) {
         int4 atoms = outOfPlaneAtoms[index];
+#ifdef MULTIPLE_VSITE_STAGES
+        if (vsiteStage[atoms.x] != currentStage)
+            continue;
+#endif
         real4 weights = outOfPlaneWeights[index];
         mixed4 pos1 = loadPos(posq, posqCorrection, atoms.y);
         mixed4 pos2 = loadPos(posq, posqCorrection, atoms.z);
@@ -997,6 +1027,10 @@ KERNEL void distributeVirtualSiteForces(GLOBAL const real4* RESTRICT posq, GLOBA
     
     for (int index = GLOBAL_ID; index < NUM_LOCAL_COORDS; index += GLOBAL_SIZE) {
         int siteAtomIndex = localCoordsIndex[index];
+#ifdef MULTIPLE_VSITE_STAGES
+        if (vsiteStage[siteAtomIndex] != currentStage)
+            continue;
+#endif
         int start = localCoordsStartIndex[index];
         int end = localCoordsStartIndex[index+1];
         mixed3 origin = make_mixed3(0), xdir = make_mixed3(0), ydir = make_mixed3(0);
@@ -1099,4 +1133,25 @@ KERNEL void timeShiftVelocities(GLOBAL mixed4* RESTRICT velm, GLOBAL const mm_lo
             velm[index] = velocity;
         }
     }
+}
+
+/**
+ * Compute the total kinetic energy.
+ */
+KERNEL void computeKineticEnergy(GLOBAL mixed4* RESTRICT velm, GLOBAL mixed* result) {
+    LOCAL mixed tempBuffer[KE_WORK_GROUP_SIZE];
+    mixed sum = 0;
+    for (unsigned int index = LOCAL_ID; index < NUM_ATOMS; index += LOCAL_SIZE) {
+        mixed4 v = velm[index];
+        if (v.w != 0)
+            sum += (v.x*v.x+v.y*v.y+v.z*v.z)/v.w;
+    }
+    tempBuffer[LOCAL_ID] = sum;
+    for (int i = 1; i < KE_WORK_GROUP_SIZE; i *= 2) {
+        SYNC_THREADS;
+        if (LOCAL_ID%(i*2) == 0 && LOCAL_ID+i < KE_WORK_GROUP_SIZE)
+            tempBuffer[LOCAL_ID] += tempBuffer[LOCAL_ID+i];
+    }
+    if (LOCAL_ID == 0)
+        *result = 0.5f*tempBuffer[0];
 }

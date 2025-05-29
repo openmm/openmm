@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.s      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.s      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -118,6 +118,49 @@ void testPeriodic() {
     ASSERT_EQUAL_VEC(Vec3(2*torque, 0, 0), forces[0], TOL);
     ASSERT_EQUAL_VEC(Vec3(0, -torque, 0), forces[2], TOL);
     ASSERT_EQUAL_TOL(0.5*1.1*(PI_M/6)*(PI_M/6), state.getPotentialEnergy(), TOL);
+}
+
+void testParallelComputation() {
+    System system;
+    const int numParticles = 200;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    HarmonicAngleForce* force = new HarmonicAngleForce();
+    for (int i = 2; i < numParticles; i++)
+        force->addAngle(i-2, i-1, i, 1.1, i);
+    system.addForce(force);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        positions[i] = Vec3(i, i%2, 0);
+    VerletIntegrator integrator1(0.01);
+    Context context1(system, integrator1, platform);
+    context1.setPositions(positions);
+    State state1 = context1.getState(State::Forces | State::Energy);
+    VerletIntegrator integrator2(0.01);
+    string deviceIndex = platform.getPropertyValue(context1, "DeviceIndex");
+    map<string, string> props;
+    props["DeviceIndex"] = deviceIndex+","+deviceIndex;
+    Context context2(system, integrator2, platform, props);
+    context2.setPositions(positions);
+    State state2 = context2.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
+
+    // Try updating some parameters and see if they still match.
+
+    for (int i = 95; i < 102; i++) {
+        int p1, p2, p3;
+        double angle, k;
+        force->getAngleParameters(i, p1, p2, p3, angle, k);
+        force->setAngleParameters(i, p1, p2, p3, angle+0.1, 2*k);
+    }
+    force->updateParametersInContext(context1);
+    force->updateParametersInContext(context2);
+    State state3 = context1.getState(State::Energy);
+    State state4 = context2.getState(State::Energy);
+    ASSERT_EQUAL_TOL(state3.getPotentialEnergy(), state4.getPotentialEnergy(), 1e-5);
+    ASSERT(fabs(state1.getPotentialEnergy()-state3.getPotentialEnergy()) > 0.1);
 }
 
 void runPlatformTests();

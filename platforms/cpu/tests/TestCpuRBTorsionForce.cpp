@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,7 +32,7 @@
 #include "CpuTests.h"
 #include "TestRBTorsionForce.h"
 
-void testParallelComputation() {
+void testLargeSystem() {
     System system;
     const int numParticles = 200;
     for (int i = 0; i < numParticles; i++)
@@ -59,5 +59,5 @@ void testParallelComputation() {
 }
 
 void runPlatformTests() {
-    testParallelComputation();
+    testLargeSystem();
 }

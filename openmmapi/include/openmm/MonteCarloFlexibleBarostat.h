@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Sander Vandenhaute                                 *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,6 +34,7 @@
 
 #include "Force.h"
 #include <string>
+#include <vector>
 #include "internal/windowsExport.h"
 
 namespace OpenMM {
@@ -172,6 +173,25 @@ public:
     void setScaleMoleculesAsRigid(bool rigid) {
         scaleMoleculesAsRigid = rigid;
     }
+    /**
+     * Compute the instantaneous pressure of a system to which this barostat is applied.
+     * All six non-zero components of the pressure tensor are computed, where each one
+     * corresponds to the derivative of the energy with respect to an element of the
+     * matrix of box vectors.
+     * 
+     * The pressure is computed from the molecular virial if getScaleMoleculesAsRigid()
+     * is true, or the atomic virial if it is false.  It uses a finite difference to
+     * calculate the derivative of potential energy with respect to volume.  For most systems
+     * in equilibrium, the time average of the instantaneous pressure should equal the
+     * pressure applied by the barostat.  Fluctuations around the average value can be
+     * extremely large, however, and it may take a very long simulation to accurately
+     * compute the average.
+     * 
+     * @param context    the Context for which to compute the current pressure
+     * @param pressure   on exit, this will contain the six non-zero elements of the
+     *                   pressure tensor in the order (XX, YY, ZZ, XY, XZ, YZ)
+     */
+    void computeCurrentPressure(Context& context, std::vector<double>& pressure) const;
 protected:
     ForceImpl* createImpl() const;
 private:

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -57,7 +57,7 @@ static void* threadBody(void* args) {
     ThreadPool::ThreadData& data = *reinterpret_cast<ThreadPool::ThreadData*>(args);
     while (true) {
         // Wait for the signal to start running.
-        
+
         data.owner.syncThreads();
         if (data.isDeleted)
             break;
@@ -71,34 +71,26 @@ ThreadPool::ThreadPool(int numThreads) : currentTask(NULL) {
     if (numThreads <= 0)
         numThreads = getNumProcessors();
     this->numThreads = numThreads;
-    pthread_cond_init(&startCondition, NULL);
-    pthread_cond_init(&endCondition, NULL);
-    pthread_mutex_init(&lock, NULL);
-    thread.resize(numThreads);
-    pthread_mutex_lock(&lock);
+    unique_lock<mutex> ul(lock);
     waitCount = 0;
     for (int i = 0; i < numThreads; i++) {
         ThreadData* data = new ThreadData(*this, i);
         data->isDeleted = false;
         threadData.push_back(data);
-        pthread_create(&thread[i], NULL, threadBody, data);
+        threads.push_back(thread(threadBody, data));
     }
     while (waitCount < numThreads)
-        pthread_cond_wait(&endCondition, &lock);
-    pthread_mutex_unlock(&lock);
+        endCondition.wait(ul);
 }
 
 ThreadPool::~ThreadPool() {
     for (auto data : threadData)
         data->isDeleted = true;
-    pthread_mutex_lock(&lock);
-    pthread_cond_broadcast(&startCondition);
-    pthread_mutex_unlock(&lock);
-    for (auto t : thread)
-        pthread_join(t, NULL);
-    pthread_mutex_destroy(&lock);
-    pthread_cond_destroy(&startCondition);
-    pthread_cond_destroy(&endCondition);
+    lock.lock();
+    startCondition.notify_all();
+    lock.unlock();
+    for (auto &t : threads)
+        t.join();
 }
 
 int ThreadPool::getNumThreads() const {
@@ -117,25 +109,22 @@ void ThreadPool::execute(function<void (ThreadPool&, int)> task) {
 }
 
 void ThreadPool::syncThreads() {
-    pthread_mutex_lock(&lock);
+    unique_lock<mutex> ul(lock);
     waitCount++;
-    pthread_cond_signal(&endCondition);
-    pthread_cond_wait(&startCondition, &lock);
-    pthread_mutex_unlock(&lock);
+    endCondition.notify_one();
+    startCondition.wait(ul);
 }
 
 void ThreadPool::waitForThreads() {
-    pthread_mutex_lock(&lock);
+    unique_lock<mutex> ul(lock);
     while (waitCount < numThreads)
-        pthread_cond_wait(&endCondition, &lock);
-    pthread_mutex_unlock(&lock);
+        endCondition.wait(ul);
 }
 
 void ThreadPool::resumeThreads() {
-    pthread_mutex_lock(&lock);
+    unique_lock<mutex> ul(lock);
     waitCount = 0;
-    pthread_cond_broadcast(&startCondition);
-    pthread_mutex_unlock(&lock);
+    startCondition.notify_all();
 }
 
 } // namespace OpenMM

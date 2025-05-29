@@ -42,46 +42,70 @@ AmoebaGeneralizedKirkwoodForceProxy::AmoebaGeneralizedKirkwoodForceProxy() : Ser
 }
 
 void AmoebaGeneralizedKirkwoodForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 2);
+    node.setIntProperty("version", 3);
     const AmoebaGeneralizedKirkwoodForce& force = *reinterpret_cast<const AmoebaGeneralizedKirkwoodForce*>(object);
 
     node.setIntProperty("forceGroup", force.getForceGroup());
     node.setStringProperty("name", force.getName());
     node.setDoubleProperty("GeneralizedKirkwoodSolventDielectric", force.getSolventDielectric());
     node.setDoubleProperty("GeneralizedKirkwoodSoluteDielectric",  force.getSoluteDielectric());
-    //node.setDoubleProperty("GeneralizedKirkwoodDielectricOffset",  force.getDielectricOffset());
+    node.setDoubleProperty("GeneralizedKirkwoodDielectricOffset",  force.getDielectricOffset());
     node.setDoubleProperty("GeneralizedKirkwoodProbeRadius",       force.getProbeRadius());
     node.setDoubleProperty("GeneralizedKirkwoodSurfaceAreaFactor", force.getSurfaceAreaFactor());
     node.setIntProperty(  "GeneralizedKirkwoodIncludeCavityTerm", force.getIncludeCavityTerm());
-
+    node.setBoolProperty("GeneralizedKirkwoodTanhRescaling", force.getTanhRescaling());
+    double b0, b1, b2;
+    force.getTanhParameters(b0, b1, b2);
+    node.setDoubleProperty("GeneralizedKirkwoodTanhB0", b0);
+    node.setDoubleProperty("GeneralizedKirkwoodTanhB1", b1);
+    node.setDoubleProperty("GeneralizedKirkwoodTanhB2", b2);
+    node.setDoubleProperty("GeneralizedKirkwoodDescreenOffset", force.getDescreenOffset());
     SerializationNode& particles = node.createChildNode("GeneralizedKirkwoodParticles");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumParticles()); ii++) {
-        double radius, charge, scalingFactor;
-        force.getParticleParameters(ii, charge, radius, scalingFactor);
-        particles.createChildNode("Particle").setDoubleProperty("charge", charge).setDoubleProperty("radius", radius).setDoubleProperty("scaleFactor", scalingFactor);
+        double radius, charge, scalingFactor, descreenRadius, neckFactor;
+        force.getParticleParameters(ii, charge, radius, scalingFactor, descreenRadius, neckFactor);
+        particles.createChildNode("Particle").setDoubleProperty("charge", charge).setDoubleProperty("radius", radius).setDoubleProperty("scaleFactor", scalingFactor).setDoubleProperty("descreenRadius", descreenRadius).setDoubleProperty("neckFactor", neckFactor);
     }
 
 }
 
 void* AmoebaGeneralizedKirkwoodForceProxy::deserialize(const SerializationNode& node) const {
     int version = node.getIntProperty("version");
-    if (version < 1 || version > 2)
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     AmoebaGeneralizedKirkwoodForce* force = new AmoebaGeneralizedKirkwoodForce();
     try {
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setName(node.getStringProperty("name", force->getName()));
-        force->setSolventDielectric(  node.getDoubleProperty("GeneralizedKirkwoodSolventDielectric"));
-        force->setSoluteDielectric(   node.getDoubleProperty("GeneralizedKirkwoodSoluteDielectric"));
-        //force->setDielectricOffset(   node.getDoubleProperty("GeneralizedKirkwoodDielectricOffset"));
-        force->setProbeRadius(        node.getDoubleProperty("GeneralizedKirkwoodProbeRadius"));
-        force->setSurfaceAreaFactor(  node.getDoubleProperty("GeneralizedKirkwoodSurfaceAreaFactor"));
-        force->setIncludeCavityTerm(  node.getIntProperty(   "GeneralizedKirkwoodIncludeCavityTerm"));
+        force->setSolventDielectric(node.getDoubleProperty("GeneralizedKirkwoodSolventDielectric"));
+        force->setSoluteDielectric(node.getDoubleProperty("GeneralizedKirkwoodSoluteDielectric"));
+        force->setProbeRadius(node.getDoubleProperty("GeneralizedKirkwoodProbeRadius"));
+        force->setSurfaceAreaFactor(node.getDoubleProperty("GeneralizedKirkwoodSurfaceAreaFactor"));
+        force->setIncludeCavityTerm(node.getIntProperty("GeneralizedKirkwoodIncludeCavityTerm"));
+        if (version > 2) {
+            force->setDielectricOffset(node.getDoubleProperty("GeneralizedKirkwoodDielectricOffset"));
+            force->setTanhRescaling(node.getBoolProperty("GeneralizedKirkwoodTanhRescaling"));
+            double b0 = node.getDoubleProperty("GeneralizedKirkwoodTanhB0");
+            double b1 = node.getDoubleProperty("GeneralizedKirkwoodTanhB1");
+            double b2 = node.getDoubleProperty("GeneralizedKirkwoodTanhB2");
+            force->setTanhParameters(b0, b1, b2);
+            force->setDescreenOffset(node.getDoubleProperty("GeneralizedKirkwoodDescreenOffset"));
+
+        }
 
         const SerializationNode& particles = node.getChildNode("GeneralizedKirkwoodParticles");
         for (unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {
             const SerializationNode& particle = particles.getChildren()[ii];
-            force->addParticle(particle.getDoubleProperty("charge"), particle.getDoubleProperty("radius"), particle.getDoubleProperty("scaleFactor"));
+            double charge = particle.getDoubleProperty("charge");
+            double radius = particle.getDoubleProperty("radius");
+            double scaleFactor = particle.getDoubleProperty("scaleFactor");
+            double descreenRadius = radius;
+            double neckFactor = 0.0;
+            if (version > 2) {
+                descreenRadius = particle.getDoubleProperty("descreenRadius");
+                neckFactor = particle.getDoubleProperty("neckFactor");
+            }
+            force->addParticle(charge, radius, scaleFactor, descreenRadius, neckFactor);
         }
     }
     catch (...) {

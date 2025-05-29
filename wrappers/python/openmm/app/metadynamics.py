@@ -172,7 +172,7 @@ class Metadynamics(object):
             simulation.step(nextSteps)
             if simulation.currentStep % self.frequency == 0:
                 position = self._force.getCollectiveVariableValues(simulation.context)
-                energy = simulation.context.getState(getEnergy=True, groups={forceGroup}).getPotentialEnergy()
+                energy = simulation.context.getState(energy=True, groups={forceGroup}).getPotentialEnergy()
                 height = self.height*np.exp(-energy/(unit.MOLAR_GAS_CONSTANT_R*self._deltaT))
                 self._addGaussian(position, height, simulation.context)
             if self.saveFrequency is not None and simulation.currentStep % self.saveFrequency == 0:
@@ -244,7 +244,7 @@ class Metadynamics(object):
         # Check for any files updated by other processes.
 
         fileLoaded = False
-        pattern = re.compile('bias_(.*)_(.*)\.npy')
+        pattern = re.compile(r'bias_(.*)_(.*)\.npy')
         for filename in os.listdir(self.biasDir):
             match = pattern.match(filename)
             if match is not None:

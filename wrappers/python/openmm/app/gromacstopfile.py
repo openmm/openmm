@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2023 Stanford University and the Authors.
+Portions copyright (c) 2012-2024 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -527,7 +527,7 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 7:
             raise ValueError('Too few fields in [ virtual_sites3 ] line: ' + line)
-        if fields[4] != '1':
+        if fields[4] not in ('1', '4'):
             raise ValueError('Unsupported function type in [ virtual_sites3 ] line: '+line)
         self._currentMoleculeType.vsites3.append(fields)
 
@@ -1079,9 +1079,16 @@ class GromacsTopFile(object):
                     sys.setVirtualSite(baseAtomIndex+atoms[0], vsite)
                 for fields in moleculeType.vsites3:
                     atoms = [int(x)-1 for x in fields[:4]]
+                    vsiteType = fields[4]
                     c1 = float(fields[5])
                     c2 = float(fields[6])
-                    vsite = mm.ThreeParticleAverageSite(baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], 1-c1-c2, c1, c2)
+                    if vsiteType == '1':
+                        vsite = mm.ThreeParticleAverageSite(baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], 1-c1-c2, c1, c2)
+                    elif vsiteType == '4':
+                        c3 = float(fields[7])
+                        vsite = mm.OutOfPlaneSite(baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], c1, c2, c3)
+                    else:
+                        raise ValueError('Internal error: vsites3 has unexpected type: '+vsiteType)
                     sys.setVirtualSite(baseAtomIndex+atoms[0], vsite)
 
                 # Add explicitly specified constraints.

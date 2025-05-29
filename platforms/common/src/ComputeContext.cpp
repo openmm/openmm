@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2019-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,6 +35,7 @@
 #include <cmath>
 #include <set>
 #include <sstream>
+#include <unordered_set>
 #include <utility>
 
 using namespace OpenMM;
@@ -44,13 +45,23 @@ const int ComputeContext::ThreadBlockSize = 64;
 const int ComputeContext::TileSize = 32;
 
 ComputeContext::ComputeContext(const System& system) : system(system), time(0.0), stepCount(0), computeForceCount(0), stepsSinceReorder(99999),
-        forceNextReorder(false), atomsWereReordered(false), forcesValid(false), thread(NULL) {
-    thread = new WorkThread();
+        forceNextReorder(false), atomsWereReordered(false), forcesValid(false) {
+    workThread = new WorkThread();
 }
 
 ComputeContext::~ComputeContext() {
-    if (thread != NULL)
-        delete thread;
+}
+
+ComputeQueue ComputeContext::getCurrentQueue() {
+    return currentQueue;
+}
+
+void ComputeContext::setCurrentQueue(ComputeQueue queue) {
+    currentQueue = queue;
+}
+
+void ComputeContext::restoreDefaultQueue() {
+    currentQueue = defaultQueue;
 }
 
 void ComputeContext::addForce(ComputeForceInfo* force) {
@@ -226,24 +237,27 @@ void ComputeContext::findMoleculeGroups() {
 
         // First make a list of every other atom to which each atom is connect by a constraint or force group.
 
-        vector<vector<int> > atomBonds(system.getNumParticles());
+        vector<unordered_set<int> > atomBondSets(system.getNumParticles());
         for (int i = 0; i < system.getNumConstraints(); i++) {
             int particle1, particle2;
             double distance;
             system.getConstraintParameters(i, particle1, particle2, distance);
-            atomBonds[particle1].push_back(particle2);
-            atomBonds[particle2].push_back(particle1);
+            atomBondSets[particle1].insert(particle2);
+            atomBondSets[particle2].insert(particle1);
         }
         for (auto force : forces) {
+            vector<int> particles;
             for (int j = 0; j < force->getNumParticleGroups(); j++) {
-                vector<int> particles;
                 force->getParticlesInGroup(j, particles);
-                for (int k = 0; k < (int) particles.size(); k++)
-                    for (int m = 0; m < (int) particles.size(); m++)
-                        if (k != m)
-                            atomBonds[particles[k]].push_back(particles[m]);
+                for (int k = 1; k < (int) particles.size(); k++) {
+                    atomBondSets[particles[k]].insert(particles[k-1]);
+                    atomBondSets[particles[k-1]].insert(particles[k]);
+                }
             }
         }
+        vector<vector<int> > atomBonds(system.getNumParticles());
+        for (int i = 0; i < system.getNumParticles(); i++)
+            atomBonds[i].insert(atomBonds[i].begin(), atomBondSets[i].begin(),atomBondSets[i].end());
 
         // Now identify atoms by which molecule they belong to.
 
@@ -267,13 +281,14 @@ void ComputeContext::findMoleculeGroups() {
             system.getConstraintParameters(i, particle1, particle2, distance);
             molecules[atomMolecule[particle1]].constraints.push_back(i);
         }
-        for (int i = 0; i < (int) forces.size(); i++)
+        for (int i = 0; i < (int) forces.size(); i++) {
+            vector<int> particles;
             for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
-                vector<int> particles;
                 forces[i]->getParticlesInGroup(j, particles);
                 if (particles.size() > 0)
                     molecules[atomMolecule[particles[0]]].groups[i].push_back(j);
             }
+        }
     }
 
     // Sort them into groups of identical molecules.
@@ -318,10 +333,10 @@ void ComputeContext::findMoleculeGroups() {
             for (int i = 0; i < (int) forces.size() && identical; i++) {
                 if (mol.groups[i].size() != mol2.groups[i].size())
                     identical = false;
+                vector<int> p1, p2;
                 for (int k = 0; k < (int) mol.groups[i].size() && identical; k++) {
                     if (!forces[i]->areGroupsIdentical(mol.groups[i][k], mol2.groups[i][k]))
                         identical = false;
-                    vector<int> p1, p2;
                     forces[i]->getParticlesInGroup(mol.groups[i][k], p1);
                     forces[i]->getParticlesInGroup(mol2.groups[i][k], p2);
                     for (int m = 0; m < p1.size(); m++)
@@ -361,7 +376,7 @@ void ComputeContext::invalidateMolecules() {
             return;
 }
 
-bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
+bool ComputeContext::invalidateMolecules(ComputeForceInfo* force, bool checkAtoms, bool checkGroups) {
     if (numAtoms == 0 || !getNonbondedUtilities().getUseCutoff())
         return false;
     bool valid = true;
@@ -385,15 +400,17 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
                 // See if the atoms are identical.
 
                 Molecule& m2 = molecules[instances[j]];
-                int offset2 = offsets[j];
-                for (int i = 0; i < (int) atoms.size() && valid; i++) {
-                    if (!force->areParticlesIdentical(atoms[i]+offset1, atoms[i]+offset2))
-                        valid = false;
+                if (checkAtoms) {
+                    int offset2 = offsets[j];
+                    for (int i = 0; i < (int) atoms.size() && valid; i++) {
+                        if (!force->areParticlesIdentical(atoms[i]+offset1, atoms[i]+offset2))
+                            valid = false;
+                    }
                 }
 
                 // See if the force groups are identical.
 
-                if (valid && forceIndex > -1) {
+                if (valid && forceIndex > -1 && checkGroups) {
                     for (int k = 0; k < (int) m1.groups[forceIndex].size() && valid; k++)
                         if (!force->areGroupsIdentical(m1.groups[forceIndex][k], m2.groups[forceIndex][k]))
                             valid = false;
@@ -718,7 +735,7 @@ int ComputeContext::findLegalFFTDimension(int minimum) {
 
 struct ComputeContext::WorkThread::ThreadData {
     ThreadData(std::queue<ComputeContext::WorkTask*>& tasks, bool& waiting,  bool& finished, bool& threwException, OpenMMException& stashedException,
-            pthread_mutex_t& queueLock, pthread_cond_t& waitForTaskCondition, pthread_cond_t& queueEmptyCondition) :
+            mutex& queueLock, condition_variable& waitForTaskCondition, condition_variable& queueEmptyCondition) :
         tasks(tasks), waiting(waiting), finished(finished), threwException(threwException), stashedException(stashedException),
         queueLock(queueLock), waitForTaskCondition(waitForTaskCondition), queueEmptyCondition(queueEmptyCondition) {
     }
@@ -727,32 +744,33 @@ struct ComputeContext::WorkThread::ThreadData {
     bool& finished;
     bool& threwException;
     OpenMMException& stashedException;
-    pthread_mutex_t& queueLock;
-    pthread_cond_t& waitForTaskCondition;
-    pthread_cond_t& queueEmptyCondition;
+    mutex& queueLock;
+    condition_variable& waitForTaskCondition;
+    condition_variable& queueEmptyCondition;
 };
 
 static void* threadBody(void* args) {
     ComputeContext::WorkThread::ThreadData& data = *reinterpret_cast<ComputeContext::WorkThread::ThreadData*>(args);
     while (!data.finished || data.tasks.size() > 0) {
-        pthread_mutex_lock(&data.queueLock);
-        while (data.tasks.empty() && !data.finished) {
-            data.waiting = true;
-            pthread_cond_signal(&data.queueEmptyCondition);
-            pthread_cond_wait(&data.waitForTaskCondition, &data.queueLock);
-        }
-        // If we keep going after having caught an exception once, next tasks will likely throw too and we don't want the initial exception overshadowed.
-        while (data.threwException && !data.tasks.empty()) {
-            delete data.tasks.front();
-            data.tasks.pop();
-        }
         ComputeContext::WorkTask* task = NULL;
-        if (!data.tasks.empty()) {
-            data.waiting = false;
-            task = data.tasks.front();
-            data.tasks.pop();
+        {
+            unique_lock<mutex> lock(data.queueLock);
+            while (data.tasks.empty() && !data.finished) {
+                data.waiting = true;
+                data.queueEmptyCondition.notify_one();
+                data.waitForTaskCondition.wait(lock);
+            }
+            // If we keep going after having caught an exception once, next tasks will likely throw too and we don't want the initial exception overshadowed.
+            while (data.threwException && !data.tasks.empty()) {
+                delete data.tasks.front();
+                data.tasks.pop();
+            }
+            if (!data.tasks.empty()) {
+                data.waiting = false;
+                task = data.tasks.front();
+                data.tasks.pop();
+            }
         }
-        pthread_mutex_unlock(&data.queueLock);
         if (task != NULL) {
             try {
                 task->execute();
@@ -765,36 +783,29 @@ static void* threadBody(void* args) {
         }
     }
     data.waiting = true;
-    pthread_cond_signal(&data.queueEmptyCondition);
+    data.queueEmptyCondition.notify_one();
     delete &data;
     return 0;
 }
 
 ComputeContext::WorkThread::WorkThread() : waiting(true), finished(false), threwException(false), stashedException("Default WorkThread exception. This should never be thrown.") {
-    pthread_mutex_init(&queueLock, NULL);
-    pthread_cond_init(&waitForTaskCondition, NULL);
-    pthread_cond_init(&queueEmptyCondition, NULL);
     ThreadData* data = new ThreadData(tasks, waiting, finished, threwException, stashedException, queueLock, waitForTaskCondition, queueEmptyCondition);
-    pthread_create(&thread, NULL, threadBody, data);
+    workThread = thread(threadBody, data);
 }
 
 ComputeContext::WorkThread::~WorkThread() {
-    pthread_mutex_lock(&queueLock);
+    queueLock.lock();
     finished = true;
-    pthread_cond_broadcast(&waitForTaskCondition);
-    pthread_mutex_unlock(&queueLock);
-    pthread_join(thread, NULL);
-    pthread_mutex_destroy(&queueLock);
-    pthread_cond_destroy(&waitForTaskCondition);
-    pthread_cond_destroy(&queueEmptyCondition);
+    waitForTaskCondition.notify_all();
+    queueLock.unlock();
+    workThread.join();
 }
 
 void ComputeContext::WorkThread::addTask(ComputeContext::WorkTask* task) {
-    pthread_mutex_lock(&queueLock);
+    unique_lock<mutex> lock(queueLock);
     tasks.push(task);
     waiting = false;
-    pthread_cond_signal(&waitForTaskCondition);
-    pthread_mutex_unlock(&queueLock);
+    waitForTaskCondition.notify_one();
 }
 
 bool ComputeContext::WorkThread::isWaiting() {
@@ -806,14 +817,15 @@ bool ComputeContext::WorkThread::isFinished() {
 }
 
 bool ComputeContext::WorkThread::isCurrentThread() {
-    return (pthread_self() == thread);
+    return (this_thread::get_id() == workThread.get_id());
 }
 
 void ComputeContext::WorkThread::flush() {
-    pthread_mutex_lock(&queueLock);
-    while (!waiting)
-       pthread_cond_wait(&queueEmptyCondition, &queueLock);
-    pthread_mutex_unlock(&queueLock);
+    {
+        unique_lock<mutex> lock(queueLock);
+        while (!waiting)
+            queueEmptyCondition.wait(lock);
+    }
     if (threwException) {
         threwException = false;
         throw stashedException;

@@ -62,16 +62,9 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     
     // Check for errors in virtual sites and massless particles.
     
-    for (int i = 0; i < numParticles; i++) {
-        if (system.isVirtualSite(i)) {
-            if (system.getParticleMass(i) != 0.0)
-                throw OpenMMException("Virtual site has nonzero mass");
-            const VirtualSite& site = system.getVirtualSite(i);
-            for (int j = 0; j < site.getNumParticles(); j++)
-                if (system.isVirtualSite(site.getParticle(j)))
-                    throw OpenMMException("A virtual site cannot depend on another virtual site");
-        }
-    }
+    for (int i = 0; i < numParticles; i++)
+        if (system.isVirtualSite(i) && system.getParticleMass(i) != 0.0)
+            throw OpenMMException("Virtual site has nonzero mass");
     set<pair<int, int> > constraintAtoms;
     for (int i = 0; i < system.getNumConstraints(); i++) {
         int particle1, particle2;

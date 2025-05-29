@@ -135,6 +135,7 @@ private:
     std::vector<std::vector<double> > epsilonMatrix;
     std::vector<int> indexIVs;
     std::vector<double> reductions;
+    std::vector<double> scaleFactors;
     std::vector<bool> isAlchemical;
     std::vector<std::set<int> > allExclusions;
     Vec3 _periodicBoxVectors[3];

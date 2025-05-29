@@ -128,9 +128,10 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     from setuptools import Extension
     setupKeywords = {}
     setupKeywords["name"]              = "OpenMM"
-    setupKeywords["version"]           = "%s.%s.%s" % (major_version_num,
+    setupKeywords["version"]           = "%s.%s.%s%s" % (major_version_num,
                                                        minor_version_num,
-                                                       build_info)
+                                                       build_info,
+                                                       os.getenv('VERSION_SUFFIX', ''))
     setupKeywords["author"]            = "Peter Eastman"
     setupKeywords["license"]           = \
     "Python Software Foundation License (BSD-like)"
@@ -152,8 +153,9 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                                           "openmm.app.internal.pdbx.writer"]
     setupKeywords["data_files"]        = []
     setupKeywords["package_data"]      = {"openmm" : [],
-                                          "openmm.app" : ['data/*.xml', 'data/*.pdb', 'data/amber14/*.xml', 'data/charmm36/*.xml', 'data/implicit/*.xml'],
+                                          "openmm.app" : ['data/*.xml', 'data/*.pdb', 'data/amber14/*.xml', 'data/amber19/*.xml', 'data/charmm36/*.xml', 'data/implicit/*.xml'],
                                           "openmm.app.internal" : []}
+    setupKeywords["install_requires"]  = ["numpy"]
     setupKeywords["platforms"]         = ["Linux", "Mac OS X", "Windows"]
     setupKeywords["description"]       = \
     "Python wrapper for OpenMM (a C++ MD package)"

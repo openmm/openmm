@@ -12,7 +12,7 @@ Context constructor:
 
 .. code-block:: c
 
-    Platform& platform = Platform::getPlatformByName("OpenCL");
+    Platform& platform = Platform::getPlatform("OpenCL");
     map<string, string> properties;
     properties["DeviceIndex"] = "1";
     Context context(system, integrator, platform, properties);
@@ -105,6 +105,12 @@ values.  For example,
     properties["DeviceIndex"] = "0,1";
 
 This tells it to use both devices 0 and 1, splitting the work between them.
+
+HIP Platform
+************
+
+The HIP Platform recognizes exactly the same Platform-specific properties as
+the CUDA platform.
 
 CPU Platform
 ************

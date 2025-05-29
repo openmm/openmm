@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,11 +40,9 @@
 #include <utility>
 
 using namespace OpenMM;
-using std::string;
-using std::stringstream;
-using std::vector;
+using namespace std;
 
-CustomBondForce::CustomBondForce(const string& energy) : energyExpression(energy), usePeriodic(false) {
+CustomBondForce::CustomBondForce(const string& energy) : energyExpression(energy), usePeriodic(false), numContexts(0) {
 }
 
 const string& CustomBondForce::getEnergyFunction() const {
@@ -126,14 +124,30 @@ void CustomBondForce::setBondParameters(int index, int particle1, int particle2,
     bonds[index].parameters = parameters;
     bonds[index].particle1 = particle1;
     bonds[index].particle2 = particle2;
+    if (numContexts > 0) {
+        firstChangedBond = min(index, firstChangedBond);
+        lastChangedBond = max(index, lastChangedBond);
+    }
 }
 
 ForceImpl* CustomBondForce::createImpl() const {
+    if (numContexts == 0) {
+        // Begin tracking changes to bonds.
+        firstChangedBond = bonds.size();
+        lastChangedBond = -1;
+    }
+    numContexts++;
     return new CustomBondForceImpl(*this);
 }
 
 void CustomBondForce::updateParametersInContext(Context& context) {
-    dynamic_cast<CustomBondForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+    dynamic_cast<CustomBondForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context), firstChangedBond, lastChangedBond);
+    if (numContexts == 1) {
+        // We just updated the only existing context for this force, so we can reset
+        // the tracking of changed bonds.
+        firstChangedBond = bonds.size();
+        lastChangedBond = -1;
+    }
 }
 
 void CustomBondForce::setUsesPeriodicBoundaryConditions(bool periodic) {

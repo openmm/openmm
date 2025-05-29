@@ -9,27 +9,30 @@
     def getIntegrator(self):
         return self._integrator
 
-    def getState(self, getPositions=False, getVelocities=False,
+    def getState(self, positions=False, velocities=False,
+                 forces=False, energy=False, parameters=False,
+                 parameterDerivatives=False, integratorParameters=False,
+                 enforcePeriodicBox=False, groups=-1,
+                 getPositions=False, getVelocities=False,
                  getForces=False, getEnergy=False, getParameters=False,
-                 getParameterDerivatives=False, getIntegratorParameters=False,
-                 enforcePeriodicBox=False, groups=-1):
+                 getParameterDerivatives=False, getIntegratorParameters=False):
         """Get a State object recording the current state information stored in this context.
 
         Parameters
         ----------
-        getPositions : bool=False
+        positions : bool=False
             whether to store particle positions in the State
-        getVelocities : bool=False
+        velocities : bool=False
             whether to store particle velocities in the State
-        getForces : bool=False
+        forces : bool=False
             whether to store the forces acting on particles in the State
-        getEnergy : bool=False
+        energy : bool=False
             whether to store potential and kinetic energy in the State
-        getParameters : bool=False
+        parameters : bool=False
             whether to store context parameters in the State
-        getParameterDerivatives : bool=False
+        parameterDerivatives : bool=False
             whether to store parameter derivatives in the State
-        getIntegratorParameters : bool=False
+        integratorParameters : bool=False
             whether to store integrator parameters in the State
         enforcePeriodicBox : bool=False
             if false, the position of each particle will be whatever position
@@ -41,6 +44,20 @@
             forces and energies. The default value includes all groups. groups
             can also be passed as an unsigned integer interpreted as a bitmask,
             in which case group i will be included if (groups&(1<<i)) != 0.
+        getPositions : bool=False
+            Deprecated.  Use `positions` instead.
+        getVelocities : bool=False
+            Deprecated.  Use `velocities` instead.
+        getForces : bool=False
+            Deprecated.  Use `forces` instead.
+        getEnergy : bool=False
+            Deprecated.  Use `energy` instead.
+        getParameters : bool=False
+            Deprecated.  Use `parameters` instead.
+        getParameterDerivatives : bool=False
+            Deprecated.  Use `parameterDerivatives` instead.
+        getIntegratorParameters : bool=False
+            Deprecated.  Use `integratorParameters` instead.
         """
         try:
             # is the input integer-like?
@@ -55,19 +72,19 @@
         if groups_mask >= 0x80000000:
             groups_mask -= 0x100000000
         types = 0
-        if getPositions:
+        if positions or getPositions:
             types += State.Positions
-        if getVelocities:
+        if velocities or getVelocities:
             types += State.Velocities
-        if getForces:
+        if forces or getForces:
             types += State.Forces
-        if getEnergy:
+        if energy or getEnergy:
             types += State.Energy
-        if getParameters:
+        if parameters or getParameters:
             types += State.Parameters
-        if getParameterDerivatives:
+        if parameterDerivatives or getParameterDerivatives:
             types += State.ParameterDerivatives
-        if getIntegratorParameters:
+        if integratorParameters or getIntegratorParameters:
             types += State.IntegratorParameters
         state = _openmm.Context_getState(self, types, enforcePeriodicBox, groups_mask)
         return state
@@ -371,7 +388,7 @@ Parameters:
     def deserialize(inputString):
       """Reconstruct an object that has been serialized as XML."""
       import re
-      match = re.search("<([^?]\S*)", inputString)
+      match = re.search(r"<([^?]\S*)", inputString)
       if match is None:
         raise ValueError("Invalid input string")
       type = match.groups()[0]

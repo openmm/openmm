@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -58,10 +58,10 @@ public:
     
     fvec4() = default;
     fvec4(float v) {
-        val = {v, v, v, v};
+        val = (__m128) {v, v, v, v};
     }
     fvec4(float v1, float v2, float v3, float v4) {
-        val = {v1, v2, v3, v4};
+        val = (__m128) {v1, v2, v3, v4};
     }
     fvec4(__m128 v) : val(v) {}
     fvec4(const float* v) {
@@ -96,38 +96,34 @@ public:
         v[2] = val[2];
     }
     fvec4 operator+(fvec4 other) const {
-        return val+other;
+        return val+other.val;
     }
     fvec4 operator-(fvec4 other) const {
-        return val-other;
+        return val-other.val;
     }
     fvec4 operator*(fvec4 other) const {
-        return val*other;
+        return val*other.val;
     }
     fvec4 operator/(fvec4 other) const {
-        return val/other;
+        return val/other.val;
     }
     void operator+=(fvec4 other) {
-        val = val+other;
+        val = val+other.val;
     }
     void operator-=(fvec4 other) {
-        val = val-other;
+        val = val-other.val;
     }
     void operator*=(fvec4 other) {
-        val = val*other;
+        val = val*other.val;
     }
     void operator/=(fvec4 other) {
-        val = val/other;
+        val = val/other.val;
     }
     fvec4 operator-() const {
         return -val;
     }
-    fvec4 operator&(fvec4 other) const {
-        return (fvec4) (((__m128i)val)&((__m128i)other.val));
-    }
-    fvec4 operator|(fvec4 other) const {
-        return (fvec4) (((__m128i)val)|((__m128i)other.val));
-    }
+    fvec4 operator&(fvec4 other) const;
+    fvec4 operator|(fvec4 other) const;
     ivec4 operator==(fvec4 other) const;
     ivec4 operator!=(fvec4 other) const;
     ivec4 operator>(fvec4 other) const;
@@ -153,14 +149,14 @@ public:
     
     ivec4() {}
     ivec4(int v) {
-        val = {v, v, v, v};
+        val = (__m128i) {v, v, v, v};
     }
     ivec4(int v1, int v2, int v3, int v4) {
-        val = {v1, v2, v3, v4};
+        val = (__m128i) {v1, v2, v3, v4};
     }
     ivec4(__m128i v) : val(v) {}
     ivec4(const int* v) {
-        val = *((__m128*) v);
+        val = *((__m128i*) v);
     }
     operator __m128i() const {
         return val;
@@ -169,25 +165,25 @@ public:
         return val[i];
     }
     void store(int* v) const {
-        *((__m128*) v) = val;
+        *((__m128i*) v) = val;
     }
     ivec4 operator+(ivec4 other) const {
-        return val+other;
+        return val+other.val;
     }
     ivec4 operator-(ivec4 other) const {
-        return val-other;
+        return val-other.val;
     }
     ivec4 operator*(ivec4 other) const {
-        return val*other;
+        return val*other.val;
     }
     void operator+=(ivec4 other) {
-        val = val+other;
+        val = val+other.val;
     }
     void operator-=(ivec4 other) {
-        val = val-other;
+        val = val-other.val;
     }
     void operator*=(ivec4 other) {
-        val = val*other;
+        val = val*other.val;
     }
     ivec4 operator-() const {
         return -val;
@@ -253,6 +249,14 @@ inline ivec4::operator fvec4() const {
     return __builtin_convertvector(val, __m128);
 }
 
+inline fvec4 fvec4::operator&(fvec4 other) const {
+    return fvec4((__m128) (((__m128i)val)&((__m128i)other.val)));
+}
+
+inline fvec4 fvec4::operator|(fvec4 other) const {
+    return fvec4((__m128) (((__m128i)val)|((__m128i)other.val)));
+}
+
 inline ivec4 fvec4::expandBitsToMask(int bitmask) {
     return ivec4(bitmask & 1 ? -1 : 0,
                  bitmask & 2 ? -1 : 0,
@@ -263,7 +267,7 @@ inline ivec4 fvec4::expandBitsToMask(int bitmask) {
 // Functions that operate on fvec4s.
 
 static inline fvec4 abs(fvec4 v) {
-    return v&(__m128) ivec4(0x7FFFFFFF);
+    return v&(__m128) ivec4(0x7FFFFFFF).val;
 }
 
 static inline fvec4 exp(fvec4 v) {
@@ -386,7 +390,7 @@ static inline fvec4 max(fvec4 v1, fvec4 v2) {
 static inline fvec4 round(fvec4 v) {
     fvec4 shift(0x1.0p23f);
     fvec4 absResult = (abs(v)+shift)-shift;
-    return (__m128) ((ivec4(0x80000000)&(__m128i)v) + (ivec4(0x7FFFFFFF)&(__m128i)absResult));
+    return (__m128) ((ivec4(0x80000000).val&(__m128i)v.val) + (ivec4(0x7FFFFFFF).val&(__m128i)absResult.val));
 }
 
 static inline fvec4 floor(fvec4 v) {
@@ -402,9 +406,9 @@ static inline fvec4 ceil(fvec4 v) {
 static inline fvec4 rsqrt(fvec4 v) {
     // Initial estimate of rsqrt().
 
-    ivec4 i = (__m128i) v;
+    ivec4 i = (__m128i) v.val;
     i = ivec4(0x5f375a86)-ivec4(i.val>>ivec4(1).val);
-    fvec4 y = (__m128) i;
+    fvec4 y = (__m128) i.val;
 
     // Perform three iterations of Newton refinement.
 
@@ -455,4 +459,3 @@ static inline fvec4 reduceToVec3(fvec4 x, fvec4 y, fvec4 z) {
 }
 
 #endif /*OPENMM_VECTORIZE_PORTABLE_H_*/
-

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -127,26 +127,29 @@ double computeScreening(double r, double thole, double alpha1, double alpha2) {
     return 1.0-(1.0+u/2)*exp(-u);
 }
 
-void testThole() {
+void testThole(bool periodic) {
     const double k = ONE_4PI_EPS0*1.5;
     const double charge = 0.1;
     const double alpha = ONE_4PI_EPS0*charge*charge/k;
     const double thole = 2.5;
+    const double box = 2.0;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
     system.addParticle(1.0);
     system.addParticle(1.0);
+    system.setDefaultPeriodicBoxVectors(Vec3(box, 0, 0), Vec3(0, box, 0), Vec3(0, 0, box));
     DrudeForce* drude = new DrudeForce();
     drude->addParticle(1, 0, -1, -1, -1, charge, alpha, 1, 1);
     drude->addParticle(3, 2, -1, -1, -1, charge, alpha, 1, 1);
     drude->addScreenedPair(0, 1, thole);
+    drude->setUsesPeriodicBoundaryConditions(periodic);
     system.addForce(drude);
     vector<Vec3> positions(4);
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(0, -0.5, 0);
-    positions[2] = Vec3(1, 0, 0);
-    positions[3] = Vec3(1, 0, 0.3);
+    positions[2] = Vec3(1.1, 0, 0);
+    positions[3] = Vec3(1.1, 0, 0.3);
     double energySpring1 = 0.5*k*0.5*0.5;
     double energySpring2 = 0.5*k*0.3*0.3;
     double energyDipole = 0.0;
@@ -154,6 +157,11 @@ void testThole() {
     for (int i = 0; i < 2; i++)
         for (int j = 2; j < 4; j++) {
             Vec3 delta = positions[i]-positions[j];
+            if (periodic) {
+                delta[0] -= box*floor(delta[0]/box+0.5);
+                delta[1] -= box*floor(delta[1]/box+0.5);
+                delta[2] -= box*floor(delta[2]/box+0.5);
+            }
             double r = sqrt(delta.dot(delta));
             energyDipole += ONE_4PI_EPS0*q[i]*q[j]*computeScreening(r, thole, alpha, alpha)/r;
         }
@@ -204,7 +212,8 @@ int main(int argc, char* argv[]) {
         setupKernels(argc, argv);
         testSingleParticle();
         testAnisotropicParticle();
-        testThole();
+        testThole(false);
+        testThole(true);
         testChangingParameters();
         runPlatformTests();
     }

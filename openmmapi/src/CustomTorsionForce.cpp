@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,11 +40,9 @@
 #include <utility>
 
 using namespace OpenMM;
-using std::string;
-using std::stringstream;
-using std::vector;
+using namespace std;
 
-CustomTorsionForce::CustomTorsionForce(const string& energy) : energyExpression(energy), usePeriodic(false) {
+CustomTorsionForce::CustomTorsionForce(const string& energy) : energyExpression(energy), usePeriodic(false), numContexts(0) {
 }
 
 const string& CustomTorsionForce::getEnergyFunction() const {
@@ -130,14 +128,30 @@ void CustomTorsionForce::setTorsionParameters(int index, int particle1, int part
     torsions[index].particle2 = particle2;
     torsions[index].particle3 = particle3;
     torsions[index].particle4 = particle4;
+    if (numContexts > 0) {
+        firstChangedTorsion = min(index, firstChangedTorsion);
+        lastChangedTorsion = max(index, lastChangedTorsion);
+    }
 }
 
 ForceImpl* CustomTorsionForce::createImpl() const {
+    if (numContexts == 0) {
+        // Begin tracking changes to torsions.
+        firstChangedTorsion = torsions.size();
+        lastChangedTorsion = -1;
+    }
+    numContexts++;
     return new CustomTorsionForceImpl(*this);
 }
 
 void CustomTorsionForce::updateParametersInContext(Context& context) {
-    dynamic_cast<CustomTorsionForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+    dynamic_cast<CustomTorsionForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context), firstChangedTorsion, lastChangedTorsion);
+    if (numContexts == 1) {
+        // We just updated the only existing context for this force, so we can reset
+        // the tracking of changed torsions.
+        firstChangedTorsion = torsions.size();
+        lastChangedTorsion = -1;
+    }
 }
 
 void CustomTorsionForce::setUsesPeriodicBoundaryConditions(bool periodic) {

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,11 +40,9 @@
 #include <utility>
 
 using namespace OpenMM;
-using std::string;
-using std::stringstream;
-using std::vector;
+using namespace std;
 
-CustomAngleForce::CustomAngleForce(const string& energy) : energyExpression(energy), usePeriodic(false) {
+CustomAngleForce::CustomAngleForce(const string& energy) : energyExpression(energy), usePeriodic(false), numContexts(0) {
 }
 
 const string& CustomAngleForce::getEnergyFunction() const {
@@ -128,14 +126,30 @@ void CustomAngleForce::setAngleParameters(int index, int particle1, int particle
     angles[index].particle1 = particle1;
     angles[index].particle2 = particle2;
     angles[index].particle3 = particle3;
+    if (numContexts > 0) {
+        firstChangedAngle = min(index, firstChangedAngle);
+        lastChangedAngle = max(index, lastChangedAngle);
+    }
 }
 
 ForceImpl* CustomAngleForce::createImpl() const {
+    if (numContexts == 0) {
+        // Begin tracking changes to angles.
+        firstChangedAngle = angles.size();
+        lastChangedAngle = -1;
+    }
+    numContexts++;
     return new CustomAngleForceImpl(*this);
 }
 
 void CustomAngleForce::updateParametersInContext(Context& context) {
-    dynamic_cast<CustomAngleForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+    dynamic_cast<CustomAngleForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context), firstChangedAngle, lastChangedAngle);
+    if (numContexts == 1) {
+        // We just updated the only existing context for this force, so we can reset
+        // the tracking of changed angles.
+        firstChangedAngle = angles.size();
+        lastChangedAngle = -1;
+    }
 }
 
 void CustomAngleForce::setUsesPeriodicBoundaryConditions(bool periodic) {

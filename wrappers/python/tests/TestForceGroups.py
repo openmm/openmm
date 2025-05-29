@@ -14,7 +14,7 @@ class TestForceGroups(unittest.TestCase):
             force.setForceGroup(i)
             system.addForce(force)
 
-        platform = mm.Platform.getPlatformByName('Reference')
+        platform = mm.Platform.getPlatform('Reference')
         context = mm.Context(system, mm.VerletIntegrator(0), platform)
         context.setPositions([(0,0,0)])
         self.context = context

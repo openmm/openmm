@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -108,7 +108,7 @@ vector<pair<int, int> > CustomBondForceImpl::getBondedParticles() const {
     return bonds;
 }
 
-void CustomBondForceImpl::updateParametersInContext(ContextImpl& context) {
-    kernel.getAs<CalcCustomBondForceKernel>().copyParametersToContext(context, owner);
+void CustomBondForceImpl::updateParametersInContext(ContextImpl& context, int firstBond, int lastBond) {
+    kernel.getAs<CalcCustomBondForceKernel>().copyParametersToContext(context, owner, firstBond, lastBond);
     context.systemChanged();
 }

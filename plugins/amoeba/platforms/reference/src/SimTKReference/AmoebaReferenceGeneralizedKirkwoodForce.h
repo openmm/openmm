@@ -82,6 +82,53 @@ public:
     void setIncludeCavityTerm(int includeCavityTerm);
 
     /**
+     * Get the tanhRescaling flag, which controls whether tanh rescaling of the solute integral is performed.
+     *
+     * @return tanhRescaling The value tanhRescaling flag.
+     */
+    bool getTanhRescaling() const;
+
+    /**
+     *  Set the tanhRescaling flag.
+     *
+     *  @param tanhRescaling if true, tanh rescaling of the solute integral is performed.
+     */
+    void setTanhRescaling(bool tanhRescaling);
+
+    /**
+     * Get Tanh parameters b0, b1 and b2.
+     *
+     * @param b0 The first tanh parameter.
+     * @param b1 The second tanh parameter.
+     * @param b2 The third tanh parameter.
+    */
+    void getTanhParameters(double& b0, double& b1, double& b2) const;
+
+    /**
+     * Set the the Tanh function parameters that account for interstitial spaces.
+     *
+     * @param b0 The first tanh parameter.
+     * @param b1 The second tanh parameter.
+     * @param b2 The third tanh parameter.
+     */
+    void setTanhParameters(double b0, double b1, double b2);
+
+    /**
+     *  Get the descreen offset for calculating Born radii.
+     *
+     *  @return descreenOffset
+     */
+    double getDescreenOffset() const;
+
+    /**
+     * Set descreen offset for calculating Born radii.
+     *
+     * @param descreenOffset descreen offset
+     *
+     */
+    void setDescreenOffset(double descreenOffset);
+
+    /**
      *  Get directPolarization flag 
      *
      *  @return directPolarization
@@ -128,7 +175,7 @@ public:
     void setSolventDielectric(double solventDielectric);
 
     /**
-     *  Get dielectric offset
+     *  Get dielectric offset for the cavity term.
      *
      *  @return dielectricOffset
      *
@@ -136,7 +183,7 @@ public:
     double getDielectricOffset() const;
 
     /**
-     * Set dielectric offset
+     * Set dielectric offset for the cavity term.
      *
      * @param dielectricOffset dielectric offset
      *
@@ -216,6 +263,36 @@ public:
     void setCharges(const vector<double>& charges);
 
     /**
+     * Set descreen radii
+     *
+     * @param descreenRadii input vector of descreen radii
+     *
+    */
+    void setDescreenRadii(const vector<double>& descreenRadii);
+
+    /**
+     * Get descreen radii
+     *
+     * @param descreenRadii output vector of descreen radii
+     *
+     */
+    void getDescreenRadii(vector<double>& descreenRadii) const;
+
+    /**
+     * Set neck scale factors
+     *
+     * @param neckFactors input vector of neck scale factors
+     */
+    void setNeckFactors(const vector<double>& neckFactors);
+
+    /**
+     * Get neck scale factors
+     *
+     * @param neckFactors output vector of neck scale factors
+     */
+    void getNeckFactors(vector<double>& neckFactors) const;
+
+    /**
      * Calculate Grycuk Born radii
      *
      * @param particlePositions particle positions
@@ -229,13 +306,23 @@ public:
      * @param bornRadii vector of Born radii
      *
      */
-    void getGrycukBornRadii(vector<double>& bornRadii) const;     
+    void getGrycukBornRadii(vector<double>& bornRadii) const;
+
+    /**
+     * Get Grycik Solute Integral (must have called calculateGrycukBornRadii())
+     *
+     * @param bornRadii vector of Born radii
+     *
+     */
+    void getSoluteIntegral(vector<double>& soluteIntegral) const;
 
 private:
 
     int _numParticles;
     int _includeCavityTerm;
     int _directPolarization;
+    bool _tanhRescaling;
+    double _descreenOffset;
 
     double _soluteDielectric;
     double _solventDielectric;
@@ -243,10 +330,17 @@ private:
     double _probeRadius;
     double _surfaceAreaFactor;
 
+    double _beta0;
+    double _beta1;
+    double _beta2;
+
     std::vector<double> _atomicRadii;
     std::vector<double> _scaleFactors;
     std::vector<double> _charges;
+    std::vector<double> _descreenRadii;
+    std::vector<double> _neckFactors;
 
+    std::vector<double> _soluteIntegral;
     std::vector<double> _bornRadii;
 
 };

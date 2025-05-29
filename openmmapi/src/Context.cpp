@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -252,12 +252,15 @@ void Context::reinitialize(bool preserveState) {
     stringstream checkpoint(ios_base::out | ios_base::in | ios_base::binary);
     if (preserveState)
         createCheckpoint(checkpoint);
+    bool hasSetPositions = impl->hasSetPositions;
     integrator.cleanup();
     delete impl;
     impl = new ContextImpl(*this, system, integrator, &platform, properties);
     impl->initialize();
-    if (preserveState)
+    if (preserveState) {
         loadCheckpoint(checkpoint);
+        impl->hasSetPositions = hasSetPositions;
+    }
 }
 
 void Context::createCheckpoint(ostream& stream) {

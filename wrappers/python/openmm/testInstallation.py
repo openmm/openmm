@@ -52,7 +52,7 @@ def run_tests():
         try:
             simulation = Simulation(pdb.topology, system, integrator, platform)
             simulation.context.setPositions(pdb.positions)
-            forces[i] = simulation.context.getState(getForces=True).getForces()
+            forces[i] = simulation.context.getState(forces=True).getForces()
             del simulation
             print("- Successfully computed forces")
         except:

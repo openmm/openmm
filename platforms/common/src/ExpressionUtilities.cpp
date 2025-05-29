@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1079,7 +1079,7 @@ Lepton::CustomFunction* ExpressionUtilities::getPeriodicDistancePlaceholder() {
 }
 
 void ExpressionUtilities::callFunction(stringstream& out, string singleFn, string doubleFn, const string& arg, const string& tempType) {
-    bool isDouble = (tempType[0] == 'd');
+    bool isDouble = (context.getUseDoublePrecision() || tempType[0] == 'd');
     bool isVector = (tempType[tempType.size()-1] == '3');
     string fn = (isDouble ? doubleFn : singleFn);
     if (isVector)
@@ -1089,7 +1089,7 @@ void ExpressionUtilities::callFunction(stringstream& out, string singleFn, strin
 }
 
 void ExpressionUtilities::callFunction2(stringstream& out, string singleFn, string doubleFn, const string& arg1, const string& arg2, const string& tempType) {
-    bool isDouble = (tempType[0] == 'd');
+    bool isDouble = (context.getUseDoublePrecision() || tempType[0] == 'd');
     bool isVector = (tempType[tempType.size()-1] == '3');
     string fn = (isDouble ? doubleFn : singleFn);
     if (isVector) {

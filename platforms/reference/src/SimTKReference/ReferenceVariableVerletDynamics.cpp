@@ -149,7 +149,7 @@ void ReferenceVariableVerletDynamics::update(const OpenMM::System& system, vecto
                atomCoordinates[i][j] = xPrime[i][j];
            }
    }
-   ReferenceVirtualSites::computePositions(system, atomCoordinates, boxVectors);
+   getVirtualSites().computePositions(system, atomCoordinates, boxVectors);
    incrementTimeStep();
 }
 

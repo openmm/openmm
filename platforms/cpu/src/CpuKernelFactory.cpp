@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -39,8 +39,11 @@ using namespace OpenMM;
 
 KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     CpuPlatform::PlatformData& data = CpuPlatform::getPlatformData(context);
+    ReferencePlatform::PlatformData& refdata = *static_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     if (name == CalcForcesAndEnergyKernel::Name())
         return new CpuCalcForcesAndEnergyKernel(name, platform, data, context);
+    if (name == UpdateStateDataKernel::Name())
+        return new CpuUpdateStateDataKernel(name, platform, data, refdata);
     if (name == CalcHarmonicAngleForceKernel::Name())
         return new CpuCalcHarmonicAngleForceKernel(name, platform, data);
     if (name == CalcPeriodicTorsionForceKernel::Name())
@@ -59,8 +62,6 @@ KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform&
         return new CpuCalcCustomGBForceKernel(name, platform, data);
     if (name == CalcGayBerneForceKernel::Name())
         return new CpuCalcGayBerneForceKernel(name, platform, data);
-    if (name == IntegrateLangevinStepKernel::Name())
-        return new CpuIntegrateLangevinStepKernel(name, platform, data);
     if (name == IntegrateLangevinMiddleStepKernel::Name())
         return new CpuIntegrateLangevinMiddleStepKernel(name, platform, data);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str());

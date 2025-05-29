@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Mark Friedrichs                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -213,9 +213,6 @@ CommonCalcAmoebaMultipoleForceKernel::CommonCalcAmoebaMultipoleForceKernel(const
         gkKernel(NULL) {
 }
 
-CommonCalcAmoebaMultipoleForceKernel::~CommonCalcAmoebaMultipoleForceKernel() {
-}
-
 void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
     ContextSelector selector(cc);
 
@@ -231,11 +228,13 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
     vector<float> localDipolesVec;
     vector<float> localQuadrupolesVec;
     vector<mm_int4> multipoleParticlesVec;
+    totalCharge = 0.0;
     for (int i = 0; i < numMultipoles; i++) {
         double charge, thole, damping, polarity;
         int axisType, atomX, atomY, atomZ;
         vector<double> dipole, quadrupole;
         force.getMultipoleParameters(i, charge, dipole, quadrupole, axisType, atomZ, atomX, atomY, thole, damping, polarity);
+        totalCharge += charge;
         if (cc.getUseDoublePrecision())
             posqd[i] = mm_double4(0, 0, 0, charge);
         else
@@ -440,7 +439,8 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
             gridSizeX = cc.findLegalFFTDimension(gridSizeX);
             gridSizeY = cc.findLegalFFTDimension(gridSizeY);
             gridSizeZ = cc.findLegalFFTDimension(gridSizeZ);
-        } else {
+        }
+        else {
             gridSizeX = cc.findLegalFFTDimension(nx);
             gridSizeY = cc.findLegalFFTDimension(ny);
             gridSizeZ = cc.findLegalFFTDimension(nz);
@@ -717,6 +717,7 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
         pmePhip.initialize(cc, 10*numMultipoles, elementSize, "pmePhip");
         pmePhidp.initialize(cc, 20*numMultipoles, elementSize, "pmePhidp");
         pmeCphi.initialize(cc, 10*numMultipoles, elementSize, "pmeCphi");
+        fft = cc.createFFT(gridSizeX, gridSizeY, gridSizeZ, false);
 
         // Create the PME kernels.
 
@@ -1157,9 +1158,9 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
         pmeSpreadFixedMultipolesKernel->execute(cc.getNumAtoms());
         if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
-        computeFFT(true);
+        fft->execFFT(pmeGrid1, pmeGrid2, true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
-        computeFFT(false);
+        fft->execFFT(pmeGrid2, pmeGrid1, false);
         pmeFixedPotentialKernel->execute(cc.getNumAtoms());
         pmeTransformPotentialKernel->setArg(0, pmePhi);
         pmeTransformPotentialKernel->execute(cc.getNumAtoms());
@@ -1181,9 +1182,9 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
         pmeSpreadInducedDipolesKernel->execute(cc.getNumAtoms());
         if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
-        computeFFT(true);
+        fft->execFFT(pmeGrid1, pmeGrid2, true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
-        computeFFT(false);
+        fft->execFFT(pmeGrid2, pmeGrid1, false);
         pmeInducedPotentialKernel->execute(cc.getNumAtoms());
         
         // Iterate until the dipoles converge.
@@ -1220,7 +1221,17 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
     
     cc.getPosq().copyTo(lastPositions);
     multipolesAreValid = true;
-    return 0.0;
+
+    // Correction for the neutralizing plasma.
+
+    if (usePME) {
+        Vec3 a, b, c;
+        cc.getPeriodicBoxVectors(a, b, c);
+        double volume = a[0] * b[1] * c[2];
+        return -totalCharge*totalCharge/(8*EPSILON0*volume*pmeAlpha*pmeAlpha);
+    }
+    else
+        return 0.0;
 }
 
 void CommonCalcAmoebaMultipoleForceKernel::computeInducedField() {
@@ -1257,9 +1268,9 @@ void CommonCalcAmoebaMultipoleForceKernel::computeInducedField() {
         pmeSpreadInducedDipolesKernel->execute(cc.getNumAtoms());
         if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
-        computeFFT(true);
+        fft->execFFT(pmeGrid1, pmeGrid2, true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
-        computeFFT(false);
+        fft->execFFT(pmeGrid2, pmeGrid1, false);
         pmeInducedPotentialKernel->execute(cc.getNumAtoms());
         if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
             pmeRecordInducedFieldDipolesKernel->execute(cc.getNumAtoms());
@@ -1656,11 +1667,13 @@ void CommonCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImpl& 
     vector<float> localDipolesVec;
     vector<float> localQuadrupolesVec;
     vector<mm_int4> multipoleParticlesVec;
+    totalCharge = 0.0;
     for (int i = 0; i < force.getNumMultipoles(); i++) {
         double charge, thole, damping, polarity;
         int axisType, atomX, atomY, atomZ;
         vector<double> dipole, quadrupole;
         force.getMultipoleParameters(i, charge, dipole, quadrupole, axisType, atomZ, atomX, atomY, thole, damping, polarity);
+        totalCharge += charge;
         if (cc.getUseDoublePrecision())
             posqd[i].w = charge;
         else
@@ -1718,10 +1731,10 @@ public:
     ForceInfo(const AmoebaGeneralizedKirkwoodForce& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
-        double charge1, charge2, radius1, radius2, scale1, scale2;
-        force.getParticleParameters(particle1, charge1, radius1, scale1);
-        force.getParticleParameters(particle2, charge2, radius2, scale2);
-        return (charge1 == charge2 && radius1 == radius2 && scale1 == scale2);
+        double charge1, charge2, radius1, radius2, scale1, scale2, descreen1, descreen2, neck1, neck2;
+        force.getParticleParameters(particle1, charge1, radius1, scale1, descreen1, neck1);
+        force.getParticleParameters(particle2, charge2, radius2, scale2, descreen2, neck2);
+        return (charge1 == charge2 && radius1 == radius2 && scale1 == scale2 && descreen1 == descreen2 && neck1 == neck2);
     }
 private:
     const AmoebaGeneralizedKirkwoodForce& force;
@@ -1743,7 +1756,16 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& sy
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
     int paddedNumAtoms = cc.getPaddedNumAtoms();
     int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-    params.initialize<mm_float2>(cc, paddedNumAtoms, "amoebaGkParams");
+    params.initialize<mm_float4>(cc, paddedNumAtoms,"amoebaGkParams");
+    vector<float> neckRadiiVector = AmoebaGeneralizedKirkwoodForceImpl::getNeckRadii();
+    unsigned long numNeckRadii = neckRadiiVector.size();
+    unsigned long numNeckRadii2 = numNeckRadii * numNeckRadii;
+    neckRadii.initialize<float>(cc, numNeckRadii, "neckRadii");
+    neckRadii.upload(neckRadiiVector);
+    neckA.initialize<float>(cc, numNeckRadii2, "neckA");
+    neckA.upload(AmoebaGeneralizedKirkwoodForceImpl::getAij());
+    neckB.initialize<float>(cc, numNeckRadii2, "neckB");
+    neckB.upload(AmoebaGeneralizedKirkwoodForceImpl::getBij());
     bornRadii.initialize(cc, paddedNumAtoms, elementSize, "bornRadii");
     field.initialize(cc, 3*paddedNumAtoms, sizeof(long long), "gkField");
     bornSum.initialize<long long>(cc, paddedNumAtoms, "bornSum");
@@ -1758,14 +1780,12 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& sy
     cc.addAutoclearBuffer(field);
     cc.addAutoclearBuffer(bornSum);
     cc.addAutoclearBuffer(bornForce);
-    vector<mm_float2> paramsVector(paddedNumAtoms);
+    vector<mm_float4> paramsVector(paddedNumAtoms);
     for (int i = 0; i < force.getNumParticles(); i++) {
-        double charge, radius, scalingFactor;
-        force.getParticleParameters(i, charge, radius, scalingFactor);
-        paramsVector[i] = mm_float2((float) radius, (float) (scalingFactor*radius));
-        
+        double charge, radius, scalingFactor, descreenRadius, neckFactor;
+        force.getParticleParameters(i, charge, radius, scalingFactor, descreenRadius, neckFactor);
+        paramsVector[i] = mm_float4((float) radius,(float) scalingFactor, (float) descreenRadius, (float) neckFactor);
         // Make sure the charge matches the one specified by the AmoebaMultipoleForce.
-        
         double charge2, thole, damping, polarity;
         int axisType, atomX, atomY, atomZ;
         vector<double> dipole, quadrupole;
@@ -1810,11 +1830,29 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& sy
         defines["MUTUAL_POLARIZATION"] = "";
     else if (polarizationType == AmoebaMultipoleForce::Extrapolated)
         defines["EXTRAPOLATED_POLARIZATION"] = "";
+    defines["DESCREEN_OFFSET"] = cc.doubleToString(force.getDescreenOffset());
+    tanhRescaling = force.getTanhRescaling();
+    // Max Born radius is 3 nm (30 A).
+    defines["BIG_RADIUS"] = cc.doubleToString(3.0);
+    if (tanhRescaling) {
+        defines["TANH_RESCALING"] = "true";
+        double beta0, beta1, beta2;
+        force.getTanhParameters(beta0, beta1, beta2);
+        defines["BETA0"] = cc.doubleToString(beta0);
+        defines["BETA1"] = cc.doubleToString(beta1);
+        defines["BETA2"] = cc.doubleToString(beta2);
+    }
+    else {
+        defines["TANH_RESCALING"] = "false";
+        defines["BETA0"] = cc.doubleToString(0.0);
+        defines["BETA1"] = cc.doubleToString(0.0);
+        defines["BETA2"] = cc.doubleToString(0.0);
+    }
     includeSurfaceArea = force.getIncludeCavityTerm();
     if (includeSurfaceArea) {
         defines["SURFACE_AREA_FACTOR"] = cc.doubleToString(force.getSurfaceAreaFactor());
         defines["PROBE_RADIUS"] = cc.doubleToString(force.getProbeRadius());
-        defines["DIELECTRIC_OFFSET"] = cc.doubleToString(0.009);
+        defines["DIELECTRIC_OFFSET"] = cc.doubleToString(force.getDielectricOffset());
     }
     cc.addForce(new ForceInfo(force));
 }
@@ -1873,6 +1911,9 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::computeBornRadii(ComputeArr
         computeBornSumKernel->addArg(cc.getPosq());
         computeBornSumKernel->addArg(params);
         computeBornSumKernel->addArg();
+        computeBornSumKernel->addArg(neckRadii);
+        computeBornSumKernel->addArg(neckA);
+        computeBornSumKernel->addArg(neckB);
         reduceBornSumKernel = program->createKernel("reduceBornSum");
         reduceBornSumKernel->addArg(bornSum);
         reduceBornSumKernel->addArg(params);
@@ -1896,6 +1937,10 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::computeBornRadii(ComputeArr
         chainRuleKernel->addArg();
         chainRuleKernel->addArg();
         chainRuleKernel->addArg(params);
+        chainRuleKernel->addArg(neckRadii);
+        chainRuleKernel->addArg(neckA);
+        chainRuleKernel->addArg(neckB);
+        chainRuleKernel->addArg(bornSum);
         chainRuleKernel->addArg(bornRadii);
         chainRuleKernel->addArg(bornForce);
         ediffKernel = program->createKernel("computeEDiffForce");
@@ -1964,12 +2009,11 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::copyParametersToContext(Con
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
     
     // Record the per-particle parameters.
-    
-    vector<mm_float2> paramsVector(cc.getPaddedNumAtoms());
+    vector<mm_float4> paramsVector(cc.getPaddedNumAtoms());
     for (int i = 0; i < force.getNumParticles(); i++) {
-        double charge, radius, scalingFactor;
-        force.getParticleParameters(i, charge, radius, scalingFactor);
-        paramsVector[i] = mm_float2((float) radius, (float) (scalingFactor*radius));
+        double charge, radius, scalingFactor, descreenRadius, neckFactor;
+        force.getParticleParameters(i, charge, radius, scalingFactor, descreenRadius, neckFactor);
+        paramsVector[i] = mm_float4((float) radius, (float) scalingFactor, (float) descreenRadius, (float) neckFactor);
     }
     params.upload(paramsVector);
     cc.invalidateMolecules();
@@ -1985,11 +2029,11 @@ public:
     }
     bool areParticlesIdentical(int particle1, int particle2) {
         int iv1, iv2, type1, type2;
-        double sigma1, sigma2, epsilon1, epsilon2, reduction1, reduction2;
+        double sigma1, sigma2, epsilon1, epsilon2, reduction1, reduction2, scaleFactor1, scaleFactor2;
         bool isAlchemical1, isAlchemical2;
-        force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1, isAlchemical1, type1);
-        force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2, isAlchemical2, type2);
-        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2 && isAlchemical1 == isAlchemical2 && type1 == type2);
+        force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1, isAlchemical1, type1, scaleFactor1);
+        force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2, isAlchemical2, type2, scaleFactor2);
+        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2 && isAlchemical1 == isAlchemical2 && type1 == type2 && scaleFactor1 == scaleFactor2);
     }
 private:
     const AmoebaVdwForce& force;
@@ -2010,6 +2054,7 @@ void CommonCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoe
     int paddedNumAtoms = cc.getPaddedNumAtoms();
     bondReductionAtoms.initialize<int>(cc, paddedNumAtoms, "bondReductionAtoms");
     bondReductionFactors.initialize<float>(cc, paddedNumAtoms, "bondReductionFactors");
+    scaleFactors.initialize<float>(cc, paddedNumAtoms, "scaleFactors");
     tempPosq.initialize(cc, paddedNumAtoms, cc.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "tempPosq");
     tempForces.initialize<long long>(cc, 3*paddedNumAtoms, "tempForces");
     
@@ -2031,6 +2076,7 @@ void CommonCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoe
     vector<float> isAlchemicalVec(paddedNumAtoms, 0);
     vector<int> bondReductionAtomsVec(paddedNumAtoms, 0);
     vector<float> bondReductionFactorsVec(paddedNumAtoms, 0);
+    vector<float> scaleFactorsVec(paddedNumAtoms, 0);
     vector<vector<int> > exclusions(cc.getNumAtoms());
 
     // Handle Alchemical parameters.
@@ -2042,17 +2088,19 @@ void CommonCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoe
 
     for (int i = 0; i < force.getNumParticles(); i++) {
         int ivIndex, type;
-        double sigma, epsilon, reductionFactor;
+        double sigma, epsilon, reductionFactor, scaleFactor;
         bool alchemical;
-        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical, type);
+        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical, type, scaleFactor);
         isAlchemicalVec[i] = (alchemical) ? 1.0f : 0.0f;
         bondReductionAtomsVec[i] = ivIndex;
         bondReductionFactorsVec[i] = (float) reductionFactor;
+        scaleFactorsVec[i] = (float) scaleFactor;
         force.getParticleExclusions(i, exclusions[i]);
         exclusions[i].push_back(i);
     }
     bondReductionAtoms.upload(bondReductionAtomsVec);
     bondReductionFactors.upload(bondReductionFactorsVec);
+    scaleFactors.upload(scaleFactorsVec);
     if (force.getUseDispersionCorrection())
         dispersionCoefficient = AmoebaVdwForceImpl::calcDispersionCorrection(system, force);
     else
@@ -2065,7 +2113,6 @@ void CommonCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoe
     nonbonded = cc.createNonbondedUtilities();
     nonbonded->addParameter(ComputeParameterInfo(atomType, "atomType", "int", 1));
     nonbonded->addArgument(ComputeParameterInfo(sigmaEpsilon, "sigmaEpsilon", "float", 2));
-
     if (hasAlchemical) {
        isAlchemical.upload(isAlchemicalVec);
        currentVdwLambda = 1.0f;
@@ -2073,7 +2120,7 @@ void CommonCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoe
        nonbonded->addParameter(ComputeParameterInfo(isAlchemical, "isAlchemical", "float", 1));
        nonbonded->addArgument(ComputeParameterInfo(vdwLambda, "vdwLambda", "float", 1));
     }
-    
+    nonbonded->addParameter(ComputeParameterInfo(scaleFactors, "scaleFactor", "float", 1));
     // Create the interaction kernel.
     
     map<string, string> replacements;
@@ -2166,18 +2213,21 @@ void CommonCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& contex
     vector<float> isAlchemicalVec(cc.getPaddedNumAtoms(), 0);
     vector<int> bondReductionAtomsVec(cc.getPaddedNumAtoms(), 0);
     vector<float> bondReductionFactorsVec(cc.getPaddedNumAtoms(), 0);
+    vector<float> scaleFactorsVec(cc.getPaddedNumAtoms(), 0);
     for (int i = 0; i < force.getNumParticles(); i++) {
         int ivIndex, type;
-        double sigma, epsilon, reductionFactor;
+        double sigma, epsilon, reductionFactor, scaleFactor;
         bool alchemical;
-        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical, type);
+        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical, type, scaleFactor);
         isAlchemicalVec[i] = (alchemical) ? 1.0f : 0.0f;
         bondReductionAtomsVec[i] = ivIndex;
         bondReductionFactorsVec[i] = (float) reductionFactor;
+        scaleFactorsVec[i] = (float) scaleFactor;
     }
     if (hasAlchemical) isAlchemical.upload(isAlchemicalVec);
     bondReductionAtoms.upload(bondReductionAtomsVec);
     bondReductionFactors.upload(bondReductionFactorsVec);
+    scaleFactors.upload(scaleFactorsVec);
     if (force.getUseDispersionCorrection())
         dispersionCoefficient = AmoebaVdwForceImpl::calcDispersionCorrection(system, force);
     else
@@ -2236,6 +2286,7 @@ void CommonCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, 
     defines["RMINO"] = cc.doubleToString(force.getRmino());
     defines["RMINH"] = cc.doubleToString(force.getRminh());
     defines["AWATER"] = cc.doubleToString(force.getAwater());
+    defines["DISPOFF"] = cc.doubleToString(force.getDispoff());
     defines["SHCTD"] = cc.doubleToString(force.getShctd());
     defines["M_PI"] = cc.doubleToString(M_PI);
     ComputeProgram program = cc.compileProgram(CommonAmoebaKernelSources::amoebaWcaForce, defines);
@@ -2371,12 +2422,14 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
     vector<double> localDipolesVec, localQuadrupolesVec;
     vector<mm_int4> multipoleParticlesVec;
     vector<vector<int> > exclusions(numParticles);
+    totalCharge = 0.0;
     for (int i = 0; i < numParticles; i++) {
         double charge, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
         int axisType, atomX, atomY, atomZ;
         vector<double> dipole, quadrupole;
         force.getParticleParameters(i, charge, dipole, quadrupole, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha,
                                     polarizability, axisType, atomZ, atomX, atomY);
+        totalCharge += charge;
         coreChargeVec.push_back(coreCharge);
         valenceChargeVec.push_back(charge-coreCharge);
         alphaVec.push_back(alpha);
@@ -2528,7 +2581,8 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
             gridSizeX = cc.findLegalFFTDimension(gridSizeX);
             gridSizeY = cc.findLegalFFTDimension(gridSizeY);
             gridSizeZ = cc.findLegalFFTDimension(gridSizeZ);
-        } else {
+        }
+        else {
             gridSizeX = cc.findLegalFFTDimension(nx);
             gridSizeY = cc.findLegalFFTDimension(ny);
             gridSizeZ = cc.findLegalFFTDimension(nz);
@@ -2542,7 +2596,8 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
             dispersionGridSizeX = cc.findLegalFFTDimension(dispersionGridSizeX);
             dispersionGridSizeY = cc.findLegalFFTDimension(dispersionGridSizeY);
             dispersionGridSizeZ = cc.findLegalFFTDimension(dispersionGridSizeZ);
-        } else {
+        }
+        else {
             dispersionGridSizeX = cc.findLegalFFTDimension(nx);
             dispersionGridSizeY = cc.findLegalFFTDimension(ny);
             dispersionGridSizeZ = cc.findLegalFFTDimension(nz);
@@ -2600,10 +2655,8 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
 
         // Create required data structures.
 
-        int roundedZSize = PmeOrder*(int) ceil(gridSizeZ/(double) PmeOrder);
-        int gridElements = gridSizeX*gridSizeY*roundedZSize;
-        roundedZSize = PmeOrder*(int) ceil(dispersionGridSizeZ/(double) PmeOrder);
-        gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*roundedZSize);
+        int gridElements = gridSizeX*gridSizeY*gridSizeZ;
+        gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);
         pmeGrid1.initialize(cc, gridElements, elementSize, "pmeGrid1");
         pmeGrid2.initialize(cc, gridElements, 2*elementSize, "pmeGrid2");
         if (useFixedPointChargeSpreading()) {
@@ -2622,6 +2675,8 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
         pmePhidp.initialize(cc, 20*numParticles, elementSize, "pmePhidp");
         pmeCphi.initialize(cc, 10*numParticles, elementSize, "pmeCphi");
         pmeAtomGridIndex.initialize<mm_int2>(cc, numParticles, "pmeAtomGridIndex");
+        fft = cc.createFFT(gridSizeX, gridSizeY, gridSizeZ, true);
+        dfft = cc.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
 
         // Create the PME kernels.
 
@@ -2781,9 +2836,11 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
         pmeDefines["CHARGE"] = "charges[atom]";
         pmeDefines["USE_LJPME"] = "1";
         program = cc.compileProgram(CommonKernelSources::pme, pmeDefines);
-        dpmeFinishSpreadChargeKernel = program->createKernel("finishSpreadCharge");
-        dpmeFinishSpreadChargeKernel->addArg(pmeGrid2);
-        dpmeFinishSpreadChargeKernel->addArg(pmeGrid1);
+        if (useFixedPointChargeSpreading()) {
+            dpmeFinishSpreadChargeKernel = program->createKernel("finishSpreadCharge");
+            dpmeFinishSpreadChargeKernel->addArg(pmeGrid2);
+            dpmeFinishSpreadChargeKernel->addArg(pmeGrid1);
+        }
         dpmeGridIndexKernel = program->createKernel("findAtomGridIndex");
         dpmeGridIndexKernel->addArg(cc.getPosq());
         dpmeGridIndexKernel->addArg(pmeAtomGridIndex);
@@ -2791,7 +2848,10 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
             dpmeGridIndexKernel->addArg();
         dpmeSpreadChargeKernel = program->createKernel("gridSpreadCharge");
         dpmeSpreadChargeKernel->addArg(cc.getPosq());
-        dpmeSpreadChargeKernel->addArg(pmeGrid2);
+        if (useFixedPointChargeSpreading())
+            dpmeSpreadChargeKernel->addArg(pmeGrid2);
+        else
+            dpmeSpreadChargeKernel->addArg(pmeGrid1);
         for (int i = 0; i < 8; i++)
             dpmeSpreadChargeKernel->addArg();
         dpmeSpreadChargeKernel->addArg(pmeAtomGridIndex);
@@ -3246,9 +3306,9 @@ double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool i
         pmeSpreadFixedMultipolesKernel->execute(cc.getNumAtoms());
         if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
-        computeFFT(true, false);
+        fft->execFFT(pmeGrid1, pmeGrid2, true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
-        computeFFT(false, false);
+        fft->execFFT(pmeGrid2, pmeGrid1, false);
         pmeFixedPotentialKernel->execute(cc.getNumAtoms());
         pmeTransformPotentialKernel->setArg(0, pmePhi);
         pmeTransformPotentialKernel->execute(cc.getNumAtoms());
@@ -3258,14 +3318,18 @@ double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool i
 
         dpmeGridIndexKernel->execute(cc.getNumAtoms());
         sortGridIndex();
-        cc.clearBuffer(pmeGrid2);
-        dpmeSpreadChargeKernel->execute(cc.getNumAtoms(), 128);
-        dpmeFinishSpreadChargeKernel->execute(dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
-        computeFFT(true, true);
+        if (useFixedPointChargeSpreading())
+            cc.clearBuffer(pmeGrid2);
+        else
+            cc.clearBuffer(pmeGrid1);
+        dpmeSpreadChargeKernel->execute(PmeOrder*cc.getNumAtoms(), 128);
+        if (useFixedPointChargeSpreading())
+            dpmeFinishSpreadChargeKernel->execute(dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
+        dfft->execFFT(pmeGrid1, pmeGrid2, true);
         if (includeEnergy)
             dpmeEvalEnergyKernel->execute(dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);
         dpmeConvolutionKernel->execute(dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
-        computeFFT(false, true);
+        dfft->execFFT(pmeGrid2, pmeGrid1, false);
         dpmeInterpolateForceKernel->execute(cc.getNumAtoms(), 128);
     }
 
@@ -3310,7 +3374,17 @@ double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool i
     
     cc.getPosq().copyTo(lastPositions);
     multipolesAreValid = true;
-    return 0.0;
+
+    // Correction for the neutralizing plasma.
+
+    if (usePME) {
+        Vec3 a, b, c;
+        cc.getPeriodicBoxVectors(a, b, c);
+        double volume = a[0] * b[1] * c[2];
+        return -totalCharge*totalCharge/(8*EPSILON0*volume*pmeAlpha*pmeAlpha);
+    }
+    else
+        return 0.0;
 }
 
 void CommonCalcHippoNonbondedForceKernel::computeInducedField(int optOrder) {
@@ -3332,9 +3406,9 @@ void CommonCalcHippoNonbondedForceKernel::computeInducedField(int optOrder) {
         pmeSpreadInducedDipolesKernel->execute(cc.getNumAtoms());
         if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
-        computeFFT(true, false);
+        fft->execFFT(pmeGrid1, pmeGrid2, true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
-        computeFFT(false, false);
+        fft->execFFT(pmeGrid2, pmeGrid1, false);
         pmeInducedPotentialKernel->setArg(2, optOrder);
         pmeInducedPotentialKernel->execute(cc.getNumAtoms());
         pmeRecordInducedFieldDipolesKernel->execute(cc.getNumAtoms());
@@ -3445,12 +3519,14 @@ void CommonCalcHippoNonbondedForceKernel::copyParametersToContext(ContextImpl& c
     vector<double> coreChargeVec, valenceChargeVec, alphaVec, epsilonVec, dampingVec, c6Vec, pauliKVec, pauliQVec, pauliAlphaVec, polarizabilityVec;
     vector<double> localDipolesVec, localQuadrupolesVec;
     vector<mm_int4> multipoleParticlesVec;
+    totalCharge = 0.0;
     for (int i = 0; i < numParticles; i++) {
         double charge, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
         int axisType, atomX, atomY, atomZ;
         vector<double> dipole, quadrupole;
         force.getParticleParameters(i, charge, dipole, quadrupole, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha,
                                     polarizability, axisType, atomZ, atomX, atomY);
+        totalCharge += charge;
         coreChargeVec.push_back(coreCharge);
         valenceChargeVec.push_back(charge-coreCharge);
         alphaVec.push_back(alpha);

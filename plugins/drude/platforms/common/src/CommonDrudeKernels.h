@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,7 +35,6 @@
 #include "openmm/DrudeKernels.h"
 #include "openmm/common/ComputeContext.h"
 #include "openmm/common/ComputeArray.h"
-#include "lbfgs.h"
 
 namespace OpenMM {
 
@@ -121,7 +120,7 @@ private:
 class CommonIntegrateDrudeSCFStepKernel : public IntegrateDrudeSCFStepKernel {
 public:
     CommonIntegrateDrudeSCFStepKernel(const std::string& name, const Platform& platform, ComputeContext& cc) :
-            IntegrateDrudeSCFStepKernel(name, platform), cc(cc), minimizerPos(NULL), hasInitializedKernels(false) {
+            IntegrateDrudeSCFStepKernel(name, platform), cc(cc), hasInitializedKernels(false) {
     }
     ~CommonIntegrateDrudeSCFStepKernel();
     /**
@@ -151,10 +150,9 @@ private:
     ComputeContext& cc;
     double prevStepSize;
     bool hasInitializedKernels;
-    std::vector<int> drudeParticles;
-    lbfgsfloatval_t *minimizerPos;
-    lbfgs_parameter_t minimizerParams;
-    ComputeKernel kernel1, kernel2;
+    std::vector<int> drudeIndexVec;
+    ComputeArray drudeParams, drudeIndices, drudeParents;
+    ComputeKernel kernel1, kernel2, minimizeKernel;
 };
 
 } // namespace OpenMM

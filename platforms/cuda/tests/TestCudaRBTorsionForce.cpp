@@ -32,34 +32,6 @@
 #include "CudaTests.h"
 #include "TestRBTorsionForce.h"
 
-void testParallelComputation() {
-    System system;
-    const int numParticles = 200;
-    for (int i = 0; i < numParticles; i++)
-        system.addParticle(1.0);
-    RBTorsionForce* force = new RBTorsionForce();
-    for (int i = 3; i < numParticles; i++)
-        force->addTorsion(i-3, i-2, i-1, i, 2, 0.1*i, 0.5*i, i, 1, 1);
-    system.addForce(force);
-    vector<Vec3> positions(numParticles);
-    for (int i = 0; i < numParticles; i++)
-        positions[i] = Vec3(i, i%2, i%3);
-    VerletIntegrator integrator1(0.01);
-    Context context1(system, integrator1, platform);
-    context1.setPositions(positions);
-    State state1 = context1.getState(State::Forces | State::Energy);
-    VerletIntegrator integrator2(0.01);
-    string deviceIndex = platform.getPropertyValue(context1, CudaPlatform::CudaDeviceIndex());
-    map<string, string> props;
-    props[CudaPlatform::CudaDeviceIndex()] = deviceIndex+","+deviceIndex;
-    Context context2(system, integrator2, platform, props);
-    context2.setPositions(positions);
-    State state2 = context2.getState(State::Forces | State::Energy);
-    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-5);
-    for (int i = 0; i < numParticles; i++)
-        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
-}
-
 void runPlatformTests() {
     testParallelComputation();
 }

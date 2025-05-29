@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,8 +36,9 @@
 #include "openmm/internal/PeriodicTorsionForceImpl.h"
 
 using namespace OpenMM;
+using namespace std;
 
-PeriodicTorsionForce::PeriodicTorsionForce() : usePeriodic(false) {
+PeriodicTorsionForce::PeriodicTorsionForce() : usePeriodic(false), numContexts(0) {
 }
 
 int PeriodicTorsionForce::addTorsion(int particle1, int particle2, int particle3, int particle4, int periodicity, double phase, double k) {
@@ -65,14 +66,30 @@ void PeriodicTorsionForce::setTorsionParameters(int index, int particle1, int pa
     periodicTorsions[index].periodicity = periodicity;
     periodicTorsions[index].phase = phase;
     periodicTorsions[index].k = k;
+    if (numContexts > 0) {
+        firstChangedTorsion = min(index, firstChangedTorsion);
+        lastChangedTorsion = max(index, lastChangedTorsion);
+    }
 }
 
 ForceImpl* PeriodicTorsionForce::createImpl() const {
+    if (numContexts == 0) {
+        // Begin tracking changes to torsions.
+        firstChangedTorsion = periodicTorsions.size();
+        lastChangedTorsion = -1;
+    }
+    numContexts++;
     return new PeriodicTorsionForceImpl(*this);
 }
 
 void PeriodicTorsionForce::updateParametersInContext(Context& context) {
-    dynamic_cast<PeriodicTorsionForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+    dynamic_cast<PeriodicTorsionForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context), firstChangedTorsion, lastChangedTorsion);
+    if (numContexts == 1) {
+        // We just updated the only existing context for this force, so we can reset
+        // the tracking of changed torsions.
+        firstChangedTorsion = periodicTorsions.size();
+        lastChangedTorsion = -1;
+    }
 }
 
 void PeriodicTorsionForce::setUsesPeriodicBoundaryConditions(bool periodic) {

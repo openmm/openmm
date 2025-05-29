@@ -176,7 +176,10 @@ class SimulatedTempering(object):
                 steps2 = st.reportInterval - simulation.currentStep%st.reportInterval
                 steps = min(steps1, steps2)
                 isUpdateAttempt = (steps1 == steps)
-                return (steps, False, isUpdateAttempt, False, isUpdateAttempt)
+                if isUpdateAttempt:
+                    return {'steps': steps, 'periodic':None, 'include':['velocities', 'energy']}
+                else:
+                    return {'steps': steps, 'periodic':None, 'include':[]}
 
             def report(self, simulation, state):
                 st = self.st

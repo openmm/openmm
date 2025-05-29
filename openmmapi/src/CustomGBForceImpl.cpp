@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,20 +29,19 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#ifdef WIN32
+  #define _USE_MATH_DEFINES // Needed to get M_PI
+#endif
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomGBForceImpl.h"
 #include "openmm/internal/Messages.h"
 #include "openmm/kernels.h"
+#include <cmath>
 #include <sstream>
 
 using namespace OpenMM;
-using std::map;
-using std::pair;
-using std::vector;
-using std::set;
-using std::string;
-using std::stringstream;
+using namespace std;
 
 CustomGBForceImpl::CustomGBForceImpl(const CustomGBForce& owner) : owner(owner) {
     forceGroup = owner.getForceGroup();
@@ -74,6 +73,8 @@ void CustomGBForceImpl::initialize(ContextImpl& context) {
     for (int i = 0; i < owner.getNumExclusions(); i++) {
         int particle1, particle2;
         owner.getExclusionParticles(i, particle1, particle2);
+        int minp = min(particle1, particle2);
+        int maxp = max(particle1, particle2);
         if (particle1 < 0 || particle1 >= owner.getNumParticles()) {
             stringstream msg;
             msg << "CustomGBForce: Illegal particle index for an exclusion: ";
@@ -86,7 +87,7 @@ void CustomGBForceImpl::initialize(ContextImpl& context) {
             msg << particle2;
             throw OpenMMException(msg.str());
         }
-        if (exclusions[particle1].count(particle2) > 0 || exclusions[particle2].count(particle1) > 0) {
+        if (exclusions[minp].count(maxp) > 0) {
             stringstream msg;
             msg << "CustomGBForce: Multiple exclusions are specified for particles ";
             msg << particle1;
@@ -94,8 +95,7 @@ void CustomGBForceImpl::initialize(ContextImpl& context) {
             msg << particle2;
             throw OpenMMException(msg.str());
         }
-        exclusions[particle1].insert(particle2);
-        exclusions[particle2].insert(particle1);
+        exclusions[minp].insert(maxp);
     }
     if (owner.getNonbondedMethod() == CustomGBForce::CutoffPeriodic) {
         Vec3 boxVectors[3];
