@@ -259,6 +259,9 @@ class PdbxReader(object):
                     if reservedWord is not None:
                         if reservedWord == "stop":
                             return
+                         elif reservedWord == "loop":
+                            # If the category has no rows, we skip it
+                            continue
                         else:
                             self.__syntaxError("Unexpected reserved word after loop declaration: %s" % (reservedWord))
                     
