@@ -3768,21 +3768,6 @@ void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const
 
 void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) {
     ContextSelector selector(cc);
-    cc.getPosq().copyTo(savedPositions);
-    cc.getVelm().copyTo(savedVelocities);
-    cc.getLongForceBuffer().copyTo(savedLongForces);
-    if (savedFloatForces.isInitialized())
-        cc.getFloatForceBuffer().copyTo(savedFloatForces);
-    lastPosCellOffsets = cc.getPosCellOffsets();
-    lastAtomOrder = cc.getAtomIndex();
-}
-
-void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
-    ContextSelector selector(cc);
-
-    // check if atoms were reordered from energy evaluation before scaling
-    atomsWereReordered = cc.getAtomsWereReordered();
-
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
 
@@ -3829,6 +3814,20 @@ void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
         for (int i = 0; i < components; i++)
             kineticEnergyKernel->addArg(energyBuffers[i]);
     }
+    cc.getPosq().copyTo(savedPositions);
+    cc.getVelm().copyTo(savedVelocities);
+    cc.getLongForceBuffer().copyTo(savedLongForces);
+    if (savedFloatForces.isInitialized())
+        cc.getFloatForceBuffer().copyTo(savedFloatForces);
+    lastPosCellOffsets = cc.getPosCellOffsets();
+    lastAtomOrder = cc.getAtomIndex();
+}
+
+void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
+    ContextSelector selector(cc);
+
+    // check if atoms were reordered from energy evaluation before scaling
+    atomsWereReordered = cc.getAtomsWereReordered();
     kernel->setArg(0, (float) scaleX);
     kernel->setArg(1, (float) scaleY);
     kernel->setArg(2, (float) scaleZ);
