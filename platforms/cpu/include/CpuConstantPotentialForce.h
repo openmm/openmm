@@ -140,8 +140,8 @@ private:
 class CpuConstantPotentialCGSolver : public CpuConstantPotentialSolver {
 private:
     Vec3 boxVectors[3];
-    std::vector<double> precondVector;
-    double precondScale;
+    bool precondRequested, precondActivated;
+    std::vector<float> precondVector;
     std::vector<float> q;
     std::vector<float> grad;
     std::vector<float> projGrad;
@@ -149,6 +149,7 @@ private:
     std::vector<float> qStep;
     std::vector<float> gradStep;
     std::vector<float> grad0;
+    std::vector<float> qLast;
 
 public:
     /**
@@ -156,8 +157,9 @@ public:
      * 
      * @param numParticles           the number of particles
      * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
+     * @param precond                whether or not to use a preconditioner
      */
-    CpuConstantPotentialCGSolver(int numParticles, int numElectrodeParticles);
+    CpuConstantPotentialCGSolver(int numParticles, int numElectrodeParticles, bool precond);
     /**
      * Solves for charges.
      * 

@@ -375,7 +375,7 @@ void testElectrodeMatrixNoMass() {
     ASSERT(thrown);
 }
 
-void testSmallSystems(ConstantPotentialForce::ConstantPotentialMethod method) {
+void testSmallSystems(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
     // Ensures that solver convergence is achieved on various small systems with
     // zero or one degrees of freedom.
 
@@ -391,6 +391,7 @@ void testSmallSystems(ConstantPotentialForce::ConstantPotentialMethod method) {
     set<int> electrode1{0};
     force1->addElectrode(electrode1, 0, 0.2, 0);
     force1->setConstantPotentialMethod(method);
+    force1->setUsePreconditioner(usePreconditioner);
     force1->setUseChargeConstraint(true);
     force1->setChargeConstraintTarget(5);
     system1.addForce(force1);
@@ -419,6 +420,7 @@ void testSmallSystems(ConstantPotentialForce::ConstantPotentialMethod method) {
     set<int> electrode2{0, 1};
     force2->addElectrode(electrode2, 0, 0.2, 0);
     force2->setConstantPotentialMethod(method);
+    force2->setUsePreconditioner(usePreconditioner);
     force2->setUseChargeConstraint(true);
     force2->setChargeConstraintTarget(5);
     system2.addForce(force2);
@@ -443,6 +445,7 @@ void testSmallSystems(ConstantPotentialForce::ConstantPotentialMethod method) {
     force3->addParticle(2);
     force3->addParticle(3);
     force3->setConstantPotentialMethod(method);
+    force3->setUsePreconditioner(usePreconditioner);
     force3->setUseChargeConstraint(false);
     system3.addForce(force3);
     VerletIntegrator integrator3(0.001);
@@ -470,6 +473,7 @@ void testSmallSystems(ConstantPotentialForce::ConstantPotentialMethod method) {
     set<int> electrode4{0};
     force4->addElectrode(electrode4, 0, 0.2, 0);
     force4->setConstantPotentialMethod(method);
+    force4->setUsePreconditioner(usePreconditioner);
     force4->setUseChargeConstraint(false);
     system4.addForce(force4);
     VerletIntegrator integrator4(0.001);
@@ -484,7 +488,7 @@ void testSmallSystems(ConstantPotentialForce::ConstantPotentialMethod method) {
     ASSERT_EQUAL(-1, charges4[2]);
 }
 
-void testNoConstraintWithoutElectrode(ConstantPotentialForce::ConstantPotentialMethod method) {
+void testNoConstraintWithoutElectrode(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
     // If there are no electrodes (no charge degrees of freedom in the system),
     // the user should not be allowed to specify a total charge constraint.
 
@@ -495,6 +499,7 @@ void testNoConstraintWithoutElectrode(ConstantPotentialForce::ConstantPotentialM
     force->addParticle(1);
     force->addParticle(1);
     force->setConstantPotentialMethod(method);
+    force->setUsePreconditioner(usePreconditioner);
     force->setUseChargeConstraint(true);
     system.addForce(force);
     VerletIntegrator integrator(0.001);
@@ -509,7 +514,7 @@ void testNoConstraintWithoutElectrode(ConstantPotentialForce::ConstantPotentialM
     ASSERT(thrown);
 }
 
-void testConstrainCharge(ConstantPotentialForce::ConstantPotentialMethod method) {
+void testConstrainCharge(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
     // Ensures that the total charge constraint works correctly, including when
     // the system charge target is set to a non-neutral value and the
     // non-electrode particles carry a net charge.
@@ -539,6 +544,7 @@ void testConstrainCharge(ConstantPotentialForce::ConstantPotentialMethod method)
 
     force->addElectrode(electrode, 0, 0.2, 0);
     force->setConstantPotentialMethod(method);
+    force->setUsePreconditioner(usePreconditioner);
     force->setUseChargeConstraint(true);
     force->setChargeConstraintTarget(chargeTarget);
 
@@ -558,7 +564,7 @@ void testConstrainCharge(ConstantPotentialForce::ConstantPotentialMethod method)
     ASSERT_EQUAL_TOL(chargeTarget - electrolyteCharge, electrodeCharge, TOL);
 }
 
-void makeTestUpdateSystem(ConstantPotentialForce::ConstantPotentialMethod method, System& system, ConstantPotentialForce*& force, vector<Vec3>& positions) {
+void makeTestUpdateSystem(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner, System& system, ConstantPotentialForce*& force, vector<Vec3>& positions) {
     // Makes a reference system for tests below checking that the properties of
     // a system can be changed after context creation.
 
@@ -580,6 +586,7 @@ void makeTestUpdateSystem(ConstantPotentialForce::ConstantPotentialMethod method
     force->addElectrode({3}, 1, 0.2, 0.3);
     force->addElectrode({4}, 2, 0.4, 0.5);
     force->setConstantPotentialMethod(method);
+    force->setUsePreconditioner(usePreconditioner);
     force->setUseChargeConstraint(true);
     force->setChargeConstraintTarget(5);
     force->setExternalField(Vec3(1, 2, 3));
@@ -593,14 +600,14 @@ void makeTestUpdateSystem(ConstantPotentialForce::ConstantPotentialMethod method
     positions.push_back(Vec3(2, 2, 2));
 }
 
-void testUpdateParticleExceptionParameters(ConstantPotentialForce::ConstantPotentialMethod method) {
+void testUpdateParticleExceptionParameters(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
     // Ensures that particle and exception parameters can be updated and that
     // the results match those computed by a completely different system.
 
     System system1;
     ConstantPotentialForce* force1;
     vector<Vec3> positions1;
-    makeTestUpdateSystem(method, system1, force1, positions1);
+    makeTestUpdateSystem(method, usePreconditioner, system1, force1, positions1);
 
     // Make sure to get charges before updating so that the constant potential
     // method initializes: we are testing that it reinitializes with the update.
@@ -619,7 +626,7 @@ void testUpdateParticleExceptionParameters(ConstantPotentialForce::ConstantPoten
     System system2;
     ConstantPotentialForce* force2;
     vector<Vec3> positions2;
-    makeTestUpdateSystem(method, system2, force2, positions2);
+    makeTestUpdateSystem(method, usePreconditioner, system2, force2, positions2);
     force2->setParticleParameters(1, 3);
     force2->setParticleParameters(2, -5);
     force2->setExceptionParameters(0, 0, 1, 1.75);
@@ -646,14 +653,14 @@ void testUpdateParticleExceptionParameters(ConstantPotentialForce::ConstantPoten
     }
 }
 
-void testUpdateElectrodeParameters(ConstantPotentialForce::ConstantPotentialMethod method) {
+void testUpdateElectrodeParameters(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
     // Ensures that electrode parameters can be updated and that the results
     // match those computed by a completely different system.
 
     System system1;
     ConstantPotentialForce* force1;
     vector<Vec3> positions1;
-    makeTestUpdateSystem(method, system1, force1, positions1);
+    makeTestUpdateSystem(method, usePreconditioner, system1, force1, positions1);
 
     // Make sure to get charges before updating so that the constant potential
     // method initializes: we are testing that it reinitializes with the update.
@@ -670,7 +677,7 @@ void testUpdateElectrodeParameters(ConstantPotentialForce::ConstantPotentialMeth
     System system2;
     ConstantPotentialForce* force2;
     vector<Vec3> positions2;
-    makeTestUpdateSystem(method, system2, force2, positions2);
+    makeTestUpdateSystem(method, usePreconditioner, system2, force2, positions2);
     force2->setElectrodeParameters(0, {3}, 3, 0.6, 0.7);
 
     VerletIntegrator integrator2(0.001);
@@ -695,7 +702,7 @@ void testUpdateElectrodeParameters(ConstantPotentialForce::ConstantPotentialMeth
     }
 }
 
-void testUpdateChargeFieldParameters(ConstantPotentialForce::ConstantPotentialMethod method) {
+void testUpdateChargeFieldParameters(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
     // Ensures that charge target and external field parameters can be updated
     // and that the results match those computed by a completely different
     // system.
@@ -703,7 +710,7 @@ void testUpdateChargeFieldParameters(ConstantPotentialForce::ConstantPotentialMe
     System system1;
     ConstantPotentialForce* force1;
     vector<Vec3> positions1;
-    makeTestUpdateSystem(method, system1, force1, positions1);
+    makeTestUpdateSystem(method, usePreconditioner, system1, force1, positions1);
 
     // Make sure to get charges before updating so that the constant potential
     // method initializes: we are testing that it reinitializes with the update.
@@ -721,7 +728,7 @@ void testUpdateChargeFieldParameters(ConstantPotentialForce::ConstantPotentialMe
     System system2;
     ConstantPotentialForce* force2;
     vector<Vec3> positions2;
-    makeTestUpdateSystem(method, system2, force2, positions2);
+    makeTestUpdateSystem(method, usePreconditioner, system2, force2, positions2);
     force2->setChargeConstraintTarget(-7);
     force2->setExternalField(Vec3(-6, -4, -2));
 
@@ -747,14 +754,14 @@ void testUpdateChargeFieldParameters(ConstantPotentialForce::ConstantPotentialMe
     }
 }
 
-void testUpdateBox(ConstantPotentialForce::ConstantPotentialMethod method) {
+void testUpdateBox(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
     // Ensures that box vectors can be updated and that the results match those
     // computed by a completely different system.
 
     System system1;
     ConstantPotentialForce* force1;
     vector<Vec3> positions1;
-    makeTestUpdateSystem(method, system1, force1, positions1);
+    makeTestUpdateSystem(method, usePreconditioner, system1, force1, positions1);
 
     // Make sure to get charges before updating so that the constant potential
     // method initializes: we are testing that it reinitializes with the update.
@@ -775,7 +782,7 @@ void testUpdateBox(ConstantPotentialForce::ConstantPotentialMethod method) {
     System system2;
     ConstantPotentialForce* force2;
     vector<Vec3> positions2;
-    makeTestUpdateSystem(method, system2, force2, positions2);
+    makeTestUpdateSystem(method, usePreconditioner, system2, force2, positions2);
     force2->setPMEParameters(alpha, nx, ny, nz);
     system2.setDefaultPeriodicBoxVectors(Vec3(3.25, 0, 0), Vec3(0, 3.5, 0), Vec3(0, 0, 3.75));
 
@@ -801,7 +808,7 @@ void testUpdateBox(ConstantPotentialForce::ConstantPotentialMethod method) {
     }
 }
 
-void testUpdatePositions(ConstantPotentialForce::ConstantPotentialMethod method) {
+void testUpdatePositions(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
     // Ensures that particle positions can be updated and that the results match
     // those computed by a completely different system.  This checks that, e.g.,
     // a precomputed matrix is invalidated and recomputed when electrode
@@ -810,7 +817,7 @@ void testUpdatePositions(ConstantPotentialForce::ConstantPotentialMethod method)
     System system1;
     ConstantPotentialForce* force1;
     vector<Vec3> positions1;
-    makeTestUpdateSystem(method, system1, force1, positions1);
+    makeTestUpdateSystem(method, usePreconditioner, system1, force1, positions1);
 
     // Make sure to get charges before updating so that the constant potential
     // method initializes: we are testing that it reinitializes with the update.
@@ -828,7 +835,7 @@ void testUpdatePositions(ConstantPotentialForce::ConstantPotentialMethod method)
     System system2;
     ConstantPotentialForce* force2;
     vector<Vec3> positions2;
-    makeTestUpdateSystem(method, system2, force2, positions2);
+    makeTestUpdateSystem(method, usePreconditioner, system2, force2, positions2);
 
     VerletIntegrator integrator2(0.001);
     Context context2(system2, integrator2, platform);
@@ -1048,7 +1055,7 @@ void makeTestSimulateSystem(bool freezeAll, System& system, ConstantPotentialFor
     system.addForce(constantPotentialForce);
 }
 
-void testReferenceCharges(bool testThomasFermi, ConstantPotentialForce::ConstantPotentialMethod method) {
+void testReferenceCharges(bool testThomasFermi, ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
     // Make sure that charges solved for match values computed by an external
     // reference implementation.
 
@@ -1060,6 +1067,7 @@ void testReferenceCharges(bool testThomasFermi, ConstantPotentialForce::Constant
 
     testForce->setEwaldErrorTolerance(5e-5);
     testForce->setConstantPotentialMethod(method);
+    testForce->setUsePreconditioner(usePreconditioner);
     testForce->setUseChargeConstraint(true);
     testForce->setChargeConstraintTarget(0);
     testForce->setCutoffDistance(1);
@@ -1098,7 +1106,7 @@ void testReferenceCharges(bool testThomasFermi, ConstantPotentialForce::Constant
     }
 }
 
-void testChargeUpdate(ConstantPotentialForce::ConstantPotentialMethod method) {
+void testChargeUpdate(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
     // Make sure that charges get updated correctly before and after dynamics.
 
     System testSystem;
@@ -1108,6 +1116,7 @@ void testChargeUpdate(ConstantPotentialForce::ConstantPotentialMethod method) {
     makeTestSimulateSystem(method == ConstantPotentialForce::Matrix, testSystem, testForce, positions);
 
     testForce->setConstantPotentialMethod(method);
+    testForce->setUsePreconditioner(usePreconditioner);
     testForce->setUseChargeConstraint(true);
     testForce->setChargeConstraintTarget(1);
     testForce->setExternalField(Vec3(10, 0, 0));
@@ -1150,7 +1159,7 @@ void testChargeUpdate(ConstantPotentialForce::ConstantPotentialMethod method) {
     }
 }
 
-void testEnergyConservation(ConstantPotentialForce::ConstantPotentialMethod method, int stepCount) {
+void testEnergyConservation(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner, int stepCount) {
     // Do a short dynamics run and ensure that energy is conserved.
 
     System system;
@@ -1160,6 +1169,7 @@ void testEnergyConservation(ConstantPotentialForce::ConstantPotentialMethod meth
     makeTestSimulateSystem(method == ConstantPotentialForce::Matrix, system, force, positions);
 
     force->setConstantPotentialMethod(method);
+    force->setUsePreconditioner(usePreconditioner);
     force->setUseChargeConstraint(true);
     force->setChargeConstraintTarget(1);
     force->setExternalField(Vec3(10, 0, 0));
@@ -1217,7 +1227,7 @@ void compareToReferencePlatform(System& system, ConstantPotentialForce* force, c
     }
 }
 
-void testCompareToReferencePlatform(ConstantPotentialForce::ConstantPotentialMethod method) {
+void testCompareToReferencePlatform(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
     // Compares results between the current and reference platforms for a few
     // test systems.  This is only called in the runPlatformTests() for
     // platforms other than the reference platform.
@@ -1226,12 +1236,13 @@ void testCompareToReferencePlatform(ConstantPotentialForce::ConstantPotentialMet
     ConstantPotentialForce* force;
     vector<Vec3> positions;
 
-    makeTestUpdateSystem(method, system, force, positions);
+    makeTestUpdateSystem(method, usePreconditioner, system, force, positions);
     force->setEwaldErrorTolerance(5e-5);
     compareToReferencePlatform(system, force, positions);
 
     makeTestSimulateSystem(method == ConstantPotentialForce::Matrix, system, force, positions);
     force->setConstantPotentialMethod(method);
+    force->setUsePreconditioner(usePreconditioner);
     force->setUseChargeConstraint(true);
     force->setChargeConstraintTarget(1);
     force->setExternalField(Vec3(10, 0, 0));
@@ -1246,7 +1257,22 @@ void testCompareToReferencePlatform(ConstantPotentialForce::ConstantPotentialMet
 }
 
 void platformInitialize();
-void runPlatformTests();
+void runPlatformTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner);
+
+void runMethodDependentTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
+    testSmallSystems(method, usePreconditioner);
+    testNoConstraintWithoutElectrode(method, usePreconditioner);
+    testConstrainCharge(method, usePreconditioner);
+    testUpdateParticleExceptionParameters(method, usePreconditioner);
+    testUpdateElectrodeParameters(method, usePreconditioner);
+    testUpdateChargeFieldParameters(method, usePreconditioner);
+    testUpdateBox(method, usePreconditioner);
+    testUpdatePositions(method, usePreconditioner);
+    testReferenceCharges(false, method, usePreconditioner); // External field
+    testReferenceCharges(true, method, usePreconditioner);  // Thomas-Fermi
+    testChargeUpdate(method, usePreconditioner);
+    runPlatformTests(method, usePreconditioner);
+}
 
 int main(int argc, char* argv[]) {
     try {
@@ -1258,39 +1284,17 @@ int main(int argc, char* argv[]) {
         testCoulombOverlap();
         testCoulombNonNeutral();
         testCoulombGaussian();
+        
         testElectrodesDisjoint();
         testNoElectrodeExceptions();
         testElectrodeMatrixNoMass();
 
-        testSmallSystems(ConstantPotentialForce::Matrix);
-        testSmallSystems(ConstantPotentialForce::CG);
-        testNoConstraintWithoutElectrode(ConstantPotentialForce::Matrix);
-        testNoConstraintWithoutElectrode(ConstantPotentialForce::CG);
-        testConstrainCharge(ConstantPotentialForce::Matrix);
-        testConstrainCharge(ConstantPotentialForce::CG);
-
-        testUpdateParticleExceptionParameters(ConstantPotentialForce::Matrix);
-        testUpdateParticleExceptionParameters(ConstantPotentialForce::CG);
-        testUpdateElectrodeParameters(ConstantPotentialForce::Matrix);
-        testUpdateElectrodeParameters(ConstantPotentialForce::CG);
-        testUpdateChargeFieldParameters(ConstantPotentialForce::Matrix);
-        testUpdateChargeFieldParameters(ConstantPotentialForce::CG);
-        testUpdateBox(ConstantPotentialForce::Matrix);
-        testUpdateBox(ConstantPotentialForce::CG);
-        testUpdatePositions(ConstantPotentialForce::Matrix);
-        testUpdatePositions(ConstantPotentialForce::CG);
-
         testParallelPlateCapacitorDoubleCell();
         testParallelPlateCapacitorFiniteField();
 
-        testReferenceCharges(false, ConstantPotentialForce::Matrix); // External field
-        testReferenceCharges(false, ConstantPotentialForce::CG);
-        testReferenceCharges(true, ConstantPotentialForce::Matrix);  // Thomas-Fermi
-        testReferenceCharges(true, ConstantPotentialForce::CG);
-        testChargeUpdate(ConstantPotentialForce::Matrix);
-        testChargeUpdate(ConstantPotentialForce::CG);
-
-        runPlatformTests();
+        runMethodDependentTests(ConstantPotentialForce::Matrix, false); // Matrix inversion (usePreconditioner ignored)
+        runMethodDependentTests(ConstantPotentialForce::CG, false);     // Conjugate gradient (not preconditioned)
+        runMethodDependentTests(ConstantPotentialForce::CG, true);      // Conjugate gradient (preconditioned)
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

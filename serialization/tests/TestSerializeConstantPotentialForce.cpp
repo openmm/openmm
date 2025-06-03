@@ -51,6 +51,7 @@ void testSerialization() {
     int nx = 3, ny = 5, nz = 7;
     force.setPMEParameters(alpha, nx, ny, nz);
     force.setConstantPotentialMethod(ConstantPotentialForce::Matrix);
+    force.setUsePreconditioner(false);
     force.setCGErrorTolerance(2e-8);
     force.setUseChargeConstraint(true);
     force.setChargeConstraintTarget(0.1);
@@ -93,6 +94,7 @@ void testSerialization() {
     ASSERT_EQUAL(ny, ny2);
     ASSERT_EQUAL(nz, nz2);
     ASSERT_EQUAL(force.getConstantPotentialMethod(), force2.getConstantPotentialMethod());
+    ASSERT_EQUAL(force.getUsePreconditioner(), force2.getUsePreconditioner());
     ASSERT_EQUAL(force.getCGErrorTolerance(), force2.getCGErrorTolerance());
     ASSERT_EQUAL(force.getUseChargeConstraint(), force2.getUseChargeConstraint());
     ASSERT_EQUAL(force.getChargeConstraintTarget(), force2.getChargeConstraintTarget());

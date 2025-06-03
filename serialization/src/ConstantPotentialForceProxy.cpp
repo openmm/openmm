@@ -58,6 +58,7 @@ void ConstantPotentialForceProxy::serialize(const void* object, SerializationNod
     node.setBoolProperty("exceptionsUsePeriodic", force.getExceptionsUsePeriodicBoundaryConditions());
     node.setIntProperty("constantPotentialMethod", (int) force.getConstantPotentialMethod());
     node.setDoubleProperty("cgTolerance", force.getCGErrorTolerance());
+    node.setBoolProperty("usePreconditioner", force.getUsePreconditioner());
     node.setBoolProperty("useChargeConstraint", force.getUseChargeConstraint());
     node.setDoubleProperty("chargeConstraintTarget", force.getChargeConstraintTarget());
     Vec3 externalField;
@@ -103,7 +104,7 @@ void* ConstantPotentialForceProxy::deserialize(const SerializationNode& node) co
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setName(node.getStringProperty("name", force->getName()));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
-        force->setCGErrorTolerance(node.getDoubleProperty("cgTolerance"));
+        force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance"));
         double alpha = node.getDoubleProperty("alpha", 0.0);
         int nx = node.getIntProperty("nx", 0);
         int ny = node.getIntProperty("ny", 0);
@@ -111,7 +112,8 @@ void* ConstantPotentialForceProxy::deserialize(const SerializationNode& node) co
         force->setPMEParameters(alpha, nx, ny, nz);
         force->setExceptionsUsePeriodicBoundaryConditions(node.getBoolProperty("exceptionsUsePeriodic"));
         force->setConstantPotentialMethod((ConstantPotentialForce::ConstantPotentialMethod) node.getIntProperty("constantPotentialMethod"));
-        force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance"));
+        force->setCGErrorTolerance(node.getDoubleProperty("cgTolerance"));
+        force->setUsePreconditioner(node.getBoolProperty("usePreconditioner"));
         force->setUseChargeConstraint(node.getBoolProperty("useChargeConstraint"));
         force->setChargeConstraintTarget(node.getDoubleProperty("chargeConstraintTarget"));
         const SerializationNode& externalFieldNode = node.getChildNode("ExternalField");

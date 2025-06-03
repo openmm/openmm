@@ -232,7 +232,8 @@ void CpuConstantPotentialMatrixSolver::ensureValid(CpuConstantPotentialForce& co
     }
 }
 
-CpuConstantPotentialCGSolver::CpuConstantPotentialCGSolver(int numParticles,int numElectrodeParticles) : CpuConstantPotentialSolver(numParticles, numElectrodeParticles),
+CpuConstantPotentialCGSolver::CpuConstantPotentialCGSolver(int numParticles,int numElectrodeParticles, bool precond) : CpuConstantPotentialSolver(numParticles, numElectrodeParticles),
+    precondRequested(precond),
     precondVector(numElectrodeParticles),
     q(numElectrodeParticles),
     grad(numElectrodeParticles),
@@ -240,20 +241,27 @@ CpuConstantPotentialCGSolver::CpuConstantPotentialCGSolver(int numParticles,int 
     precGrad(numElectrodeParticles),
     qStep(numElectrodeParticles),
     gradStep(numElectrodeParticles),
-    grad0(numElectrodeParticles)
+    grad0(numElectrodeParticles),
+    qLast(numElectrodeParticles)
 {
 }
 
 void CpuConstantPotentialCGSolver::solveImpl(CpuConstantPotentialForce& conp, ThreadPool& threads, Kernel& pmeKernel) {
     ensureValid(conp, threads, pmeKernel);
-
-    // offset, precondVector, and precondScale need to use double precision for
-    // reliable convergence; the remaining algorithm variables can use single
-    // precision safely.
-
+    
     double offset;
     float error, paramScale, alpha, beta;
     const float errorTarget = conp.cgErrorTol * conp.cgErrorTol * numElectrodeParticles;
+
+    // Set initial guess charges as linear extrapolations from the current and
+    // previous charges fed through the solver, and save the current charges as
+    // the previous charges.
+    for (int ii = 0; ii < numElectrodeParticles; ii++) {
+        int i = conp.elecToSys[ii];
+        float qGuess = conp.posq[4 * i + 3];
+        conp.posq[4 * i + 3] = 2.0f * qGuess - qLast[ii];
+        qLast[ii] = qGuess;
+    }
 
     // Ensure that initial guess charges satisfy the constraint.
     if (conp.useChargeConstraint) {
@@ -303,15 +311,19 @@ void CpuConstantPotentialCGSolver::solveImpl(CpuConstantPotentialForce& conp, Th
     grad0.assign(&conp.chargeDerivatives[0], &conp.chargeDerivatives[numElectrodeParticles]);
 
     // Project the initial gradient with preconditioning.
-    offset = 0.0;
-    if (conp.useChargeConstraint) {
-        for (int ii = 0; ii < numElectrodeParticles; ii++) {
-            offset += precondVector[ii] * grad[ii];
+    if (precondActivated) {
+        offset = 0.0;
+        if (conp.useChargeConstraint) {
+            for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                offset += precondVector[ii] * grad[ii];
+            }
         }
-        offset *= precondScale;
+        for (int ii = 0; ii < numElectrodeParticles; ii++) {
+            precGrad[ii] = precondVector[ii] * (grad[ii] - offset);
+        }
     }
-    for (int ii = 0; ii < numElectrodeParticles; ii++) {
-        precGrad[ii] = precondVector[ii] * (grad[ii] - offset);
+    else {
+        precGrad.assign(projGrad.begin(), projGrad.end());
     }
 
     // Initialize step vector for conjugate gradient iterations.
@@ -414,15 +426,19 @@ void CpuConstantPotentialCGSolver::solveImpl(CpuConstantPotentialForce& conp, Th
         }
 
         // Project the current gradient with preconditioning.
-        offset = 0.0;
-        if (conp.useChargeConstraint) {
-            for (int ii = 0; ii < numElectrodeParticles; ii++) {
-                offset += precondVector[ii] * grad[ii];
+        if (precondActivated) {
+            offset = 0.0;
+            if (conp.useChargeConstraint) {
+                for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                    offset += precondVector[ii] * grad[ii];
+                }
             }
-            offset *= precondScale;
+            for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                precGrad[ii] = precondVector[ii] * (grad[ii] - offset);
+            }
         }
-        for (int ii = 0; ii < numElectrodeParticles; ii++) {
-            precGrad[ii] = precondVector[ii] * (grad[ii] - offset);
+        else {
+            precGrad.assign(projGrad.begin(), projGrad.end());
         }
 
         // Evaluate the conjugate gradient parameter beta.
@@ -477,8 +493,21 @@ void CpuConstantPotentialCGSolver::ensureValid(CpuConstantPotentialForce& conp, 
     boxVectors[1] = conp.boxVectors[1];
     boxVectors[2] = conp.boxVectors[2];
 
-    float pmeTerm = 0.0f;
-    if (numElectrodeParticles) {
+    precondActivated = false;
+    if (precondRequested && numElectrodeParticles) {
+        // If electrode self-energy contributions differ between electrodes,
+        // a preconditioner may help convergence; otherwise, it provides no
+        // benefit and may slow convergence due to roundoff error.
+        for (int ie = 1; ie < conp.numElectrodes; ie++) {
+            // Note electrodeSelfScales[1] has the scale for electrode 0, etc.
+            if (conp.electrodeSelfScales[ie + 1] != conp.electrodeSelfScales[ie]) {
+                precondActivated = true;
+                break;
+            }
+        }
+    }
+
+    if (precondActivated) {
         // Save the position of the first electrode particle.
         int i0 = conp.elecToSys[0];
         float x0 = conp.posq[4 * i0];
@@ -507,7 +536,7 @@ void CpuConstantPotentialCGSolver::ensureValid(CpuConstantPotentialForce& conp, 
         CpuConstantPotentialPmeIO io(conp.posq, NULL, &derivatives[0], numParticles, numElectrodeParticles);
         pmeKernel.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, boxVectors, false, false, true);
         pmeKernel.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
-        pmeTerm = derivatives[0];
+        float pmeTerm = derivatives[0];
 
         // Restore particle positions and charges.
         conp.posq[4 * i0] = x0;
@@ -516,17 +545,20 @@ void CpuConstantPotentialCGSolver::ensureValid(CpuConstantPotentialForce& conp, 
         for (int i = 0; i < numParticles; i++) {
             conp.posq[4 * i + 3] = qSave[i];
         }
-    }
 
-    // The diagonal has a contribution from reciprocal space, Ewald
-    // self-interaction, Ewald neutralizing plasma, Gaussian self-interaction,
-    // and Thomas-Fermi contributions.
-    precondScale = 0.0;
-    for (int ii = 0; ii < numElectrodeParticles; ii++) {
-        precondVector[ii] = 1.0 / (2.0 * (conp.electrodeSelfScales[conp.elecElec[ii] + 1] - conp.plasmaScale) + pmeTerm);
-        precondScale += precondVector[ii];
+        // The diagonal has a contribution from reciprocal space, Ewald
+        // self-interaction, Ewald neutralizing plasma, Gaussian self-interaction,
+        // and Thomas-Fermi contributions.
+        double precondScaleInv = 0.0;
+        for (int ii = 0; ii < numElectrodeParticles; ii++) {
+            precondVector[ii] = 1.0f / (2.0f * (conp.electrodeSelfScales[conp.elecElec[ii] + 1] - conp.plasmaScale) + pmeTerm);
+            precondScaleInv += precondVector[ii];
+        }
+        double precondScale = 1.0 / precondScaleInv;
+        for (int ii = 0; ii < numElectrodeParticles; ii++) {
+            precondVector[ii] *= precondScale;
+        }
     }
-    precondScale = 1.0 / precondScale;
 }
 
 const int CpuConstantPotentialForce::PotentialIndex = 0;

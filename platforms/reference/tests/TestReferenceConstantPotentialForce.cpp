@@ -35,7 +35,7 @@
 void platformInitialize() {
 }
 
-void testGradientFiniteDifference(ConstantPotentialForce::ConstantPotentialMethod method) {
+void testGradientFiniteDifference(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
     // Ensures that computed forces match actual changes in energy with particle
     // perturbations, accounting for changes in electrode atom charges.
 
@@ -46,7 +46,7 @@ void testGradientFiniteDifference(ConstantPotentialForce::ConstantPotentialMetho
     System system;
     ConstantPotentialForce* force;
     vector<Vec3> positions;
-    makeTestUpdateSystem(method, system, force, positions);
+    makeTestUpdateSystem(method, usePreconditioner, system, force, positions);
     force->setEwaldErrorTolerance(2e-6);
     VerletIntegrator integrator(0.001);
     Context context(system, integrator, platform);
@@ -75,11 +75,8 @@ void testGradientFiniteDifference(ConstantPotentialForce::ConstantPotentialMetho
     }
 }
 
-void runPlatformTests() {
+void runPlatformTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
     // Test is extremely slow on emulated platforms, so don't run many steps.
-    testEnergyConservation(ConstantPotentialForce::Matrix, 50);
-    testEnergyConservation(ConstantPotentialForce::CG, 50);
-
-    testGradientFiniteDifference(ConstantPotentialForce::Matrix);
-    testGradientFiniteDifference(ConstantPotentialForce::CG);
+    testEnergyConservation(method, usePreconditioner, 50);
+    testGradientFiniteDifference(method, usePreconditioner);
 }

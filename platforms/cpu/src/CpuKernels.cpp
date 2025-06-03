@@ -1015,9 +1015,11 @@ void CpuCalcConstantPotentialForceKernel::initialize(const System& system, const
     ConstantPotentialForce::ConstantPotentialMethod method = force.getConstantPotentialMethod();
     if (method == ConstantPotentialForce::Matrix) {
         solver = new CpuConstantPotentialMatrixSolver(numParticles, numElectrodeParticles);
-    } else if (method == ConstantPotentialForce::CG) {
-        solver = new CpuConstantPotentialCGSolver(numParticles, numElectrodeParticles);
-    } else {
+    }
+    else if (method == ConstantPotentialForce::CG) {
+        solver = new CpuConstantPotentialCGSolver(numParticles, numElectrodeParticles, force.getUsePreconditioner());
+    }
+    else {
         throw OpenMMException("internal error: invalid constant potential method");
     }
 

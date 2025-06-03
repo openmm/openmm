@@ -168,16 +168,17 @@ public:
 class ReferenceConstantPotentialCGSolver : public ReferenceConstantPotentialSolver {
 private:
     Vec3 boxVectors[3];
+    bool precond;
     std::vector<double> precondVector;
-    double precondScale;
 
 public:
     /**
      * Creates a ReferenceConstantPotentialCGSolver.
      * 
      * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
+     * @param precond                whether or not to use a preconditioner
      */
-    ReferenceConstantPotentialCGSolver(int numElectrodeParticles);
+    ReferenceConstantPotentialCGSolver(int numElectrodeParticles, bool precond);
     /**
      * Updates precomputed data stored by the solver.
      * 

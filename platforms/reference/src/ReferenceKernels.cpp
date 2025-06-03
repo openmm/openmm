@@ -1270,7 +1270,7 @@ void ReferenceCalcConstantPotentialForceKernel::initialize(const System& system,
         solver = new ReferenceConstantPotentialMatrixSolver(numElectrodeParticles);
     }
     else if (method == ConstantPotentialForce::CG) {
-        solver = new ReferenceConstantPotentialCGSolver(numElectrodeParticles);
+        solver = new ReferenceConstantPotentialCGSolver(numElectrodeParticles, force.getUsePreconditioner());
     }
     else {
         throw OpenMMException("internal error: invalid constant potential method");

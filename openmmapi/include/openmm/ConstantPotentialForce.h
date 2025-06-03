@@ -334,6 +334,16 @@ public:
      */
     void setConstantPotentialMethod(ConstantPotentialMethod method);
     /**
+     * Get whether or not to use a preconditioner when solving for electrode
+     * charges with the conjugate gradient method.
+     */
+    bool getUsePreconditioner() const;
+    /**
+     * Set whether or not to use a preconditioner when solving for electrode
+     * charges with the conjugate gradient method.
+     */
+    void setUsePreconditioner(bool use);
+    /**
      * Get the tolerance, in units of kJ/mol per proton charge, used for the
      * conjugate gradient method of calculating electrode charges.  The method
      * will iterate until the RMS error in the electrode potentials (gradient of
@@ -437,7 +447,7 @@ private:
     ConstantPotentialMethod constantPotentialMethod;
     double cutoffDistance, ewaldErrorTol, alpha, cgErrorTol, chargeTarget;
     Vec3 externalField;
-    bool exceptionsUsePeriodic, useChargeConstraint;
+    bool exceptionsUsePeriodic, useChargeConstraint, usePreconditioner;
     int nx, ny, nz;
     void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
     std::vector<ParticleInfo> particles;

@@ -45,7 +45,8 @@ using namespace std;
 ConstantPotentialForce::ConstantPotentialForce() : constantPotentialMethod(CG),
         cutoffDistance(1.0), ewaldErrorTol(5e-4), alpha(0.0), cgErrorTol(1e-4),
         chargeTarget(0.0), exceptionsUsePeriodic(false),
-        useChargeConstraint(false), nx(0), ny(0), nz(0), numContexts(0) {
+        useChargeConstraint(false), usePreconditioner(true),
+        nx(0), ny(0), nz(0), numContexts(0) {
 }
 
 double ConstantPotentialForce::getCutoffDistance() const {
@@ -239,6 +240,14 @@ void ConstantPotentialForce::setConstantPotentialMethod(ConstantPotentialMethod 
         throw OpenMMException("ConstantPotentialForce: Illegal value for constant potential method");
     }
     constantPotentialMethod = method;
+}
+
+bool ConstantPotentialForce::getUsePreconditioner() const {
+    return usePreconditioner;
+}
+
+void ConstantPotentialForce::setUsePreconditioner(bool use) {
+    usePreconditioner = use;
 }
 
 double ConstantPotentialForce::getCGErrorTolerance() const {

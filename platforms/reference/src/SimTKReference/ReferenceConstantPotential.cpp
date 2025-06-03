@@ -197,8 +197,8 @@ void ReferenceConstantPotentialMatrixSolver::solve(
     }
 }
 
-ReferenceConstantPotentialCGSolver::ReferenceConstantPotentialCGSolver(int numElectrodeParticles) : ReferenceConstantPotentialSolver(),
-    precondVector(numElectrodeParticles) {
+ReferenceConstantPotentialCGSolver::ReferenceConstantPotentialCGSolver(int numElectrodeParticles, bool precond) : ReferenceConstantPotentialSolver(),
+    precond(precond), precondVector(numElectrodeParticles) {
 }
 
 void ReferenceConstantPotentialCGSolver::update(
@@ -232,33 +232,38 @@ void ReferenceConstantPotentialCGSolver::update(
     boxVectors[1] = conp.boxVectors[1];
     boxVectors[2] = conp.boxVectors[2];
 
-    // Perform a reference PME calculation with a single charge at the origin to
-    // find the constant offset on the preconditioner diagonal due to the PME
-    // calculation.  This will actually vary slightly with position but only due
-    // to finite accuracy of the PME splines, so it is fine to assume it will be
-    // constant for the preconditioner.
-    pme_t pmeData;
-    pme_init(&pmeData, conp.ewaldAlpha, 1, conp.gridSize, 5, 1);
-    std::vector<Vec3> pmePosData(1);
-    std::vector<double> pmeChargeDerivatives(1);
-    std::vector<int> pmeElectrodeIndices(1);
-    std::vector<double> pmeCharges(1, 1.0);
-    pme_exec_charge_derivatives(pmeData, pmePosData, pmeChargeDerivatives, pmeElectrodeIndices, pmeCharges, boxVectors);
-    pme_destroy(pmeData);
+    if (precond) {
+        // Perform a reference PME calculation with a single charge at the origin to
+        // find the constant offset on the preconditioner diagonal due to the PME
+        // calculation.  This will actually vary slightly with position but only due
+        // to finite accuracy of the PME splines, so it is fine to assume it will be
+        // constant for the preconditioner.
+        pme_t pmeData;
+        pme_init(&pmeData, conp.ewaldAlpha, 1, conp.gridSize, 5, 1);
+        std::vector<Vec3> pmePosData(1);
+        std::vector<double> pmeChargeDerivatives(1);
+        std::vector<int> pmeElectrodeIndices(1);
+        std::vector<double> pmeCharges(1, 1.0);
+        pme_exec_charge_derivatives(pmeData, pmePosData, pmeChargeDerivatives, pmeElectrodeIndices, pmeCharges, boxVectors);
+        pme_destroy(pmeData);
 
-    // The diagonal has a contribution from reciprocal space, Ewald
-    // self-interaction, Ewald neutralizing plasma, Gaussian self-interaction,
-    // and Thomas-Fermi contributions.
-    precondScale = 0.0;
-    double volume = boxVectors[0][0] * boxVectors[1][1] * boxVectors[2][2];
-    double ewaldTerm = pmeChargeDerivatives[0] - SELF_ALPHA_SCALE * conp.ewaldAlpha - PLASMA_SCALE / (volume * conp.ewaldAlpha * conp.ewaldAlpha);
-    for (int ii = 0; ii < numElectrodeParticles; ii++) {
-        precondVector[ii] = 1.0 / (SELF_ETA_SCALE / electrodeParamArray[ii][conp.GaussianWidthIndex]
-            + TF_SCALE * electrodeParamArray[ii][conp.ThomasFermiScaleIndex] + ewaldTerm);
-        precondScale += precondVector[ii];
+        // The diagonal has a contribution from reciprocal space, Ewald
+        // self-interaction, Ewald neutralizing plasma, Gaussian self-interaction,
+        // and Thomas-Fermi contributions.
+        double volume = boxVectors[0][0] * boxVectors[1][1] * boxVectors[2][2];
+        double ewaldTerm = pmeChargeDerivatives[0] - SELF_ALPHA_SCALE * conp.ewaldAlpha - PLASMA_SCALE / (volume * conp.ewaldAlpha * conp.ewaldAlpha);
 
+        double precondScaleInv = 0.0;
+        for (int ii = 0; ii < numElectrodeParticles; ii++) {
+            precondVector[ii] = 1.0 / (SELF_ETA_SCALE / electrodeParamArray[ii][conp.GaussianWidthIndex]
+                + TF_SCALE * electrodeParamArray[ii][conp.ThomasFermiScaleIndex] + ewaldTerm);
+            precondScaleInv += precondVector[ii];
+        }
+        double precondScale = 1.0 / precondScaleInv;
+        for (int ii = 0; ii < numElectrodeParticles; ii++) {
+            precondVector[ii] *= precondScale;
+        }
     }
-    precondScale = 1.0 / precondScale;
 }
 
 void ReferenceConstantPotentialCGSolver::solve(
@@ -332,15 +337,19 @@ void ReferenceConstantPotentialCGSolver::solve(
     conp.getDerivatives(numParticles, numElectrodeParticles, posData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, grad0, pmeData);
 
     // Project the initial gradient with preconditioning.
-    offset = 0.0;
-    if (conp.useChargeConstraint) {
-        for (int ii = 0; ii < numElectrodeParticles; ii++) {
-            offset += precondVector[ii] * grad[ii];
+    if (precond) {
+        offset = 0.0;
+        if (conp.useChargeConstraint) {
+            for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                offset += precondVector[ii] * grad[ii];
+            }
         }
-        offset *= precondScale;
+        for (int ii = 0; ii < numElectrodeParticles; ii++) {
+            precGrad[ii] = precondVector[ii] * (grad[ii] - offset);
+        }
     }
-    for (int ii = 0; ii < numElectrodeParticles; ii++) {
-        precGrad[ii] = precondVector[ii] * (grad[ii] - offset);
+    else {
+        precGrad.assign(projGrad.begin(), projGrad.end());
     }
 
     // Initialize step vector for conjugate gradient iterations.
@@ -441,15 +450,19 @@ void ReferenceConstantPotentialCGSolver::solve(
         }
 
         // Project the current gradient with preconditioning.
-        offset = 0.0;
-        if (conp.useChargeConstraint) {
-            for (int ii = 0; ii < numElectrodeParticles; ii++) {
-                offset += precondVector[ii] * grad[ii];
+        if (precond) {
+            offset = 0.0;
+            if (conp.useChargeConstraint) {
+                for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                    offset += precondVector[ii] * grad[ii];
+                }
             }
-            offset *= precondScale;
+            for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                precGrad[ii] = precondVector[ii] * (grad[ii] - offset);
+            }
         }
-        for (int ii = 0; ii < numElectrodeParticles; ii++) {
-            precGrad[ii] = precondVector[ii] * (grad[ii] - offset);
+        else {
+            precGrad.assign(projGrad.begin(), projGrad.end());
         }
 
         // Evaluate the conjugate gradient parameter beta.

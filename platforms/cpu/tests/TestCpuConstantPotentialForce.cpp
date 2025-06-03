@@ -40,9 +40,7 @@ void platformInitialize() {
     registerCpuPmeKernelFactories();
 }
 
-void runPlatformTests() {
-    testEnergyConservation(ConstantPotentialForce::Matrix, 100);
-    testEnergyConservation(ConstantPotentialForce::CG, 100);
-    testCompareToReferencePlatform(ConstantPotentialForce::Matrix);
-    testCompareToReferencePlatform(ConstantPotentialForce::CG);
+void runPlatformTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
+    testEnergyConservation(method, usePreconditioner, 100);
+    testCompareToReferencePlatform(method, usePreconditioner);
 }
