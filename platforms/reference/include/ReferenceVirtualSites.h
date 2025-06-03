@@ -44,11 +44,11 @@ public:
     /**
      * Compute the positions of all virtual sites.
      */
-    void computePositions(const System& system, std::vector<Vec3>& atomCoordinates) const;
+    void computePositions(const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates, const Vec3* boxVectors) const;
     /**
      * Distribute forces from virtual sites to the atoms they are based on.
      */
-    void distributeForces(const System& system, const std::vector<Vec3>& atomCoordinates, std::vector<Vec3>& forces) const;
+    void distributeForces(const System& system, const std::vector<Vec3>& atomCoordinates, std::vector<Vec3>& forces, const Vec3* boxVectors) const;
 private:
     std::vector<int> order;
 };
