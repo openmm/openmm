@@ -103,6 +103,8 @@ KernelImpl* HipKernelFactory::createKernelImpl(std::string name, const Platform&
         return new CommonCalcCustomTorsionForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcNonbondedForceKernel::Name())
         return new HipCalcNonbondedForceKernel(name, platform, cu, context.getSystem());
+    if (name == CalcConstantPotentialForceKernel::Name())
+        return new HipCalcConstantPotentialForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomNonbondedForceKernel::Name())
         return new CommonCalcCustomNonbondedForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcGBSAOBCForceKernel::Name())

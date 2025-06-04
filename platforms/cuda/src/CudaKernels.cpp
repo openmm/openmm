@@ -54,6 +54,11 @@ using namespace std;
         throw OpenMMException(m.str());\
     }
 
+static void getCudaPmeParameters(CudaContext& cu, bool& usePmeQueue, bool& useFixedPointChargeSpreading) {
+    usePmeQueue = (!cu.getPlatformData().disablePmeStream && !cu.getPlatformData().useCpuPme);
+    useFixedPointChargeSpreading = cu.getUseDoublePrecision() || cu.getPlatformData().deterministicForces;
+}
+
 void CudaCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
@@ -87,7 +92,13 @@ double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bo
 }
 
 void CudaCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
-    bool usePmeQueue = (!cu.getPlatformData().disablePmeStream && !cu.getPlatformData().useCpuPme);
-    bool useFixedPointChargeSpreading = cu.getUseDoublePrecision() || cu.getPlatformData().deterministicForces;
+    bool usePmeQueue, useFixedPointChargeSpreading;
+    getCudaPmeParameters(cu, usePmeQueue, useFixedPointChargeSpreading);
     commonInitialize(system, force, usePmeQueue, false, useFixedPointChargeSpreading, cu.getPlatformData().useCpuPme);
+}
+
+void CudaCalcConstantPotentialForceKernel::initialize(const System& system, const ConstantPotentialForce& force) {
+    bool usePmeQueue, useFixedPointChargeSpreading;
+    getCudaPmeParameters(cu, usePmeQueue, useFixedPointChargeSpreading);
+    commonInitialize(system, force, usePmeQueue, false, useFixedPointChargeSpreading);
 }
