@@ -258,13 +258,11 @@ class ForceField(object):
                 raise ValueError('Could not locate file "%s"' % file)
             except Exception as e:
                 # Fail with an error message about which file could not be read.
-                msg  = str(e) + '\n'
                 if hasattr(file, 'name'):
                     filename = file.name
                 else:
                     filename = str(file)
-                msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
-                raise Exception(msg)
+                raise Exception('ForceField.loadFile() encountered an error reading file "%s": %s' % (filename, e))
 
             trees.append(tree)
             i += 1
