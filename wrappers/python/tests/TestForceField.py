@@ -6,6 +6,8 @@ from openmm.unit import *
 import openmm.app.element as elem
 import openmm.app.forcefield as forcefield
 import math
+import shutil
+import tempfile
 import textwrap
 try:
     from cStringIO import StringIO
@@ -1253,6 +1255,23 @@ class TestForceField(unittest.TestCase):
         self.assertTrue(len(forcefield._atomTypes) > 10)
         self.assertTrue('spce-O' in forcefield._atomTypes)
         self.assertTrue('HOH' in forcefield._templates)
+
+    def test_IncludesFromDataDirectory(self):
+        """Test relative include paths from subdirectories of the data directory."""
+
+        oldDataDirs = forcefield._dataDirectories
+        try:
+            with tempfile.TemporaryDirectory() as tempDataDir:
+                forcefield._dataDirectories = forcefield._getDataDirectories() + [tempDataDir]
+                os.mkdir(os.path.join(tempDataDir, 'subdir'))
+                for testFileName in ['ff_with_includes.xml', 'test_amber_ff.xml']:
+                    shutil.copyfile(os.path.join('systems', testFileName), os.path.join(tempDataDir, 'subdir', testFileName))
+                ff = ForceField(os.path.join('subdir', 'ff_with_includes.xml'))
+                self.assertTrue(len(ff._atomTypes) > 10)
+                self.assertTrue('spce-O' in ff._atomTypes)
+                self.assertTrue('HOH' in ff._templates)
+        finally:
+            forcefield._dataDirectories = oldDataDirs
 
     def test_ImpropersOrdering(self):
         """Test correctness of the ordering of atom indexes in improper torsions
