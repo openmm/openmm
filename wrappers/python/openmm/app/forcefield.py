@@ -245,20 +245,19 @@ class ForceField(object):
         i = 0
         while i < len(files):
             file = files[i]
-            tree = None
-            try:
-                # this handles either filenames or open file-like objects
-                tree = etree.parse(file)
-            except IOError:
+            # this handles either filenames or open file-like objects
+            if isinstance(file, str) and not os.path.isfile(file):
                 for dataDir in _getDataDirectories():
                     f = os.path.join(dataDir, file)
                     if os.path.isfile(f):
-                        tree = etree.parse(f)
+                        file = f
                         break
+            try:
+                tree = etree.parse(file)
+            except FileNotFoundError:
+                raise ValueError('Could not locate file "%s"' % file)
             except Exception as e:
                 # Fail with an error message about which file could not be read.
-                # TODO: Also handle case where fallback to 'data' directory encounters problems,
-                # but this is much less worrisome because we control those files.
                 msg  = str(e) + '\n'
                 if hasattr(file, 'name'):
                     filename = file.name
@@ -266,8 +265,6 @@ class ForceField(object):
                     filename = str(file)
                 msg += "ForceField.loadFile() encountered an error reading file '%s'\n" % filename
                 raise Exception(msg)
-            if tree is None:
-                raise ValueError('Could not locate file "%s"' % file)
 
             trees.append(tree)
             i += 1
