@@ -286,6 +286,7 @@ extern "C" __launch_bounds__(THREAD_BLOCK_SIZE) __global__ void computeNonbonded
                 skipTiles = end;
             skipBase += TILE_SIZE;
             currentSkipIndex = 0;
+            SYNC_WARPS;
         }
         while (SHFL(skipTiles, currentSkipIndex) < pos)
             currentSkipIndex++;
