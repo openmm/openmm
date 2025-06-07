@@ -192,7 +192,7 @@ Array2D<Real> Cholesky<Real>::solve(const Array2D<Real> &B)
 		return Array2D<Real>();
 
 	if (!isspd)
-	    return Arran2D<Real>();
+	    return Array2D<Real>();
 
 
 	Array2D<Real> X = B.copy();
