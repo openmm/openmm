@@ -1,6 +1,3 @@
-#ifndef OPENMM_H_
-#define OPENMM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (c) 2015-2025 Stanford University and the Authors.      *
+ * Authors: Evan Pretti                                                       *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -32,58 +29,54 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CMAPTorsionForce.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/CompoundIntegrator.h"
-#include "openmm/ConstantPotentialForce.h"
-#include "openmm/CustomBondForce.h"
-#include "openmm/CustomCentroidBondForce.h"
-#include "openmm/CustomCompoundBondForce.h"
-#include "openmm/CustomAngleForce.h"
-#include "openmm/CustomTorsionForce.h"
-#include "openmm/CustomExternalForce.h"
-#include "openmm/CustomCVForce.h"
-#include "openmm/CustomGBForce.h"
-#include "openmm/CustomHbondForce.h"
-#include "openmm/CustomIntegrator.h"
-#include "openmm/CustomManyParticleForce.h"
-#include "openmm/CustomNonbondedForce.h"
-#include "openmm/CustomVolumeForce.h"
-#include "openmm/DPDIntegrator.h"
-#include "openmm/Force.h"
-#include "openmm/GayBerneForce.h"
-#include "openmm/GBSAOBCForce.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/Integrator.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/LangevinMiddleIntegrator.h"
-#include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/MonteCarloAnisotropicBarostat.h"
-#include "openmm/MonteCarloBarostat.h"
-#include "openmm/MonteCarloFlexibleBarostat.h"
-#include "openmm/MonteCarloMembraneBarostat.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/Context.h"
-#include "openmm/OpenMMException.h"
-#include "openmm/PeriodicTorsionForce.h"
-#include "openmm/RBTorsionForce.h"
-#include "openmm/RMSDForce.h"
-#include "openmm/State.h"
-#include "openmm/System.h"
-#include "openmm/TabulatedFunction.h"
-#include "openmm/Units.h"
-#include "openmm/VariableLangevinIntegrator.h"
-#include "openmm/VariableVerletIntegrator.h"
-#include "openmm/Vec3.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/NoseHooverIntegrator.h"
-#include "openmm/NoseHooverChain.h"
-#include "openmm/VirtualSite.h"
-#include "openmm/Platform.h"
-#include "openmm/serialization/XmlSerializer.h"
-#include "openmm/ATMForce.h"
+#include "ReferenceTests.h"
+#include "TestConstantPotentialForce.h"
 
-#endif /*OPENMM_H_*/
+void platformInitialize() {
+}
+
+void testGradientFiniteDifference(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
+    // Ensures that computed forces match actual changes in energy with particle
+    // perturbations, accounting for changes in electrode atom charges.
+
+    // Finite differences with single precision PME have a lot of error, so we
+    // only run this test on the reference platform, and the other platforms'
+    // forces are compared to forces computed by the reference platform.
+
+    System system;
+    ConstantPotentialForce* force;
+    vector<Vec3> positions;
+    makeTestUpdateSystem(method, usePreconditioner, system, force, positions);
+    force->setEwaldErrorTolerance(2e-6);
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+
+    State state = context.getState(State::Energy | State::Forces);
+    double energy = state.getPotentialEnergy();
+    vector<Vec3> forces = state.getForces();
+
+    double delta = 1e-3;
+    for (int i = 0; i < forces.size(); i++) {
+        for (int d = 0; d < 3; d++) {
+            double refPos = positions[i][d];
+
+            positions[i][d] = refPos - delta;
+            context.setPositions(positions);
+            vector<double> c;
+            double energyL = context.getState(State::Energy).getPotentialEnergy();
+            positions[i][d] = refPos + delta;
+            context.setPositions(positions);
+            double energyR = context.getState(State::Energy).getPotentialEnergy();
+            positions[i][d] = refPos;
+
+            ASSERT_EQUAL_TOL((energyR - energyL) / (2 * delta), -forces[i][d], 5e-4);
+        }
+    }
+}
+
+void runPlatformTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
+    // Test is extremely slow on emulated platforms, so don't run many steps.
+    testEnergyConservation(method, usePreconditioner, 50);
+    testGradientFiniteDifference(method, usePreconditioner);
+}
