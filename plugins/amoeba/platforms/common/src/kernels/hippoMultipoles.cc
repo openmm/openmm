@@ -1,12 +1,20 @@
 KERNEL void computeLabFrameMoments(GLOBAL real4* RESTRICT posq, GLOBAL int4* RESTRICT multipoleParticles, GLOBAL real* RESTRICT localDipoles,
         GLOBAL real* RESTRICT localQuadrupoles, GLOBAL real* RESTRICT labDipoles, GLOBAL real* RESTRICT labQXX, GLOBAL real* RESTRICT labQXY, GLOBAL real* RESTRICT labQXZ,
-        GLOBAL real* RESTRICT labQYY, GLOBAL real* RESTRICT labQYZ) {
+        GLOBAL real* RESTRICT labQYY, GLOBAL real* RESTRICT labQYZ
+#ifdef USE_PERIODIC
+        ,real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
+#endif
+         ) {
     for (int atom = GLOBAL_ID; atom < NUM_ATOMS; atom += GLOBAL_SIZE) {
         int4 particles = multipoleParticles[atom];
         if (particles.z >= 0) {
             real4 thisParticlePos = posq[atom];
             real4 posZ = posq[particles.z];
-            real3 vectorZ = normalize(make_real3(posZ.x-thisParticlePos.x, posZ.y-thisParticlePos.y, posZ.z-thisParticlePos.z));
+            real3 vectorZ = make_real3(posZ.x-thisParticlePos.x, posZ.y-thisParticlePos.y, posZ.z-thisParticlePos.z);
+#ifdef USE_PERIODIC
+            APPLY_PERIODIC_TO_DELTA(vectorZ)
+#endif
+            vectorZ = normalize(vectorZ);
             int axisType = particles.w; 
             real4 posX;
             real3 vectorX;
@@ -19,6 +27,9 @@ KERNEL void computeLabFrameMoments(GLOBAL real4* RESTRICT posq, GLOBAL int4* RES
             else {
                 posX = posq[particles.x];
                 vectorX = make_real3(posX.x-thisParticlePos.x, posX.y-thisParticlePos.y, posX.z-thisParticlePos.z);
+#ifdef USE_PERIODIC
+                APPLY_PERIODIC_TO_DELTA(vectorX)
+#endif
             }
         
             // branch based on axis type
@@ -38,6 +49,9 @@ KERNEL void computeLabFrameMoments(GLOBAL real4* RESTRICT posq, GLOBAL int4* RES
                 if (particles.y >= 0 && particles.y < NUM_ATOMS) {
                     real4 posY = posq[particles.y];
                     real3 vectorY = make_real3(posY.x-thisParticlePos.x, posY.y-thisParticlePos.y, posY.z-thisParticlePos.z);
+#ifdef USE_PERIODIC
+                    APPLY_PERIODIC_TO_DELTA(vectorY)
+#endif
                     vectorY = normalize(vectorY);
                     vectorX = normalize(vectorX);
                     if (axisType == 2) {
@@ -83,25 +97,37 @@ KERNEL void computeLabFrameMoments(GLOBAL real4* RESTRICT posq, GLOBAL int4* RES
             bool reverse = false;
             if (axisType == 0 && particles.x >= 0 && particles.y >=0 && particles.z >= 0) {
                 real4 posY = posq[particles.y];
-                real delta[4][3];
+                real3 delta[4];
 
-                delta[0][0] = thisParticlePos.x - posY.x;
-                delta[0][1] = thisParticlePos.y - posY.y;
-                delta[0][2] = thisParticlePos.z - posY.z;
+                delta[0].x = thisParticlePos.x - posY.x;
+                delta[0].y = thisParticlePos.y - posY.y;
+                delta[0].z = thisParticlePos.z - posY.z;
+#ifdef USE_PERIODIC
+                APPLY_PERIODIC_TO_DELTA(delta[0])
+#endif
 
-                delta[1][0] = posZ.x - posY.x;
-                delta[1][1] = posZ.y - posY.y;
-                delta[1][2] = posZ.z - posY.z;
+                delta[1].x = posZ.x - posY.x;
+                delta[1].y = posZ.y - posY.y;
+                delta[1].z = posZ.z - posY.z;
+#ifdef USE_PERIODIC
+                APPLY_PERIODIC_TO_DELTA(delta[1])
+#endif
 
-                delta[2][0] = posX.x - posY.x;
-                delta[2][1] = posX.y - posY.y;
-                delta[2][2] = posX.z - posY.z;
+                delta[2].x = posX.x - posY.x;
+                delta[2].y = posX.y - posY.y;
+                delta[2].z = posX.z - posY.z;
+#ifdef USE_PERIODIC
+                APPLY_PERIODIC_TO_DELTA(delta[2])
+#endif
 
-                delta[3][0] = delta[1][1]*delta[2][2] - delta[1][2]*delta[2][1];
-                delta[3][1] = delta[2][1]*delta[0][2] - delta[2][2]*delta[0][1];
-                delta[3][2] = delta[0][1]*delta[1][2] - delta[0][2]*delta[1][1];
+                delta[3].x = delta[1].y*delta[2].z - delta[1].z*delta[2].y;
+                delta[3].y = delta[2].y*delta[0].z - delta[2].z*delta[0].y;
+                delta[3].z = delta[0].y*delta[1].z - delta[0].z*delta[1].y;
+#ifdef USE_PERIODIC
+                APPLY_PERIODIC_TO_DELTA(delta[3])
+#endif
 
-                real volume = delta[3][0]*delta[0][0] + delta[3][1]*delta[1][0] + delta[3][2]*delta[2][0];
+                real volume = delta[3].x*delta[0].x + delta[3].y*delta[1].x + delta[3].z*delta[2].x;
                 reverse = (volume < 0);
             }
         
@@ -179,7 +205,11 @@ inline DEVICE real normVector(real3* v) {
  * Compute the force on each particle due to the torque.
  */
 KERNEL void mapTorqueToForce(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL const mm_long* RESTRICT torqueBuffers,
-        GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT multipoleParticles) {
+        GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT multipoleParticles
+#ifdef USE_PERIODIC
+        ,real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
+#endif
+         ) {
     const int U = 0;
     const int V = 1;
     const int W = 2;
@@ -215,9 +245,16 @@ KERNEL void mapTorqueToForce(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL cons
         if (axisType < 5 && particles.z >= 0) {
             real3 atomPos = trimTo3(posq[atom]);
             vector[U] = atomPos - trimTo3(posq[axisAtom]);
+#ifdef USE_PERIODIC
+            APPLY_PERIODIC_TO_DELTA(vector[U])
+#endif
             norms[U] = normVector(&vector[U]);
-            if (axisType != 4 && particles.x >= 0)
+            if (axisType != 4 && particles.x >= 0) {
                 vector[V] = atomPos - trimTo3(posq[particles.x]);
+#ifdef USE_PERIODIC
+                APPLY_PERIODIC_TO_DELTA(vector[V])
+#endif
+            }
             else {
                 if (fabs(vector[U].x/norms[U]) < 0.866)
                     vector[V] = make_real3(1, 0, 0);
