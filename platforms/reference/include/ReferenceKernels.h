@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -68,6 +68,7 @@ class ReferenceVariableStochasticDynamics;
 class ReferenceVariableVerletDynamics;
 class ReferenceVerletDynamics;
 class ReferenceCustomDynamics;
+class ReferenceDPDDynamics;
 
 /**
  * This kernel is invoked at the beginning and end of force and energy computations.  It gives the
@@ -1510,6 +1511,42 @@ private:
 };
 
 /**
+ * This kernel is invoked by DPDIntegrator to take one time step.
+ */
+class ReferenceIntegrateDPDStepKernel : public IntegrateDPDStepKernel {
+public:
+    ReferenceIntegrateDPDStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateDPDStepKernel(name, platform),
+        data(data), dynamics(NULL) {
+    }
+    ~ReferenceIntegrateDPDStepKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the DPDIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const DPDIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the DPDIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const DPDIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the DPDIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator);
+private:
+    ReferencePlatform::PlatformData& data;
+    ReferenceDPDDynamics* dynamics;
+    std::vector<double> masses;
+};
+
+/**
  * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
  */
 class ReferenceApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
@@ -1547,11 +1584,13 @@ public:
     /**
      * Initialize the kernel.
      *
-     * @param system     the System this kernel will be applied to
-     * @param barostat   the MonteCarloBarostat this kernel will be used for
+     * @param system          the System this kernel will be applied to
+     * @param barostat        the MonteCarloBarostat this kernel will be used for
      * @param rigidMolecules  whether molecules should be kept rigid while scaling coordinates
+     * @param components      the number of box components the barostat operates one (1 for isotropic scaling,
+     *                        3 for anisotropic, 6 for both lengths and angles)
      */
-    void initialize(const System& system, const Force& barostat, bool rigidMolecules=true);
+    void initialize(const System& system, const Force& barostat, int components, bool rigidMolecules=true);
     /**
      * Save the coordinates before attempting a Monte Carlo step.  This allows us to restore them
      * if the step is rejected.
@@ -1579,8 +1618,19 @@ public:
      * @param context    the context in which to execute this kernel
      */
     void restoreCoordinates(ContextImpl& context);
+    /**
+     * Compute the kinetic energy of the system.  If initialize() was called with rigidMolecules=true, this
+     * should include only the translational center of mass motion of molecules.  Otherwise it should include
+     * the total kinetic energy of all particles.  This is used when computing instantaneous pressure.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param ke         a vector to store the kinetic energy components into.  On output, its length will
+     *                   equal the number of components passed to initialize().
+     */
+    void computeKineticEnergy(ContextImpl& context, std::vector<double>& ke);
 private:
     bool rigidMolecules;
+    int components;
     ReferenceMonteCarloBarostat* barostat;
 };
 

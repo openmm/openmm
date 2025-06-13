@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -32,12 +32,14 @@
 #include "HipArray.h"
 #include "HipBondedUtilities.h"
 #include "HipEvent.h"
+#include "HipFFT3D.h"
 #include "HipIntegrationUtilities.h"
 #include "HipKernels.h"
 #include "HipKernelSources.h"
 #include "HipNonbondedUtilities.h"
 #include "HipProgram.h"
-#include "HipFFT3D.h"
+#include "HipQueue.h"
+#include "HipSort.h"
 #include "openmm/common/ComputeArray.h"
 #include "openmm/common/ContextSelector.h"
 #include "SHA1.h"
@@ -86,7 +88,7 @@ bool HipContext::hasInitializedHip = false;
 
 
 HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& tempDir, HipPlatform::PlatformData& platformData,
-        HipContext* originalContext) : ComputeContext(system), currentStream(0), defaultStream(0), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
+        HipContext* originalContext) : ComputeContext(system), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
         pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL),
         useBlockingSync(useBlockingSync), supportsHardwareFloatGlobalAtomicAdd(false) {
     if (!hasInitializedHip) {
@@ -149,15 +151,15 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
             else
                 throw OpenMMException("No compatible HIP device is available");
         }
-        CHECK_RESULT(hipStreamCreateWithFlags(&defaultStream, hipStreamNonBlocking));
+        defaultQueue = shared_ptr<ComputeQueueImpl>(new HipQueue());
     }
     else {
         isLinkedContext = true;
         this->deviceIndex = originalContext->deviceIndex;
         this->device = originalContext->device;
-        defaultStream = originalContext->defaultStream;
+        defaultQueue = originalContext->defaultQueue;
     }
-    currentStream = defaultStream;
+    currentQueue = defaultQueue;
 
     hipDeviceProp_t props;
     CHECK_RESULT(hipGetDeviceProperties(&props, device));
@@ -172,16 +174,19 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
 
     // GPUs starting from CDNA1 and RDNA3 support atomic add for floats (global_atomic_add_f32),
     // which can be used in PME. Older GPUs use fixed point charge spreading instead.
-    this->supportsHardwareFloatGlobalAtomicAdd = true;
-    if (gpuArchitecture.find("gfx900") == 0 ||
-        gpuArchitecture.find("gfx906") == 0 ||
-        gpuArchitecture.find("gfx10") == 0) {
-        this->supportsHardwareFloatGlobalAtomicAdd = false;
+    // RDNA4 also has this instruction but benchmarks show that it is very slow compared to
+    // global_atomic_add_u64.
+    this->supportsHardwareFloatGlobalAtomicAdd = false;
+    if (gpuArchitecture.find("gfx908") == 0 ||
+        gpuArchitecture.find("gfx90a") == 0 ||
+        gpuArchitecture.find("gfx94") == 0 ||
+        gpuArchitecture.find("gfx11") == 0) {
+        this->supportsHardwareFloatGlobalAtomicAdd = true;
     }
 
     contextIsValid = true;
     ContextSelector selector(*this);
-    if (contextIndex > 0) {
+    if (contextIndex > 0 && originalContext == NULL) {
         int canAccess;
         CHECK_RESULT(hipDeviceCanAccessPeer(&canAccess, getDevice(), platformData.contexts[0]->getDevice()));
         if (canAccess) {
@@ -349,6 +354,7 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
     nonbonded = new HipNonbondedUtilities(*this);
     integration = new HipIntegrationUtilities(*this, system);
     expression = new HipExpressionUtilities(*this);
+    clearBuffer(posq);
 }
 
 HipContext::~HipContext() {
@@ -373,8 +379,6 @@ HipContext::~HipContext() {
         delete nonbonded;
     for (auto module : loadedModules)
         hipModuleUnload(module);
-    if (!isLinkedContext)
-        hipStreamDestroy(defaultStream);
     popAsCurrent();
     contextIsValid = false;
 }
@@ -676,16 +680,12 @@ double& HipContext::getEnergyWorkspace() {
     return platformData.contextEnergy[contextIndex];
 }
 
+ComputeQueue HipContext::createQueue() {
+    return shared_ptr<ComputeQueueImpl>(new HipQueue());
+}
+
 hipStream_t HipContext::getCurrentStream() {
-    return currentStream;
-}
-
-void HipContext::setCurrentStream(hipStream_t stream) {
-    currentStream = stream;
-}
-
-void HipContext::restoreDefaultStream() {
-    currentStream = defaultStream;
+    return dynamic_cast<HipQueue*>(currentQueue.get())->getStream();
 }
 
 HipArray* HipContext::createArray() {
@@ -694,6 +694,14 @@ HipArray* HipContext::createArray() {
 
 ComputeEvent HipContext::createEvent() {
     return shared_ptr<ComputeEventImpl>(new HipEvent(*this));
+}
+
+ComputeSort HipContext::createSort(ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform) {
+    return shared_ptr<ComputeSortImpl>(new HipSort(*this, trait, length, uniform));
+}
+
+FFT3D HipContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
+    return FFT3D(new HipFFT3D(*this, xsize, ysize, zsize, realToComplex));
 }
 
 int HipContext::findLegalFFTDimension(int minimum) {
@@ -725,7 +733,7 @@ void HipContext::executeKernel(hipFunction_t kernel, void** arguments, int threa
     if (blockSize == -1)
         blockSize = ThreadBlockSize;
     int gridSize = std::min((threads+blockSize-1)/blockSize, numThreadBlocks);
-    hipError_t result = hipModuleLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, currentStream, arguments, NULL);
+    hipError_t result = hipModuleLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, getCurrentStream(), arguments, NULL);
     if (result != hipSuccess) {
         stringstream str;
         str<<"Error invoking kernel: "<<getErrorString(result)<<" ("<<result<<")";
@@ -737,7 +745,7 @@ void HipContext::executeKernelFlat(hipFunction_t kernel, void** arguments, int t
     if (blockSize == -1)
         blockSize = ThreadBlockSize;
     int gridSize = (threads+blockSize-1)/blockSize;
-    hipError_t result = hipModuleLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, currentStream, arguments, NULL);
+    hipError_t result = hipModuleLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, getCurrentStream(), arguments, NULL);
     if (result != hipSuccess) {
         stringstream str;
         str<<"Error invoking kernel: "<<getErrorString(result)<<" ("<<result<<")";

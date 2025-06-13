@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -31,6 +31,7 @@
 #include "openmm/System.h"
 #include "HipArray.h"
 #include "HipExpressionUtilities.h"
+#include "openmm/common/ComputeSort.h"
 #include "openmm/common/NonbondedUtilities.h"
 #include <hip/hip_runtime.h>
 #include <sstream>
@@ -40,7 +41,6 @@
 namespace OpenMM {
 
 class HipContext;
-class HipSort;
 
 /**
  * This class provides a generic interface for calculating nonbonded interactions.  It does this in two
@@ -84,23 +84,11 @@ public:
      * @param forceGroup       the force group in which the interaction should be calculated
      * @param usesNeighborList specifies whether a neighbor list should be used to optimize this interaction.  This should
      *                         be viewed as only a suggestion.  Even when it is false, a neighbor list may be used anyway.
-     */
-    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup, bool usesNeighborList = true);
-    /**
-     * Add a nonbonded interaction to be evaluated by the default interaction kernel.
-     *
-     * @param usesCutoff       specifies whether a cutoff should be applied to this interaction
-     * @param usesPeriodic     specifies whether periodic boundary conditions should be applied to this interaction
-     * @param usesExclusions   specifies whether this interaction uses exclusions.  If this is true, it must have identical exclusions to every other interaction.
-     * @param cutoffDistance   the cutoff distance for this interaction (ignored if usesCutoff is false)
-     * @param exclusionList    for each atom, specifies the list of other atoms whose interactions should be excluded
-     * @param kernel           the code to evaluate the interaction
-     * @param forceGroup       the force group in which the interaction should be calculated
-     * @param usesNeighborList specifies whether a neighbor list should be used to optimize this interaction.  This should
-     *                         be viewed as only a suggestion.  Even when it is false, a neighbor list may be used anyway.
      * @param supportsPairList specifies whether this interaction can work with a neighbor list that uses a separate pair list
      */
-    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup, bool usesNeighborList, bool supportsPairList);
+    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance,
+                        const std::vector<std::vector<int> >& exclusionList, const std::string& kernel,
+                        int forceGroup, bool useNeighborList=true, bool supportsPairList=false);
     /**
      * Add a per-atom parameter that the default interaction kernel may depend on.
      */
@@ -344,7 +332,7 @@ private:
     HipArray largeBlockBoundingBox;
     HipArray oldPositions;
     HipArray rebuildNeighborList;
-    HipSort* blockSorter;
+    ComputeSort blockSorter;
     hipEvent_t downloadCountEvent;
     unsigned int* pinnedCountBuffer;
     std::vector<void*> forceArgs, findBlockBoundsArgs, computeSortKeysArgs, sortBoxDataArgs, findInteractingBlocksArgs, copyInteractionCountsArgs;
@@ -354,7 +342,7 @@ private:
     std::vector<std::string> energyParameterDerivatives;
     std::map<int, double> groupCutoff;
     std::map<int, std::string> groupKernelSource;
-    double lastCutoff;
+    double maxCutoff;
     bool useCutoff, usePeriodic, anyExclusions, usePadding, useNeighborList, forceRebuildNeighborList, canUsePairList, useLargeBlocks;
     int startTileIndex, startBlockIndex, numBlocks, numTilesInBatch, maxExclusions;
     int numForceThreadBlocks, forceThreadBlockSize, findInteractingBlocksThreadBlockSize, numAtoms, groupFlags;
@@ -370,7 +358,6 @@ private:
 class HipNonbondedUtilities::KernelSet {
 public:
     bool hasForces;
-    double cutoffDistance;
     std::string source;
     hipFunction_t forceKernel, energyKernel, forceEnergyKernel;
     hipFunction_t findBlockBoundsKernel;

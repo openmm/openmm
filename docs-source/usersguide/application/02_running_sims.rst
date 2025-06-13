@@ -11,9 +11,9 @@ A First Example
 ***************
 
 Let’s begin with our first example of an OpenMM script. It loads a PDB file
-called :file:`input.pdb` that defines a biomolecular system, parameterizes it using the Amber14 force field and TIP3P-FB water
+called :file:`input.pdb` that defines a biomolecular system, parameterizes it using the Amber19 force field and TIP3P-FB water
 model, energy minimizes it, simulates it for 10,000 steps with a Langevin
-integrator, and saves a snapshot frame to a PDB file called :file:`output.pdb` every 1000 time
+integrator, and saves a snapshot frame to a DCD file called :file:`output.dcd` every 1000 time
 steps.
 
 .. samepage::
@@ -25,14 +25,14 @@ steps.
         from sys import stdout
 
         pdb = PDBFile('input.pdb')
-        forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
+        forcefield = ForceField('amber19-all.xml', 'amber19/tip3pfb.xml')
         system = forcefield.createSystem(pdb.topology, nonbondedMethod=PME,
                 nonbondedCutoff=1*nanometer, constraints=HBonds)
         integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
         simulation = Simulation(pdb.topology, system, integrator)
         simulation.context.setPositions(pdb.positions)
         simulation.minimizeEnergy()
-        simulation.reporters.append(PDBReporter('output.pdb', 1000))
+        simulation.reporters.append(DCDReporter('output.dcd', 1000))
         simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
                 potentialEnergy=True, temperature=True))
         simulation.step(10000)
@@ -87,14 +87,14 @@ Make sure you include the single quotes around the file name.  OpenMM also can l
 files in the newer PDBx/mmCIF format: just change :class:`PDBFile` to :class:`PDBxFile`.
 ::
 
-    forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
+    forcefield = ForceField('amber19-all.xml', 'amber19/tip3pfb.xml')
 
 This line specifies the force field to use for the simulation.  Force fields are
 defined by XML files.  OpenMM includes XML files defining lots of standard force fields (see Section :numref:`force-fields`).
 If you find you need to extend the repertoire of force fields available,
 you can find more information on how to create these XML files in Chapter :numref:`creating-force-fields`.
-In this case we load two of those files: :file:`amber14-all.xml`, which contains the
-Amber14 force field, and :file:`amber14/tip3pfb.xml`, which contains the TIP3P-FB water model.  The
+In this case we load two of those files: :file:`amber19-all.xml`, which contains the
+Amber19 force field, and :file:`amber19/tip3pfb.xml`, which contains the TIP3P-FB water model.  The
 :class:`ForceField` object is assigned to a variable called :code:`forcefield`\ .
 ::
 
@@ -152,12 +152,12 @@ good idea to do this at the start of a simulation, since the coordinates in the
 PDB file might produce very large forces.
 ::
 
-    simulation.reporters.append(PDBReporter('output.pdb', 1000))
+    simulation.reporters.append(DCDReporter('output.dcd', 1000))
 
 This line creates a “reporter” to generate output during the simulation, and
-adds it to the :class:`Simulation` object’s list of reporters.  A :class:`PDBReporter` writes
-structures to a PDB file.  We specify that the output file should be called
-:file:`output.pdb`, and that a structure should be written every 1000 time steps.
+adds it to the :class:`Simulation` object’s list of reporters.  A :class:`DCDReporter` writes
+structures to a DCD file.  We specify that the output file should be called
+:file:`output.dcd`, and that a structure should be written every 1000 time steps.
 ::
 
     simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
@@ -169,13 +169,13 @@ information every 1000 time steps: the current step index, the potential energy
 of the system, and the temperature.  We specify :code:`stdout` (not in
 quotes) as the output file, which means to write the results to the console.  We
 also could have given a file name (in quotes), just as we did for the
-:class:`PDBReporter`, to write the information to a file.
+:class:`DCDReporter`, to write the information to a file.
 ::
 
     simulation.step(10000)
 
 Finally, we run the simulation, integrating the equations of motion for 10,000
-time steps.  Once it is finished, you can load the PDB file into any program you
+time steps.  Once it is finished, you can load the DCD file into any program you
 want for analysis and visualization (VMD_, PyMol_, AmberTools_, etc.).
 
 .. _VMD: http://www.ks.uiuc.edu/Research/vmd/
@@ -210,7 +210,7 @@ found in OpenMM’s :file:`examples` folder with the name :file:`simulateAmber.p
         simulation = Simulation(prmtop.topology, system, integrator)
         simulation.context.setPositions(inpcrd.positions)
         simulation.minimizeEnergy()
-        simulation.reporters.append(PDBReporter('output.pdb', 1000))
+        simulation.reporters.append(DCDReporter('output.dcd', 1000))
         simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
                 potentialEnergy=True, temperature=True))
         simulation.step(10000)
@@ -300,7 +300,7 @@ with the name :file:`simulateGromacs.py`.
         simulation = Simulation(top.topology, system, integrator)
         simulation.context.setPositions(gro.positions)
         simulation.minimizeEnergy()
-        simulation.reporters.append(PDBReporter('output.pdb', 1000))
+        simulation.reporters.append(DCDReporter('output.dcd', 1000))
         simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
                 potentialEnergy=True, temperature=True))
         simulation.step(10000)
@@ -358,7 +358,7 @@ on the :class:`CharmmPsfFile`.
         simulation = Simulation(psf.topology, system, integrator)
         simulation.context.setPositions(pdb.positions)
         simulation.minimizeEnergy()
-        simulation.reporters.append(PDBReporter('output.pdb', 1000))
+        simulation.reporters.append(DCDReporter('output.dcd', 1000))
         simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
                 potentialEnergy=True, temperature=True))
         simulation.step(10000)
@@ -456,11 +456,11 @@ the main force field, and possibly a second file to define the water model
 (either implicit or explicit).  For example:
 ::
 
-    forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
+    forcefield = ForceField('amber19-all.xml', 'amber19/tip3pfb.xml')
 
-In some cases, one XML file may load several others.  For example, :file:`amber14-all.xml`
+In some cases, one XML file may load several others.  For example, :file:`amber19-all.xml`
 is really just a shortcut for loading several different files that together make up
-the AMBER14 force field.  If you need finer grained control over which parameters
+the Amber19 force field.  If you need finer grained control over which parameters
 are loaded, you can instead specify the component files individually.
 
 Be aware that some force fields and water models include "extra particles", such
@@ -472,11 +472,85 @@ must first add the extra particles to the :class:`Topology`.  See section
 The force fields described below are the ones that are bundled with OpenMM.
 Additional force fields are available online at https://github.com/openmm/openmmforcefields.
 
+Amber19
+-------
+
+The Amber19 force field is made up of various files that define parameters for
+proteins, DNA, RNA, water, and ions.
+
+.. tabularcolumns:: |l|L|
+
+===================================  ===========================================
+File                                 Parameters
+===================================  ===========================================
+:file:`amber19/protein.ff19SB.xml`   Protein\ :cite:`Tian2020` (recommended, includes residue-specific CMAP terms)
+:file:`amber19/protein.ff19ipq.xml`  Protein (alternative)
+:file:`amber19/DNA.OL21.xml`         DNA\ :cite:`Zgarbova2021`
+:file:`amber14/RNA.OL3.xml`          RNA
+:file:`amber14/GLYCAM_06j-1.xml`     Carbohydrates and glycosylated proteins\ :cite:`Kirschner2007`
+:file:`amber19/tip3p.xml`            TIP3P water model\ :cite:`Jorgensen1983` and ions
+:file:`amber19/tip3pfb.xml`          TIP3P-FB water model\ :cite:`Wang2014` and ions
+:file:`amber19/tip4pew.xml`          TIP4P-Ew water model\ :cite:`Horn2004` and ions
+:file:`amber19/tip4pfb.xml`          TIP4P-FB water model\ :cite:`Wang2014` and ions
+:file:`amber19/spce.xml`             SPC/E water model\ :cite:`Berendsen1987` and ions
+:file:`amber19/opc.xml`              OPC water model\ :cite:`Izadi2014` and ions
+:file:`amber19/opc3.xml`             OPC3 water model\ :cite:`Izadi2016` and ions
+===================================  ===========================================
+
+As a convenience, the file :file:`amber19-all.xml` can be used as a shortcut to
+include :file:`amber19/protein.ff19SB.xml`, :file:`amber19/DNA.OL21.xml`, and
+:file:`amber14/RNA.OL3.xml`.  In most cases, you can simply include that file,
+plus one of the water models, such as :file:`amber19/tip3pfb.xml` for the
+TIP3P-FB water model and ions\ :cite:`Wang2014`:
+::
+
+    forcefield = ForceField('amber19-all.xml', 'amber19/tip3pfb.xml')
+
+GLYCAM is not included by default, since it is quite large.  If your system contains
+carbohydrates, include that file as well:
+::
+
+    forcefield = ForceField('amber19-all.xml', 'amber19/tip3pfb.xml', 'amber14/GLYCAM_06j-1.xml')
+
+Be aware that GLYCAM works somewhat differently from most force fields.  It uses
+its own nonstandard `naming convention <https://glycam.org/docs/forcefield/glycam-naming-2/index.html>`_
+for carbohydrates, and requires your input file to follow it.  If any residues have
+names different from what it expects, GLYCAM will be unable to assign parameters
+to them.
+
+.. tip::
+   Files in the :code:`amber14` directory are used by the older Amber14 force
+   field described below, but those also listed in the table above are shared between
+   the Amber14 and Amber19 force fields and can be used with the files in the
+   :code:`amber19` directory.
+
+.. tip:: The solvent model XML files included under the :file:`amber19/` directory
+         include both water *and* ions compatible with that water model, so if you
+         mistakenly specify :file:`tip3p.xml` instead of :file:`amber19/tip3p.xml`,
+         you run the risk of having :class:`ForceField` throw an exception since
+         :file:`tip3p.xml` will be missing parameters for ions in your system.
+
+.. warning::
+   The updated Lipid21 lipid force field is not yet supported in this port of
+   Amber19, as it makes use of Amber features not yet supported in
+   `ParmEd <https://github.com/parmed/parmed>`_.  Amber19 should be preferred
+   over Amber14 for simulations not requiring a lipid force field, but Amber14
+   should be used if the Lipid17 force field is desired.  Alternatively, to use
+   Amber19 with Lipid21, you can prepare your system with AmberTools_ before
+   loading it into OpenMM, as described in Section :numref:`using_amber_files`.
+
+The converted parameter sets come from the `AmberTools 24 release <http://ambermd.org/AmberTools.php>`_
+and were converted using the openmmforcefields_ package and `ParmEd <https://github.com/parmed/parmed>`_.
+
 Amber14
 -------
 
-The Amber14\ :cite:`Maier2015` force field is made up of various files that define
-parameters for proteins, DNA, RNA, lipids, water, and ions.
+Similarly to the Amber19 force field, Amber14\ :cite:`Maier2015` is made up of
+various files that define parameters for proteins, DNA, RNA, lipids, water, and
+ions.  The file :file:`amber14-all.xml` can be used as a shortcut to include
+:file:`amber14/protein.ff14SB.xml`, :file:`amber14/DNA.OL15.xml`,
+:file:`amber14/RNA.OL3.xml`, and :file:`amber14/lipid17.xml`.  The same remarks
+for Amber19 regarding water, ions, and GLYCAM apply to Amber14.
 
 .. tabularcolumns:: |l|L|
 
@@ -495,39 +569,17 @@ File                                 Parameters
 :file:`amber14/tip4pew.xml`          TIP4P-Ew water model\ :cite:`Horn2004` and ions
 :file:`amber14/tip4pfb.xml`          TIP4P-FB water model\ :cite:`Wang2014` and ions
 :file:`amber14/spce.xml`             SPC/E water model\ :cite:`Berendsen1987` and ions
-:code:`amber14/opc.xml`              OPC water model\ :cite:`Izadi2014` and ions
-:code:`amber14/opc3.xml`             OPC3 water model\ :cite:`Izadi2016` and ions
+:file:`amber14/opc.xml`              OPC water model\ :cite:`Izadi2014` and ions
+:file:`amber14/opc3.xml`             OPC3 water model\ :cite:`Izadi2016` and ions
 ===================================  ============================================
 
-As a convenience, the file :file:`amber14-all.xml` can be used as a shortcut to include
-:file:`amber14/protein.ff14SB.xml`, :file:`amber14/DNA.OL15.xml`, :file:`amber14/RNA.OL3.xml`,
-and :file:`amber14/lipid17.xml`.  In most cases, you can simply include that file,
-plus one of the water models, such as :file:`amber14/tip3pfb.xml` for the TIP3P-FB
-water model and ions\ :cite:`Wang2014`:
-::
-
-    forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
-
-GLYCAM is not included by default, since it is quite large.  If your system contains
-carbohydrates, include that file as well:
-::
-
-    forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml', 'amber14/GLYCAM_06j-1.xml')
-
-Be aware that GLYCAM works somewhat differently from most force fields.  It uses
-its own nonstandard `naming convention <https://glycam.org/docs/forcefield/glycam-naming-2/index.html>`_
-for carbohydrates, and requires your input file to follow it.  If any residues have
-names different from what it expects, GLYCAM will be unable to assign parameters
-to them.
-
-.. tip:: The solvent model XML files included under the :file:`amber14/` directory
-         include both water *and* ions compatible with that water model, so if you
-         mistakenly specify :file:`tip3p.xml` instead of :file:`amber14/tip3p.xml`,
-         you run the risk of having :class:`ForceField` throw an exception since
-         :file:`tip3p.xml` will be missing parameters for ions in your system.
+.. tip::
+   The XML files for water and ions provided in the :file:`amber14/` directory
+   are identical to those in the :file:`amber19/` directory.  They are provided
+   in both directories for compatibility and convenience.
 
 The converted parameter sets come from the `AmberTools 17 release <http://ambermd.org/AmberTools.php>`_
-and were converted using the `openmmforcefields <https://github.com/openmm/openmmforcefields>`_ package and `ParmEd <https://github.com/parmed/parmed>`_.
+and were converted using the openmmforcefields_ package and `ParmEd <https://github.com/parmed/parmed>`_.
 
 CHARMM36
 --------
@@ -541,7 +593,7 @@ for full references).
 =================================  ============================================
 File                               Parameters
 =================================  ============================================
-:file:`charmm36.xml`               Protein, DNA, RNA, lipids, carbohydrates, and small molecules
+:file:`charmm36_2024.xml`          Protein, DNA, RNA, lipids, carbohydrates, and small molecules
 :file:`charmm36/water.xml`         Default CHARMM water model (a modified version of TIP3P\ :cite:`Jorgensen1983`) and ions
 :file:`charmm36/spce.xml`          SPC/E water model\ :cite:`Berendsen1987` and ions
 :file:`charmm36/tip3p-pme-b.xml`   TIP3P-PME-B water model\ :cite:`Price2004` and ions
@@ -552,19 +604,13 @@ File                               Parameters
 :file:`charmm36/tip5pew.xml`       TIP5P-Ew water model\ :cite:`Rick2004` and ions
 =================================  ============================================
 
-The file :file:`charmm36.xml` bundles everything but the water and ions into a single
+The file :file:`charmm36_2024.xml` bundles everything but the water and ions into a single
 file.  In most cases, you can simply include that file, plus one of the water models,
 such as :file:`charmm36/water.xml`, which specifies the default CHARMM water model
 (a modified version of TIP3P\ :cite:`Jorgensen1983`) and ions:
 ::
 
-    forcefield = ForceField('charmm36.xml', 'charmm36/water.xml')
-
-.. warning:: Drude polarizable sites and lone pairs are not yet supported
-             by `ParmEd <https://github.com/parmed/parmed>`_ and the CHARMM36 forcefields
-             that depend on these features are not included in this port.
-             To use the CHARMM 2019 polarizable force field\ :cite:`Lopes2013`,
-             include the single file :file:`charmm_polar_2019.xml`.
+    forcefield = ForceField('charmm36_2024.xml', 'charmm36/water.xml')
 
 .. tip:: The solvent model XML files included under the :file:`charmm36/` directory
          include both water *and* ions compatible with that water model, so if you
@@ -595,8 +641,18 @@ such as :file:`charmm36/water.xml`, which specifies the default CHARMM water mod
          `CHARMM-GUI <http://charmm-gui.org/>`_, it's easiest to load
          the PSF file directly, as discussed in Section :numref:`using-charmm-files`.
 
-The converted parameter sets come from the `CHARMM36 July 2017 update <http://mackerell.umaryland.edu/charmm_ff.shtml>`_
-and were converted using the `openmmforcefields <https://github.com/openmm/openmmforcefields>`_ package and `parmed <https://github.com/parmed/parmed>`_.
+.. warning:: Some residues and patches are not included in this port of
+             CHARMM36, either due to a lack of support for certain CHARMM
+             features in `ParmEd <https://github.com/parmed/parmed>`_, or
+             because they generate a large number of residue-patch combinations,
+             slowing down parameterization.  The openmmforcefields_ package
+             includes residues and patches not present in this port within
+             additional force field XML files that can be loaded as needed.
+
+The converted parameter sets come from the
+`CHARMM36 July 2024 update <http://mackerell.umaryland.edu/charmm_ff.shtml>`_,
+which includes the CHARMM36m protein parameters.  They were converted using the
+openmmforcefields_ package and `ParmEd <https://github.com/parmed/parmed>`_.
 
 Implicit Solvent
 ----------------
@@ -606,7 +662,7 @@ Born implicit solvent models from AMBER.  To use them, include an extra file whe
 creating the ForceField.  For example,
 ::
 
-    forcefield = ForceField('amber14-all.xml', 'implicit/gbn2.xml')
+    forcefield = ForceField('amber19-all.xml', 'implicit/gbn2.xml')
 
 .. tabularcolumns:: |l|L|
 
@@ -681,8 +737,8 @@ recommended for most simulations.
 CHARMM Polarizable Force Field
 ------------------------------
 
-To use the CHARMM 2019 polarizable force field\ :cite:`Lopes2013`, include the
-single file :file:`charmm_polar_2019.xml`.  It includes parameters for proteins, lipids,
+To use the CHARMM 2023 polarizable force field\ :cite:`Lopes2013`, include the
+single file :file:`charmm_polar_2023.xml`.  It includes parameters for proteins, lipids, carbohydrates,
 water, and ions.  When using this force field, remember to add extra particles to
 the :class:`Topology` as described in section :numref:`adding-or-removing-extra-particles`.
 This force field also requires that you use one of the special integrators that
@@ -698,17 +754,19 @@ still useful for reproducing older results.
 
 .. tabularcolumns:: |l|L|
 
-=============================  ================================================================================
+=============================  ==================================================================================
 File                           Force Field
-=============================  ================================================================================
+=============================  ==================================================================================
 :code:`amber96.xml`            Amber96\ :cite:`Kollman1997`
 :code:`amber99sb.xml`          Amber99\ :cite:`Wang2000` with modified backbone torsions\ :cite:`Hornak2006`
 :code:`amber99sbildn.xml`      Amber99SB plus improved side chain torsions\ :cite:`Lindorff-Larsen2010`
 :code:`amber99sbnmr.xml`       Amber99SB with modifications to fit NMR data\ :cite:`Li2010`
 :code:`amber03.xml`            Amber03\ :cite:`Duan2003`
 :code:`amber10.xml`            Amber10 (documented in the AmberTools_ manual as `ff10`)
+:code:`charmm36.xml`           July 2017 release of the CHARMM36 force field without CHARMM36m protein parameters
 :code:`charmm_polar_2013.xml`  2013 version of the CHARMM polarizable force field\ :cite:`Lopes2013`
-=============================  ================================================================================
+:code:`charmm_polar_2019.xml`  2019 version of the CHARMM polarizable force field\ :cite:`Lopes2013`
+=============================  ==================================================================================
 
 Several of these force fields support implicit solvent.  To enable it, also
 include the corresponding OBC file.
@@ -732,7 +790,7 @@ Water Models
 ------------
 
 The following files define popular water models.  They can be used with force fields
-that do not provide their own water models.  When using Amber14 or CHARMM36, use
+that do not provide their own water models.  When using Amber19, Amber14 or CHARMM36, use
 the water files included with those force fields instead, since they also include
 ion parameters.
 
@@ -1384,15 +1442,15 @@ To save a trajectory, just add a “reporter” to the simulation, as shown in t
 example scripts above:
 ::
 
-    simulation.reporters.append(PDBReporter('output.pdb', 1000))
+    simulation.reporters.append(DCDReporter('output.dcd', 1000))
 
-The two parameters of the :class:`PDBReporter` are the output filename and how often (in
-number of time steps) output structures should be written.  To use PDBx/mmCIF,
-DCD or XTC format, just replace :class:`PDBReporter` with :class:`PDBxReporter`, 
-:class:`DCDReporter` or :class:`XTCReporter`.  The parameters represent the same values:
+The two parameters of the :class:`DCDReporter` are the output filename and how often (in
+number of time steps) output structures should be written.  To use PDB, PDBx/mmCIF,
+or XTC format, just replace :class:`DCDReporter` with :class:`PDBReporter`, :class:`PDBxReporter`, 
+or :class:`XTCReporter`.  The parameters represent the same values:
 ::
 
-    simulation.reporters.append(DCDReporter('output.dcd', 1000))
+    simulation.reporters.append(XTCReporter('output.xtc', 1000))
 
 Recording Other Data
 ====================

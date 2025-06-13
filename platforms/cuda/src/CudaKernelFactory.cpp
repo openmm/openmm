@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,6 +30,12 @@
 #include "CudaPlatform.h"
 #include "openmm/common/CommonKernels.h"
 #include "openmm/common/CommonParallelKernels.h"
+#include "openmm/common/CommonCalcCustomGBForceKernel.h"
+#include "openmm/common/CommonCalcCustomHbondForceKernel.h"
+#include "openmm/common/CommonCalcCustomManyParticleForceKernel.h"
+#include "openmm/common/CommonCalcCustomNonbondedForceKernel.h"
+#include "openmm/common/CommonIntegrateCustomStepKernel.h"
+#include "openmm/common/CommonIntegrateNoseHooverStepKernel.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
@@ -134,6 +140,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CommonIntegrateVariableLangevinStepKernel(name, platform, cu);
     if (name == IntegrateCustomStepKernel::Name())
         return new CommonIntegrateCustomStepKernel(name, platform, cu);
+    if (name == IntegrateDPDStepKernel::Name())
+        return new CommonIntegrateDPDStepKernel(name, platform, cu);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new CommonApplyAndersenThermostatKernel(name, platform, cu);
     if (name == IntegrateNoseHooverStepKernel::Name())

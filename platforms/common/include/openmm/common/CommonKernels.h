@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,9 +33,9 @@
 #include "openmm/Platform.h"
 #include "openmm/kernels.h"
 #include "openmm/internal/CompiledExpressionSet.h"
-#include "openmm/internal/CustomIntegratorUtilities.h"
-#include "openmm/internal/CustomNonbondedForceImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "lepton/CompiledExpression.h"
+#include "lepton/CustomFunction.h"
 #include "lepton/ExpressionProgram.h"
 
 namespace OpenMM {
@@ -154,6 +154,8 @@ public:
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
 private:
     ComputeContext& cc;
+    ComputeArray floatBuffer, doubleBuffer;
+    ComputeKernel copyFloatKernel, copyDoubleKernel;
 };
 
 /**
@@ -715,67 +717,6 @@ private:
 };
 
 /**
- * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
- */
-class CommonCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
-public:
-    CommonCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            cc(cc), params(NULL), computedValues(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
-    }
-    ~CommonCalcCustomNonbondedForceKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the CustomNonbondedForce this kernel will be used for
-     */
-    void initialize(const System& system, const CustomNonbondedForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the CustomNonbondedForce to copy the parameters from
-     * @param firstParticle  the index of the first particle whose parameters might have changed
-     * @param lastParticle   the index of the last particle whose parameters might have changed
-     */
-    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle);
-private:
-    class ForceInfo;
-    class LongRangePostComputation;
-    class LongRangeTask;
-    void initInteractionGroups(const CustomNonbondedForce& force, const std::string& interactionSource, const std::vector<std::string>& tableTypes);
-    ComputeContext& cc;
-    ForceInfo* info;
-    ComputeParameterSet* params;
-    ComputeParameterSet* computedValues;
-    ComputeArray globals, interactionGroupData, filteredGroupData, numGroupTiles;
-    ComputeKernel interactionGroupKernel, prepareNeighborListKernel, buildNeighborListKernel, computedValuesKernel;
-    std::vector<void*> interactionGroupArgs;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
-    std::vector<ComputeArray> tabulatedFunctionArrays;
-    std::map<std::string, int> tabulatedFunctionUpdateCount;
-    std::vector<std::string> paramNames, computedValueNames;
-    std::vector<ComputeParameterInfo> paramBuffers, computedValueBuffers;
-    double longRangeCoefficient;
-    std::vector<double> longRangeCoefficientDerivs;
-    bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList;
-    int numGroupThreadBlocks;
-    CustomNonbondedForce* forceCopy;
-    CustomNonbondedForceImpl::LongRangeCorrectionData longRangeCorrectionData;
-    const System& system;
-};
-
-/**
  * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.
  */
 class CommonCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
@@ -815,170 +756,6 @@ private:
     ForceInfo* info;
     ComputeArray params, charges, bornSum, bornRadii, bornForce, obcChain;
     ComputeKernel computeBornSumKernel, reduceBornSumKernel, force1Kernel, reduceBornForceKernel;
-};
-
-/**
- * This kernel is invoked by CustomGBForce to calculate the forces acting on the system.
- */
-class CommonCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
-public:
-    CommonCalcCustomGBForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcCustomGBForceKernel(name, platform),
-            hasInitializedKernels(false), cc(cc), params(NULL), computedValues(NULL), energyDerivs(NULL), energyDerivChain(NULL), system(system) {
-    }
-    ~CommonCalcCustomGBForceKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the CustomGBForce this kernel will be used for
-     */
-    void initialize(const System& system, const CustomGBForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the CustomGBForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
-private:
-    class ForceInfo;
-    double cutoff;
-    bool hasInitializedKernels, needParameterGradient, needEnergyParamDerivs;
-    int maxTiles, numComputedValues;
-    ComputeContext& cc;
-    ForceInfo* info;
-    ComputeParameterSet* params;
-    ComputeParameterSet* computedValues;
-    ComputeParameterSet* energyDerivs;
-    ComputeParameterSet* energyDerivChain;
-    std::vector<ComputeParameterSet*> dValuedParam;
-    std::vector<ComputeArray> dValue0dParam;
-    ComputeArray longEnergyDerivs, globals, valueBuffers;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
-    std::vector<ComputeArray> tabulatedFunctionArrays;
-    std::map<std::string, int> tabulatedFunctionUpdateCount;
-    std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;
-    const System& system;
-    ComputeKernel pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
-    std::string pairValueSrc, pairEnergySrc;
-    std::map<std::string, std::string> pairValueDefines, pairEnergyDefines;
-};
-
-/**
- * This kernel is invoked by CustomHbondForce to calculate the forces acting on the system.
- */
-class CommonCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
-public:
-    CommonCalcCustomHbondForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcCustomHbondForceKernel(name, platform),
-            hasInitializedKernel(false), cc(cc), donorParams(NULL), acceptorParams(NULL), system(system) {
-    }
-    ~CommonCalcCustomHbondForceKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the CustomHbondForce this kernel will be used for
-     */
-    void initialize(const System& system, const CustomHbondForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the CustomHbondForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const CustomHbondForce& force);
-private:
-    class ForceInfo;
-    int numDonors, numAcceptors;
-    bool hasInitializedKernel, useBoundingBoxes;
-    ComputeContext& cc;
-    ForceInfo* info;
-    ComputeParameterSet* donorParams;
-    ComputeParameterSet* acceptorParams;
-    ComputeArray globals;
-    ComputeArray donors;
-    ComputeArray acceptors;
-    ComputeArray donorExclusions;
-    ComputeArray acceptorExclusions;
-    ComputeArray donorBlockCenter, donorBlockSize, acceptorBlockCenter, acceptorBlockSize;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
-    std::vector<ComputeArray> tabulatedFunctionArrays;
-    std::map<std::string, int> tabulatedFunctionUpdateCount;
-    const System& system;
-    ComputeKernel blockBoundsKernel, forceKernel;
-};
-
-/**
- * This kernel is invoked by CustomManyParticleForce to calculate the forces acting on the system.
- */
-class CommonCalcCustomManyParticleForceKernel : public CalcCustomManyParticleForceKernel {
-public:
-    CommonCalcCustomManyParticleForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcCustomManyParticleForceKernel(name, platform),
-            hasInitializedKernel(false), cc(cc), params(NULL), system(system) {
-    }
-    ~CommonCalcCustomManyParticleForceKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the CustomManyParticleForce this kernel will be used for
-     */
-    void initialize(const System& system, const CustomManyParticleForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the CustomManyParticleForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const CustomManyParticleForce& force);
-
-private:
-    class ForceInfo;
-    ComputeContext& cc;
-    ForceInfo* info;
-    bool hasInitializedKernel;
-    NonbondedMethod nonbondedMethod;
-    int maxNeighborPairs, forceWorkgroupSize, findNeighborsWorkgroupSize;
-    ComputeParameterSet* params;
-    ComputeArray globals, particleTypes,  orderIndex, particleOrder;
-    ComputeArray exclusions, exclusionStartIndex, blockCenter, blockBoundingBox;
-    ComputeArray neighborPairs, numNeighborPairs, neighborStartIndex, numNeighborsForAtom, neighbors;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
-    std::vector<ComputeArray> tabulatedFunctionArrays;
-    std::map<std::string, int> tabulatedFunctionUpdateCount;
-    const System& system;
-    ComputeKernel forceKernel, blockBoundsKernel, neighborsKernel, startIndicesKernel, copyPairsKernel;
-    ComputeEvent event;
 };
 
 /**
@@ -1168,118 +945,6 @@ private:
     ComputeKernel kernel1, kernel2, kernel3;
 };
 
-/*
- * This kernel is invoked by NoseHooverIntegrator to take one time step.
- */
-class CommonIntegrateNoseHooverStepKernel : public IntegrateNoseHooverStepKernel {
-public:
-    CommonIntegrateNoseHooverStepKernel(std::string name, const Platform& platform, ComputeContext& cc) :
-                                  IntegrateNoseHooverStepKernel(name, platform), cc(cc), hasInitializedKernels(false),
-                                  hasInitializedKineticEnergyKernel(false), hasInitializedHeatBathEnergyKernel(false),
-                                  hasInitializedScaleVelocitiesKernel(false), hasInitializedPropagateKernel(false) {}
-    ~CommonIntegrateNoseHooverStepKernel() {}
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param integrator the NoseHooverIntegrator this kernel will be used for
-     */
-    void initialize(const System& system, const NoseHooverIntegrator& integrator);
-    /**
-     * Execute the kernel.
-     *
-     * @param context    the context in which to execute this kernel
-     * @param integrator the VerletIntegrator this kernel is being used for
-     */
-    void execute(ContextImpl& context, const NoseHooverIntegrator& integrator);
-    /**
-     * Compute the kinetic energy.
-     *
-     * @param context    the context in which to execute this kernel
-     * @param integrator the NoseHooverIntegrator this kernel is being used for
-     */
-    double computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator);
-    /**
-     * Execute the kernel that propagates the Nose Hoover chain and determines the velocity scale factor.
-     * 
-     * @param context  the context in which to execute this kernel
-     * @param noseHooverChain the object describing the chain to be propagated.
-     * @param kineticEnergy the {center of mass, relative} kineticEnergies of the particles being thermostated by this chain.
-     * @param timeStep the time step used by the integrator.
-     * @return the velocity scale factor to apply to the particles associated with this heat bath.
-     */
-    std::pair<double, double> propagateChain(ContextImpl& context, const NoseHooverChain &noseHooverChain, std::pair<double, double> kineticEnergy, double timeStep);
-    /**
-     * Execute the kernal that computes the total (kinetic + potential) heat bath energy.
-     *
-     * @param context the context in which to execute this kernel
-     * @param noseHooverChain the chain whose energy is to be determined.
-     * @return the total heat bath energy.
-     */
-    double computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain);
-    /**
-     * Execute the kernel that computes the kinetic energy for a subset of atoms,
-     * or the relative kinetic energy of Drude particles with respect to their parent atoms
-     *
-     * @param context the context in which to execute this kernel
-     * @param noseHooverChain the chain whose energy is to be determined.
-     * @param downloadValue whether the computed value should be downloaded and returned.
-     */
-    std::pair<double, double> computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain, bool downloadValue);
-    /**
-     * Execute the kernel that scales the velocities of particles associated with a nose hoover chain
-     *
-     * @param context the context in which to execute this kernel
-     * @param noseHooverChain the chain whose energy is to be determined.
-     * @param scaleFactor the multiplicative factor by which {absolute, relative} velocities are scaled.
-     */
-    void scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, std::pair<double, double> scaleFactor);
-    /**
-     * Write the chain states to a checkpoint.
-     */
-    void createCheckpoint(ContextImpl& context, std::ostream& stream) const;
-    /**
-     * Load the chain states from a checkpoint.
-     */
-    void loadCheckpoint(ContextImpl& context, std::istream& stream);
-    /**
-     * Get the internal states of all chains.
-     * 
-     * @param context       the context for which to get the states
-     * @param positions     element [i][j] contains the position of bead j for chain i
-     * @param velocities    element [i][j] contains the velocity of bead j for chain i
-     */
-    void getChainStates(ContextImpl& context, std::vector<std::vector<double> >& positions, std::vector<std::vector<double> >& velocities) const;
-    /**
-     * Set the internal states of all chains.
-     * 
-     * @param context       the context for which to get the states
-     * @param positions     element [i][j] contains the position of bead j for chain i
-     * @param velocities    element [i][j] contains the velocity of bead j for chain i
-     */
-    void setChainStates(ContextImpl& context, const std::vector<std::vector<double> >& positions, const std::vector<std::vector<double> >& velocities);
-private:
-    ComputeContext& cc;
-    float prevMaxPairDistance;
-    ComputeArray maxPairDistanceBuffer, pairListBuffer, atomListBuffer, pairTemperatureBuffer, oldDelta;
-    std::map<int, ComputeArray> chainState;
-    ComputeKernel kernel1, kernel2, kernel3, kernel4, kernelHardWall;
-    bool hasInitializedKernels;
-    ComputeKernel reduceEnergyKernel;
-    ComputeKernel computeHeatBathEnergyKernel;
-    ComputeKernel computeAtomsKineticEnergyKernel;
-    ComputeKernel computePairsKineticEnergyKernel;
-    ComputeKernel scaleAtomsVelocitiesKernel;
-    ComputeKernel scalePairsVelocitiesKernel;
-    ComputeArray energyBuffer, scaleFactorBuffer, kineticEnergyBuffer, chainMasses, chainForces, heatBathEnergy;
-    std::map<int, ComputeArray> atomlists, pairlists;
-    std::map<int, ComputeKernel> propagateKernels;
-    bool hasInitializedPropagateKernel;
-    bool hasInitializedKineticEnergyKernel;
-    bool hasInitializedHeatBathEnergyKernel;
-    bool hasInitializedScaleVelocitiesKernel;
-};
-
 /**
  * This kernel is invoked by BrownianIntegrator to take one time step.
  */
@@ -1395,129 +1060,42 @@ private:
 };
 
 /**
- * This kernel is invoked by CustomIntegrator to take one time step.
+ * This kernel is invoked by DPDIntegrator to take one time step.
  */
-class CommonIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
+class CommonIntegrateDPDStepKernel : public IntegrateDPDStepKernel {
 public:
-    enum GlobalTargetType {DT, VARIABLE, PARAMETER};
-    CommonIntegrateCustomStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateCustomStepKernel(name, platform), cc(cc),
-            hasInitializedKernels(false), deviceGlobalsAreCurrent(false), needsEnergyParamDerivs(false) {
+    CommonIntegrateDPDStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateDPDStepKernel(name, platform), cc(cc),
+            hasInitializedKernels(false) {
     }
     /**
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param integrator the CustomIntegrator this kernel will be used for
+     * @param integrator the DPDIntegrator this kernel will be used for
      */
-    void initialize(const System& system, const CustomIntegrator& integrator);
+    void initialize(const System& system, const DPDIntegrator& integrator);
     /**
      * Execute the kernel.
      * 
      * @param context    the context in which to execute this kernel
-     * @param integrator the CustomIntegrator this kernel is being used for
-     * @param forcesAreValid if the context has been modified since the last time step, this will be
-     *                       false to show that cached forces are invalid and must be recalculated.
-     *                       On exit, this should specify whether the cached forces are valid at the
-     *                       end of the step.
+     * @param integrator the DPDIntegrator this kernel is being used for
      */
-    void execute(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
+    void execute(ContextImpl& context, const DPDIntegrator& integrator);
     /**
      * Compute the kinetic energy.
      * 
      * @param context    the context in which to execute this kernel
-     * @param integrator the CustomIntegrator this kernel is being used for
-     * @param forcesAreValid if the context has been modified since the last time step, this will be
-     *                       false to show that cached forces are invalid and must be recalculated.
-     *                       On exit, this should specify whether the cached forces are valid at the
-     *                       end of the step.
+     * @param integrator the DPDIntegrator this kernel is being used for
      */
-    double computeKineticEnergy(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
-    /**
-     * Get the values of all global variables.
-     *
-     * @param context   the context in which to execute this kernel
-     * @param values    on exit, this contains the values
-     */
-    void getGlobalVariables(ContextImpl& context, std::vector<double>& values) const;
-    /**
-     * Set the values of all global variables.
-     *
-     * @param context   the context in which to execute this kernel
-     * @param values    a vector containing the values
-     */
-    void setGlobalVariables(ContextImpl& context, const std::vector<double>& values);
-    /**
-     * Get the values of a per-DOF variable.
-     *
-     * @param context   the context in which to execute this kernel
-     * @param variable  the index of the variable to get
-     * @param values    on exit, this contains the values
-     */
-    void getPerDofVariable(ContextImpl& context, int variable, std::vector<Vec3>& values) const;
-    /**
-     * Set the values of a per-DOF variable.
-     *
-     * @param context   the context in which to execute this kernel
-     * @param variable  the index of the variable to get
-     * @param values    a vector containing the values
-     */
-    void setPerDofVariable(ContextImpl& context, int variable, const std::vector<Vec3>& values);
+    double computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator);
 private:
     class ReorderListener;
-    class GlobalTarget;
-    class DerivFunction;
-    std::string createPerDofComputation(const std::string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator,
-        const std::string& forceName, const std::string& energyName, std::vector<const TabulatedFunction*>& functions,
-        std::vector<std::pair<std::string, std::string> >& functionNames);
-    void prepareForComputation(ContextImpl& context, CustomIntegrator& integrator, bool& forcesAreValid);
-    Lepton::ExpressionTreeNode replaceDerivFunctions(const Lepton::ExpressionTreeNode& node, OpenMM::ContextImpl& context);
-    void findExpressionsForDerivs(const Lepton::ExpressionTreeNode& node, std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variableNodes);
-    void recordGlobalValue(double value, GlobalTarget target, CustomIntegrator& integrator);
-    void recordChangedParameters(ContextImpl& context);
-    bool evaluateCondition(int step);
     ComputeContext& cc;
-    double energy;
-    float energyFloat;
-    int numGlobalVariables, sumWorkGroupSize;
-    bool hasInitializedKernels, deviceGlobalsAreCurrent, modifiesParameters, hasAnyConstraints, needsEnergyParamDerivs;
-    std::vector<bool> deviceValuesAreCurrent;
-    mutable std::vector<bool> localValuesAreCurrent;
-    ComputeArray globalValues, sumBuffer, summedValue;
-    ComputeArray uniformRandoms, randomSeed, perDofEnergyParamDerivs;
-    std::vector<ComputeArray> tabulatedFunctions, perDofValues;
-    std::map<int, double> savedEnergy;
-    std::map<int, ComputeArray> savedForces;
-    std::set<int> validSavedForces;
-    mutable std::vector<std::vector<mm_float4> > localPerDofValuesFloat;
-    mutable std::vector<std::vector<mm_double4> > localPerDofValuesDouble;
-    std::map<std::string, double> energyParamDerivs;
-    std::vector<std::string> perDofEnergyParamDerivNames;
-    std::vector<double> localPerDofEnergyParamDerivs;
-    std::vector<double> localGlobalValues;
-    std::vector<double> initialGlobalVariables;
-    std::vector<std::vector<ComputeKernel> > kernels;
-    ComputeKernel randomKernel, kineticEnergyKernel, sumKineticEnergyKernel;
-    std::vector<CustomIntegrator::ComputationType> stepType;
-    std::vector<CustomIntegratorUtilities::Comparison> comparisons;
-    std::vector<std::vector<Lepton::CompiledExpression> > globalExpressions;
-    CompiledExpressionSet expressionSet;
-    std::vector<bool> needsGlobals, needsForces, needsEnergy;
-    std::vector<bool> computeBothForceAndEnergy, invalidatesForces, merged;
-    std::vector<int> forceGroupFlags, blockEnd, requiredGaussian, requiredUniform;
-    std::vector<int> stepEnergyVariableIndex, globalVariableIndex, parameterVariableIndex;
-    int gaussianVariableIndex, uniformVariableIndex, dtVariableIndex;
-    std::vector<std::string> parameterNames;
-    std::vector<GlobalTarget> stepTarget;
-};
-
-class CommonIntegrateCustomStepKernel::GlobalTarget {
-public:
-    CommonIntegrateCustomStepKernel::GlobalTargetType type;
-    int variableIndex;
-    GlobalTarget() {
-    }
-    GlobalTarget(CommonIntegrateCustomStepKernel::GlobalTargetType type, int variableIndex) : type(type), variableIndex(variableIndex) {
-    }
+    bool hasInitializedKernels;
+    int numTypes, randomSeed, blockSize;
+    double maxCutoff;
+    ComputeArray particleType, pairParams, oldDelta, velDelta, tileCounter;
+    ComputeKernel kernel1, kernel2, kernel3, kernel4;
 };
 
 /**
@@ -1635,11 +1213,13 @@ public:
     /**
      * Initialize the kernel.
      *
-     * @param system     the System this kernel will be applied to
-     * @param barostat   the MonteCarloBarostat this kernel will be used for
+     * @param system          the System this kernel will be applied to
+     * @param barostat        the MonteCarloBarostat this kernel will be used for
      * @param rigidMolecules  whether molecules should be kept rigid while scaling coordinates
+     * @param components      the number of box components the barostat operates one (1 for isotropic scaling,
+     *                        3 for anisotropic, 6 for both lengths and angles)
      */
-    void initialize(const System& system, const Force& barostat, bool rigidMolecules=true);
+    void initialize(const System& system, const Force& barostat, int components, bool rigidMolecules=true);
     /**
      * Save the coordinates before attempting a Monte Carlo step.  This allows us to restore them
      * if the step is rejected.
@@ -1667,14 +1247,24 @@ public:
      * @param context    the context in which to execute this kernel
      */
     void restoreCoordinates(ContextImpl& context);
+    /**
+     * Compute the kinetic energy of the system.  If initialize() was called with rigidMolecules=true, this
+     * should include only the translational center of mass motion of molecules.  Otherwise it should include
+     * the total kinetic energy of all particles.  This is used when computing instantaneous pressure.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param ke         a vector to store the kinetic energy components into.  On output, its length will
+     *                   equal the number of components passed to initialize().
+     */
+    void computeKineticEnergy(ContextImpl& context, std::vector<double>& ke);
 private:
     ComputeContext& cc;
     bool hasInitializedKernels, rigidMolecules, atomsWereReordered;
-    int numMolecules;
+    int numMolecules, components;
     ComputeArray savedPositions, savedFloatForces, savedLongForces, savedVelocities;
-    ComputeArray moleculeAtoms;
-    ComputeArray moleculeStartIndex;
-    ComputeKernel kernel;
+    ComputeArray moleculeAtoms, moleculeStartIndex;
+    std::vector<ComputeArray> energyBuffers;
+    ComputeKernel kernel, kineticEnergyKernel;
     std::vector<int> lastAtomOrder;
     std::vector<mm_int4> lastPosCellOffsets;
 };

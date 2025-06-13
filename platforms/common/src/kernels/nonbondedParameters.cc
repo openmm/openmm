@@ -3,13 +3,15 @@
  */
 KERNEL void computeParameters(GLOBAL mixed* RESTRICT energyBuffer, int includeSelfEnergy, GLOBAL real* RESTRICT globalParams,
         int numAtoms, GLOBAL const float4* RESTRICT baseParticleParams, GLOBAL real4* RESTRICT posq, GLOBAL real* RESTRICT charge,
-        GLOBAL float2* RESTRICT sigmaEpsilon, GLOBAL float4* RESTRICT particleParamOffsets, GLOBAL int* RESTRICT particleOffsetIndices
+        GLOBAL float2* RESTRICT sigmaEpsilon, GLOBAL float4* RESTRICT particleParamOffsets, GLOBAL int* RESTRICT particleOffsetIndices,
+        GLOBAL real* RESTRICT chargeBuffer
 #ifdef HAS_EXCEPTIONS
         , int numExceptions, GLOBAL const float4* RESTRICT baseExceptionParams, GLOBAL float4* RESTRICT exceptionParams,
         GLOBAL float4* RESTRICT exceptionParamOffsets, GLOBAL int* RESTRICT exceptionOffsetIndices
 #endif
         ) {
     mixed energy = 0;
+    real totalCharge = 0;
 
     // Compute particle parameters.
     
@@ -31,6 +33,7 @@ KERNEL void computeParameters(GLOBAL mixed* RESTRICT energyBuffer, int includeSe
         charge[i] = params.x;
 #endif
         sigmaEpsilon[i] = make_float2(0.5f*params.y, 2*SQRT(params.z));
+        totalCharge += params.x;
 #ifdef HAS_OFFSETS
     #ifdef INCLUDE_EWALD
         energy -= EWALD_SELF_ENERGY_SCALE*params.x*params.x;
@@ -62,6 +65,20 @@ KERNEL void computeParameters(GLOBAL mixed* RESTRICT energyBuffer, int includeSe
 #endif
     if (includeSelfEnergy)
         energyBuffer[GLOBAL_ID] += energy;
+
+    // Record the total charge from particles processed by this block.
+
+#if defined(HAS_OFFSETS) && defined(INCLUDE_EWALD)
+    LOCAL real temp[WORK_GROUP_SIZE];
+    temp[LOCAL_ID] = totalCharge;
+    for (int i = 1; i < WORK_GROUP_SIZE; i *= 2) {
+        SYNC_THREADS;
+        if (LOCAL_ID%(i*2) == 0 && LOCAL_ID+i < WORK_GROUP_SIZE)
+            temp[LOCAL_ID] += temp[LOCAL_ID+i];
+    }
+    if (LOCAL_ID == 0)
+        chargeBuffer[GROUP_ID] = temp[0];
+#endif
 }
 
 /**
@@ -86,5 +103,28 @@ KERNEL void computeExclusionParameters(GLOBAL real4* RESTRICT posq, GLOBAL real*
         float epsilon = 0;
 #endif
         exclusionParams[i] = make_float4((float) (ONE_4PI_EPS0*chargeProd), sigma, epsilon, 0);
+    }
+}
+
+/**
+ * When using Ewald or PME with parameter offsets, the total charge can change each step.
+ * We therefore need to compute the correction for the neutralizing plasma on the GPU.
+ * This kernel is executed by a single thread block.
+ */
+KERNEL void computePlasmaCorrection(GLOBAL real* RESTRICT chargeBuffer, GLOBAL mixed* RESTRICT energyBuffer,
+        real alpha, real volume) {
+    LOCAL real temp[WORK_GROUP_SIZE];
+    real sum = 0;
+    for (unsigned int index = LOCAL_ID; index < NUM_GROUPS; index += LOCAL_SIZE)
+        sum += chargeBuffer[index];
+    temp[LOCAL_ID] = sum;
+    for (int i = 1; i < WORK_GROUP_SIZE; i *= 2) {
+        SYNC_THREADS;
+        if (LOCAL_ID%(i*2) == 0 && LOCAL_ID+i < WORK_GROUP_SIZE)
+            temp[LOCAL_ID] += temp[LOCAL_ID+i];
+    }
+    if (LOCAL_ID == 0) {
+        real totalCharge = temp[0];
+        energyBuffer[0] -= totalCharge*totalCharge/(8*EPSILON0*volume*alpha*alpha);
     }
 }

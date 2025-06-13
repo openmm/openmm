@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -31,7 +31,6 @@
 #include "HipContext.h"
 #include "HipKernelSources.h"
 #include "HipExpressionUtilities.h"
-#include "HipSort.h"
 #include <algorithm>
 #include <map>
 #include <set>
@@ -48,7 +47,7 @@ using namespace std;
     }
 
 
-class HipNonbondedUtilities::BlockSortTrait : public HipSort::SortTrait {
+class HipNonbondedUtilities::BlockSortTrait : public ComputeSortImpl::SortTrait {
 public:
     BlockSortTrait() {}
     int getDataSize() const {return sizeof(int);}
@@ -62,7 +61,7 @@ public:
 };
 
 HipNonbondedUtilities::HipNonbondedUtilities(HipContext& context) : context(context), useCutoff(false), usePeriodic(false), useNeighborList(false), anyExclusions(false), usePadding(true),
-        blockSorter(NULL), pinnedCountBuffer(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0), canUsePairList(true), tilesAfterReorder(0) {
+        pinnedCountBuffer(NULL), forceRebuildNeighborList(true), groupFlags(0), canUsePairList(true), tilesAfterReorder(0) {
     // Decide how many thread blocks to use.
 
     string errorMessage = "Error initializing nonbonded utilities";
@@ -82,18 +81,13 @@ HipNonbondedUtilities::HipNonbondedUtilities(HipContext& context) : context(cont
 }
 
 HipNonbondedUtilities::~HipNonbondedUtilities() {
-    if (blockSorter != NULL)
-        delete blockSorter;
     if (pinnedCountBuffer != NULL)
         hipHostFree(pinnedCountBuffer);
     hipEventDestroy(downloadCountEvent);
 }
 
-void HipNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup, bool usesNeighborList) {
-    addInteraction(usesCutoff, usesPeriodic, usesExclusions, cutoffDistance, exclusionList, kernel, forceGroup, usesNeighborList, false);
-}
-
-void HipNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup, bool usesNeighborList, bool supportsPairList) {
+void HipNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance,
+        const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup, bool usesNeighborList, bool supportsPairList) {
     if (groupCutoff.size() > 0) {
         if (usesCutoff != useCutoff)
             throw OpenMMException("All Forces must agree on whether to use a cutoff");
@@ -276,6 +270,7 @@ void HipNonbondedUtilities::initialize(const System& system) {
 
     // Create data structures for the neighbor list.
 
+    maxCutoff = getMaxCutoffDistance();
     if (useCutoff) {
         // Select a size for the arrays that hold the neighbor list.  We have to make a fairly
         // arbitrary guess, but if this turns out to be too small we'll increase it later.
@@ -303,7 +298,7 @@ void HipNonbondedUtilities::initialize(const System& system) {
         largeBlockBoundingBox.initialize(context, numAtomBlocks*4, elementSize, "largeBlockBoundingBox");
         oldPositions.initialize(context, numAtoms, 4*elementSize, "oldPositions");
         rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
-        blockSorter = new HipSort(context, new BlockSortTrait(), numAtomBlocks, false);
+        blockSorter = context.createSort(new BlockSortTrait(), numAtomBlocks, false);
         vector<unsigned int> count(2, 0);
         interactionCount.upload(count);
         rebuildNeighborList.upload(&count[0]);
@@ -429,7 +424,7 @@ void HipNonbondedUtilities::prepareInteractions(int forceGroups) {
     KernelSet& kernels = groupKernels[forceGroups];
     if (useCutoff && usePeriodic) {
         double4 box = context.getPeriodicBoxSize();
-        double minAllowedSize = 1.999999*kernels.cutoffDistance;
+        double minAllowedSize = 1.999999*maxCutoff;
         if (box.x < minAllowedSize || box.y < minAllowedSize || box.z < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
     }
@@ -440,15 +435,12 @@ void HipNonbondedUtilities::prepareInteractions(int forceGroups) {
 
     // Compute the neighbor list.
 
-    if (lastCutoff != kernels.cutoffDistance)
-        forceRebuildNeighborList = true;
     context.executeKernelFlat(kernels.findBlockBoundsKernel, &findBlockBoundsArgs[0], context.getPaddedNumAtoms(), context.getSIMDWidth());
     context.executeKernelFlat(kernels.computeSortKeysKernel, &computeSortKeysArgs[0], context.getNumAtomBlocks());
     blockSorter->sort(sortedBlocks);
     context.executeKernelFlat(kernels.sortBoxDataKernel, &sortBoxDataArgs[0], context.getNumAtoms(), 64);
     context.executeKernelFlat(kernels.findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtomBlocks() * context.getSIMDWidth() * numTilesInBatch, findInteractingBlocksThreadBlockSize);
     forceRebuildNeighborList = false;
-    lastCutoff = kernels.cutoffDistance;
     context.executeKernelFlat(kernels.copyInteractionCountsKernel, &copyInteractionCountsArgs[0], 1, 1);
     hipEventRecord(downloadCountEvent, context.getCurrentStream());
 }
@@ -525,26 +517,23 @@ void HipNonbondedUtilities::setAtomBlockRange(double startFraction, double endFr
 
 void HipNonbondedUtilities::createKernelsForGroups(int groups) {
     KernelSet kernels;
-    double cutoff = 0.0;
     string source;
     for (int i = 0; i < 32; i++) {
         if ((groups&(1<<i)) != 0) {
-            cutoff = max(cutoff, groupCutoff[i]);
             source += groupKernelSource[i];
         }
     }
     kernels.hasForces = (source.size() > 0);
-    kernels.cutoffDistance = cutoff;
     kernels.source = source;
     kernels.forceKernel = kernels.energyKernel = kernels.forceEnergyKernel = NULL;
     if (useCutoff) {
-        double paddedCutoff = padCutoff(cutoff);
+        double paddedCutoff = padCutoff(maxCutoff);
         map<string, string> defines;
         defines["TILE_SIZE"] = context.intToString(HipContext::TileSize);
         defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
         defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
-        defines["PADDING"] = context.doubleToString(paddedCutoff-cutoff);
+        defines["PADDING"] = context.doubleToString(paddedCutoff-maxCutoff);
         defines["PADDED_CUTOFF"] = context.doubleToString(paddedCutoff);
         defines["PADDED_CUTOFF_SQUARED"] = context.doubleToString(paddedCutoff*paddedCutoff);
         defines["NUM_TILES_WITH_EXCLUSIONS"] = context.intToString(exclusionTiles.getSize());

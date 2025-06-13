@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,7 +35,6 @@
     // Prevent Windows from defining macros that interfere with other code.
     #define NOMINMAX
 #endif
-#include <pthread.h>
 #include <cuda.h>
 #include <builtin_types.h>
 #include <vector_functions.h>
@@ -46,6 +45,7 @@
 #include "CudaIntegrationUtilities.h"
 #include "CudaNonbondedUtilities.h"
 #include "CudaPlatform.h"
+#include "CudaQueue.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/common/ComputeContext.h"
 #include "openmm/Kernel.h"
@@ -154,22 +154,24 @@ public:
      */
     std::vector<ComputeContext*> getAllContexts();
     /**
+     * Get the ContextImpl is ComputeContext is associated with.
+     */
+    ContextImpl& getContextImpl() {
+        return *platformData.context;
+    }
+    /**
      * Get a workspace used for accumulating energy when a simulation is parallelized across
      * multiple devices.
      */
     double& getEnergyWorkspace();
     /**
+     * Create a new ComputeQueue for use with this context.
+     */
+    ComputeQueue createQueue();
+    /**
      * Get the stream currently being used for execution.
      */
     CUstream getCurrentStream();
-    /**
-     * Set the stream to use for execution.
-     */
-    void setCurrentStream(CUstream stream);
-    /**
-     * Reset the context to using the default stream for execution.
-     */
-    void restoreDefaultStream();
     /**
      * Construct an uninitialized array of the appropriate class for this platform.  The returned
      * value should be created on the heap with the "new" operator.
@@ -179,6 +181,19 @@ public:
      * Construct a ComputeEvent object of the appropriate class for this platform.
      */
     ComputeEvent createEvent();
+    /**
+     * Construct a ComputeSort object of the appropriate class for this platform.
+     * 
+     * @param trait      a SortTrait defining the type of data to sort.  It should have been allocated
+     *                   on the heap with the "new" operator.  This object takes over ownership of it,
+     *                   and deletes it when the ComputeSort is deleted.
+     * @param length     the length of the arrays this object will be used to sort
+     * @param uniform    whether the input data is expected to follow a uniform or nonuniform
+     *                   distribution.  This argument is used only as a hint.  It allows parts
+     *                   of the algorithm to be tuned for faster performance on the expected
+     *                   distribution.
+     */
+    ComputeSort createSort(ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform=true);
     /**
      * Compile source code to create a ComputeProgram.
      *
@@ -510,6 +525,16 @@ public:
         return new CudaNonbondedUtilities(*this);
     }
     /**
+     * Create an object for performing 3D FFTs.  The caller is responsible for deleting
+     * the object when it is no longer needed.
+     *
+     * @param xsize   the first dimension of the data sets on which FFTs will be performed
+     * @param ysize   the second dimension of the data sets on which FFTs will be performed
+     * @param zsize   the third dimension of the data sets on which FFTs will be performed
+     * @param realToComplex  if true, a real-to-complex transform will be done.  Otherwise, it is complex-to-complex.
+     */
+    FFT3D createFFT(int xsize, int ysize, int zsize, bool realToComplex=false);
+    /**
      * This should be called by the Integrator from its own initialize() method.
      * It ensures all contexts are fully initialized.
      */
@@ -577,7 +602,6 @@ private:
     std::map<std::string, std::string> compilationDefines;
     CUcontext context;
     CUdevice device;
-    CUstream currentStream;
     CUfunction clearBufferKernel;
     CUfunction clearTwoBuffersKernel;
     CUfunction clearThreeBuffersKernel;
