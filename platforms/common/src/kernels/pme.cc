@@ -173,6 +173,8 @@ KERNEL void reciprocalConvolution(GLOBAL real2* RESTRICT pmeGrid, GLOBAL const r
         real eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)/denom;
         if (kx != 0 || ky != 0 || kz != 0) {
             pmeGrid[index] = make_real2(grid.x*eterm, grid.y*eterm);
+        } else {
+            pmeGrid[index] = make_real2(0);
         }
 #endif
     }
@@ -341,6 +343,77 @@ KERNEL void gridInterpolateForce(GLOBAL const real4* RESTRICT posq, GLOBAL mm_ul
         forceBuffers[atom] += (mm_ulong) realToFixedPoint(forceX);
         forceBuffers[atom+PADDED_NUM_ATOMS] += (mm_ulong) realToFixedPoint(forceY);
         forceBuffers[atom+2*PADDED_NUM_ATOMS] += (mm_ulong) realToFixedPoint(forceZ);
+#endif
+    }
+}
+
+KERNEL void gridInterpolateChargeDerivatives(GLOBAL const real4* RESTRICT posq, GLOBAL mm_ulong* RESTRICT derivatives, GLOBAL const real* RESTRICT pmeGrid,
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ, GLOBAL const int* RESTRICT atomIndices
+        ) {
+    real3 data[PME_ORDER];
+    const real scale = RECIP((real) (PME_ORDER-1));
+
+    for (int i = GLOBAL_ID; i < NUM_INDICES; i += GLOBAL_SIZE) {
+        int atom = atomIndices[i];
+        real derivative = 0;
+        real4 pos = posq[atom];
+        APPLY_PERIODIC_TO_POS(pos)
+        real3 t = make_real3(pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
+                             pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
+                             pos.z*recipBoxVecZ.z);
+        t.x = (t.x-floor(t.x))*GRID_SIZE_X;
+        t.y = (t.y-floor(t.y))*GRID_SIZE_Y;
+        t.z = (t.z-floor(t.z))*GRID_SIZE_Z;
+        int3 gridIndex = make_int3(((int) t.x) % GRID_SIZE_X,
+                                   ((int) t.y) % GRID_SIZE_Y,
+                                   ((int) t.z) % GRID_SIZE_Z);
+
+        // Since we need the full set of thetas, it's faster to compute them here than load them
+        // from global memory.
+
+        real3 dr = make_real3(t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z);
+        data[PME_ORDER-1] = make_real3(0);
+        data[1] = dr;
+        data[0] = make_real3(1)-dr;
+        for (int j = 3; j < PME_ORDER; j++) {
+            real div = RECIP((real) (j-1));
+            data[j-1] = div*dr*data[j-2];
+            for (int k = 1; k < (j-1); k++)
+                data[j-k-1] = div*((dr+make_real3(k))*data[j-k-2] + (make_real3(j-k)-dr)*data[j-k-1]);
+            data[0] = div*(make_real3(1)-dr)*data[0];
+        }
+        data[PME_ORDER-1] = scale*dr*data[PME_ORDER-2];
+        for (int j = 1; j < (PME_ORDER-1); j++)
+            data[PME_ORDER-j-1] = scale*((dr+make_real3(j))*data[PME_ORDER-j-2] + (make_real3(PME_ORDER-j)-dr)*data[PME_ORDER-j-1]);
+        data[0] = scale*(make_real3(1)-dr)*data[0];
+
+        // Compute the charge derivative on this atom.
+
+        for (int ix = 0; ix < PME_ORDER; ix++) {
+            int xbase = gridIndex.x+ix;
+            xbase -= (xbase >= GRID_SIZE_X ? GRID_SIZE_X : 0);
+            xbase = xbase*GRID_SIZE_Y*GRID_SIZE_Z;
+            real dx = data[ix].x;
+
+            for (int iy = 0; iy < PME_ORDER; iy++) {
+                int ybase = gridIndex.y+iy;
+                ybase -= (ybase >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
+                ybase = xbase + ybase*GRID_SIZE_Z;
+                real dy = data[iy].y;
+
+                for (int iz = 0; iz < PME_ORDER; iz++) {
+                    int zindex = gridIndex.z+iz;
+                    zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
+                    derivative += dx*dy*data[iz].z*pmeGrid[ybase + zindex];
+                }
+            }
+        }
+        derivative *= EPSILON_FACTOR;
+#ifdef USE_PME_STREAM
+        ATOMIC_ADD(&derivatives[i], (mm_ulong) realToFixedPoint(derivative));
+#else
+        derivatives[i] += (mm_ulong) realToFixedPoint(derivative);
 #endif
     }
 }

@@ -408,6 +408,7 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
             pmeDefines["PME_ORDER"] = cc.intToString(PmeOrder);
             pmeDefines["NUM_ATOMS"] = cc.intToString(numParticles);
             pmeDefines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
+            pmeDefines["NUM_INDICES"] = "0";
             pmeDefines["RECIP_EXP_FACTOR"] = cc.doubleToString(M_PI*M_PI/(alpha*alpha));
             pmeDefines["GRID_SIZE_X"] = cc.intToString(gridSizeX);
             pmeDefines["GRID_SIZE_Y"] = cc.intToString(gridSizeY);
