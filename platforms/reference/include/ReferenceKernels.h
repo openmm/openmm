@@ -69,6 +69,7 @@ class ReferenceVariableVerletDynamics;
 class ReferenceVerletDynamics;
 class ReferenceCustomDynamics;
 class ReferenceDPDDynamics;
+class ReferenceQTBDynamics;
 
 /**
  * This kernel is invoked at the beginning and end of force and energy computations.  It gives the
@@ -1543,6 +1544,42 @@ public:
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceDPDDynamics* dynamics;
+    std::vector<double> masses;
+};
+
+/**
+ * This kernel is invoked by QTBIntegrator to take one time step.
+ */
+class ReferenceIntegrateQTBStepKernel : public IntegrateQTBStepKernel {
+public:
+    ReferenceIntegrateQTBStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateQTBStepKernel(name, platform),
+        data(data), dynamics(NULL) {
+    }
+    ~ReferenceIntegrateQTBStepKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the QTBIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const QTBIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the QTBIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const QTBIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the QTBIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const QTBIntegrator& integrator);
+private:
+    ReferencePlatform::PlatformData& data;
+    ReferenceQTBDynamics* dynamics;
     std::vector<double> masses;
 };
 

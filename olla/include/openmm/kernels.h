@@ -57,6 +57,7 @@
 #include "openmm/KernelImpl.h"
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/PeriodicTorsionForce.h"
+#include "openmm/QTBIntegrator.h"
 #include "openmm/RBTorsionForce.h"
 #include "openmm/RMSDForce.h"
 #include "openmm/NonbondedForce.h"
@@ -1433,6 +1434,39 @@ public:
      * @param integrator the DPDIntegrator this kernel is being used for
      */
     virtual double computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator) = 0;
+};
+
+/**
+ * This kernel is invoked by QTBIntegrator to take one time step.
+ */
+class IntegrateQTBStepKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "IntegrateQTBStep";
+    }
+    IntegrateQTBStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the QTBIntegrator this kernel will be used for
+     */
+    virtual void initialize(const System& system, const QTBIntegrator& integrator) = 0;
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the QTBIntegrator this kernel is being used for
+     */
+    virtual void execute(ContextImpl& context, const QTBIntegrator& integrator) = 0;
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the QTBIntegrator this kernel is being used for
+     */
+    virtual double computeKineticEnergy(ContextImpl& context, const QTBIntegrator& integrator) = 0;
 };
 
 /**

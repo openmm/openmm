@@ -60,6 +60,7 @@
 #include "ReferenceNoseHooverDynamics.h"
 #include "ReferencePointFunctions.h"
 #include "ReferenceProperDihedralBond.h"
+#include "ReferenceQTBDynamics.h"
 #include "ReferenceRbDihedralBond.h"
 #include "ReferenceRMSDForce.h"
 #include "ReferenceTabulatedFunction.h"
@@ -2890,6 +2891,40 @@ void ReferenceIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDInt
 }
 
 double ReferenceIntegrateDPDStepKernel::computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator) {
+    return computeShiftedKineticEnergy(context, masses, 0.0);
+}
+
+ReferenceIntegrateQTBStepKernel::~ReferenceIntegrateQTBStepKernel() {
+    if (dynamics)
+        delete dynamics;
+}
+
+void ReferenceIntegrateQTBStepKernel::initialize(const System& system, const QTBIntegrator& integrator) {
+    int numParticles = system.getNumParticles();
+    masses.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = system.getParticleMass(i);
+    SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
+}
+
+void ReferenceIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegrator& integrator) {
+    double temperature = integrator.getTemperature();
+    double friction = integrator.getFriction();
+    double stepSize = integrator.getStepSize();
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& velData = extractVelocities(context);
+    if (dynamics == NULL) {
+        dynamics = new ReferenceQTBDynamics(context.getSystem(), integrator);
+        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        dynamics->setVirtualSites(extractVirtualSites(context));
+    }
+    dynamics->setTemperature(integrator.getTemperature());
+    dynamics->update(context, posData, velData, masses, integrator.getConstraintTolerance());
+    data.time += stepSize;
+    data.stepCount++;
+}
+
+double ReferenceIntegrateQTBStepKernel::computeKineticEnergy(ContextImpl& context, const QTBIntegrator& integrator) {
     return computeShiftedKineticEnergy(context, masses, 0.0);
 }
 
