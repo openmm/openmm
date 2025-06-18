@@ -397,7 +397,7 @@ void testSmallSystems(ConstantPotentialForce::ConstantPotentialMethod method, bo
     system1.addForce(force1);
     VerletIntegrator integrator1(0.001);
     Context context1(system1, integrator1, platform);
-    vector<Vec3> positions1{Vec3(0, 0, 0), Vec3(1, 0, 0)};
+    vector<Vec3> positions1{Vec3(0, 0, 0), Vec3(0.5, 0, 0)};
     context1.setPositions(positions1);
     vector<double> charges1;
     force1->getCharges(context1, charges1);
