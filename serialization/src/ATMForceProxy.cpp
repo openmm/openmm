@@ -33,12 +33,85 @@
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/Force.h"
 #include "openmm/ATMForce.h"
+#include "openmm/OpenMMException.h"
+#include <vector>
 #include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
 ATMForceProxy::ATMForceProxy() : SerializationProxy("ATMForce") {
+}
+
+void ATMForceProxy::loadParams(int numParticles, const ATMForce& force, vector<int>& type, vector<Vec3>& d1, vector<Vec3>& d0, vector<int>& j1, vector<int>& i1, vector<int>& j0, vector<int>& i0) const {
+      for (int p = 0; p < numParticles; p++) {
+	const ATMTransformation* transformation = force.getParticleTransformation(p);
+	if (transformation != NULL) {
+	    string s = transformation->getName();
+	    if (s == "FixedDisplacement") {
+		type[p] = ATMTransformationType.at(s);
+		d1[p] = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement1();
+		d0[p] = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement0();
+		j1[p] = i1[p] = j0[p] = i0[p] = -1;
+	    }
+	    else if (s == "VectordistanceDisplacement") {
+		type[p] = ATMTransformationType.at(s);
+		d1[p] = Vec3(0,0,0);
+		d0[p] = Vec3(0,0,0);
+		j1[p] = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getDestinationParticle1();
+		i1[p] = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getOriginParticle1();
+		j0[p] = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getDestinationParticle0();
+		i0[p] = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getOriginParticle0();
+	    }
+	    else {
+		throw OpenMMException("loadParams(): invalid particle Transformation");
+	    }
+	}
+	else {
+	    type[p] = ATMTransformationType.at("NoDisplacement");
+	    d1[p] = Vec3(0,0,0);
+	    d0[p] = Vec3(0,0,0);
+	    j1[p] = i1[p] = j0[p] = i0[p] = -1;
+	}
+    }
+}
+
+void ATMForceProxy::storeParams(int numParticles, ATMForce& force, const SerializationNode& particles) const {
+    for (auto& p : particles.getChildren()){
+
+	//support older serialized ATMForces that did not store the transformation type
+	//or the vector distance indexes
+	int transformation_type;
+        if (p.hasProperty("type")) {
+	    transformation_type = p.getIntProperty("type");
+	}
+	else if (p.hasProperty("pj1")) {
+	    if (p.getIntProperty("pj1") >= 0) {
+		transformation_type = ATMTransformationType.at("VectordistanceDisplacement");
+	    }
+	    else {
+		transformation_type = ATMTransformationType.at("FixedDisplacement");
+	    }
+	}
+	else {
+	    transformation_type = ATMTransformationType.at("FixedDisplacement");
+	}
+
+	//add particle based on transformation type
+	if (transformation_type == ATMTransformationType.at("NoDisplacement")) {
+	    force.addParticle();
+	}
+	else if (transformation_type == ATMTransformationType.at("FixedDisplacement")) {
+	    force.addParticle(new ATMFixedDisplacement(Vec3(p.getDoubleProperty("d1x"), p.getDoubleProperty("d1y"), p.getDoubleProperty("d1z")), Vec3(p.getDoubleProperty("d0x"), p.getDoubleProperty("d0y"), p.getDoubleProperty("d0z"))));
+	}
+	else if (transformation_type == ATMTransformationType.at("VectordistanceDisplacement")) {
+	    force.addParticle(new ATMVectordistanceDisplacement( p.getIntProperty("pj1"), p.getIntProperty("pi1"), p.getIntProperty("pj0"), p.getIntProperty("pi0")));
+	}
+	else {
+	    throw OpenMMException("storeParams(): invalid particle Transformation");
+	}
+
+    }
 }
 
 void ATMForceProxy::serialize(const void* object, SerializationNode& node) const {
@@ -61,13 +134,22 @@ void ATMForceProxy::serialize(const void* object, SerializationNode& node) const
         f.createChildNode("Force", &force.getForce(i));
     }
     SerializationNode& particles = node.createChildNode("Particles");
+
+    int numParticles = force.getNumParticles();
+    vector<int> type(numParticles);
+    vector<int> j1(numParticles);
+    vector<int> i1(numParticles);
+    vector<int> j0(numParticles);
+    vector<int> i0(numParticles);
+    vector<Vec3> d1(numParticles);
+    vector<Vec3> d0(numParticles);
+    loadParams(numParticles, force, type, d1, d0, j1, i1, j0, i0);
+
     for (int i = 0; i < force.getNumParticles(); i++) {
-        Vec3 d1, d0;
-	int j1, i1, j0, i0;
-        force.getParticleParameters(i, d1, d0, j1, i1, j0, i0 );
-        particles.createChildNode("Particle").setDoubleProperty("d1x", d1[0]).setDoubleProperty("d1y", d1[1]).setDoubleProperty("d1z", d1[2])
-	  .setDoubleProperty("d0x", d0[0]).setDoubleProperty("d0y", d0[1]).setDoubleProperty("d0z", d0[2])
-	  .setIntProperty("pj1", j1).setIntProperty("pi1", i1).setIntProperty("pj0", j0).setIntProperty("pi0", i0);
+        particles.createChildNode("Particle").setIntProperty("type", type[i])
+	  .setDoubleProperty("d1x", d1[i][0]).setDoubleProperty("d1y", d1[i][1]).setDoubleProperty("d1z", d1[i][2])
+	  .setDoubleProperty("d0x", d0[i][0]).setDoubleProperty("d0y", d0[i][1]).setDoubleProperty("d0z", d0[i][2])
+	  .setIntProperty("pj1", j1[i]).setIntProperty("pi1", i1[i]).setIntProperty("pj0", j0[i]).setIntProperty("pi0", i0[i]);
     }
 }
 
@@ -90,15 +172,9 @@ void* ATMForceProxy::deserialize(const SerializationNode& node) const {
         for (auto& f : forces.getChildren())
             force->addForce(f.getChildren()[0].decodeObject<Force>());
         const SerializationNode& particles = node.getChildNode("Particles");
-        for (auto& p : particles.getChildren()){
-	    if ( p.getIntProperty("pj1") > 0 && p.getIntProperty("pi1") > 0 ){
-		force->addParticle(p.getIntProperty("pj1"), p.getIntProperty("pi1"), p.getIntProperty("pj0"), p.getIntProperty("pi0"));
-	    }
-	    else {
-		force->addParticle(Vec3(p.getDoubleProperty("d1x"), p.getDoubleProperty("d1y"), p.getDoubleProperty("d1z")),
-				   Vec3(p.getDoubleProperty("d0x"), p.getDoubleProperty("d0y"), p.getDoubleProperty("d0z")));
-	    }
-	}
+
+	storeParams(force->getNumParticles(), *force, particles);
+
         return force;
     }
     catch (...) {

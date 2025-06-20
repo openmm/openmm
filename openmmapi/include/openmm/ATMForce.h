@@ -40,6 +40,7 @@
 #include <openmm/Vec3.h>
 #include <vector>
 #include <string>
+#include <map>
 #include "internal/windowsExport.h"
 
 namespace OpenMM {
@@ -159,6 +160,80 @@ namespace OpenMM {
  * computed.  You can then query its value in a Context by calling getState() on it.
  */
 
+
+/**
+ * These are classes used to specify coordinate transformations
+ */
+
+/**
+ * Maps to identify types of transformations
+ */
+static const std::map<std::string, int> ATMTransformationType {
+    {"NoDisplacement", 0},
+    {"FixedDisplacement", 1},
+    {"VectordistanceDisplacement", 2}
+};
+static const std::map<int, std::string> ATMTransformationName {
+    {0, "NoDisplacement"},
+    {1, "FixedDisplacement"},
+    {2, "VectordistanceDisplacement"}
+};
+
+class ATMTransformation {
+public:
+    ATMTransformation(){}
+    virtual ~ATMTransformation(){};
+    const std::string& getName() const {
+	return name;
+    }
+    int getTypeid() const {
+	return type;
+    }
+protected:
+    int type;
+    std::string name;
+};
+
+class ATMFixedDisplacement : public ATMTransformation {
+public:
+    ATMFixedDisplacement(const Vec3& displacement1, const Vec3& displacement0=Vec3()) : displ1(displacement1), displ0(displacement0) {
+	name = "FixedDisplacement";
+	type = ATMTransformationType.at(name);
+    }
+    ~ATMFixedDisplacement() override {}
+    const Vec3& getFixedDisplacement1() const {
+	return displ1;
+    }
+    const Vec3& getFixedDisplacement0() const {
+	return displ0;
+    }
+private:
+    Vec3 displ1, displ0;
+};
+
+class ATMVectordistanceDisplacement : public ATMTransformation {
+public:
+    ATMVectordistanceDisplacement(int pDestination1, int pOrigin1, int  pDestination0 = -1, int pOrigin0 = -1) : pDestination1(pDestination1), pOrigin1(pOrigin1), pDestination0(pDestination0), pOrigin0(pOrigin0) {
+	name = "VectordistanceDisplacement";
+	type = ATMTransformationType.at(name);
+    }
+    ~ATMVectordistanceDisplacement() override {}
+    int getDestinationParticle1() const {
+	return pDestination1;
+    }
+    int getOriginParticle1() const {
+	return pOrigin1;
+    }
+    int getDestinationParticle0() const {
+	return pDestination0;
+    }
+    int getOriginParticle0() const {
+	return pOrigin0;
+    }
+ private:
+    int pDestination1, pOrigin1, pDestination0, pOrigin0;
+};
+
 class OPENMM_EXPORT ATMForce : public OpenMM::Force {
 public:
     /**
@@ -238,8 +313,21 @@ public:
      * return the force from index
      */
     Force& getForce(int index) const;
+
+    /**
+     * Add a stationary particle: one whose coordinate is not transformed
+     *
+     * All of the particles in the System must be added to the ATMForce in the same order
+     * as they appear in the System.
+     *
+     * @return                 the index of the particle that was added
+     */
+    int addParticle();
+
     /**
      * Add a particle to the force with fixed lab frame displacements
+     * DEPRECATED. Use:
+     *   addParticle(new ATMFixedDisplacement(displacement1, displacement0))
      *
      * All of the particles in the System must be added to the ATMForce in the same order
      * as they appear in the System.
@@ -248,53 +336,42 @@ public:
      * @param displacement0    the displacement of the particle for the initial state in nm
      * @return                 the index of the particle that was added
      */
-    int addParticle(const Vec3& displacement1=Vec3(), const Vec3& displacement0=Vec3());
+    int addParticle(const Vec3& displacement1, const Vec3& displacement0=Vec3());
+
     /**
-     * Add a particle to the force with displacements as the vector distances between specified particles
+     * Add a particle to the force with transformation method
      *
      * All of the particles in the System must be added to the ATMForce in the same order
      * as they appear in the System.
      *
-     * @param pDestination1   the index of the destination particle for the displacement for the target state or -1 for no displacement
-     * @param pOrigin1        the index of the origin particle for the displacement for the target stateor -1 for no displacement
-     * @param pDestination0   the index of the destination particle for the displacement for the initial state or -1 for no displacement
-     * @param pOrigin0        the index of the origin particle for the displacement for the initial state or -1 for no displacement
+     * @param transformation  the pointer to the Transformation object
      * @return                the index of the particle that was added
      */
-    int addParticle(int pDestination1, int pOrigin1, int pDestination0 = -1, int pOrigin0 = -1);
+    int addParticle(ATMTransformation* transformation);
 
     /**
      * Get the parameters for a particle
+     * DEPRECATED. Use:
+     *  const ATMTransformation* transformation = getParticleTransformation(index)
+     *  displacement1 = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement1();
+     *  displacement0 = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement0();
      * 
      * @param index           the index in the force for the particle for which to get parameters
      * @param displacement1   the fixed lab-frame displacement of the particle for the target state in nm
      * @param displacement0   the fixed lab-frame displacement of the particle for the initial state in nm
-     * @param pDestination1   the index of the destination particle for the displacement for the target state or -1 for no displacement 
-     * @param pOrigin1        the index of the origin particle for the displacement for the target state or -1 for no displacement 
-     * @param pDestination0   the index of the destination particle for the displacement for the initial state or -1 for no displacement 
-     * @param pOrigin0        the index of the origin particle for the displacement for the initial state or -1 for no displacement 
      */
-    void getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0,
-			       int& pDestination1, int& pOrigin1, int& pDestination0, int& pOrigin0 ) const;
+    void getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0) const;
 
     /**
      * Set the displacements for a particle as fixed lab frame vectors
+     * DEPRECATED. Use:
+     *   setParticleTransformation(index, new ATMFixedDisplacement(displacement1, displacement0))
      * 
      * @param index           the index in the force of the particle for which to set parameters
      * @param displacement1   the fixed lab-frame displacement of the particle for the target state in nm
      * @param displacement0   the fixed lab-frame displacement of the particle for the initial state in nm
      */
     void setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0=Vec3());
-    /**
-     * Set the displacements for a particle as the vector distances between specified particles
-     * 
-     * @param index           the index in the force of the particle for which to set parameters
-     * @param pDestination1   the index of the destination particle for the displacement for the target state or -1 for no displacement
-     * @param pOrigin1        the index of the origin particle for the displacement for the target state or -1 for no displacement
-     * @param pDestination0   the index of the destination particle for the displacement for the initial state or -1 for no displacement
-     * @param pOrigin0        the index of the origin particle for the displacement for the initial state or -1 for no  displacement
-     */
-    void setParticleParameters(int index, int pDestination1, int pOrigin1, int pDestination0, int pOrigin0 );
 
     /**
      * Add a new global parameter that the interaction may depend on.  The default value provided to
@@ -449,6 +526,38 @@ public:
         return key;
     }
 
+    /**
+     * Change the transformation method for the specified particle
+     *
+     * @param index           the index of the particle
+     * @param transformation  the pointer to the Transformation object
+     */
+    void setParticleTransformation(int index, ATMTransformation* transformation);
+
+    /**
+     * Returns the Transformation object associated with the particle or NULL
+     *
+     * @param index           the index of the particle
+     * @return                the pointer to the Transformation object
+     */
+    const ATMTransformation* getParticleTransformation(int index) const;
+
+    /**
+     * Returns the FixedDisplacement transformation object associated with the particle or NULL
+     *
+     * @param index           the index of the particle
+     * @return                the pointer to the FixedDisplacement transformation object
+     */
+    const ATMFixedDisplacement* getParticleFixedDisplacementTransformation(int index) const;
+
+    /**
+     * Returns the VectordistanceDisplacement transformation object associated with the particle or NULL
+     *
+     * @param index           the index of the particle
+     * @return                the pointer to the VectordistanceDisplacement transformation object
+     */
+    const ATMVectordistanceDisplacement* getParticleVectordistanceDisplacementTransformation(int index) const;
+
 protected:
   ForceImpl* createImpl() const;
 private:
@@ -468,16 +577,12 @@ private:
 class ATMForce::ParticleInfo {
 public:
     int index;
-    Vec3 displacement1, displacement0;
-    //variable displacements = pos[pDestination] - pos[pOrigin]
-    int pDestination1, pOrigin1, pDestination0, pOrigin0;
-    ParticleInfo() : index(-1) {
+    ATMTransformation* transformation;
+    ParticleInfo() : index(-1), transformation(NULL) {
     }
-    ParticleInfo(int index) : index(index) {
+    ParticleInfo(int index) : index(index), transformation(NULL) {
     }
-    ParticleInfo(int index, Vec3 displacement1, Vec3 displacement0, int pj1, int pi1, int pj0, int pi0 ) :
-        index(index), displacement1(displacement1), displacement0(displacement0),
-                      pDestination1(pj1), pOrigin1(pi1), pDestination0(pj0), pOrigin0(pi0) {
+    ParticleInfo(int index, ATMTransformation* transformation) : index(index), transformation(transformation) {
     }
 };
 

@@ -55,8 +55,8 @@ void testSerialization() {
     HarmonicAngleForce* v2 = new HarmonicAngleForce();
     v2->addAngle(3, 11, 15, 0.4, 0.2);
     force.addForce(v2);
-    force.addParticle(Vec3(1, 2, 3));
-    force.addParticle(Vec3(0, 0, -1), Vec3(3, 2, 1));
+    force.addParticle(new ATMFixedDisplacement(Vec3(1, 2, 3)));
+    force.addParticle(new ATMVectordistanceDisplacement(0, 1));
 
     // Serialize and then deserialize it.
 
@@ -87,18 +87,35 @@ void testSerialization() {
     }
     ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());
     for (int i = 0; i < force.getNumParticles(); i++) {
-        Vec3 d1a, d1b, d0a, d0b;
-	int j1a, i1a, j0a, i0a;
-	int j1b, i1b, j0b, i0b;
+	const ATMTransformation* transformation  = force.getParticleTransformation(i);
+	const ATMTransformation* transformation2 = force2.getParticleTransformation(i);
+	ASSERT_EQUAL(transformation->getName(), transformation2->getName());
+	if (transformation->getName() == "FixedDisplacement") {
+	    const Vec3 d1a = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement1();
+	    const Vec3 d0a = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement0();
+	    const Vec3 d1b = dynamic_cast<const ATMFixedDisplacement*>(transformation2)->getFixedDisplacement1();
+	    const Vec3 d0b = dynamic_cast<const ATMFixedDisplacement*>(transformation2)->getFixedDisplacement0();
+	    ASSERT_EQUAL_VEC(d1a, d1b, 0.0);
+	    ASSERT_EQUAL_VEC(d0a, d0b, 0.0);
+	}
+	else if (transformation->getName() == "VectordistanceDisplacement") {
+	    int j1a = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getDestinationParticle1();
+	    int i1a = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getOriginParticle1();
+	    int j0a = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getDestinationParticle0();
+	    int i0a = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getOriginParticle0();
+	    int j1b = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation2)->getDestinationParticle1();
+	    int i1b = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation2)->getOriginParticle1();
+	    int j0b = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation2)->getDestinationParticle0();
+	    int i0b = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation2)->getOriginParticle0();
+	    ASSERT_EQUAL(j1a, j1b);
+	    ASSERT_EQUAL(i1a, i1b);
+	    ASSERT_EQUAL(j0a, j0b);
+	    ASSERT_EQUAL(i0a, i0b);
+	}
+	else {
+	    ASSERT_EQUAL("NoDisplacement", transformation->getName());
+	}
 
-        force.getParticleParameters(i,  d1a, d0a, j1a, i1a, j0a, i0a);
-        force2.getParticleParameters(i, d1b, d0b, j1b, i1b, j0b, i0b);
-        ASSERT_EQUAL_VEC(d1a, d1b, 0.0);
-        ASSERT_EQUAL_VEC(d0a, d0b, 0.0);
-	ASSERT_EQUAL( j1a, j1b);
-	ASSERT_EQUAL( i1a, i1b);
-	ASSERT_EQUAL( j0a, j0b);
-	ASSERT_EQUAL( i0a, i0b);
     }
 }
 

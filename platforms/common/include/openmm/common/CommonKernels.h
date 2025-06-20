@@ -1321,7 +1321,8 @@ private:
     class ReorderListener;
     
     void initKernels(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1);
-    
+    void loadParams(int numParticles, const ATMForce& force, std::vector<Vec3>& d1, std::vector<Vec3>& d0, std::vector<int>& j1, std::vector<int>& i1, std::vector<int>& j0, std::vector<int>& i0);
+
     bool hasInitializedKernel;
     ComputeContext& cc;
     ComputeArray displ1, displ0;               // actual displacements used in calculation

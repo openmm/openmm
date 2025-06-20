@@ -1708,6 +1708,7 @@ private:
     std::vector<int> pj1, pi1, pj0, pi0;
     void setDisplacements(std::vector<Vec3>& pos);
     void displForces(std::vector<Vec3>& force0, std::vector<Vec3>& force1);
+    void loadParams(int numParticles, const ATMForce& force);
 };
 
 /**

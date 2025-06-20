@@ -2997,29 +2997,53 @@ void ReferenceRemoveCMMotionKernel::execute(ContextImpl& context) {
     }
 }
 
-void ReferenceCalcATMForceKernel::initialize(const System& system, const ATMForce& force) {
-    numParticles = force.getNumParticles();
-
-    //displacement map
-    displ1.resize(numParticles);
-    displ0.resize(numParticles);
+void ReferenceCalcATMForceKernel::loadParams(int numParticles, const ATMForce& force) {
+    //vector displacements
     displacement1.resize(numParticles);
     displacement0.resize(numParticles);
+    //particle distance displacements
     pj1.resize(numParticles);
     pi1.resize(numParticles);
     pj0.resize(numParticles);
     pi0.resize(numParticles);
     for (int i = 0; i < numParticles; i++) {
-        Vec3 d1, d0;
-	int j1, i1, j0, i0;
-        force.getParticleParameters(i, d1, d0, j1, i1, j0, i0 );
-	displacement1[i] = d1;
-	displacement0[i] = d0;
-	pj1[i] = j1;
-	pi1[i] = i1;
-	pj0[i] = j0;
-	pi0[i] = i0;
+	const ATMTransformation* transformation = force.getParticleTransformation(i);
+	if (transformation != NULL) {
+	    string s = transformation->getName();
+	    if (s == "FixedDisplacement") {
+		const Vec3 d1 = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement1();
+		const Vec3 d0 = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement0();
+		displacement1[i] = d1;
+		displacement0[i] = d0;
+		pj1[i] = pi1[i] = pj0[i] = pi0[i] = -1;
+	    }
+	    else if (s == "VectordistanceDisplacement") {
+		displacement1[i] = Vec3(0, 0, 0);
+		displacement0[i] = Vec3(0, 0, 0);
+		pj1[i] = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getDestinationParticle1();
+		pi1[i] = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getOriginParticle1();
+		pj0[i] = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getDestinationParticle0();
+		pi0[i] = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getOriginParticle0();
+	    }
+	    else {
+		throw OpenMMException("loadParams(): invalid particle Transformation");
+	    }
+	}
+	else {
+	    displacement1[i] = Vec3(0, 0, 0);
+	    displacement0[i] = Vec3(0, 0, 0);
+	    pj1[i] = pi1[i] = pj0[i] = pi0[i] = -1;
+	}
     }
+}
+
+void ReferenceCalcATMForceKernel::initialize(const System& system, const ATMForce& force) {
+    numParticles = force.getNumParticles();
+    //displacement map
+    displ1.resize(numParticles);
+    displ0.resize(numParticles);
+    //load particle parameters from the force object
+    loadParams(numParticles, force);
 }
 
 void ReferenceCalcATMForceKernel::setDisplacements(vector<Vec3>& pos){
@@ -3133,23 +3157,7 @@ void ReferenceCalcATMForceKernel::copyParametersToContext(ContextImpl& context, 
           throw OpenMMException("copyParametersToContext: The number of ATMForce particles has changed");
     displ1.resize(numParticles);
     displ0.resize(numParticles);
-    displacement1.resize(numParticles);
-    displacement0.resize(numParticles);
-    pj1.resize(numParticles);
-    pi1.resize(numParticles);
-    pj0.resize(numParticles);
-    pi0.resize(numParticles);
-    for (int i = 0; i < numParticles; i++) {
-        Vec3 d1, d0;
-	int j1, i1, j0, i0;
-        force.getParticleParameters(i, d1, d0, j1, i1, j0, i0 );
-	displacement1[i] = d1;
-	displacement0[i] = d0;
-	pj1[i] = j1;
-	pi1[i] = i1;
-	pj0[i] = j0;
-	pi0[i] = i0;
-    }
+    loadParams(numParticles, force);
 }
 
 void ReferenceCalcCustomCPPForceKernel::initialize(const System& system, CustomCPPForceImpl& force) {
