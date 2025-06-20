@@ -100,5 +100,5 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
 void CudaCalcConstantPotentialForceKernel::initialize(const System& system, const ConstantPotentialForce& force) {
     bool usePmeQueue, useFixedPointChargeSpreading;
     getCudaPmeParameters(cu, usePmeQueue, useFixedPointChargeSpreading);
-    commonInitialize(system, force, usePmeQueue, false, useFixedPointChargeSpreading);
+    commonInitialize(system, force, false, useFixedPointChargeSpreading);
 }

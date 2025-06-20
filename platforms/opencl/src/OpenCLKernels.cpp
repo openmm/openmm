@@ -96,5 +96,5 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 void OpenCLCalcConstantPotentialForceKernel::initialize(const System& system, const ConstantPotentialForce& force) {
     bool usePmeQueue, deviceIsCpu;
     getOpenCLPmeParameters(cl, usePmeQueue, deviceIsCpu);
-    commonInitialize(system, force, usePmeQueue, deviceIsCpu, true);
+    commonInitialize(system, force, deviceIsCpu, true);
 }

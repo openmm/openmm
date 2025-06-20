@@ -101,15 +101,9 @@ KERNEL void evaluateSelfEnergyForces(
         const real4 posOffset = pos + offset.x * periodicBoxVecX + offset.y * periodicBoxVecY + offset.z * periodicBoxVecZ;
         const real fieldTerm = posOffset.x * externalField.x + posOffset.y * externalField.y + posOffset.z * externalField.z;
         energyBuffer[GLOBAL_ID] += charge * (charge * params.w - params.x - fieldTerm);
-#ifdef USE_PME_STREAM
-        ATOMIC_ADD(&forceBuffers[i], (mm_ulong) realToFixedPoint(charge * externalField.x));
-        ATOMIC_ADD(&forceBuffers[i + PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(charge * externalField.y));
-        ATOMIC_ADD(&forceBuffers[i + 2 * PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(charge * externalField.z));
-#else
         forceBuffers[i] += (mm_ulong) realToFixedPoint(charge * externalField.x);
         forceBuffers[i + PADDED_NUM_ATOMS] += (mm_ulong) realToFixedPoint(charge * externalField.y);
         forceBuffers[i + 2 * PADDED_NUM_ATOMS] += (mm_ulong) realToFixedPoint(charge * externalField.z);
-#endif
     }
 }
 

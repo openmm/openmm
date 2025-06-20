@@ -678,8 +678,7 @@ CommonCalcConstantPotentialForceKernel::~CommonCalcConstantPotentialForceKernel(
     }
 }
 
-void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& system, const ConstantPotentialForce& force, bool usePmeQueue,
-        bool deviceIsCpu, bool useFixedPointChargeSpreading) {
+void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& system, const ConstantPotentialForce& force, bool deviceIsCpu, bool useFixedPointChargeSpreading) {
     ContextSelector selector(cc);
     if (cc.getNumContexts() > 1) {
         throw OpenMMException("ConstantPotentialForce does not support using multiple devices");
@@ -687,7 +686,6 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
     threadBlockSize = cc.getMaxThreadBlockSize();
     int elementSize = cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float);
 
-    this->usePmeQueue = usePmeQueue;
     this->deviceIsCpu = deviceIsCpu;
     this->useFixedPointChargeSpreading = useFixedPointChargeSpreading;
     this->usePosqCharges = cc.requestPosqCharges();
@@ -1112,9 +1110,6 @@ void CommonCalcConstantPotentialForceKernel::ensureInitialized() {
     if (usePosqCharges) {
         defines["USE_POSQ_CHARGES"] = "1";
     }
-    if (usePmeQueue) {
-        defines["USE_PME_STREAM"] = "1";
-    }
     ComputeProgram program = cc.compileProgram(CommonKernelSources::constantPotential, defines);
 
     updateNonElectrodeChargesKernel = program->createKernel("updateNonElectrodeCharges");
@@ -1200,9 +1195,6 @@ double CommonCalcConstantPotentialForceKernel::doEnergyForces(bool includeForces
     }
     double energy = 0.0;
 
-    if (usePmeQueue) {
-        throw OpenMMException("PME queue not supported");
-    }
     pmeExecute(includeEnergy, includeForces, false);
 
     // Ewald neutralizing plasma and per-particle energy.
@@ -1240,9 +1232,6 @@ void CommonCalcConstantPotentialForceKernel::doDerivatives() {
     cc.clearBuffer(chargeDerivatives);
     cc.clearBuffer(chargeDerivativesFixed);
 
-    if (usePmeQueue) {
-        throw OpenMMException("PME queue not supported");
-    }
     pmeExecute(false, false, true);
     evaluateDirectDerivativesKernel->execute(numParticles * numElectrodeParticles);
 
@@ -1290,14 +1279,8 @@ void CommonCalcConstantPotentialForceKernel::pmeSetup() {
     pmeBsplineModuliZ.initialize(cc, gridSizeZ, elementSize, "pmeBsplineModuliZ");
     pmeAtomGridIndex.initialize<mm_int2>(cc, numParticles, "pmeAtomGridIndex");
     int energyElementSize = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
-    pmeEnergyBuffer.initialize(cc, cc.getNumThreadBlocks() * ComputeContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
-    cc.clearBuffer(pmeEnergyBuffer);
     sort = cc.createSort(new SortTrait(), cc.getNumAtoms());
     fft = cc.createFFT(gridSizeX, gridSizeY, gridSizeZ, true);
-    if (usePmeQueue) {
-        pmeDefines["USE_PME_STREAM"] = "1";
-        pmeQueue = cc.createQueue();
-    }
 
     // Initialize the b-spline moduli.
 
@@ -1395,12 +1378,7 @@ void CommonCalcConstantPotentialForceKernel::pmeCompileKernels() {
 
     pmeEvalEnergyKernel = program->createKernel("gridEvaluateEnergy");
     pmeEvalEnergyKernel->addArg(pmeGrid2);
-    if (usePmeQueue) {
-        pmeEvalEnergyKernel->addArg(pmeEnergyBuffer);
-    }
-    else {
-        pmeEvalEnergyKernel->addArg(cc.getEnergyBuffer());
-    }
+    pmeEvalEnergyKernel->addArg(cc.getEnergyBuffer());
     pmeEvalEnergyKernel->addArg(pmeBsplineModuliX);
     pmeEvalEnergyKernel->addArg(pmeBsplineModuliY);
     pmeEvalEnergyKernel->addArg(pmeBsplineModuliZ);

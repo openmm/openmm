@@ -232,11 +232,10 @@ public:
      *
      * @param system       the System this kernel will be applied to
      * @param force        the ConstantPotentialForce this kernel will be used for
-     * @param usePmeQueue  whether to perform PME on a separate queue
      * @param deviceIsCpu  whether the device this calculation is running on is a CPU
      * @param useFixedPointChargeSpreading  whether PME charge spreading should be done in fixed point or floating point
      */
-    void commonInitialize(const System& system, const ConstantPotentialForce& force, bool usePmeQueue, bool deviceIsCpu, bool useFixedPointChargeSpreading);
+    void commonInitialize(const System& system, const ConstantPotentialForce& force, bool deviceIsCpu, bool useFixedPointChargeSpreading);
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -319,11 +318,9 @@ private:
     ComputeArray pmeBsplineModuliY;
     ComputeArray pmeBsplineModuliZ;
     ComputeArray pmeAtomGridIndex;
-    ComputeArray pmeEnergyBuffer;
     ComputeArray posCellOffsets;
     ComputeSort sort;
     FFT3D fft;
-    ComputeQueue pmeQueue;
     ComputeKernel updateNonElectrodeChargesKernel;
     ComputeKernel updateElectrodeChargesKernel;
     ComputeKernel getTotalChargeKernel;

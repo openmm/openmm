@@ -102,5 +102,5 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
 void HipCalcConstantPotentialForceKernel::initialize(const System& system, const ConstantPotentialForce& force) {
     bool usePmeQueue, useFixedPointChargeSpreading;
     getHipPmeParameters(cu, usePmeQueue, useFixedPointChargeSpreading);
-    commonInitialize(system, force, usePmeQueue, false, useFixedPointChargeSpreading);
+    commonInitialize(system, force, false, useFixedPointChargeSpreading);
 }
