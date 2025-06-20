@@ -1,5 +1,7 @@
-DEVICE real reduceLocalBuffer(LOCAL_ARG volatile real* temp) {
+DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) {
     const int thread = LOCAL_ID;
+    SYNC_THREADS;
+    temp[thread] = value;
     SYNC_THREADS;
     for (int step = 1; step < 32; step *= 2) {
         if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
@@ -56,20 +58,19 @@ KERNEL void getTotalCharge(
     // This kernel expects to be executed in a single thread block.
 
     LOCAL volatile real temp[THREAD_BLOCK_SIZE];
-    const int thread = LOCAL_ID;
 
-    temp[thread] = 0;
-    for (int i = GLOBAL_ID; i < NUM_PARTICLES; i += GLOBAL_SIZE) {
+    real totalCharge = 0;
+    for (int i = LOCAL_ID; i < NUM_PARTICLES; i += LOCAL_SIZE) {
 #ifdef USE_POSQ_CHARGES
-        temp[thread] += posq[i].w;
+        totalCharge += posq[i].w;
 #else
-        temp[thread] += charges[i];
+        totalCharge += charges[i];
 #endif
     }
+    totalCharge = reduceValue(totalCharge, temp);
 
-    reduceLocalBuffer(temp);
-    if (thread == 0) {
-        output[0] = temp[0];
+    if (LOCAL_ID == 0) {
+        output[0] = totalCharge;
     }
 }
 
@@ -184,6 +185,8 @@ KERNEL void finishDerivatives(
     GLOBAL real* RESTRICT chargeDerivatives,
     GLOBAL mm_long* RESTRICT chargeDerivativesFixed
 ) {
+    const real fixed_scale = 1 / (real) 0x100000000;
+
     for (int ii = GLOBAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += GLOBAL_SIZE) {
         int i = elecToSys[ii];
         const real4 pos = posq[i];
@@ -197,6 +200,6 @@ KERNEL void finishDerivatives(
 
         const real4 posOffset = pos + offset.x * periodicBoxVecX + offset.y * periodicBoxVecY + offset.z * periodicBoxVecZ;
         const real fieldTerm = posOffset.x * externalField.x + posOffset.y * externalField.y + posOffset.z * externalField.z;
-        chargeDerivatives[ii] += 2 * (charge * params.w - plasmaScale) - params.x - fieldTerm + FIXED_SCALE * chargeDerivativesFixed[ii];
+        chargeDerivatives[ii] += 2 * (charge * params.w - plasmaScale) - params.x - fieldTerm + fixed_scale * chargeDerivativesFixed[ii];
     }
 }

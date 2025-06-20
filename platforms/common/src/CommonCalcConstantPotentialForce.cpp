@@ -554,33 +554,39 @@ void CommonConstantPotentialCGSolver::ensureValid(CommonCalcConstantPotentialFor
     float pmeTerm = 0.0f;
 
     if (precondActivated) {
-        // Save the position of the first electrode particle.
-        int i0 = kernel.hostElecToSys[0];
-        vector<mm_double4> posq(kernel.cc.getPaddedNumAtoms());
-        kernel.cc.getPosq().download(posq, true);
-        double x0 = posq[i0].x;
-        double y0 = posq[i0].y;
-        double z0 = posq[i0].z;
+        // Save all positions and charges.
+        vector<mm_double4> posqSave(kernel.cc.getPaddedNumAtoms());
+        vector<double> qSave;
+        kernel.cc.getPosq().download(posqSave, true);
+        if (!kernel.usePosqCharges) {
+            qSave.resize(kernel.cc.getPaddedNumAtoms());
+            kernel.charges.download(qSave, true);
+        }
 
-        // Save the charges of all particles, and then zero them.
-        vector<double> qSave(kernel.cc.getPaddedNumAtoms());
+        vector<mm_double4> posqCopy(posqSave);
+        vector<double> qCopy(qSave);
+
+        // Zero all charges.
         if (kernel.usePosqCharges) {
             for (int i = 0; i < numParticles; i++) {
-                qSave[i] = posq[i].w;
-                posq[i].w = 0.0;
+                posqCopy[i].w = 0.0;
             }
         } else {
-            kernel.charges.download(qSave, true);
-            kernel.cc.clearBuffer(kernel.charges);
+            for (int i = 0; i < numParticles; i++) {
+                qCopy[i] = 0.0;
+            }
         }
 
         // Place a unit charge at the origin.
-        posq[i0] = mm_double4(0.0, 0.0, 0.0, 1.0);
-        kernel.cc.getPosq().upload(posq, true);
-        if (kernel.usePosqCharges) {
-            vector<double> qUpload(kernel.cc.getPaddedNumAtoms());
-            qUpload[i0] = 1.0;
-            kernel.charges.upload(qUpload, true);
+        int i0 = kernel.hostElecToSys[0];
+        posqCopy[i0] = mm_double4(0.0, 0.0, 0.0, 1.0);
+        if (!kernel.usePosqCharges) {
+            qCopy[i0] = 1.0;
+        }
+
+        kernel.cc.getPosq().upload(posqCopy, true);
+        if (!kernel.usePosqCharges) {
+            kernel.charges.upload(qCopy, true);
         }
 
         // Perform a reference PME calculation with a single charge at the
@@ -592,20 +598,13 @@ void CommonConstantPotentialCGSolver::ensureValid(CommonCalcConstantPotentialFor
         kernel.pmeExecute(false, false, true);
         vector<long> derivatives(numElectrodeParticles);
         kernel.chargeDerivativesFixed.download(derivatives);
-        double pmeTerm = derivatives[0] / 0x100000000;
+        double pmeTerm = derivatives[0] / (double) 0x100000000;
 
-        // Restore particle positions and charges.
-        posq[i0].x = x0;
-        posq[i0].y = y0;
-        posq[i0].z = z0;
-        if (kernel.usePosqCharges) {
-            for (int i = 0; i < numParticles; i++) {
-                posq[i0].w = qSave[i];
-            }
-        } else {
+        // Restore all positions and charges.
+        kernel.cc.getPosq().upload(posqSave, true);
+        if (!kernel.usePosqCharges) {
             kernel.charges.upload(qSave, true);
         }
-        kernel.cc.getPosq().upload(posq, true);
 
         // The diagonal has a contribution from reciprocal space, Ewald
         // self-interaction, Ewald neutralizing plasma, Gaussian self-interaction,
@@ -1056,7 +1055,6 @@ void CommonCalcConstantPotentialForceKernel::ensureInitialized() {
     map<string, string> defines;
     defines["CUTOFF_SQUARED"] = cc.doubleToString(cutoff * cutoff);
     defines["EWALD_ALPHA"] = cc.doubleToString(ewaldAlpha);
-    defines["FIXED_SCALE"] = cc.doubleToString(1.0 / 0x100000000);
     defines["ONE_4PI_EPS0"] = cc.doubleToString(ONE_4PI_EPS0);
     defines["NUM_PARTICLES"] = cc.intToString(numParticles);
     defines["NUM_ELECTRODE_PARTICLES"] = cc.intToString(numElectrodeParticles);

@@ -434,6 +434,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     compilationDefines["ATAN"] = "atan";
     compilationDefines["ERF"] = "erf";
     compilationDefines["ERFC"] = "erfc";
+    compilationDefines["FMA"] = "fma";
 
     // Set defines for applying periodic boundary conditions.
 
