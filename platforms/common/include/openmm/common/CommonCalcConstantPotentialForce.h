@@ -86,6 +86,12 @@ public:
      * @param kernel  main constant potential kernel
      */
     virtual void solveImpl(CommonCalcConstantPotentialForceKernel& kernel) = 0;
+    /**
+     * Retrieves a list of arrays of initial guess charges to be reordered.
+     * 
+     * @param arrays  Arrays to be reordered.
+     */
+    virtual void getGuessChargeArrays(std::vector<ComputeArray*>& arrays);
 
 protected:
     int numParticles, numElectrodeParticles;
@@ -126,7 +132,7 @@ public:
      * 
      * @param kernel  main constant potential kernel
      */
-    virtual void compileKernels(CommonCalcConstantPotentialForceKernel& kernel);
+    void compileKernels(CommonCalcConstantPotentialForceKernel& kernel);
     /**
      * Solves for charges.
      * 
@@ -193,6 +199,12 @@ public:
      * @param kernel  main constant potential kernel
      */
     void solveImpl(CommonCalcConstantPotentialForceKernel& kernel);
+    /**
+     * Retrieves a list of arrays of initial guess charges to be reordered.
+     * 
+     * @param arrays  Arrays to be reordered.
+     */
+    virtual void getGuessChargeArrays(std::vector<ComputeArray*>& arrays);
 private:
     /**
      * Solves for charges.

@@ -93,15 +93,47 @@ private:
 
 class CommonCalcConstantPotentialForceKernel::ReorderListener : public ComputeContext::ReorderListener {
 public:
-    ReorderListener(ComputeContext& cc, ComputeArray& posCellOffsets) : cc(cc), posCellOffsets(posCellOffsets) {
+    ReorderListener(ComputeContext& cc, ComputeArray& posCellOffsets, int numElectrodeParticles, const vector<int>& sysToElec, const vector<int>& elecToSys) :
+            cc(cc), posCellOffsets(posCellOffsets), numElectrodeParticles(numElectrodeParticles), sysToElec(sysToElec), elecToSys(elecToSys) {
+        numParticles = cc.getNumAtoms();
+        lastOrder.assign(cc.getAtomIndex().begin(), cc.getAtomIndex().end());
+    }
+    void addChargeArray(ComputeArray& chargeArray) {
+        chargeArrays.push_back(&chargeArray);
     }
     void execute() {
         // Cell offsets may have changed due to wrapping, so update them.
         posCellOffsets.upload(cc.getPosCellOffsets());
+
+        // Reorder guess charges.
+        if(chargeArrays.empty()) {
+            return;
+        }
+        const vector<int>& order = cc.getAtomIndex();
+        for (int index = 0; index < chargeArrays.size(); index++) {
+            ComputeArray* chargeArray = chargeArrays[index];
+
+            vector<double> charges(numElectrodeParticles), swap(numElectrodeParticles);
+            chargeArray->download(charges, true);
+            for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                swap[sysToElec[lastOrder[elecToSys[ii]]]] = charges[ii];
+            }
+            for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                charges[ii] = swap[sysToElec[order[elecToSys[ii]]]];
+            }
+            chargeArray->upload(charges, true);
+        }
+        lastOrder.assign(order.begin(), order.end());
     }
 private:
     ComputeContext& cc;
     ComputeArray& posCellOffsets;
+    int numParticles;
+    int numElectrodeParticles;
+    const vector<int>& sysToElec;
+    const vector<int>& elecToSys;
+    vector<int> lastOrder;
+    vector<ComputeArray*> chargeArrays;
 };
 
 CommonConstantPotentialSolver::CommonConstantPotentialSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles) :
@@ -170,6 +202,10 @@ void CommonConstantPotentialSolver::solve(CommonCalcConstantPotentialForceKernel
     savedBoxVectors[2] = kernel.boxVectors[2];
     kernel.cc.getPosq().copyTo(savedPositions);
     kernel.electrodeCharges.copyTo(savedCharges);
+}
+
+void CommonConstantPotentialSolver::getGuessChargeArrays(vector<ComputeArray*>& arrays) {
+    arrays.clear();
 }
 
 CommonConstantPotentialMatrixSolver::CommonConstantPotentialMatrixSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles) : CommonConstantPotentialSolver(cc, numParticles, numElectrodeParticles) {
@@ -520,6 +556,11 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
     // Store the final charges.
     q.copyTo(kernel.electrodeCharges);
     kernel.mustUpdateElectrodeCharges = true;
+}
+
+void CommonConstantPotentialCGSolver::getGuessChargeArrays(vector<ComputeArray*>& arrays) {
+    CommonConstantPotentialSolver::getGuessChargeArrays(arrays);
+    arrays.push_back(&qLast);
 }
 
 void CommonConstantPotentialCGSolver::ensureValid(CommonCalcConstantPotentialForceKernel& kernel) {
@@ -880,7 +921,15 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
     // upload periodic box image indices (for external field calculation).
     posCellOffsets.initialize<mm_int4>(cc, cc.getPaddedNumAtoms(), "posCellOffsets");
     posCellOffsets.upload(cc.getPosCellOffsets());
-    cc.addReorderListener(new ReorderListener(cc, posCellOffsets));
+    ReorderListener* listener = new ReorderListener(cc, posCellOffsets, numElectrodeParticles, hostSysToElec, hostElecToSys);
+    if (hasElectrodes) {
+        vector<ComputeArray*> guessChargeArrays;
+        solver->getGuessChargeArrays(guessChargeArrays);
+        for(ComputeArray* guessChargeArray : guessChargeArrays) {
+            listener->addChargeArray(*guessChargeArray);
+        }
+    }
+    cc.addReorderListener(listener);
 }
 
 void CommonCalcConstantPotentialForceKernel::copyParametersToContext(ContextImpl& context, const ConstantPotentialForce& force, int firstParticle, int lastParticle, int firstException, int lastException, int firstElectrode, int lastElectrode) {

@@ -103,8 +103,8 @@ KERNEL void evaluateSelfEnergyForces(
         energyBuffer[GLOBAL_ID] += charge * (charge * params.w - params.x - fieldTerm);
 #ifdef USE_PME_STREAM
         ATOMIC_ADD(&forceBuffers[i], (mm_ulong) realToFixedPoint(charge * externalField.x));
-        ATOMIC_ADD(&forceBuffers[i + PADDED_NUM_ATOMS] += (mm_ulong) realToFixedPoint(charge * externalField.y));
-        ATOMIC_ADD(&forceBuffers[i + 2 * PADDED_NUM_ATOMS] += (mm_ulong) realToFixedPoint(charge * externalField.z));
+        ATOMIC_ADD(&forceBuffers[i + PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(charge * externalField.y));
+        ATOMIC_ADD(&forceBuffers[i + 2 * PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(charge * externalField.z));
 #else
         forceBuffers[i] += (mm_ulong) realToFixedPoint(charge * externalField.x);
         forceBuffers[i + PADDED_NUM_ATOMS] += (mm_ulong) realToFixedPoint(charge * externalField.y);
