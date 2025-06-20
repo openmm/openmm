@@ -275,7 +275,7 @@ public:
      */
     void getCharges(ContextImpl& context, std::vector<double>& charges);
 private:
-    void ensureInitialized();
+    void ensureInitialized(ContextImpl& context);
     double doEnergyForces(bool includeForces, bool includeEnergy);
     void doDerivatives();
     void pmeSetup();
@@ -319,6 +319,7 @@ private:
     ComputeArray pmeBsplineModuliZ;
     ComputeArray pmeAtomGridIndex;
     ComputeArray posCellOffsets;
+    ComputeArray tileCounter;
     ComputeSort sort;
     FFT3D fft;
     ComputeKernel updateNonElectrodeChargesKernel;
@@ -344,7 +345,7 @@ private:
     ConstantPotentialForce::ConstantPotentialMethod method;
     Vec3 boxVectors[3], externalField;
     double cutoff, ewaldAlpha, chargeTarget, cgErrorTol;
-    int threadBlockSize, gridSizeX, gridSizeY, gridSizeZ;
+    int threadBlockSize, directBlockSize, gridSizeX, gridSizeY, gridSizeZ;
     bool usePmeQueue, deviceIsCpu, useFixedPointChargeSpreading, usePosqCharges, useChargeConstraint;
     static const int PmeOrder = 5;
     static const double SELF_ALPHA_SCALE, SELF_ETA_SCALE, SELF_TF_SCALE, PLASMA_SCALE;

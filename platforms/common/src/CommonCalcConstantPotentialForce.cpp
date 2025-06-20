@@ -870,6 +870,8 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
     cc.getNonbondedUtilities().addArgument(ComputeParameterInfo(electrodeParams, prefix + "params", "real", 4));
     cc.getNonbondedUtilities().addInteraction(true, true, true, force.getCutoffDistance(), exclusionList, cc.replaceStrings(CommonKernelSources::constantPotentialCoulombEnergyForces, nonbondedReplacements), force.getForceGroup(), numParticles > 3000, true);
 
+    tileCounter.initialize<int>(cc, 1, "tileCounter");
+
     // Initialize the constant potential solver.
     method = force.getConstantPotentialMethod();
     cgErrorTol = force.getCGErrorTolerance();
@@ -1056,7 +1058,7 @@ void CommonCalcConstantPotentialForceKernel::getPMEParameters(double& alpha, int
 double CommonCalcConstantPotentialForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     ContextSelector selector(cc);
 
-    ensureInitialized();
+    ensureInitialized(context);
 
     cc.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     setKernelPeriodicBoxArgs(includeEnergy, includeForces);
@@ -1071,7 +1073,7 @@ double CommonCalcConstantPotentialForceKernel::execute(ContextImpl& context, boo
 void CommonCalcConstantPotentialForceKernel::getCharges(ContextImpl& context, vector<double>& chargesOut) {
     ContextSelector selector(cc);
 
-    ensureInitialized();
+    ensureInitialized(context);
 
     // Make sure that everything is updated for a force calculation but do not
     // calculate any forces.
@@ -1094,12 +1096,15 @@ void CommonCalcConstantPotentialForceKernel::getCharges(ContextImpl& context, ve
     }
 }
 
-void CommonCalcConstantPotentialForceKernel::ensureInitialized() {
+void CommonCalcConstantPotentialForceKernel::ensureInitialized(ContextImpl& context) {
     if (hasInitializedKernel) {
         return;
     }
+    
+    NonbondedUtilities& nb = cc.getNonbondedUtilities();
 
     map<string, string> defines;
+    defines["CUTOFF"] = cc.doubleToString(cutoff);
     defines["CUTOFF_SQUARED"] = cc.doubleToString(cutoff * cutoff);
     defines["EWALD_ALPHA"] = cc.doubleToString(ewaldAlpha);
     defines["ONE_4PI_EPS0"] = cc.doubleToString(ONE_4PI_EPS0);
@@ -1107,8 +1112,24 @@ void CommonCalcConstantPotentialForceKernel::ensureInitialized() {
     defines["NUM_ELECTRODE_PARTICLES"] = cc.intToString(numElectrodeParticles);
     defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
     defines["THREAD_BLOCK_SIZE"] = cc.intToString(threadBlockSize);
+    defines["TILE_SIZE"] = cc.intToString(ComputeContext::TileSize);
+    defines["WORK_GROUP_SIZE"] = cc.intToString(nb.getForceThreadBlockSize());
     if (usePosqCharges) {
         defines["USE_POSQ_CHARGES"] = "1";
+    }
+    if (cc.getIsCPU()) {
+        // Workaround for OpenCL via the Intel CPU implementation.
+        defines["INTEL_WORKAROUND"] = "1";
+    }
+    try {
+        // Workaround for OpenCL on NVIDIA.
+        string platformName = context.getPlatform().getPropertyValue(context.getOwner(), "OpenCLPlatformName");
+        if (platformName.rfind("NVIDIA", 0) == 0) {
+            defines["NVIDIA_WORKAROUND"] = "1";
+        }
+    }
+    catch (...) {
+        // This isn't the OpenCL platform.
     }
     ComputeProgram program = cc.compileProgram(CommonKernelSources::constantPotential, defines);
 
@@ -1148,7 +1169,7 @@ void CommonCalcConstantPotentialForceKernel::ensureInitialized() {
         evaluateDirectDerivativesKernel = program->createKernel("evaluateDirectDerivatives");
         evaluateDirectDerivativesKernel->addArg(cc.getPosq());
         evaluateDirectDerivativesKernel->addArg(charges);
-        evaluateDirectDerivativesKernel->addArg(elecToSys);
+        evaluateDirectDerivativesKernel->addArg(sysToElec);
         evaluateDirectDerivativesKernel->addArg(sysElec);
         evaluateDirectDerivativesKernel->addArg(electrodeParams);
         evaluateDirectDerivativesKernel->addArg(chargeDerivativesFixed);
@@ -1157,6 +1178,15 @@ void CommonCalcConstantPotentialForceKernel::ensureInitialized() {
         evaluateDirectDerivativesKernel->addArg(); // periodicBoxVecX
         evaluateDirectDerivativesKernel->addArg(); // periodicBoxVecY
         evaluateDirectDerivativesKernel->addArg(); // periodicBoxVecZ
+        evaluateDirectDerivativesKernel->addArg(nb.getExclusionTiles());
+        evaluateDirectDerivativesKernel->addArg((int) nb.getExclusionTiles().getSize());
+        evaluateDirectDerivativesKernel->addArg(nb.getInteractingTiles());
+        evaluateDirectDerivativesKernel->addArg(nb.getInteractionCount());
+        evaluateDirectDerivativesKernel->addArg(nb.getBlockCenters());
+        evaluateDirectDerivativesKernel->addArg(nb.getBlockBoundingBoxes());
+        evaluateDirectDerivativesKernel->addArg(nb.getInteractingAtoms());
+        evaluateDirectDerivativesKernel->addArg(tileCounter);
+        directBlockSize = max(32, nb.getForceThreadBlockSize());
 
         finishDerivativesKernel = program->createKernel("finishDerivatives");
         finishDerivativesKernel->addArg(cc.getPosq());
@@ -1233,7 +1263,12 @@ void CommonCalcConstantPotentialForceKernel::doDerivatives() {
     cc.clearBuffer(chargeDerivativesFixed);
 
     pmeExecute(false, false, true);
-    evaluateDirectDerivativesKernel->execute(numParticles * numElectrodeParticles);
+    evaluateDirectDerivativesKernel->execute(2 * cc.getNonbondedUtilities().getNumForceThreadBlocks() * directBlockSize, directBlockSize);
+
+    ComputeEvent event = cc.createEvent();
+    event->enqueue();
+    event->wait();
+    exit(EXIT_FAILURE);
 
     // Ewald neutralizing plasma and per-particle derivatives.
     vector<double> totalChargeVector(1);
