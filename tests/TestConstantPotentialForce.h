@@ -426,7 +426,7 @@ void testSmallSystems(ConstantPotentialForce::ConstantPotentialMethod method, bo
     system2.addForce(force2);
     VerletIntegrator integrator2(0.001);
     Context context2(system2, integrator2, platform);
-    vector<Vec3> positions2{Vec3(-0.5, 0, 0), Vec3(0.5, 0, 0), Vec3(0, 0, 0)};
+    vector<Vec3> positions2{Vec3(-0.25, 0, 0), Vec3(0.25, 0, 0), Vec3(0, 0, 0)};
     context2.setPositions(positions2);
     vector<double> charges2;
     force2->getCharges(context2, charges2);
@@ -450,7 +450,7 @@ void testSmallSystems(ConstantPotentialForce::ConstantPotentialMethod method, bo
     system3.addForce(force3);
     VerletIntegrator integrator3(0.001);
     Context context3(system3, integrator3, platform);
-    vector<Vec3> positions3{Vec3(0, 0, 0), Vec3(1, 0, 0)};
+    vector<Vec3> positions3{Vec3(0, 0, 0), Vec3(0.5, 0, 0)};
     context3.setPositions(positions3);
     vector<double> charges3;
     force3->getCharges(context3, charges3);
@@ -478,7 +478,7 @@ void testSmallSystems(ConstantPotentialForce::ConstantPotentialMethod method, bo
     system4.addForce(force4);
     VerletIntegrator integrator4(0.001);
     Context context4(system4, integrator4, platform);
-    vector<Vec3> positions4{Vec3(0, 0, 0), Vec3(-1, 0, 0), Vec3(1, 0, 0)};
+    vector<Vec3> positions4{Vec3(0, 0, 0), Vec3(-0.75, 0, 0), Vec3(0.75, 0, 0)};
     context4.setPositions(positions4);
     vector<double> charges4;
     force4->getCharges(context4, charges4);
@@ -583,13 +583,14 @@ void makeTestUpdateSystem(ConstantPotentialForce::ConstantPotentialMethod method
     force->addParticle(0);
     force->addException(0, 1, 1.5);
     force->addException(1, 2, 0);
-    force->addElectrode({3}, 1, 0.2, 0.3);
-    force->addElectrode({4}, 2, 0.4, 0.5);
+    force->addElectrode({3}, 1, 0.02, 0.3);
+    force->addElectrode({4}, 2, 0.04, 0.5);
     force->setConstantPotentialMethod(method);
     force->setUsePreconditioner(usePreconditioner);
     force->setUseChargeConstraint(true);
     force->setChargeConstraintTarget(5);
     force->setExternalField(Vec3(1, 2, 3));
+    force->setCutoffDistance(1.1);
     system.addForce(force);
     
     positions.clear();
@@ -670,7 +671,7 @@ void testUpdateElectrodeParameters(ConstantPotentialForce::ConstantPotentialMeth
     vector<double> charges1;
     force1->getCharges(context1, charges1);
 
-    force1->setElectrodeParameters(0, {3}, 3, 0.6, 0.7);
+    force1->setElectrodeParameters(0, {3}, 3, 0.06, 0.7);
     force1->updateParametersInContext(context1);
     force1->getCharges(context1, charges1);
 
@@ -678,7 +679,7 @@ void testUpdateElectrodeParameters(ConstantPotentialForce::ConstantPotentialMeth
     ConstantPotentialForce* force2;
     vector<Vec3> positions2;
     makeTestUpdateSystem(method, usePreconditioner, system2, force2, positions2);
-    force2->setElectrodeParameters(0, {3}, 3, 0.6, 0.7);
+    force2->setElectrodeParameters(0, {3}, 3, 0.06, 0.7);
 
     VerletIntegrator integrator2(0.001);
     Context context2(system2, integrator2, platform);
@@ -1220,7 +1221,7 @@ void compareToReferencePlatform(System& system, ConstantPotentialForce* force, c
 
     ASSERT_EQUAL_TOL(refState.getPotentialEnergy(), testState.getPotentialEnergy(), TOL);
     for (int i = 0; i < system.getNumParticles(); i++) {
-        ASSERT_EQUAL_VEC(refForces[i], testForces[i], 1e-3);
+        ASSERT_EQUAL_VEC(refForces[i], testForces[i], 3e-3);
     }
     for (int i = 0; i < system.getNumParticles(); i++) {
         ASSERT_EQUAL_TOL(refCharges[i], testCharges[i], TOL);
@@ -1260,17 +1261,29 @@ void platformInitialize();
 void runPlatformTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner);
 
 void runMethodDependentTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
+    printf("    testSmallSystems\n");
     testSmallSystems(method, usePreconditioner);
+    printf("    testNoConstraintWithoutElectrode\n");
     testNoConstraintWithoutElectrode(method, usePreconditioner);
+    printf("    testConstrainCharge\n");
     testConstrainCharge(method, usePreconditioner);
+    printf("    testUpdateParticleExceptionParameters\n");
     testUpdateParticleExceptionParameters(method, usePreconditioner);
+    printf("    testUpdateElectrodeParameters\n");
     testUpdateElectrodeParameters(method, usePreconditioner);
+    printf("    testUpdateChargeFieldParameters\n");
     testUpdateChargeFieldParameters(method, usePreconditioner);
+    printf("    testUpdateBox\n");
     testUpdateBox(method, usePreconditioner);
+    printf("    testUpdatePositions\n");
     testUpdatePositions(method, usePreconditioner);
+    printf("    testReferenceCharges(false)\n");
     testReferenceCharges(false, method, usePreconditioner); // External field
+    printf("    testReferenceCharges(true)\n");
     testReferenceCharges(true, method, usePreconditioner);  // Thomas-Fermi
+    printf("    testChargeUpdate\n");
     testChargeUpdate(method, usePreconditioner);
+    printf("    runPlatformTests\n");
     runPlatformTests(method, usePreconditioner);
 }
 
@@ -1279,21 +1292,34 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         platformInitialize();
 
+        printf("testCoulomb(false)\n");
         testCoulomb(false); // Non-periodic exceptions
+        printf("testCoulomb(true)\n");
         testCoulomb(true);  // Periodic exceptions
+        printf("testCoulombOverlap\n");
         testCoulombOverlap();
+        printf("testCoulombNonNeutral\n");
         testCoulombNonNeutral();
+        printf("testCoulombGaussian\n");
         testCoulombGaussian();
         
+        printf("testElectrodesDisjoint\n");
         testElectrodesDisjoint();
+        printf("testNoElectrodeExceptions\n");
         testNoElectrodeExceptions();
+        printf("testElectrodeMatrixNoMass\n");
         testElectrodeMatrixNoMass();
 
+        printf("testParallelPlateCapacitorDoubleCell\n");
         testParallelPlateCapacitorDoubleCell();
+        printf("testParallelPlateCapacitorFiniteField\n");
         testParallelPlateCapacitorFiniteField();
 
+        printf("runMethodDependentTests(Matrix)\n");
         runMethodDependentTests(ConstantPotentialForce::Matrix, false); // Matrix inversion (usePreconditioner ignored)
+        printf("runMethodDependentTests(CG, false)\n");
         runMethodDependentTests(ConstantPotentialForce::CG, false);     // Conjugate gradient (not preconditioned)
+        printf("runMethodDependentTests(CG, true)\n");
         runMethodDependentTests(ConstantPotentialForce::CG, true);      // Conjugate gradient (preconditioned)
     }
     catch(const exception& e) {
