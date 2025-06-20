@@ -34,6 +34,9 @@
 
 #include "openmm/internal/windowsExport.h"
 #include "openmm/serialization/SerializationProxy.h"
+#include "openmm/ATMForce.h"
+#include "openmm/Vec3.h"
+#include <vector>
 
 namespace OpenMM {
 
@@ -46,6 +49,9 @@ namespace OpenMM {
         ATMForceProxy();
         void serialize(const void* object, SerializationNode& node) const;
         void* deserialize(const SerializationNode& node) const;
+    private:
+	void loadParams(int numParticles, const ATMForce& force, std::vector<int>& type, std::vector<Vec3>& d1, std::vector<Vec3>& d0, std::vector<int>& j1, std::vector<int>& i1, std::vector<int>& j0, std::vector<int>& i0) const;
+	void storeParams(int numParticles, ATMForce& force, const SerializationNode& particles) const ;
     };
 
 } // namespace OpenMM

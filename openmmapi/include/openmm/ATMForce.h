@@ -40,6 +40,7 @@
 #include <openmm/Vec3.h>
 #include <vector>
 #include <string>
+#include <map>
 #include "internal/windowsExport.h"
 
 namespace OpenMM {
@@ -59,7 +60,7 @@ namespace OpenMM {
  * and please cite it to support our work if you use this software in your research.
  *
  * The ATMForce implements an arbitrary potential energy function that depends on the potential
- * energies (u0 and u1) of the system before and after a set of atoms are displaced by a specified amount.
+ * energies (u0 and u1) of the system before and after a set of atoms are displaced by some amount.
  * For example, you might displace a molecule from the solvent bulk to a receptor binding site to simulate 
  * a binding process.  The potential energy function typically also depends on one or more parameters that
  * are dialed to implement alchemical transformations.
@@ -88,7 +89,25 @@ namespace OpenMM {
  *    atm->addForce(force);
  * \endverbatim
  *
- * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
+ * In the example above, displacements are specified by fixed lab-frame vectors. ATMForce also supports variable displacements in internal
+ * system coordinates in terms of vector distances between specified particles. For example, the following code creates an ATMForce based on 
+ * the change in energy when the first particle is displaced by the vector distance from particle 1 to particle 2:
+ *
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    ATMForce *atmforce = new ATMForce("u0 + Lambda*(u1 - u0)");
+ *    atm->addGlobalParameter("Lambda", 0.5);
+ *    atm->addParticle(2, 1);
+ *    atm->addParticle();
+ *    atm->addParticle();
+ *    CustomBondForce* force = new CustomBondForce("0.5*r^2");
+ *    atm->addForce(force);
+ * \endverbatim
+ *
+ * where addParticle() without arguments adds a particle with zero displacement. 
+ * 
+ * Energy expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, atan2, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta,
  * select.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
@@ -140,6 +159,80 @@ namespace OpenMM {
  * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be
  * computed.  You can then query its value in a Context by calling getState() on it.
  */
+
+
+/**
+ * These are classes used to specify coordinate transformations
+ */
+
+/**
+ * Maps to identify types of transformations
+ */
+static const std::map<std::string, int> ATMTransformationType {
+    {"NoDisplacement", 0},
+    {"FixedDisplacement", 1},
+    {"VectordistanceDisplacement", 2}
+};
+static const std::map<int, std::string> ATMTransformationName {
+    {0, "NoDisplacement"},
+    {1, "FixedDisplacement"},
+    {2, "VectordistanceDisplacement"}
+};
+
+class ATMTransformation {
+public:
+    ATMTransformation(){}
+    virtual ~ATMTransformation(){};
+    const std::string& getName() const {
+	return name;
+    }
+    int getTypeid() const {
+	return type;
+    }
+protected:
+    int type;
+    std::string name;
+};
+
+class ATMFixedDisplacement : public ATMTransformation {
+public:
+    ATMFixedDisplacement(const Vec3& displacement1, const Vec3& displacement0=Vec3()) : displ1(displacement1), displ0(displacement0) {
+	name = "FixedDisplacement";
+	type = ATMTransformationType.at(name);
+    }
+    ~ATMFixedDisplacement() override {}
+    const Vec3& getFixedDisplacement1() const {
+	return displ1;
+    }
+    const Vec3& getFixedDisplacement0() const {
+	return displ0;
+    }
+private:
+    Vec3 displ1, displ0;
+};
+
+class ATMVectordistanceDisplacement : public ATMTransformation {
+public:
+    ATMVectordistanceDisplacement(int pDestination1, int pOrigin1, int  pDestination0 = -1, int pOrigin0 = -1) : pDestination1(pDestination1), pOrigin1(pOrigin1), pDestination0(pDestination0), pOrigin0(pOrigin0) {
+	name = "VectordistanceDisplacement";
+	type = ATMTransformationType.at(name);
+    }
+    ~ATMVectordistanceDisplacement() override {}
+    int getDestinationParticle1() const {
+	return pDestination1;
+    }
+    int getOriginParticle1() const {
+	return pOrigin1;
+    }
+    int getDestinationParticle0() const {
+	return pDestination0;
+    }
+    int getOriginParticle0() const {
+	return pOrigin0;
+    }
+ private:
+    int pDestination1, pOrigin1, pDestination0, pOrigin0;
+};
 
 class OPENMM_EXPORT ATMForce : public OpenMM::Force {
 public:
@@ -220,8 +313,21 @@ public:
      * return the force from index
      */
     Force& getForce(int index) const;
+
     /**
-     * Add a particle to the force.
+     * Add a stationary particle: one whose coordinate is not transformed
+     *
+     * All of the particles in the System must be added to the ATMForce in the same order
+     * as they appear in the System.
+     *
+     * @return                 the index of the particle that was added
+     */
+    int addParticle();
+
+    /**
+     * Add a particle to the force with fixed lab frame displacements
+     * DEPRECATED. Use:
+     *   addParticle(new ATMFixedDisplacement(displacement1, displacement0))
      *
      * All of the particles in the System must be added to the ATMForce in the same order
      * as they appear in the System.
@@ -231,22 +337,42 @@ public:
      * @return                 the index of the particle that was added
      */
     int addParticle(const Vec3& displacement1, const Vec3& displacement0=Vec3());
+
+    /**
+     * Add a particle to the force with transformation method
+     *
+     * All of the particles in the System must be added to the ATMForce in the same order
+     * as they appear in the System.
+     *
+     * @param transformation  the pointer to the Transformation object
+     * @return                the index of the particle that was added
+     */
+    int addParticle(ATMTransformation* transformation);
+
     /**
      * Get the parameters for a particle
+     * DEPRECATED. Use:
+     *  const ATMTransformation* transformation = getParticleTransformation(index)
+     *  displacement1 = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement1();
+     *  displacement0 = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement0();
      * 
      * @param index           the index in the force for the particle for which to get parameters
-     * @param displacement1   the displacement of the particle for the target state in nm
-     * @param displacement0   the displacement of the particle for the initial state in nm
+     * @param displacement1   the fixed lab-frame displacement of the particle for the target state in nm
+     * @param displacement0   the fixed lab-frame displacement of the particle for the initial state in nm
      */
     void getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0) const;
+
     /**
-     * Set the parameters for a particle
+     * Set the displacements for a particle as fixed lab frame vectors
+     * DEPRECATED. Use:
+     *   setParticleTransformation(index, new ATMFixedDisplacement(displacement1, displacement0))
      * 
      * @param index           the index in the force of the particle for which to set parameters
-     * @param displacement1   the displacement of the particle for the target state in nm
-     * @param displacement0   the displacement of the particle for the initial state in nm
+     * @param displacement1   the fixed lab-frame displacement of the particle for the target state in nm
+     * @param displacement0   the fixed lab-frame displacement of the particle for the initial state in nm
      */
     void setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0=Vec3());
+
     /**
      * Add a new global parameter that the interaction may depend on.  The default value provided to
      * this method is the initial value of the parameter in newly created Contexts.  You can change
@@ -400,6 +526,38 @@ public:
         return key;
     }
 
+    /**
+     * Change the transformation method for the specified particle
+     *
+     * @param index           the index of the particle
+     * @param transformation  the pointer to the Transformation object
+     */
+    void setParticleTransformation(int index, ATMTransformation* transformation);
+
+    /**
+     * Returns the Transformation object associated with the particle or NULL
+     *
+     * @param index           the index of the particle
+     * @return                the pointer to the Transformation object
+     */
+    const ATMTransformation* getParticleTransformation(int index) const;
+
+    /**
+     * Returns the FixedDisplacement transformation object associated with the particle or NULL
+     *
+     * @param index           the index of the particle
+     * @return                the pointer to the FixedDisplacement transformation object
+     */
+    const ATMFixedDisplacement* getParticleFixedDisplacementTransformation(int index) const;
+
+    /**
+     * Returns the VectordistanceDisplacement transformation object associated with the particle or NULL
+     *
+     * @param index           the index of the particle
+     * @return                the pointer to the VectordistanceDisplacement transformation object
+     */
+    const ATMVectordistanceDisplacement* getParticleVectordistanceDisplacementTransformation(int index) const;
+
 protected:
   ForceImpl* createImpl() const;
 private:
@@ -419,13 +577,12 @@ private:
 class ATMForce::ParticleInfo {
 public:
     int index;
-    Vec3 displacement1, displacement0;
-    ParticleInfo() : index(-1) {
+    ATMTransformation* transformation;
+    ParticleInfo() : index(-1), transformation(NULL) {
     }
-    ParticleInfo(int index) : index(index) {
+    ParticleInfo(int index) : index(index), transformation(NULL) {
     }
-    ParticleInfo(int index, Vec3 displacement1, Vec3 displacement0) :
-        index(index), displacement1(displacement1), displacement0(displacement0) {
+    ParticleInfo(int index, ATMTransformation* transformation) : index(index), transformation(transformation) {
     }
 };
 
