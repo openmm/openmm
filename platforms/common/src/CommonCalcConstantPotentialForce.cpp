@@ -1265,11 +1265,6 @@ void CommonCalcConstantPotentialForceKernel::doDerivatives() {
     pmeExecute(false, false, true);
     evaluateDirectDerivativesKernel->execute(2 * cc.getNonbondedUtilities().getNumForceThreadBlocks() * directBlockSize, directBlockSize);
 
-    ComputeEvent event = cc.createEvent();
-    event->enqueue();
-    event->wait();
-    exit(EXIT_FAILURE);
-
     // Ewald neutralizing plasma and per-particle derivatives.
     vector<double> totalChargeVector(1);
     getTotalChargeKernel->execute(threadBlockSize, threadBlockSize);
