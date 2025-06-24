@@ -515,7 +515,7 @@ void CpuConstantPotentialCGSolver::ensureValid(CpuConstantPotentialForce& conp, 
         float z0 = conp.posq[4 * i0 + 2];
 
         // Save the charges of all particles, and then zero them.
-        std::vector<float> qSave(numParticles);
+        vector<float> qSave(numParticles);
         for (int i = 0; i < numParticles; i++) {
             qSave[i] = conp.posq[4 * i + 3];
             conp.posq[4 * i + 3] = 0.0f;
@@ -532,7 +532,7 @@ void CpuConstantPotentialCGSolver::ensureValid(CpuConstantPotentialForce& conp, 
         // to the PME calculation.  This will actually vary slightly with
         // position but only due to finite accuracy of the PME splines, so it is
         // fine to assume it will be constant for the preconditioner.
-        std::vector<float> derivatives(numElectrodeParticles);
+        vector<float> derivatives(numElectrodeParticles);
         CpuConstantPotentialPmeIO io(conp.posq, NULL, &derivatives[0], numParticles, numElectrodeParticles);
         pmeKernel.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, boxVectors, false, false, true);
         pmeKernel.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
@@ -551,7 +551,7 @@ void CpuConstantPotentialCGSolver::ensureValid(CpuConstantPotentialForce& conp, 
         // and Thomas-Fermi contributions.
         double precondScaleInv = 0.0;
         for (int ii = 0; ii < numElectrodeParticles; ii++) {
-            precondVector[ii] = 1.0f / (2.0f * (conp.electrodeSelfScales[conp.elecElec[ii] + 1] - conp.plasmaScale) + pmeTerm);
+            precondVector[ii] = 1.0 / (2.0 * (conp.electrodeSelfScales[conp.elecElec[ii] + 1] - conp.plasmaScale) + pmeTerm);
             precondScaleInv += precondVector[ii];
         }
         double precondScale = 1.0 / precondScaleInv;
@@ -567,7 +567,7 @@ const int CpuConstantPotentialForce::ThomasFermiScaleIndex = 2;
 
 const int CpuConstantPotentialForce::NUM_TABLE_POINTS = 2048;
 
-const float CpuConstantPotentialForce::TWO_OVER_SQRT_PI = (float)(2.0 / sqrt(PI_M));
+const double CpuConstantPotentialForce::TWO_OVER_SQRT_PI = 2.0 / sqrt(PI_M);
 const double CpuConstantPotentialForce::SELF_ALPHA_SCALE = ONE_4PI_EPS0 / sqrt(PI_M);
 const double CpuConstantPotentialForce::SELF_ETA_SCALE = ONE_4PI_EPS0 / sqrt(2.0 * PI_M);
 const double CpuConstantPotentialForce::SELF_TF_SCALE = 1.0 / (2.0 * EPSILON0);
@@ -632,14 +632,14 @@ void CpuConstantPotentialForce::initialize(
         // with -1 indicating a non-electrode particle.  Precompute electrode
         // parameters, storing values for [-1, numElectrodes - 1] as [0,
         // numElectrodes] for convenient lookup.
-        double electrodePotential = 0.0f;
+        double electrodePotential = 0.0;
         double electrodeSelfScale = -SELF_ALPHA_SCALE * ewaldAlpha;
         if (ie != -1) {
             electrodePotential = electrodeParams[ie][PotentialIndex];
             electrodeSelfScale += SELF_ETA_SCALE / electrodeParams[ie][GaussianWidthIndex] + SELF_TF_SCALE * electrodeParams[ie][ThomasFermiScaleIndex];
         }
-        electrodePotentials[ie + 1] = (float)electrodePotential;
-        electrodeSelfScales[ie + 1] = (float)electrodeSelfScale;
+        electrodePotentials[ie + 1] = (float) electrodePotential;
+        electrodeSelfScales[ie + 1] = (float) electrodeSelfScale;
     }
 
     this->chargeTarget = chargeTarget;
@@ -664,8 +664,8 @@ void CpuConstantPotentialForce::update(float chargeTarget, const float* external
     }
 
     for (int ie = firstElectrode; ie <= lastElectrode; ie++) {
-        electrodePotentials[ie + 1] = (float)electrodeParams[ie][PotentialIndex];
-        electrodeSelfScales[ie + 1] = (float)(-SELF_ALPHA_SCALE * ewaldAlpha + SELF_ETA_SCALE / electrodeParams[ie][GaussianWidthIndex] + SELF_TF_SCALE * electrodeParams[ie][ThomasFermiScaleIndex]);
+        electrodePotentials[ie + 1] = (float) electrodeParams[ie][PotentialIndex];
+        electrodeSelfScales[ie + 1] = (float) (-SELF_ALPHA_SCALE * ewaldAlpha + SELF_ETA_SCALE / electrodeParams[ie][GaussianWidthIndex] + SELF_TF_SCALE * electrodeParams[ie][ThomasFermiScaleIndex]);
     }
 
     this->chargeTarget = chargeTarget;
@@ -721,18 +721,18 @@ void CpuConstantPotentialForce::setThreadData(const Vec3* boxVectors, const vect
     this->boxVectors[2] = boxVectors[2];
 
     boxVectorsVec4.resize(3);
-    boxVectorsVec4[0] = fvec4((float)boxVectors[0][0], (float)boxVectors[0][1], (float)boxVectors[0][2], 0.0f);
-    boxVectorsVec4[1] = fvec4((float)boxVectors[1][0], (float)boxVectors[1][1], (float)boxVectors[1][2], 0.0f);
-    boxVectorsVec4[2] = fvec4((float)boxVectors[2][0], (float)boxVectors[2][1], (float)boxVectors[2][2], 0.0f);
+    boxVectorsVec4[0] = fvec4((float) boxVectors[0][0], (float) boxVectors[0][1], (float) boxVectors[0][2], 0.0f);
+    boxVectorsVec4[1] = fvec4((float) boxVectors[1][0], (float) boxVectors[1][1], (float) boxVectors[1][2], 0.0f);
+    boxVectorsVec4[2] = fvec4((float) boxVectors[2][0], (float) boxVectors[2][1], (float) boxVectors[2][2], 0.0f);
 
     boxSize = fvec4(boxVectorsVec4[0][0], boxVectorsVec4[1][1], boxVectorsVec4[2][2], 0.0f);
-    recipBoxSize = fvec4((float)(1.0 / boxVectors[0][0]), (float)(1.0 / boxVectors[1][1]), (float)(1.0 / boxVectors[2][2]), 0.0f);
+    recipBoxSize = fvec4((float) (1.0 / boxVectors[0][0]), (float) (1.0 / boxVectors[1][1]), (float) (1.0 / boxVectors[2][2]), 0.0f);
 
     triclinic = boxVectors[0][1] != 0.0 || boxVectors[0][2] != 0.0 ||
         boxVectors[1][0] != 0.0 || boxVectors[1][2] != 0.0 ||
         boxVectors[2][0] != 0.0 || boxVectors[2][1] != 0.0;
 
-    plasmaScale = (float)(1.0 / (8.0 * EPSILON0 * boxVectors[0][0] * boxVectors[1][1] * boxVectors[2][2] * ewaldAlpha * ewaldAlpha));
+    plasmaScale = (float) (1.0 / (8.0 * EPSILON0 * boxVectors[0][0] * boxVectors[1][1] * boxVectors[2][2] * ewaldAlpha * ewaldAlpha));
 
     this->posData = &posData[0];
     this->posq = posq;
@@ -808,7 +808,7 @@ void CpuConstantPotentialForce::getEnergyForcesThread(ThreadPool& threads, int t
         int end = min(start + groupSize, numParticles);
 
         for (int i = start; i < end; i++) {
-            fvec4 posI((float)posData[i][0], (float)posData[i][1], (float)posData[i][2], 0.0f);
+            fvec4 posI((float) posData[i][0], (float) posData[i][1], (float) posData[i][2], 0.0f);
             float chargeI = posq[4 * i + 3];
             float chargeIScaled = ONE_4PI_EPS0 * chargeI;
 
@@ -818,7 +818,7 @@ void CpuConstantPotentialForce::getEnergyForcesThread(ThreadPool& threads, int t
                     continue;
                 }
 
-                fvec4 posJ((float)posData[j][0], (float)posData[j][1], (float)posData[j][2], 0.0f);
+                fvec4 posJ((float) posData[j][0], (float) posData[j][1], (float) posData[j][2], 0.0f);
                 float chargeJ = posq[4 * j + 3];
 
                 fvec4 deltaR;
@@ -834,7 +834,7 @@ void CpuConstantPotentialForce::getEnergyForcesThread(ThreadPool& threads, int t
                     float erfAlphaR = erf(alphaR);
 
                     float qqFactorInverseR = qqFactor * inverseR;
-                    float forceFactor = qqFactorInverseR * inverseR * inverseR * (erfAlphaR - TWO_OVER_SQRT_PI * alphaR * exp(-alphaR * alphaR));
+                    float forceFactor = qqFactorInverseR * inverseR * inverseR * (erfAlphaR - (float) TWO_OVER_SQRT_PI * alphaR * exp(-alphaR * alphaR));
                     fvec4 force = forceFactor * deltaR;
                     (fvec4(forces + 4 * i) + force).store(forces + 4 * i);
                     (fvec4(forces + 4 * j) - force).store(forces + 4 * j);
@@ -844,7 +844,7 @@ void CpuConstantPotentialForce::getEnergyForcesThread(ThreadPool& threads, int t
                     }
                 }
                 else if (includeEnergy) {
-                    threadEnergy[threadIndex] -= qqFactor * TWO_OVER_SQRT_PI * ewaldAlpha;
+                    threadEnergy[threadIndex] -= qqFactor * (float) TWO_OVER_SQRT_PI * ewaldAlpha;
                 }
             }
 
@@ -922,7 +922,7 @@ void CpuConstantPotentialForce::getDerivativesThread(
     for (int ii = start; ii < end; ii++) {
         int i = elecToSys[ii];
         int iePlus1 = elecElec[ii] + 1;
-        fvec4 posI((float)posData[i][0], (float)posData[i][1], (float)posData[i][2], 0.0f);
+        fvec4 posI((float) posData[i][0], (float) posData[i][1], (float) posData[i][2], 0.0f);
         derivatives[4 * ii] += 2.0f * posq[4 * i + 3] * electrodeSelfScales[iePlus1] - electrodePotentials[iePlus1] - dot3(posI, externalField) + plasmaTerm;
     }
 }

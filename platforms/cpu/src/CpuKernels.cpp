@@ -988,7 +988,7 @@ void CpuCalcConstantPotentialForceKernel::initialize(const System& system, const
     // Initialize single-precision charge vector with initial guesses.
     charges.resize(numParticles);
     for (int i = 0; i < numParticles; i++) {
-        charges[i] = (float)setCharges[i];
+        charges[i] = (float) setCharges[i];
     }
 
     // Set options from force.
@@ -1024,9 +1024,9 @@ void CpuCalcConstantPotentialForceKernel::initialize(const System& system, const
     }
 
     constantPotential = createCpuConstantPotentialForceVec();
-    float externalFieldArray[3] = { (float)externalField[0], (float)externalField[1], (float)externalField[2] };
-    constantPotential->initialize(numParticles, numElectrodeParticles, chargePosqIndex, (float)nonbondedCutoff, (float)ewaldAlpha, (float)cgErrorTol,
-        gridSize, exceptionsArePeriodic, useChargeConstraint, *data.neighborList, solver, exclusions, sysToElec, elecToSys, sysElec, elecElec, electrodeParams, (float)chargeTarget, externalFieldArray);
+    float externalFieldArray[3] = { (float) externalField[0], (float) externalField[1], (float) externalField[2] };
+    constantPotential->initialize(numParticles, numElectrodeParticles, chargePosqIndex, (float) nonbondedCutoff, (float) ewaldAlpha, (float) cgErrorTol,
+        gridSize, exceptionsArePeriodic, useChargeConstraint, *data.neighborList, solver, exclusions, sysToElec, elecToSys, sysElec, elecElec, electrodeParams, (float) chargeTarget, externalFieldArray);
 }
 
 double CpuCalcConstantPotentialForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1063,7 +1063,7 @@ void CpuCalcConstantPotentialForceKernel::copyParametersToContext(ContextImpl& c
         // for electrode particles.
         if (sysElec[i] == -1) {
             force.getParticleParameters(i, setCharges[i]);
-            charges[i] = (float)setCharges[i];
+            charges[i] = (float) setCharges[i];
         }
     }
     if (firstParticle <= lastParticle) {
@@ -1131,8 +1131,8 @@ void CpuCalcConstantPotentialForceKernel::copyParametersToContext(ContextImpl& c
         }
     }
 
-    float externalFieldArray[3] = { (float)externalField[0], (float)externalField[1], (float)externalField[2] };
-    constantPotential->update((float)chargeTarget, externalFieldArray, firstElectrode, lastElectrode);
+    float externalFieldArray[3] = { (float) externalField[0], (float) externalField[1], (float) externalField[2] };
+    constantPotential->update((float) chargeTarget, externalFieldArray, firstElectrode, lastElectrode);
 }
 
 void CpuCalcConstantPotentialForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
@@ -1166,7 +1166,7 @@ void CpuCalcConstantPotentialForceKernel::getCharges(ContextImpl& context, std::
     chargesOut = setCharges;
     for (int ii = 0; ii < numElectrodeParticles; ii++) {
         int i = elecToSys[ii];
-        chargesOut[i] = (double)charges[i];
+        chargesOut[i] = (double) charges[i];
     }
 }
 

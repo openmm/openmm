@@ -141,7 +141,7 @@ class CpuConstantPotentialCGSolver : public CpuConstantPotentialSolver {
 private:
     Vec3 boxVectors[3];
     bool precondRequested, precondActivated;
-    std::vector<float> precondVector;
+    std::vector<double> precondVector;
     std::vector<float> q;
     std::vector<float> grad;
     std::vector<float> projGrad;
@@ -360,7 +360,7 @@ protected:
 
     static const int NUM_TABLE_POINTS;
 
-    static const float TWO_OVER_SQRT_PI;
+    static const double TWO_OVER_SQRT_PI;
     static const double SELF_ALPHA_SCALE;
     static const double SELF_ETA_SCALE;
     static const double SELF_TF_SCALE;
