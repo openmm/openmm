@@ -1,3 +1,14 @@
+#ifdef USE_HIP
+    #define ALIGN alignas(16)
+#else
+    #define ALIGN
+#endif
+
+typedef struct ALIGN {
+    real x, y, z, q, width, derivative;
+    int ii;
+} AtomData;
+
 DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) {
     const int thread = LOCAL_ID;
     SYNC_THREADS;
@@ -107,17 +118,8 @@ KERNEL void evaluateSelfEnergyForces(
     }
 }
 
-DEVICE void evaluateDirectDerivativesPair(GLOBAL mm_ulong* RESTRICT chargeDerivativesFixed, int ii, int jj, real3 delta, real charge1, real charge2, real width1, real width2) {
-    if (ii == -1 && jj == -1) {
-        return;
-    }
-
-    const real r2 = delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
-    if (r2 >= CUTOFF_SQUARED) {
-        return;
-    }
+DEVICE real evaluateDirectDerivative(real r2, real width1, real width2) {
     const real r = SQRT(r2);
-
     const real alphaR = EWALD_ALPHA * r;
     const real etaR = r / SQRT(width1 * width1 + width2 * width2);
 #ifdef USE_DOUBLE_PRECISION
@@ -131,13 +133,7 @@ DEVICE void evaluateDirectDerivativesPair(GLOBAL mm_ulong* RESTRICT chargeDeriva
     const real erfcAlphaR = (0.254829592f+(-0.284496736f+(1.421413741f+(-1.453152027f+1.061405429f*tAlpha)*tAlpha)*tAlpha)*tAlpha)*tAlpha*expAlphaRSqr;
     const real erfcEtaR = (0.254829592f+(-0.284496736f+(1.421413741f+(-1.453152027f+1.061405429f*tEta)*tEta)*tEta)*tEta)*tEta*expEtaRSqr;
 #endif
-    const real derivative = ONE_4PI_EPS0 * (erfcAlphaR - erfcEtaR) / r;
-    if (ii != -1) {
-        ATOMIC_ADD(&chargeDerivativesFixed[ii], (mm_ulong) realToFixedPoint(charge2 * derivative));
-    }
-    if (jj != -1) {
-        ATOMIC_ADD(&chargeDerivativesFixed[jj], (mm_ulong) realToFixedPoint(charge1 * derivative));
-    }
+    return ONE_4PI_EPS0 * (erfcAlphaR - erfcEtaR) / r;
 }
 
 KERNEL void evaluateDirectDerivatives(
@@ -153,178 +149,217 @@ KERNEL void evaluateDirectDerivatives(
     real4 periodicBoxVecY,
     real4 periodicBoxVecZ,
     GLOBAL const int2* RESTRICT exclusionTiles,
-    int numExclusionTiles,
     GLOBAL const int* RESTRICT tiles,
     GLOBAL const unsigned int* RESTRICT interactionCount,
     GLOBAL const real4* RESTRICT blockCenter,
     GLOBAL const real4* RESTRICT blockSize,
     GLOBAL const int* RESTRICT interactingAtoms,
-    GLOBAL int* RESTRICT tileCounter
+    unsigned int maxTiles
 ) {
-    if (GLOBAL_ID == 0) {
-        *tileCounter = 0;
-    }
-    SYNC_THREADS;
+    const unsigned int totalWarps = GLOBAL_SIZE / TILE_SIZE;
+    const unsigned int warp = GLOBAL_ID / TILE_SIZE;
+    const unsigned int tgx = LOCAL_ID & (TILE_SIZE - 1);
+    const unsigned int tbx = LOCAL_ID - tgx;
+    LOCAL AtomData localData[WORK_GROUP_SIZE];
 
-    const int totalWarps = GLOBAL_SIZE/TILE_SIZE;
-    const int warp = GLOBAL_ID/TILE_SIZE;
-    const int tgx = LOCAL_ID & (TILE_SIZE-1);
-    const int tbx = LOCAL_ID - tgx;
-
-    LOCAL volatile int nextTile[WORK_GROUP_SIZE/TILE_SIZE];
-    LOCAL volatile int atomIndices[WORK_GROUP_SIZE];
-    LOCAL volatile real3 localPos[WORK_GROUP_SIZE];
-    LOCAL volatile real localCharge[WORK_GROUP_SIZE];
-    LOCAL volatile int localIndexElec[WORK_GROUP_SIZE];
-    LOCAL volatile real localWidth[WORK_GROUP_SIZE];
-
-    // First loop: process fixed tiles (ones that contain exclusions).  None of
-    // the pairs involving electrode particles should actually be excluded, so
-    // no special handling should be required for them.
-
-    for (int tile = warp; tile < numExclusionTiles; tile += totalWarps) {
-        const int2 tileIndices = exclusionTiles[tile];
+    // First loop: process tiles that contain exclusions.  Exclusions cannot
+    // involve electrode particles, so only self-interactions need be excluded.
+    const unsigned int firstExclusionTile = warp * NUM_EXCLUSION_TILES / totalWarps;
+    const unsigned int lastExclusionTile = (warp + 1) * NUM_EXCLUSION_TILES / totalWarps;
+    for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
+        const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
 
-        int i = x*TILE_SIZE + tgx;
-        real4 posq1 = posq[i];
-        real3 pos1 = trimTo3(posq1);
+        const unsigned int atom1 = x * TILE_SIZE + tgx;
+        const real4 posq1 = posq[atom1];
 #ifdef USE_POSQ_CHARGES
-        real charge1 = posq1.w;
+        const real charge1 = posq1.w;
 #else
-        real charge1 = charges[i];
+        const real charge1 = charges[atom1];
 #endif
-        int ii = sysToElec[i];
-        real width1 = electrodeParams[sysElec[i] + 1].y;
+        const real width1 = electrodeParams[sysElec[atom1] + 1].y;
+        const int ii1 = sysToElec[atom1];
+
+        real derivative = 0;
 
         if (x == y) {
-            localPos[LOCAL_ID] = pos1;
-            localCharge[LOCAL_ID] = charge1;
-            localIndexElec[LOCAL_ID] = ii;
-            localWidth[LOCAL_ID] = width1;
+            // This tile is on the diagonal.
+            localData[LOCAL_ID].x = posq1.x;
+            localData[LOCAL_ID].y = posq1.y;
+            localData[LOCAL_ID].z = posq1.z;
+            localData[LOCAL_ID].q = charge1;
+            localData[LOCAL_ID].width = width1;
+            SYNC_WARPS;
+
+            for (unsigned int j = 0; j < TILE_SIZE; j++) {
+                if (ii1 != -1 && atom1 < NUM_PARTICLES && y * TILE_SIZE + j < NUM_PARTICLES && atom1 != y * TILE_SIZE + j) {
+                    const real3 pos2 = make_real3(localData[tbx + j].x, localData[tbx + j].y, localData[tbx + j].z);
+                    real3 delta = make_real3(pos2.x - posq1.x, pos2.y - posq1.y, pos2.z - posq1.z);
+                    APPLY_PERIODIC_TO_DELTA(delta)
+                    const real r2 = delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
+                    if (r2 < CUTOFF_SQUARED) {
+                        derivative += localData[tbx + j].q * evaluateDirectDerivative(r2, width1, localData[tbx + j].width);
+                    }
+                }
+                SYNC_WARPS;
+            }
         }
         else {
-            int j = y*TILE_SIZE + tgx;
-            real4 posq2 = posq[j];
-            localPos[LOCAL_ID] = trimTo3(posq2);
-    #ifdef USE_POSQ_CHARGES
-            localCharge[LOCAL_ID]  = posq2.w;
-    #else
-            localCharge[LOCAL_ID] = charges[j];
-    #endif
-            localIndexElec[LOCAL_ID] = sysToElec[j];
-            localWidth[LOCAL_ID] = electrodeParams[sysElec[j] + 1].y;
-        }
-        SYNC_WARPS;
-
-        if (i < NUM_PARTICLES) {
-            for (int k = 0; k < TILE_SIZE; k++) {
-#ifdef INTEL_WORKAROUND
-                // Workaround for bug in Intel's OpenCL for CPUs.
-                MEM_FENCE;
+            // This is an off-diagonal tile.
+            unsigned int j = y * TILE_SIZE + tgx;
+            const real4 posq2 = posq[j];
+            localData[LOCAL_ID].x = posq2.x;
+            localData[LOCAL_ID].y = posq2.y;
+            localData[LOCAL_ID].z = posq2.z;
+#ifdef USE_POSQ_CHARGES
+            localData[LOCAL_ID].q = posq2.w;
+#else
+            localData[LOCAL_ID].q = charges[j];
 #endif
-                int j = y*TILE_SIZE+k;
-                if ((x != y || i < j) && j < NUM_PARTICLES) {
-                    real3 pos2 = localPos[tbx + k];
-                    real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
+            localData[LOCAL_ID].width = electrodeParams[sysElec[j] + 1].y;
+            localData[LOCAL_ID].derivative = 0;
+            localData[LOCAL_ID].ii = sysToElec[j];
+            SYNC_WARPS;
+
+            // Evaluate derivatives.
+            unsigned int tj = tgx;
+            for (unsigned int j = 0; j < TILE_SIZE; j++) {
+                if (atom1 < NUM_PARTICLES && y * TILE_SIZE + tj < NUM_PARTICLES && (ii1 != -1 || localData[tbx + tj].ii != -1)) {
+                    const real3 pos2 = make_real3(localData[tbx + tj].x, localData[tbx + tj].y, localData[tbx + tj].z);
+                    real3 delta = make_real3(pos2.x - posq1.x, pos2.y - posq1.y, pos2.z - posq1.z);
                     APPLY_PERIODIC_TO_DELTA(delta)
-                    evaluateDirectDerivativesPair(chargeDerivativesFixed, ii, localIndexElec[tbx + k], delta, charge1, localCharge[tbx + k], width1, localWidth[tbx + k]);
+                    const real r2 = delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
+                    if (r2 < CUTOFF_SQUARED) {
+                        const real derivativeScale = evaluateDirectDerivative(r2, width1, localData[tbx + tj].width);
+                        derivative += localData[tbx + tj].q * derivativeScale;
+                        localData[tbx + tj].derivative += charge1 * derivativeScale;
+                    }
                 }
+                tj = (tj + 1) & (TILE_SIZE - 1);
+                SYNC_WARPS;
             }
         }
-#ifdef NVIDIA_WORKAROUND
-        SYNC_THREADS;
-#else
-       SYNC_WARPS;
-#endif
+
+        // Write results.
+        if (ii1 != -1) {
+            ATOMIC_ADD(&chargeDerivativesFixed[ii1], (mm_ulong) realToFixedPoint(derivative));
+        }
+        if (x != y) {
+            const int ii2 = localData[LOCAL_ID].ii;
+            if (ii2 != -1) {
+                ATOMIC_ADD(&chargeDerivativesFixed[ii2], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].derivative));
+            }
+        }
     }
 
-    // Second loop: process tiles from the neighbor list.
+    // Second loop: process tiles without exclusions.
+    const unsigned int numTiles = interactionCount[0];
+    if (numTiles > maxTiles) {
+        // There wasn't enough memory for the neighbor list.
+        return;
+    }
+    int pos = (int) (warp * ((mm_long) numTiles) / totalWarps);
+    const int end = (int) ((warp + 1) * ((mm_long) numTiles) / totalWarps);
+    LOCAL int atomIndices[WORK_GROUP_SIZE];
 
-    unsigned int numTiles = interactionCount[0];
-    for (int tile = warp; tile < numTiles; tile += totalWarps) {
-        if (tgx == 0)
-            nextTile[tbx/TILE_SIZE] = ATOMIC_ADD(tileCounter, 1);
-        SYNC_WARPS;
-        int tileIndex = nextTile[tbx/TILE_SIZE];
-        int x = tiles[tileIndex];
-        real4 blockSizeX = blockSize[x];
-        bool singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
-                                   0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
-                                   0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
+    while (pos < end) {
+        real derivative = 0;
 
-        int i = x*TILE_SIZE + tgx;
-        real4 posq1 = posq[i];
-        real3 pos1 = trimTo3(posq1);
+        // Extract the coordinates of this tile.
+        const int x = tiles[pos];
+        const real4 blockSizeX = blockSize[x];
+        const bool singlePeriodicCopy = (0.5f * periodicBoxSize.x - blockSizeX.x >= CUTOFF &&
+                                         0.5f * periodicBoxSize.y - blockSizeX.y >= CUTOFF &&
+                                         0.5f * periodicBoxSize.z - blockSizeX.z >= CUTOFF);
+
+        const unsigned int atom1 = x * TILE_SIZE + tgx;
+
+        // Load atom data for this tile.
+        real4 posq1 = posq[atom1];
 #ifdef USE_POSQ_CHARGES
-        real charge1 = posq1.w;
+        const real charge1 = posq1.w;
 #else
-        real charge1 = charges[i];
+        const real charge1 = charges[atom1];
 #endif
-        int ii = sysToElec[i];
-        real width1 = electrodeParams[sysElec[i] + 1].y;
+        const real width1 = electrodeParams[sysElec[atom1] + 1].y;
+        const int ii1 = sysToElec[atom1];
 
-        int j = interactingAtoms[tileIndex*TILE_SIZE+tgx];
-        real4 posq2 = posq[j];
-        real3 pos2 = trimTo3(posq2);
-#ifdef USE_POSQ_CHARGES
-        real charge2 = posq2.w;
-#else
-        real charge2 = charges[j];
-#endif
-        int jj = sysToElec[j];
-        real width2 = electrodeParams[sysElec[j] + 1].y;
-
+        unsigned int j = interactingAtoms[pos * TILE_SIZE + tgx];
         atomIndices[LOCAL_ID] = j;
-        localPos[LOCAL_ID] = pos2;
-        localCharge[LOCAL_ID] = charge2;
-        localIndexElec[LOCAL_ID] = jj;
-        localWidth[LOCAL_ID] = width2;
+        if (j < PADDED_NUM_ATOMS) {
+            const real4 posq2 = posq[j];
+            localData[LOCAL_ID].x = posq2.x;
+            localData[LOCAL_ID].y = posq2.y;
+            localData[LOCAL_ID].z = posq2.z;
+#ifdef USE_POSQ_CHARGES
+            localData[LOCAL_ID].q = posq2.w;
+#else
+            localData[LOCAL_ID].q = charges[j];
+#endif
+            localData[LOCAL_ID].width = electrodeParams[sysElec[j] + 1].y;
+            localData[LOCAL_ID].derivative = 0;
+            localData[LOCAL_ID].ii = sysToElec[j];
+        }
+        SYNC_WARPS;
 
         if (singlePeriodicCopy) {
-            // The box is small enough that we can just translate all the atoms into a single periodic
-            // box, then skip having to apply periodic boundary conditions later.
-
+            // The box is small enough; we can translate atoms and avoid having
+            // to apply periodic boundary conditions to every interaction later.
             real4 blockCenterX = blockCenter[x];
-            APPLY_PERIODIC_TO_POS_WITH_CENTER(pos1, blockCenterX)
-            APPLY_PERIODIC_TO_POS_WITH_CENTER(localPos[LOCAL_ID], blockCenterX)
+            APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
+            APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[LOCAL_ID], blockCenterX)
             SYNC_WARPS;
-            if (i < NUM_PARTICLES) {
-                for (int k = 0; k < TILE_SIZE; k++) {
-#ifdef INTEL_WORKAROUND
-                    // Workaround for bug in Intel's OpenCL for CPUs.
-                    MEM_FENCE;
-#endif
-                    if (atomIndices[tbx + k] < NUM_PARTICLES) {
-                        pos2 = localPos[tbx + k];
-                        real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
-                        evaluateDirectDerivativesPair(chargeDerivativesFixed, ii, localIndexElec[tbx + k], delta, charge1, localCharge[tbx + k], width1, localWidth[tbx + k]);
-                    }
-                }
-            }
-        }
-        else
-        {
-            // We need to apply periodic boundary conditions separately for each interaction.
 
-            SYNC_WARPS;
-            if (i < NUM_PARTICLES) {
-                for (int k = 0; k < TILE_SIZE; k++) {
-#ifdef INTEL_WORKAROUND
-                    // Workaround for bug in Intel's OpenCL for CPUs.
-                    MEM_FENCE;
-#endif
-                    if (atomIndices[tbx + k] < NUM_PARTICLES) {
-                        pos2 = localPos[tbx + k];
-                        real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
-                        APPLY_PERIODIC_TO_DELTA(delta)
-                        evaluateDirectDerivativesPair(chargeDerivativesFixed, ii, localIndexElec[tbx + k], delta, charge1, localCharge[tbx + k], width1, localWidth[tbx + k]);
+            unsigned int tj = tgx;
+            for (j = 0; j < TILE_SIZE; j++) {
+                const int atom2 = atomIndices[tbx + tj];
+                if (atom1 < NUM_PARTICLES && atom2 < NUM_PARTICLES && (ii1 != -1 || localData[tbx + tj].ii != -1)) {
+                    const real3 pos2 = make_real3(localData[tbx + tj].x, localData[tbx + tj].y, localData[tbx + tj].z);
+                    real3 delta = make_real3(pos2.x - posq1.x, pos2.y - posq1.y, pos2.z - posq1.z);
+                    const real r2 = delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
+                    if (r2 < CUTOFF_SQUARED) {
+                        const real derivativeScale = evaluateDirectDerivative(r2, width1, localData[tbx + tj].width);
+                        derivative += localData[tbx + tj].q * derivativeScale;
+                        localData[tbx + tj].derivative += charge1 * derivativeScale;
                     }
                 }
+                tj = (tj + 1) & (TILE_SIZE - 1);
+                SYNC_WARPS;
             }
         }
-        SYNC_WARPS;
+        else {
+            // We must apply periodic boundary conditions to every interaction.
+            unsigned int tj = tgx;
+            for (j = 0; j < TILE_SIZE; j++) {
+                const int atom2 = atomIndices[tbx+tj];
+                if (atom1 < NUM_PARTICLES && atom2 < NUM_PARTICLES && (ii1 != -1 || localData[tbx + tj].ii != -1)) {
+                    const real3 pos2 = make_real3(localData[tbx + tj].x, localData[tbx + tj].y, localData[tbx + tj].z);
+                    real3 delta = make_real3(pos2.x - posq1.x, pos2.y - posq1.y, pos2.z - posq1.z);
+                    APPLY_PERIODIC_TO_DELTA(delta)
+                    const real r2 = delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
+                    if (r2 < CUTOFF_SQUARED) {
+                        const real derivativeScale = evaluateDirectDerivative(r2, width1, localData[tbx + tj].width);
+                        derivative += localData[tbx + tj].q * derivativeScale;
+                        localData[tbx + tj].derivative += charge1 * derivativeScale;
+                    }
+                }
+                tj = (tj + 1) & (TILE_SIZE - 1);
+                SYNC_WARPS;
+            }
+        }
+
+        // Write results.
+        if (ii1 != -1) {
+            ATOMIC_ADD(&chargeDerivativesFixed[ii1], (mm_ulong) realToFixedPoint(derivative));
+        }
+        if (atomIndices[LOCAL_ID] < PADDED_NUM_ATOMS) {
+            const int ii2 = localData[LOCAL_ID].ii;
+            if (ii2 != -1) {
+                ATOMIC_ADD(&chargeDerivativesFixed[ii2], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].derivative));
+            }
+        }
+        pos++;
     }
 }
 

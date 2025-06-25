@@ -683,6 +683,9 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
     if (cc.getNumContexts() > 1) {
         throw OpenMMException("ConstantPotentialForce does not support using multiple devices");
     }
+
+    forceGroup = force.getForceGroup();
+
     threadBlockSize = cc.getMaxThreadBlockSize();
     int elementSize = cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float);
 
@@ -811,7 +814,7 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
         replacements["EWALD_ALPHA"] = cc.doubleToString(ewaldAlpha);
         replacements["PARAMS"] = cc.getBondedUtilities().addArgument(exclusionScales, "real");
         replacements["TWO_OVER_SQRT_PI"] = cc.doubleToString(2.0 / sqrt(M_PI));
-        cc.getBondedUtilities().addInteraction(hostExclusionAtoms, cc.replaceStrings(CommonKernelSources::constantPotentialExclusions, replacements), force.getForceGroup());
+        cc.getBondedUtilities().addInteraction(hostExclusionAtoms, cc.replaceStrings(CommonKernelSources::constantPotentialExclusions, replacements), forceGroup);
     }
 
     // Upload 1-4 exception parameters and create bonded force.
@@ -830,7 +833,7 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
         map<string, string> replacements;
         replacements["APPLY_PERIODIC"] = force.getExceptionsUsePeriodicBoundaryConditions() ? "1" : "0";
         replacements["PARAMS"] = cc.getBondedUtilities().addArgument(exceptionScales, "real");
-        cc.getBondedUtilities().addInteraction(hostExceptionAtoms, cc.replaceStrings(CommonKernelSources::constantPotentialExceptions, replacements), force.getForceGroup());
+        cc.getBondedUtilities().addInteraction(hostExceptionAtoms, cc.replaceStrings(CommonKernelSources::constantPotentialExceptions, replacements), forceGroup);
     }
 
     // Upload parameters for electrodes.
@@ -868,9 +871,7 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
     cc.getNonbondedUtilities().addParameter(ComputeParameterInfo(sysElec, prefix + "sysElec", "int", 1));
     nonbondedReplacements["PARAMS"] = prefix + "params";
     cc.getNonbondedUtilities().addArgument(ComputeParameterInfo(electrodeParams, prefix + "params", "real", 4));
-    cc.getNonbondedUtilities().addInteraction(true, true, true, force.getCutoffDistance(), exclusionList, cc.replaceStrings(CommonKernelSources::constantPotentialCoulombEnergyForces, nonbondedReplacements), force.getForceGroup(), numParticles > 3000, true);
-
-    tileCounter.initialize<int>(cc, 1, "tileCounter");
+    cc.getNonbondedUtilities().addInteraction(true, true, true, force.getCutoffDistance(), exclusionList, cc.replaceStrings(CommonKernelSources::constantPotentialCoulombEnergyForces, nonbondedReplacements), force.getForceGroup(), true, false);
 
     // Initialize the constant potential solver.
     method = force.getConstantPotentialMethod();
@@ -1075,9 +1076,7 @@ void CommonCalcConstantPotentialForceKernel::getCharges(ContextImpl& context, ve
 
     ensureInitialized(context);
 
-    // Make sure that everything is updated for a force calculation but do not
-    // calculate any forces.
-    context.calcForcesAndEnergy(false, false, 0);
+    cc.getNonbondedUtilities().prepareInteractions(1 << forceGroup);
     cc.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     setKernelPeriodicBoxArgs(false, false);
 
@@ -1110,6 +1109,7 @@ void CommonCalcConstantPotentialForceKernel::ensureInitialized(ContextImpl& cont
     defines["ONE_4PI_EPS0"] = cc.doubleToString(ONE_4PI_EPS0);
     defines["NUM_PARTICLES"] = cc.intToString(numParticles);
     defines["NUM_ELECTRODE_PARTICLES"] = cc.intToString(numElectrodeParticles);
+    defines["NUM_EXCLUSION_TILES"] = cc.intToString(nb.getExclusionTiles().getSize());
     defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
     defines["THREAD_BLOCK_SIZE"] = cc.intToString(threadBlockSize);
     defines["TILE_SIZE"] = cc.intToString(ComputeContext::TileSize);
@@ -1118,18 +1118,7 @@ void CommonCalcConstantPotentialForceKernel::ensureInitialized(ContextImpl& cont
         defines["USE_POSQ_CHARGES"] = "1";
     }
     if (cc.getIsCPU()) {
-        // Workaround for OpenCL via the Intel CPU implementation.
-        defines["INTEL_WORKAROUND"] = "1";
-    }
-    try {
-        // Workaround for OpenCL on NVIDIA.
-        string platformName = context.getPlatform().getPropertyValue(context.getOwner(), "OpenCLPlatformName");
-        if (platformName.rfind("NVIDIA", 0) == 0) {
-            defines["NVIDIA_WORKAROUND"] = "1";
-        }
-    }
-    catch (...) {
-        // This isn't the OpenCL platform.
+        defines["DEVICE_IS_CPU"] = "1";
     }
     ComputeProgram program = cc.compileProgram(CommonKernelSources::constantPotential, defines);
 
@@ -1179,14 +1168,12 @@ void CommonCalcConstantPotentialForceKernel::ensureInitialized(ContextImpl& cont
         evaluateDirectDerivativesKernel->addArg(); // periodicBoxVecY
         evaluateDirectDerivativesKernel->addArg(); // periodicBoxVecZ
         evaluateDirectDerivativesKernel->addArg(nb.getExclusionTiles());
-        evaluateDirectDerivativesKernel->addArg((int) nb.getExclusionTiles().getSize());
         evaluateDirectDerivativesKernel->addArg(nb.getInteractingTiles());
         evaluateDirectDerivativesKernel->addArg(nb.getInteractionCount());
         evaluateDirectDerivativesKernel->addArg(nb.getBlockCenters());
         evaluateDirectDerivativesKernel->addArg(nb.getBlockBoundingBoxes());
         evaluateDirectDerivativesKernel->addArg(nb.getInteractingAtoms());
-        evaluateDirectDerivativesKernel->addArg(tileCounter);
-        directBlockSize = max(32, nb.getForceThreadBlockSize());
+        evaluateDirectDerivativesKernel->addArg(); // maxTiles
 
         finishDerivativesKernel = program->createKernel("finishDerivatives");
         finishDerivativesKernel->addArg(cc.getPosq());
@@ -1263,7 +1250,10 @@ void CommonCalcConstantPotentialForceKernel::doDerivatives() {
     cc.clearBuffer(chargeDerivativesFixed);
 
     pmeExecute(false, false, true);
-    evaluateDirectDerivativesKernel->execute(2 * cc.getNonbondedUtilities().getNumForceThreadBlocks() * directBlockSize, directBlockSize);
+
+    NonbondedUtilities& nb = cc.getNonbondedUtilities();
+    evaluateDirectDerivativesKernel->setArg(17, (unsigned int) nb.getInteractingTiles().getSize());
+    evaluateDirectDerivativesKernel->execute(nb.getNumForceThreadBlocks() * nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
 
     // Ewald neutralizing plasma and per-particle derivatives.
     vector<double> totalChargeVector(1);
