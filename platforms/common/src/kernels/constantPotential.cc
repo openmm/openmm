@@ -156,6 +156,9 @@ KERNEL void evaluateDirectDerivatives(
     GLOBAL const int* RESTRICT interactingAtoms,
     unsigned int maxTiles
 ) {
+#ifndef DEVICE_IS_CPU
+    // GPU-specific direct derivative calculation kernel.
+
     const unsigned int totalWarps = GLOBAL_SIZE / TILE_SIZE;
     const unsigned int warp = GLOBAL_ID / TILE_SIZE;
     const unsigned int tgx = LOCAL_ID & (TILE_SIZE - 1);
@@ -164,6 +167,7 @@ KERNEL void evaluateDirectDerivatives(
 
     // First loop: process tiles that contain exclusions.  Exclusions cannot
     // involve electrode particles, so only self-interactions need be excluded.
+
     const unsigned int firstExclusionTile = warp * NUM_EXCLUSION_TILES / totalWarps;
     const unsigned int lastExclusionTile = (warp + 1) * NUM_EXCLUSION_TILES / totalWarps;
     for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
@@ -185,6 +189,7 @@ KERNEL void evaluateDirectDerivatives(
 
         if (x == y) {
             // This tile is on the diagonal.
+
             localData[LOCAL_ID].x = posq1.x;
             localData[LOCAL_ID].y = posq1.y;
             localData[LOCAL_ID].z = posq1.z;
@@ -207,6 +212,7 @@ KERNEL void evaluateDirectDerivatives(
         }
         else {
             // This is an off-diagonal tile.
+
             unsigned int j = y * TILE_SIZE + tgx;
             const real4 posq2 = posq[j];
             localData[LOCAL_ID].x = posq2.x;
@@ -222,7 +228,6 @@ KERNEL void evaluateDirectDerivatives(
             localData[LOCAL_ID].ii = sysToElec[j];
             SYNC_WARPS;
 
-            // Evaluate derivatives.
             unsigned int tj = tgx;
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 if (atom1 < NUM_PARTICLES && y * TILE_SIZE + tj < NUM_PARTICLES && (ii1 != -1 || localData[tbx + tj].ii != -1)) {
@@ -254,6 +259,7 @@ KERNEL void evaluateDirectDerivatives(
     }
 
     // Second loop: process tiles without exclusions.
+
     const unsigned int numTiles = interactionCount[0];
     if (numTiles > maxTiles) {
         // There wasn't enough memory for the neighbor list.
@@ -306,6 +312,7 @@ KERNEL void evaluateDirectDerivatives(
         if (singlePeriodicCopy) {
             // The box is small enough; we can translate atoms and avoid having
             // to apply periodic boundary conditions to every interaction later.
+
             real4 blockCenterX = blockCenter[x];
             APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
             APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[LOCAL_ID], blockCenterX)
@@ -330,9 +337,10 @@ KERNEL void evaluateDirectDerivatives(
         }
         else {
             // We must apply periodic boundary conditions to every interaction.
+
             unsigned int tj = tgx;
             for (j = 0; j < TILE_SIZE; j++) {
-                const int atom2 = atomIndices[tbx+tj];
+                const int atom2 = atomIndices[tbx + tj];
                 if (atom1 < NUM_PARTICLES && atom2 < NUM_PARTICLES && (ii1 != -1 || localData[tbx + tj].ii != -1)) {
                     const real3 pos2 = make_real3(localData[tbx + tj].x, localData[tbx + tj].y, localData[tbx + tj].z);
                     real3 delta = make_real3(pos2.x - posq1.x, pos2.y - posq1.y, pos2.z - posq1.z);
@@ -361,6 +369,254 @@ KERNEL void evaluateDirectDerivatives(
         }
         pos++;
     }
+#else
+    // CPU-specific direct derivative calculation kernel.
+
+    LOCAL AtomData localData[TILE_SIZE];
+
+    // First loop: process tiles that contain exclusions.  Exclusions cannot
+    // involve electrode particles, so only self-interactions need be excluded.
+
+    const unsigned int firstExclusionTile = GROUP_ID * NUM_EXCLUSION_TILES / NUM_GROUPS;
+    const unsigned int lastExclusionTile = (GROUP_ID + 1) * NUM_EXCLUSION_TILES / NUM_GROUPS;
+    for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
+        const int2 tileIndices = exclusionTiles[pos];
+        const unsigned int x = tileIndices.x;
+        const unsigned int y = tileIndices.y;
+
+        // Load atom data for this tile.
+        for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
+            const unsigned int j = y * TILE_SIZE + tgx;
+            const real4 posq2 = posq[j];
+            localData[tgx].x = posq2.x;
+            localData[tgx].y = posq2.y;
+            localData[tgx].z = posq2.z;
+#ifdef USE_POSQ_CHARGES
+            localData[tgx].q = posq2.w;
+#else
+            localData[tgx].q = charges[j];
+#endif
+            localData[tgx].width = electrodeParams[sysElec[j] + 1].y;
+            localData[tgx].ii = sysToElec[j];
+        }
+
+        if (x == y) {
+            // This tile is on the diagonal.
+
+            for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
+                const unsigned int atom1 = x * TILE_SIZE + tgx;
+                const int ii1 = sysToElec[atom1];
+                if (ii1 == -1) {
+                    continue;
+                }
+                const real4 posq1 = posq[atom1];
+#ifdef USE_POSQ_CHARGES
+                const real charge1 = posq1.w;
+#else
+                const real charge1 = charges[atom1];
+#endif
+                const real width1 = electrodeParams[sysElec[atom1] + 1].y;
+
+                real derivative = 0;
+
+                for (unsigned int j = 0; j < TILE_SIZE; j++) {
+                    if (atom1 < NUM_PARTICLES && y * TILE_SIZE + j < NUM_PARTICLES && atom1 != y * TILE_SIZE + j) {
+                        const real3 pos2 = make_real3(localData[j].x, localData[j].y, localData[j].z);
+                        real3 delta = make_real3(pos2.x - posq1.x, pos2.y - posq1.y, pos2.z - posq1.z);
+                        APPLY_PERIODIC_TO_DELTA(delta)
+                        const real r2 = delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
+                        if (r2 < CUTOFF_SQUARED) {
+                            derivative += localData[j].q * evaluateDirectDerivative(r2, width1, localData[j].width);
+                        }
+                    }
+                }
+
+                // Write results.
+                ATOMIC_ADD(&chargeDerivativesFixed[ii1], (mm_ulong) realToFixedPoint(derivative));
+            }
+        }
+        else {
+            // This is an off-diagonal tile.
+
+            for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
+                localData[tgx].derivative = 0;
+            }
+            for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
+                const unsigned int atom1 = x * TILE_SIZE + tgx;
+                const real4 posq1 = posq[atom1];
+#ifdef USE_POSQ_CHARGES
+                const real charge1 = posq1.w;
+#else
+                const real charge1 = charges[atom1];
+#endif
+                const real width1 = electrodeParams[sysElec[atom1] + 1].y;
+                const int ii1 = sysToElec[atom1];
+
+                real derivative = 0;
+
+                for (unsigned int j = 0; j < TILE_SIZE; j++) {
+                    if (atom1 < NUM_PARTICLES && y * TILE_SIZE + j < NUM_PARTICLES && (ii1 != -1 || localData[j].ii != -1)) {
+                        const real3 pos2 = make_real3(localData[j].x, localData[j].y, localData[j].z);
+                        real3 delta = make_real3(pos2.x - posq1.x, pos2.y - posq1.y, pos2.z - posq1.z);
+                        APPLY_PERIODIC_TO_DELTA(delta)
+                        const real r2 = delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
+                        if (r2 < CUTOFF_SQUARED) {
+                            const real derivativeScale = evaluateDirectDerivative(r2, width1, localData[j].width);
+                            derivative += localData[j].q * derivativeScale;
+                            localData[j].derivative += charge1 * derivativeScale;
+                        }
+                    }
+                }
+
+                // Write results for "1" atoms.
+                if (ii1 != -1) {
+                    ATOMIC_ADD(&chargeDerivativesFixed[ii1], (mm_ulong) realToFixedPoint(derivative));
+                }
+            }
+
+            // Write results for "2" atoms.
+            for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
+                const int ii2 = localData[tgx].ii;
+                if (ii2 != -1) {
+                    ATOMIC_ADD(&chargeDerivativesFixed[ii2], (mm_ulong) realToFixedPoint(localData[tgx].derivative));
+                }
+            }
+        }
+    }
+
+    // Second loop: process tiles without exclusions.
+
+    const unsigned int numTiles = interactionCount[0];
+    if (numTiles > maxTiles) {
+        // There wasn't enough memory for the neighbor list.
+        return;
+    }
+    int pos = (int) (GROUP_ID * ((mm_long) numTiles) / NUM_GROUPS);
+    const int end = (int) ((GROUP_ID + 1) * ((mm_long) numTiles) / NUM_GROUPS);
+    LOCAL int atomIndices[TILE_SIZE];
+
+    while (pos < end) {
+        real derivative = 0;
+
+        // Extract the coordinates of this tile.
+        const int x = tiles[pos];
+        const real4 blockSizeX = blockSize[x];
+        const bool singlePeriodicCopy = (0.5f * periodicBoxSize.x - blockSizeX.x >= CUTOFF &&
+                                         0.5f * periodicBoxSize.y - blockSizeX.y >= CUTOFF &&
+                                         0.5f * periodicBoxSize.z - blockSizeX.z >= CUTOFF);
+
+        // Load atom data for this tile.
+        for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
+            const unsigned int j = interactingAtoms[pos * TILE_SIZE + tgx];
+            atomIndices[tgx] = j;
+            if (j < PADDED_NUM_ATOMS) {
+                const real4 posq2 = posq[j];
+                localData[tgx].x = posq2.x;
+                localData[tgx].y = posq2.y;
+                localData[tgx].z = posq2.z;
+    #ifdef USE_POSQ_CHARGES
+                localData[tgx].q = posq2.w;
+    #else
+                localData[tgx].q = charges[j];
+    #endif
+                localData[tgx].width = electrodeParams[sysElec[j] + 1].y;
+                localData[tgx].derivative = 0;
+                localData[tgx].ii = sysToElec[j];
+            }
+        }
+
+        if (singlePeriodicCopy) {
+            // The box is small enough; we can translate atoms and avoid having
+            // to apply periodic boundary conditions to every interaction later.
+
+            real4 blockCenterX = blockCenter[x];
+            for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
+                APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[tgx], blockCenterX)
+            }
+            for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
+                const unsigned int atom1 = x * TILE_SIZE + tgx;
+                real4 posq1 = posq[atom1];
+                APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
+#ifdef USE_POSQ_CHARGES
+                const real charge1 = posq1.w;
+#else
+                const real charge1 = charges[atom1];
+#endif
+                const real width1 = electrodeParams[sysElec[atom1] + 1].y;
+                const int ii1 = sysToElec[atom1];
+
+                real derivative = 0;
+
+                for (unsigned int j = 0; j < TILE_SIZE; j++) {
+                    const int atom2 = atomIndices[j];
+                    if (atom1 < NUM_PARTICLES && atom2 < NUM_PARTICLES && (ii1 != -1 || localData[j].ii != -1)) {
+                        const real3 pos2 = make_real3(localData[j].x, localData[j].y, localData[j].z);
+                        real3 delta = make_real3(pos2.x - posq1.x, pos2.y - posq1.y, pos2.z - posq1.z);
+                        const real r2 = delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
+                        if (r2 < CUTOFF_SQUARED) {
+                            const real derivativeScale = evaluateDirectDerivative(r2, width1, localData[j].width);
+                            derivative += localData[j].q * derivativeScale;
+                            localData[j].derivative += charge1 * derivativeScale;
+                        }
+                    }
+                }
+
+                // Write results for "1" atoms.
+                if (ii1 != -1) {
+                    ATOMIC_ADD(&chargeDerivativesFixed[ii1], (mm_ulong) realToFixedPoint(derivative));
+                }
+            }
+        }
+        else {
+            // We must apply periodic boundary conditions to every interaction.
+
+            for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
+                const unsigned int atom1 = x * TILE_SIZE + tgx;
+                const real4 posq1 = posq[atom1];
+#ifdef USE_POSQ_CHARGES
+                const real charge1 = posq1.w;
+#else
+                const real charge1 = charges[atom1];
+#endif
+                const real width1 = electrodeParams[sysElec[atom1] + 1].y;
+                const int ii1 = sysToElec[atom1];
+
+                real derivative = 0;
+
+                for (unsigned int j = 0; j < TILE_SIZE; j++) {
+                    const int atom2 = atomIndices[j];
+                    if (atom1 < NUM_PARTICLES && atom2 < NUM_PARTICLES && (ii1 != -1 || localData[j].ii != -1)) {
+                        const real3 pos2 = make_real3(localData[j].x, localData[j].y, localData[j].z);
+                        real3 delta = make_real3(pos2.x - posq1.x, pos2.y - posq1.y, pos2.z - posq1.z);
+                        APPLY_PERIODIC_TO_DELTA(delta)
+                        const real r2 = delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
+                        if (r2 < CUTOFF_SQUARED) {
+                            const real derivativeScale = evaluateDirectDerivative(r2, width1, localData[j].width);
+                            derivative += localData[j].q * derivativeScale;
+                            localData[j].derivative += charge1 * derivativeScale;
+                        }
+                    }
+                }
+
+                // Write results for "1" atoms.
+                if (ii1 != -1) {
+                    ATOMIC_ADD(&chargeDerivativesFixed[ii1], (mm_ulong) realToFixedPoint(derivative));
+                }
+            }
+        }
+
+        // Write results for "2" atoms.
+        for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
+            if (atomIndices[tgx] < PADDED_NUM_ATOMS) {
+                const int ii2 = localData[tgx].ii;
+                if (ii2 != -1) {
+                    ATOMIC_ADD(&chargeDerivativesFixed[ii2], (mm_ulong) realToFixedPoint(localData[tgx].derivative));
+                }
+            }
+        }
+        pos++;
+    }
+#endif
 }
 
 KERNEL void finishDerivatives(

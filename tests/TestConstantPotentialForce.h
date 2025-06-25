@@ -1261,29 +1261,17 @@ void platformInitialize();
 void runPlatformTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner);
 
 void runMethodDependentTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
-    printf("    testSmallSystems\n");
     testSmallSystems(method, usePreconditioner);
-    printf("    testNoConstraintWithoutElectrode\n");
     testNoConstraintWithoutElectrode(method, usePreconditioner);
-    printf("    testConstrainCharge\n");
     testConstrainCharge(method, usePreconditioner);
-    printf("    testUpdateParticleExceptionParameters\n");
     testUpdateParticleExceptionParameters(method, usePreconditioner);
-    printf("    testUpdateElectrodeParameters\n");
     testUpdateElectrodeParameters(method, usePreconditioner);
-    printf("    testUpdateChargeFieldParameters\n");
     testUpdateChargeFieldParameters(method, usePreconditioner);
-    printf("    testUpdateBox\n");
     testUpdateBox(method, usePreconditioner);
-    printf("    testUpdatePositions\n");
     testUpdatePositions(method, usePreconditioner);
-    printf("    testReferenceCharges(false)\n");
     testReferenceCharges(false, method, usePreconditioner); // External field
-    printf("    testReferenceCharges(true)\n");
     testReferenceCharges(true, method, usePreconditioner);  // Thomas-Fermi
-    printf("    testChargeUpdate\n");
     testChargeUpdate(method, usePreconditioner);
-    printf("    runPlatformTests\n");
     runPlatformTests(method, usePreconditioner);
 }
 
@@ -1292,34 +1280,21 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         platformInitialize();
 
-        printf("testCoulomb(false)\n");
         testCoulomb(false); // Non-periodic exceptions
-        printf("testCoulomb(true)\n");
         testCoulomb(true);  // Periodic exceptions
-        printf("testCoulombOverlap\n");
         testCoulombOverlap();
-        printf("testCoulombNonNeutral\n");
         testCoulombNonNeutral();
-        printf("testCoulombGaussian\n");
         testCoulombGaussian();
         
-        printf("testElectrodesDisjoint\n");
         testElectrodesDisjoint();
-        printf("testNoElectrodeExceptions\n");
         testNoElectrodeExceptions();
-        printf("testElectrodeMatrixNoMass\n");
         testElectrodeMatrixNoMass();
 
-        printf("testParallelPlateCapacitorDoubleCell\n");
         testParallelPlateCapacitorDoubleCell();
-        printf("testParallelPlateCapacitorFiniteField\n");
         testParallelPlateCapacitorFiniteField();
 
-        printf("runMethodDependentTests(Matrix)\n");
         runMethodDependentTests(ConstantPotentialForce::Matrix, false); // Matrix inversion (usePreconditioner ignored)
-        printf("runMethodDependentTests(CG, false)\n");
         runMethodDependentTests(ConstantPotentialForce::CG, false);     // Conjugate gradient (not preconditioned)
-        printf("runMethodDependentTests(CG, true)\n");
         runMethodDependentTests(ConstantPotentialForce::CG, true);      // Conjugate gradient (preconditioned)
     }
     catch(const exception& e) {

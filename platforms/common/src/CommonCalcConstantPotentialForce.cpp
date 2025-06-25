@@ -336,7 +336,7 @@ void CommonConstantPotentialMatrixSolver::ensureValid(CommonCalcConstantPotentia
         throw OpenMMException("Electrode matrix not positive definite");
     }
 
-    // Load all elements of the lower triangle and diagonal of the Cholesky'
+    // Load all elements of the lower triangle and diagonal of the Cholesky
     // decomposition into a buffer: (0, 0), (1, 0), (1, 1), (2, 0), (2, 1), ...
     TNT::Array2D<double> choleskyLower = choleskyInverse.getL();
     vector<double> hostCapacitance(capacitance.getSize());
@@ -362,11 +362,11 @@ void CommonConstantPotentialMatrixSolver::ensureValid(CommonCalcConstantPotentia
         TNT::Array1D<double> solution = choleskyInverse.solve(TNT::Array1D<double>(numElectrodeParticles, 1.0));
         vector<double> hostConstraintVector(static_cast<double*>(solution), static_cast<double*>(solution) + numElectrodeParticles);
 
-        float constraintScaleInv = 0.0;
+        double constraintScaleInv = 0.0;
         for (int ii = 0; ii < numElectrodeParticles; ii++) {
             constraintScaleInv += hostConstraintVector[ii];
         }
-        float constraintScale = 1.0 / constraintScaleInv;
+        double constraintScale = 1.0 / constraintScaleInv;
         for (int ii = 0; ii < numElectrodeParticles; ii++) {
             hostConstraintVector[ii] *= constraintScale;
         }
@@ -503,13 +503,14 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
         return;
     }
 
-    // Save the current charges, then evaluate the gradient with zero
-    // charges (-b) so that we can later compute Ap as (Ap - b) - (-b).
+    // Save the current charges, then evaluate the gradient with zero charges
+    // (-b) so that we can later compute Ap as (Ap - b) - (-b).
     kernel.electrodeCharges.copyTo(q);
     kernel.cc.clearBuffer(kernel.electrodeCharges);
     kernel.mustUpdateElectrodeCharges = true;
     kernel.doDerivatives();
 
+    // Prepare for conjugate gradient iterations.
     solveInitializeStep3Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
 
     // Perform conjugate gradient iterations.
@@ -520,6 +521,8 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
         kernel.mustUpdateElectrodeCharges = true;
         kernel.doDerivatives();
 
+        // If A qStep is small enough, stop to prevent, e.g., division by zero
+        // in the calculation of alpha, or too large step sizes.
         solveLoopStep1Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
         errorResult.download(hostErrorResult, true);
         if (hostErrorResult[0] <= errorTarget) {
@@ -527,8 +530,8 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
             break;
         }
 
-        // Update the gradient vector (but periodically recompute it instead
-        // of updating to reduce the accumulation of roundoff error).
+        // Update the gradient vector (but periodically recompute it instead of
+        // updating to reduce the accumulation of roundoff error).
         bool recomputeGradient = (iter != 0 && iter % 32 == 0);
         solveLoopStep2Kernel->setArg(6, (int) recomputeGradient);
         solveLoopStep3Kernel->setArg(3, (int) recomputeGradient);
@@ -539,6 +542,7 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
             kernel.doDerivatives();
         }
 
+        // Check for convergence.
         solveLoopStep3Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
         errorResult.download(hostErrorResult, true);
         if (hostErrorResult[0] <= errorTarget) {
@@ -546,6 +550,7 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
             break;
         }
 
+        // Update parameters for the next iteration.
         solveLoopStep4Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
     }
 
@@ -580,8 +585,8 @@ void CommonConstantPotentialCGSolver::ensureValid(CommonCalcConstantPotentialFor
 
     precondActivated = false;
     if (precondRequested) {
-        // If electrode self-energy contributions differ between electrodes,
-        // a preconditioner may help convergence; otherwise, it provides no
+        // If electrode self-energy contributions differ between electrodes, a
+        // preconditioner may help convergence; otherwise, it provides no
         // benefit and may slow convergence due to roundoff error.
         for (int ie = 1; ie < kernel.numElectrodes; ie++) {
             // Note hostElectrodeParams[1].w has the scale for electrode 0, etc.
@@ -648,8 +653,8 @@ void CommonConstantPotentialCGSolver::ensureValid(CommonCalcConstantPotentialFor
         }
 
         // The diagonal has a contribution from reciprocal space, Ewald
-        // self-interaction, Ewald neutralizing plasma, Gaussian self-interaction,
-        // and Thomas-Fermi contributions.
+        // self-interaction, Ewald neutralizing plasma, Gaussian
+        // self-interaction, and Thomas-Fermi contributions.
         double plasmaScale = CommonCalcConstantPotentialForceKernel::PLASMA_SCALE / (boxVectors[0][0] * boxVectors[1][1] * boxVectors[2][2] * kernel.ewaldAlpha * kernel.ewaldAlpha);
         vector<double> hostPrecondVector(numElectrodeParticles);
         double precondScaleInv = 0.0;
@@ -694,8 +699,8 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
     this->usePosqCharges = cc.requestPosqCharges();
 
     int forceIndex;
-    for (forceIndex = 0; forceIndex < system.getNumForces() && &system.getForce(forceIndex) != &force; ++forceIndex)
-        ;
+    for (forceIndex = 0; forceIndex < system.getNumForces() && &system.getForce(forceIndex) != &force; ++forceIndex) {
+    }
     string prefix = "constantPotential" + cc.intToString(forceIndex) + "_";
 
     // Get particle parameters.
@@ -1076,7 +1081,9 @@ void CommonCalcConstantPotentialForceKernel::getCharges(ContextImpl& context, ve
 
     ensureInitialized(context);
 
+    // We need to have a neighbor list to evaluate direct space derivatives.
     cc.getNonbondedUtilities().prepareInteractions(1 << forceGroup);
+
     cc.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     setKernelPeriodicBoxArgs(false, false);
 
@@ -1117,7 +1124,7 @@ void CommonCalcConstantPotentialForceKernel::ensureInitialized(ContextImpl& cont
     if (usePosqCharges) {
         defines["USE_POSQ_CHARGES"] = "1";
     }
-    if (cc.getIsCPU()) {
+    if (deviceIsCpu) {
         defines["DEVICE_IS_CPU"] = "1";
     }
     ComputeProgram program = cc.compileProgram(CommonKernelSources::constantPotential, defines);

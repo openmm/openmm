@@ -345,7 +345,7 @@ private:
     Vec3 boxVectors[3], externalField;
     double cutoff, ewaldAlpha, chargeTarget, cgErrorTol;
     int threadBlockSize, gridSizeX, gridSizeY, gridSizeZ;
-    bool usePmeQueue, deviceIsCpu, useFixedPointChargeSpreading, usePosqCharges, useChargeConstraint;
+    bool deviceIsCpu, useFixedPointChargeSpreading, usePosqCharges, useChargeConstraint;
     int forceGroup;
     static const int PmeOrder = 5;
     static const double SELF_ALPHA_SCALE, SELF_ETA_SCALE, SELF_TF_SCALE, PLASMA_SCALE;

@@ -18,6 +18,8 @@
         SYNC_THREADS; \
     }
 
+// Sum value from each thread (using temp).  Use real type variables (float on
+// single and mixed precision modes, double on double precision mode).
 DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
     REDUCE_BODY_1
     temp[thread] = temp[thread] + temp[thread + step];
@@ -27,6 +29,10 @@ DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
     return temp[0];
 }
 
+// We need more than single precision for accumulation regardless of the mode
+// selected, so use double if double precision is supported, and otherwise use
+// double-float arithmetic.  In the latter case, use float2 with .x storing the
+// "high" part and .y storing the "low" part of each double-float number.
 #ifdef SUPPORTS_DOUBLE_PRECISION
 
 #define ACCUM double
@@ -58,11 +64,14 @@ DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offse
 // For details of the compensated summation implemented, see Joldes et al.,
 // ACM Trans. Math. Softw. 2017, 44, 15res (DOI: 10.1145/3121432).
 
+// float + float -> float2, only valid if the floating-point exponent of a is
+// not less than that of b.
 DEVICE inline float2 compensatedAddKernel1(float a, float b) {
     float s = a + b;
     return make_float2(s, b - (s - a));
 }
 
+// float + float -> float2, valid for any inputs.
 DEVICE inline float2 compensatedAddKernel2(float a, float b) {
     float s = a + b;
     float c = s - b;
@@ -70,22 +79,27 @@ DEVICE inline float2 compensatedAddKernel2(float a, float b) {
     return make_float2(s, (a - c) + (b - d));
 }
 
+// float * float -> float2.
 DEVICE inline float2 compensatedMultiplyKernel(float a, float b) {
     float c = a * b;
     return make_float2(c, FMA(a, b, -c));
 }
 
+// float2 + float -> float.  Like compensatedAdd2, but only computes the high
+// part of the result.
 DEVICE inline float compensatedAdd1(float2 x, float y) {
     float2 s = compensatedAddKernel2(x.x, y);
     return s.x + (x.y + s.y);
 }
 
+// float2 + float -> float2, with a relative error of 2^-47.
 DEVICE inline float2 compensatedAdd2(float2 x, float y) {
     float2 s = compensatedAddKernel2(x.x, y);
     float v = x.y + s.y;
     return compensatedAddKernel1(s.x, v);
 }
 
+// float2 + float2 -> float2, with a relative error of 2^-46.
 DEVICE inline float2 compensatedAdd3(float2 x, float2 y) {
     float2 s = compensatedAddKernel2(x.x, y.x);
     float2 t = compensatedAddKernel2(x.y, y.y);
@@ -95,11 +109,13 @@ DEVICE inline float2 compensatedAdd3(float2 x, float2 y) {
     return compensatedAddKernel1(v.x, w);
 }
 
+// float2 * float -> float2, with a relative error of 2^-47.
 DEVICE inline float2 compensatedMultiply(float2 x, float y) {
     float c = x.x * y;
     return compensatedAddKernel1(c, FMA(x.x, y, -c) + x.y * y);
 }
 
+// Sum value from each thread (using temp) and return (sum + offset) * scale.
 DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offset, real scale) {
     REDUCE_BODY_1
     temp[thread] = compensatedAdd3(temp[thread], temp[thread + step]);
@@ -110,7 +126,6 @@ DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offse
 }
 
 #endif
-
 
 KERNEL void solveInitializeStep1(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT qLast
 #ifdef USE_CHARGE_CONSTRAINT
@@ -239,8 +254,8 @@ KERNEL void solveLoopStep1(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real*
         gradStep[ii] = chargeDerivatives[ii] - grad0[ii];
     }
 
-    // If A qStep is small enough, stop to prevent, e.g., division by
-    // zero in the calculation of alpha, or too large step sizes.
+    // If A qStep is small enough, stop to prevent, e.g., division by zero in
+    // the calculation of alpha, or too large step sizes.
     real error = 0;
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
         error += gradStep[ii] * gradStep[ii];
@@ -284,9 +299,9 @@ KERNEL void solveLoopStep2(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* 
     }
 
 #ifdef USE_CHARGE_CONSTRAINT
-    // Remove any accumulated drift from the charge vector.  This
-    // would be zero in exact arithmetic, but error can accumulate
-    // over time in finite precision.
+    // Remove any accumulated drift from the charge vector.  This would be zero
+    // in exact arithmetic, but error can accumulate over time in finite
+    // precision.
     ACCUM offsetAccum = ACCUM_ZERO;
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
         offsetAccum = ACCUM_ADD(offsetAccum, -q[ii]);
@@ -398,9 +413,9 @@ KERNEL void solveLoopStep4(GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT pro
     }
 
 #ifdef USE_CHARGE_CONSTRAINT
-    // Project out any deviation off of the constraint plane from
-    // the step vector.  This would be zero in exact arithmetic, but
-    // error can accumulate over time in finite precision.
+    // Project out any deviation off of the constraint plane from the step
+    // vector.  This would be zero in exact arithmetic, but error can accumulate
+    // over time in finite precision.
 
     ACCUM offsetAccum = ACCUM_ZERO;
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
