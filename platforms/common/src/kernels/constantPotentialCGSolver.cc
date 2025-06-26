@@ -133,6 +133,7 @@ KERNEL void solveInitializeStep1(GLOBAL real* RESTRICT electrodeCharges, GLOBAL 
 #endif
 ) {
     // This kernel expects to be executed in a single thread block.
+    if (LOCAL_ID == 0) printf("            solveInitializeStep1\n");
 
 #ifdef USE_CHARGE_CONSTRAINT
     LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
@@ -162,6 +163,7 @@ KERNEL void solveInitializeStep1(GLOBAL real* RESTRICT electrodeCharges, GLOBAL 
 
 KERNEL void solveInitializeStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad, GLOBAL real* RESTRICT errorResult) {
     // This kernel expects to be executed in a single thread block.
+    if (LOCAL_ID == 0) printf("            solveInitializeStep2\n");
 
     LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
     LOCAL volatile real temp[THREAD_BLOCK_SIZE];
@@ -203,6 +205,7 @@ KERNEL void solveInitializeStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL
 #endif
 ) {
     // This kernel expects to be executed in a single thread block.
+    if (LOCAL_ID == 0) printf("            solveInitializeStep3\n");
 
 #if defined(PRECOND_REQUESTED) && defined(USE_CHARGE_CONSTRAINT)
     LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
@@ -247,6 +250,7 @@ KERNEL void solveInitializeStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL
 
 KERNEL void solveLoopStep1(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT gradStep, GLOBAL real* RESTRICT grad0, GLOBAL real* RESTRICT errorResult) {
     // This kernel expects to be executed in a single thread block.
+    if (LOCAL_ID == 0) printf("            solveLoopStep1\n");
 
     LOCAL volatile real temp[THREAD_BLOCK_SIZE];
 
@@ -292,6 +296,7 @@ KERNEL void solveLoopStep2(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* 
         alpha -= qStep[ii] * grad[ii];
     }
     alpha = reduceReal(alpha, temp) * paramScale;
+    if (LOCAL_ID == 0) printf("            solveLoopStep2: paramScale = %.6g, alpha = %.6g\n", paramScale, alpha);
 
     // Update the charge vector.
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
@@ -326,6 +331,7 @@ KERNEL void solveLoopStep2(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* 
 
 KERNEL void solveLoopStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad, int recomputeGradient, GLOBAL real* RESTRICT errorResult) {
     // This kernel expects to be executed in a single thread block.
+    if (LOCAL_ID == 0) printf("            solveLoopStep3\n");
 
     LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
     LOCAL volatile real temp[THREAD_BLOCK_SIZE];
@@ -406,6 +412,7 @@ KERNEL void solveLoopStep4(GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT pro
         beta += precGrad[ii] * gradStep[ii];
     }
     beta = reduceReal(beta, temp) * paramScale[0];
+    if (LOCAL_ID == 0) printf("            solveLoopStep4: beta = %.6g\n", beta);
 
     // Update the step vector.
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
