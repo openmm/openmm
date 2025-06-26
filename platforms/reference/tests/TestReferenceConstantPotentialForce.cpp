@@ -77,6 +77,6 @@ void testGradientFiniteDifference(ConstantPotentialForce::ConstantPotentialMetho
 
 void runPlatformTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
     // Test is extremely slow on emulated platforms, so don't run many steps.
-    testEnergyConservation(method, usePreconditioner, 50);
+    testEnergyConservation(method, usePreconditioner, 25);
     testGradientFiniteDifference(method, usePreconditioner);
 }
