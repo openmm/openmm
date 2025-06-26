@@ -3,14 +3,14 @@
     SYNC_THREADS; \
     temp[thread] = value; \
     SYNC_THREADS; \
-    for (int step = 1; step < 32; step *= 2) { \
+    for (int step = 1; step < 16; step *= 2) { \
         if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
 
 #define REDUCE_BODY_2 \
         } \
         SYNC_WARPS; \
     } \
-    for (int step = 32; step < LOCAL_SIZE; step *= 2) { \
+    for (int step = 16; step < LOCAL_SIZE; step *= 2) { \
         if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
 
 #define REDUCE_BODY_3 \
@@ -21,7 +21,6 @@
 // Sum value from each thread (using temp).  Use real type variables (float on
 // single and mixed precision modes, double on double precision mode).
 
-/*
 DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
     REDUCE_BODY_1
     temp[thread] = temp[thread] + temp[thread + step];
@@ -29,30 +28,6 @@ DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
     temp[thread] = temp[thread] + temp[thread + step];
     REDUCE_BODY_3
     if (LOCAL_ID == 0) printf("reduceReal result: %24.16e\n", temp[0]);
-    return temp[0];
-}
-*/
-
-DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
-    const int thread = LOCAL_ID;
-    SYNC_THREADS;
-    temp[thread] = value;
-    // printf("reduceReal[%i]: temp[%i] = %24.16e\n", thread, thread, value);
-    SYNC_THREADS;
-    for (int step = 1; step < 16; step *= 2) {
-        if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            // printf("reduceReal[%i]: temp[%i] = %24.16e + %24.16e (%i)\n", thread, thread, temp[thread], temp[thread + step], thread + step);
-            temp[thread] = temp[thread] + temp[thread + step];
-        }
-        SYNC_WARPS;
-    }
-    for (int step = 16; step < LOCAL_SIZE; step *= 2) {
-        if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            // printf("reduceReal[%i]: temp[%i] = %24.16e + %24.16e (%i)\n", thread, thread, temp[thread], temp[thread + step], thread + step);
-            temp[thread] = temp[thread] + temp[thread + step];
-        }
-        SYNC_THREADS;
-    }
     return temp[0];
 }
 
