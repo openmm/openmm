@@ -499,7 +499,6 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
     // Check for convergence at the initial guess charges.
     solveInitializeStep2Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
     errorResult.download(hostErrorResult, true);
-    printf("CommonConstantPotentialCGSolver::solveImpl() initial error: %24.16e (target %24.16e)\n\n", hostErrorResult[0], errorTarget);
     if (hostErrorResult[0] <= errorTarget) {
         return;
     }
@@ -526,7 +525,6 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
         // in the calculation of alpha, or too large step sizes.
         solveLoopStep1Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
         errorResult.download(hostErrorResult, true);
-        printf("CommonConstantPotentialCGSolver::solveImpl() iteration %i step error: %24.16e (target %24.16e)\n\n", iter, hostErrorResult[0], errorTarget);
         if (hostErrorResult[0] <= errorTarget) {
             converged = true;
             break;
@@ -547,7 +545,6 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
         // Check for convergence.
         solveLoopStep3Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
         errorResult.download(hostErrorResult, true);
-        printf("CommonConstantPotentialCGSolver::solveImpl() iteration %i gradient error: %24.16e (target %24.16e)\n\n", iter, hostErrorResult[0], errorTarget);
         if (hostErrorResult[0] <= errorTarget) {
             converged = true;
             break;
@@ -1112,23 +1109,6 @@ void CommonCalcConstantPotentialForceKernel::ensureInitialized(ContextImpl& cont
     
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
 
-    printf("CommonCalcConstantPotentialForceKernel::ensureInitialized():\n");
-    printf("MaxThreadBlockSize         = %i\n", cc.getMaxThreadBlockSize());
-    printf("NumAtomBlocks              = %i\n", cc.getNumAtomBlocks());
-    printf("NumAtoms                   = %i\n", cc.getNumAtoms());
-    printf("NumThreadBlocks            = %i\n", cc.getNumThreadBlocks());
-    printf("PaddedNumAtoms             = %i\n", cc.getPaddedNumAtoms());
-    printf("SIMDWidth                  = %i\n", cc.getSIMDWidth());
-    printf("Supports64BitGlobalAtomics = %i\n", (int) cc.getSupports64BitGlobalAtomics());
-    printf("SupportsDoublePrecision    = %i\n", (int) cc.getSupportsDoublePrecision());
-    printf("UseDoublePrecision         = %i\n", (int) cc.getUseDoublePrecision());
-    printf("UseMixedPrecision          = %i\n", (int) cc.getUseMixedPrecision());
-    printf("ForceThreadBlockSize       = %i\n", nb.getForceThreadBlockSize());
-    printf("NumForceBuffers            = %i\n", nb.getNumForceBuffers());
-    printf("NumForceThreadBlocks       = %i\n", nb.getNumForceThreadBlocks());
-    printf("NumTiles                   = %i\n", nb.getNumTiles());
-    printf("\n");
-
     map<string, string> defines;
     defines["CUTOFF"] = cc.doubleToString(cutoff);
     defines["CUTOFF_SQUARED"] = cc.doubleToString(cutoff * cutoff);
@@ -1295,17 +1275,6 @@ void CommonCalcConstantPotentialForceKernel::doDerivatives() {
         finishDerivativesKernel->setArg(10, mm_float4((float) externalField[0], (float) externalField[1], (float) externalField[2], 0));
     }
     finishDerivativesKernel->execute(numElectrodeParticles);
-
-    printf("CommonCalcConstantPotentialForceKernel::doDerivatives():\n");
-    vector<double> debugCharges(numElectrodeParticles), debugDerivatives(numElectrodeParticles);
-    vector<int64_t> debugDerivativesFixed(numElectrodeParticles);
-    electrodeCharges.download(debugCharges, true);
-    chargeDerivatives.download(debugDerivatives, true);
-    chargeDerivativesFixed.download(debugDerivativesFixed);
-    for (int ii = 0; ii < numElectrodeParticles; ii++) {
-        printf("%12i %24.16e %24.16e %24lli\n", ii, debugCharges[ii], debugDerivatives[ii], debugDerivativesFixed[ii]);
-    }
-    printf("\n");
 }
 
 void CommonCalcConstantPotentialForceKernel::pmeSetup() {

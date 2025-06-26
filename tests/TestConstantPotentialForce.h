@@ -877,9 +877,8 @@ void testParallelPlateCapacitorDoubleCell() {
         vector<Vec3> positions;
         set<int> electrode1, electrode2;
         for (int iz = 0; iz < 4; iz++) {
-            // TODO: temporary, for CI testing
-            for (int iy = 0; iy < 3; iy++) {
-                for (int ix = 0; ix < 3; ix++) {
+            for (int iy = 0; iy < 12; iy++) {
+                for (int ix = 0; ix < 8; ix++) {
                     electrode1.insert(force->getNumParticles());
                     system.addParticle(0);
                     force->addParticle(0);
@@ -913,9 +912,6 @@ void testParallelPlateCapacitorDoubleCell() {
         for (int ii : electrode2) {
             q2 += charges[ii];
         }
-
-        // TODO: remove this!  For CI testing, only do once!
-        return;
 
         // Charge on each electrode is doubled since we are using a double-cell.
         // Use a looser tolerance since the analytical formula is for uniform
@@ -1283,10 +1279,6 @@ int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
         platformInitialize();
-
-        // TODO: temporary attempt to debug test via CI!
-        testParallelPlateCapacitorDoubleCell();
-        return 0;
 
         testCoulomb(false); // Non-periodic exceptions
         testCoulomb(true);  // Periodic exceptions
