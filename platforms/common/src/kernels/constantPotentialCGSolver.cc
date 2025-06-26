@@ -37,18 +37,18 @@ DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
     const int thread = LOCAL_ID;
     SYNC_THREADS;
     temp[thread] = value;
-    printf("reduceReal[%i]: temp[%i] = %24.16e\n", thread, thread, value);
+    // printf("reduceReal[%i]: temp[%i] = %24.16e\n", thread, thread, value);
     SYNC_THREADS;
-    for (int step = 1; step < 32; step *= 2) {
+    for (int step = 1; step < 16; step *= 2) {
         if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            printf("reduceReal[%i]: temp[%i] = %24.16e + %24.16e (%i)\n", thread, thread, temp[thread], temp[thread + step], thread + step);
+            // printf("reduceReal[%i]: temp[%i] = %24.16e + %24.16e (%i)\n", thread, thread, temp[thread], temp[thread + step], thread + step);
             temp[thread] = temp[thread] + temp[thread + step];
         }
         SYNC_WARPS;
     }
-    for (int step = 32; step < LOCAL_SIZE; step *= 2) {
+    for (int step = 16; step < LOCAL_SIZE; step *= 2) {
         if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            printf("reduceReal[%i]: temp[%i] = %24.16e + %24.16e (%i)\n", thread, thread, temp[thread], temp[thread + step], thread + step);
+            // printf("reduceReal[%i]: temp[%i] = %24.16e + %24.16e (%i)\n", thread, thread, temp[thread], temp[thread + step], thread + step);
             temp[thread] = temp[thread] + temp[thread + step];
         }
         SYNC_THREADS;
