@@ -39,9 +39,15 @@ DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
 #define ACCUM_ZERO 0.0
 
 // Perform accum = accum + real.
-#define ACCUM_ADD(x, y) ((x) + (y))
+#define ACCUM_ADD_221(x, y) ((x) + (ACCUM) (y))
 // Perform real = real + accum.
-#define ACCUM_APPLY(x, y) ((real) ((x) + (y)))
+#define ACCUM_ADD_112(x, y) ((real) ((ACCUM) (x) + (y)))
+// Perform real = accum * real.
+#define ACCUM_MUL_121(x, y) ((real) ((x) * (ACCUM) (y)))
+// Perform accum = (accum * real) + real.
+#define ACCUM_MUL_ADD_2211(x, y, z) ((ACCUM) (x) + ((y) * (ACCUM) (z)))
+// Perform real = (real + accum) * accum.
+#define ACCUM_ADD_MUL_1122(x, y, z) ((real) (((ACCUM) (x) + (y)) * (z)))
 
 // Sum value from each thread (using temp) and return (sum + offset) * scale.
 DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offset, real scale) {
@@ -58,8 +64,11 @@ DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offse
 #define ACCUM float2
 #define ACCUM_ZERO make_float2(0.0f, 0.0f)
 
-#define ACCUM_ADD(x, y) compensatedAdd2(x, y)
-#define ACCUM_APPLY(x, y) compensatedAdd1(y, x)
+#define ACCUM_ADD_221(x, y) compensatedAdd2(x, y)
+#define ACCUM_ADD_112(x, y) compensatedAdd1(y, x)
+#define ACCUM_MUL_121(x, y) compensatedMultiply1(x, y)
+#define ACCUM_MUL_ADD_2212(x, y, z) compensatedAdd3(compensatedMultiply2(x, y), z)
+#define ACCUM_ADD_MUL_1122(x, y, z) compensatedMultiply3(compensatedAdd2(y, x), z)
 
 // For details of the compensated summation implemented, see Joldes et al.,
 // ACM Trans. Math. Softw. 2017, 44, 15res (DOI: 10.1145/3121432).
@@ -109,10 +118,23 @@ DEVICE inline float2 compensatedAdd3(float2 x, float2 y) {
     return compensatedAddKernel1(v.x, w);
 }
 
+// float2 * float -> float.  Like compensatedMultiply2, but only computes the
+// high part of the result.
+DEVICE inline float compensatedMultiply1(float2 x, float y) {
+    float c = x.x * y;
+    return c + (FMA(x.x, y, -c) + x.y * y);
+}
+
 // float2 * float -> float2, with a relative error of 2^-47.
-DEVICE inline float2 compensatedMultiply(float2 x, float y) {
+DEVICE inline float2 compensatedMultiply2(float2 x, float y) {
     float c = x.x * y;
     return compensatedAddKernel1(c, FMA(x.x, y, -c) + x.y * y);
+}
+
+// float2 * float2 -> float.
+DEVICE inline float compensatedMultiply3(float2 x, float2 y) {
+    float2 c = compensatedMultiplyKernel(x.x, y.x);
+    return c.x + (c.y + FMA(x.y, y.x, FMA(x.x, y.y, x.y * y.y)));
 }
 
 // Sum value from each thread (using temp) and return (sum + offset) * scale.
@@ -122,7 +144,7 @@ DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offse
     REDUCE_BODY_2
     temp[thread] = compensatedAdd3(temp[thread], temp[thread + step]);
     REDUCE_BODY_3
-    return compensatedMultiply(compensatedAdd2(temp[0], offset), scale);
+    return compensatedMultiply2(compensatedAdd2(temp[0], offset), scale);
 }
 
 #endif
@@ -152,11 +174,11 @@ KERNEL void solveInitializeStep1(GLOBAL real* RESTRICT electrodeCharges, GLOBAL 
     // Ensure that initial guess charges satisfy the constraint.
     ACCUM offsetAccum = ACCUM_ZERO;
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        offsetAccum = ACCUM_ADD(offsetAccum, -electrodeCharges[ii]);
+        offsetAccum = ACCUM_ADD_221(offsetAccum, -electrodeCharges[ii]);
     }
     const ACCUM offset = reduceAccum(offsetAccum, tempAccum, chargeTarget, 1 / (real) NUM_ELECTRODE_PARTICLES);
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        electrodeCharges[ii] = ACCUM_APPLY(electrodeCharges[ii], offset);
+        electrodeCharges[ii] = ACCUM_ADD_112(electrodeCharges[ii], offset);
     }
 #endif
 }
@@ -176,11 +198,11 @@ KERNEL void solveInitializeStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL
     // Project the initial gradient without preconditioning.
     ACCUM offsetAccum = ACCUM_ZERO;
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        offsetAccum = ACCUM_ADD(offsetAccum, grad[ii]);
+        offsetAccum = ACCUM_ADD_221(offsetAccum, grad[ii]);
     }
     const ACCUM offset = reduceAccum(offsetAccum, tempAccum, 0, -1 / (real) NUM_ELECTRODE_PARTICLES);
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        projGrad[ii] = ACCUM_APPLY(grad[ii], offset);
+        projGrad[ii] = ACCUM_ADD_112(grad[ii], offset);
     }
 #else
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
@@ -201,7 +223,7 @@ KERNEL void solveInitializeStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL
 
 KERNEL void solveInitializeStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad, GLOBAL real* RESTRICT precGrad, GLOBAL real* RESTRICT qStep, GLOBAL real* RESTRICT grad0
 #ifdef PRECOND_REQUESTED
-    , GLOBAL real* RESTRICT precondVector, int precondActivated
+    , GLOBAL ACCUM* RESTRICT precondVector, int precondActivated
 #endif
 ) {
     // This kernel expects to be executed in a single thread block.
@@ -221,15 +243,15 @@ KERNEL void solveInitializeStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL
 #ifdef USE_CHARGE_CONSTRAINT
         ACCUM offsetAccum = ACCUM_ZERO;
         for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            offsetAccum = ACCUM_ADD(offsetAccum, precondVector[ii] * grad[ii]);
+            offsetAccum = ACCUM_MUL_ADD_2212(precondVector[ii], grad[ii], offsetAccum);
         }
         const ACCUM offset = reduceAccum(offsetAccum, tempAccum, 0, -1);
         for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            precGrad[ii] = precondVector[ii] * ACCUM_APPLY(grad[ii], offset);
+            precGrad[ii] = ACCUM_ADD_MUL_1122(grad[ii], offset, precondVector[ii]);
         }
 #else
         for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            precGrad[ii] = precondVector[ii] * grad[ii];
+            precGrad[ii] = ACCUM_MUL_121(precondVector[ii], grad[ii]);
         }
 #endif
     }
@@ -309,11 +331,11 @@ KERNEL void solveLoopStep2(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* 
     // precision.
     ACCUM offsetAccum = ACCUM_ZERO;
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        offsetAccum = ACCUM_ADD(offsetAccum, -q[ii]);
+        offsetAccum = ACCUM_ADD_221(offsetAccum, -q[ii]);
     }
     const ACCUM offset = reduceAccum(offsetAccum, tempAccum, chargeTarget, 1 / (real) NUM_ELECTRODE_PARTICLES);
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        q[ii] = ACCUM_APPLY(q[ii], offset);
+        q[ii] = ACCUM_ADD_112(q[ii], offset);
     }
 #endif
 
@@ -346,11 +368,11 @@ KERNEL void solveLoopStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real*
 #ifdef USE_CHARGE_CONSTRAINT
     ACCUM offsetAccum = ACCUM_ZERO;
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        offsetAccum = ACCUM_ADD(offsetAccum, grad[ii]);
+        offsetAccum = ACCUM_ADD_221(offsetAccum, grad[ii]);
     }
     const ACCUM offset = reduceAccum(offsetAccum, tempAccum, 0, -1 / (real) NUM_ELECTRODE_PARTICLES);
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        projGrad[ii] = ACCUM_APPLY(grad[ii], offset);
+        projGrad[ii] = ACCUM_ADD_112(grad[ii], offset);
     }
 #else
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
@@ -371,7 +393,7 @@ KERNEL void solveLoopStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real*
 
 KERNEL void solveLoopStep4(GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad, GLOBAL real* RESTRICT precGrad, GLOBAL real* RESTRICT qStep, GLOBAL real* RESTRICT gradStep, GLOBAL real* RESTRICT paramScale
 #ifdef PRECOND_REQUESTED
-    , GLOBAL real* RESTRICT precondVector, int precondActivated
+    , GLOBAL ACCUM* RESTRICT precondVector, int precondActivated
 #endif
 ) {
     // This kernel expects to be executed in a single thread block.
@@ -385,15 +407,15 @@ KERNEL void solveLoopStep4(GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT pro
 #ifdef USE_CHARGE_CONSTRAINT
         ACCUM offsetAccum = ACCUM_ZERO;
         for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            offsetAccum = ACCUM_ADD(offsetAccum, precondVector[ii] * grad[ii]);
+            offsetAccum = ACCUM_MUL_ADD_2212(precondVector[ii], grad[ii], offsetAccum);
         }
         const ACCUM offset = reduceAccum(offsetAccum, tempAccum, 0, -1);
         for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            precGrad[ii] = precondVector[ii] * ACCUM_APPLY(grad[ii], offset);
+            precGrad[ii] = ACCUM_ADD_MUL_1122(grad[ii], offset, precondVector[ii]);
         }
 #else
         for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            precGrad[ii] = precondVector[ii] * grad[ii];
+            precGrad[ii] = ACCUM_MUL_121(precondVector[ii], grad[ii]);
         }
 #endif
     }
@@ -426,11 +448,11 @@ KERNEL void solveLoopStep4(GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT pro
 
     ACCUM offsetAccum = ACCUM_ZERO;
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        offsetAccum = ACCUM_ADD(offsetAccum, qStep[ii]);
+        offsetAccum = ACCUM_ADD_221(offsetAccum, qStep[ii]);
     }
     const ACCUM offset = reduceAccum(offsetAccum, tempAccum, 0, -1 / (real) NUM_ELECTRODE_PARTICLES);
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        qStep[ii] = ACCUM_APPLY(qStep[ii], offset);
+        qStep[ii] = ACCUM_ADD_112(qStep[ii], offset);
     }
 #endif
 }

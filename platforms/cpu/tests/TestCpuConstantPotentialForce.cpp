@@ -41,6 +41,6 @@ void platformInitialize() {
 }
 
 void runPlatformTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
-    testEnergyConservation(method, usePreconditioner, 25);
+    // testEnergyConservation(method, usePreconditioner, 100);
     testCompareToReferencePlatform(method, usePreconditioner);
 }

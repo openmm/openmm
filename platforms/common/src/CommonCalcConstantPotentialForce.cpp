@@ -389,7 +389,9 @@ CommonConstantPotentialCGSolver::CommonConstantPotentialCGSolver(ComputeContext&
     paramScale.initialize(cc, 1, elementSize, "paramScale");
     errorResult.initialize(cc, 1, elementSize, "errorResult");
     if (precondRequested) {
-        precondVector.initialize(cc, numElectrodeParticles, elementSize, "precondVector");
+        // If double precision is supported, this will hold double values;
+        // otherwise, it will hold mm_float2 values.
+        precondVector.initialize(cc, numElectrodeParticles, sizeof(double), "precondVector");
     }
 
     cc.clearBuffer(qLast);
@@ -669,7 +671,17 @@ void CommonConstantPotentialCGSolver::ensureValid(CommonCalcConstantPotentialFor
         for (int ii = 0; ii < numElectrodeParticles; ii++) {
             hostPrecondVector[ii] *= precondScale;
         }
-        precondVector.upload(hostPrecondVector, true);
+        if (kernel.cc.getSupportsDoublePrecision()) {
+            precondVector.upload(hostPrecondVector);
+        } else {
+            vector<mm_float2> hostPrecondVectorSplit(numElectrodeParticles);
+            for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                float const x = (float) hostPrecondVector[ii];
+                hostPrecondVectorSplit[ii].x = x;
+                hostPrecondVectorSplit[ii].y = (float) (hostPrecondVector[ii] - (double) x);
+            }
+            precondVector.upload(hostPrecondVectorSplit);
+        }
     }
 }
 
