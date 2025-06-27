@@ -44,8 +44,8 @@ DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
 #define ACCUM_ADD_112(x, y) ((real) ((ACCUM) (x) + (y)))
 // Perform real = accum * real.
 #define ACCUM_MUL_121(x, y) ((real) ((x) * (ACCUM) (y)))
-// Perform accum = (accum * real) + real.
-#define ACCUM_MUL_ADD_2211(x, y, z) ((ACCUM) (x) + ((y) * (ACCUM) (z)))
+// Perform accum = (accum * real) + accum.
+#define ACCUM_MUL_ADD_2212(x, y, z) (((x) * (ACCUM) (y)) + (z))
 // Perform real = (real + accum) * accum.
 #define ACCUM_ADD_MUL_1122(x, y, z) ((real) (((ACCUM) (x) + (y)) * (z)))
 
