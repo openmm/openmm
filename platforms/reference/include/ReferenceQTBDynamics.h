@@ -33,17 +33,17 @@
 namespace OpenMM {
 
 class OPENMM_EXPORT ReferenceQTBDynamics : public ReferenceDynamics {
+protected:
+    double friction;
+    int segmentLength, stepIndex;
+    std::vector<OpenMM::Vec3> xPrime, oldx, randomForce, segmentVelocity;
+    std::vector<double> inverseMasses, typeAdaptationRate, typeMass;
+    std::vector<double> noise, theta, thetad, cutoffFunction;
+    std::vector<int> particleType;
+    std::vector<std::vector<int> > typeParticles;
+    std::vector<std::vector<double> > adaptedFriction;
 
-   protected:
-
-      double friction, defaultAdaptationRate;
-      int segmentLength, stepIndex;
-      std::vector<OpenMM::Vec3> xPrime, oldx, randomForce;
-      std::vector<double> inverseMasses, typeAdaptationRate;
-      std::vector<float> noise, theta;
-      std::vector<std::vector<int> > typeParticles;
-      
-   public:
+public:
     /**
      * Constructor
      * 
@@ -87,10 +87,19 @@ class OPENMM_EXPORT ReferenceQTBDynamics : public ReferenceDynamics {
     virtual void updatePart3(OpenMM::ContextImpl& context, int numParticles, std::vector<OpenMM::Vec3>& atomCoordinates,
                              std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& xPrime);
 
+private:
     /**
      * Generate noise for the next segment.
      */
     void generateNoise(int numParticles, std::vector<double>& masses);
+    /**
+     * Update the friction rates used for generating noise.
+     */
+    void adaptFriction();
+    /**
+     * Compute the deconvolved version of theta that compensates of broadening of peaks in the spectrum.
+     */
+    void deconvolveTheta();
 };
 
 } // namespace OpenMM
