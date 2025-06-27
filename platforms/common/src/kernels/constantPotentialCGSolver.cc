@@ -39,15 +39,15 @@ DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
 #define ACCUM_ZERO 0.0
 
 // Perform accum = accum + real.
-#define ACCUM_ADD_221(x, y) ((x) + (ACCUM) (y))
+#define ACCUM_ADD(x, y) ((x) + (ACCUM) (y))
 // Perform real = real + accum.
-#define ACCUM_ADD_112(x, y) ((real) ((ACCUM) (x) + (y)))
+#define ACCUM_APPLY(x, y) ((real) ((ACCUM) (x) + (y)))
 // Perform real = accum * real.
-#define ACCUM_MUL_121(x, y) ((real) ((x) * (ACCUM) (y)))
+#define ACCUM_MUL(x, y) ((real) ((x) * (ACCUM) (y)))
 // Perform accum = (accum * real) + accum.
-#define ACCUM_MUL_ADD_2212(x, y, z) (((x) * (ACCUM) (y)) + (z))
+#define ACCUM_MUL_ADD(x, y, z) (((x) * (ACCUM) (y)) + (z))
 // Perform real = (real + accum) * accum.
-#define ACCUM_ADD_MUL_1122(x, y, z) ((real) (((ACCUM) (x) + (y)) * (z)))
+#define ACCUM_ADD_MUL(x, y, z) ((real) (((ACCUM) (x) + (y)) * (z)))
 
 // Sum value from each thread (using temp) and return (sum + offset) * scale.
 DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offset, real scale) {
@@ -64,14 +64,14 @@ DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offse
 #define ACCUM float2
 #define ACCUM_ZERO make_float2(0.0f, 0.0f)
 
-#define ACCUM_ADD_221(x, y) compensatedAdd2(x, y)
-#define ACCUM_ADD_112(x, y) compensatedAdd1(y, x)
-#define ACCUM_MUL_121(x, y) compensatedMultiply1(x, y)
-#define ACCUM_MUL_ADD_2212(x, y, z) compensatedAdd3(compensatedMultiply2(x, y), z)
-#define ACCUM_ADD_MUL_1122(x, y, z) compensatedMultiply3(compensatedAdd2(y, x), z)
+#define ACCUM_ADD(x, y) compensatedAdd2(x, y)
+#define ACCUM_APPLY(x, y) compensatedAdd1(y, x)
+#define ACCUM_MUL(x, y) compensatedMultiply1(x, y)
+#define ACCUM_MUL_ADD(x, y, z) compensatedAdd3(compensatedMultiply2(x, y), z)
+#define ACCUM_ADD_MUL(x, y, z) compensatedMultiply3(compensatedAdd2(y, x), z)
 
-// For details of the compensated summation implemented, see Joldes et al.,
-// ACM Trans. Math. Softw. 2017, 44, 15res (DOI: 10.1145/3121432).
+// For details of the compensated addition and multiplication implemented, see
+// Joldes et al., ACM Trans. Math. Softw. 2017, 44, 15res (DOI: 10.1145/3121432).
 
 // float + float -> float2, only valid if the floating-point exponent of a is
 // not less than that of b.
@@ -155,7 +155,6 @@ KERNEL void solveInitializeStep1(GLOBAL real* RESTRICT electrodeCharges, GLOBAL 
 #endif
 ) {
     // This kernel expects to be executed in a single thread block.
-    if (LOCAL_ID == 0) printf("            solveInitializeStep1\n");
 
 #ifdef USE_CHARGE_CONSTRAINT
     LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
@@ -174,18 +173,17 @@ KERNEL void solveInitializeStep1(GLOBAL real* RESTRICT electrodeCharges, GLOBAL 
     // Ensure that initial guess charges satisfy the constraint.
     ACCUM offsetAccum = ACCUM_ZERO;
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        offsetAccum = ACCUM_ADD_221(offsetAccum, -electrodeCharges[ii]);
+        offsetAccum = ACCUM_ADD(offsetAccum, -electrodeCharges[ii]);
     }
     const ACCUM offset = reduceAccum(offsetAccum, tempAccum, chargeTarget, 1 / (real) NUM_ELECTRODE_PARTICLES);
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        electrodeCharges[ii] = ACCUM_ADD_112(electrodeCharges[ii], offset);
+        electrodeCharges[ii] = ACCUM_APPLY(electrodeCharges[ii], offset);
     }
 #endif
 }
 
 KERNEL void solveInitializeStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad, GLOBAL real* RESTRICT errorResult) {
     // This kernel expects to be executed in a single thread block.
-    if (LOCAL_ID == 0) printf("            solveInitializeStep2\n");
 
     LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
     LOCAL volatile real temp[THREAD_BLOCK_SIZE];
@@ -198,11 +196,11 @@ KERNEL void solveInitializeStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL
     // Project the initial gradient without preconditioning.
     ACCUM offsetAccum = ACCUM_ZERO;
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        offsetAccum = ACCUM_ADD_221(offsetAccum, grad[ii]);
+        offsetAccum = ACCUM_ADD(offsetAccum, grad[ii]);
     }
     const ACCUM offset = reduceAccum(offsetAccum, tempAccum, 0, -1 / (real) NUM_ELECTRODE_PARTICLES);
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        projGrad[ii] = ACCUM_ADD_112(grad[ii], offset);
+        projGrad[ii] = ACCUM_APPLY(grad[ii], offset);
     }
 #else
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
@@ -227,7 +225,6 @@ KERNEL void solveInitializeStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL
 #endif
 ) {
     // This kernel expects to be executed in a single thread block.
-    if (LOCAL_ID == 0) printf("            solveInitializeStep3\n");
 
 #if defined(PRECOND_REQUESTED) && defined(USE_CHARGE_CONSTRAINT)
     LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
@@ -243,15 +240,15 @@ KERNEL void solveInitializeStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL
 #ifdef USE_CHARGE_CONSTRAINT
         ACCUM offsetAccum = ACCUM_ZERO;
         for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            offsetAccum = ACCUM_MUL_ADD_2212(precondVector[ii], grad[ii], offsetAccum);
+            offsetAccum = ACCUM_MUL_ADD(precondVector[ii], grad[ii], offsetAccum);
         }
         const ACCUM offset = reduceAccum(offsetAccum, tempAccum, 0, -1);
         for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            precGrad[ii] = ACCUM_ADD_MUL_1122(grad[ii], offset, precondVector[ii]);
+            precGrad[ii] = ACCUM_ADD_MUL(grad[ii], offset, precondVector[ii]);
         }
 #else
         for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            precGrad[ii] = ACCUM_MUL_121(precondVector[ii], grad[ii]);
+            precGrad[ii] = ACCUM_MUL(precondVector[ii], grad[ii]);
         }
 #endif
     }
@@ -272,7 +269,6 @@ KERNEL void solveInitializeStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL
 
 KERNEL void solveLoopStep1(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT gradStep, GLOBAL real* RESTRICT grad0, GLOBAL real* RESTRICT errorResult) {
     // This kernel expects to be executed in a single thread block.
-    if (LOCAL_ID == 0) printf("            solveLoopStep1\n");
 
     LOCAL volatile real temp[THREAD_BLOCK_SIZE];
 
@@ -318,7 +314,6 @@ KERNEL void solveLoopStep2(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* 
         alpha -= qStep[ii] * grad[ii];
     }
     alpha = reduceReal(alpha, temp) * paramScale;
-    if (LOCAL_ID == 0) printf("            solveLoopStep2: paramScale = %.6g, alpha = %.6g\n", paramScale, alpha);
 
     // Update the charge vector.
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
@@ -331,11 +326,11 @@ KERNEL void solveLoopStep2(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* 
     // precision.
     ACCUM offsetAccum = ACCUM_ZERO;
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        offsetAccum = ACCUM_ADD_221(offsetAccum, -q[ii]);
+        offsetAccum = ACCUM_ADD(offsetAccum, -q[ii]);
     }
     const ACCUM offset = reduceAccum(offsetAccum, tempAccum, chargeTarget, 1 / (real) NUM_ELECTRODE_PARTICLES);
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        q[ii] = ACCUM_ADD_112(q[ii], offset);
+        q[ii] = ACCUM_APPLY(q[ii], offset);
     }
 #endif
 
@@ -353,7 +348,6 @@ KERNEL void solveLoopStep2(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* 
 
 KERNEL void solveLoopStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad, int recomputeGradient, GLOBAL real* RESTRICT errorResult) {
     // This kernel expects to be executed in a single thread block.
-    if (LOCAL_ID == 0) printf("            solveLoopStep3\n");
 
     LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
     LOCAL volatile real temp[THREAD_BLOCK_SIZE];
@@ -368,11 +362,11 @@ KERNEL void solveLoopStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real*
 #ifdef USE_CHARGE_CONSTRAINT
     ACCUM offsetAccum = ACCUM_ZERO;
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        offsetAccum = ACCUM_ADD_221(offsetAccum, grad[ii]);
+        offsetAccum = ACCUM_ADD(offsetAccum, grad[ii]);
     }
     const ACCUM offset = reduceAccum(offsetAccum, tempAccum, 0, -1 / (real) NUM_ELECTRODE_PARTICLES);
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        projGrad[ii] = ACCUM_ADD_112(grad[ii], offset);
+        projGrad[ii] = ACCUM_APPLY(grad[ii], offset);
     }
 #else
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
@@ -407,15 +401,15 @@ KERNEL void solveLoopStep4(GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT pro
 #ifdef USE_CHARGE_CONSTRAINT
         ACCUM offsetAccum = ACCUM_ZERO;
         for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            offsetAccum = ACCUM_MUL_ADD_2212(precondVector[ii], grad[ii], offsetAccum);
+            offsetAccum = ACCUM_MUL_ADD(precondVector[ii], grad[ii], offsetAccum);
         }
         const ACCUM offset = reduceAccum(offsetAccum, tempAccum, 0, -1);
         for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            precGrad[ii] = ACCUM_ADD_MUL_1122(grad[ii], offset, precondVector[ii]);
+            precGrad[ii] = ACCUM_ADD_MUL(grad[ii], offset, precondVector[ii]);
         }
 #else
         for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            precGrad[ii] = ACCUM_MUL_121(precondVector[ii], grad[ii]);
+            precGrad[ii] = ACCUM_MUL(precondVector[ii], grad[ii]);
         }
 #endif
     }
@@ -434,7 +428,6 @@ KERNEL void solveLoopStep4(GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT pro
         beta += precGrad[ii] * gradStep[ii];
     }
     beta = reduceReal(beta, temp) * paramScale[0];
-    if (LOCAL_ID == 0) printf("            solveLoopStep4: beta = %.6g\n", beta);
 
     // Update the step vector.
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
@@ -448,11 +441,11 @@ KERNEL void solveLoopStep4(GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT pro
 
     ACCUM offsetAccum = ACCUM_ZERO;
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        offsetAccum = ACCUM_ADD_221(offsetAccum, qStep[ii]);
+        offsetAccum = ACCUM_ADD(offsetAccum, qStep[ii]);
     }
     const ACCUM offset = reduceAccum(offsetAccum, tempAccum, 0, -1 / (real) NUM_ELECTRODE_PARTICLES);
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        qStep[ii] = ACCUM_ADD_112(qStep[ii], offset);
+        qStep[ii] = ACCUM_APPLY(qStep[ii], offset);
     }
 #endif
 }

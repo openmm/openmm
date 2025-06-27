@@ -76,6 +76,6 @@ void testGradientFiniteDifference(ConstantPotentialForce::ConstantPotentialMetho
 }
 
 void runPlatformTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
-    // testEnergyConservation(method, usePreconditioner, 100);
+    testEnergyConservation(method, usePreconditioner, 10);
     testGradientFiniteDifference(method, usePreconditioner);
 }

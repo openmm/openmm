@@ -501,7 +501,6 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
     // Check for convergence at the initial guess charges.
     solveInitializeStep2Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
     errorResult.download(hostErrorResult, true);
-    printf("        error init = %.6g (%.6g)\n", hostErrorResult[0], errorTarget);
     if (hostErrorResult[0] <= errorTarget) {
         return;
     }
@@ -528,7 +527,6 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
         // in the calculation of alpha, or too large step sizes.
         solveLoopStep1Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
         errorResult.download(hostErrorResult, true);
-        printf("        error %i step = %.6g (%.6g)\n", iter, hostErrorResult[0], errorTarget);
         if (hostErrorResult[0] <= errorTarget) {
             converged = true;
             break;
@@ -549,7 +547,6 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
         // Check for convergence.
         solveLoopStep3Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
         errorResult.download(hostErrorResult, true);
-        printf("        error %i grad = %.6g (%.6g)\n", iter, hostErrorResult[0], errorTarget);
         if (hostErrorResult[0] <= errorTarget) {
             converged = true;
             break;
