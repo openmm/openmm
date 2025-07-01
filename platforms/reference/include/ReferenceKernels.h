@@ -1553,7 +1553,7 @@ private:
 class ReferenceIntegrateQTBStepKernel : public IntegrateQTBStepKernel {
 public:
     ReferenceIntegrateQTBStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateQTBStepKernel(name, platform),
-        data(data), dynamics(NULL) {
+        data(data), dynamics(NULL), hasInitialized(false) {
     }
     ~ReferenceIntegrateQTBStepKernel();
     /**
@@ -1577,10 +1577,19 @@ public:
      * @param integrator the QTBIntegrator this kernel is being used for
      */
     double computeKineticEnergy(ContextImpl& context, const QTBIntegrator& integrator);
+    /**
+     * Write the adapted friction to a checkpoint.
+     */
+    void createCheckpoint(ContextImpl& context, std::ostream& stream) const;
+    /**
+     * Load the adapted friction from a checkpoint.
+     */
+    void loadCheckpoint(ContextImpl& context, std::istream& stream);
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceQTBDynamics* dynamics;
     std::vector<double> masses;
+    bool hasInitialized;
 };
 
 /**

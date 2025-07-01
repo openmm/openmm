@@ -27,6 +27,7 @@
 #include "ReferenceDynamics.h"
 #include "openmm/QTBIntegrator.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/windowsExport.h"
 #include <complex>
 
@@ -35,7 +36,7 @@ namespace OpenMM {
 class OPENMM_EXPORT ReferenceQTBDynamics : public ReferenceDynamics {
 protected:
     double friction;
-    int segmentLength, stepIndex;
+    int segmentLength, stepIndex, numFreq;
     std::vector<OpenMM::Vec3> xPrime, oldx, randomForce, segmentVelocity;
     std::vector<double> inverseMasses, typeAdaptationRate, typeMass;
     std::vector<double> noise, theta, thetad, cutoffFunction;
@@ -57,6 +58,12 @@ public:
      */
     ~ReferenceQTBDynamics();
 
+    /**
+     * Recalculate the target noise spectrum.  This must be called before running any dynamics.
+     * 
+     * @param threads        a ThreadPool to use for parallelizing the calculation.
+     */
+    void calcSpectrum(ThreadPool& threads);
     /**
      * Perform a time step, updating the positions and velocities.
      * 
@@ -86,6 +93,14 @@ public:
      */
     virtual void updatePart3(OpenMM::ContextImpl& context, int numParticles, std::vector<OpenMM::Vec3>& atomCoordinates,
                              std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& xPrime);
+    /**
+     * Write the adapted friction to a checkpoint.
+     */
+    void createCheckpoint(std::ostream& stream) const;
+    /**
+     * Load the adapted friction from a checkpoint.
+     */
+    void loadCheckpoint(std::istream& stream);
 
 private:
     /**
@@ -99,7 +114,7 @@ private:
     /**
      * Compute the deconvolved version of theta that compensates of broadening of peaks in the spectrum.
      */
-    void deconvolveTheta();
+    void deconvolveTheta(ThreadPool& threads);
 };
 
 } // namespace OpenMM

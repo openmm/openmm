@@ -2905,18 +2905,19 @@ void ReferenceIntegrateQTBStepKernel::initialize(const System& system, const QTB
     for (int i = 0; i < numParticles; ++i)
         masses[i] = system.getParticleMass(i);
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
+    dynamics = new ReferenceQTBDynamics(system, integrator);
 }
 
 void ReferenceIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegrator& integrator) {
-    double temperature = integrator.getTemperature();
-    double friction = integrator.getFriction();
     double stepSize = integrator.getStepSize();
     vector<Vec3>& posData = extractPositions(context);
     vector<Vec3>& velData = extractVelocities(context);
-    if (dynamics == NULL) {
-        dynamics = new ReferenceQTBDynamics(context.getSystem(), integrator);
+    if (!hasInitialized) {
+        hasInitialized = true;
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         dynamics->setVirtualSites(extractVirtualSites(context));
+        ThreadPool threads;
+        dynamics->calcSpectrum(threads);
     }
     dynamics->setTemperature(integrator.getTemperature());
     dynamics->update(context, posData, velData, masses, integrator.getConstraintTolerance());
@@ -2926,6 +2927,13 @@ void ReferenceIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBInt
 
 double ReferenceIntegrateQTBStepKernel::computeKineticEnergy(ContextImpl& context, const QTBIntegrator& integrator) {
     return computeShiftedKineticEnergy(context, masses, 0.0);
+}
+void ReferenceIntegrateQTBStepKernel::createCheckpoint(ContextImpl& context, ostream& stream) const {
+    dynamics->createCheckpoint(stream);
+}
+
+void ReferenceIntegrateQTBStepKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
+    dynamics->loadCheckpoint(stream);
 }
 
 ReferenceApplyAndersenThermostatKernel::~ReferenceApplyAndersenThermostatKernel() {

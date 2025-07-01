@@ -140,3 +140,17 @@ void QTBIntegrator::step(int steps) {
         kernel.getAs<IntegrateQTBStepKernel>().execute(*context, *this);
     }
 }
+
+void QTBIntegrator::createCheckpoint(std::ostream& stream) const {
+    kernel.getAs<IntegrateQTBStepKernel>().createCheckpoint(*context, stream);
+}
+
+void QTBIntegrator::loadCheckpoint(std::istream& stream) {
+    kernel.getAs<IntegrateQTBStepKernel>().loadCheckpoint(*context, stream);
+}
+
+void QTBIntegrator::serializeParameters(SerializationNode& node) const {
+}
+
+void QTBIntegrator::deserializeParameters(const SerializationNode& node) {
+}

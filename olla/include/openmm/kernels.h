@@ -1467,6 +1467,14 @@ public:
      * @param integrator the QTBIntegrator this kernel is being used for
      */
     virtual double computeKineticEnergy(ContextImpl& context, const QTBIntegrator& integrator) = 0;
+    /**
+     * Write the adapted friction to a checkpoint.
+     */
+    virtual void createCheckpoint(ContextImpl& context, std::ostream& stream) const = 0;
+    /**
+     * Load the adapted friction from a checkpoint.
+     */
+    virtual void loadCheckpoint(ContextImpl& context, std::istream& stream) = 0;
 };
 
 /**
