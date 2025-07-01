@@ -315,6 +315,10 @@ void ReferenceQTBDynamics::deconvolveTheta(ThreadPool& threads) {
     thetad = fnext;
 }
 
+void ReferenceQTBDynamics::getAdaptedFriction(int particle, vector<double>& friction) const {
+    friction = adaptedFriction[particleType[particle]];
+}
+
 void ReferenceQTBDynamics::createCheckpoint(std::ostream& stream) const {
     stream.write((char*) &stepIndex, sizeof(int));
     stream.write((char*) noise.data(), sizeof(double)*noise.size());

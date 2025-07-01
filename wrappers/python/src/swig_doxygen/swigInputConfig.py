@@ -517,6 +517,8 @@ UNITS = {
 ("QTBIntegrator", "setDefaultAdaptationRate") : (None, (None,)),
 ("QTBIntegrator", "getTypeAdaptationRates") : (None, ()),
 ("QTBIntegrator", "getParticleTypes") : (None, ()),
+("QTBIntegrator", "getCutoffFrequency") : ("unit.picosecond**-1", ()),
+("QTBIntegrator", "setCutoffFrequency") : (None, ("unit.picosecond**-1",)),
 ("LocalEnergyMinimizer", "minimize") : (None, (None, "unit.kilojoules_per_mole/unit.nanometer", None)),
 ("ATMForce", "getForce") : (None, ()),
 ("ATMForce", "getPerturbationEnergy") :  ('unit.kilojoule_per_mole', ()),

@@ -113,6 +113,10 @@ void QTBIntegrator::setTypeAdaptationRate(int type, double rate) {
     typeAdaptationRates[type] = rate;
 }
 
+void QTBIntegrator::getAdaptedFriction(int particle, vector<double>& friction) const {
+    kernel.getAs<IntegrateQTBStepKernel>().getAdaptedFriction(*context, particle, friction);
+}
+
 void QTBIntegrator::cleanup() {
     kernel = Kernel();
 }

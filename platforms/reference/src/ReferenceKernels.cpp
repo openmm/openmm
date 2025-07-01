@@ -2928,6 +2928,11 @@ void ReferenceIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBInt
 double ReferenceIntegrateQTBStepKernel::computeKineticEnergy(ContextImpl& context, const QTBIntegrator& integrator) {
     return computeShiftedKineticEnergy(context, masses, 0.0);
 }
+
+void ReferenceIntegrateQTBStepKernel::getAdaptedFriction(ContextImpl& context, int particle, std::vector<double>& friction) const {
+    dynamics->getAdaptedFriction(particle, friction);
+}
+
 void ReferenceIntegrateQTBStepKernel::createCheckpoint(ContextImpl& context, ostream& stream) const {
     dynamics->createCheckpoint(stream);
 }

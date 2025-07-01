@@ -94,6 +94,14 @@ public:
     virtual void updatePart3(OpenMM::ContextImpl& context, int numParticles, std::vector<OpenMM::Vec3>& atomCoordinates,
                              std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& xPrime);
     /**
+     * Get the adapted friction coefficients for a particle.
+     * 
+     * @param particle   the index of the particle for which to get the friction
+     * @param friction   the adapted friction coefficients used in generating the
+     *                   random force.
+     */
+    void getAdaptedFriction(int particle, std::vector<double>& friction) const;
+    /**
      * Write the adapted friction to a checkpoint.
      */
     void createCheckpoint(std::ostream& stream) const;

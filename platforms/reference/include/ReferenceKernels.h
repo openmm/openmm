@@ -1578,11 +1578,26 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const QTBIntegrator& integrator);
     /**
+     * Get the adapted friction coefficients for a particle.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param particle   the index of the particle for which to get the friction
+     * @param friction   the adapted friction coefficients used in generating the
+     *                   random force.
+     */
+    void getAdaptedFriction(ContextImpl& context, int particle, std::vector<double>& friction) const;
+    /**
      * Write the adapted friction to a checkpoint.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param stream     the stream to write the checkpoint to
      */
     void createCheckpoint(ContextImpl& context, std::ostream& stream) const;
     /**
      * Load the adapted friction from a checkpoint.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param stream     the stream to read the checkpoint from
      */
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
 private:

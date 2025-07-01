@@ -142,6 +142,20 @@ public:
      */
     void setTypeAdaptationRate(int type, double rate);
     /**
+     * Get the adapted friction coefficients for a particle.  The return value is
+     * a vector of length numFreq = (3*n+1)/2, where n is the number of time steps
+     * in a segment.  Element i is the friction coefficient used in generating
+     * the random force with frequency i*pi/(numFreq*stepSize).
+     * 
+     * This method is guaranteed to return identical results for particles that
+     * have the same type.
+     * 
+     * @param particle    the index of the particle for which to get the friction
+     * @param friction    the adapted friction coefficients used in generating the
+     *                    random force.
+     */
+    void getAdaptedFriction(int particle, std::vector<double>& friction) const;
+    /**
      * Get the random number seed.  See setRandomNumberSeed() for details.
      */
     int getRandomNumberSeed() const {
