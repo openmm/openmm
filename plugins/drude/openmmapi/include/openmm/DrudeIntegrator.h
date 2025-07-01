@@ -45,11 +45,12 @@ namespace OpenMM {
 class OPENMM_EXPORT_DRUDE DrudeIntegrator : public Integrator {
 public:
     /**
-     * Create a DrudeSCFIntegrator.
+     * Create a DrudeIntegrator.
      *
      * @param stepSize       the step size with which to integrator the system (in picoseconds)
      */
     DrudeIntegrator(double stepSize) {};
+
     /**
      * Advance a simulation through time by taking a series of time steps.
      *
@@ -101,7 +102,8 @@ public:
     int getRandomNumberSeed() const {
         return randomNumberSeed;
     }
-protected:
+ 
+ protected:
     /**
      * This will be called by the Context when it is created.  It informs the Integrator
      * of what context it will be integrating, and gives it a chance to do any necessary initialization.

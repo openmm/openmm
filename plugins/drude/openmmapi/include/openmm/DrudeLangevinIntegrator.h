@@ -34,6 +34,7 @@
 
 #include "openmm/DrudeIntegrator.h"
 #include "openmm/Kernel.h"
+#include "openmm/DrudeForce.h"
 #include "openmm/internal/windowsExportDrude.h"
 
 namespace OpenMM {
@@ -50,7 +51,7 @@ namespace OpenMM {
  * with a hard wall constraint.  By default the limit is set to 0.02 nm.
  * 
  * This Integrator requires the System to include a DrudeForce, which it uses to identify the Drude
- * particles.
+ * particles, or that a DrudeForce is provided by calling setDrudeForce.
  */
 
 class OPENMM_EXPORT_DRUDE DrudeLangevinIntegrator : public DrudeIntegrator {
@@ -65,6 +66,7 @@ public:
      * @param stepSize       the step size with which to integrator the system (in picoseconds)
      */
     DrudeLangevinIntegrator(double temperature, double frictionCoeff, double drudeTemperature, double drudeFrictionCoeff, double stepSize);
+    ~DrudeLangevinIntegrator();
     /**
      * Get the temperature of the main heat bath (in Kelvin).
      *
@@ -132,6 +134,32 @@ public:
      * and should remain close to the prescribed Drude temperature.
      */
     double computeDrudeTemperature();
+
+    /**
+     * Set the DrudeForce object used to identify the Drude particles.
+     *
+     * The DrudeForce should have been created on the heap with the
+     * "new" operator. The DrudeIntegrator takes over ownership of it, 
+     * and deletes the Force when the DrudeIntegrator itself is deleted.
+     *
+     * @param force   a pointer to the DrudeForce
+     */
+    void setDrudeForce(DrudeForce* force);
+
+    /**
+     * Queries whether a DrudeForce has been set
+     *
+     * @return   True if a DrudeForce is set, False otherwise
+     */
+    bool isDrudeForceSet() const;
+    
+    /**
+     * Get the stored DrudeForce object if one was set.
+     *
+     * @return   a reference to the DrudeForce
+     */
+    const DrudeForce& getDrudeForce() const;
+
 protected:
     /**
      * This will be called by the Context when it is created.  It informs the Integrator
@@ -152,9 +180,11 @@ protected:
      * Compute the kinetic energy of the system at the current time.
      */
     double computeKineticEnergy() override;
-private:
+
+ private:
     double temperature, friction, drudeFriction;
     Kernel kernel;
+    DrudeForce* drudeForce;
 };
 
 } // namespace OpenMM

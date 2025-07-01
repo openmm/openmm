@@ -141,7 +141,11 @@ STEAL_OWNERSHIP = {("Platform", "registerPlatform") : [0],
                    ("CustomCVForce", "addCollectiveVariable") : [1],
                    ("CustomIntegrator", "addTabulatedFunction") : [1],
                    ("CompoundIntegrator", "addIntegrator") : [0],
+                   ("DrudeLangevinIntegrator", "setDrudeForce") : [0],
+                   ("DrudeSCFIntegrator", "setDrudeForce") : [0],
+                   ("DrudeNoseHooverIntegrator", "setDrudeForce") : [0],
 }
+
 
 
 REQUIRE_ORDERED_SET = {("CustomNonbondedForce", "addInteractionGroup") : [0, 1],
@@ -479,10 +483,13 @@ UNITS = {
 ("DrudeLangevinIntegrator", "getMaxDrudeDistance") : ("unit.nanometer", ()),
 ("DrudeLangevinIntegrator", "setMaxDrudeDistance") : (None, ("unit.nanometer",)),
 ("DrudeNoseHooverIntegrator", "getVelocitiesForTemperature") : ("unit.nanometers / unit.picosecond", (None, "unit.kelvin", None)),
+("DrudeNoseHooverIntegrator", "getDrudeForce") : (None, (None,)),
 ("DrudeLangevinIntegrator", "getDrudeFriction") : ("unit.picosecond**-1", ()),
 ("DrudeLangevinIntegrator", "setDrudeFriction") : (None, ("unit.picosecond**-1",)),
+("DrudeLangevinIntegrator", "getDrudeForce") : (None, (None,)),
 ("DrudeSCFIntegrator", "getMinimizationErrorTolerance") : ("unit.kilojoules_per_mole/unit.nanometer", ()),
 ("DrudeSCFIntegrator", "setMinimizationErrorTolerance") : (None, ("unit.kilojoules_per_mole/unit.nanometer",)),
+("DrudeSCFIntegrator", "getDrudeForce") : (None, (None,)),
 ("RPMDIntegrator", "getContractions") : (None, ()),
 ("RPMDIntegrator", "getTotalEnergy") : ("unit.kilojoules_per_mole", ()),
 ("RPMDIntegrator", "getState"): (None,(None, None, None, None)),

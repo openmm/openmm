@@ -39,6 +39,9 @@
 #include <set>
 #include <string>
 
+//DEBUG
+#include <iostream>
+
 using namespace OpenMM;
 using std::string;
 using std::vector;
@@ -57,6 +60,13 @@ DrudeLangevinIntegrator::DrudeLangevinIntegrator(double temperature, double fric
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
     setRandomNumberSeed(0);
+    drudeForce = nullptr;
+}
+
+DrudeLangevinIntegrator::~DrudeLangevinIntegrator() {
+    if (drudeForce) {
+	delete drudeForce;
+    }
 }
 
 void DrudeLangevinIntegrator::initialize(ContextImpl& contextRef) {
@@ -64,15 +74,20 @@ void DrudeLangevinIntegrator::initialize(ContextImpl& contextRef) {
         throw OpenMMException("This Integrator is already bound to a context");
     const DrudeForce* force = NULL;
     const System& system = contextRef.getSystem();
-    for (int i = 0; i < system.getNumForces(); i++)
-        if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
-            if (force == NULL)
-                force = dynamic_cast<const DrudeForce*>(&system.getForce(i));
-            else
-                throw OpenMMException("The System contains multiple DrudeForces");
-        }
-    if (force == NULL)
-        throw OpenMMException("The System does not contain a DrudeForce");
+    if (isDrudeForceSet()) {
+	force = &getDrudeForce();
+    }
+    else {
+	for (int i = 0; i < system.getNumForces(); i++)
+	  if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
+	      if (force == NULL)
+		  force = dynamic_cast<const DrudeForce*>(&system.getForce(i));
+	      else
+		  throw OpenMMException("The System contains multiple DrudeForces");
+	  }
+	if (force == NULL)
+	    throw OpenMMException("The System does not contain a DrudeForce");
+    }
     context = &contextRef;
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateDrudeLangevinStepKernel::Name(), contextRef);
@@ -139,3 +154,23 @@ double DrudeLangevinIntegrator::computeDrudeTemperature() {
     return computeTemperaturesFromVelocities(context->getSystem(), velocities).second;
 } 
 
+void DrudeLangevinIntegrator::setDrudeForce(DrudeForce* force) {
+  if (drudeForce) {
+	delete drudeForce;
+    }
+    drudeForce = force;
+}
+
+bool DrudeLangevinIntegrator::isDrudeForceSet() const {
+    if (!drudeForce) {
+	return false;
+    }
+    return true;
+}
+
+const DrudeForce& DrudeLangevinIntegrator::getDrudeForce() const {
+    if (!drudeForce) {
+	throw OpenMMException("getDrudeForce: a DrudeForce has not been set.");
+    }
+    return *drudeForce;
+}

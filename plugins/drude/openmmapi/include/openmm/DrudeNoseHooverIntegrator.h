@@ -34,6 +34,7 @@
 
 #include "openmm/NoseHooverIntegrator.h"
 #include "openmm/Kernel.h"
+#include "openmm/DrudeForce.h"
 #include "openmm/internal/windowsExportDrude.h"
 
 namespace OpenMM {
@@ -50,7 +51,7 @@ namespace OpenMM {
  * with a hard wall constraint.  By default the limit is set to 0.02 nm.
  *
  * This Integrator requires the System to include a DrudeForce, which it uses to identify the Drude
- * particles.
+ * particles, or that a DrudeForce is provided by calling setDrudeForce.
  */
 
 class OPENMM_EXPORT_DRUDE DrudeNoseHooverIntegrator : public NoseHooverIntegrator {
@@ -71,8 +72,8 @@ public:
     DrudeNoseHooverIntegrator(double temperature, double collisionFrequency, 
                               double drudeTemperature, double drudeCollisionFrequency, double stepSize, 
                               int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 7);
-
-    virtual ~DrudeNoseHooverIntegrator();
+    //virtual ~DrudeNoseHooverIntegrator();
+    ~DrudeNoseHooverIntegrator();
     /**
      * This will be called by the Context when it is created.  It informs the Integrator
      * of what context it will be integrating, and gives it a chance to do any necessary initialization.
@@ -112,6 +113,32 @@ public:
      * and should remain close to the prescribed Drude temperature.
      */ 
      double computeDrudeTemperature();
+
+    /**
+     * Set the DrudeForce object used to identify the Drude particles.
+     *
+     * The DrudeForce should have been created on the heap with the
+     * "new" operator. The DrudeIntegrator takes over ownership of it, 
+     * and deletes the Force when the DrudeIntegrator itself is deleted.
+     *
+     * @param force   a pointer to the DrudeForce
+     */
+    void setDrudeForce(DrudeForce* force);
+
+    /**
+     * Queries whether a DrudeForce has been set
+     *
+     * @return   True if a DrudeForce is set, False otherwise
+     */
+    bool isDrudeForceSet() const;
+
+    /**
+     * Get the stored DrudeForce object if one was set.
+     *
+     * @return   a reference to the DrudeForce
+     */
+    const DrudeForce& getDrudeForce() const;
+
 protected:
     /**
      * Return a list of velocities normally distributed around a target temperature, with the Drude
@@ -124,6 +151,7 @@ protected:
     virtual std::vector<Vec3> getVelocitiesForTemperature(const System &system, double temperature,
                                                           int randomSeed) const override;
     double drudeTemperature;
+    DrudeForce* drudeForce;
 };
 
 } // namespace OpenMM
