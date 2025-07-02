@@ -83,6 +83,10 @@ ATMForce::ATMForce(double lambda1, double lambda2, double alpha, double uh, doub
 ATMForce::~ATMForce() {
     for (Force* force : forces)
         delete force;
+    for (ParticleInfo particle : particles) {
+	if (particle.transformation)
+	    delete particle.transformation;
+    }
 }
 
 const string& ATMForce::getEnergyFunction() const {
@@ -94,102 +98,54 @@ void ATMForce::setEnergyFunction(const std::string& energy) {
 }
 
 int ATMForce::addParticle() {
-    particles.push_back(ParticleInfo(particles.size(), NULL));
+    particles.push_back(ParticleInfo(particles.size(), new ATMForce::FixedDisplacement(Vec3(0, 0, 0), Vec3(0, 0, 0))));
     return particles.size()-1;
 }
 int ATMForce::addParticle(const Vec3& displacement1, const Vec3& displacement0) {
-    if (particles.size() == 0){
-	std::cout << "Deprecation warning: ATMForce::addParticle() with explicit displacement vectors is deprecated. Add particles to ATMForce using ATMTransformation objects. For example: atmforce->addParticle(new ATMFixedDisplacement(d));" << std::endl;
-    }
-    ATMFixedDisplacement* fd = new ATMFixedDisplacement(displacement1, displacement0);
+    FixedDisplacement* fd = new FixedDisplacement(displacement1, displacement0);
     particles.push_back(ParticleInfo(particles.size(), fd));
     return particles.size()-1;
 }
-int ATMForce::addParticle(ATMTransformation* transformation) {
-    if (transformation == NULL) {
-	particles.push_back(ParticleInfo(particles.size(), transformation));
-	return particles.size()-1;
-    }
-    string s = transformation->getName();
-    if (s == "FixedDisplacement") {
-	particles.push_back(ParticleInfo(particles.size(), transformation));
-	return particles.size()-1;
-    } else if (s == "VectordistanceDisplacement") {
-	particles.push_back(ParticleInfo(particles.size(), transformation));
-	return particles.size()-1;
-    }
-    throw OpenMMException("Invalid ATMTransformation object");
+
+int ATMForce::addParticle(ATMForce::CoordinateTransformation* transformation) {
+    particles.push_back(ParticleInfo(particles.size(), transformation));
+    return particles.size()-1;
 }
+
+const std::map<std::string, int> ATMForce::CoordinateTransformationType {
+    {"FixedDisplacement", 1},
+    {"ParticleOffsetDisplacement", 2}
+};
+const std::map<int, std::string> ATMForce::CoordinateTransformationName {
+    {1, "FixedDisplacement"},
+    {2, "ParticleOffsetDisplacement"}
+};
 
 void ATMForce::getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0) const {
     ASSERT_VALID_INDEX(index, particles);
-    ATMTransformation* transformation = particles[index].transformation;
-    if (transformation == NULL) {
-	displacement1 = Vec3(0, 0, 0);
-	displacement0 = Vec3(0, 0, 0);
-    }
-    else if (particles[index].transformation->getName() == "FixedDisplacement") {
-	displacement1 = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement1();
-	displacement0 = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement0();
-    }
-    else {
-        throw OpenMMException("getParticleParameters(): particle lacks fixed displacements");
-    }
+    CoordinateTransformation* transformation = particles[index].transformation;
+    displacement1 = dynamic_cast<const FixedDisplacement*>(transformation)->getFixedDisplacement1();
+    displacement0 = dynamic_cast<const FixedDisplacement*>(transformation)->getFixedDisplacement0();
 }
 
-const ATMTransformation* ATMForce::getParticleTransformation(int index) const {
+const ATMForce::CoordinateTransformation& ATMForce::getParticleTransformation(int index) const {
     ASSERT_VALID_INDEX(index, particles);
-    return particles[index].transformation;
-}
-
-const ATMFixedDisplacement* ATMForce::getParticleFixedDisplacementTransformation(int index) const {
-    ASSERT_VALID_INDEX(index, particles);
-    const ATMTransformation* transformation =  ATMForce::getParticleTransformation(index);
-    if ( transformation != NULL){
-	string s = transformation->getName();
-	if (s == "FixedDisplacement"){
-	    return dynamic_cast<const ATMFixedDisplacement*>(transformation);
-	}
-    }
-    throw OpenMMException("This particle lacks a FixedDisplacement transformation object");
-}
-
-const ATMVectordistanceDisplacement* ATMForce::getParticleVectordistanceDisplacementTransformation(int index) const {
-    ASSERT_VALID_INDEX(index, particles);
-    const ATMTransformation* transformation =  ATMForce::getParticleTransformation(index);
-    if ( transformation != NULL){
-	string s = transformation->getName();
-	if (s == "VectordistanceDisplacement"){
-	    return dynamic_cast<const ATMVectordistanceDisplacement*>(transformation);
-	}
-    }
-    throw OpenMMException("This particle lacks a VectordistanceDisplacement transformation object");
+    return *(particles[index].transformation);
 }
 
 void ATMForce::setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0) {
     ASSERT_VALID_INDEX(index, particles);
-    if (particles[index].transformation != NULL) delete particles[index].transformation;
-    ATMFixedDisplacement* fd = new ATMFixedDisplacement(displacement1, displacement0);
+    if (particles[index].transformation)
+	delete particles[index].transformation;
+    FixedDisplacement* fd = new FixedDisplacement(displacement1, displacement0);
     particles[index].transformation = fd;
 }
 
-void ATMForce::setParticleTransformation(int index, ATMTransformation* transformation) {
+void ATMForce::setParticleTransformation(int index, ATMForce::CoordinateTransformation* transformation) {
     ASSERT_VALID_INDEX(index, particles);
-    if (transformation == NULL) {
-	if (particles[index].transformation != NULL) delete particles[index].transformation;
-	particles[index].transformation = transformation;
-    }
-    string s = transformation->getName();
-    if (s == "FixedDisplacement") {
-	if (particles[index].transformation != NULL) delete particles[index].transformation;
-	particles[index].transformation = transformation;
-    } else if (s == "VectordistanceDisplacement") {
-	if (particles[index].transformation != NULL) delete particles[index].transformation;
-	particles[index].transformation = transformation;
-    }
-    else {
-	throw OpenMMException("Invalid ATMTransformation object");
-    }
+    if (particles[index].transformation)
+	delete particles[index].transformation;
+    particles[index].transformation = transformation;
 }
 
 int ATMForce::addForce(Force* force) {

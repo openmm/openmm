@@ -3891,31 +3891,25 @@ CommonCalcATMForceKernel::~CommonCalcATMForceKernel() {
 
 
 void CommonCalcATMForceKernel::loadParams(int numParticles, const ATMForce& force, vector<Vec3>& d1, vector<Vec3>& d0, vector<int>& j1, vector<int>& i1, vector<int>& j0, vector<int>& i0) {
-      for (int p = 0; p < numParticles; p++) {
-	const ATMTransformation* transformation = force.getParticleTransformation(p);
-	if (transformation != NULL) {
-	    string s = transformation->getName();
-	    if (s == "FixedDisplacement") {
-		d1[p] = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement1();
-		d0[p] = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement0();
-		j1[p] = i1[p] = j0[p] = i0[p] = -1;
-	    }
-	    else if (s == "VectordistanceDisplacement") {
-		d1[p] = Vec3(0, 0, 0);
-		d0[p] = Vec3(0, 0, 0);
-		j1[p] = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getDestinationParticle1();
-		i1[p] = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getOriginParticle1();
-		j0[p] = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getDestinationParticle0();
-		i0[p] = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getOriginParticle0();
-	    }
-	    else {
-		throw OpenMMException("loadParams(): invalid particle Transformation");
-	    }
+    for (int p = 0; p < numParticles; p++) {
+	const ATMForce::CoordinateTransformation& transformation = force.getParticleTransformation(p);
+	if (dynamic_cast<const ATMForce::FixedDisplacement*>(&transformation) != NULL) {
+	    const ATMForce::FixedDisplacement* fd = dynamic_cast<const ATMForce::FixedDisplacement*>(&transformation);
+	    d1[p] = fd->getFixedDisplacement1();
+	    d0[p] = fd->getFixedDisplacement0();
+	    j1[p] = i1[p] = j0[p] = i0[p] = -1;
 	}
-	else {
+	else if (dynamic_cast<const ATMForce::ParticleOffsetDisplacement*>(&transformation) != NULL) {
+	    const ATMForce::ParticleOffsetDisplacement* vd = dynamic_cast<const ATMForce::ParticleOffsetDisplacement*>(&transformation);
 	    d1[p] = Vec3(0, 0, 0);
 	    d0[p] = Vec3(0, 0, 0);
-	    j1[p] = i1[p] = j0[p] = i0[p] = -1;
+	    j1[p] = vd->getDestinationParticle1();
+	    i1[p] = vd->getOriginParticle1();
+	    j0[p] = vd->getDestinationParticle0();
+	    i0[p] = vd->getOriginParticle0();
+	}
+	else {
+	    throw OpenMMException("loadParams(): invalid particle Transformation");
 	}
     }
 }

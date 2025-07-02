@@ -43,74 +43,32 @@ using namespace std;
 ATMForceProxy::ATMForceProxy() : SerializationProxy("ATMForce") {
 }
 
-void ATMForceProxy::loadParams(int numParticles, const ATMForce& force, vector<int>& type, vector<Vec3>& d1, vector<Vec3>& d0, vector<int>& j1, vector<int>& i1, vector<int>& j0, vector<int>& i0) const {
-      for (int p = 0; p < numParticles; p++) {
-	const ATMTransformation* transformation = force.getParticleTransformation(p);
-	if (transformation != NULL) {
-	    string s = transformation->getName();
-	    if (s == "FixedDisplacement") {
-		type[p] = ATMTransformationType.at(s);
-		d1[p] = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement1();
-		d0[p] = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement0();
-		j1[p] = i1[p] = j0[p] = i0[p] = -1;
-	    }
-	    else if (s == "VectordistanceDisplacement") {
-		type[p] = ATMTransformationType.at(s);
-		d1[p] = Vec3(0,0,0);
-		d0[p] = Vec3(0,0,0);
-		j1[p] = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getDestinationParticle1();
-		i1[p] = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getOriginParticle1();
-		j0[p] = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getDestinationParticle0();
-		i0[p] = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getOriginParticle0();
-	    }
-	    else {
-		throw OpenMMException("loadParams(): invalid particle Transformation");
-	    }
-	}
-	else {
-	    type[p] = ATMTransformationType.at("NoDisplacement");
-	    d1[p] = Vec3(0,0,0);
-	    d0[p] = Vec3(0,0,0);
-	    j1[p] = i1[p] = j0[p] = i0[p] = -1;
-	}
-    }
-}
-
 void ATMForceProxy::storeParams(int numParticles, ATMForce& force, const SerializationNode& particles) const {
     for (auto& p : particles.getChildren()){
 
 	//support older serialized ATMForces that did not store the transformation type
-	//or the vector distance indexes
-	int transformation_type;
+	//or the particle offset displacement indexes
         if (p.hasProperty("type")) {
-	    transformation_type = p.getIntProperty("type");
-	}
-	else if (p.hasProperty("pj1")) {
-	    if (p.getIntProperty("pj1") >= 0) {
-		transformation_type = ATMTransformationType.at("VectordistanceDisplacement");
+	    //normal behavior
+	    int transformation_type = p.getIntProperty("type");
+	    if (transformation_type == ATMForce::CoordinateTransformationType.at("FixedDisplacement")) {
+		force.addParticle(new ATMForce::FixedDisplacement(Vec3(p.getDoubleProperty("d1x"), p.getDoubleProperty("d1y"), p.getDoubleProperty("d1z")), Vec3(p.getDoubleProperty("d0x"), p.getDoubleProperty("d0y"), p.getDoubleProperty("d0z"))));
+	    }
+	    else if (transformation_type == ATMForce::CoordinateTransformationType.at("ParticleOffsetDisplacement")) {
+		force.addParticle(new ATMForce::ParticleOffsetDisplacement( p.getIntProperty("pj1"), p.getIntProperty("pi1"), p.getIntProperty("pj0"), p.getIntProperty("pi0")));
 	    }
 	    else {
-		transformation_type = ATMTransformationType.at("FixedDisplacement");
+		throw OpenMMException("storeParams(): invalid particle transformation type");
 	    }
 	}
-	else {
-	    transformation_type = ATMTransformationType.at("FixedDisplacement");
-	}
-
-	//add particle based on transformation type
-	if (transformation_type == ATMTransformationType.at("NoDisplacement")) {
-	    force.addParticle();
-	}
-	else if (transformation_type == ATMTransformationType.at("FixedDisplacement")) {
-	    force.addParticle(new ATMFixedDisplacement(Vec3(p.getDoubleProperty("d1x"), p.getDoubleProperty("d1y"), p.getDoubleProperty("d1z")), Vec3(p.getDoubleProperty("d0x"), p.getDoubleProperty("d0y"), p.getDoubleProperty("d0z"))));
-	}
-	else if (transformation_type == ATMTransformationType.at("VectordistanceDisplacement")) {
-	    force.addParticle(new ATMVectordistanceDisplacement( p.getIntProperty("pj1"), p.getIntProperty("pi1"), p.getIntProperty("pj0"), p.getIntProperty("pi0")));
+	else if (p.hasProperty("pj1") &&  p.getIntProperty("pj1") >= 0) {
+	    //missing type, but particle offset indexes are present
+	    force.addParticle(new ATMForce::ParticleOffsetDisplacement( p.getIntProperty("pj1"), p.getIntProperty("pi1"), p.getIntProperty("pj0"), p.getIntProperty("pi0")));
 	}
 	else {
-	    throw OpenMMException("storeParams(): invalid particle Transformation");
+	    //only displacements are present
+	    force.addParticle(new ATMForce::FixedDisplacement(Vec3(p.getDoubleProperty("d1x"), p.getDoubleProperty("d1y"), p.getDoubleProperty("d1z")), Vec3(p.getDoubleProperty("d0x"), p.getDoubleProperty("d0y"), p.getDoubleProperty("d0z"))));
 	}
-
     }
 }
 
@@ -136,20 +94,34 @@ void ATMForceProxy::serialize(const void* object, SerializationNode& node) const
     SerializationNode& particles = node.createChildNode("Particles");
 
     int numParticles = force.getNumParticles();
-    vector<int> type(numParticles);
-    vector<int> j1(numParticles);
-    vector<int> i1(numParticles);
-    vector<int> j0(numParticles);
-    vector<int> i0(numParticles);
-    vector<Vec3> d1(numParticles);
-    vector<Vec3> d0(numParticles);
-    loadParams(numParticles, force, type, d1, d0, j1, i1, j0, i0);
-
+    int type, j1, i1, j0, i0;
+    Vec3 d1, d0;
     for (int i = 0; i < force.getNumParticles(); i++) {
-        particles.createChildNode("Particle").setIntProperty("type", type[i])
-	  .setDoubleProperty("d1x", d1[i][0]).setDoubleProperty("d1y", d1[i][1]).setDoubleProperty("d1z", d1[i][2])
-	  .setDoubleProperty("d0x", d0[i][0]).setDoubleProperty("d0y", d0[i][1]).setDoubleProperty("d0z", d0[i][2])
-	  .setIntProperty("pj1", j1[i]).setIntProperty("pi1", i1[i]).setIntProperty("pj0", j0[i]).setIntProperty("pi0", i0[i]);
+	const ATMForce::CoordinateTransformation& transformation = force.getParticleTransformation(i);
+	if (dynamic_cast<const ATMForce::FixedDisplacement*>(&transformation) != NULL) {
+	    const ATMForce::FixedDisplacement* fd = dynamic_cast<const ATMForce::FixedDisplacement*>(&transformation);
+	    d1 = fd->getFixedDisplacement1();
+	    d0 = fd->getFixedDisplacement0();
+	    j1 = i1 = j0 = i0 = -1;
+	    type = ATMForce::CoordinateTransformationType.at("FixedDisplacement");
+	}
+	else if (dynamic_cast<const ATMForce::ParticleOffsetDisplacement*>(&transformation) != NULL) {
+	    const ATMForce::ParticleOffsetDisplacement* vd = dynamic_cast<const ATMForce::ParticleOffsetDisplacement*>(&transformation);
+	    d1 = Vec3(0, 0, 0);
+	    d0 = Vec3(0, 0, 0);
+	    j1 = vd->getDestinationParticle1();
+	    i1 = vd->getOriginParticle1();
+	    j0 = vd->getDestinationParticle0();
+	    i0 = vd->getOriginParticle0();
+	    type = ATMForce::CoordinateTransformationType.at("ParticleOffsetDisplacement");
+	}
+	else {
+	    throw OpenMMException("serialize(): invalid particle CoordinateTransformation");
+	}
+	particles.createChildNode("Particle").setIntProperty("type", type)
+	    .setDoubleProperty("d1x", d1[0]).setDoubleProperty("d1y", d1[1]).setDoubleProperty("d1z", d1[2])
+	    .setDoubleProperty("d0x", d0[0]).setDoubleProperty("d0y", d0[1]).setDoubleProperty("d0z", d0[2])
+	    .setIntProperty("pj1", j1).setIntProperty("pi1", i1).setIntProperty("pj0", j0).setIntProperty("pi0", i0);
     }
 }
 

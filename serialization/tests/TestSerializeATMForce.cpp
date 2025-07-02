@@ -55,8 +55,8 @@ void testSerialization() {
     HarmonicAngleForce* v2 = new HarmonicAngleForce();
     v2->addAngle(3, 11, 15, 0.4, 0.2);
     force.addForce(v2);
-    force.addParticle(new ATMFixedDisplacement(Vec3(1, 2, 3)));
-    force.addParticle(new ATMVectordistanceDisplacement(0, 1));
+    force.addParticle(new ATMForce::FixedDisplacement(Vec3(1, 2, 3)));
+    force.addParticle(new ATMForce::ParticleOffsetDisplacement(0, 1));
 
     // Serialize and then deserialize it.
 
@@ -87,33 +87,37 @@ void testSerialization() {
     }
     ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());
     for (int i = 0; i < force.getNumParticles(); i++) {
-	const ATMTransformation* transformation  = force.getParticleTransformation(i);
-	const ATMTransformation* transformation2 = force2.getParticleTransformation(i);
-	ASSERT_EQUAL(transformation->getName(), transformation2->getName());
-	if (transformation->getName() == "FixedDisplacement") {
-	    const Vec3 d1a = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement1();
-	    const Vec3 d0a = dynamic_cast<const ATMFixedDisplacement*>(transformation)->getFixedDisplacement0();
-	    const Vec3 d1b = dynamic_cast<const ATMFixedDisplacement*>(transformation2)->getFixedDisplacement1();
-	    const Vec3 d0b = dynamic_cast<const ATMFixedDisplacement*>(transformation2)->getFixedDisplacement0();
+	const ATMForce::CoordinateTransformation& transformation  = force.getParticleTransformation(i);
+	const ATMForce::CoordinateTransformation& transformation2 = force2.getParticleTransformation(i);
+	ASSERT_EQUAL(transformation.getName(), transformation2.getName());
+	if (dynamic_cast<const ATMForce::FixedDisplacement*>(&transformation) != NULL) {
+	    const ATMForce::FixedDisplacement* fd  = dynamic_cast<const ATMForce::FixedDisplacement*>(&transformation);
+	    const ATMForce::FixedDisplacement* fd2 = dynamic_cast<const ATMForce::FixedDisplacement*>(&transformation2);
+	    const Vec3 d1a = fd->getFixedDisplacement1();
+	    const Vec3 d0a = fd->getFixedDisplacement0();
+	    const Vec3 d1b = fd2->getFixedDisplacement1();
+	    const Vec3 d0b = fd2->getFixedDisplacement0();
 	    ASSERT_EQUAL_VEC(d1a, d1b, 0.0);
 	    ASSERT_EQUAL_VEC(d0a, d0b, 0.0);
 	}
-	else if (transformation->getName() == "VectordistanceDisplacement") {
-	    int j1a = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getDestinationParticle1();
-	    int i1a = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getOriginParticle1();
-	    int j0a = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getDestinationParticle0();
-	    int i0a = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation)->getOriginParticle0();
-	    int j1b = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation2)->getDestinationParticle1();
-	    int i1b = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation2)->getOriginParticle1();
-	    int j0b = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation2)->getDestinationParticle0();
-	    int i0b = dynamic_cast<const ATMVectordistanceDisplacement*>(transformation2)->getOriginParticle0();
+	else if (dynamic_cast<const ATMForce::ParticleOffsetDisplacement*>(&transformation) != NULL) {
+	    const ATMForce::ParticleOffsetDisplacement* vd  = dynamic_cast<const ATMForce::ParticleOffsetDisplacement*>(&transformation);
+	    const ATMForce::ParticleOffsetDisplacement* vd2 = dynamic_cast<const ATMForce::ParticleOffsetDisplacement*>(&transformation2);
+	    int j1a = vd->getDestinationParticle1();
+	    int i1a = vd->getOriginParticle1();
+	    int j0a = vd->getDestinationParticle0();
+	    int i0a = vd->getOriginParticle0();
+	    int j1b = vd2->getDestinationParticle1();
+	    int i1b = vd2->getOriginParticle1();
+	    int j0b = vd2->getDestinationParticle0();
+	    int i0b = vd2->getOriginParticle0();
 	    ASSERT_EQUAL(j1a, j1b);
 	    ASSERT_EQUAL(i1a, i1b);
 	    ASSERT_EQUAL(j0a, j0b);
 	    ASSERT_EQUAL(i0a, i0b);
 	}
 	else {
-	    ASSERT_EQUAL("NoDisplacement", transformation->getName());
+	    throwException(__FILE__, __LINE__, "Unknown CoordinateTransformation type");
 	}
 
     }

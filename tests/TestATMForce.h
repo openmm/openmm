@@ -58,8 +58,8 @@ using namespace std;
 void testAPI(){
     ATMForce* atm = new ATMForce(0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.6, 0.8, -1.0);
     atm->addParticle(Vec3(1, 2, 3), Vec3(4, 5, 6)); //old interface
-    atm->addParticle(new ATMFixedDisplacement(Vec3(7, 8, 9), Vec3(10, 11, 12)));
-    atm->addParticle(new ATMVectordistanceDisplacement(1, 0));
+    atm->addParticle(new ATMForce::FixedDisplacement(Vec3(7, 8, 9), Vec3(10, 11, 12)));
+    atm->addParticle(new ATMForce::ParticleOffsetDisplacement(1, 0));
     atm->addParticle();
 
     Vec3 d1, d0;
@@ -67,13 +67,13 @@ void testAPI(){
     ASSERT_EQUAL_VEC(Vec3(1, 2, 3), d1, 1e-6);
     ASSERT_EQUAL_VEC(Vec3(4, 5, 6), d0, 1e-6);
 
-    const ATMFixedDisplacement* ft = atm->getParticleFixedDisplacementTransformation(1);
-    d1 = ft->getFixedDisplacement1();
-    d0 = ft->getFixedDisplacement0();
+    const ATMForce::FixedDisplacement* fd = (dynamic_cast<const ATMForce::FixedDisplacement*>(&(atm->getParticleTransformation(1))));
+    d1 = fd->getFixedDisplacement1();
+    d0 = fd->getFixedDisplacement0();
     ASSERT_EQUAL_VEC(Vec3(7, 8, 9), d1, 1e-6);
     ASSERT_EQUAL_VEC(Vec3(10, 11, 12), d0, 1e-6);
 
-    const ATMVectordistanceDisplacement* vt = atm->getParticleVectordistanceDisplacementTransformation(2);
+    const ATMForce::ParticleOffsetDisplacement* vt = (dynamic_cast<const ATMForce::ParticleOffsetDisplacement*>(&(atm->getParticleTransformation(2))));
     int j1 = vt->getDestinationParticle1();
     int i1 = vt->getOriginParticle1();
     int j0 = vt->getDestinationParticle0();
@@ -82,20 +82,6 @@ void testAPI(){
     ASSERT_EQUAL( 0, i1);
     ASSERT_EQUAL(-1, j0);
     ASSERT_EQUAL(-1, i0);
-
-    const ATMTransformation* t = atm->getParticleTransformation(2);
-    const std::string tName = t->getName();
-    if (tName == "VectordistanceDisplacement") {
-      const ATMVectordistanceDisplacement* vt2 = atm->getParticleVectordistanceDisplacementTransformation(2);
-      int j1 = vt2->getDestinationParticle1();
-      int i1 = vt2->getOriginParticle1();
-      int j0 = vt2->getDestinationParticle0();
-      int i0 = vt2->getOriginParticle0();
-      ASSERT_EQUAL( 1, j1);
-      ASSERT_EQUAL( 0, i1);
-      ASSERT_EQUAL(-1, j0);
-      ASSERT_EQUAL(-1, i0);
-    }
 
     atm->getParticleParameters(3, d1, d0);
     ASSERT_EQUAL_VEC(Vec3(0, 0, 0), d1, 1e-6);
@@ -126,7 +112,7 @@ void test2Particles() {
     ATMForce* atm = new ATMForce(lmbd, lmbd, 0., 0, 0, umax, ubcore, acore, direction);
     Vec3 displ = Vec3(1., 0., 0.);
     atm->addParticle();
-    atm->addParticle(new ATMFixedDisplacement(displ));
+    atm->addParticle(new ATMForce::FixedDisplacement(displ));
     atm->addForce(bond);
     atm->addEnergyParameterDerivative(ATMForce::Lambda1());
     atm->addEnergyParameterDerivative(ATMForce::Lambda2());
@@ -195,8 +181,8 @@ void test3ParticlesSwap() {
     ATMForce* atm = new ATMForce(lmbd, lmbd, 0., 0, 0, umax, ubcore, acore, direction);
     //swap particles 1 and 2
     atm->addParticle( ); //particle 0 is not displaced
-    atm->addParticle(new ATMVectordistanceDisplacement(2,  1) );
-    atm->addParticle(new ATMVectordistanceDisplacement(1,  2) );
+    atm->addParticle(new ATMForce::ParticleOffsetDisplacement(2,  1) );
+    atm->addParticle(new ATMForce::ParticleOffsetDisplacement(1,  2) );
 
     atm->addForce(bond);
     system.addForce(atm);
@@ -251,7 +237,7 @@ void test2Particles2Displacement0() {
     atm->addParticle();
     //second particle is displaced at both states but by the same amount (1,0,0)
     Vec3 displ0 = Vec3(1., 0., 0.);
-    atm->addParticle(new ATMFixedDisplacement(displ0, displ0));
+    atm->addParticle(new ATMForce::FixedDisplacement(displ0, displ0));
     atm->addForce(bond);
     system.addForce(atm);
 
@@ -329,7 +315,7 @@ void test2ParticlesSoftCore() {
     ATMForce* atm = new ATMForce(lmbd, lmbd, 0., 0, 0, umax, ubcore, acore, direction);
     Vec3   displ = Vec3(5., 0., 0.);
     atm->addParticle();
-    atm->addParticle(new ATMFixedDisplacement(displ));
+    atm->addParticle(new ATMForce::FixedDisplacement(displ));
     atm->addForce(bond);
     system.addForce(atm);
 
@@ -484,7 +470,7 @@ void testParticlesCustomExpressionLinear() {
     atm->addGlobalParameter("Lambda", lmbd);
     Vec3   displ = Vec3(5., 0., 0.);
     atm->addParticle();
-    atm->addParticle(new ATMFixedDisplacement(displ));
+    atm->addParticle(new ATMForce::FixedDisplacement(displ));
     atm->addForce(bond);
     system.addForce(atm);
 
@@ -536,7 +522,7 @@ void testParticlesCustomExpressionSoftplus() {
     atm->addGlobalParameter("W0", w0);
 
     atm->addParticle();
-    atm->addParticle(new ATMFixedDisplacement(displ));
+    atm->addParticle(new ATMForce::FixedDisplacement(displ));
     atm->addForce(bond);
     system.addForce(atm);
 
@@ -586,7 +572,7 @@ void testLargeSystem() {
         Vec3 d(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
         displacements.push_back(d);
         external->addParticle(i);
-        atm->addParticle(new ATMFixedDisplacement(d));
+        atm->addParticle(new ATMForce::FixedDisplacement(d));
     }
 
     // Also add nonbonded forces to trigger atom reordering on the GPU.
@@ -655,7 +641,7 @@ void testLargeSystemSwap() {
         system.addParticle(1.0);
         positions.push_back(3*Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt)));
         external->addParticle(i, {qf[i]});
-        atm->addParticle(new ATMVectordistanceDisplacement(target_particle[i], i));
+        atm->addParticle(new ATMForce::ParticleOffsetDisplacement(target_particle[i], i));
     }
 
     double energy0 = 0.;
