@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -52,6 +52,8 @@ KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform&
         return new CpuCalcRBTorsionForceKernel(name, platform, data);
     if (name == CalcNonbondedForceKernel::Name())
         return new CpuCalcNonbondedForceKernel(name, platform, data);
+    if (name == CalcConstantPotentialForceKernel::Name())
+        return new CpuCalcConstantPotentialForceKernel(name, platform, data);
     if (name == CalcCustomNonbondedForceKernel::Name())
         return new CpuCalcCustomNonbondedForceKernel(name, platform, data);
     if (name == CalcCustomManyParticleForceKernel::Name())
