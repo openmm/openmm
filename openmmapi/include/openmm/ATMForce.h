@@ -40,6 +40,7 @@
 #include <openmm/Vec3.h>
 #include <vector>
 #include <string>
+#include <map>
 #include "internal/windowsExport.h"
 
 namespace OpenMM {
@@ -59,7 +60,7 @@ namespace OpenMM {
  * and please cite it to support our work if you use this software in your research.
  *
  * The ATMForce implements an arbitrary potential energy function that depends on the potential
- * energies (u0 and u1) of the system before and after a set of atoms are displaced by a specified amount.
+ * energies (u0 and u1) of the system before and after a set of atoms are displaced by some amount.
  * For example, you might displace a molecule from the solvent bulk to a receptor binding site to simulate 
  * a binding process.  The potential energy function typically also depends on one or more parameters that
  * are dialed to implement alchemical transformations.
@@ -69,9 +70,11 @@ namespace OpenMM {
  * of the variables u0 and u1. Then call addGlobalParameter() to define the parameters on which the potential energy expression depends.
  * The values of global parameters may be modified during a simulation by calling Context::setParameter().
  * Next, call addForce() to add Force objects that define the terms of the potential energy function
- * that change upon displacement. Finally, call addParticle() to specify the displacement applied to
- * each particle. Displacements can be changed by calling setParticleParameters(). As any per-particle parameters, 
- * changes in displacements take effect only after calling updateParametersInContext().
+ * that change upon displacement. Finally, call addParticle() to specify the coordinate transformation applied to
+ * each particle. Currently supported coordinate transformations consist of displacing the positions of particles by some amount.
+ * Fixed lab-frame displacements can be provided directly as arguments to addParticle() and can be changed by calling setParticleParameters().
+ * Although this specification is deprecated in favor of generic coordinate transformation object (see below). As any per-particle parameters,
+ * changes in particle coordinate transformations take effect only after calling updateParametersInContext().
  *
  * As an example, the following code creates an ATMForce based on the change in energy of
  * two particles when the second particle is displaced by 1 nm in the x direction.
@@ -88,7 +91,39 @@ namespace OpenMM {
  *    atm->addForce(force);
  * \endverbatim
  *
- * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
+ * A fixed displacement can be also specified using a FixedDisplacement coordinate transformation class. 
+ * Also, calling addParticle() without arguments is equivalent to a zero displacement. So the example above is equivalent to
+ *
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    ATMForce *atmforce = new ATMForce("u0 + Lambda*(u1 - u0)");
+ *    atm->addGlobalParameter("Lambda", 0.5);
+ *    atm->addParticle();
+ *    atm->addParticle(new ATMForce::FixedDisplacement(Vec3(1, 0, 0)));
+ *    CustomBondForce* force = new CustomBondForce("0.5*r^2");
+ *    atm->addForce(force);
+ * \endverbatim
+ *
+ * In the examples above, displacements are specified by fixed lab-frame vectors. ATMForce also supports variable displacements in internal
+ * system coordinates in terms of vector distances between specified particles. For example, the following code creates an ATMForce based on 
+ * the change in energy when the first particle is displaced by the vector distance from particle 1 to particle 2:
+ *
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    ATMForce *atmforce = new ATMForce("u0 + Lambda*(u1 - u0)");
+ *    atm->addGlobalParameter("Lambda", 0.5);
+ *    atm->addParticle(new ATMForce::ParticleOffsetDisplacement(2, 1));
+ *    atm->addParticle();
+ *    atm->addParticle();
+ *    CustomBondForce* force = new CustomBondForce("0.5*r^2");
+ *    atm->addForce(force);
+ * \endverbatim
+ *
+ * where ParticleOffsetDisplacement is a class that describes this particular type of coordinate transformation.
+ * 
+ * Energy expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, atan2, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta,
  * select.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
@@ -125,12 +160,20 @@ namespace OpenMM {
  * In most cases, particles are only displaced in one of the two states evaluated by this force.  It computes the
  * change in energy between the current particle coordinates (as stored in the Context) and the displaced coordinates.
  * In some cases, it is useful to apply displacements to both states.  You can do this by providing two displacement
- * vectors to addParticle():
+ * vectors to addParticle() or
  * 
  * \verbatim embed:rst:leading-asterisk
  * .. code-block:: cpp
  *
  *    atm->addParticle(Vec3(1, 0, 0), Vec3(-1, 0, 0));
+ * \endverbatim
+ *
+ * or
+ *
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    atm->addParticle(new ATMForce::FixedDisplacement(Vec3(1, 0, 0), Vec3(-1, 0, 0)));
  * \endverbatim
  * 
  * In this case, u1 will be computed after displacing the particle in the positive x direction, and
@@ -220,8 +263,22 @@ public:
      * return the force from index
      */
     Force& getForce(int index) const;
+
     /**
-     * Add a particle to the force.
+     * Add a stationary particle: one whose coordinate is not transformed
+     *
+     * All of the particles in the System must be added to the ATMForce in the same order
+     * as they appear in the System.
+     *
+     * @return                 the index of the particle that was added
+     */
+    int addParticle();
+
+    /**
+     * Add a particle to the force with fixed lab frame displacements
+     *
+     * @deprecated This method exists only for backward compatibility. Use:
+     *   addParticle(new ATMFixedDisplacement(displacement1, displacement0))
      *
      * All of the particles in the System must be added to the ATMForce in the same order
      * as they appear in the System.
@@ -231,22 +288,64 @@ public:
      * @return                 the index of the particle that was added
      */
     int addParticle(const Vec3& displacement1, const Vec3& displacement0=Vec3());
+
+    class CoordinateTransformation;
+    class FixedDisplacement;
+    class ParticleOffsetDisplacement;
+
+    /**
+     * Maps the names of coordinate transformations: "FixedDisplacement",
+     * and "ParticleOffsetDisplacement" to numerical values. Used for serialization.
+     */
+    static const std::map<std::string, int> CoordinateTransformationType;
+    /**
+     * Maps numerical coordinate transformations types to
+     * the corresponding coordinate transformation names.
+     * It is the inverse mapping of CoordinateTransformationType.
+     */
+    static const std::map<int, std::string> CoordinateTransformationName;
+
+    /**
+     * Add a particle to the force with a coordinate transformation method
+     *
+     * All of the particles in the System must be added to the ATMForce in the same order
+     * as they appear in the System.
+     *
+     * @param transformation  the pointer to the CoordinateTransformation object, which should have been
+     *                        created on the heap with the "new" operator.  The ATMForce takes over
+     *                        ownership of it, and deletes the CoordinateTransformation when the ATMForce
+     *                        itself is deleted. Currently supported transformations are FixedDisplacement and
+     *                        ParticleOffsetDisplacement.
+     * @return                the index of the particle that was added
+     */
+    int addParticle(CoordinateTransformation* transformation);
+
     /**
      * Get the parameters for a particle
+     *
+     * @deprecated This method exists only for backward compatibility.  Use:
+     *   const ATMForce::CoordinateTransformation& transformation = getParticleTransformation(index);
+     *   Vec3 displacement1 = dynamic_cast<const ATMFixedDisplacement*>(&transformation)->getFixedDisplacement1();
+     *   Vec3 displacement0 = dynamic_cast<const ATMFixedDisplacement*>(&transformation)->getFixedDisplacement0();
      * 
      * @param index           the index in the force for the particle for which to get parameters
-     * @param displacement1   the displacement of the particle for the target state in nm
-     * @param displacement0   the displacement of the particle for the initial state in nm
+     * @param displacement1   the fixed lab-frame displacement of the particle for the target state in nm
+     * @param displacement0   the fixed lab-frame displacement of the particle for the initial state in nm
      */
     void getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0) const;
+
     /**
-     * Set the parameters for a particle
+     * Set the displacements for a particle as fixed lab frame vectors
+     *
+     * @deprecated This method exists only for backward compatibility. Use:
+     *    setParticleTransformation(index, new ATMForce::FixedDisplacement(displacement1, displacement0))
      * 
      * @param index           the index in the force of the particle for which to set parameters
-     * @param displacement1   the displacement of the particle for the target state in nm
-     * @param displacement0   the displacement of the particle for the initial state in nm
+     * @param displacement1   the fixed lab-frame displacement of the particle for the target state in nm
+     * @param displacement0   the fixed lab-frame displacement of the particle for the initial state in nm
      */
     void setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0=Vec3());
+
     /**
      * Add a new global parameter that the interaction may depend on.  The default value provided to
      * this method is the initial value of the parameter in newly created Contexts.  You can change
@@ -400,6 +499,25 @@ public:
         return key;
     }
 
+    /**
+     * Change the coordinate transformation method for the specified particle
+     *
+     * @param index           the index of the particle
+     * @param transformation  the pointer to the CoordinateTransformation object, which should have been 
+     *                        created on the heap with the "new" operator.  The ATMForce takes over 
+     *                        ownership of it, and deletes the CoordinateTransformation when the ATMForce 
+     *                        itself is deleted.
+     */
+    void setParticleTransformation(int index, CoordinateTransformation* transformation);
+
+    /**
+     * Returns the Transformation object associated with the particle
+     *
+     * @param index           the index of the particle
+     * @return                the CoordinateTransformation object associated with the particle
+     */
+    const CoordinateTransformation& getParticleTransformation(int index) const;
+
 protected:
   ForceImpl* createImpl() const;
 private:
@@ -419,13 +537,12 @@ private:
 class ATMForce::ParticleInfo {
 public:
     int index;
-    Vec3 displacement1, displacement0;
-    ParticleInfo() : index(-1) {
+    CoordinateTransformation* transformation;
+    ParticleInfo() : index(-1), transformation(NULL) {
     }
-    ParticleInfo(int index) : index(index) {
+    ParticleInfo(int index) : index(index), transformation(NULL) {
     }
-    ParticleInfo(int index, Vec3 displacement1, Vec3 displacement0) :
-        index(index), displacement1(displacement1), displacement0(displacement0) {
+    ParticleInfo(int index, CoordinateTransformation* transformation) : index(index), transformation(transformation) {
     }
 };
 
@@ -441,6 +558,80 @@ public:
     }
     GlobalParameterInfo(const std::string& name, double defaultValue) : name(name), defaultValue(defaultValue) {
     }
+};
+
+/**
+ * The CoordinateTransformation class describes a generic coordinate transformation applied
+ * to a particle. It is a virtual base class. Use the derived classes FixedDisplacement and
+ * ParticleOffsetDisplacement to define actual coordinate transformations
+ */
+class ATMForce::CoordinateTransformation {
+public:
+    CoordinateTransformation(){}
+    virtual ~CoordinateTransformation(){};
+    const std::string& getName() const {
+	return name;
+    }
+    int getTypeid() const {
+	return type;
+    }
+protected:
+    int type;
+    std::string name;
+};
+
+/**
+ * The FixedDisplacement class describes a coordinate transformation where a particle is displaced by
+ * a fixed amount. To use it, create a FixedDisplacement object passing the displacement vectors for the two
+ * states evaluated by ATMForce. The first displacement applies to the target state, and the second 
+ * to the reference state. The second displacement can be omitted, in which case it is set to zero.
+ */
+class ATMForce::FixedDisplacement : public ATMForce::CoordinateTransformation {
+public:
+    FixedDisplacement(const Vec3& displacement1, const Vec3& displacement0=Vec3()) : displ1(displacement1), displ0(displacement0) {
+	name = "FixedDisplacement";
+	type = CoordinateTransformationType.at(name);
+    }
+    ~FixedDisplacement() override {}
+    const Vec3& getFixedDisplacement1() const {
+	return displ1;
+    }
+    const Vec3& getFixedDisplacement0() const {
+	return displ0;
+    }
+private:
+    Vec3 displ1, displ0;
+};
+
+/**
+ * The ParticleOffsetDisplacement class describes a coordinate transformation in which a particle is displaced by the
+ * vector distance between two particles. The displacement is variable because it changes as the two particles move.
+ * To use it, create a ParticleOffsetDisplacement passing the indexes, pDestination1 and pOrigin1, respectively, of 
+ * the two particles, resulting in the variable displacement pos[pDestination1]-pos[pOrigin1] if the array pos holds the
+ * particles' positions. Optionally, a second set of particles, pDestination0 and pOrigin0, can be specified to also apply
+ * a similar variable displacement at the reference state of the ATMForce.
+ */
+class ATMForce::ParticleOffsetDisplacement : public ATMForce::CoordinateTransformation {
+public:
+    ParticleOffsetDisplacement(int pDestination1, int pOrigin1, int  pDestination0 = -1, int pOrigin0 = -1) : pDestination1(pDestination1), pOrigin1(pOrigin1), pDestination0(pDestination0), pOrigin0(pOrigin0) {
+	name = "ParticleOffsetDisplacement";
+	type = CoordinateTransformationType.at(name);
+    }
+    ~ParticleOffsetDisplacement() override {}
+    int getDestinationParticle1() const {
+	return pDestination1;
+    }
+    int getOriginParticle1() const {
+	return pOrigin1;
+    }
+    int getDestinationParticle0() const {
+	return pDestination0;
+    }
+    int getOriginParticle0() const {
+	return pOrigin0;
+    }
+ private:
+    int pDestination1, pOrigin1, pDestination0, pOrigin0;
 };
 
 } // namespace OpenMM

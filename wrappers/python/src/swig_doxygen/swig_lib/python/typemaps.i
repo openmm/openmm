@@ -427,7 +427,7 @@ int Py_SequenceToVecVecVecDouble(PyObject* obj, std::vector<std::vector<std::vec
         SWIG_fail;
     }
 }
-%typemap(typecheck, fragment="Py_SequenceToVec3") Vec3 {
+%typemap(typecheck, precedence=SWIG_TYPECHECK_DOUBLE_ARRAY, fragment="Py_SequenceToVec3") Vec3 {
     int res = 0;
     Py_SequenceToVec3($input, res);
     $1 = SWIG_IsOK(res);
@@ -444,7 +444,7 @@ int Py_SequenceToVecVecVecDouble(PyObject* obj, std::vector<std::vector<std::vec
     }
     $1 = &myVec;
 }
-%typemap(typecheck, fragment="Py_SequenceToVec3") const Vec3& {
+%typemap(typecheck, precedence=SWIG_TYPECHECK_DOUBLE_ARRAY, fragment="Py_SequenceToVec3") const Vec3& {
     int res = 0;
     Py_SequenceToVec3($input, res);
     $1 = SWIG_IsOK(res);
