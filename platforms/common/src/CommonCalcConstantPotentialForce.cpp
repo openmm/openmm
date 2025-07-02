@@ -211,7 +211,7 @@ void CommonConstantPotentialSolver::getGuessChargeArrays(vector<ComputeArray*>& 
 CommonConstantPotentialMatrixSolver::CommonConstantPotentialMatrixSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles) : CommonConstantPotentialSolver(cc, numParticles, numElectrodeParticles) {
     int elementSize = cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float);
     electrodePosData.initialize(cc, numElectrodeParticles, cc.getPosq().getElementSize(), "electrodePosData");
-    capacitance.initialize(cc, (size_t)numElectrodeParticles * (numElectrodeParticles + 1) / 2, elementSize, "capacitance");
+    capacitance.initialize(cc, (size_t) numElectrodeParticles * numElectrodeParticles, elementSize, "capacitance");
     constraintVector.initialize(cc, numElectrodeParticles, elementSize, "constraintVector");
     checkSavedElectrodePositionsKernelResult.initialize<int>(cc, 1, "checkSavedElectrodePositionsKernelResult");
 }
@@ -336,12 +336,12 @@ void CommonConstantPotentialMatrixSolver::ensureValid(CommonCalcConstantPotentia
         throw OpenMMException("Electrode matrix not positive definite");
     }
 
-    // Load all elements of the lower triangle and diagonal of the Cholesky
-    // decomposition into a buffer: (0, 0), (1, 0), (1, 1), (2, 0), (2, 1), ...
+    // Load the results of the Cholesky decomposition into a buffer.
     TNT::Array2D<double> choleskyLower = choleskyInverse.getL();
     vector<double> hostCapacitance(capacitance.getSize());
     size_t index = 0;
     for (int ii = 0; ii < numElectrodeParticles; ii++) {
+        // Load the lower triangle.
         for (int jj = 0; jj < ii; jj++) {
             hostCapacitance[index++] = choleskyLower[ii][jj];
         }
@@ -349,6 +349,11 @@ void CommonConstantPotentialMatrixSolver::ensureValid(CommonCalcConstantPotentia
         // A Cholesky solve uses the lower triangle as is but divides by the
         // diagonal elements, so take their reciprocals now. 
         hostCapacitance[index++] = 1.0 / choleskyLower[ii][ii];
+
+        // Load the transpose of the lower triangle into the upper triangle.
+        for (int jj = ii + 1; jj < numElectrodeParticles; jj++) {
+            hostCapacitance[index++] = choleskyLower[jj][ii];
+        }
     }
     capacitance.upload(hostCapacitance, true);
 
