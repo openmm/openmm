@@ -491,4 +491,12 @@
     <NBFixPair class1="CAL" class2="OC2D2" epsilon="0.50208" sigma="0.28793846570295767" />
     <NBFixPair class1="CAL" class2="OG2D2" epsilon="0.50208" sigma="0.28793846570295767" />
   </LennardJonesForce>
+  <InitializationScript>
+EXPECTED_VERSION = "charmm36_2024"
+if hasattr(self, "_charmm_ff_version"):
+    if self._charmm_ff_version != EXPECTED_VERSION:
+        raise RuntimeError(f"CHARMM force field versions ({self._charmm_ff_version} and {EXPECTED_VERSION}) incompatible")
+else:
+    self._charmm_ff_version = EXPECTED_VERSION
+  </InitializationScript>
 </ForceField>
