@@ -141,12 +141,11 @@ STEAL_OWNERSHIP = {("Platform", "registerPlatform") : [0],
                    ("CustomCVForce", "addCollectiveVariable") : [1],
                    ("CustomIntegrator", "addTabulatedFunction") : [1],
                    ("CompoundIntegrator", "addIntegrator") : [0],
+                   ("DrudeIntegrator", "setDrudeForce") : [0],
                    ("DrudeLangevinIntegrator", "setDrudeForce") : [0],
                    ("DrudeSCFIntegrator", "setDrudeForce") : [0],
                    ("DrudeNoseHooverIntegrator", "setDrudeForce") : [0],
 }
-
-
 
 REQUIRE_ORDERED_SET = {("CustomNonbondedForce", "addInteractionGroup") : [0, 1],
                        ("CustomNonbondedForce", "setInteractionGroupParameters") : [1, 2],
@@ -478,6 +477,7 @@ UNITS = {
 ("DrudeIntegrator", "setDrudeTemperature") : (None, ("unit.kelvin",)),
 ("DrudeIntegrator", "getMaxDrudeDistance") : ("unit.nanometer", ()),
 ("DrudeIntegrator", "setMaxDrudeDistance") : (None, ("unit.nanometer",)),
+("DrudeIntegrator", "getDrudeForce") : (None, (None,)),
 ("DrudeLangevinIntegrator", "getDrudeTemperature") : ("unit.kelvin", ()),
 ("DrudeLangevinIntegrator", "setDrudeTemperature") : (None, ("unit.kelvin",)),
 ("DrudeLangevinIntegrator", "getMaxDrudeDistance") : ("unit.nanometer", ()),
