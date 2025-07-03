@@ -115,24 +115,3 @@ void DrudeSCFIntegrator::step(int steps) {
         kernel.getAs<IntegrateDrudeSCFStepKernel>().execute(*context, *this);
     }
 }
-
-void DrudeSCFIntegrator::setDrudeForce(DrudeForce* force) {
-    if (drudeForce) {
-      delete drudeForce;
-    }
-    drudeForce = force;
-}
-
-bool DrudeSCFIntegrator::isDrudeForceSet() const {
-    if (!drudeForce) {
-	return false;
-    }
-    return true;
-}
-
-const DrudeForce& DrudeSCFIntegrator::getDrudeForce() const {
-    if (!drudeForce) {
-	throw OpenMMException("getDrudeForce: a DrudeForce has not been set.");
-    }
-    return *drudeForce;
-}

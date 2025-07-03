@@ -34,6 +34,7 @@
 
 #include "openmm/Integrator.h"
 #include "openmm/Kernel.h"
+#include "openmm/DrudeForce.h"
 #include "openmm/internal/windowsExportDrude.h"
 
 namespace OpenMM {
@@ -102,7 +103,33 @@ public:
     int getRandomNumberSeed() const {
         return randomNumberSeed;
     }
- 
+
+    
+    /**
+     * Set the DrudeForce object used to identify the Drude particles.
+     *
+     * The DrudeForce should have been created on the heap with the
+     * "new" operator. The DrudeIntegrator takes over ownership of it, 
+     * and deletes the Force when the DrudeIntegrator itself is deleted.
+     *
+     * @param force   a pointer to the DrudeForce
+     */
+    void setDrudeForce(DrudeForce* force);
+
+    /**
+     * Queries whether a DrudeForce has been set
+     *
+     * @return   True if a DrudeForce is set, False otherwise
+     */
+    bool isDrudeForceSet() const;
+    
+    /**
+     * Get the stored DrudeForce object if one was set.
+     *
+     * @return   a reference to the DrudeForce
+     */
+    const DrudeForce& getDrudeForce() const;
+    
  protected:
     /**
      * This will be called by the Context when it is created.  It informs the Integrator
@@ -136,6 +163,7 @@ public:
 
     int randomNumberSeed;
     double drudeTemperature, maxDrudeDistance;
+    DrudeForce *drudeForce;
 };
 
 } // namespace OpenMM

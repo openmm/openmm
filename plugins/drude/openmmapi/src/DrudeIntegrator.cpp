@@ -40,11 +40,11 @@
 using namespace OpenMM;
 
 namespace OpenMM {
-    extern std::vector<Vec3> assignDrudeVelocities(const System &system, double temperature, double drudeTemperature, int randomSeed);
+    extern std::vector<Vec3> assignDrudeVelocities(const System &system, double temperature, double drudeTemperature, int randomSeed, DrudeForce *drudeForce);
 }
 
 std::vector<Vec3> DrudeIntegrator::getVelocitiesForTemperature(const System &system, double temperature, int randomSeedIn) const {
-    return assignDrudeVelocities(system, temperature, drudeTemperature, randomSeedIn);
+    return assignDrudeVelocities(system, temperature, drudeTemperature, randomSeedIn, drudeForce);
 }
 
 void DrudeIntegrator::setDrudeTemperature(double temp) {
@@ -61,4 +61,26 @@ void DrudeIntegrator::setMaxDrudeDistance(double distance) {
     if (distance < 0)
         throw OpenMMException("setMaxDrudeDistance: Distance cannot be negative");
     maxDrudeDistance = distance;
+}
+
+  
+void DrudeIntegrator::setDrudeForce(DrudeForce* force) {
+    if (drudeForce) {
+	delete drudeForce;
+    }
+    drudeForce = force;
+}
+
+bool DrudeIntegrator::isDrudeForceSet() const {
+    if (!drudeForce) {
+	return false;
+    }
+    return true;
+}
+
+const DrudeForce& DrudeIntegrator::getDrudeForce() const {
+    if (!drudeForce) {
+	throw OpenMMException("getDrudeForce: a DrudeForce has not been set.");
+    }
+    return *drudeForce;
 }

@@ -49,8 +49,8 @@ using std::vector;
 using std::pair;
 
 namespace OpenMM {
-    extern std::vector<Vec3> assignDrudeVelocities(const System &system, double temperature, double drudeTemperature, int randomSeed);
-    pair<double, double> computeTemperaturesFromVelocities(const System& system, const vector<Vec3>& velocities);
+    extern std::vector<Vec3> assignDrudeVelocities(const System &system, double temperature, double drudeTemperature, int randomSeed, DrudeForce *drudeForce);
+    pair<double, double> computeTemperaturesFromVelocities(const System& system, const vector<Vec3>& velocities, DrudeForce *drudeForce);
 }
 
 
@@ -167,7 +167,7 @@ double DrudeNoseHooverIntegrator::computeSystemTemperature() {
     context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
     vector<Vec3> velocities;
     context->computeShiftedVelocities(getVelocityTimeOffset(), velocities);
-    return computeTemperaturesFromVelocities(context->getSystem(), velocities).first;
+    return computeTemperaturesFromVelocities(context->getSystem(), velocities, drudeForce).first;
 }
 
 double DrudeNoseHooverIntegrator::computeDrudeTemperature() {
@@ -183,7 +183,7 @@ double DrudeNoseHooverIntegrator::computeDrudeTemperature() {
 
 std::vector<Vec3> DrudeNoseHooverIntegrator::getVelocitiesForTemperature(const System &system, double temperature,
                                                                          int randomSeedIn) const {
-    return assignDrudeVelocities(system, temperature, drudeTemperature, randomSeedIn);
+    return assignDrudeVelocities(system, temperature, drudeTemperature, randomSeedIn, drudeForce);
 }
 
 void DrudeNoseHooverIntegrator::setDrudeForce(DrudeForce* force) {
