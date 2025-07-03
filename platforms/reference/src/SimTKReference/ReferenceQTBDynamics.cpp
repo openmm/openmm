@@ -45,7 +45,6 @@ ReferenceQTBDynamics::ReferenceQTBDynamics(const System& system, const QTBIntegr
     int numParticles = system.getNumParticles();
     xPrime.resize(numParticles);
     oldx.resize(numParticles);
-    inverseMasses.resize(numParticles);
     noise.resize(3*3*segmentLength*numParticles);
     randomForce.resize(segmentLength*numParticles);
     segmentVelocity.resize(segmentLength*numParticles);
@@ -199,9 +198,10 @@ void ReferenceQTBDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordi
             vector<double>& masses, double tolerance, ThreadPool& threads) {
     int numParticles = context.getSystem().getNumParticles();
     ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
-    if (getTimeStep() == 0) {
+    if (inverseMasses.size() == 0) {
         // Invert masses
 
+        inverseMasses.resize(numParticles);
         for (int ii = 0; ii < numParticles; ii++) {
             if (masses[ii] == 0.0)
                 inverseMasses[ii] = 0.0;
@@ -257,7 +257,7 @@ void ReferenceQTBDynamics::generateNoise(int numParticles, vector<double>& masse
     vector<ptrdiff_t> complexStride = {(ptrdiff_t) sizeof(complex<double>)};
     vector<size_t> shape = {(size_t) 3*segmentLength}, axes = {0};
     threads.execute([&] (ThreadPool& threads, int threadIndex) {
-        vector<complex<double> > recipData(numFreq);
+        vector<complex<double> > recipData(3*segmentLength);
         vector<double> force(3*segmentLength);
         for (int particle = threadIndex; particle < numParticles; particle += threads.getNumThreads()) {
             int type = particleType[particle];
@@ -285,7 +285,7 @@ void ReferenceQTBDynamics::adaptFriction(ThreadPool& threads) {
     vector<size_t> shape = {(size_t) 3*segmentLength}, axes = {0};
     threads.execute([&] (ThreadPool& threads, int threadIndex) {
         vector<double> vel(3*segmentLength, 0.0), force(3*segmentLength, 0.0);
-        vector<complex<double> > recipVel(numFreq), recipForce(numFreq);
+        vector<complex<double> > recipVel(3*segmentLength), recipForce(3*segmentLength);
         vector<double> dfdt(numFreq);
         for (int type = threadIndex; type < typeParticles.size(); type += threads.getNumThreads()) {
             for (int i = 0; i < dfdt.size(); i++)
