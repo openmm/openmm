@@ -512,6 +512,45 @@ void testLargeSystem() {
     }
 }
 
+void testChangingBoxVectors() {
+    // Create a periodic system with incorrect default box vectors.
+
+    int numParticles = 500;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
+    NonbondedForce* force = new NonbondedForce();
+    force->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    ATMForce* atm = new ATMForce(0.0, 0.0, 0.1, 0.0, 0.0, 1e6, 5e5, 1.0/16, 1.0);
+    atm->addForce(force);
+    system.addForce(atm);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions;
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        positions.push_back(3*Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5));
+        force->addParticle(0.0, 0.1, 1.0);
+        atm->addParticle(Vec3());
+        for (int j = 0; j < i; j++) {
+            Vec3 delta = positions[i]-positions[j];
+            for (int k = 0; k < 3; k++)
+                delta[k] -= round(delta[k]/2.0)*2.0;
+            if (sqrt(delta.dot(delta)) < 0.1)
+                force->addException(i, j, 0.0, 0.1, 0.0);
+        }
+    }
+
+    // Set the correct box vectors in the context and check that energy is calculated correctly.
+
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setPeriodicBoxVectors(Vec3(2, 0, 0), Vec3(0, 2, 0), Vec3(0, 0, 2));
+    double energy1 = context.getState(State::Energy).getPotentialEnergy();
+    double energy2 = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(energy1, energy2, 1e-6);
+}
+
 void testMolecules() {
     // Verify that ATMForce correctly propagates information about molecules
     // from the forces it contains.
@@ -603,6 +642,7 @@ int main(int argc, char* argv[]) {
         testParticlesCustomExpressionLinear();
         testParticlesCustomExpressionSoftplus();
         testLargeSystem();
+	testChangingBoxVectors();
         testMolecules();
         testSimulation();
         runPlatformTests();

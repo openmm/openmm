@@ -42,7 +42,7 @@ HipArray::HipArray(HipContext& context, size_t size, int elementSize, const std:
 }
 
 HipArray::~HipArray() {
-    if (pointer != 0 && ownsMemory && context->getContextIsValid()) {
+    if (pointer != 0 && ownsMemory) {
         ContextSelector selector(*context);
         hipError_t result = hipFree(pointer);
         if (result != hipSuccess) {

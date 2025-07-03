@@ -654,7 +654,7 @@ To add a CustomAngleForce to the System, include a tag that looks like this:
     <CustomAngleForce energy="scale*k*(theta-theta0)^2">
      <GlobalParameter name="scale" defaultValue="0.5"/>
      <PerAngleParameter name="k"/>
-     <PerAngleParameter name=" theta0"/>
+     <PerAngleParameter name="theta0"/>
      <Angle class1="HW" class2="OW" class3="HW" theta0="1.824218" k="836.8"/>
      <Angle class1="HW" class2="HW" class3="OW" theta0="2.229483" k="0.0"/>
      <Angle class1="C" class2="C" class3="O" theta0="2.094395" k="669.44"/>

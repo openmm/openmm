@@ -134,6 +134,11 @@ static map<string, double>& extractEnergyParameterDerivatives(ContextImpl& conte
     return *data->energyParameterDerivatives;
 }
 
+static ThreadPool& extractThreadPool(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return data->threads;
+}
+
 /**
  * Make sure an expression doesn't use any undefined variables.
  */
@@ -1575,13 +1580,13 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
     // Add in the long range correction.
     
     if (!hasInitializedLongRangeCorrection) {
-        ThreadPool threads;
+        ThreadPool& threads = extractThreadPool(context);
         longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(*forceCopy, threads.getNumThreads());
         CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, threads);
         hasInitializedLongRangeCorrection = true;
     }
     else if (globalParamsChanged && forceCopy != NULL) {
-        ThreadPool threads;
+        ThreadPool& threads = extractThreadPool(context);
         CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, threads);
     }
     double volume = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
@@ -1608,7 +1613,7 @@ void ReferenceCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImp
     // If necessary, recompute the long range correction.
     
     if (forceCopy != NULL) {
-        ThreadPool threads;
+        ThreadPool& threads = extractThreadPool(context);
         longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, threads.getNumThreads());
         CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, threads);
         hasInitializedLongRangeCorrection = true;
