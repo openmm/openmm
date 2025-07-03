@@ -40,7 +40,7 @@ using namespace OpenMM;
 using namespace std;
 
 ReferenceQTBDynamics::ReferenceQTBDynamics(const System& system, const QTBIntegrator& integrator) :
-           ReferenceDynamics(system.getNumParticles(), integrator.getStepSize(), integrator.getTemperature()), friction(integrator.getFriction()), stepIndex(0) {
+            ReferenceDynamics(system.getNumParticles(), integrator.getStepSize(), integrator.getTemperature()), friction(integrator.getFriction()), stepIndex(0) {
     segmentLength = (int) ceil(integrator.getSegmentLength()/integrator.getStepSize());
     int numParticles = system.getNumParticles();
     xPrime.resize(numParticles);
@@ -91,7 +91,6 @@ ReferenceQTBDynamics::ReferenceQTBDynamics(const System& system, const QTBIntegr
 
     numFreq = (3*segmentLength+1)/2;
     theta.resize(numFreq);
-    thetad.resize(numFreq, 0);
     cutoffFunction.resize(numFreq);
     double cutoff = integrator.getCutoffFrequency();
     double cutoffWidth = cutoff/100;
@@ -110,6 +109,8 @@ ReferenceQTBDynamics::~ReferenceQTBDynamics() {
 }
 
 void ReferenceQTBDynamics::calcSpectrum(ThreadPool& threads) {
+    // Compute the standard spectrum.
+
     double hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
     double kT = BOLTZ*getTemperature();
     theta[0] = kT;
@@ -117,7 +118,46 @@ void ReferenceQTBDynamics::calcSpectrum(ThreadPool& threads) {
         double w = M_PI*i/(numFreq*getDeltaT());
         theta[i] = hbar*w*(0.5+1/(exp(hbar*w/kT)-1));
     }
-    deconvolveTheta(threads);
+
+    // Compute the deconvolved version.
+
+    auto C = [&](double w0, double w) {
+        double t = w*w-w0*w0;
+        return (friction/M_PI)*w0*w0/(t*t+friction*friction*w*w);
+    };
+    vector<vector<double> > D(numFreq, vector<double>(numFreq));
+    vector<double> h(numFreq);
+    vector<double> fcurrent(numFreq), fnext(numFreq);
+    for (int i = 0; i < numFreq; i++)
+        fcurrent[i] = 0.5*theta[i];
+    double dw = M_PI/(numFreq*getDeltaT());
+    threads.execute([&] (ThreadPool& threads, int threadIndex) {
+        for (int i = threadIndex; i < numFreq; i += threads.getNumThreads()) {
+            double wi = M_PI*(i+0.5)/(numFreq*getDeltaT());
+            h[i] = 0.0;
+            for (int j = 0; j < numFreq; j++) {
+                double wj = M_PI*(j+0.5)/(numFreq*getDeltaT());
+                h[i] += dw*C(wj, wi)*fcurrent[j];
+                D[i][j] = 0.0;
+                for (int k = 0; k < numFreq; k++) {
+                    double wk = M_PI*(k+0.5)/(numFreq*getDeltaT());
+                    D[i][j] += dw*C(wk, wi)*C(wk, wj);
+                }
+            }
+        }
+    });
+    threads.waitForThreads();
+    for (int iteration = 0; iteration < 20; iteration++) {
+        for (int i = 0; i < numFreq; i++) {
+            double denom = 0.0;
+            for (int j = 0; j < numFreq; j++)
+                denom += dw*D[i][j]*fcurrent[j];
+            fnext[i] = fcurrent[i]*h[i]/denom;
+        }
+        fcurrent = fnext;
+    }
+    thetad = fnext;
+    lastTemperature = getTemperature();
 }
 
 void ReferenceQTBDynamics::updatePart1(int numParticles, vector<Vec3>& velocities, vector<Vec3>& forces) {
@@ -154,8 +194,8 @@ void ReferenceQTBDynamics::updatePart3(OpenMM::ContextImpl& context, int numPart
     }
 }
 
-void ReferenceQTBDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordinates,
-                                    vector<Vec3>& velocities, vector<double>& masses, double tolerance) {
+void ReferenceQTBDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordinates, vector<Vec3>& velocities,
+            vector<double>& masses, double tolerance, ThreadPool& threads) {
     int numParticles = context.getSystem().getNumParticles();
     ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
     if (getTimeStep() == 0) {
@@ -171,8 +211,10 @@ void ReferenceQTBDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordi
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     vector<Vec3>& forces = *data->forces;
     if (stepIndex%segmentLength == 0) {
+        if (lastTemperature != getTemperature() || thetad.size() == 0)
+            calcSpectrum(threads);
         adaptFriction();
-        generateNoise(numParticles, masses);
+        generateNoise(numParticles, masses, threads);
         stepIndex = 0;
     }
 
@@ -197,7 +239,7 @@ void ReferenceQTBDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordi
     stepIndex += 1;
 }
 
-void ReferenceQTBDynamics::generateNoise(int numParticles, vector<double>& masses) {
+void ReferenceQTBDynamics::generateNoise(int numParticles, vector<double>& masses, ThreadPool& threads) {
     // Update the buffer of white noise.
 
     for (int base = 0; base < noise.size(); base += 3*segmentLength) {
@@ -210,27 +252,30 @@ void ReferenceQTBDynamics::generateNoise(int numParticles, vector<double>& masse
     // Generate the random force for the next segment.
 
     double dt = getDeltaT();
-    vector<complex<double> > recipData(numFreq);
-    vector<double> force(3*segmentLength);
     vector<ptrdiff_t> realStride = {(ptrdiff_t) sizeof(double)};
     vector<ptrdiff_t> complexStride = {(ptrdiff_t) sizeof(complex<double>)};
-    vector<size_t> axes = {0};
-    for (int particle = 0; particle < numParticles; particle++) {
-        int type = particleType[particle];
-        for (int axis = 0; axis < 3; axis++) {
-            double* data = &noise[(3*particle+axis)*3*segmentLength];
-            pocketfft::r2c({(unsigned long) (3*segmentLength)}, realStride, complexStride, axes, true, data, recipData.data(), 1.0, 1);
-            for (int i = 0; i < numFreq; i++) {
-                double w = M_PI*i/(numFreq*dt);
-                double gamma = adaptedFriction[type][i];
-                double cw = (1 - 2*exp(-dt*friction)*cos(w*dt) + exp(-2*friction*dt)) / ((friction*friction+w*w)*dt*dt);
-                recipData[i] *= sqrt(cutoffFunction[i]*thetad[i]*cw*gamma/friction);
+    vector<size_t> shape = {(size_t) 3*segmentLength}, axes = {0};
+    threads.execute([&] (ThreadPool& threads, int threadIndex) {
+        vector<complex<double> > recipData(numFreq);
+        vector<double> force(3*segmentLength);
+        for (int particle = threadIndex; particle < numParticles; particle += threads.getNumThreads()) {
+            int type = particleType[particle];
+            for (int axis = 0; axis < 3; axis++) {
+                double* data = &noise[(3*particle+axis)*3*segmentLength];
+                pocketfft::r2c(shape, realStride, complexStride, axes, true, data, recipData.data(), 1.0, 1);
+                for (int i = 0; i < numFreq; i++) {
+                    double w = M_PI*i/(numFreq*dt);
+                    double gamma = adaptedFriction[type][i];
+                    double cw = (1 - 2*exp(-dt*friction)*cos(w*dt) + exp(-2*friction*dt)) / ((friction*friction+w*w)*dt*dt);
+                    recipData[i] *= sqrt(cutoffFunction[i]*thetad[i]*cw*gamma/friction);
+                }
+                pocketfft::c2r(shape, complexStride, realStride, axes, false, recipData.data(), force.data(), 1.0/(3*segmentLength), 1);
+                for (int i = 0; i < segmentLength; i++)
+                    randomForce[particle*segmentLength+i][axis] = sqrt(2*masses[particle]*friction/dt)*force[segmentLength+i];
             }
-            pocketfft::c2r({(unsigned long) (3*segmentLength)}, complexStride, realStride, axes, false, recipData.data(), force.data(), 1.0/(3*segmentLength), 1);
-            for (int i = 0; i < segmentLength; i++)
-                randomForce[particle*segmentLength+i][axis] = sqrt(2*masses[particle]*friction/dt)*force[segmentLength+i];
         }
-    }
+    });
+    threads.waitForThreads();
 }
 
 void ReferenceQTBDynamics::adaptFriction() {
@@ -271,48 +316,6 @@ void ReferenceQTBDynamics::adaptFriction() {
         for (int i = 0; i < adaptedFriction[type].size(); i++)
             adaptedFriction[type][i] = max(0.0, adaptedFriction[type][i]-scale*typeAdaptationRate[type]*dfdt[i]);
     }
-}
-
-void ReferenceQTBDynamics::deconvolveTheta(ThreadPool& threads) {
-    int maxIndex = numFreq;
-    while (maxIndex > 0 && theta[maxIndex-1] == 0)
-        maxIndex--;
-    auto C = [&](double w0, double w) {
-        double t = w*w-w0*w0;
-        return (friction/M_PI)*w0*w0/(t*t+friction*friction*w*w);
-    };
-    vector<vector<double> > D(maxIndex, vector<double>(maxIndex));
-    vector<double> h(maxIndex);
-    vector<double> fcurrent(numFreq), fnext(numFreq);
-    for (int i = 0; i < numFreq; i++)
-        fcurrent[i] = 0.5*theta[i];
-    double dw = M_PI/(numFreq*getDeltaT());
-    threads.execute([&] (ThreadPool& threads, int threadIndex) {
-        for (int i = threadIndex; i < maxIndex; i += threads.getNumThreads()) {
-            double wi = M_PI*(i+0.5)/(numFreq*getDeltaT());
-            h[i] = 0.0;
-            for (int j = 0; j < maxIndex; j++) {
-                double wj = M_PI*(j+0.5)/(numFreq*getDeltaT());
-                h[i] += dw*C(wj, wi)*fcurrent[j];
-                D[i][j] = 0.0;
-                for (int k = 0; k < maxIndex; k++) {
-                    double wk = M_PI*(k+0.5)/(numFreq*getDeltaT());
-                    D[i][j] += dw*C(wk, wi)*C(wk, wj);
-                }
-            }
-        }
-    });
-    threads.waitForThreads();
-    for (int iteration = 0; iteration < 20; iteration++) {
-        for (int i = 0; i < maxIndex; i++) {
-            double denom = 0.0;
-            for (int j = 0; j < maxIndex; j++)
-                denom += dw*D[i][j]*fcurrent[j];
-            fnext[i] = fcurrent[i]*h[i]/denom;
-        }
-        fcurrent = fnext;
-    }
-    thetad = fnext;
 }
 
 void ReferenceQTBDynamics::getAdaptedFriction(int particle, vector<double>& friction) const {

@@ -2900,7 +2900,7 @@ double ReferenceIntegrateDPDStepKernel::computeKineticEnergy(ContextImpl& contex
 }
 
 ReferenceIntegrateQTBStepKernel::~ReferenceIntegrateQTBStepKernel() {
-    if (dynamics)
+    if (dynamics != NULL)
         delete dynamics;
 }
 
@@ -2921,11 +2921,9 @@ void ReferenceIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBInt
         hasInitialized = true;
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         dynamics->setVirtualSites(extractVirtualSites(context));
-        ThreadPool threads;
-        dynamics->calcSpectrum(threads);
     }
     dynamics->setTemperature(integrator.getTemperature());
-    dynamics->update(context, posData, velData, masses, integrator.getConstraintTolerance());
+    dynamics->update(context, posData, velData, masses, integrator.getConstraintTolerance(), extractThreadPool(context));
     data.time += stepSize;
     data.stepCount++;
 }

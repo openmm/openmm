@@ -35,7 +35,7 @@ namespace OpenMM {
 
 class OPENMM_EXPORT ReferenceQTBDynamics : public ReferenceDynamics {
 protected:
-    double friction;
+    double friction, lastTemperature;
     int segmentLength, stepIndex, numFreq;
     std::vector<OpenMM::Vec3> xPrime, oldx, randomForce, segmentVelocity;
     std::vector<double> inverseMasses, typeAdaptationRate, typeMass;
@@ -59,12 +59,6 @@ public:
     ~ReferenceQTBDynamics();
 
     /**
-     * Recalculate the target noise spectrum.  This must be called before running any dynamics.
-     * 
-     * @param threads        a ThreadPool to use for parallelizing the calculation.
-     */
-    void calcSpectrum(ThreadPool& threads);
-    /**
      * Perform a time step, updating the positions and velocities.
      * 
      * @param context             the context this integrator is updating
@@ -73,9 +67,10 @@ public:
      * @param velocities          velocities
      * @param masses              atom masses
      * @param tolerance           the constraint tolerance
+     * @param threads      a ThreadPool to use for parallelization
      */
     void update(OpenMM::ContextImpl& context, std::vector<OpenMM::Vec3>& atomCoordinates,
-                std::vector<OpenMM::Vec3>& velocities, std::vector<double>& masses, double tolerance);
+                std::vector<OpenMM::Vec3>& velocities, std::vector<double>& masses, double tolerance, ThreadPool& threads);
 
     /**
      * The first stage of the update algorithm.
@@ -112,17 +107,17 @@ public:
 
 private:
     /**
+     * Recalculate the target noise spectrum.
+     */
+    void calcSpectrum(ThreadPool& threads);
+    /**
      * Generate noise for the next segment.
      */
-    void generateNoise(int numParticles, std::vector<double>& masses);
+    void generateNoise(int numParticles, std::vector<double>& masses, ThreadPool& threads);
     /**
      * Update the friction rates used for generating noise.
      */
     void adaptFriction();
-    /**
-     * Compute the deconvolved version of theta that compensates of broadening of peaks in the spectrum.
-     */
-    void deconvolveTheta(ThreadPool& threads);
 };
 
 } // namespace OpenMM
