@@ -169,11 +169,14 @@ void testWaterDimer() {
     checkForceEnergyConsistency(context);
 }
 
-void testWaterBox() {
+void testWaterBox(int offsetIndex = -1) {
     System system;
     HippoNonbondedForce* hippo = new HippoNonbondedForce();
     buildWaterSystem(system, 216, hippo);
-    system.setDefaultPeriodicBoxVectors(Vec3(1.8643, 0, 0), Vec3(0, 1.8643, 0), Vec3(0, 0, 1.8643));
+    Vec3 a(1.8643, 0, 0);
+    Vec3 b(0, 1.8643, 0);
+    Vec3 c(0, 0, 1.8643);
+    system.setDefaultPeriodicBoxVectors(a, b, c);
     hippo->setNonbondedMethod(HippoNonbondedForce::PME);
     hippo->setCutoffDistance(0.7);
     hippo->setSwitchingDistance(0.6);
@@ -843,6 +846,11 @@ void testWaterBox() {
         Vec3(-0.8345957, 0.40272220000000003, 0.3589257),
         Vec3(-0.8130328000000001, 0.28452380000000005, 0.2577949)
     };
+
+    if (offsetIndex != -1) {
+        positions[offsetIndex] += a + b + c;
+    }
+
     context.setPositions(positions);
     State state = context.getState(State::Energy | State::Forces);
     
@@ -1603,6 +1611,8 @@ int main(int argc, char* argv[]) {
         }
         testWaterDimer();
         testWaterBox();
+        for (int offsetIndex = 0; offsetIndex < 30; offsetIndex += 4)
+            testWaterBox(offsetIndex);
         testChangingParameters();
         testNeutralizingPlasmaCorrection();
     }
