@@ -119,7 +119,8 @@ void ReferenceQTBDynamics::calcSpectrum(ThreadPool& threads) {
         theta[i] = hbar*w*(0.5+1/(exp(hbar*w/kT)-1));
     }
 
-    // Compute the deconvolved version.
+    // Compute the deconvolved version.  The algorithm is described in the supplementary
+    // information in https://doi.org/10.1021/acs.jpclett.1c01722.
 
     auto C = [&](double w0, double w) {
         double t = w*w-w0*w0;
@@ -213,7 +214,7 @@ void ReferenceQTBDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordi
     if (stepIndex%segmentLength == 0) {
         if (lastTemperature != getTemperature() || thetad.size() == 0)
             calcSpectrum(threads);
-        adaptFriction();
+        adaptFriction(threads);
         generateNoise(numParticles, masses, threads);
         stepIndex = 0;
     }
@@ -278,44 +279,47 @@ void ReferenceQTBDynamics::generateNoise(int numParticles, vector<double>& masse
     threads.waitForThreads();
 }
 
-void ReferenceQTBDynamics::adaptFriction() {
-    vector<double> vel(3*segmentLength, 0.0), force(3*segmentLength, 0.0);
-    vector<complex<double> > recipVel(numFreq), recipForce(numFreq);
-    vector<double> dfdt(numFreq);
+void ReferenceQTBDynamics::adaptFriction(ThreadPool& threads) {
     vector<ptrdiff_t> realStride = {(ptrdiff_t) sizeof(double)};
     vector<ptrdiff_t> complexStride = {(ptrdiff_t) sizeof(complex<double>)};
     vector<size_t> shape = {(size_t) 3*segmentLength}, axes = {0};
-    for (int type = 0; type < typeParticles.size(); type++) {
-        for (int i = 0; i < dfdt.size(); i++)
-            dfdt[i] = 0;
-        for (int particle : typeParticles[type]) {
-            for (int axis = 0; axis < 3; axis++) {
-                // Compute the Fourier transformed velocity and force.
+    threads.execute([&] (ThreadPool& threads, int threadIndex) {
+        vector<double> vel(3*segmentLength, 0.0), force(3*segmentLength, 0.0);
+        vector<complex<double> > recipVel(numFreq), recipForce(numFreq);
+        vector<double> dfdt(numFreq);
+        for (int type = threadIndex; type < typeParticles.size(); type += threads.getNumThreads()) {
+            for (int i = 0; i < dfdt.size(); i++)
+                dfdt[i] = 0;
+            for (int particle : typeParticles[type]) {
+                for (int axis = 0; axis < 3; axis++) {
+                    // Compute the Fourier transformed velocity and force.
 
-                for (int i = 0; i < segmentLength; i++) {
-                    vel[i] = segmentVelocity[particle*segmentLength+i][axis];
-                    force[i] = randomForce[particle*segmentLength+i][axis];
-                }
-                pocketfft::r2c(shape, realStride, complexStride, axes, true, vel.data(), recipVel.data(), 1.0, 1);
-                pocketfft::r2c(shape, realStride, complexStride, axes, true, force.data(), recipForce.data(), 1.0, 1);
+                    for (int i = 0; i < segmentLength; i++) {
+                        vel[i] = segmentVelocity[particle*segmentLength+i][axis];
+                        force[i] = randomForce[particle*segmentLength+i][axis];
+                    }
+                    pocketfft::r2c(shape, realStride, complexStride, axes, true, vel.data(), recipVel.data(), 1.0, 1);
+                    pocketfft::r2c(shape, realStride, complexStride, axes, true, force.data(), recipForce.data(), 1.0, 1);
 
-                // Compute the error in the fluctuation dissipation theorem.
+                    // Compute the error in the fluctuation dissipation theorem.
 
-                double mass = typeMass[type];
-                for (int i = 0; i < numFreq; i++) {
-                    double cvv = norm(recipVel[i]);
-                    complex<double> cvf = recipVel[i]*conj(recipForce[i]);
-                    dfdt[i] += mass*adaptedFriction[type][i]*cvv - cvf.real();
+                    double mass = typeMass[type];
+                    for (int i = 0; i < numFreq; i++) {
+                        double cvv = norm(recipVel[i]);
+                        complex<double> cvf = recipVel[i]*conj(recipForce[i]);
+                        dfdt[i] += mass*adaptedFriction[type][i]*cvv - cvf.real();
+                    }
                 }
             }
+
+            // Average over particles and axes, and update the friction.
+
+            double scale = getDeltaT()/(3*typeParticles[type].size()*segmentLength);
+            for (int i = 0; i < adaptedFriction[type].size(); i++)
+                adaptedFriction[type][i] = max(0.0, adaptedFriction[type][i]-scale*typeAdaptationRate[type]*dfdt[i]);
         }
-
-        // Average over particles and axes, and update the friction.
-
-        double scale = getDeltaT()/(3*typeParticles[type].size()*segmentLength);
-        for (int i = 0; i < adaptedFriction[type].size(); i++)
-            adaptedFriction[type][i] = max(0.0, adaptedFriction[type][i]-scale*typeAdaptationRate[type]*dfdt[i]);
-    }
+    });
+    threads.waitForThreads();
 }
 
 void ReferenceQTBDynamics::getAdaptedFriction(int particle, vector<double>& friction) const {

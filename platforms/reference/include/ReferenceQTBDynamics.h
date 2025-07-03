@@ -117,7 +117,7 @@ private:
     /**
      * Update the friction rates used for generating noise.
      */
-    void adaptFriction();
+    void adaptFriction(ThreadPool& threads);
 };
 
 } // namespace OpenMM

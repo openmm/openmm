@@ -39,8 +39,39 @@
 namespace OpenMM {
 
 /**
+ * This integrator implements the Adaptive Quantum Thermal Bath (adQTB) algorithm
+ * as described in https://doi.org/10.1021/acs.jctc.8b01164.  This is a fast method
+ * for approximating nuclear quantum effects by applying a Langevin thermostat whose
+ * random force varies with frequency to match the expected energy of a quantum
+ * harmonic oscillator.
+ * 
+ * To compensate for zero point energy leakage, the spectrum of the random force
+ * is adjusted automatically.  The trajectory is divided into short segments.  At
+ * the end of each segment, the distribution of energy across frequencies is evaluated,
+ * and the friction coefficients used in generating the random force are adjusted
+ * to better match the target distribution.  You can monitor this process by calling
+ * getAdaptedFriction().  It is important to equilibrate the simulation long enough
+ * for the friction coefficients to converge before beginning the production part of
+ * the simulation.
+ * 
+ * To make this process more robust, it is recommended to average the data over all
+ * particles that are expected to behave identically.  To do this, you can optionally
+ * call setParticleType() to define a particle as having a particular type.  The
+ * data for all particles of the same type is averaged and they are adjusted together.
+ * You also can set a different adaptation rate for each particle type.  The more
+ * particles that are being averaged over, the higher the adaptation rate can reasonably
+ * be set, leading to faster adaptation.
+ * 
+ * Most properties of this integrator are fixed at Context creation time and can
+ * only be changed after that by reinitializing the Context.  That includes the
+ * step size, friction coefficient, segment length, cutoff frequency, particle types,
+ * and adaptation rates.  The only property of the integrator that can be freely
+ * changed in the middle of a simulation is the temperature, and even that requires
+ * some care.  The new temperature will not take effect until the beginning of the
+ * next segment.  Furthermore, changing the temperature is a potentially expensive
+ * operation, since it requires performing a calculation whose cost scales as the
+ * cube of the number of time steps in a segment.
  */
-
 class OPENMM_EXPORT QTBIntegrator : public Integrator {
 public:
     /**

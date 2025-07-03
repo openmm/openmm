@@ -93,7 +93,6 @@ void testHarmonic() {
         double hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
         double kT = BOLTZ*temperature;
         double expected = 1.5*hbar*w*(0.5+1/(exp(hbar*w/kT)-1));
-        printf("%g %g %g %g\n", w, expected, energy[i], energy[i]/expected);
         ASSERT_USUALLY_EQUAL_TOL(expected, energy[i], 0.05);
     }
 }
@@ -158,9 +157,173 @@ void testCoupledHarmonic() {
         double hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
         double kT = BOLTZ*temperature;
         double expected = 1.5*hbar*w*(0.5+1/(exp(hbar*w/kT)-1));
-        printf("%g %g %g %g\n", w, expected, energy[i], energy[i]/expected);
         ASSERT_USUALLY_EQUAL_TOL(expected, energy[i], 0.15);
     }
+}
+
+
+void testConstraints() {
+    const int numParticles = 8;
+    const int numConstraints = 5;
+    const double temp = 100.0;
+    System system;
+    QTBIntegrator integrator(temp, 2.0, 0.01);
+    integrator.setConstraintTolerance(1e-5);
+    NonbondedForce* forceField = new NonbondedForce();
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(10.0);
+        forceField->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+    }
+    system.addConstraint(0, 1, 1.0);
+    system.addConstraint(1, 2, 1.0);
+    system.addConstraint(2, 3, 1.0);
+    system.addConstraint(4, 5, 1.0);
+    system.addConstraint(6, 7, 1.0);
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(numParticles);
+    vector<Vec3> velocities(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
+    for (int i = 0; i < numParticles; ++i) {
+        positions[i] = Vec3(i/2, (i+1)/2, 0);
+        velocities[i] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
+    }
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+
+    // Simulate it and see whether the constraints remain satisfied.
+
+    for (int i = 0; i < 1000; ++i) {
+        State state = context.getState(State::Positions);
+        for (int j = 0; j < numConstraints; ++j) {
+            int particle1, particle2;
+            double distance;
+            system.getConstraintParameters(j, particle1, particle2, distance);
+            Vec3 p1 = state.getPositions()[particle1];
+            Vec3 p2 = state.getPositions()[particle2];
+            double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
+            ASSERT_EQUAL_TOL(distance, dist, 1e-4);
+        }
+        integrator.step(1);
+    }
+}
+
+void testConstrainedMasslessParticles() {
+    System system;
+    system.addParticle(0.0);
+    system.addParticle(1.0);
+    system.addConstraint(0, 1, 1.5);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(-1, 0, 0);
+    positions[1] = Vec3(1, 0, 0);
+    QTBIntegrator integrator(300.0, 2.0, 0.01);
+    bool failed = false;
+    try {
+        // This should throw an exception.
+        
+        Context context(system, integrator, platform);
+    }
+    catch (exception& ex) {
+        failed = true;
+    }
+    ASSERT(failed);
+    
+    // Now make both particles massless, which should work.
+    
+    system.setParticleMass(1, 0.0);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(300.0);
+    integrator.step(1);
+    State state = context.getState(State::Velocities);
+    ASSERT_EQUAL(0.0, state.getVelocities()[0][0]);
+}
+
+void testRandomSeed() {
+    const int numParticles = 8;
+    const double temp = 100.0;
+    System system;
+    QTBIntegrator integrator(temp, 2.0, 0.01);
+    NonbondedForce* forceField = new NonbondedForce();
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(2.0);
+        forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+    }
+    system.addForce(forceField);
+    vector<Vec3> positions(numParticles);
+    vector<Vec3> velocities(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
+        velocities[i] = Vec3(0, 0, 0);
+    }
+
+    // Try twice with the same random seed.
+
+    integrator.setRandomNumberSeed(5);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    integrator.step(10);
+    State state1 = context.getState(State::Positions);
+    context.reinitialize();
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    integrator.step(10);
+    State state2 = context.getState(State::Positions);
+
+    // Try twice with a different random seed.
+
+    integrator.setRandomNumberSeed(10);
+    context.reinitialize();
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    integrator.step(10);
+    State state3 = context.getState(State::Positions);
+    context.reinitialize();
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    integrator.step(10);
+    State state4 = context.getState(State::Positions);
+
+    // Compare the results.
+
+    for (int i = 0; i < numParticles; i++) {
+        for (int j = 0; j < 3; j++) {
+            ASSERT_EQUAL_TOL(state1.getPositions()[i][j], state2.getPositions()[i][j], 1e-6);
+            ASSERT_EQUAL_TOL(state3.getPositions()[i][j], state4.getPositions()[i][j], 1e-6);
+            ASSERT(state1.getPositions()[i][j] != state3.getPositions()[i][j]);
+        }
+    }
+}
+
+void testInitialTemperature() {
+    // Check temperature initialization for a collection of randomly placed particles
+    const int numParticles = 50000;
+    const int nDoF = 3 * numParticles;
+    const double targetTemperature = 300;
+    System system;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    std::vector<Vec3> positions(numParticles);
+
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        positions[i][0] = genrand_real2(sfmt);
+        positions[i][1] = genrand_real2(sfmt);
+        positions[i][2] = genrand_real2(sfmt);
+    }
+
+    QTBIntegrator integrator(300, 25, 0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(targetTemperature);
+    auto velocities = context.getState(State::Velocities).getVelocities();
+    double kineticEnergy = 0;
+    for(const auto &v : velocities) kineticEnergy += 0.5 * v.dot(v);
+    double temperature = (2*kineticEnergy / (nDoF*BOLTZ));
+    ASSERT_USUALLY_EQUAL_TOL(targetTemperature, temperature, 0.01);
 }
 
 void runPlatformTests();
@@ -170,6 +333,10 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         testHarmonic();
         testCoupledHarmonic();
+        testConstraints();
+        testConstrainedMasslessParticles();
+        testRandomSeed();
+        testInitialTemperature();
         runPlatformTests();
     }
     catch(const exception& e) {
