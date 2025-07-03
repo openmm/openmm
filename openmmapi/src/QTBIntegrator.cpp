@@ -34,10 +34,12 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/kernels.h"
+#include <set>
 #include <string>
 
 using namespace OpenMM;
 using std::map;
+using std::set;
 using std::string;
 using std::vector;
 
@@ -154,7 +156,34 @@ void QTBIntegrator::loadCheckpoint(std::istream& stream) {
 }
 
 void QTBIntegrator::serializeParameters(SerializationNode& node) const {
+    node.setIntProperty("version", 1);
+    vector<int> particles;
+    set<int> types;
+    for (int i = 0; i < context->getSystem().getNumParticles(); i++) {
+        if (particleType.find(i) == particleType.end())
+            particles.push_back(i);
+        else if (types.find(particleType.at(i)) == types.end()) {
+            particles.push_back(i);
+            types.insert(particleType.at(i));
+        }
+    }
+    vector<double> friction;
+    for (int i : particles) {
+        SerializationNode& particle = node.createChildNode("Friction").setIntProperty("particle", i);
+        getAdaptedFriction(i, friction);
+        for (double f : friction)
+            particle.createChildNode("F").setDoubleProperty("v", f);
+    }
 }
 
 void QTBIntegrator::deserializeParameters(const SerializationNode& node) {
+    if (node.getIntProperty("version") != 1)
+        throw OpenMMException("Unsupported version number");
+    for (const SerializationNode& child : node.getChildren()) {
+        int particle = child.getIntProperty("particle");
+        vector<double> friction;
+        for (const SerializationNode& f : child.getChildren())
+            friction.push_back(f.getDoubleProperty("v"));
+        kernel.getAs<IntegrateQTBStepKernel>().setAdaptedFriction(*context, particle, friction);
+    }
 }

@@ -65,7 +65,6 @@ void testHarmonic() {
     }
     QTBIntegrator integrator(temperature, 10.0, 0.001);
     integrator.setCutoffFrequency(500.0);
-    integrator.setDefaultAdaptationRate(1e-4);
     Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(temperature);
@@ -160,7 +159,6 @@ void testCoupledHarmonic() {
         ASSERT_USUALLY_EQUAL_TOL(expected, energy[i], 0.15);
     }
 }
-
 
 void testConstraints() {
     const int numParticles = 8;
@@ -326,6 +324,52 @@ void testInitialTemperature() {
     ASSERT_USUALLY_EQUAL_TOL(targetTemperature, temperature, 0.01);
 }
 
+void testSerializeParameters() {
+    // Test serializing the integrator's parameters.
+
+    int numParticles = 10;
+    double temperature = 300.0;
+    double mass = 2.0;
+    System system;
+    vector<Vec3> positions(numParticles);
+    CustomExternalForce* force = new CustomExternalForce("0.5*k*(x*x+y*y+z*z)");
+    system.addForce(force);
+    force->addPerParticleParameter("k");
+    QTBIntegrator integrator(temperature, 10.0, 0.001);
+    integrator.setCutoffFrequency(500.0);
+    integrator.setDefaultAdaptationRate(0.1);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(mass);
+        force->addParticle(i, {1000.0*(i+1)*(i+1)});
+        if (i < 5)
+            integrator.setParticleType(i, i%3);
+    }
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(temperature);
+
+    // Run for a little while, then record a State.
+
+    integrator.step(5000);
+    State state = context.getState(State::IntegratorParameters);
+
+    // Create a new Integrator and Context, set the State, and see if the adapted
+    // friction coefficients were set correctly.
+
+    QTBIntegrator integrator2(temperature, 10.0, 0.001);
+    for (auto type : integrator.getParticleTypes())
+        integrator2.setParticleType(type.first, type.second);
+    Context context2(system, integrator2, platform);
+    context2.setPositions(positions);
+    context2.setState(state);
+    for (int i = 0; i < numParticles; i++) {
+        vector<double> f1, f2;
+        integrator.getAdaptedFriction(i, f1);
+        integrator2.getAdaptedFriction(i, f2);
+        ASSERT_EQUAL_CONTAINERS(f1, f2);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -337,6 +381,7 @@ int main(int argc, char* argv[]) {
         testConstrainedMasslessParticles();
         testRandomSeed();
         testInitialTemperature();
+        testSerializeParameters();
         runPlatformTests();
     }
     catch(const exception& e) {

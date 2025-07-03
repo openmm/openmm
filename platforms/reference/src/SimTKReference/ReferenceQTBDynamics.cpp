@@ -326,6 +326,10 @@ void ReferenceQTBDynamics::getAdaptedFriction(int particle, vector<double>& fric
     friction = adaptedFriction[particleType[particle]];
 }
 
+void ReferenceQTBDynamics::setAdaptedFriction(int particle, const std::vector<double>& friction) {
+    adaptedFriction[particleType[particle]] = friction;
+}
+
 void ReferenceQTBDynamics::createCheckpoint(std::ostream& stream) const {
     stream.write((char*) &stepIndex, sizeof(int));
     stream.write((char*) noise.data(), sizeof(double)*noise.size());

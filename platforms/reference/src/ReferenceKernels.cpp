@@ -2936,6 +2936,10 @@ void ReferenceIntegrateQTBStepKernel::getAdaptedFriction(ContextImpl& context, i
     dynamics->getAdaptedFriction(particle, friction);
 }
 
+void ReferenceIntegrateQTBStepKernel::setAdaptedFriction(ContextImpl& context, int particle, const std::vector<double>& friction) {
+    dynamics->setAdaptedFriction(particle, friction);
+}
+
 void ReferenceIntegrateQTBStepKernel::createCheckpoint(ContextImpl& context, ostream& stream) const {
     dynamics->createCheckpoint(stream);
 }

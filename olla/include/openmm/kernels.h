@@ -1473,9 +1473,19 @@ public:
      * @param context    the context in which to execute this kernel
      * @param particle   the index of the particle for which to get the friction
      * @param friction   the adapted friction coefficients used in generating the
-     *                   random force.
+     *                   random force
      */
     virtual void getAdaptedFriction(ContextImpl& context, int particle, std::vector<double>& friction) const = 0;
+    /**
+     * Set the adapted friction coefficients for a particle.  This affects the
+     * specified particle, and all others that have the same type.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param particle   the index of the particle for which to get the friction
+     * @param friction   the adapted friction coefficients used in generating the
+     *                   random force
+     */
+    virtual void setAdaptedFriction(ContextImpl& context, int particle, const std::vector<double>& friction) = 0;
     /**
      * Write the adapted friction to a checkpoint.
      * 
