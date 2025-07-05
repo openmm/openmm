@@ -392,7 +392,7 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
             }
         }
     }
-    extractVirtualSites(context).computePositions(context.getSystem(), pos);
+    extractVirtualSites(context).computePositions(context.getSystem(), pos, extractBoxVectors(context));
     data.time += integrator.getStepSize();
     data.stepCount++;
 }
@@ -470,7 +470,7 @@ void ReferenceIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const D
     
     // Update the positions of virtual sites and Drude particles.
     
-    extractVirtualSites(context).computePositions(context.getSystem(), pos);
+    extractVirtualSites(context).computePositions(context.getSystem(), pos, extractBoxVectors(context));
     minimize(context, integrator.getMinimizationErrorTolerance());
     data.time += integrator.getStepSize();
     data.stepCount++;
