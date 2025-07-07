@@ -1386,6 +1386,66 @@ ATOM     20  OT2 HIS     1A   -0.864     1.172  -1.737  1.00  0.00           O
 END"""))
         # If the check is not done correctly, this will throw an exception.
         ff.createSystem(pdb.topology)
+    
+    def test_CharmmLoad(self):
+        """Tests that the CHARMM force fields are capable of parameterizing systems."""
+
+        charmm_models = ("charmm36", "charmm36_2024")
+        water_models_3 = ("water", "spce", "tip3p-pme-b", "tip3p-pme-f")
+        water_models_4 = ("tip4p2005", "tip4pew")
+        water_models_5 = ("tip5p", "tip5pew")
+
+        # Checks that the numbers of various types of terms in a system matches expected counts.
+        def check_system(system, particle_count, site_count, constraint_count, bond_count, angle_count, cmap_count, exception_count, override_count, drude_count, screen_count):
+            self.assertEqual(particle_count, system.getNumParticles())
+            self.assertEqual(site_count, sum([1 for index in range(system.getNumParticles()) if system.isVirtualSite(index)]))
+            self.assertEqual(constraint_count, system.getNumConstraints())
+            self.assertEqual(bond_count, sum([force.getNumBonds() for force in system.getForces() if isinstance(force, HarmonicBondForce)]))
+            self.assertEqual(angle_count, sum([force.getNumAngles() for force in system.getForces() if isinstance(force, HarmonicAngleForce)]))
+            self.assertEqual(cmap_count, sum([force.getNumTorsions() for force in system.getForces() if isinstance(force, CMAPTorsionForce)]))
+            self.assertEqual(exception_count, sum([force.getNumExceptions() for force in system.getForces() if isinstance(force, NonbondedForce)]))
+            self.assertEqual(override_count, sum([force.getNumBonds() for force in system.getForces() if isinstance(force, CustomBondForce)]))
+            self.assertEqual(drude_count, sum([force.getNumParticles() for force in system.getForces() if isinstance(force, DrudeForce)]))
+            self.assertEqual(screen_count, sum([force.getNumScreenedPairs() for force in system.getForces() if isinstance(force, DrudeForce)]))
+
+        # Standard 20 amino acids including N- and C-terminal variants.
+        pdb_20aa = PDBFile("systems/test_charmm_20aa.pdb")
+        for charmm_model in charmm_models:
+            check_system(ForceField(f"{charmm_model}.xml").createSystem(pdb_20aa.topology), 1032, 0, 0, 1937, 1833, 20, 5390, 2527, 0, 0)
+
+        # Standard 20 amino acids including N- and C-terminal variants (Drude).
+        pdb_20aa_drude = PDBFile("systems/test_charmm_20aa_drude.pdb")
+        for drude_model in ("charmm_polar_2019", "charmm_polar_2023"):
+            check_system(ForceField(f"{drude_model}.xml").createSystem(pdb_20aa_drude.topology), 1794, 241, 0, 2106, 1833, 20, 18162, 7434, 521, 1203)
+
+        # Peptide in water with ions.
+        pdb_peptide_3 = PDBFile("systems/test_charmm_peptide_3.pdb")
+        pdb_peptide_4 = PDBFile("systems/test_charmm_peptide_4.pdb")
+        pdb_peptide_5 = PDBFile("systems/test_charmm_peptide_5.pdb")
+        for charmm_model in charmm_models:
+            for water_model in water_models_3:
+                check_system(ForceField(f"{charmm_model}.xml", f"{charmm_model}/{water_model}.xml").createSystem(pdb_peptide_3.topology), 1136, 0, 984, 234, 249, 8, 1727, 353, 0, 0)
+            for water_model in water_models_4:
+                check_system(ForceField(f"{charmm_model}.xml", f"{charmm_model}/{water_model}.xml").createSystem(pdb_peptide_4.topology), 1464, 328, 984, 234, 249, 8, 2711, 353, 0, 0)
+            for water_model in water_models_5:
+                check_system(ForceField(f"{charmm_model}.xml", f"{charmm_model}/{water_model}.xml").createSystem(pdb_peptide_5.topology), 1792, 656, 984, 234, 249, 8, 4023, 353, 0, 0)
+
+    def test_CharmmVersionMismatchCheck(self):
+        """
+        Tests that CHARMM force fields cannot be loaded with the wrong water model versions.
+        """
+
+        charmm_models = ("charmm36", "charmm36_2024")
+        water_models = ("water", "spce", "tip3p-pme-b", "tip3p-pme-f", "tip4p2005", "tip4pew", "tip5p", "tip5pew")
+
+        for base_charmm_model in charmm_models:
+            for water_charmm_model in charmm_models:
+                if base_charmm_model != water_charmm_model:
+                    for water_model in water_models:
+                        with self.assertRaises(Exception):
+                            ForceField(f"{base_charmm_model}.xml", f"{water_charmm_model}/{water_model}.xml")
+                        with self.assertRaises(Exception):
+                            ForceField(f"{water_charmm_model}/{water_model}.xml", f"{base_charmm_model}.xml")
 
     def test_CharmmPolar(self):
         """Test the CHARMM polarizable force field."""
