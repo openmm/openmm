@@ -346,7 +346,7 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     // Next it needs to load parameters from global memory.
 
     if (force.getNumGlobalParameters() > 0)
-        extraArgs << ", GLOBAL const float* RESTRICT globals";
+        extraArgs << ", GLOBAL const real* RESTRICT globals";
     for (int i = 0; i < (int) donorParams->getParameterInfos().size(); i++) {
         ComputeParameterInfo& parameter = donorParams->getParameterInfos()[i];
         extraArgs << ", GLOBAL const "+parameter.getType()+"* RESTRICT donor"+parameter.getName();

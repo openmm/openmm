@@ -720,7 +720,8 @@ void ComputeContext::updateGlobalParamValues() {
     bool changed = false;
     if (!hasInitializedGlobals) {
         hasInitializedGlobals = true;
-        globalParamValues.initialize<float>(*this, max(1, (int) globalParamNames.size()), "globalParameters");
+        int elementSize = (getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+        globalParamValues.initialize(*this, max(1, (int) globalParamNames.size()), elementSize, "globalParameters");
         lastGlobalParamValues.resize(globalParamValues.getSize(), 0.0);
         if (globalParamNames.size() > 0)
             changed = true;

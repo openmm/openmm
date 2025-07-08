@@ -290,7 +290,7 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
             cc.getNonbondedUtilities().addParameter(ComputeParameterInfo(computedValueBuffers[i].getArray(), prefix+"values"+cc.intToString(i+1),
                     computedValueBuffers[i].getComponentType(), computedValueBuffers[i].getNumComponents()));
         if (needGlobalParams)
-            cc.getNonbondedUtilities().addArgument(ComputeParameterInfo(cc.getGlobalParamValues(), prefix+"globals", "float", 1));
+            cc.getNonbondedUtilities().addArgument(ComputeParameterInfo(cc.getGlobalParamValues(), prefix+"globals", "real", 1));
     }
     if (force.getNumComputedValues() > 0) {
         // Create the kernel to calculate computed values.
@@ -305,7 +305,7 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
             valuesSource << buffer.getType() << " local_" << valueName << ";\n";
         }
         if (force.getNumGlobalParameters() > 0)
-            args << ", GLOBAL const float* globals";
+            args << ", GLOBAL const real* globals";
         for (int i = 0; i < params->getParameterInfos().size(); i++) {
             ComputeParameterInfo& buffer = params->getParameterInfos()[i];
             string paramName = "params"+cc.intToString(i+1);
@@ -561,7 +561,7 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     for (int i = 0; i < tabulatedFunctionArrays.size(); i++)
         args << ", GLOBAL const " << tableTypes[i]<< "* RESTRICT table" << i;
     if (needGlobalParams)
-        args<<", GLOBAL const float* RESTRICT globals";
+        args<<", GLOBAL const real* RESTRICT globals";
     if (hasParamDerivs)
         args << ", GLOBAL mixed* RESTRICT energyParamDerivs";
     replacements["PARAMETER_ARGUMENTS"] = args.str();

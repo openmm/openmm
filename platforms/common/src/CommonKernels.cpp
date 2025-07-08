@@ -589,7 +589,7 @@ void CommonCalcCustomBondForceKernel::initialize(const System& system, const Cus
         variables[name] = "bondParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        string argName = cc.getBondedUtilities().addArgument(cc.getGlobalParamValues(), "float");
+        string argName = cc.getBondedUtilities().addArgument(cc.getGlobalParamValues(), "real");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             int index = cc.registerGlobalParam(name);
@@ -805,7 +805,7 @@ void CommonCalcCustomAngleForceKernel::initialize(const System& system, const Cu
         variables[name] = "angleParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        string argName = cc.getBondedUtilities().addArgument(cc.getGlobalParamValues(), "float");
+        string argName = cc.getBondedUtilities().addArgument(cc.getGlobalParamValues(), "real");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             int index = cc.registerGlobalParam(name);
@@ -1115,7 +1115,7 @@ void CommonCalcCustomTorsionForceKernel::initialize(const System& system, const 
         variables[name] = "torsionParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        string argName = cc.getBondedUtilities().addArgument(cc.getGlobalParamValues(), "float");
+        string argName = cc.getBondedUtilities().addArgument(cc.getGlobalParamValues(), "real");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             int index = cc.registerGlobalParam(name);
@@ -1377,7 +1377,7 @@ void CommonCalcCustomExternalForceKernel::initialize(const System& system, const
         variables[name] = "particleParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        string argName = cc.getBondedUtilities().addArgument(cc.getGlobalParamValues(), "float");
+        string argName = cc.getBondedUtilities().addArgument(cc.getGlobalParamValues(), "real");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             int index = cc.registerGlobalParam(name);
@@ -1511,7 +1511,7 @@ void CommonCalcCustomCompoundBondForceKernel::initialize(const System& system, c
         variables[name] = "bondParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        string argName = cc.getBondedUtilities().addArgument(cc.getGlobalParamValues(), "float");
+        string argName = cc.getBondedUtilities().addArgument(cc.getGlobalParamValues(), "real");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             int index = cc.registerGlobalParam(name);
@@ -1748,7 +1748,7 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
         extraArgs << ", GLOBAL mixed* RESTRICT energyParamDerivs";
     needGlobalParams = (force.getNumGlobalParameters() > 0);
     if (needGlobalParams) {
-        extraArgs << ", GLOBAL const float* RESTRICT globals";
+        extraArgs << ", GLOBAL const real* RESTRICT globals";
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             int index = cc.registerGlobalParam(name);

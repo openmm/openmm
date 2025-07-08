@@ -343,7 +343,7 @@ void CommonCalcCustomManyParticleForceKernel::initialize(const System& system, c
 
     stringstream extraArgs;
     if (force.getNumGlobalParameters() > 0)
-        extraArgs << ", GLOBAL const float* globals";
+        extraArgs << ", GLOBAL const real* globals";
     for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
         ComputeParameterInfo& parameter = params->getParameterInfos()[i];
         extraArgs<<", GLOBAL const "<<parameter.getType()<<"* RESTRICT global_params"<<(i+1);

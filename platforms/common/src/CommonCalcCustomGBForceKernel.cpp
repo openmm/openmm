@@ -269,7 +269,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         replacements["COMPUTE_VALUE"] = n2ValueStr;
         stringstream extraArgs, atomParams, loadLocal1, loadLocal2, load1, load2, tempDerivs1, tempDerivs2, storeDeriv1, storeDeriv2;
         if (force.getNumGlobalParameters() > 0)
-            extraArgs << ", GLOBAL const float* globals";
+            extraArgs << ", GLOBAL const real* globals";
         pairValueUsesParam.resize(params->getParameterInfos().size(), false);
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
             ComputeParameterInfo& buffer = params->getParameterInfos()[i];
@@ -339,7 +339,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
 
         stringstream reductionSource, extraArgs, deriv0;
         if (force.getNumGlobalParameters() > 0)
-            extraArgs << ", GLOBAL const float* globals";
+            extraArgs << ", GLOBAL const real* globals";
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
             ComputeParameterInfo& buffer = params->getParameterInfos()[i];
             string paramName = "params"+cc.intToString(i+1);
@@ -459,7 +459,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         replacements["COMPUTE_INTERACTION"] = n2EnergyStr;
         stringstream extraArgs, atomParams, loadLocal1, loadLocal2, clearLocal, load1, load2, declare1, recordDeriv, storeDerivs1, storeDerivs2, initParamDerivs, saveParamDerivs;
         if (force.getNumGlobalParameters() > 0)
-            extraArgs << ", GLOBAL const float* globals";
+            extraArgs << ", GLOBAL const real* globals";
         pairEnergyUsesParam.resize(params->getParameterInfos().size(), false);
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
             ComputeParameterInfo& buffer = params->getParameterInfos()[i];
@@ -547,7 +547,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
 
         stringstream compute, extraArgs, reduce, initParamDerivs, saveParamDerivs;
         if (force.getNumGlobalParameters() > 0)
-            extraArgs << ", GLOBAL const float* globals";
+            extraArgs << ", GLOBAL const real* globals";
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
             ComputeParameterInfo& buffer = params->getParameterInfos()[i];
             string paramName = "params"+cc.intToString(i+1);
@@ -665,7 +665,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
 
         stringstream compute, extraArgs, initParamDerivs, saveParamDerivs;
         if (force.getNumGlobalParameters() > 0)
-            extraArgs << ", GLOBAL const float* globals";
+            extraArgs << ", GLOBAL const real* globals";
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
             ComputeParameterInfo& buffer = params->getParameterInfos()[i];
             string paramName = "params"+cc.intToString(i+1);
@@ -816,7 +816,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
             }
         }
         if (needGlobalParams)
-            arguments.push_back(ComputeParameterInfo(cc.getGlobalParamValues(), prefix+"globals", "float", 1));
+            arguments.push_back(ComputeParameterInfo(cc.getGlobalParamValues(), prefix+"globals", "real", 1));
         nb.addInteraction(useCutoff, usePeriodic, force.getNumExclusions() > 0, cutoff, exclusionList, source, force.getForceGroup());
         for (auto param : parameters)
             nb.addParameter(param);
