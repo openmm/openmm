@@ -133,12 +133,6 @@ void CommonCalcCustomManyParticleForceKernel::initialize(const System& system, c
 
     // Record information about parameters.
 
-    globalParamNames.resize(force.getNumGlobalParameters());
-    globalParamValues.resize(force.getNumGlobalParameters());
-    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-        globalParamNames[i] = force.getGlobalParameterName(i);
-        globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
-    }
     vector<pair<ExpressionTreeNode, string> > variables;
     for (int i = 0; i < particlesPerSet; i++) {
         string index = cc.intToString(i+1);
@@ -153,14 +147,12 @@ void CommonCalcCustomManyParticleForceKernel::initialize(const System& system, c
             variables.push_back(makeVariable(name+index, "((real) params"+params->getParameterSuffix(i, index)+")"));
         }
     }
-    if (force.getNumGlobalParameters() > 0) {
-        globals.initialize<float>(cc, force.getNumGlobalParameters(), "customManyParticleGlobals");
-        globals.upload(globalParamValues);
-        for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-            const string& name = force.getGlobalParameterName(i);
-            string value = "globals["+cc.intToString(i)+"]";
-            variables.push_back(makeVariable(name, value));
-        }
+    needGlobalParams = (force.getNumGlobalParameters() > 0);
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        const string& name = force.getGlobalParameterName(i);
+        int index = cc.registerGlobalParam(name);
+        string value = "globals["+cc.intToString(index)+"]";
+        variables.push_back(makeVariable(name, value));
     }
 
     // Build data structures for type filters.
@@ -423,8 +415,8 @@ double CommonCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bo
             forceKernel->addArg(exclusions);
             forceKernel->addArg(exclusionStartIndex);
         }
-        if (globals.isInitialized())
-            forceKernel->addArg(globals);
+        if (needGlobalParams)
+            forceKernel->addArg(cc.getGlobalParamValues());
         for (auto& parameter : params->getParameterInfos())
             forceKernel->addArg(parameter.getArray());
         for (auto& function : tabulatedFunctionArrays)
@@ -472,17 +464,6 @@ double CommonCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bo
             copyPairsKernel->addArg(numNeighborsForAtom);
             copyPairsKernel->addArg(neighborStartIndex);
        }
-    }
-    if (globals.isInitialized()) {
-        bool changed = false;
-        for (int i = 0; i < (int) globalParamNames.size(); i++) {
-            float value = (float) context.getParameter(globalParamNames[i]);
-            if (value != globalParamValues[i])
-                changed = true;
-            globalParamValues[i] = value;
-        }
-        if (changed)
-            globals.upload(globalParamValues);
     }
     while (true) {
         int* numPairs = (int*) cc.getPinnedBuffer();

@@ -574,12 +574,6 @@ void CommonCalcCustomBondForceKernel::initialize(const System& system, const Cus
 
     // Record information for the expressions.
 
-    globalParamNames.resize(force.getNumGlobalParameters());
-    globalParamValues.resize(force.getNumGlobalParameters());
-    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-        globalParamNames[i] = force.getGlobalParameterName(i);
-        globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
-    }
     Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
     Lepton::ParsedExpression forceExpression = energyExpression.differentiate("r").optimize();
     map<string, Lepton::ParsedExpression> expressions;
@@ -595,12 +589,11 @@ void CommonCalcCustomBondForceKernel::initialize(const System& system, const Cus
         variables[name] = "bondParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        globals.initialize<float>(cc, force.getNumGlobalParameters(), "customBondGlobals");
-        globals.upload(globalParamValues);
-        string argName = cc.getBondedUtilities().addArgument(globals, "float");
+        string argName = cc.getBondedUtilities().addArgument(cc.getGlobalParamValues(), "float");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
-            string value = argName+"["+cc.intToString(i)+"]";
+            int index = cc.registerGlobalParam(name);
+            string value = argName+"["+cc.intToString(index)+"]";
             variables[name] = value;
         }
     }
@@ -626,18 +619,6 @@ void CommonCalcCustomBondForceKernel::initialize(const System& system, const Cus
 }
 
 double CommonCalcCustomBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    ContextSelector selector(cc);
-    if (globals.isInitialized()) {
-        bool changed = false;
-        for (int i = 0; i < (int) globalParamNames.size(); i++) {
-            float value = (float) context.getParameter(globalParamNames[i]);
-            if (value != globalParamValues[i])
-                changed = true;
-            globalParamValues[i] = value;
-        }
-        if (changed)
-            globals.upload(globalParamValues);
-    }
     return 0.0;
 }
 
@@ -809,12 +790,6 @@ void CommonCalcCustomAngleForceKernel::initialize(const System& system, const Cu
 
     // Record information for the expressions.
 
-    globalParamNames.resize(force.getNumGlobalParameters());
-    globalParamValues.resize(force.getNumGlobalParameters());
-    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-        globalParamNames[i] = force.getGlobalParameterName(i);
-        globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
-    }
     Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
     Lepton::ParsedExpression forceExpression = energyExpression.differentiate("theta").optimize();
     map<string, Lepton::ParsedExpression> expressions;
@@ -830,12 +805,11 @@ void CommonCalcCustomAngleForceKernel::initialize(const System& system, const Cu
         variables[name] = "angleParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        globals.initialize<float>(cc, force.getNumGlobalParameters(), "customAngleGlobals");
-        globals.upload(globalParamValues);
-        string argName = cc.getBondedUtilities().addArgument(globals, "float");
+        string argName = cc.getBondedUtilities().addArgument(cc.getGlobalParamValues(), "float");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
-            string value = argName+"["+cc.intToString(i)+"]";
+            int index = cc.registerGlobalParam(name);
+            string value = argName+"["+cc.intToString(index)+"]";
             variables[name] = value;
         }
     }
@@ -861,18 +835,6 @@ void CommonCalcCustomAngleForceKernel::initialize(const System& system, const Cu
 }
 
 double CommonCalcCustomAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    ContextSelector selector(cc);
-    if (globals.isInitialized()) {
-        bool changed = false;
-        for (int i = 0; i < (int) globalParamNames.size(); i++) {
-            float value = (float) context.getParameter(globalParamNames[i]);
-            if (value != globalParamValues[i])
-                changed = true;
-            globalParamValues[i] = value;
-        }
-        if (changed)
-            globals.upload(globalParamValues);
-    }
     return 0.0;
 }
 
@@ -1138,12 +1100,6 @@ void CommonCalcCustomTorsionForceKernel::initialize(const System& system, const 
 
     // Record information for the expressions.
 
-    globalParamNames.resize(force.getNumGlobalParameters());
-    globalParamValues.resize(force.getNumGlobalParameters());
-    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-        globalParamNames[i] = force.getGlobalParameterName(i);
-        globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
-    }
     Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
     Lepton::ParsedExpression forceExpression = energyExpression.differentiate("theta").optimize();
     map<string, Lepton::ParsedExpression> expressions;
@@ -1159,12 +1115,11 @@ void CommonCalcCustomTorsionForceKernel::initialize(const System& system, const 
         variables[name] = "torsionParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        globals.initialize<float>(cc, force.getNumGlobalParameters(), "customTorsionGlobals");
-        globals.upload(globalParamValues);
-        string argName = cc.getBondedUtilities().addArgument(globals, "float");
+        string argName = cc.getBondedUtilities().addArgument(cc.getGlobalParamValues(), "float");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
-            string value = argName+"["+cc.intToString(i)+"]";
+            int index = cc.registerGlobalParam(name);
+            string value = argName+"["+cc.intToString(index)+"]";
             variables[name] = value;
         }
     }
@@ -1190,18 +1145,6 @@ void CommonCalcCustomTorsionForceKernel::initialize(const System& system, const 
 }
 
 double CommonCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    ContextSelector selector(cc);
-    if (globals.isInitialized()) {
-        bool changed = false;
-        for (int i = 0; i < (int) globalParamNames.size(); i++) {
-            float value = (float) context.getParameter(globalParamNames[i]);
-            if (value != globalParamValues[i])
-                changed = true;
-            globalParamValues[i] = value;
-        }
-        if (changed)
-            globals.upload(globalParamValues);
-    }
     return 0.0;
 }
 
@@ -1411,12 +1354,6 @@ void CommonCalcCustomExternalForceKernel::initialize(const System& system, const
 
     // Record information for the expressions.
 
-    globalParamNames.resize(force.getNumGlobalParameters());
-    globalParamValues.resize(force.getNumGlobalParameters());
-    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-        globalParamNames[i] = force.getGlobalParameterName(i);
-        globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
-    }
     map<string, Lepton::CustomFunction*> customFunctions;
     customFunctions["periodicdistance"] = cc.getExpressionUtilities().getPeriodicDistancePlaceholder();
     Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction(), customFunctions).optimize();
@@ -1440,12 +1377,11 @@ void CommonCalcCustomExternalForceKernel::initialize(const System& system, const
         variables[name] = "particleParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        globals.initialize<float>(cc, force.getNumGlobalParameters(), "customExternalGlobals");
-        globals.upload(globalParamValues);
-        string argName = cc.getBondedUtilities().addArgument(globals, "float");
+        string argName = cc.getBondedUtilities().addArgument(cc.getGlobalParamValues(), "float");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
-            string value = argName+"["+cc.intToString(i)+"]";
+            int index = cc.registerGlobalParam(name);
+            string value = argName+"["+cc.intToString(index)+"]";
             variables[name] = value;
         }
     }
@@ -1464,18 +1400,6 @@ void CommonCalcCustomExternalForceKernel::initialize(const System& system, const
 }
 
 double CommonCalcCustomExternalForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    ContextSelector selector(cc);
-    if (globals.isInitialized()) {
-        bool changed = false;
-        for (int i = 0; i < (int) globalParamNames.size(); i++) {
-            float value = (float) context.getParameter(globalParamNames[i]);
-            if (value != globalParamValues[i])
-                changed = true;
-            globalParamValues[i] = value;
-        }
-        if (changed)
-            globals.upload(globalParamValues);
-    }
     return 0.0;
 }
 
@@ -1575,12 +1499,6 @@ void CommonCalcCustomCompoundBondForceKernel::initialize(const System& system, c
     
     // Record information about parameters.
 
-    globalParamNames.resize(force.getNumGlobalParameters());
-    globalParamValues.resize(force.getNumGlobalParameters());
-    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-        globalParamNames[i] = force.getGlobalParameterName(i);
-        globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
-    }
     map<string, string> variables;
     for (int i = 0; i < particlesPerBond; i++) {
         string index = cc.intToString(i+1);
@@ -1593,12 +1511,11 @@ void CommonCalcCustomCompoundBondForceKernel::initialize(const System& system, c
         variables[name] = "bondParams"+params->getParameterSuffix(i);
     }
     if (force.getNumGlobalParameters() > 0) {
-        globals.initialize<float>(cc, force.getNumGlobalParameters(), "customCompoundBondGlobals");
-        globals.upload(globalParamValues);
-        string argName = cc.getBondedUtilities().addArgument(globals, "float");
+        string argName = cc.getBondedUtilities().addArgument(cc.getGlobalParamValues(), "float");
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
-            string value = argName+"["+cc.intToString(i)+"]";
+            int index = cc.registerGlobalParam(name);
+            string value = argName+"["+cc.intToString(index)+"]";
             variables[name] = value;
         }
     }
@@ -1644,18 +1561,6 @@ void CommonCalcCustomCompoundBondForceKernel::initialize(const System& system, c
 }
 
 double CommonCalcCustomCompoundBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    ContextSelector selector(cc);
-    if (globals.isInitialized()) {
-        bool changed = false;
-        for (int i = 0; i < (int) globalParamNames.size(); i++) {
-            float value = (float) context.getParameter(globalParamNames[i]);
-            if (value != globalParamValues[i])
-                changed = true;
-            globalParamValues[i] = value;
-        }
-        if (changed)
-            globals.upload(globalParamValues);
-    }
     return 0.0;
 }
 
@@ -1827,12 +1732,6 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
     
     // Record information about parameters.
 
-    globalParamNames.resize(force.getNumGlobalParameters());
-    globalParamValues.resize(force.getNumGlobalParameters());
-    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-        globalParamNames[i] = force.getGlobalParameterName(i);
-        globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
-    }
     map<string, string> variables;
     for (int i = 0; i < groupsPerBond; i++) {
         string index = cc.intToString(i+1);
@@ -1847,13 +1746,13 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
     needEnergyParamDerivs = (force.getNumEnergyParameterDerivatives() > 0);
     if (needEnergyParamDerivs)
         extraArgs << ", GLOBAL mixed* RESTRICT energyParamDerivs";
-    if (force.getNumGlobalParameters() > 0) {
-        globals.initialize<float>(cc, force.getNumGlobalParameters(), "customCentroidBondGlobals");
-        globals.upload(globalParamValues);
+    needGlobalParams = (force.getNumGlobalParameters() > 0);
+    if (needGlobalParams) {
         extraArgs << ", GLOBAL const float* RESTRICT globals";
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
-            string value = "globals["+cc.intToString(i)+"]";
+            int index = cc.registerGlobalParam(name);
+            string value = "globals["+cc.intToString(index)+"]";
             variables[name] = value;
         }
     }
@@ -1942,8 +1841,8 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
         groupForcesKernel->addArg(); // Deriv buffer hasn't been created yet.
     for (auto& function : tabulatedFunctionArrays)
         groupForcesKernel->addArg(function);
-    if (globals.isInitialized())
-        groupForcesKernel->addArg(globals);
+    if (needGlobalParams)
+        groupForcesKernel->addArg();
     for (auto& parameter : params->getParameterInfos())
         groupForcesKernel->addArg(parameter.getArray());
     applyForcesKernel = program->createKernel("applyForcesToAtoms");
@@ -1959,22 +1858,17 @@ double CommonCalcCustomCentroidBondForceKernel::execute(ContextImpl& context, bo
     if (numBonds == 0)
         return 0.0;
     ContextSelector selector(cc);
-    if (globals.isInitialized()) {
-        bool changed = false;
-        for (int i = 0; i < (int) globalParamNames.size(); i++) {
-            float value = (float) context.getParameter(globalParamNames[i]);
-            if (value != globalParamValues[i])
-                changed = true;
-            globalParamValues[i] = value;
-        }
-        if (changed)
-            globals.upload(globalParamValues);
-    }
     computeCentersKernel->execute(32*numGroups);
     groupForcesKernel->setArg(2, cc.getEnergyBuffer());
     setPeriodicBoxArgs(cc, groupForcesKernel, 5);
     if (needEnergyParamDerivs)
         groupForcesKernel->setArg(10, cc.getEnergyParamDerivBuffer());
+    if (needGlobalParams) {
+        int index = 10+tabulatedFunctionArrays.size();
+        if (needEnergyParamDerivs)
+            index += 1;
+        groupForcesKernel->setArg(index, cc.getGlobalParamValues());
+    }
     groupForcesKernel->execute(numBonds);
     applyForcesKernel->setArg(5, cc.getLongForceBuffer());
     applyForcesKernel->execute(32*numGroups);
