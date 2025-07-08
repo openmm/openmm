@@ -115,20 +115,10 @@ void HipNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, b
 }
 
 void HipNonbondedUtilities::addParameter(ComputeParameterInfo parameter) {
-    parameters.push_back(ParameterInfo(parameter.getName(), parameter.getComponentType(), parameter.getNumComponents(),
-            parameter.getSize(), context.unwrap(parameter.getArray()).getDevicePointer(), parameter.isConstant()));
-}
-
-void HipNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
     parameters.push_back(parameter);
 }
 
 void HipNonbondedUtilities::addArgument(ComputeParameterInfo parameter) {
-    arguments.push_back(ParameterInfo(parameter.getName(), parameter.getComponentType(), parameter.getNumComponents(),
-            parameter.getSize(), context.unwrap(parameter.getArray()).getDevicePointer(), parameter.isConstant()));
-}
-
-void HipNonbondedUtilities::addArgument(const ParameterInfo& parameter) {
     arguments.push_back(parameter);
 }
 
@@ -333,10 +323,10 @@ void HipNonbondedUtilities::initialize(const System& system) {
         forceArgs.push_back(&maxSinglePairs);
         forceArgs.push_back(&singlePairs.getDevicePointer());
     }
-    for (int i = 0; i < (int) parameters.size(); i++)
-        forceArgs.push_back(&parameters[i].getMemory());
-    for (ParameterInfo& arg : arguments)
-        forceArgs.push_back(&arg.getMemory());
+    hasInitializedParams = false;
+    paramStartIndex = forceArgs.size();
+    for (int i = 0; i < parameters.size()+arguments.size(); i++)
+        forceArgs.push_back(NULL);
     if (energyParameterDerivatives.size() > 0)
         forceArgs.push_back(&context.getEnergyParamDerivBuffer().getDevicePointer());
     if (useCutoff) {
@@ -445,6 +435,15 @@ void HipNonbondedUtilities::prepareInteractions(int forceGroups) {
     hipEventRecord(downloadCountEvent, context.getCurrentStream());
 }
 
+void HipNonbondedUtilities::initParamArgs() {
+    int index = paramStartIndex;
+    for (ComputeParameterInfo& param : parameters)
+        forceArgs[index++] = &context.unwrap(param.getArray()).getDevicePointer();
+    for (ComputeParameterInfo& arg : arguments)
+        forceArgs[index++] = &context.unwrap(arg.getArray()).getDevicePointer();
+    hasInitializedParams = true;
+}
+
 void HipNonbondedUtilities::computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) {
     if ((forceGroups&groupFlags) == 0)
         return;
@@ -453,6 +452,8 @@ void HipNonbondedUtilities::computeInteractions(int forceGroups, bool includeFor
         hipFunction_t& kernel = (includeForces ? (includeEnergy ? kernels.forceEnergyKernel : kernels.forceKernel) : kernels.energyKernel);
         if (kernel == NULL)
             kernel = createInteractionKernel(kernels.source, parameters, arguments, true, true, forceGroups, includeForces, includeEnergy);
+        if (!hasInitializedParams)
+            initParamArgs();
         context.executeKernelFlat(kernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     if (useNeighborList && numTiles > 0) {
@@ -586,12 +587,12 @@ void HipNonbondedUtilities::createKernelsForGroups(int groups) {
     groupKernels[groups] = kernels;
 }
 
-hipFunction_t HipNonbondedUtilities::createInteractionKernel(const string& source, vector<ParameterInfo>& params, vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups, bool includeForces, bool includeEnergy) {
+hipFunction_t HipNonbondedUtilities::createInteractionKernel(const string& source, vector<ComputeParameterInfo>& params, vector<ComputeParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups, bool includeForces, bool includeEnergy) {
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
     const string suffixes[] = {"x", "y", "z", "w"};
     stringstream args;
-    for (const ParameterInfo& param : params) {
+    for (const ComputeParameterInfo& param : params) {
         args << ", ";
         if (param.isConstant())
             args << "const ";
@@ -599,7 +600,7 @@ hipFunction_t HipNonbondedUtilities::createInteractionKernel(const string& sourc
         args << "* __restrict__ global_";
         args << param.getName();
     }
-    for (const ParameterInfo& arg : arguments) {
+    for (const ComputeParameterInfo& arg : arguments) {
         args << ", ";
         if (arg.isConstant())
             args << "const ";
@@ -612,7 +613,7 @@ hipFunction_t HipNonbondedUtilities::createInteractionKernel(const string& sourc
     replacements["PARAMETER_ARGUMENTS"] = args.str();
 
     stringstream load1;
-    for (const ParameterInfo& param : params) {
+    for (const ComputeParameterInfo& param : params) {
         load1 << param.getType();
         load1 << " ";
         load1 << param.getName();
@@ -629,7 +630,7 @@ hipFunction_t HipNonbondedUtilities::createInteractionKernel(const string& sourc
     broadcastWarpData << "posq2.y = SHFL(shflPosq.y, j);\n";
     broadcastWarpData << "posq2.z = SHFL(shflPosq.z, j);\n";
     broadcastWarpData << "posq2.w = SHFL(shflPosq.w, j);\n";
-    for (const ParameterInfo& param : params) {
+    for (const ComputeParameterInfo& param : params) {
         broadcastWarpData << param.getType() << " shfl" << param.getName() << ";\n";
         for (int j = 0; j < param.getNumComponents(); j++) {
             if (param.getNumComponents() == 1)
@@ -642,22 +643,22 @@ hipFunction_t HipNonbondedUtilities::createInteractionKernel(const string& sourc
 
     // Part 2. Defines for off-diagonal exclusions, and neighborlist tiles.
     stringstream declareLocal2;
-    for (const ParameterInfo& param : params)
+    for (const ComputeParameterInfo& param : params)
         declareLocal2<<param.getType()<<" shfl"<<param.getName()<<";\n";
     replacements["DECLARE_LOCAL_PARAMETERS"] = declareLocal2.str();
 
     stringstream loadLocal2;
-    for (const ParameterInfo& param : params)
+    for (const ComputeParameterInfo& param : params)
         loadLocal2<<"shfl"<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
     replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
 
     stringstream load2j;
-    for (const ParameterInfo& param : params)
+    for (const ComputeParameterInfo& param : params)
         load2j<<param.getType()<<" "<<param.getName()<<"2 = shfl"<<param.getName()<<";\n";
     replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
 
     stringstream clearLocal;
-    for (const ParameterInfo& param : params) {
+    for (const ComputeParameterInfo& param : params) {
         clearLocal<<"shfl";
         clearLocal<<param.getName()<<" = ";
         if (param.getNumComponents() == 1)
@@ -683,7 +684,7 @@ hipFunction_t HipNonbondedUtilities::createInteractionKernel(const string& sourc
     stringstream shuffleWarpData;
     shuffleWarpData << "shflPosq = warpRotateLeft<TILE_SIZE>(shflPosq);\n";
     shuffleWarpData << "shflForce = warpRotateLeft<TILE_SIZE>(shflForce);\n";
-    for (const ParameterInfo& param : params) {
+    for (const ComputeParameterInfo& param : params) {
         shuffleWarpData<<"shfl"<<param.getName()<<"=warpRotateLeft<TILE_SIZE>(shfl"<<param.getName()<<");\n";
     }
     replacements["SHUFFLE_WARP_DATA"] = shuffleWarpData.str();
