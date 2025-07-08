@@ -76,9 +76,10 @@ public:
      * @param velocities          velocities
      * @param masses              atom masses
      * @param tolerance           the constraint tolerance
+     * @param boxVectors          the current periodic box vectors
      */
     void update(OpenMM::ContextImpl& context, std::vector<OpenMM::Vec3>& atomCoordinates,
-                std::vector<OpenMM::Vec3>& velocities, std::vector<double>& masses, double tolerance);
+                std::vector<OpenMM::Vec3>& velocities, std::vector<double>& masses, double tolerance, const Vec3* boxVectors);
 
     /**
      * The first stage of the update algorithm.

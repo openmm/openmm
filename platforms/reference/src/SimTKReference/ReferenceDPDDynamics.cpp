@@ -133,7 +133,7 @@ void ReferenceDPDDynamics::updatePart3(OpenMM::ContextImpl& context, int numPart
 }
 
 void ReferenceDPDDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordinates,
-                                    vector<Vec3>& velocities, vector<double>& masses, double tolerance) {
+                                    vector<Vec3>& velocities, vector<double>& masses, double tolerance, const Vec3* boxVectors) {
     int numParticles = context.getSystem().getNumParticles();
     ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
     if (this->masses.size() == 0) {
@@ -163,6 +163,6 @@ void ReferenceDPDDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordi
     // 3rd update
 
     updatePart3(context, numParticles, atomCoordinates, velocities, xPrime);
-    getVirtualSites().computePositions(context.getSystem(), atomCoordinates);
+    getVirtualSites().computePositions(context.getSystem(), atomCoordinates, boxVectors);
     incrementTimeStep();
 }
