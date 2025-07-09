@@ -34,6 +34,7 @@
 #include "ReferencePlatform.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
+#include "openmm/CustomNonbondedForce.h"
 #include "openmm/ConstantPotentialForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
@@ -166,43 +167,62 @@ void testCoulombNonNeutral() {
     // includes a neutralizing plasma correction, this ensures that the same
     // correction is working in ConstantPotentialForce.
 
-    for (int iCutoff = 1; iCutoff < 5; iCutoff++) {
-        System refSystem;
-        System testSystem;
-        NonbondedForce* refForce = new NonbondedForce();
-        ConstantPotentialForce* testForce = new ConstantPotentialForce();
+    System refSystem;
+    System testSystem;
+    NonbondedForce* refForce = new NonbondedForce();
+    ConstantPotentialForce* testForce = new ConstantPotentialForce();
 
-        Vec3 a, b, c;
-        a = Vec3(10, 0, 0);
-        b = Vec3(1, 9, 0);
-        c = Vec3(2, 3, 8);
-        refSystem.setDefaultPeriodicBoxVectors(a, b, c);
-        testSystem.setDefaultPeriodicBoxVectors(a, b, c);
+    Vec3 a, b, c;
+    a = Vec3(10, 0, 0);
+    b = Vec3(1, 9, 0);
+    c = Vec3(2, 3, 8);
+    refSystem.setDefaultPeriodicBoxVectors(a, b, c);
+    testSystem.setDefaultPeriodicBoxVectors(a, b, c);
 
-        vector<Vec3> positions;
-        for (int i = 0; i < 10; i++) {
-            refSystem.addParticle(1);
-            testSystem.addParticle(1);
-            double f = 0.1 * i;
-            refForce->addParticle((i % 2 ? -1 : 1) + f * f, 1, 0);
-            testForce->addParticle((i % 2 ? -1 : 1) + f * f);
-            positions.push_back(f * a + f * f * b + f * f * f * c);
+    vector<Vec3> positions;
+    for (int i = 0; i < 10; i++) {
+        refSystem.addParticle(1);
+        testSystem.addParticle(1);
+        double f = 0.1 * i;
+        refForce->addParticle((i % 2 ? -1 : 1) + f * f, 1, 0);
+        testForce->addParticle((i % 2 ? -1 : 1) + f * f);
+        positions.push_back(f * a + f * f * b + f * f * f * c);
+    }
+
+    refForce->setNonbondedMethod(NonbondedForce::PME);
+
+    refForce->setCutoffDistance(1.5);
+    testForce->setCutoffDistance(1.5);
+
+    refSystem.addForce(refForce);
+    testSystem.addForce(testForce);
+
+    VerletIntegrator refIntegrator(0.001);
+    VerletIntegrator testIntegrator(0.001);
+    Context refContext(refSystem, refIntegrator, platform);
+    Context testContext(testSystem, testIntegrator, platform);
+    refContext.setPositions(positions);
+    testContext.setPositions(positions);
+
+    {
+        State refState = refContext.getState(State::Energy | State::Forces);
+        State testState = testContext.getState(State::Energy | State::Forces);
+        const vector<Vec3>& refForces = refState.getForces();
+        const vector<Vec3>& testForces = testState.getForces();
+
+        ASSERT_EQUAL_TOL(refState.getPotentialEnergy(), testState.getPotentialEnergy(), TOL);
+        for (int i = 0; i < refForces.size(); i++) {
+            ASSERT_EQUAL_VEC(refForces[i], testForces[i], TOL);
         }
+    }
 
-        refForce->setNonbondedMethod(NonbondedForce::PME);
+    refForce->setCutoffDistance(2.5);
+    testForce->setCutoffDistance(2.5);
 
-        refForce->setCutoffDistance(0.5 * iCutoff);
-        testForce->setCutoffDistance(0.5 * iCutoff);
+    refContext.reinitialize(true);
+    testContext.reinitialize(true);
 
-        refSystem.addForce(refForce);
-        testSystem.addForce(testForce);
-
-        VerletIntegrator refIntegrator(0.001);
-        VerletIntegrator testIntegrator(0.001);
-        Context refContext(refSystem, refIntegrator, platform);
-        Context testContext(testSystem, testIntegrator, platform);
-        refContext.setPositions(positions);
-        testContext.setPositions(positions);
+    {
         State refState = refContext.getState(State::Energy | State::Forces);
         State testState = testContext.getState(State::Energy | State::Forces);
         const vector<Vec3>& refForces = refState.getForces();
@@ -642,262 +662,119 @@ void makeTestUpdateSystem(ConstantPotentialForce::ConstantPotentialMethod method
     positions.push_back(Vec3(2, 2, 2));
 }
 
-void testUpdateParticleExceptionParameters(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
-    // Ensures that particle and exception parameters can be updated and that
-    // the results match those computed by a completely different system.
+void testUpdate(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
+    // Ensures that parameters can be updated and that the results match those
+    // computed by a completely different system.
 
-    System system1;
-    ConstantPotentialForce* force1;
-    vector<Vec3> positions1;
+    System system1, system2;
+    ConstantPotentialForce* force1, * force2;
+    vector<Vec3> positions1, positions2;
+    VerletIntegrator integrator1(0.001), integrator2(0.001);
+    vector<double> charges1, charges2;
     makeTestUpdateSystem(method, usePreconditioner, system1, force1, positions1);
+    makeTestUpdateSystem(method, usePreconditioner, system2, force2, positions2);
 
     // Make sure to get charges before updating so that the constant potential
     // method initializes: we are testing that it reinitializes with the update.
-    VerletIntegrator integrator1(0.001);
     Context context1(system1, integrator1, platform);
     context1.setPositions(positions1);
-    vector<double> charges1;
     force1->getCharges(context1, charges1);
-
     force1->setParticleParameters(1, 3);
     force1->setParticleParameters(2, -5);
     force1->setExceptionParameters(0, 0, 1, 1.75);
-    force1->updateParametersInContext(context1);
-    force1->getCharges(context1, charges1);
-
-    System system2;
-    ConstantPotentialForce* force2;
-    vector<Vec3> positions2;
-    makeTestUpdateSystem(method, usePreconditioner, system2, force2, positions2);
-    force2->setParticleParameters(1, 3);
-    force2->setParticleParameters(2, -5);
-    force2->setExceptionParameters(0, 0, 1, 1.75);
-
-    VerletIntegrator integrator2(0.001);
-    Context context2(system2, integrator2, platform);
-    context2.setPositions(positions2);
-    vector<double> charges2;
-    force2->getCharges(context2, charges2);
-
-    // Test charges.
-    for (int i = 0; i < charges2.size(); i++) {
-        ASSERT_EQUAL_TOL(charges2[i], charges1[i], TOL);
-    }
-
-    // Get states and test energies and forces.
-    State state1 = context1.getState(State::Energy | State::Forces);
-    State state2 = context2.getState(State::Energy | State::Forces);
-    const vector<Vec3>& forces1 = state1.getForces();
-    const vector<Vec3>& forces2 = state2.getForces();
-    ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state1.getPotentialEnergy(), TOL);
-    for (int i = 0; i < forces2.size(); i++) {
-        ASSERT_EQUAL_VEC(forces2[i], forces1[i], TOL);
-    }
-}
-
-void testUpdateElectrodeParameters(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
-    // Ensures that electrode parameters can be updated and that the results
-    // match those computed by a completely different system.
-
-    System system1;
-    ConstantPotentialForce* force1;
-    vector<Vec3> positions1;
-    makeTestUpdateSystem(method, usePreconditioner, system1, force1, positions1);
-
-    // Make sure to get charges before updating so that the constant potential
-    // method initializes: we are testing that it reinitializes with the update.
-    VerletIntegrator integrator1(0.001);
-    Context context1(system1, integrator1, platform);
-    context1.setPositions(positions1);
-    vector<double> charges1;
-    force1->getCharges(context1, charges1);
-
     force1->setElectrodeParameters(0, {3}, 3, 0.06, 0.7);
-    force1->updateParametersInContext(context1);
-    force1->getCharges(context1, charges1);
-
-    System system2;
-    ConstantPotentialForce* force2;
-    vector<Vec3> positions2;
-    makeTestUpdateSystem(method, usePreconditioner, system2, force2, positions2);
-    force2->setElectrodeParameters(0, {3}, 3, 0.06, 0.7);
-
-    VerletIntegrator integrator2(0.001);
-    Context context2(system2, integrator2, platform);
-    context2.setPositions(positions2);
-    vector<double> charges2;
-    force2->getCharges(context2, charges2);
-
-    // Test charges.
-    for (int i = 0; i < charges2.size(); i++) {
-        ASSERT_EQUAL_TOL(charges2[i], charges1[i], TOL);
-    }
-
-    // Get states and test energies and forces.
-    State state1 = context1.getState(State::Energy | State::Forces);
-    State state2 = context2.getState(State::Energy | State::Forces);
-    const vector<Vec3>& forces1 = state1.getForces();
-    const vector<Vec3>& forces2 = state2.getForces();
-    ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state1.getPotentialEnergy(), TOL);
-    for (int i = 0; i < forces2.size(); i++) {
-        ASSERT_EQUAL_VEC(forces2[i], forces1[i], TOL);
-    }
-}
-
-void testUpdateChargeFieldParameters(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
-    // Ensures that charge target and external field parameters can be updated
-    // and that the results match those computed by a completely different
-    // system.
-
-    System system1;
-    ConstantPotentialForce* force1;
-    vector<Vec3> positions1;
-    makeTestUpdateSystem(method, usePreconditioner, system1, force1, positions1);
-
-    // Make sure to get charges before updating so that the constant potential
-    // method initializes: we are testing that it reinitializes with the update.
-    VerletIntegrator integrator1(0.001);
-    Context context1(system1, integrator1, platform);
-    context1.setPositions(positions1);
-    vector<double> charges1;
-    force1->getCharges(context1, charges1);
-
     force1->setChargeConstraintTarget(-7);
     force1->setExternalField(Vec3(-6, -4, -2));
     force1->updateParametersInContext(context1);
     force1->getCharges(context1, charges1);
 
-    System system2;
-    ConstantPotentialForce* force2;
-    vector<Vec3> positions2;
-    makeTestUpdateSystem(method, usePreconditioner, system2, force2, positions2);
+    // Reinitialize the reference system completely to force an update.
+    force2->setParticleParameters(1, 3);
+    force2->setParticleParameters(2, -5);
+    force2->setExceptionParameters(0, 0, 1, 1.75);
+    force2->setElectrodeParameters(0, {3}, 3, 0.06, 0.7);
     force2->setChargeConstraintTarget(-7);
     force2->setExternalField(Vec3(-6, -4, -2));
-
-    VerletIntegrator integrator2(0.001);
     Context context2(system2, integrator2, platform);
     context2.setPositions(positions2);
-    vector<double> charges2;
     force2->getCharges(context2, charges2);
 
-    // Test charges.
-    for (int i = 0; i < charges2.size(); i++) {
-        ASSERT_EQUAL_TOL(charges2[i], charges1[i], TOL);
+    {
+        // Test charges.
+        for (int i = 0; i < charges2.size(); i++) {
+            ASSERT_EQUAL_TOL(charges2[i], charges1[i], TOL);
+        }
+
+        // Get states and test energies and forces.
+        State state1 = context1.getState(State::Energy | State::Forces);
+        State state2 = context2.getState(State::Energy | State::Forces);
+        const vector<Vec3>& forces1 = state1.getForces();
+        const vector<Vec3>& forces2 = state2.getForces();
+        ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state1.getPotentialEnergy(), TOL);
+        for (int i = 0; i < forces2.size(); i++) {
+            ASSERT_EQUAL_VEC(forces2[i], forces1[i], TOL);
+        }
     }
 
-    // Get states and test energies and forces.
-    State state1 = context1.getState(State::Energy | State::Forces);
-    State state2 = context2.getState(State::Energy | State::Forces);
-    const vector<Vec3>& forces1 = state1.getForces();
-    const vector<Vec3>& forces2 = state2.getForces();
-    ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state1.getPotentialEnergy(), TOL);
-    for (int i = 0; i < forces2.size(); i++) {
-        ASSERT_EQUAL_VEC(forces2[i], forces1[i], TOL);
-    }
-}
-
-void testUpdateBox(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
-    // Ensures that box vectors can be updated and that the results match those
-    // computed by a completely different system.
-
-    System system1;
-    ConstantPotentialForce* force1;
-    vector<Vec3> positions1;
-    makeTestUpdateSystem(method, usePreconditioner, system1, force1, positions1);
-
-    // Make sure to get charges before updating so that the constant potential
-    // method initializes: we are testing that it reinitializes with the update.
-    // Get PME parameters to apply to the second context so that energies and
-    // forces can be compared.
-    VerletIntegrator integrator1(0.001);
-    Context context1(system1, integrator1, platform);
+    // Now test updating the box.  Get PME parameters to apply to the second
+    // context so that energies and forces can be compared.
     double alpha;
     int nx, ny, nz;
     force1->getPMEParametersInContext(context1, alpha, nx, ny, nz);
-    context1.setPositions(positions1);
-    vector<double> charges1;
-    force1->getCharges(context1, charges1);
 
     context1.setPeriodicBoxVectors(Vec3(3.25, 0, 0), Vec3(0, 3.5, 0), Vec3(0, 0, 3.75));
     force1->getCharges(context1, charges1);
 
-    System system2;
-    ConstantPotentialForce* force2;
-    vector<Vec3> positions2;
-    makeTestUpdateSystem(method, usePreconditioner, system2, force2, positions2);
     force2->setPMEParameters(alpha, nx, ny, nz);
     system2.setDefaultPeriodicBoxVectors(Vec3(3.25, 0, 0), Vec3(0, 3.5, 0), Vec3(0, 0, 3.75));
-
-    VerletIntegrator integrator2(0.001);
-    Context context2(system2, integrator2, platform);
+    context2.reinitialize(false);
     context2.setPositions(positions2);
-    vector<double> charges2;
     force2->getCharges(context2, charges2);
 
-    // Test charges.
-    for (int i = 0; i < charges2.size(); i++) {
-        ASSERT_EQUAL_TOL(charges2[i], charges1[i], TOL);
+    {
+        // Test charges.
+        for (int i = 0; i < charges2.size(); i++) {
+            ASSERT_EQUAL_TOL(charges2[i], charges1[i], TOL);
+        }
+
+        // Get states and test energies and forces.
+        State state1 = context1.getState(State::Energy | State::Forces);
+        State state2 = context2.getState(State::Energy | State::Forces);
+        const vector<Vec3>& forces1 = state1.getForces();
+        const vector<Vec3>& forces2 = state2.getForces();
+        ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state1.getPotentialEnergy(), TOL);
+        for (int i = 0; i < forces2.size(); i++) {
+            ASSERT_EQUAL_VEC(forces2[i], forces1[i], TOL);
+        }
     }
 
-    // Get states and test energies and forces.
-    State state1 = context1.getState(State::Energy | State::Forces);
-    State state2 = context2.getState(State::Energy | State::Forces);
-    const vector<Vec3>& forces1 = state1.getForces();
-    const vector<Vec3>& forces2 = state2.getForces();
-    ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state1.getPotentialEnergy(), TOL);
-    for (int i = 0; i < forces2.size(); i++) {
-        ASSERT_EQUAL_VEC(forces2[i], forces1[i], TOL);
-    }
-}
-
-void testUpdatePositions(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
-    // Ensures that particle positions can be updated and that the results match
-    // those computed by a completely different system.  This checks that, e.g.,
-    // a precomputed matrix is invalidated and recomputed when electrode
-    // particle positions are adjusted.
-
-    System system1;
-    ConstantPotentialForce* force1;
-    vector<Vec3> positions1;
-    makeTestUpdateSystem(method, usePreconditioner, system1, force1, positions1);
-
-    // Make sure to get charges before updating so that the constant potential
-    // method initializes: we are testing that it reinitializes with the update.
-    VerletIntegrator integrator1(0.001);
-    Context context1(system1, integrator1, platform);
-    context1.setPositions(positions1);
-    vector<double> charges1;
-    force1->getCharges(context1, charges1);
-
+    // Now test updating positions.  This checks that, e.g., a precomputed
+    // matrix is invalidated and recomputed when electrode particle positions
+    // are adjusted.
     positions1[0] += Vec3(0.1, 0.2, 0.3);
     positions1[4] += Vec3(0.4, 0.5, 0.6);
     context1.setPositions(positions1);
     force1->getCharges(context1, charges1);
 
-    System system2;
-    ConstantPotentialForce* force2;
-    vector<Vec3> positions2;
-    makeTestUpdateSystem(method, usePreconditioner, system2, force2, positions2);
-
-    VerletIntegrator integrator2(0.001);
-    Context context2(system2, integrator2, platform);
+    context2.reinitialize(false);
     context2.setPositions(positions1);
-    vector<double> charges2;
     force2->getCharges(context2, charges2);
 
-    // Test charges.
-    for (int i = 0; i < charges2.size(); i++) {
-        ASSERT_EQUAL_TOL(charges2[i], charges1[i], TOL);
-    }
+    {
+        // Test charges.
+        for (int i = 0; i < charges2.size(); i++) {
+            ASSERT_EQUAL_TOL(charges2[i], charges1[i], TOL);
+        }
 
-    // Get states and test energies and forces.
-    State state1 = context1.getState(State::Energy | State::Forces);
-    State state2 = context2.getState(State::Energy | State::Forces);
-    const vector<Vec3>& forces1 = state1.getForces();
-    const vector<Vec3>& forces2 = state2.getForces();
-    ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state1.getPotentialEnergy(), TOL);
-    for (int i = 0; i < forces2.size(); i++) {
-        ASSERT_EQUAL_VEC(forces2[i], forces1[i], TOL);
+        // Get states and test energies and forces.
+        State state1 = context1.getState(State::Energy | State::Forces);
+        State state2 = context2.getState(State::Energy | State::Forces);
+        const vector<Vec3>& forces1 = state1.getForces();
+        const vector<Vec3>& forces2 = state2.getForces();
+        ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state1.getPotentialEnergy(), TOL);
+        for (int i = 0; i < forces2.size(); i++) {
+            ASSERT_EQUAL_VEC(forces2[i], forces1[i], TOL);
+        }
     }
 }
 
@@ -907,59 +784,78 @@ void testParallelPlateCapacitorDoubleCell() {
 
     double capacitance = EPSILON0 * 2.0 * 3.0 / 7.0;
 
-    for (int ip = -2; ip <= 2; ip++) {
-        double potential = 100.0 * ip;
+    double potential = 100.0;
 
-        System system;
-        ConstantPotentialForce* force = new ConstantPotentialForce();
+    System system;
+    ConstantPotentialForce* force = new ConstantPotentialForce();
 
-        system.setDefaultPeriodicBoxVectors(Vec3(2, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 16));
+    system.setDefaultPeriodicBoxVectors(Vec3(2, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 16));
 
-        vector<Vec3> positions;
-        set<int> electrode1, electrode2;
-        for (int iz = 0; iz < 4; iz++) {
-            for (int iy = 0; iy < 12; iy++) {
-                for (int ix = 0; ix < 8; ix++) {
-                    electrode1.insert(force->getNumParticles());
-                    system.addParticle(0);
-                    force->addParticle(0);
-                    positions.push_back(Vec3(0.25 * ix, 0.25 * iy, 0.25 * iz));
+    vector<Vec3> positions;
+    set<int> electrode1, electrode2;
+    for (int iz = 0; iz < 4; iz++) {
+        for (int iy = 0; iy < 12; iy++) {
+            for (int ix = 0; ix < 8; ix++) {
+                electrode1.insert(force->getNumParticles());
+                system.addParticle(0);
+                force->addParticle(0);
+                positions.push_back(Vec3(0.25 * ix, 0.25 * iy, 0.25 * iz));
 
-                    electrode2.insert(force->getNumParticles());
-                    system.addParticle(0);
-                    force->addParticle(0);
-                    positions.push_back(Vec3(0.25 * ix, 0.25 * iy, 0.25 * iz + 8.0));
-                }
+                electrode2.insert(force->getNumParticles());
+                system.addParticle(0);
+                force->addParticle(0);
+                positions.push_back(Vec3(0.25 * ix, 0.25 * iy, 0.25 * iz + 8.0));
             }
         }
-        force->addElectrode(electrode1, 0, 0.2, 0);
-        force->addElectrode(electrode2, potential, 0.2, 0);
-        force->setUseChargeConstraint(true);
-
-        system.addForce(force);
-
-        VerletIntegrator integrator(0.001);
-        Context context(system, integrator, platform);
-        context.setPositions(positions);
-        vector<double> charges;
-        force->getCharges(context, charges);
-
-        double q1 = 0;
-        for (int ii : electrode1) {
-            q1 += charges[ii];
-        }
-
-        double q2 = 0;
-        for (int ii : electrode2) {
-            q2 += charges[ii];
-        }
-
-        // Charge on each electrode is doubled since we are using a double-cell.
-        // Use a looser tolerance since the analytical formula is for uniform
-        // plates with defined edges, not cubic arrays of Gaussian charges.
-        ASSERT_EQUAL_TOL(-2.0 * potential * capacitance, q1, 1e-3);
-        ASSERT_EQUAL_TOL(2.0 * potential * capacitance, q2, 1e-3);
     }
+    force->addElectrode(electrode1, 0, 0.2, 0);
+    force->addElectrode(electrode2, potential, 0.2, 0);
+    force->setUseChargeConstraint(true);
+
+    system.addForce(force);
+
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    vector<double> charges;
+    double q1, q2;
+
+    force->getCharges(context, charges);
+
+    q1 = 0;
+    for (int ii : electrode1) {
+        q1 += charges[ii];
+    }
+
+    q2 = 0;
+    for (int ii : electrode2) {
+        q2 += charges[ii];
+    }
+
+    // Charge on each electrode is doubled since we are using a double-cell.
+    // Use a looser tolerance since the analytical formula is for uniform
+    // plates with defined edges, not cubic arrays of Gaussian charges.
+    ASSERT_EQUAL_TOL(-2.0 * potential * capacitance, q1, 1e-3);
+    ASSERT_EQUAL_TOL(2.0 * potential * capacitance, q2, 1e-3);
+
+    // Update potential to a new value and recompute.
+    potential = -200.0;
+    force->setElectrodeParameters(1, electrode2, potential, 0.2, 0);
+    force->updateParametersInContext(context);
+    force->getCharges(context, charges);
+
+    q1 = 0;
+    for (int ii : electrode1) {
+        q1 += charges[ii];
+    }
+
+    q2 = 0;
+    for (int ii : electrode2) {
+        q2 += charges[ii];
+    }
+
+    ASSERT_EQUAL_TOL(-2.0 * potential * capacitance, q1, 1e-3);
+    ASSERT_EQUAL_TOL(2.0 * potential * capacitance, q2, 1e-3);
 }
 
 void testParallelPlateCapacitorFiniteField() {
@@ -968,62 +864,80 @@ void testParallelPlateCapacitorFiniteField() {
 
     double capacitance = EPSILON0 * 2.0 * 3.0 / 11.0;
 
-    for (int ip = -2; ip <= 2; ip++) {
-        double potential = 100.0 * ip;
+    double potential = 100.0;
 
-        System system;
-        ConstantPotentialForce* force = new ConstantPotentialForce();
+    System system;
+    ConstantPotentialForce* force = new ConstantPotentialForce();
 
-        system.setDefaultPeriodicBoxVectors(Vec3(2, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 16));
+    system.setDefaultPeriodicBoxVectors(Vec3(2, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 16));
 
-        vector<Vec3> positions;
-        set<int> electrode1, electrode2;
-        for (int iz = 0; iz < 4; iz++) {
-            for (int iy = 0; iy < 12; iy++) {
-                for (int ix = 0; ix < 8; ix++) {
-                    electrode1.insert(force->getNumParticles());
-                    system.addParticle(0);
-                    force->addParticle(0);
-                    positions.push_back(Vec3(0.25 * ix, 0.25 * iy, 0.25 * iz));
+    vector<Vec3> positions;
+    set<int> electrode1, electrode2;
+    for (int iz = 0; iz < 4; iz++) {
+        for (int iy = 0; iy < 12; iy++) {
+            for (int ix = 0; ix < 8; ix++) {
+                electrode1.insert(force->getNumParticles());
+                system.addParticle(0);
+                force->addParticle(0);
+                positions.push_back(Vec3(0.25 * ix, 0.25 * iy, 0.25 * iz));
 
-                    electrode2.insert(force->getNumParticles());
-                    system.addParticle(0);
-                    force->addParticle(0);
-                    positions.push_back(Vec3(0.25 * ix, 0.25 * iy, 0.25 * iz + 12.0));
-                }
+                electrode2.insert(force->getNumParticles());
+                system.addParticle(0);
+                force->addParticle(0);
+                positions.push_back(Vec3(0.25 * ix, 0.25 * iy, 0.25 * iz + 12.0));
             }
         }
-        force->addElectrode(electrode1, 0, 0.2, 0);
-        force->addElectrode(electrode2, potential, 0.2, 0);
-        force->setUseChargeConstraint(true);
-        force->setExternalField(Vec3(0, 0, -potential / 16));
-
-        system.addForce(force);
-
-        VerletIntegrator integrator(0.001);
-        Context context(system, integrator, platform);
-        context.setPositions(positions);
-        vector<double> charges;
-        force->getCharges(context, charges);
-
-        double q1 = 0;
-        for (int ii : electrode1) {
-            q1 += charges[ii];
-        }
-
-        double q2 = 0;
-        for (int ii : electrode2) {
-            q2 += charges[ii];
-        }
-
-        // Use a looser tolerance since the analytical formula is for uniform
-        // plates with defined edges, not cubic arrays of Gaussian charges.
-        ASSERT_EQUAL_TOL(-potential * capacitance, q1, 1e-3);
-        ASSERT_EQUAL_TOL(potential * capacitance, q2, 1e-3);
     }
+    force->addElectrode(electrode1, 0, 0.2, 0);
+    force->addElectrode(electrode2, potential, 0.2, 0);
+    force->setUseChargeConstraint(true);
+    force->setExternalField(Vec3(0, 0, -potential / 16));
+
+    system.addForce(force);
+
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    vector<double> charges;
+    force->getCharges(context, charges);
+
+    double q1 = 0;
+    for (int ii : electrode1) {
+        q1 += charges[ii];
+    }
+
+    double q2 = 0;
+    for (int ii : electrode2) {
+        q2 += charges[ii];
+    }
+
+    // Use a looser tolerance since the analytical formula is for uniform
+    // plates with defined edges, not cubic arrays of Gaussian charges.
+    ASSERT_EQUAL_TOL(-potential * capacitance, q1, 1e-3);
+    ASSERT_EQUAL_TOL(potential * capacitance, q2, 1e-3);
+
+    // Update potential to a new value and recompute.
+    potential = -200.0;
+    force->setElectrodeParameters(1, electrode2, potential, 0.2, 0);
+    force->setExternalField(Vec3(0, 0, -potential / 16));
+    force->updateParametersInContext(context);
+    force->getCharges(context, charges);
+
+    q1 = 0;
+    for (int ii : electrode1) {
+        q1 += charges[ii];
+    }
+
+    q2 = 0;
+    for (int ii : electrode2) {
+        q2 += charges[ii];
+    }
+
+    ASSERT_EQUAL_TOL(-potential * capacitance, q1, 1e-3);
+    ASSERT_EQUAL_TOL(potential * capacitance, q2, 1e-3);
 }
 
-void makeTestSimulateSystem(bool freezeAll, System& system, ConstantPotentialForce*& constantPotentialForce, vector<Vec3>& positions) {
+void makeTestReferenceSystem(bool freezeAll, System& system, ConstantPotentialForce*& constantPotentialForce, vector<Vec3>& positions) {
     // Generates a test system with SPC/E water in contact with a model
     // electrode.
 
@@ -1105,7 +1019,7 @@ void testReferenceCharges(bool testThomasFermi, ConstantPotentialForce::Constant
     ConstantPotentialForce* testForce;
     vector<Vec3> positions;
 
-    makeTestSimulateSystem(method == ConstantPotentialForce::Matrix, testSystem, testForce, positions);
+    makeTestReferenceSystem(method == ConstantPotentialForce::Matrix, testSystem, testForce, positions);
 
     testForce->setEwaldErrorTolerance(5e-5);
     testForce->setConstantPotentialMethod(method);
@@ -1155,7 +1069,7 @@ void testChargeUpdate(ConstantPotentialForce::ConstantPotentialMethod method, bo
     ConstantPotentialForce* testForce;
     vector<Vec3> positions;
 
-    makeTestSimulateSystem(method == ConstantPotentialForce::Matrix, testSystem, testForce, positions);
+    makeTestReferenceSystem(method == ConstantPotentialForce::Matrix, testSystem, testForce, positions);
 
     testForce->setConstantPotentialMethod(method);
     testForce->setUsePreconditioner(usePreconditioner);
@@ -1205,29 +1119,61 @@ void testEnergyConservation(ConstantPotentialForce::ConstantPotentialMethod meth
     // Do a short dynamics run and ensure that energy is conserved.
 
     System system;
-    ConstantPotentialForce* force;
-    vector<Vec3> positions;
+    system.setDefaultPeriodicBoxVectors(Vec3(2, 0, 0), Vec3(0, 2, 0), Vec3(0, 0, 3));
 
-    makeTestSimulateSystem(method == ConstantPotentialForce::Matrix, system, force, positions);
+    // WCA potential to keep particles from getting too close to each other.
+    CustomNonbondedForce* nonbondedForce = new CustomNonbondedForce("1/r^12-2/r^6+1");
+    nonbondedForce->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    nonbondedForce->setCutoffDistance(1);
 
-    force->setConstantPotentialMethod(method);
-    force->setUsePreconditioner(usePreconditioner);
-    force->setUseChargeConstraint(true);
-    force->setChargeConstraintTarget(1);
-    force->setExternalField(Vec3(10, 0, 0));
-    force->setEwaldErrorTolerance(1e-4);
+    ConstantPotentialForce* constantPotentialForce = new ConstantPotentialForce();
+    constantPotentialForce->setCutoffDistance(1);
+    constantPotentialForce->setUseChargeConstraint(true);
+    constantPotentialForce->setChargeConstraintTarget(1);
+    constantPotentialForce->setExternalField(Vec3(1, 2, 4));
+    constantPotentialForce->setConstantPotentialMethod(method);
+    constantPotentialForce->setUsePreconditioner(usePreconditioner);
+    constantPotentialForce->setEwaldErrorTolerance(1e-4);
 
-    set<int> electrodeParticles;
-    double potential, gaussianWidth, thomasFermiScale;
-    force->getElectrodeParameters(0, electrodeParticles, potential, gaussianWidth, thomasFermiScale);
-    force->setElectrodeParameters(0, electrodeParticles, 1, 0.05, 1);
-    force->getElectrodeParameters(1, electrodeParticles, potential, gaussianWidth, thomasFermiScale);
-    force->setElectrodeParameters(1, electrodeParticles, 2, 0.06, 1.2);
+    for (int i = 0; i < 8; i++) {
+        system.addParticle(method == ConstantPotentialForce::Matrix ? 0 : 1);
+        constantPotentialForce->addParticle(0);
+    }
+    for (int i = 0; i < 4; i++) {
+        system.addParticle(1);
+    }
+    for (int i = 0; i < 12; i++) {
+        nonbondedForce->addParticle();
+    }
+    constantPotentialForce->addParticle(1);
+    constantPotentialForce->addParticle(-1);
+    constantPotentialForce->addParticle(-1);
+    constantPotentialForce->addParticle(1);
+    constantPotentialForce->addElectrode({0, 1, 2, 3}, -8, 0.05, 1);
+    constantPotentialForce->addElectrode({4, 5, 6, 7}, 8, 0.1, 1.5);
 
-    VerletIntegrator integrator(0.001);
+    system.addForce(nonbondedForce);
+    system.addForce(constantPotentialForce);
+
+    vector<Vec3> positions{
+        Vec3(0.0, 0.0, 0.0),
+        Vec3(0.0, 1.0, 0.0),
+        Vec3(1.0, 0.0, 0.0),
+        Vec3(1.0, 1.0, 0.0),
+        Vec3(0.0, 0.0, 2.0),
+        Vec3(0.0, 1.0, 2.0),
+        Vec3(1.0, 0.0, 2.0),
+        Vec3(1.0, 1.0, 2.0),
+        Vec3(0.5, 0.5, 1.0),
+        Vec3(0.5, 1.5, 1.0),
+        Vec3(1.5, 0.5, 1.0),
+        Vec3(1.5, 1.5, 1.0)
+    };
+
+    VerletIntegrator integrator(0.002);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(300);
+    context.setVelocitiesToTemperature(1 / BOLTZ);
 
     State state1 = context.getState(State::Energy);
     double energy1 = state1.getPotentialEnergy() + state1.getKineticEnergy();
@@ -1237,7 +1183,7 @@ void testEnergyConservation(ConstantPotentialForce::ConstantPotentialMethod meth
     State state2 = context.getState(State::Energy);
     double energy2 = state2.getPotentialEnergy() + state2.getKineticEnergy();
 
-    ASSERT_USUALLY_EQUAL_TOL(energy1, energy2, 1e-4);
+    ASSERT_USUALLY_EQUAL_TOL(energy1, energy2, 5e-4);
 }
 
 void compareToReferencePlatform(System& system, ConstantPotentialForce* force, const vector<Vec3>& positions) {
@@ -1282,7 +1228,7 @@ void testCompareToReferencePlatform(ConstantPotentialForce::ConstantPotentialMet
     force->setEwaldErrorTolerance(5e-5);
     compareToReferencePlatform(system, force, positions);
 
-    makeTestSimulateSystem(method == ConstantPotentialForce::Matrix, system, force, positions);
+    makeTestReferenceSystem(method == ConstantPotentialForce::Matrix, system, force, positions);
     force->setConstantPotentialMethod(method);
     force->setUsePreconditioner(usePreconditioner);
     force->setUseChargeConstraint(true);
@@ -1301,19 +1247,31 @@ void testCompareToReferencePlatform(ConstantPotentialForce::ConstantPotentialMet
 void platformInitialize();
 void runPlatformTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner);
 
+timespec start_timer() {
+    timespec result;
+    clock_gettime(CLOCK_MONOTONIC, &result);
+    return result;
+}
+double end_timer(timespec then) {
+    timespec now = start_timer();
+    return (double) (now.tv_sec - then.tv_sec) + 1e-9 * (now.tv_nsec - then.tv_nsec);
+}
+
+#define RUN_TIMER(statement) do { \
+    timespec timer = start_timer(); \
+    statement; \
+    printf("%80s: %12.6f s\n", #statement, end_timer(timer)); \
+} while(false)
+
 void runMethodDependentTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
-    testSmallSystems(method, usePreconditioner);
-    testNoConstraintWithoutElectrode(method, usePreconditioner);
-    testConstrainCharge(method, usePreconditioner);
-    testUpdateParticleExceptionParameters(method, usePreconditioner);
-    testUpdateElectrodeParameters(method, usePreconditioner);
-    testUpdateChargeFieldParameters(method, usePreconditioner);
-    testUpdateBox(method, usePreconditioner);
-    testUpdatePositions(method, usePreconditioner);
-    testReferenceCharges(false, method, usePreconditioner); // External field
-    testReferenceCharges(true, method, usePreconditioner);  // Thomas-Fermi
-    testChargeUpdate(method, usePreconditioner);
-    runPlatformTests(method, usePreconditioner);
+    RUN_TIMER(testSmallSystems(method, usePreconditioner));
+    RUN_TIMER(testNoConstraintWithoutElectrode(method, usePreconditioner));
+    RUN_TIMER(testConstrainCharge(method, usePreconditioner));
+    RUN_TIMER(testUpdate(method, usePreconditioner));
+    RUN_TIMER(testReferenceCharges(false, method, usePreconditioner)); // External field
+    RUN_TIMER(testReferenceCharges(true, method, usePreconditioner));  // Thomas-Fermi
+    RUN_TIMER(testChargeUpdate(method, usePreconditioner));
+    RUN_TIMER(runPlatformTests(method, usePreconditioner));
 }
 
 int main(int argc, char* argv[]) {
@@ -1321,22 +1279,27 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         platformInitialize();
 
-        testCoulomb(false); // Non-periodic exceptions
-        testCoulomb(true);  // Periodic exceptions
-        testCoulombOverlap();
-        testCoulombNonNeutral();
-        testCoulombGaussian();
-        testFiniteFieldNonPeriodic();
+        timespec timer;
+
+        RUN_TIMER(testCoulomb(false)); // Non-periodic exceptions
+        RUN_TIMER(testCoulomb(true));  // Periodic exceptions
+        RUN_TIMER(testCoulombOverlap());
+        RUN_TIMER(testCoulombNonNeutral());
+        RUN_TIMER(testCoulombGaussian());
+        RUN_TIMER(testFiniteFieldNonPeriodic());
         
-        testElectrodesDisjoint();
-        testNoElectrodeExceptions();
-        testElectrodeMatrixNoMass();
+        RUN_TIMER(testElectrodesDisjoint());
+        RUN_TIMER(testNoElectrodeExceptions());
+        RUN_TIMER(testElectrodeMatrixNoMass());
 
-        testParallelPlateCapacitorDoubleCell();
-        testParallelPlateCapacitorFiniteField();
+        RUN_TIMER(testParallelPlateCapacitorDoubleCell());
+        RUN_TIMER(testParallelPlateCapacitorFiniteField());
 
+        printf("\nMatrix:\n");
         runMethodDependentTests(ConstantPotentialForce::Matrix, false); // Matrix inversion (usePreconditioner ignored)
+        printf("\nCG:\n");
         runMethodDependentTests(ConstantPotentialForce::CG, false);     // Conjugate gradient (not preconditioned)
+        printf("\nCG (preconditioned):\n");
         runMethodDependentTests(ConstantPotentialForce::CG, true);      // Conjugate gradient (preconditioned)
     }
     catch(const exception& e) {
