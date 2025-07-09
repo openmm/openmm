@@ -1260,7 +1260,7 @@ double end_timer(timespec then) {
 #define RUN_TIMER(statement) do { \
     timespec timer = start_timer(); \
     statement; \
-    printf("%80s: %12.6f s\n", #statement, end_timer(timer)); \
+    fprintf(stderr, "%80s: %12.6f s\n", #statement, end_timer(timer)); \
 } while(false)
 
 void runMethodDependentTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
@@ -1295,11 +1295,11 @@ int main(int argc, char* argv[]) {
         RUN_TIMER(testParallelPlateCapacitorDoubleCell());
         RUN_TIMER(testParallelPlateCapacitorFiniteField());
 
-        printf("\nMatrix:\n");
+        fprintf(stderr, "\nMatrix:\n");
         runMethodDependentTests(ConstantPotentialForce::Matrix, false); // Matrix inversion (usePreconditioner ignored)
-        printf("\nCG:\n");
+        fprintf(stderr, "\nCG:\n");
         runMethodDependentTests(ConstantPotentialForce::CG, false);     // Conjugate gradient (not preconditioned)
-        printf("\nCG (preconditioned):\n");
+        fprintf(stderr, "\nCG (preconditioned):\n");
         runMethodDependentTests(ConstantPotentialForce::CG, true);      // Conjugate gradient (preconditioned)
     }
     catch(const exception& e) {

@@ -84,7 +84,7 @@ def execute_tests(options, raw_options):
     if os.path.isdir('Testing'):
         shutil.rmtree('Testing')
     return call(['ctest',
-                 '--output-on-failure',
+                 '-VV',
                  '--parallel', str(options.parallel),
                  '-T', 'Test',
                  '--timeout', options.timeout,
@@ -112,7 +112,7 @@ def execute_failed_tests(options, raw_options):
     start_time = datetime.fromtimestamp(options.start_time)
     stop_time = start_time + timedelta(minutes=options.job_duration)
     return call(['ctest'] + raw_options + [
-                 '--output-on-failure',
+                 '-VV',
                  '--parallel', str(options.parallel),
                  '-R', '|'.join(failed_tests),
                  '--timeout', options.timeout,
