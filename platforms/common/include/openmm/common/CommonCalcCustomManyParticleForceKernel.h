@@ -76,15 +76,13 @@ private:
     class ForceInfo;
     ComputeContext& cc;
     ForceInfo* info;
-    bool hasInitializedKernel;
+    bool hasInitializedKernel, needGlobalParams;
     NonbondedMethod nonbondedMethod;
     int maxNeighborPairs, forceWorkgroupSize, findNeighborsWorkgroupSize;
     ComputeParameterSet* params;
-    ComputeArray globals, particleTypes,  orderIndex, particleOrder;
+    ComputeArray  particleTypes,  orderIndex, particleOrder;
     ComputeArray exclusions, exclusionStartIndex, blockCenter, blockBoundingBox;
     ComputeArray neighborPairs, numNeighborPairs, neighborStartIndex, numNeighborsForAtom, neighbors;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
     std::map<std::string, int> tabulatedFunctionUpdateCount;
     const System& system;

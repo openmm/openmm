@@ -152,8 +152,6 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     acceptors.initialize<mm_int4>(cc, numAcceptors, "customHbondAcceptors");
     donorParams = new ComputeParameterSet(cc, force.getNumPerDonorParameters(), numDonors, "customHbondDonorParameters");
     acceptorParams = new ComputeParameterSet(cc, force.getNumPerAcceptorParameters(), numAcceptors, "customHbondAcceptorParameters");
-    if (force.getNumGlobalParameters() > 0)
-        globals.initialize<float>(cc, force.getNumGlobalParameters(), "customHbondGlobals");
     vector<vector<float> > donorParamVector(numDonors);
     vector<mm_int4> donorVector(numDonors);
     for (int i = 0; i < numDonors; i++) {
@@ -254,14 +252,6 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
 
     // Record information about parameters.
 
-    globalParamNames.resize(force.getNumGlobalParameters());
-    globalParamValues.resize(force.getNumGlobalParameters());
-    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-        globalParamNames[i] = force.getGlobalParameterName(i);
-        globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
-    }
-    if (globals.isInitialized())
-        globals.upload(globalParamValues);
     map<string, string> variables;
     for (int i = 0; i < force.getNumPerDonorParameters(); i++) {
         const string& name = force.getPerDonorParameterName(i);
@@ -273,8 +263,10 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         const string& name = force.getGlobalParameterName(i);
-        variables[name] = "globals["+cc.intToString(i)+"]";
+        int index = cc.registerGlobalParam(name);
+        variables[name] = "globals["+cc.intToString(index)+"]";
     }
+    needGlobalParams = (force.getNumGlobalParameters() > 0);
 
     // Now to generate the kernel.  First, it needs to calculate all distances, angles,
     // and dihedrals the expression depends on.
@@ -354,7 +346,7 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     // Next it needs to load parameters from global memory.
 
     if (force.getNumGlobalParameters() > 0)
-        extraArgs << ", GLOBAL const float* RESTRICT globals";
+        extraArgs << ", GLOBAL const real* RESTRICT globals";
     for (int i = 0; i < (int) donorParams->getParameterInfos().size(); i++) {
         ComputeParameterInfo& parameter = donorParams->getParameterInfos()[i];
         extraArgs << ", GLOBAL const "+parameter.getType()+"* RESTRICT donor"+parameter.getName();
@@ -457,17 +449,6 @@ double CommonCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
     if (numDonors == 0 || numAcceptors == 0)
         return 0.0;
     ContextSelector selector(cc);
-    if (globals.isInitialized()) {
-        bool changed = false;
-        for (int i = 0; i < (int) globalParamNames.size(); i++) {
-            float value = (float) context.getParameter(globalParamNames[i]);
-            if (value != globalParamValues[i])
-                changed = true;
-            globalParamValues[i] = value;
-        }
-        if (changed)
-            globals.upload(globalParamValues);
-    }
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
         if (useBoundingBoxes) {
@@ -495,8 +476,8 @@ double CommonCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
             forceKernel->addArg(acceptorBlockCenter);
             forceKernel->addArg(acceptorBlockSize);
         }
-        if (globals.isInitialized())
-            forceKernel->addArg(globals);
+        if (needGlobalParams)
+            forceKernel->addArg(cc.getGlobalParamValues());
         for (auto& parameter : donorParams->getParameterInfos())
             forceKernel->addArg(parameter.getArray());
         for (auto& parameter : acceptorParams->getParameterInfos())

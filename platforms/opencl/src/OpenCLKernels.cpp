@@ -62,6 +62,7 @@ void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     cl.setForcesValid(true);
     cl.clearAutoclearBuffers();
+    cl.updateGlobalParamValues();
     for (auto computation : cl.getPreComputations())
         computation->computeForceAndEnergy(includeForces, includeEnergy, groups);
     OpenCLNonbondedUtilities& nb = cl.getNonbondedUtilities();

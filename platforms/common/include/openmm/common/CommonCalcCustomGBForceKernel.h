@@ -73,7 +73,7 @@ public:
 private:
     class ForceInfo;
     double cutoff;
-    bool hasInitializedKernels, needParameterGradient, needEnergyParamDerivs;
+    bool hasInitializedKernels, needGlobalParams, needParameterGradient, needEnergyParamDerivs;
     int maxTiles, numComputedValues;
     ComputeContext& cc;
     ForceInfo* info;
@@ -83,9 +83,7 @@ private:
     ComputeParameterSet* energyDerivChain;
     std::vector<ComputeParameterSet*> dValuedParam;
     std::vector<ComputeArray> dValue0dParam;
-    ComputeArray longEnergyDerivs, globals, valueBuffers;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
+    ComputeArray longEnergyDerivs, valueBuffers;
     std::vector<ComputeArray> tabulatedFunctionArrays;
     std::map<std::string, int> tabulatedFunctionUpdateCount;
     std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;

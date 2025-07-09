@@ -115,20 +115,10 @@ void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, 
 }
 
 void CudaNonbondedUtilities::addParameter(ComputeParameterInfo parameter) {
-    parameters.push_back(ParameterInfo(parameter.getName(), parameter.getComponentType(), parameter.getNumComponents(),
-            parameter.getSize(), context.unwrap(parameter.getArray()).getDevicePointer(), parameter.isConstant()));
-}
-
-void CudaNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
     parameters.push_back(parameter);
 }
 
 void CudaNonbondedUtilities::addArgument(ComputeParameterInfo parameter) {
-    arguments.push_back(ParameterInfo(parameter.getName(), parameter.getComponentType(), parameter.getNumComponents(),
-            parameter.getSize(), context.unwrap(parameter.getArray()).getDevicePointer(), parameter.isConstant()));
-}
-
-void CudaNonbondedUtilities::addArgument(const ParameterInfo& parameter) {
     arguments.push_back(parameter);
 }
 
@@ -313,10 +303,10 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         forceArgs.push_back(&maxSinglePairs);
         forceArgs.push_back(&singlePairs.getDevicePointer());
     }
-    for (int i = 0; i < (int) parameters.size(); i++)
-        forceArgs.push_back(&parameters[i].getMemory());
-    for (ParameterInfo& arg : arguments)
-        forceArgs.push_back(&arg.getMemory());
+    hasInitializedParams = false;
+    paramStartIndex = forceArgs.size();
+    for (int i = 0; i < parameters.size()+arguments.size(); i++)
+        forceArgs.push_back(NULL);
     if (energyParameterDerivatives.size() > 0)
         forceArgs.push_back(&context.getEnergyParamDerivBuffer().getDevicePointer());
     if (useCutoff) {
@@ -423,6 +413,15 @@ void CudaNonbondedUtilities::prepareInteractions(int forceGroups) {
     cuEventRecord(downloadCountEvent, context.getCurrentStream());
 }
 
+void CudaNonbondedUtilities::initParamArgs() {
+    int index = paramStartIndex;
+    for (ComputeParameterInfo& param : parameters)
+        forceArgs[index++] = &context.unwrap(param.getArray()).getDevicePointer();
+    for (ComputeParameterInfo& arg : arguments)
+        forceArgs[index++] = &context.unwrap(arg.getArray()).getDevicePointer();
+    hasInitializedParams = true;
+}
+
 void CudaNonbondedUtilities::computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) {
     if ((forceGroups&groupFlags) == 0)
         return;
@@ -431,6 +430,8 @@ void CudaNonbondedUtilities::computeInteractions(int forceGroups, bool includeFo
         CUfunction& kernel = (includeForces ? (includeEnergy ? kernels.forceEnergyKernel : kernels.forceKernel) : kernels.energyKernel);
         if (kernel == NULL)
             kernel = createInteractionKernel(kernels.source, parameters, arguments, true, true, forceGroups, includeForces, includeEnergy);
+        if (!hasInitializedParams)
+            initParamArgs();
         context.executeKernel(kernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     if (useNeighborList && numTiles > 0) {
@@ -536,13 +537,13 @@ void CudaNonbondedUtilities::createKernelsForGroups(int groups) {
     groupKernels[groups] = kernels;
 }
 
-CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source, vector<ParameterInfo>& params, vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups, bool includeForces, bool includeEnergy) {
+CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source, vector<ComputeParameterInfo>& params, vector<ComputeParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups, bool includeForces, bool includeEnergy) {
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
     const string suffixes[] = {"x", "y", "z", "w"};
     stringstream localData;
     int localDataSize = 0;
-    for (const ParameterInfo& param : params) {
+    for (const ComputeParameterInfo& param : params) {
         if (param.getNumComponents() == 1)
             localData<<param.getType()<<" "<<param.getName()<<";\n";
         else {
@@ -553,7 +554,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     }
     replacements["ATOM_PARAMETER_DATA"] = localData.str();
     stringstream args;
-    for (const ParameterInfo& param : params) {
+    for (const ComputeParameterInfo& param : params) {
         args << ", ";
         if (param.isConstant())
             args << "const ";
@@ -561,7 +562,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         args << "* __restrict__ global_";
         args << param.getName();
     }
-    for (const ParameterInfo& arg : arguments) {
+    for (const ComputeParameterInfo& arg : arguments) {
         args << ", ";
         if (arg.isConstant())
             args << "const ";
@@ -574,7 +575,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     replacements["PARAMETER_ARGUMENTS"] = args.str();
 
     stringstream load1;
-    for (const ParameterInfo& param : params) {
+    for (const ComputeParameterInfo& param : params) {
         load1 << param.getType();
         load1 << " ";
         load1 << param.getName();
@@ -591,7 +592,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     broadcastWarpData << "posq2.y = real_shfl(shflPosq.y, j);\n";
     broadcastWarpData << "posq2.z = real_shfl(shflPosq.z, j);\n";
     broadcastWarpData << "posq2.w = real_shfl(shflPosq.w, j);\n";
-    for (const ParameterInfo& param : params) {
+    for (const ComputeParameterInfo& param : params) {
         broadcastWarpData << param.getType() << " shfl" << param.getName() << ";\n";
         for (int j = 0; j < param.getNumComponents(); j++) {
             if (param.getNumComponents() == 1)
@@ -604,27 +605,27 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     
     // Part 2. Defines for off-diagonal exclusions, and neighborlist tiles. 
     stringstream declareLocal2;
-    for (const ParameterInfo& param : params)
+    for (const ComputeParameterInfo& param : params)
         declareLocal2<<param.getType()<<" shfl"<<param.getName()<<";\n";
     replacements["DECLARE_LOCAL_PARAMETERS"] = declareLocal2.str();
 
     stringstream loadLocal2;
-    for (const ParameterInfo& param : params)
+    for (const ComputeParameterInfo& param : params)
         loadLocal2<<"shfl"<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
     replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
    
     stringstream load2j;
-    for (const ParameterInfo& param : params)
+    for (const ComputeParameterInfo& param : params)
         load2j<<param.getType()<<" "<<param.getName()<<"2 = shfl"<<param.getName()<<";\n";
     replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
 
     stringstream load2g;
-    for (const ParameterInfo& param : params)
+    for (const ComputeParameterInfo& param : params)
         load2g<<param.getType()<<" "<<param.getName()<<"2 = global_"<<param.getName()<<"[atom2];\n";
     replacements["LOAD_ATOM2_PARAMETERS_FROM_GLOBAL"] = load2g.str();
     
     stringstream clearLocal;
-    for (const ParameterInfo& param : params) {
+    for (const ComputeParameterInfo& param : params) {
         clearLocal<<"shfl"<<param.getName()<<" = ";
         if (param.getNumComponents() == 1)
             clearLocal<<"0;\n";
@@ -654,7 +655,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     shuffleWarpData << "shflForce.x = real_shfl(shflForce.x, tgx+1);\n";
     shuffleWarpData << "shflForce.y = real_shfl(shflForce.y, tgx+1);\n";
     shuffleWarpData << "shflForce.z = real_shfl(shflForce.z, tgx+1);\n";
-    for (const ParameterInfo& param : params) {
+    for (const ComputeParameterInfo& param : params) {
         if (param.getNumComponents() == 1)
             shuffleWarpData<<"shfl"<<param.getName()<<"=real_shfl(shfl"<<param.getName()<<", tgx+1);\n";
         else {

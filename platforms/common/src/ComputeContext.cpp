@@ -45,7 +45,7 @@ const int ComputeContext::ThreadBlockSize = 64;
 const int ComputeContext::TileSize = 32;
 
 ComputeContext::ComputeContext(const System& system) : system(system), time(0.0), stepCount(0), computeForceCount(0), stepsSinceReorder(99999),
-        forceNextReorder(false), atomsWereReordered(false), forcesValid(false) {
+        forceNextReorder(false), atomsWereReordered(false), forcesValid(false), hasInitializedGlobals(false) {
     workThread = new WorkThread();
 }
 
@@ -706,6 +706,35 @@ int ComputeContext::findLegalFFTDimension(int minimum) {
             return minimum;
         minimum++;
     }
+}
+
+int ComputeContext::registerGlobalParam(const string& name) {
+    for (int i = 0; i < globalParamNames.size(); i++)
+        if (globalParamNames[i] == name)
+            return i;
+    globalParamNames.push_back(name);
+    return globalParamNames.size()-1;
+}
+
+void ComputeContext::updateGlobalParamValues() {
+    bool changed = false;
+    if (!hasInitializedGlobals) {
+        hasInitializedGlobals = true;
+        int elementSize = (getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+        globalParamValues.initialize(*this, max(1, (int) globalParamNames.size()), elementSize, "globalParameters");
+        lastGlobalParamValues.resize(globalParamValues.getSize(), 0.0);
+        if (globalParamNames.size() > 0)
+            changed = true;
+    }
+    for (int i = 0; i < globalParamNames.size(); i++) {
+        double value = getContextImpl()->getParameter(globalParamNames[i]);
+        if (value != lastGlobalParamValues[i]) {
+            lastGlobalParamValues[i] = value;
+            changed = true;
+        }
+    }
+    if (changed)
+        getGlobalParamValues().upload(lastGlobalParamValues, true);
 }
 
 struct ComputeContext::WorkThread::ThreadData {

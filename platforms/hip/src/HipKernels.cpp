@@ -68,6 +68,7 @@ void HipCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
     cu.setForcesValid(true);
     ContextSelector selector(cu);
     cu.clearAutoclearBuffers();
+    cu.updateGlobalParamValues();
     for (auto computation : cu.getPreComputations())
         computation->computeForceAndEnergy(includeForces, includeEnergy, groups);
     HipNonbondedUtilities& nb = cu.getNonbondedUtilities();
