@@ -1247,31 +1247,15 @@ void testCompareToReferencePlatform(ConstantPotentialForce::ConstantPotentialMet
 void platformInitialize();
 void runPlatformTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner);
 
-timespec start_timer() {
-    timespec result;
-    clock_gettime(CLOCK_MONOTONIC, &result);
-    return result;
-}
-double end_timer(timespec then) {
-    timespec now = start_timer();
-    return (double) (now.tv_sec - then.tv_sec) + 1e-9 * (now.tv_nsec - then.tv_nsec);
-}
-
-#define RUN_TIMER(statement) do { \
-    timespec timer = start_timer(); \
-    statement; \
-    fprintf(stderr, "%80s: %12.6f s\n", #statement, end_timer(timer)); \
-} while(false)
-
 void runMethodDependentTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
-    RUN_TIMER(testSmallSystems(method, usePreconditioner));
-    RUN_TIMER(testNoConstraintWithoutElectrode(method, usePreconditioner));
-    RUN_TIMER(testConstrainCharge(method, usePreconditioner));
-    RUN_TIMER(testUpdate(method, usePreconditioner));
-    RUN_TIMER(testReferenceCharges(false, method, usePreconditioner)); // External field
-    RUN_TIMER(testReferenceCharges(true, method, usePreconditioner));  // Thomas-Fermi
-    RUN_TIMER(testChargeUpdate(method, usePreconditioner));
-    RUN_TIMER(runPlatformTests(method, usePreconditioner));
+    testSmallSystems(method, usePreconditioner);
+    testNoConstraintWithoutElectrode(method, usePreconditioner);
+    testConstrainCharge(method, usePreconditioner);
+    testUpdate(method, usePreconditioner);
+    testReferenceCharges(false, method, usePreconditioner); // External field
+    testReferenceCharges(true, method, usePreconditioner);  // Thomas-Fermi
+    testChargeUpdate(method, usePreconditioner);
+    runPlatformTests(method, usePreconditioner);
 }
 
 int main(int argc, char* argv[]) {
@@ -1279,27 +1263,22 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         platformInitialize();
 
-        timespec timer;
+        testCoulomb(false); // Non-periodic exceptions
+        testCoulomb(true);  // Periodic exceptions
+        testCoulombOverlap();
+        testCoulombNonNeutral();
+        testCoulombGaussian();
+        testFiniteFieldNonPeriodic();
 
-        RUN_TIMER(testCoulomb(false)); // Non-periodic exceptions
-        RUN_TIMER(testCoulomb(true));  // Periodic exceptions
-        RUN_TIMER(testCoulombOverlap());
-        RUN_TIMER(testCoulombNonNeutral());
-        RUN_TIMER(testCoulombGaussian());
-        RUN_TIMER(testFiniteFieldNonPeriodic());
-        
-        RUN_TIMER(testElectrodesDisjoint());
-        RUN_TIMER(testNoElectrodeExceptions());
-        RUN_TIMER(testElectrodeMatrixNoMass());
+        testElectrodesDisjoint();
+        testNoElectrodeExceptions();
+        testElectrodeMatrixNoMass();
 
-        RUN_TIMER(testParallelPlateCapacitorDoubleCell());
-        RUN_TIMER(testParallelPlateCapacitorFiniteField());
+        testParallelPlateCapacitorDoubleCell();
+        testParallelPlateCapacitorFiniteField();
 
-        fprintf(stderr, "\nMatrix:\n");
         runMethodDependentTests(ConstantPotentialForce::Matrix, false); // Matrix inversion (usePreconditioner ignored)
-        fprintf(stderr, "\nCG:\n");
         runMethodDependentTests(ConstantPotentialForce::CG, false);     // Conjugate gradient (not preconditioned)
-        fprintf(stderr, "\nCG (preconditioned):\n");
         runMethodDependentTests(ConstantPotentialForce::CG, true);      // Conjugate gradient (preconditioned)
     }
     catch(const exception& e) {
