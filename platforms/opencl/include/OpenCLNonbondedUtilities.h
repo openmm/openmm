@@ -67,7 +67,6 @@ class OpenCLContext;
 
 class OPENMM_EXPORT_COMMON OpenCLNonbondedUtilities : public NonbondedUtilities {
 public:
-    class ParameterInfo;
     OpenCLNonbondedUtilities(OpenCLContext& context);
     ~OpenCLNonbondedUtilities();
     /**
@@ -92,21 +91,9 @@ public:
      */
     void addParameter(ComputeParameterInfo parameter);
     /**
-     * Add a per-atom parameter that the default interaction kernel may depend on.
-     * 
-     * @deprecated Use the version that takes a ComputeParameterInfo instead.
-     */
-    void addParameter(const ParameterInfo& parameter);
-    /**
      * Add an array (other than a per-atom parameter) that should be passed as an argument to the default interaction kernel.
      */
     void addArgument(ComputeParameterInfo parameter);
-    /**
-     * Add an array (other than a per-atom parameter) that should be passed as an argument to the default interaction kernel.
-     * 
-     * @deprecated Use the version that takes a ComputeParameterInfo instead.
-     */
-    void addArgument(const ParameterInfo& parameter);
     /**
      * Register that the interaction kernel will be computing the derivative of the potential energy
      * with respect to a parameter.
@@ -294,7 +281,7 @@ public:
      * @param includeForces whether this kernel should compute forces
      * @param includeEnergy whether this kernel should compute potential energy
      */
-    cl::Kernel createInteractionKernel(const std::string& source, const std::vector<ParameterInfo>& params, const std::vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups, bool includeForces, bool includeEnergy);
+    cl::Kernel createInteractionKernel(const std::string& source, std::vector<ComputeParameterInfo>& params, std::vector<ComputeParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups, bool includeForces, bool includeEnergy);
     /**
      * Create the set of kernels that will be needed for a particular combination of force groups.
      * 
@@ -332,8 +319,8 @@ private:
     cl::Buffer* pinnedCountBuffer;
     unsigned int* pinnedCountMemory;
     std::vector<std::vector<int> > atomExclusions;
-    std::vector<ParameterInfo> parameters;
-    std::vector<ParameterInfo> arguments;
+    std::vector<ComputeParameterInfo> parameters;
+    std::vector<ComputeParameterInfo> arguments;
     std::vector<std::string> energyParameterDerivatives;
     std::map<int, double> groupCutoff;
     std::map<int, std::string> groupKernelSource;
@@ -360,62 +347,6 @@ public:
     cl::Kernel sortBoxDataKernel;
     cl::Kernel findInteractingBlocksKernel;
     cl::Kernel findInteractionsWithinBlocksKernel;
-};
-
-/**
- * This class stores information about a per-atom parameter that may be used in a nonbonded kernel.
- */
-
-class OpenCLNonbondedUtilities::ParameterInfo {
-public:
-    /**
-     * Create a ParameterInfo object.
-     *
-     * @param name           the name of the parameter
-     * @param type           the data type of the parameter's components
-     * @param numComponents  the number of components in the parameter
-     * @param size           the size of the parameter in bytes
-     * @param memory         the memory containing the parameter values
-     * @param constant       whether the memory should be marked as constant
-     */
-    ParameterInfo(const std::string& name, const std::string& componentType, int numComponents, int size, cl::Memory& memory, bool constant=true) :
-            name(name), componentType(componentType), numComponents(numComponents), size(size), memory(&memory), constant(constant) {
-        if (numComponents == 1)
-            type = componentType;
-        else {
-            std::stringstream s;
-            s << componentType << numComponents;
-            type = s.str();
-        }
-    }
-    const std::string& getName() const {
-        return name;
-    }
-    const std::string& getComponentType() const {
-        return componentType;
-    }
-    const std::string& getType() const {
-        return type;
-    }
-    int getNumComponents() const {
-        return numComponents;
-    }
-    int getSize() const {
-        return size;
-    }
-    cl::Memory& getMemory() const {
-        return *memory;
-    }
-    bool isConstant() const {
-        return constant;
-    }
-private:
-    std::string name;
-    std::string componentType;
-    std::string type;
-    int size, numComponents;
-    cl::Memory* memory;
-    bool constant;
 };
 
 } // namespace OpenMM

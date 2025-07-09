@@ -152,8 +152,6 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     int paddedNumParticles = cc.getPaddedNumAtoms();
     int numParams = force.getNumPerParticleParameters();
     params = new ComputeParameterSet(cc, numParams, paddedNumParticles, "customNonbondedParameters", true);
-    if (force.getNumGlobalParameters() > 0)
-        globals.initialize<float>(cc, force.getNumGlobalParameters(), "customNonbondedGlobals");
     vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
     vector<vector<int> > exclusionList(numParticles);
     for (int i = 0; i < numParticles; i++) {
@@ -211,8 +209,6 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         globalParamNames[i] = force.getGlobalParameterName(i);
         globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
     }
-    if (globals.isInitialized())
-        globals.upload(globalParamValues);
     bool useCutoff = (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff && force.getNonbondedMethod() != CustomNonbondedForce::CutoffNonPeriodic);
     Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
@@ -256,9 +252,11 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         variables.push_back(makeVariable(computedValueNames[i]+"1", prefix+"values"+cc.intToString(i+1)+"1"));
         variables.push_back(makeVariable(computedValueNames[i]+"2", prefix+"values"+cc.intToString(i+1)+"2"));
     }
+    needGlobalParams = (force.getNumGlobalParameters() > 0);
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         const string& name = force.getGlobalParameterName(i);
-        string value = "globals["+cc.intToString(i)+"]";
+        int index = cc.registerGlobalParam(name);
+        string value = "globals["+cc.intToString(index)+"]";
         variables.push_back(makeVariable(name, prefix+value));
     }
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
@@ -291,10 +289,8 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         for (int i = 0; i < computedValueBuffers.size(); i++)
             cc.getNonbondedUtilities().addParameter(ComputeParameterInfo(computedValueBuffers[i].getArray(), prefix+"values"+cc.intToString(i+1),
                     computedValueBuffers[i].getComponentType(), computedValueBuffers[i].getNumComponents()));
-        if (globals.isInitialized()) {
-            globals.upload(globalParamValues);
-            cc.getNonbondedUtilities().addArgument(ComputeParameterInfo(globals, prefix+"globals", "float", 1));
-        }
+        if (needGlobalParams)
+            cc.getNonbondedUtilities().addArgument(ComputeParameterInfo(cc.getGlobalParamValues(), prefix+"globals", "real", 1));
     }
     if (force.getNumComputedValues() > 0) {
         // Create the kernel to calculate computed values.
@@ -309,7 +305,7 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
             valuesSource << buffer.getType() << " local_" << valueName << ";\n";
         }
         if (force.getNumGlobalParameters() > 0)
-            args << ", GLOBAL const float* globals";
+            args << ", GLOBAL const real* globals";
         for (int i = 0; i < params->getParameterInfos().size(); i++) {
             ComputeParameterInfo& buffer = params->getParameterInfos()[i];
             string paramName = "params"+cc.intToString(i+1);
@@ -318,8 +314,11 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         map<string, string> variables;
         for (int i = 0; i < force.getNumPerParticleParameters(); i++)
             variables[force.getPerParticleParameterName(i)] = "params"+params->getParameterSuffix(i, "[index]");
-        for (int i = 0; i < force.getNumGlobalParameters(); i++)
-            variables[force.getGlobalParameterName(i)] = "globals["+cc.intToString(i)+"]";
+        for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+            const string& name = force.getGlobalParameterName(i);
+            int index = cc.registerGlobalParam(name);
+            variables[name] = "globals["+cc.intToString(index)+"]";
+        }
         for (int i = 0; i < force.getNumComputedValues(); i++) {
             string name, expression;
             force.getComputedValueParameters(i, name, expression);
@@ -341,8 +340,8 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         computedValuesKernel = program->createKernel("computePerParticleValues");
         for (auto& value : computedValues->getParameterInfos())
             computedValuesKernel->addArg(value.getArray());
-        if (globals.isInitialized())
-            computedValuesKernel->addArg(globals);
+        if (needGlobalParams)
+            computedValuesKernel->addArg();
         for (auto& parameter : params->getParameterInfos())
             computedValuesKernel->addArg(parameter.getArray());
         for (auto& function : tabulatedFunctionArrays)
@@ -561,8 +560,8 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         args<<", GLOBAL const "<<computedValueBuffers[i].getType()<<"* RESTRICT global_values"<<(i+1);
     for (int i = 0; i < tabulatedFunctionArrays.size(); i++)
         args << ", GLOBAL const " << tableTypes[i]<< "* RESTRICT table" << i;
-    if (globals.isInitialized())
-        args<<", GLOBAL const float* RESTRICT globals";
+    if (needGlobalParams)
+        args<<", GLOBAL const real* RESTRICT globals";
     if (hasParamDerivs)
         args << ", GLOBAL mixed* RESTRICT energyParamDerivs";
     replacements["PARAMETER_ARGUMENTS"] = args.str();
@@ -634,18 +633,12 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
     }
     ContextSelector selector(cc);
     bool recomputeLongRangeCorrection = !hasInitializedLongRangeCorrection;
-    if (globals.isInitialized()) {
-        bool changed = false;
+    if (needGlobalParams && forceCopy != NULL) {
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
             float value = (float) context.getParameter(globalParamNames[i]);
             if (value != globalParamValues[i])
-                changed = true;
-            globalParamValues[i] = value;
-        }
-        if (changed) {
-            globals.upload(globalParamValues);
-            if (forceCopy != NULL)
                 recomputeLongRangeCorrection = true;
+            globalParamValues[i] = value;
         }
     }
     if (recomputeLongRangeCorrection) {
@@ -656,8 +649,10 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
         else
             hasInitializedLongRangeCorrection = false;
     }
-    if (computedValues != NULL)
+    if (computedValues != NULL) {
+        computedValuesKernel->setArg(computedValues->getParameterInfos().size(), cc.getGlobalParamValues());
         computedValuesKernel->execute(cc.getNumAtoms());
+    }
     if (interactionGroupData.isInitialized()) {
         if (!hasInitializedKernel) {
             hasInitializedKernel = true;
@@ -676,8 +671,8 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
                 interactionGroupKernel->addArg(buffer.getArray());
             for (auto& function : tabulatedFunctionArrays)
                 interactionGroupKernel->addArg(function);
-            if (globals.isInitialized())
-                interactionGroupKernel->addArg(globals);
+            if (needGlobalParams)
+                interactionGroupKernel->addArg(cc.getGlobalParamValues());
             if (hasParamDerivs)
                 interactionGroupKernel->addArg(cc.getEnergyParamDerivBuffer());
             if (useNeighborList) {
