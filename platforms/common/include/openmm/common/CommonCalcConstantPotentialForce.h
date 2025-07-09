@@ -334,6 +334,7 @@ private:
     ComputeKernel pmeEvalEnergyKernel;
     ComputeKernel pmeInterpolateForceKernel;
     ComputeKernel pmeInterpolateChargeDerivativesKernel;
+    std::vector<mm_int4> hostPosCellOffsets;
     std::vector<double> setCharges, hostNonElectrodeCharges, hostElectrodeCharges;
     std::vector<std::pair<int, int> > exclusions;
     std::vector<int> exceptions;

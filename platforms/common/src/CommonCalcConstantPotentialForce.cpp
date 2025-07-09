@@ -93,8 +93,8 @@ private:
 
 class CommonCalcConstantPotentialForceKernel::ReorderListener : public ComputeContext::ReorderListener {
 public:
-    ReorderListener(ComputeContext& cc, ComputeArray& posCellOffsets, int numElectrodeParticles, const vector<int>& sysToElec, const vector<int>& elecToSys) :
-            cc(cc), posCellOffsets(posCellOffsets), numElectrodeParticles(numElectrodeParticles), sysToElec(sysToElec), elecToSys(elecToSys) {
+    ReorderListener(ComputeContext& cc, int numElectrodeParticles, const vector<int>& sysToElec, const vector<int>& elecToSys) :
+            cc(cc), numElectrodeParticles(numElectrodeParticles), sysToElec(sysToElec), elecToSys(elecToSys) {
         numParticles = cc.getNumAtoms();
         lastOrder.assign(cc.getAtomIndex().begin(), cc.getAtomIndex().end());
     }
@@ -102,11 +102,8 @@ public:
         chargeArrays.push_back(&chargeArray);
     }
     void execute() {
-        // Cell offsets may have changed due to wrapping, so update them.
-        posCellOffsets.upload(cc.getPosCellOffsets());
-
         // Reorder guess charges.
-        if(chargeArrays.empty()) {
+        if (chargeArrays.empty()) {
             return;
         }
         const vector<int>& order = cc.getAtomIndex();
@@ -127,7 +124,6 @@ public:
     }
 private:
     ComputeContext& cc;
-    ComputeArray& posCellOffsets;
     int numParticles;
     int numElectrodeParticles;
     const vector<int>& sysToElec;
@@ -940,15 +936,17 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
     info = new ForceInfo(force, hostSysElec, hostElectrodeParams);
     cc.addForce(info);
 
-    // Create a reorder listener to swap around electrode guess charges and
-    // upload periodic box image indices (for external field calculation).
+    // Initialize cell offsets for finite field computation.
     posCellOffsets.initialize<mm_int4>(cc, cc.getPaddedNumAtoms(), "posCellOffsets");
-    posCellOffsets.upload(cc.getPosCellOffsets());
-    ReorderListener* listener = new ReorderListener(cc, posCellOffsets, numElectrodeParticles, hostSysToElec, hostElecToSys);
+    hostPosCellOffsets = cc.getPosCellOffsets();
+    posCellOffsets.upload(hostPosCellOffsets);
+
+    // Create a reorder listener to swap electrode guess charges.
+    ReorderListener* listener = new ReorderListener(cc, numElectrodeParticles, hostSysToElec, hostElecToSys);
     if (hasElectrodes) {
         vector<ComputeArray*> guessChargeArrays;
         solver->getGuessChargeArrays(guessChargeArrays);
-        for(ComputeArray* guessChargeArray : guessChargeArrays) {
+        for (ComputeArray* guessChargeArray : guessChargeArrays) {
             listener->addChargeArray(*guessChargeArray);
         }
     }
@@ -1610,5 +1608,20 @@ void CommonCalcConstantPotentialForceKernel::setKernelPeriodicBoxArgs(bool inclu
                 pmeInterpolateChargeDerivativesKernel->setArg(10, recipBoxVectorsFloat[2]);
             }
         }
+    }
+
+    const vector<mm_int4>& newPosCellOffsets = cc.getPosCellOffsets();
+    bool mustUpdatePosCellOffsets = false;
+    for (int i = 0; i < numParticles; i++) {
+        mm_int4 oldOffset = hostPosCellOffsets[i];
+        mm_int4 newOffset = newPosCellOffsets[i];
+        if (newOffset.x != oldOffset.x || newOffset.y != oldOffset.y || newOffset.z != oldOffset.z) {
+            mustUpdatePosCellOffsets = true;
+            break;
+        }
+    }
+    if (mustUpdatePosCellOffsets) {
+        hostPosCellOffsets.assign(newPosCellOffsets.begin(), newPosCellOffsets.end());
+        posCellOffsets.upload(hostPosCellOffsets);
     }
 }
