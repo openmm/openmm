@@ -1112,9 +1112,10 @@ void CommonCalcConstantPotentialForceKernel::getCharges(ContextImpl& context, ve
     // charges.
     chargesOut = setCharges;
     if (hasElectrodes) {
+        const vector<int>& order = cc.getAtomIndex();
         electrodeCharges.download(hostElectrodeCharges, true);
         for (int ii = 0; ii < numElectrodeParticles; ii++) {
-            chargesOut[hostElecToSys[ii]] = hostElectrodeCharges[ii];
+            chargesOut[order[hostElecToSys[ii]]] = hostElectrodeCharges[ii];
         }
     }
 }

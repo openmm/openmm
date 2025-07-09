@@ -280,6 +280,47 @@ void testCoulombGaussian() {
     ASSERT_EQUAL_TOL(refState.getPotentialEnergy() + du_pair + du_self, testState.getPotentialEnergy(), TOL);
 }
 
+void testFiniteFieldNonPeriodic() {
+    // Ensures that the electric field energy is based on an absolute offset
+    // from the origin and not affected by periodic wrapping.
+
+    System testSystem;
+    Vec3 a, b, c;
+    a = Vec3(10, 0, 0);
+    b = Vec3(1, 9, 0);
+    c = Vec3(2, 3, 8);
+    testSystem.setDefaultPeriodicBoxVectors(a, b, c);
+    testSystem.addParticle(0);
+
+    Vec3 field(123, -456, 789);
+    double charge = -2;
+
+    ConstantPotentialForce* testForce = new ConstantPotentialForce();
+    testForce->setEwaldErrorTolerance(1e-4);
+    testForce->addParticle(charge);
+    testSystem.addForce(testForce);
+
+    VerletIntegrator baseIntegrator(0.001);
+    Context baseContext(testSystem, baseIntegrator, platform);
+    baseContext.setPositions(vector<Vec3>{Vec3(0, 0, 0)});
+    double pmeBaseEnergy = baseContext.getState(State::Energy).getPotentialEnergy();
+
+    testForce->setExternalField(field);
+
+    Vec3 position(30, 20, -10);
+    double referenceEnergy = pmeBaseEnergy - charge * field.dot(position);
+    Vec3 referenceForce = charge * field;
+
+    VerletIntegrator testIntegrator(0.001);
+    Context testContext(testSystem, testIntegrator, platform);
+    testContext.setPositions(vector<Vec3>{position});
+    testIntegrator.step(1);
+
+    State testState = testContext.getState(State::Energy | State::Forces);
+    ASSERT_EQUAL_TOL(referenceEnergy, testState.getPotentialEnergy(), TOL);
+    ASSERT_EQUAL_VEC(referenceForce, testState.getForces()[0], TOL);
+}
+
 void testElectrodesDisjoint() {
     // Ensures that a particle cannot belong to more than one electrode.
 
@@ -1285,6 +1326,7 @@ int main(int argc, char* argv[]) {
         testCoulombOverlap();
         testCoulombNonNeutral();
         testCoulombGaussian();
+        testFiniteFieldNonPeriodic();
         
         testElectrodesDisjoint();
         testNoElectrodeExceptions();

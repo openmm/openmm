@@ -109,7 +109,7 @@ KERNEL void evaluateSelfEnergyForces(
 #endif
         const real4 params = electrodeParams[sysElec[i] + 1];
 
-        const real4 posOffset = pos + offset.x * periodicBoxVecX + offset.y * periodicBoxVecY + offset.z * periodicBoxVecZ;
+        const real4 posOffset = pos - offset.x * periodicBoxVecX - offset.y * periodicBoxVecY - offset.z * periodicBoxVecZ;
         const real fieldTerm = posOffset.x * externalField.x + posOffset.y * externalField.y + posOffset.z * externalField.z;
         energyBuffer[GLOBAL_ID] += charge * (charge * params.w - params.x - fieldTerm);
         forceBuffers[i] += (mm_ulong) realToFixedPoint(charge * externalField.x);
@@ -647,7 +647,7 @@ KERNEL void finishDerivatives(
 #endif
         const real4 params = electrodeParams[elecElec[ii] + 1];
 
-        const real4 posOffset = pos + offset.x * periodicBoxVecX + offset.y * periodicBoxVecY + offset.z * periodicBoxVecZ;
+        const real4 posOffset = pos - offset.x * periodicBoxVecX - offset.y * periodicBoxVecY - offset.z * periodicBoxVecZ;
         const real fieldTerm = posOffset.x * externalField.x + posOffset.y * externalField.y + posOffset.z * externalField.z;
         chargeDerivatives[ii] += 2 * (charge * params.w - plasmaScale) - params.x - fieldTerm + fixed_scale * chargeDerivativesFixed[ii];
     }
