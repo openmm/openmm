@@ -3298,6 +3298,7 @@ class CustomManyParticleGenerator(object):
             generator.typeFilters.append((int(param.attrib['index']), [int(x) for x in param.attrib['types'].split(',')]))
         generator.params = ForceField._AtomTypeParameters(ff, 'CustomManyParticleForce', 'Atom', generator.perParticleParams)
         generator.params.parseDefinitions(element)
+        generator.functions += _parseFunctions(element)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         methodMap = {NoCutoff:mm.CustomManyParticleForce.NoCutoff,

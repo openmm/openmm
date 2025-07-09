@@ -133,7 +133,7 @@ void ReferenceMonteCarloBarostat::computeMolecularKineticEnergy(const vector<Vec
             molVel += masses[atom]*velocities[atom];
             molMass += masses[atom];
         }
-        molVel /= molecule.size();
+        molVel /= molMass;
         if (components == 1)
             ke[0] += 0.5*molMass*molVel.dot(molVel);
         else {
