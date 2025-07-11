@@ -64,7 +64,7 @@ KERNEL void updateElectrodeCharges(
 KERNEL void getTotalCharge(
     GLOBAL real4* RESTRICT posq,
     GLOBAL real* RESTRICT charges,
-    GLOBAL real* RESTRICT output
+    GLOBAL real* RESTRICT totalChargeResult
 ) {
     // This kernel expects to be executed in a single thread block.
 
@@ -81,7 +81,7 @@ KERNEL void getTotalCharge(
     totalCharge = reduceValue(totalCharge, temp);
 
     if (LOCAL_ID == 0) {
-        output[0] = totalCharge;
+        totalChargeResult[0] = totalCharge;
     }
 }
 
@@ -90,6 +90,7 @@ KERNEL void evaluateSelfEnergyForces(
     GLOBAL real* RESTRICT charges,
     GLOBAL int* RESTRICT sysElec,
     GLOBAL real4* RESTRICT electrodeParams,
+    GLOBAL real* RESTRICT totalCharge,
     GLOBAL int4* RESTRICT posCellOffsets,
     real4 periodicBoxVecX,
     real4 periodicBoxVecY,
@@ -99,6 +100,10 @@ KERNEL void evaluateSelfEnergyForces(
     GLOBAL mm_ulong* RESTRICT forceBuffers
 
 ) {
+    if (GLOBAL_ID == 0) {
+        energyBuffer[0] -= PLASMA_SCALE * totalCharge[0] * totalCharge[0] / (periodicBoxVecX.x * periodicBoxVecY.y * periodicBoxVecZ.z * EWALD_ALPHA * EWALD_ALPHA);
+    }
+
     for (int i = GLOBAL_ID; i < NUM_PARTICLES; i += GLOBAL_SIZE) {
         const real4 pos = posq[i];
         const int4 offset = posCellOffsets[i];
@@ -625,7 +630,7 @@ KERNEL void finishDerivatives(
     GLOBAL int* RESTRICT elecToSys,
     GLOBAL int* RESTRICT elecElec,
     GLOBAL real4* RESTRICT electrodeParams,
-    real plasmaScale,
+    GLOBAL real* RESTRICT totalCharge,
     GLOBAL int4* RESTRICT posCellOffsets,
     real4 periodicBoxVecX,
     real4 periodicBoxVecY,
@@ -634,7 +639,8 @@ KERNEL void finishDerivatives(
     GLOBAL real* RESTRICT chargeDerivatives,
     GLOBAL mm_long* RESTRICT chargeDerivativesFixed
 ) {
-    const real fixed_scale = 1 / (real) 0x100000000;
+    const real fixedScale = 1 / (real) 0x100000000;
+    const real plasmaScale = PLASMA_SCALE * totalCharge[0] / (periodicBoxVecX.x * periodicBoxVecY.y * periodicBoxVecZ.z * EWALD_ALPHA * EWALD_ALPHA);
 
     for (int ii = GLOBAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += GLOBAL_SIZE) {
         int i = elecToSys[ii];
@@ -649,6 +655,6 @@ KERNEL void finishDerivatives(
 
         const real4 posOffset = pos - offset.x * periodicBoxVecX - offset.y * periodicBoxVecY - offset.z * periodicBoxVecZ;
         const real fieldTerm = posOffset.x * externalField.x + posOffset.y * externalField.y + posOffset.z * externalField.z;
-        chargeDerivatives[ii] += 2 * (charge * params.w - plasmaScale) - params.x - fieldTerm + fixed_scale * chargeDerivativesFixed[ii];
+        chargeDerivatives[ii] += 2 * (charge * params.w - plasmaScale) - params.x - fieldTerm + fixedScale * chargeDerivativesFixed[ii];
     }
 }

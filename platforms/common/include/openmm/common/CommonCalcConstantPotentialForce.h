@@ -281,7 +281,7 @@ private:
     void pmeSetup();
     void pmeCompileKernels();
     void pmeExecute(bool includeEnergy, bool includeForces, bool includeChargeDerivatives);
-    void setKernelPeriodicBoxArgs(bool includeEnergy, bool includeForces);
+    void setKernelInputs(bool includeEnergy, bool includeForces);
     class SortTrait : public ComputeSortImpl::SortTrait {
         int getDataSize() const {return 8;}
         int getKeySize() const {return 4;}
@@ -297,7 +297,7 @@ private:
     ComputeContext& cc;
     ForceInfo* info;
     CommonConstantPotentialSolver* solver;
-    bool hasInitializedKernel, hasElectrodes, mustUpdateNonElectrodeCharges, mustUpdateElectrodeCharges;
+    bool hasInitializedKernel, hasElectrodes, mustUpdateNonElectrodeCharges, mustUpdateElectrodeCharges, pmeShouldSort;
     int numParticles, numElectrodeParticles, numElectrodes;
     ComputeArray charges;
     ComputeArray nonElectrodeCharges;

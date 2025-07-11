@@ -258,7 +258,8 @@ void CommonConstantPotentialMatrixSolver::solveImpl(CommonCalcConstantPotentialF
     if (kernel.useChargeConstraint) {
         if (kernel.cc.getUseDoublePrecision()) {
             solveKernel->setArg(4, kernel.chargeTarget);
-        } else {
+        }
+        else {
             solveKernel->setArg(4, (float) kernel.chargeTarget);
         }
     }
@@ -482,7 +483,8 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
         if (kernel.cc.getUseDoublePrecision()) {
             solveInitializeStep1Kernel->setArg(2, kernel.chargeTarget);
             solveLoopStep2Kernel->setArg(7, kernel.chargeTarget);
-        } else {
+        }
+        else {
             solveInitializeStep1Kernel->setArg(2, (float) kernel.chargeTarget);
             solveLoopStep2Kernel->setArg(7, (float) kernel.chargeTarget);
         }
@@ -620,7 +622,8 @@ void CommonConstantPotentialCGSolver::ensureValid(CommonCalcConstantPotentialFor
             for (int i = 0; i < numParticles; i++) {
                 posqCopy[i].w = 0.0;
             }
-        } else {
+        }
+        else {
             for (int i = 0; i < numParticles; i++) {
                 qCopy[i] = 0.0;
             }
@@ -644,7 +647,9 @@ void CommonConstantPotentialCGSolver::ensureValid(CommonCalcConstantPotentialFor
         // position but only due to finite accuracy of the PME splines, so it is
         // fine to assume it will be constant for the preconditioner.
         kernel.cc.clearBuffer(kernel.chargeDerivativesFixed);
+        kernel.pmeShouldSort = true;
         kernel.pmeExecute(false, false, true);
+        kernel.pmeShouldSort = true;
         vector<long> derivatives(numElectrodeParticles);
         kernel.chargeDerivativesFixed.download(derivatives);
         double pmeTerm = derivatives[0] / (double) 0x100000000;
@@ -671,7 +676,8 @@ void CommonConstantPotentialCGSolver::ensureValid(CommonCalcConstantPotentialFor
         }
         if (kernel.cc.getSupportsDoublePrecision()) {
             precondVector.upload(hostPrecondVector);
-        } else {
+        }
+        else {
             vector<mm_float2> hostPrecondVectorSplit(numElectrodeParticles);
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
                 float const x = (float) hostPrecondVector[ii];
@@ -969,7 +975,8 @@ void CommonCalcConstantPotentialForceKernel::copyParametersToContext(ContextImpl
         }
         if (cc.getUseDoublePrecision()) {
             nonElectrodeCharges.uploadSubArray(&hostNonElectrodeCharges[firstParticle], firstParticle, lastParticle - firstParticle + 1);
-        } else {
+        }
+        else {
             vector<float> hostNonElectrodeChargesFloat(lastParticle - firstParticle + 1);
             for (int i = firstParticle; i <= lastParticle; i++) {
                 hostNonElectrodeChargesFloat[i - firstParticle] = (float) hostNonElectrodeCharges[i];
@@ -1082,7 +1089,9 @@ double CommonCalcConstantPotentialForceKernel::execute(ContextImpl& context, boo
     ensureInitialized(context);
 
     cc.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-    setKernelPeriodicBoxArgs(includeEnergy, includeForces);
+    setKernelInputs(includeEnergy, includeForces);
+
+    pmeShouldSort = true;
 
     if (solver != NULL) {
         solver->solve(*this);
@@ -1100,7 +1109,9 @@ void CommonCalcConstantPotentialForceKernel::getCharges(ContextImpl& context, ve
     cc.getNonbondedUtilities().prepareInteractions(1 << forceGroup);
 
     cc.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-    setKernelPeriodicBoxArgs(false, false);
+    setKernelInputs(false, false);
+
+    pmeShouldSort = true;
 
     if (solver != NULL) {
         solver->solve(*this);
@@ -1134,6 +1145,7 @@ void CommonCalcConstantPotentialForceKernel::ensureInitialized(ContextImpl& cont
     defines["NUM_ELECTRODE_PARTICLES"] = cc.intToString(numElectrodeParticles);
     defines["NUM_EXCLUSION_TILES"] = cc.intToString(nb.getExclusionTiles().getSize());
     defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
+    defines["PLASMA_SCALE"] = cc.doubleToString(PLASMA_SCALE);
     defines["THREAD_BLOCK_SIZE"] = cc.intToString(threadBlockSize);
     defines["TILE_SIZE"] = cc.intToString(ComputeContext::TileSize);
     defines["WORK_GROUP_SIZE"] = cc.intToString(nb.getForceThreadBlockSize());
@@ -1169,6 +1181,7 @@ void CommonCalcConstantPotentialForceKernel::ensureInitialized(ContextImpl& cont
     evaluateSelfEnergyForcesKernel->addArg(charges);
     evaluateSelfEnergyForcesKernel->addArg(sysElec);
     evaluateSelfEnergyForcesKernel->addArg(electrodeParams);
+    evaluateSelfEnergyForcesKernel->addArg(totalChargeBuffer);
     evaluateSelfEnergyForcesKernel->addArg(posCellOffsets);
     evaluateSelfEnergyForcesKernel->addArg(); // periodicBoxVecX
     evaluateSelfEnergyForcesKernel->addArg(); // periodicBoxVecY
@@ -1204,7 +1217,7 @@ void CommonCalcConstantPotentialForceKernel::ensureInitialized(ContextImpl& cont
         finishDerivativesKernel->addArg(elecToSys);
         finishDerivativesKernel->addArg(elecElec);
         finishDerivativesKernel->addArg(electrodeParams);
-        finishDerivativesKernel->addArg(); // plasmaScale
+        finishDerivativesKernel->addArg(totalChargeBuffer);
         finishDerivativesKernel->addArg(posCellOffsets);
         finishDerivativesKernel->addArg(); // periodicBoxVecX
         finishDerivativesKernel->addArg(); // periodicBoxVecY
@@ -1233,28 +1246,22 @@ double CommonCalcConstantPotentialForceKernel::doEnergyForces(bool includeForces
         }
         mustUpdateElectrodeCharges = false;
     }
-    double energy = 0.0;
 
     pmeExecute(includeEnergy, includeForces, false);
 
     // Ewald neutralizing plasma and per-particle energy.
-    vector<double> totalChargeVector(1);
-    getTotalChargeKernel->execute(threadBlockSize, threadBlockSize);
-    totalChargeBuffer.download(totalChargeVector, true);
-    if (includeEnergy) {
-        energy -= PLASMA_SCALE * totalChargeVector[0] * totalChargeVector[0] / (boxVectors[0][0] * boxVectors[1][1] * boxVectors[2][2] * ewaldAlpha * ewaldAlpha);
-    }
-
     if (includeEnergy || includeForces) {
+        getTotalChargeKernel->execute(threadBlockSize, threadBlockSize);
         if (cc.getUseDoublePrecision()) {
-            evaluateSelfEnergyForcesKernel->setArg(8, mm_double4(externalField[0], externalField[1], externalField[2], 0));
-        } else {
-            evaluateSelfEnergyForcesKernel->setArg(8, mm_float4((float) externalField[0], (float) externalField[1], (float) externalField[2], 0));
+            evaluateSelfEnergyForcesKernel->setArg(9, mm_double4(externalField[0], externalField[1], externalField[2], 0));
+        }
+        else {
+            evaluateSelfEnergyForcesKernel->setArg(9, mm_float4((float) externalField[0], (float) externalField[1], (float) externalField[2], 0));
         }
         evaluateSelfEnergyForcesKernel->execute(numParticles);
     }
 
-    return energy;
+    return 0.0;
 }
 
 void CommonCalcConstantPotentialForceKernel::doDerivatives() {
@@ -1275,21 +1282,10 @@ void CommonCalcConstantPotentialForceKernel::doDerivatives() {
     pmeExecute(false, false, true);
 
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
-    evaluateDirectDerivativesKernel->setArg(17, (unsigned int) nb.getInteractingTiles().getSize());
     evaluateDirectDerivativesKernel->execute(nb.getNumForceThreadBlocks() * nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
 
     // Ewald neutralizing plasma and per-particle derivatives.
-    vector<double> totalChargeVector(1);
     getTotalChargeKernel->execute(threadBlockSize, threadBlockSize);
-    totalChargeBuffer.download(totalChargeVector, true);
-    double plasmaOffset = PLASMA_SCALE * totalChargeVector[0] / (boxVectors[0][0] * boxVectors[1][1] * boxVectors[2][2] * ewaldAlpha * ewaldAlpha);
-    if (cc.getUseDoublePrecision()) {
-        finishDerivativesKernel->setArg(5, plasmaOffset);
-        finishDerivativesKernel->setArg(10, mm_double4(externalField[0], externalField[1], externalField[2], 0));
-    } else {
-        finishDerivativesKernel->setArg(5, (float) plasmaOffset);
-        finishDerivativesKernel->setArg(10, mm_float4((float) externalField[0], (float) externalField[1], (float) externalField[2], 0));
-    }
     finishDerivativesKernel->execute(numElectrodeParticles);
 }
 
@@ -1464,8 +1460,11 @@ void CommonCalcConstantPotentialForceKernel::pmeExecute(bool includeEnergy, bool
     else {
         cc.clearBuffer(pmeGrid1);
     }
-    pmeGridIndexKernel->execute(cc.getNumAtoms());
-    sort->sort(pmeAtomGridIndex);
+    if (pmeShouldSort) {
+        pmeGridIndexKernel->execute(cc.getNumAtoms());
+        sort->sort(pmeAtomGridIndex);
+        pmeShouldSort = false;
+    }
     pmeSpreadChargeKernel->execute(cc.getNumAtoms());
     if (useFixedPointChargeSpreading) {
         pmeFinishSpreadChargeKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
@@ -1500,7 +1499,7 @@ void CommonCalcConstantPotentialForceKernel::pmeExecute(bool includeEnergy, bool
     }
 }
 
-void CommonCalcConstantPotentialForceKernel::setKernelPeriodicBoxArgs(bool includeEnergy, bool includeForces) {
+void CommonCalcConstantPotentialForceKernel::setKernelInputs(bool includeEnergy, bool includeForces) {
     double determinant = boxVectors[0][0] * boxVectors[1][1] * boxVectors[2][2];
     double scale = 1.0 / determinant;
     mm_double4 recipBoxVectors[3];
@@ -1516,13 +1515,14 @@ void CommonCalcConstantPotentialForceKernel::setKernelPeriodicBoxArgs(bool inclu
     setPeriodicBoxArgs(cc, pmeSpreadChargeKernel, 2);
     if (includeEnergy || includeForces) {
         if (cc.getUseDoublePrecision()) {
-            evaluateSelfEnergyForcesKernel->setArg(5, mm_double4(boxVectors[0][0], boxVectors[0][1], boxVectors[0][2], 0));
-            evaluateSelfEnergyForcesKernel->setArg(6, mm_double4(boxVectors[1][0], boxVectors[1][1], boxVectors[1][2], 0));
-            evaluateSelfEnergyForcesKernel->setArg(7, mm_double4(boxVectors[2][0], boxVectors[2][1], boxVectors[2][2], 0));
-        } else {
-            evaluateSelfEnergyForcesKernel->setArg(5, mm_float4((float) boxVectors[0][0], (float) boxVectors[0][1], (float) boxVectors[0][2], 0));
-            evaluateSelfEnergyForcesKernel->setArg(6, mm_float4((float) boxVectors[1][0], (float) boxVectors[1][1], (float) boxVectors[1][2], 0));
-            evaluateSelfEnergyForcesKernel->setArg(7, mm_float4((float) boxVectors[2][0], (float) boxVectors[2][1], (float) boxVectors[2][2], 0));
+            evaluateSelfEnergyForcesKernel->setArg(6, mm_double4(boxVectors[0][0], boxVectors[0][1], boxVectors[0][2], 0));
+            evaluateSelfEnergyForcesKernel->setArg(7, mm_double4(boxVectors[1][0], boxVectors[1][1], boxVectors[1][2], 0));
+            evaluateSelfEnergyForcesKernel->setArg(8, mm_double4(boxVectors[2][0], boxVectors[2][1], boxVectors[2][2], 0));
+        }
+        else {
+            evaluateSelfEnergyForcesKernel->setArg(6, mm_float4((float) boxVectors[0][0], (float) boxVectors[0][1], (float) boxVectors[0][2], 0));
+            evaluateSelfEnergyForcesKernel->setArg(7, mm_float4((float) boxVectors[1][0], (float) boxVectors[1][1], (float) boxVectors[1][2], 0));
+            evaluateSelfEnergyForcesKernel->setArg(8, mm_float4((float) boxVectors[2][0], (float) boxVectors[2][1], (float) boxVectors[2][2], 0));
         }
     }
     if (includeForces) {
@@ -1532,14 +1532,21 @@ void CommonCalcConstantPotentialForceKernel::setKernelPeriodicBoxArgs(bool inclu
         setPeriodicBoxArgs(cc, pmeInterpolateChargeDerivativesKernel, 3);
         setPeriodicBoxArgs(cc, evaluateDirectDerivativesKernel, 6);
 
+        evaluateDirectDerivativesKernel->setArg(17, (unsigned int) cc.getNonbondedUtilities().getInteractingTiles().getSize());
+
         if (cc.getUseDoublePrecision()) {
             finishDerivativesKernel->setArg(7, mm_double4(boxVectors[0][0], boxVectors[0][1], boxVectors[0][2], 0));
             finishDerivativesKernel->setArg(8, mm_double4(boxVectors[1][0], boxVectors[1][1], boxVectors[1][2], 0));
             finishDerivativesKernel->setArg(9, mm_double4(boxVectors[2][0], boxVectors[2][1], boxVectors[2][2], 0));
-        } else {
+
+            finishDerivativesKernel->setArg(10, mm_double4(externalField[0], externalField[1], externalField[2], 0));
+        }
+        else {
             finishDerivativesKernel->setArg(7, mm_float4((float) boxVectors[0][0], (float) boxVectors[0][1], (float) boxVectors[0][2], 0));
             finishDerivativesKernel->setArg(8, mm_float4((float) boxVectors[1][0], (float) boxVectors[1][1], (float) boxVectors[1][2], 0));
             finishDerivativesKernel->setArg(9, mm_float4((float) boxVectors[2][0], (float) boxVectors[2][1], (float) boxVectors[2][2], 0));
+
+            finishDerivativesKernel->setArg(10, mm_float4((float) externalField[0], (float) externalField[1], (float) externalField[2], 0));
         }
     }
 

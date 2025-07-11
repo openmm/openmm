@@ -42,26 +42,25 @@ KERNEL void solve(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT 
 ) {
     // This kernel expects to be executed in a single thread block.
 
-    LOCAL volatile real temp[THREAD_BLOCK_SIZE];
-
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
         electrodeCharges[ii] = -chargeDerivatives[ii];
     }
+
+    SYNC_THREADS;
 
     // Cholesky solve step 1 (outer loop over rows).
     for (int jj = 0; jj < NUM_ELECTRODE_PARTICLES; jj++) {
         const mm_long offset = (mm_long) jj * NUM_ELECTRODE_PARTICLES;
 
-        real total = 0;
-        for (int ii = LOCAL_ID; ii < jj; ii += LOCAL_SIZE) {
-            // Retrieve capacitance[jj, ii] from the lower triangle.
-            total -= electrodeCharges[ii] * capacitance[offset + ii];
-        }
-        total = reduceValue(total, temp);
-
         if (LOCAL_ID == 0) {
             // Retrieve 1 / capacitance[jj, jj] (reciprocal already taken on host).
-            electrodeCharges[jj] = (electrodeCharges[jj] + total) * capacitance[offset + jj];
+            electrodeCharges[jj] *= capacitance[offset + jj];
+        }
+        SYNC_THREADS;
+
+        for (int ii = LOCAL_ID + jj + 1; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
+            // Retrieve capacitance[jj, ii] from the lower triangle.
+            electrodeCharges[ii] -= electrodeCharges[jj] * capacitance[offset + ii];
         }
         SYNC_THREADS;
     }
@@ -70,21 +69,22 @@ KERNEL void solve(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT 
     for (int jj = NUM_ELECTRODE_PARTICLES - 1; jj >= 0; jj--) {
         const mm_long offset = (mm_long) jj * NUM_ELECTRODE_PARTICLES;
 
-        real total = 0;
-        for (int ii = LOCAL_ID + jj + 1; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            // Retrieve capacitance[ii, jj] by retrieving capacitance[jj, ii] from the upper triangle.
-            total -= electrodeCharges[ii] * capacitance[offset + ii];
-        }
-        total = reduceValue(total, temp);
-
         if (LOCAL_ID == 0) {
             // Retrieve 1 / capacitance[jj, jj] (reciprocal already taken on host).
-            electrodeCharges[jj] = (electrodeCharges[jj] + total) * capacitance[offset + jj];
+            electrodeCharges[jj] *= capacitance[offset + jj];
+        }
+        SYNC_THREADS;
+
+        for (int ii = LOCAL_ID; ii < jj; ii += LOCAL_SIZE) {
+            // Retrieve capacitance[ii, jj] by retrieving capacitance[jj, ii] from the upper triangle.
+            electrodeCharges[ii] -= electrodeCharges[jj] * capacitance[offset + ii];
         }
         SYNC_THREADS;
     }
 
 #ifdef USE_CHARGE_CONSTRAINT
+    LOCAL volatile real temp[THREAD_BLOCK_SIZE];
+
     real chargeOffset = 0;
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
         chargeOffset -= electrodeCharges[ii];
