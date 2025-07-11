@@ -499,7 +499,7 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
     // Check for convergence at the initial guess charges.
     solveInitializeStep2Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
     convergedResult.download(&converged);
-    if (converged != 0) {
+    if (converged) {
         return;
     }
 
@@ -536,12 +536,12 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
 
         solveLoopStep2Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
         convergedResult.download(&converged);
-        if (converged != 0) {
+        if (converged) {
             break;
         }
     }
 
-    if (converged == 0) {
+    if (!converged) {
         throw OpenMMException("Constant potential conjugate gradient iterations not converged");
     }
 

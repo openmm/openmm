@@ -295,14 +295,13 @@ KERNEL void solveLoopStep1(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* 
         error += gradStep[ii] * gradStep[ii];
     }
     error = reduceReal(error, temp);
+    const bool converged = (error <= ERROR_TARGET);
     if (LOCAL_ID == 0) {
-        convergedResult[0] = (int) (error <= ERROR_TARGET);
+        convergedResult[0] = (int) converged;
     }
 
-    SYNC_THREADS;
-
     // If the first convergence check succeeded, do not do any more work.
-    if (convergedResult[0] != 0) {
+    if (converged) {
         return;
     }
 
@@ -401,14 +400,13 @@ KERNEL void solveLoopStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real*
         error += projGrad[ii] * projGrad[ii];
     }
     error = reduceReal(error, temp);
+    const bool converged = (error <= ERROR_TARGET);
     if (LOCAL_ID == 0) {
-        convergedResult[0] = (int) (error <= ERROR_TARGET);
+        convergedResult[0] = (int) converged;
     }
 
-    SYNC_THREADS;
-
     // If the second convergence check succeeded, do not do any more work.
-    if (convergedResult[0] != 0) {
+    if (converged) {
         return;
     }
 
