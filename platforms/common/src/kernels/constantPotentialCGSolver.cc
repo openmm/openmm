@@ -182,10 +182,12 @@ KERNEL void solveInitializeStep1(GLOBAL real* RESTRICT electrodeCharges, GLOBAL 
 #endif
 }
 
-KERNEL void solveInitializeStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad, GLOBAL real* RESTRICT errorResult) {
+KERNEL void solveInitializeStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad, GLOBAL int* RESTRICT convergedResult) {
     // This kernel expects to be executed in a single thread block.
 
+#ifdef USE_CHARGE_CONSTRAINT
     LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
+#endif
     LOCAL volatile real temp[THREAD_BLOCK_SIZE];
 
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
@@ -215,11 +217,12 @@ KERNEL void solveInitializeStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL
     }
     error = reduceReal(error, temp);
     if (LOCAL_ID == 0) {
-        errorResult[0] = error;
+        convergedResult[0] = (int) (error <= ERROR_TARGET);
     }
 }
 
-KERNEL void solveInitializeStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad, GLOBAL real* RESTRICT precGrad, GLOBAL real* RESTRICT qStep, GLOBAL real* RESTRICT grad0
+KERNEL void solveInitializeStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad,
+    GLOBAL real* RESTRICT precGrad, GLOBAL real* RESTRICT qStep, GLOBAL real* RESTRICT grad0
 #ifdef PRECOND_REQUESTED
     , GLOBAL ACCUM* RESTRICT precondVector, int precondActivated
 #endif
@@ -267,9 +270,18 @@ KERNEL void solveInitializeStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL
     }
 }
 
-KERNEL void solveLoopStep1(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT gradStep, GLOBAL real* RESTRICT grad0, GLOBAL real* RESTRICT errorResult) {
+KERNEL void solveLoopStep1(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT q, GLOBAL real* RESTRICT grad,
+    GLOBAL real* RESTRICT qStep, GLOBAL real* RESTRICT gradStep, GLOBAL real* RESTRICT grad0, GLOBAL real* RESTRICT paramScaleResult,
+    GLOBAL int* RESTRICT convergedResult, int recomputeGradient
+#ifdef USE_CHARGE_CONSTRAINT
+    , real chargeTarget
+#endif
+) {
     // This kernel expects to be executed in a single thread block.
 
+#ifdef USE_CHARGE_CONSTRAINT
+    LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
+#endif
     LOCAL volatile real temp[THREAD_BLOCK_SIZE];
 
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
@@ -284,19 +296,15 @@ KERNEL void solveLoopStep1(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real*
     }
     error = reduceReal(error, temp);
     if (LOCAL_ID == 0) {
-        errorResult[0] = error;
+        convergedResult[0] = (int) (error <= ERROR_TARGET);
     }
-}
 
-KERNEL void solveLoopStep2(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT q, GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT qStep, GLOBAL real* RESTRICT gradStep, GLOBAL real* RESTRICT paramScaleResult, int recomputeGradient
-#ifdef USE_CHARGE_CONSTRAINT
-    , real chargeTarget
-#endif
-) {
-    // This kernel expects to be executed in a single thread block.
+    SYNC_THREADS;
 
-    LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
-    LOCAL volatile real temp[THREAD_BLOCK_SIZE];
+    // If the first convergence check succeeded, do not do any more work.
+    if (convergedResult[0] != 0) {
+        return;
+    }
 
     // Evaluate the scalar 1 / (qStep^T A qStep).
     real paramScale = 0;
@@ -346,10 +354,23 @@ KERNEL void solveLoopStep2(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* 
     }
 }
 
-KERNEL void solveLoopStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad, int recomputeGradient, GLOBAL real* RESTRICT errorResult) {
+KERNEL void solveLoopStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad, GLOBAL real* RESTRICT precGrad,
+    GLOBAL real* RESTRICT qStep, GLOBAL real* RESTRICT gradStep, GLOBAL real* RESTRICT paramScale, GLOBAL int* RESTRICT convergedResult, int recomputeGradient
+#ifdef PRECOND_REQUESTED
+    , GLOBAL ACCUM* RESTRICT precondVector, int precondActivated
+#endif
+) {
     // This kernel expects to be executed in a single thread block.
 
+    // If the first kernel indicated convergence, stop (the kernel is still
+    // launched so that we only need to download convergedResult once).
+    if (convergedResult[0] != 0) {
+        return;
+    }
+
+#ifdef USE_CHARGE_CONSTRAINT
     LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
+#endif
     LOCAL volatile real temp[THREAD_BLOCK_SIZE];
 
     if (recomputeGradient) {
@@ -364,7 +385,7 @@ KERNEL void solveLoopStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real*
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
         offsetAccum = ACCUM_ADD(offsetAccum, grad[ii]);
     }
-    const ACCUM offset = reduceAccum(offsetAccum, tempAccum, 0, -1 / (real) NUM_ELECTRODE_PARTICLES);
+    ACCUM offset = reduceAccum(offsetAccum, tempAccum, 0, -1 / (real) NUM_ELECTRODE_PARTICLES);
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
         projGrad[ii] = ACCUM_APPLY(grad[ii], offset);
     }
@@ -381,29 +402,25 @@ KERNEL void solveLoopStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real*
     }
     error = reduceReal(error, temp);
     if (LOCAL_ID == 0) {
-        errorResult[0] = error;
+        convergedResult[0] = (int) (error <= ERROR_TARGET);
     }
-}
 
-KERNEL void solveLoopStep4(GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad, GLOBAL real* RESTRICT precGrad, GLOBAL real* RESTRICT qStep, GLOBAL real* RESTRICT gradStep, GLOBAL real* RESTRICT paramScale
-#ifdef PRECOND_REQUESTED
-    , GLOBAL ACCUM* RESTRICT precondVector, int precondActivated
-#endif
-) {
-    // This kernel expects to be executed in a single thread block.
+    SYNC_THREADS;
 
-    LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
-    LOCAL volatile real temp[THREAD_BLOCK_SIZE];
+    // If the second convergence check succeeded, do not do any more work.
+    if (convergedResult[0] != 0) {
+        return;
+    }
 
     // Project the current gradient with preconditioning.
 #ifdef PRECOND_REQUESTED
     if (precondActivated) {
 #ifdef USE_CHARGE_CONSTRAINT
-        ACCUM offsetAccum = ACCUM_ZERO;
+        offsetAccum = ACCUM_ZERO;
         for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
             offsetAccum = ACCUM_MUL_ADD(precondVector[ii], grad[ii], offsetAccum);
         }
-        const ACCUM offset = reduceAccum(offsetAccum, tempAccum, 0, -1);
+        offset = reduceAccum(offsetAccum, tempAccum, 0, -1);
         for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
             precGrad[ii] = ACCUM_ADD_MUL(grad[ii], offset, precondVector[ii]);
         }
@@ -439,11 +456,11 @@ KERNEL void solveLoopStep4(GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT pro
     // vector.  This would be zero in exact arithmetic, but error can accumulate
     // over time in finite precision.
 
-    ACCUM offsetAccum = ACCUM_ZERO;
+    offsetAccum = ACCUM_ZERO;
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
         offsetAccum = ACCUM_ADD(offsetAccum, qStep[ii]);
     }
-    const ACCUM offset = reduceAccum(offsetAccum, tempAccum, 0, -1 / (real) NUM_ELECTRODE_PARTICLES);
+    offset = reduceAccum(offsetAccum, tempAccum, 0, -1 / (real) NUM_ELECTRODE_PARTICLES);
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
         qStep[ii] = ACCUM_APPLY(qStep[ii], offset);
     }

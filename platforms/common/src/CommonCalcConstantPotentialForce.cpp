@@ -378,7 +378,7 @@ void CommonConstantPotentialMatrixSolver::ensureValid(CommonCalcConstantPotentia
 }
 
 CommonConstantPotentialCGSolver::CommonConstantPotentialCGSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles, bool precond) :
-        CommonConstantPotentialSolver(cc, numParticles, numElectrodeParticles), precondRequested(precond), hostErrorResult(1) {
+        CommonConstantPotentialSolver(cc, numParticles, numElectrodeParticles), precondRequested(precond) {
     int elementSize = cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float);
     q.initialize(cc, numElectrodeParticles, elementSize, "q");
     grad.initialize(cc, numElectrodeParticles, elementSize, "grad");
@@ -389,7 +389,7 @@ CommonConstantPotentialCGSolver::CommonConstantPotentialCGSolver(ComputeContext&
     grad0.initialize(cc, numElectrodeParticles, elementSize, "grad0");
     qLast.initialize(cc, numElectrodeParticles, elementSize, "qLast");
     paramScale.initialize(cc, 1, elementSize, "paramScale");
-    errorResult.initialize(cc, 1, elementSize, "errorResult");
+    convergedResult.initialize(cc, 1, sizeof(int), "convergedResult");
     if (precondRequested) {
         // If double precision is supported, this will hold double values;
         // otherwise, it will hold mm_float2 values.
@@ -403,6 +403,7 @@ void CommonConstantPotentialCGSolver::compileKernels(CommonCalcConstantPotential
     CommonConstantPotentialSolver::compileKernels(kernel);
 
     map<string, string> defines;
+    defines["ERROR_TARGET"] = kernel.cc.doubleToString(kernel.cgErrorTol * kernel.cgErrorTol * numElectrodeParticles);
     defines["NUM_ELECTRODE_PARTICLES"] = kernel.cc.intToString(numElectrodeParticles);
     defines["THREAD_BLOCK_SIZE"] = kernel.cc.intToString(kernel.threadBlockSize);
     if (kernel.useChargeConstraint) {
@@ -411,6 +412,7 @@ void CommonConstantPotentialCGSolver::compileKernels(CommonCalcConstantPotential
     if (precondRequested) {
         defines["PRECOND_REQUESTED"] = "1";
     }
+
     ComputeProgram program = kernel.cc.compileProgram(CommonKernelSources::constantPotentialCGSolver, defines);
 
     solveInitializeStep1Kernel = program->createKernel("solveInitializeStep1");
@@ -424,7 +426,7 @@ void CommonConstantPotentialCGSolver::compileKernels(CommonCalcConstantPotential
     solveInitializeStep2Kernel->addArg(kernel.chargeDerivatives);
     solveInitializeStep2Kernel->addArg(grad);
     solveInitializeStep2Kernel->addArg(projGrad);
-    solveInitializeStep2Kernel->addArg(errorResult);
+    solveInitializeStep2Kernel->addArg(convergedResult);
 
     solveInitializeStep3Kernel = program->createKernel("solveInitializeStep3");
     solveInitializeStep3Kernel->addArg(kernel.chargeDerivatives);
@@ -439,40 +441,33 @@ void CommonConstantPotentialCGSolver::compileKernels(CommonCalcConstantPotential
     }
 
     solveLoopStep1Kernel = program->createKernel("solveLoopStep1");
+    solveLoopStep1Kernel->addArg(kernel.electrodeCharges);
     solveLoopStep1Kernel->addArg(kernel.chargeDerivatives);
+    solveLoopStep1Kernel->addArg(q);
+    solveLoopStep1Kernel->addArg(grad);
+    solveLoopStep1Kernel->addArg(qStep);
     solveLoopStep1Kernel->addArg(gradStep);
     solveLoopStep1Kernel->addArg(grad0);
-    solveLoopStep1Kernel->addArg(errorResult);
+    solveLoopStep1Kernel->addArg(paramScale);
+    solveLoopStep1Kernel->addArg(convergedResult);
+    solveLoopStep1Kernel->addArg(); // recomputeGradient
+    if (kernel.useChargeConstraint) {
+        solveLoopStep1Kernel->addArg(); // chargeTarget
+    }
 
     solveLoopStep2Kernel = program->createKernel("solveLoopStep2");
-    solveLoopStep2Kernel->addArg(kernel.electrodeCharges);
-    solveLoopStep2Kernel->addArg(q);
+    solveLoopStep2Kernel->addArg(kernel.chargeDerivatives);
     solveLoopStep2Kernel->addArg(grad);
+    solveLoopStep2Kernel->addArg(projGrad);
+    solveLoopStep2Kernel->addArg(precGrad);
     solveLoopStep2Kernel->addArg(qStep);
     solveLoopStep2Kernel->addArg(gradStep);
     solveLoopStep2Kernel->addArg(paramScale);
+    solveLoopStep2Kernel->addArg(convergedResult);
     solveLoopStep2Kernel->addArg(); // recomputeGradient
-    if (kernel.useChargeConstraint) {
-        solveLoopStep2Kernel->addArg(); // chargeTarget
-    }
-
-    solveLoopStep3Kernel = program->createKernel("solveLoopStep3");
-    solveLoopStep3Kernel->addArg(kernel.chargeDerivatives);
-    solveLoopStep3Kernel->addArg(grad);
-    solveLoopStep3Kernel->addArg(projGrad);
-    solveLoopStep3Kernel->addArg(); // recomputeGradient
-    solveLoopStep3Kernel->addArg(errorResult);
-
-    solveLoopStep4Kernel = program->createKernel("solveLoopStep4");
-    solveLoopStep4Kernel->addArg(grad);
-    solveLoopStep4Kernel->addArg(projGrad);
-    solveLoopStep4Kernel->addArg(precGrad);
-    solveLoopStep4Kernel->addArg(qStep);
-    solveLoopStep4Kernel->addArg(gradStep);
-    solveLoopStep4Kernel->addArg(paramScale);
     if (precondRequested) {
-        solveLoopStep4Kernel->addArg(precondVector);
-        solveLoopStep4Kernel->addArg(); // precondActivated
+        solveLoopStep2Kernel->addArg(precondVector);
+        solveLoopStep2Kernel->addArg(); // precondActivated
     }
 }
 
@@ -482,19 +477,19 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
     if (kernel.useChargeConstraint) {
         if (kernel.cc.getUseDoublePrecision()) {
             solveInitializeStep1Kernel->setArg(2, kernel.chargeTarget);
-            solveLoopStep2Kernel->setArg(7, kernel.chargeTarget);
+            solveLoopStep1Kernel->setArg(10, kernel.chargeTarget);
         }
         else {
             solveInitializeStep1Kernel->setArg(2, (float) kernel.chargeTarget);
-            solveLoopStep2Kernel->setArg(7, (float) kernel.chargeTarget);
+            solveLoopStep1Kernel->setArg(10, (float) kernel.chargeTarget);
         }
     }
     if (precondRequested) {
         solveInitializeStep3Kernel->setArg(7, (int) precondActivated);
-        solveLoopStep4Kernel->setArg(7, (int) precondActivated);
+        solveLoopStep2Kernel->setArg(10, (int) precondActivated);
     }
 
-    const double errorTarget = kernel.cgErrorTol * kernel.cgErrorTol * numElectrodeParticles;
+    int converged;
 
     // Evaluate the initial gradient Aq - b.
     solveInitializeStep1Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
@@ -503,8 +498,8 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
 
     // Check for convergence at the initial guess charges.
     solveInitializeStep2Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
-    errorResult.download(hostErrorResult, true);
-    if (hostErrorResult[0] <= errorTarget) {
+    convergedResult.download(&converged);
+    if (converged != 0) {
         return;
     }
 
@@ -519,47 +514,34 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
     solveInitializeStep3Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
 
     // Perform conjugate gradient iterations.
-    bool converged = false;
+    converged = 0;
     for (int iter = 0; iter <= numElectrodeParticles; iter++) {
         // Evaluate the matrix-vector product A qStep.
         qStep.copyTo(kernel.electrodeCharges);
         kernel.mustUpdateElectrodeCharges = true;
         kernel.doDerivatives();
 
-        // If A qStep is small enough, stop to prevent, e.g., division by zero
-        // in the calculation of alpha, or too large step sizes.
-        solveLoopStep1Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
-        errorResult.download(hostErrorResult, true);
-        if (hostErrorResult[0] <= errorTarget) {
-            converged = true;
-            break;
-        }
-
-        // Update the gradient vector (but periodically recompute it instead of
-        // updating to reduce the accumulation of roundoff error).
+        // Periodically recompute the gradient vector instead of updating it to
+        // reduce the accumulation of roundoff error.
         bool recomputeGradient = (iter != 0 && iter % 32 == 0);
-        solveLoopStep2Kernel->setArg(6, (int) recomputeGradient);
-        solveLoopStep3Kernel->setArg(3, (int) recomputeGradient);
+        solveLoopStep1Kernel->setArg(9, (int) recomputeGradient);
+        solveLoopStep2Kernel->setArg(8, (int) recomputeGradient);
 
-        solveLoopStep2Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
+        solveLoopStep1Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
+
         if (recomputeGradient) {
             kernel.mustUpdateElectrodeCharges = true;
             kernel.doDerivatives();
         }
 
-        // Check for convergence.
-        solveLoopStep3Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
-        errorResult.download(hostErrorResult, true);
-        if (hostErrorResult[0] <= errorTarget) {
-            converged = true;
+        solveLoopStep2Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
+        convergedResult.download(&converged);
+        if (converged != 0) {
             break;
         }
-
-        // Update parameters for the next iteration.
-        solveLoopStep4Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
     }
 
-    if (!converged) {
+    if (converged == 0) {
         throw OpenMMException("Constant potential conjugate gradient iterations not converged");
     }
 

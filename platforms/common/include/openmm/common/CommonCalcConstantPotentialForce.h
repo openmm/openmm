@@ -167,15 +167,12 @@ private:
     ComputeArray grad0;
     ComputeArray qLast;
     ComputeArray paramScale;
-    ComputeArray errorResult;
+    ComputeArray convergedResult;
     ComputeKernel solveInitializeStep1Kernel;
     ComputeKernel solveInitializeStep2Kernel;
     ComputeKernel solveInitializeStep3Kernel;
     ComputeKernel solveLoopStep1Kernel;
     ComputeKernel solveLoopStep2Kernel;
-    ComputeKernel solveLoopStep3Kernel;
-    ComputeKernel solveLoopStep4Kernel;
-    std::vector<double> hostErrorResult;
 
 public:
     /**
