@@ -107,8 +107,8 @@ public:
      * Copy the values in the Buffer to a vector.
      */
     template <class T>
-    void download(std::vector<T>& data) const {
-        ArrayInterface::download(data);
+    void download(std::vector<T>& data, bool convert=false) const {
+        ArrayInterface::download(data, convert);
     }
     /**
      * Copy the values from host memory to the array.

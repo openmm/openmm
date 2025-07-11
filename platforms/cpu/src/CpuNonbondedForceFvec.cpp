@@ -32,10 +32,6 @@ CpuNonbondedForce* createCpuNonbondedForceVec4(const CpuNeighborList& neighbors)
 CpuNonbondedForce* createCpuNonbondedForceAvx(const CpuNeighborList& neighbors);
 CpuNonbondedForce* createCpuNonbondedForceAvx2(const CpuNeighborList& neighbors);
 
-bool isAvx2Supported();
-
-#include <iostream>
-
 CpuNonbondedForce* createCpuNonbondedForceVec(const CpuNeighborList& neighbors) {
     if (isAvx2Supported())
         return createCpuNonbondedForceAvx2(neighbors);
