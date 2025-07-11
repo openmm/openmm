@@ -62,6 +62,7 @@
 #include "openmm/NonbondedForce.h"
 #include "openmm/NoseHooverIntegrator.h"
 #include "openmm/PeriodicTorsionForce.h"
+#include "openmm/QTBIntegrator.h"
 #include "openmm/RBTorsionForce.h"
 #include "openmm/RMSDForce.h"
 #include "openmm/System.h"
@@ -104,6 +105,7 @@
 #include "openmm/serialization/NonbondedForceProxy.h"
 #include "openmm/serialization/NoseHooverIntegratorProxy.h"
 #include "openmm/serialization/PeriodicTorsionForceProxy.h"
+#include "openmm/serialization/QTBIntegratorProxy.h"
 #include "openmm/serialization/RBTorsionForceProxy.h"
 #include "openmm/serialization/RMSDForceProxy.h"
 #include "openmm/serialization/StateProxy.h"
@@ -168,6 +170,7 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(NoseHooverIntegrator), new NoseHooverIntegratorProxy());
     SerializationProxy::registerProxy(typeid(PeriodicTorsionForce), new PeriodicTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(RBTorsionForce), new RBTorsionForceProxy());
+    SerializationProxy::registerProxy(typeid(QTBIntegrator), new QTBIntegratorProxy());
     SerializationProxy::registerProxy(typeid(RMSDForce), new RMSDForceProxy());
     SerializationProxy::registerProxy(typeid(System), new SystemProxy());
     SerializationProxy::registerProxy(typeid(State), new StateProxy());
