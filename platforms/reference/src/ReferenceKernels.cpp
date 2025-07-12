@@ -3007,27 +3007,27 @@ void ReferenceCalcATMForceKernel::loadParams(int numParticles, const ATMForce& f
     pj0.resize(numParticles);
     pi0.resize(numParticles);
     for (int i = 0; i < numParticles; i++) {
-	const ATMForce::CoordinateTransformation& transformation = force.getParticleTransformation(i);
-	if (dynamic_cast<const ATMForce::FixedDisplacement*>(&transformation) != NULL) {
-	    const ATMForce::FixedDisplacement* fd = dynamic_cast<const ATMForce::FixedDisplacement*>(&transformation);
-	    const Vec3 d1 = fd->getFixedDisplacement1();
-	    const Vec3 d0 = fd->getFixedDisplacement0();
-	    displacement1[i] = d1;
-	    displacement0[i] = d0;
-	    pj1[i] = pi1[i] = pj0[i] = pi0[i] = -1;
-	}
-	else if (dynamic_cast<const ATMForce::ParticleOffsetDisplacement*>(&transformation) != NULL) {
-	    const ATMForce::ParticleOffsetDisplacement* vd = dynamic_cast<const ATMForce::ParticleOffsetDisplacement*>(&transformation);
-	    displacement1[i] = Vec3(0, 0, 0);
-	    displacement0[i] = Vec3(0, 0, 0);
-	    pj1[i] = vd->getDestinationParticle1();
-	    pi1[i] = vd->getOriginParticle1();
-	    pj0[i] = vd->getDestinationParticle0();
-	    pi0[i] = vd->getOriginParticle0();
-	}
-	else {
-	    throw OpenMMException("loadParams(): invalid particle Transformation");
-	}
+        const ATMForce::CoordinateTransformation& transformation = force.getParticleTransformation(i);
+        if (dynamic_cast<const ATMForce::FixedDisplacement*>(&transformation) != NULL) {
+            const ATMForce::FixedDisplacement* fd = dynamic_cast<const ATMForce::FixedDisplacement*>(&transformation);
+            const Vec3 d1 = fd->getFixedDisplacement1();
+            const Vec3 d0 = fd->getFixedDisplacement0();
+            displacement1[i] = d1;
+            displacement0[i] = d0;
+            pj1[i] = pi1[i] = pj0[i] = pi0[i] = -1;
+        }
+        else if (dynamic_cast<const ATMForce::ParticleOffsetDisplacement*>(&transformation) != NULL) {
+          const ATMForce::ParticleOffsetDisplacement* vd = dynamic_cast<const ATMForce::ParticleOffsetDisplacement*>(&transformation);
+            displacement1[i] = Vec3(0, 0, 0);
+            displacement0[i] = Vec3(0, 0, 0);
+            pj1[i] = vd->getDestinationParticle1();
+            pi1[i] = vd->getOriginParticle1();
+            pj0[i] = vd->getDestinationParticle0();
+            pi0[i] = vd->getOriginParticle0();
+        }
+        else {
+            throw OpenMMException("loadParams(): invalid particle Transformation");
+        }
     }
 }
 
@@ -3045,15 +3045,15 @@ void ReferenceCalcATMForceKernel::setDisplacements(vector<Vec3>& pos){
 
   for (int i = 0; i < numParticles; i++) {
     if (pj1[i] >= 0 && pi1[i] >= 0){
-      displ1[i] = pos[pj1[i]] - pos[pi1[i]];
-      if (pi0[i] >= 0 && pj0[i] >= 0){
-	displ0[i] = pos[pj0[i]] - pos[pi0[i]];
-      }else{
-	displ0[i] = Vec3();
-      }
+        displ1[i] = pos[pj1[i]] - pos[pi1[i]];
+        if (pi0[i] >= 0 && pj0[i] >= 0){
+            displ0[i] = pos[pj0[i]] - pos[pi0[i]];
+        }else{
+            displ0[i] = Vec3();
+        }
     }else{
-      displ1[i] = displacement1[i];
-      displ0[i] = displacement0[i];
+        displ1[i] = displacement1[i];
+        displ0[i] = displacement0[i];
     }
   }
 }
@@ -3061,27 +3061,27 @@ void ReferenceCalcATMForceKernel::setDisplacements(vector<Vec3>& pos){
 
 //Add forces from variable displacements
 void ReferenceCalcATMForceKernel::displForces(vector<Vec3>& force0, vector<Vec3>& force1){
-  vector<Vec3> dforce1(numParticles), dforce0(numParticles);
+    vector<Vec3> dforce1(numParticles), dforce0(numParticles);
 
-  for (int i = 0; i < numParticles; i++){
-      if (pj1[i] >= 0 && pi1[i] >= 0){
-	dforce1[pj1[i]] += force1[i];
-	dforce1[pi1[i]] -= force1[i];
-      }
-  }
-  for (int i = 0; i < numParticles; i++){
-    force1[i] += dforce1[i];
-  }
+    for (int i = 0; i < numParticles; i++){
+        if (pj1[i] >= 0 && pi1[i] >= 0){
+            dforce1[pj1[i]] += force1[i];
+            dforce1[pi1[i]] -= force1[i];
+        }
+    }
+    for (int i = 0; i < numParticles; i++){
+        force1[i] += dforce1[i];
+    }
 
-  for (int i = 0; i < numParticles; i++){
-      if (pj0[i] >= 0 && pi0[i] >= 0){
-	dforce0[pj0[i]] += force0[i];
-	dforce0[pi0[i]] -= force0[i];
-      }
-  }
-  for (int i = 0; i < numParticles; i++){
-    force0[i] += dforce0[i];
-  }
+    for (int i = 0; i < numParticles; i++){
+        if (pj0[i] >= 0 && pi0[i] >= 0){
+            dforce0[pj0[i]] += force0[i];
+            dforce0[pi0[i]] -= force0[i];
+        }
+    }
+    for (int i = 0; i < numParticles; i++){
+        force0[i] += dforce0[i];
+    }
 }
 
 void ReferenceCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1,
@@ -3098,9 +3098,9 @@ void ReferenceCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl&
     double epsi = std::numeric_limits<float>::min();
     for (int i = 0; i < force.size(); i++) {
         if (fabs(dEdu0) > epsi)
-	    force[i] += dEdu0*force0[i];
-	if (fabs(dEdu1) > epsi)
-	    force[i] += dEdu1*force1[i];
+            force[i] += dEdu0*force0[i];
+        if (fabs(dEdu1) > epsi)
+            force[i] += dEdu1*force1[i];
     }
 
     map<string, double>& derivs = extractEnergyParameterDerivatives(context);

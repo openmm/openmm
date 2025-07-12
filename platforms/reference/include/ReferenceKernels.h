@@ -1669,7 +1669,7 @@ public:
     }
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the ATMForce this kernel will be used for
      */
