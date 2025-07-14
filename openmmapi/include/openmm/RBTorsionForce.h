@@ -56,9 +56,7 @@ public:
     /**
      * Get the number of Ryckaert-Bellemans torsion terms in the potential function
      */
-    int getNumTorsions() const {
-        return rbTorsions.size();
-    }
+    int getNumTorsions() const;
     /**
      * Add a Ryckaert-Bellemans torsion term to the force field.
      *

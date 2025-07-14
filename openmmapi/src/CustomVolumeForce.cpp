@@ -75,3 +75,7 @@ void CustomVolumeForce::setGlobalParameterDefaultValue(int index, double default
 ForceImpl* CustomVolumeForce::createImpl() const {
     return new CustomVolumeForceImpl(*this);
 }
+
+int CustomVolumeForce::getNumGlobalParameters() const {
+    return globalParameters.size();
+}

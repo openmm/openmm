@@ -94,28 +94,20 @@ public:
     /**
      * Get the number of bonds for which force field parameters have been defined.
      */
-    int getNumBonds() const {
-        return bonds.size();
-    }
+    int getNumBonds() const;
     /**
      * Get the number of per-bond parameters that the interaction depends on.
      */
-    int getNumPerBondParameters() const {
-        return parameters.size();
-    }
+    int getNumPerBondParameters() const;
     /**
      * Get the number of global parameters that the interaction depends on.
      */
-    int getNumGlobalParameters() const {
-        return globalParameters.size();
-    }
+    int getNumGlobalParameters() const;
     /**
      * Get the number of global parameters with respect to which the derivative of the energy
      * should be computed.
      */
-    int getNumEnergyParameterDerivatives() const {
-        return energyParameterDerivatives.size();
-    }
+    int getNumEnergyParameterDerivatives() const;
     /**
      * Get the algebraic expression that gives the interaction energy for each bond
      */

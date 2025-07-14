@@ -93,3 +93,7 @@ void HarmonicBondForce::setUsesPeriodicBoundaryConditions(bool periodic) {
 bool HarmonicBondForce::usesPeriodicBoundaryConditions() const {
     return usePeriodic;
 }
+
+int HarmonicBondForce::getNumBonds() const {
+    return bonds.size();
+}

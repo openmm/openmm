@@ -159,3 +159,19 @@ void CustomAngleForce::setUsesPeriodicBoundaryConditions(bool periodic) {
 bool CustomAngleForce::usesPeriodicBoundaryConditions() const {
     return usePeriodic;
 }
+
+int CustomAngleForce::getNumAngles() const {
+    return angles.size();
+}
+
+int CustomAngleForce::getNumPerAngleParameters() const {
+    return parameters.size();
+}
+
+int CustomAngleForce::getNumGlobalParameters() const {
+    return globalParameters.size();
+}
+
+int CustomAngleForce::getNumEnergyParameterDerivatives() const {
+    return energyParameterDerivatives.size();
+}

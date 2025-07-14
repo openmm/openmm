@@ -154,3 +154,15 @@ bool System::usesPeriodicBoundaryConditions() const {
 
     return uses_pbc;
 }
+
+int System::getNumParticles() const {
+    return masses.size();
+}
+
+int System::getNumConstraints() const {
+    return constraints.size();
+}
+
+int System::getNumForces() const {
+    return forces.size();
+}

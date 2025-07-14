@@ -94,28 +94,20 @@ public:
     /**
      * Get the number of angles for which force field parameters have been defined.
      */
-    int getNumAngles() const {
-        return angles.size();
-    }
+    int getNumAngles() const;
     /**
      * Get the number of per-angle parameters that the interaction depends on.
      */
-    int getNumPerAngleParameters() const {
-        return parameters.size();
-    }
+    int getNumPerAngleParameters() const;
     /**
      * Get the number of global parameters that the interaction depends on.
      */
-    int getNumGlobalParameters() const {
-        return globalParameters.size();
-    }
+    int getNumGlobalParameters() const;
     /**
      * Get the number of global parameters with respect to which the derivative of the energy
      * should be computed.
      */
-    int getNumEnergyParameterDerivatives() const {
-        return energyParameterDerivatives.size();
-    }
+    int getNumEnergyParameterDerivatives() const;
     /**
      * Get the algebraic expression that gives the interaction energy for each angle
      */
