@@ -99,7 +99,7 @@ class WrapperGenerator:
                            ]
         self.skipMethods = [s.replace(' ', '') for s in self.skipMethods]
         self.hideClasses = ['Kernel', 'KernelImpl', 'KernelFactory', 'ContextImpl', 'SerializationNode', 'SerializationProxy']
-        self.renameTypes = {'CoordinateTransformation': 'OpenMM::ATMForce::CoordinateTransformation'}
+        self.renameTypes = {}
         self.nodeByID={}
 
         # Read all the XML files and merge them into a single document.
@@ -141,6 +141,10 @@ class WrapperGenerator:
                 baseNode = self.getNodeByID(baseNodeID)
                 self.findBaseNodes(baseNode, excludedClassNodes)
         excludedClassNodes.append(node)
+        for inner in findNodes(node, "innerclass", prot="public"):
+            fullName = getNodeText(inner)
+            shortName = fullName.rsplit("::")[-1]
+            self.renameTypes[shortName] = fullName
 
     def getClassMethods(self, classNode):
         className = getText("compoundname", classNode)
