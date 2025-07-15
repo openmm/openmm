@@ -327,7 +327,7 @@ class SwigInputBuilder:
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
 
-        self.fOut.write("%factory(OpenMM::ATMForce::CoordinateTransformation* OpenMM_ATMForce__getParticleTransformation")
+        self.fOut.write("%factory(OpenMM::ATMForce::CoordinateTransformation& OpenMM::ATMForce::getParticleTransformation")
         for name in sorted(coordinateTransformationSubclassList):
             self.fOut.write(",\n         OpenMM::ATMForce::%s" % name)
         self.fOut.write(");\n\n")

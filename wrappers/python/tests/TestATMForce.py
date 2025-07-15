@@ -49,6 +49,7 @@ class TestATMForce(unittest.TestCase):
         epert_expected = 69.4062*kilojoules_per_mole
         assert( abs(epot-epot_expected) < 1.e-3*kilojoules_per_mole )
         assert( abs(epert-epert_expected) < 1.e-3*kilojoules_per_mole )
+        assert isinstance(atmforce.getParticleTransformation(0), FixedDisplacement)
 
     def test3ParticlesNonbondedSwap(self):
         """Test coordinate swap"""
