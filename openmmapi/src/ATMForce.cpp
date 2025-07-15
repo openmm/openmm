@@ -176,3 +176,18 @@ void ATMForce::getPerturbationEnergy(OpenMM::Context& context, double& u0, doubl
     dynamic_cast<ATMForceImpl&>(getImplInContext(context)).getPerturbationEnergy(getContextImpl(context), u0, u1, energy);
 }
 
+int ATMForce::getNumParticles() const {
+    return particles.size();
+}
+
+int ATMForce::getNumForces() const {
+    return forces.size();
+}
+
+int ATMForce::getNumGlobalParameters() const {
+    return globalParameters.size();
+}
+
+int ATMForce::getNumEnergyParameterDerivatives() const {
+    return energyParameterDerivatives.size();
+}

@@ -343,3 +343,39 @@ void CustomNonbondedForce::updateParametersInContext(Context& context) {
         lastChangedParticle = -1;
     }
 }
+
+int CustomNonbondedForce::getNumParticles() const {
+    return particles.size();
+}
+
+int CustomNonbondedForce::getNumExclusions() const {
+    return exclusions.size();
+}
+
+int CustomNonbondedForce::getNumPerParticleParameters() const {
+    return parameters.size();
+}
+
+int CustomNonbondedForce::getNumGlobalParameters() const {
+    return globalParameters.size();
+}
+
+int CustomNonbondedForce::getNumTabulatedFunctions() const {
+    return functions.size();
+}
+
+int CustomNonbondedForce::getNumFunctions() const {
+    return functions.size();
+}
+
+int CustomNonbondedForce::getNumComputedValues() const {
+    return computedValues.size();
+}
+
+int CustomNonbondedForce::getNumInteractionGroups() const {
+    return interactionGroups.size();
+}
+
+int CustomNonbondedForce::getNumEnergyParameterDerivatives() const {
+    return energyParameterDerivatives.size();
+}

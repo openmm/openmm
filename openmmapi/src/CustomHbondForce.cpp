@@ -245,3 +245,35 @@ ForceImpl* CustomHbondForce::createImpl() const {
 void CustomHbondForce::updateParametersInContext(Context& context) {
     dynamic_cast<CustomHbondForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
+
+int CustomHbondForce::getNumDonors() const {
+    return donors.size();
+}
+
+int CustomHbondForce::getNumAcceptors() const {
+    return acceptors.size();
+}
+
+int CustomHbondForce::getNumExclusions() const {
+    return exclusions.size();
+}
+
+int CustomHbondForce::getNumPerDonorParameters() const {
+    return donorParameters.size();
+}
+
+int CustomHbondForce::getNumPerAcceptorParameters() const {
+    return acceptorParameters.size();
+}
+
+int CustomHbondForce::getNumGlobalParameters() const {
+    return globalParameters.size();
+}
+
+int CustomHbondForce::getNumTabulatedFunctions() const {
+    return functions.size();
+}
+
+int CustomHbondForce::getNumFunctions() const {
+    return functions.size();
+}

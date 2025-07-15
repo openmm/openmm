@@ -138,3 +138,7 @@ void DPDIntegrator::step(int steps) {
         kernel.getAs<IntegrateDPDStepKernel>().execute(*context, *this);
     }
 }
+
+int DPDIntegrator::getNumTypePairs() const {
+    return pairs.size();
+}

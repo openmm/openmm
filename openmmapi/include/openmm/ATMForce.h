@@ -177,28 +177,20 @@ public:
      *
      * This should be the same number of particles as the System
      */
-    int getNumParticles() const {
-        return particles.size();
-    }
+    int getNumParticles() const;
     /**
      * Get the number of Forces included in the ATMForce.
      */
-    int getNumForces() const {
-        return forces.size();
-    }
+    int getNumForces() const;
     /**
      * Get the number of global parameters that the interaction depends on.
      */
-    int getNumGlobalParameters() const {
-        return globalParameters.size();
-    }
+    int getNumGlobalParameters() const;
     /**
      * Get the number of global parameters with respect to which the derivative of the energy
      * should be computed.
      */
-    int getNumEnergyParameterDerivatives() const {
-        return energyParameterDerivatives.size();
-    }
+    int getNumEnergyParameterDerivatives() const;
     /**
      * Get the algebraic expression that gives the energy of the system
      */

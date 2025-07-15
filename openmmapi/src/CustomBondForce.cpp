@@ -157,3 +157,19 @@ void CustomBondForce::setUsesPeriodicBoundaryConditions(bool periodic) {
 bool CustomBondForce::usesPeriodicBoundaryConditions() const {
     return usePeriodic;
 }
+
+int CustomBondForce::getNumBonds() const {
+    return bonds.size();
+}
+
+int CustomBondForce::getNumPerBondParameters() const {
+    return parameters.size();
+}
+
+int CustomBondForce::getNumGlobalParameters() const {
+    return globalParameters.size();
+}
+
+int CustomBondForce::getNumEnergyParameterDerivatives() const {
+    return energyParameterDerivatives.size();
+}
