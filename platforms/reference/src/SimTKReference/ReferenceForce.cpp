@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2023 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -107,6 +107,15 @@ Vec3 ReferenceForce::getDeltaRPeriodic(const Vec3& atomCoordinatesI, const Vec3&
     diff -= boxVectors[1]*floor(diff[1]/boxVectors[1][1]+0.5);
     diff -= boxVectors[0]*floor(diff[0]/boxVectors[0][0]+0.5);
     return diff;
+}
+
+void ReferenceForce::invertBoxVectors(const OpenMM::Vec3* boxVectors, OpenMM::Vec3* recipBoxVectors) {
+    double determinant = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
+    assert(determinant > 0);
+    double scale = 1.0/determinant;
+    recipBoxVectors[0] = Vec3(boxVectors[1][1]*boxVectors[2][2], 0, 0)*scale;
+    recipBoxVectors[1] = Vec3(-boxVectors[1][0]*boxVectors[2][2], boxVectors[0][0]*boxVectors[2][2], 0)*scale;
+    recipBoxVectors[2] = Vec3(boxVectors[1][0]*boxVectors[2][1]-boxVectors[1][1]*boxVectors[2][0], -boxVectors[0][0]*boxVectors[2][1], boxVectors[0][0]*boxVectors[1][1])*scale;
 }
 
 double* ReferenceForce::getVariablePointer(Lepton::CompiledExpression& expression, const std::string& name) {

@@ -1,7 +1,7 @@
 /*
  * Reference implementation of PME reciprocal space interactions.
  *
- * Copyright (c) 2009-2022, Erik Lindahl, Rossen Apostolov, Szilard Pall, Peter Eastman
+ * Copyright (c) 2009-2023, Erik Lindahl, Rossen Apostolov, Szilard Pall, Peter Eastman
  * All rights reserved.
  * Contact: lindahl@cbr.su.se Stockholm University, Sweden.
  *
@@ -35,6 +35,7 @@
 #include <complex>
 
 #include "ReferencePME.h"
+#include "ReferenceForce.h"
 #include "SimTKOpenMMRealType.h"
 
 #ifdef _MSC_VER
@@ -194,17 +195,6 @@ pme_calculate_bsplines_moduli(pme_t pme)
     free(data);
     free(ddata);
     free(bsplines_data);
-}
-
-
-static void invert_box_vectors(const Vec3 boxVectors[3], Vec3 recipBoxVectors[3])
-{
-    double determinant = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
-    assert(determinant > 0);
-    double scale = 1.0/determinant;
-    recipBoxVectors[0] = Vec3(boxVectors[1][1]*boxVectors[2][2], 0, 0)*scale;
-    recipBoxVectors[1] = Vec3(-boxVectors[1][0]*boxVectors[2][2], boxVectors[0][0]*boxVectors[2][2], 0)*scale;
-    recipBoxVectors[2] = Vec3(boxVectors[1][0]*boxVectors[2][1]-boxVectors[1][1]*boxVectors[2][0], -boxVectors[0][0]*boxVectors[2][1], boxVectors[0][0]*boxVectors[1][1])*scale;
 }
 
 static void
@@ -773,7 +763,7 @@ int pme_exec(pme_t       pme,
     /* Routine is called with coordinates in x, a box, and charges in q */
 
     Vec3 recipBoxVectors[3];
-    invert_box_vectors(periodicBoxVectors, recipBoxVectors);
+    ReferenceForce::invertBoxVectors(periodicBoxVectors, recipBoxVectors);
     
     /* Before we can do the actual interpolation, we need to recalculate and update
      * the indices for each particle in the charge grid (initialized in pme_init()),
@@ -822,7 +812,7 @@ int pme_exec_dpme(pme_t       pme,
     /* Routine is called with coordinates in x, a box, and charges in q */
 
     Vec3 recipBoxVectors[3];
-    invert_box_vectors(periodicBoxVectors, recipBoxVectors);
+    ReferenceForce::invertBoxVectors(periodicBoxVectors, recipBoxVectors);
 
     /* Before we can do the actual interpolation, we need to recalculate and update
      * the indices for each particle in the charge grid (initialized in pme_init()),

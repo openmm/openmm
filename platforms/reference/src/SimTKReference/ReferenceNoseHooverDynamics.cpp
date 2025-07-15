@@ -115,7 +115,7 @@ void ReferenceNoseHooverDynamics::step2(OpenMM::ContextImpl &context, const Open
                                           vector<Vec3>& velocities,
                                           vector<Vec3>& forces, vector<double>& masses, double tolerance,
                                           const std::vector<int> & atomList, const std::vector<std::tuple<int, int, double>> &pairList,
-                                          double maxPairDistance) {
+                                          double maxPairDistance, const Vec3* boxVectors) {
     const double halfdt = 0.5*getDeltaT();
     for (int atom = 0; atom < numberOfAtoms; ++atom) {
         if (masses[atom] != 0.0) {
@@ -200,7 +200,7 @@ void ReferenceNoseHooverDynamics::step2(OpenMM::ContextImpl &context, const Open
         }
     } /* end of hard wall constraint part */
 
-    getVirtualSites().computePositions(context.getSystem(), atomCoordinates);
+    getVirtualSites().computePositions(context.getSystem(), atomCoordinates, boxVectors);
 
     incrementTimeStep();
 }
