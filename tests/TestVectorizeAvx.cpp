@@ -115,6 +115,9 @@ void testLogic() {
     ASSERT_EQUAL(4.0, temp.upperVec()[3]);
     ASSERT_VEC8_EQUAL_INT(i1&mask, 0, 2, 3, 0, 0, 6, 7, 0);
     ASSERT_VEC8_EQUAL_INT(i1|mask, 1, allBits, allBits, 4, 5, allBits, allBits, 8);
+    ivec8 i2(1, 2, 4, 3, 7, 6, 5, 8);
+    ASSERT_VEC8_EQUAL_INT(i1 == i2, -1, -1, 0, 0, 0, -1, 0, -1);
+    ASSERT_VEC8_EQUAL_INT(i1 != i2, 0, 0, -1, -1, -1, 0, -1, 0);
 }
 
 int main(int argc, char* argv[]) {
