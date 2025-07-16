@@ -43,6 +43,7 @@ class ReferenceCustomDynamics : public ReferenceDynamics {
 private:
 
     class DerivFunction;
+    bool initialized;
     const OpenMM::CustomIntegrator& integrator;
     std::vector<double> inverseMasses;
     std::vector<OpenMM::Vec3> sumBuffer, oldPos;

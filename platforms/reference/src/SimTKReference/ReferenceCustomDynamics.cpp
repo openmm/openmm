@@ -84,7 +84,7 @@ static bool isVectorExpression(const ExpressionTreeNode& node) {
    --------------------------------------------------------------------------------------- */
 
 ReferenceCustomDynamics::ReferenceCustomDynamics(int numberOfAtoms, const CustomIntegrator& integrator) : 
-           ReferenceDynamics(numberOfAtoms, integrator.getStepSize(), 0.0), integrator(integrator) {
+           ReferenceDynamics(numberOfAtoms, integrator.getStepSize(), 0.0), initialized(false), integrator(integrator) {
     sumBuffer.resize(numberOfAtoms);
     oldPos.resize(numberOfAtoms);
     stepType.resize(integrator.getNumComputations());
@@ -195,6 +195,8 @@ void ReferenceCustomDynamics::initialize(ContextImpl& context, vector<double>& m
         perDofVariableIndex.push_back(expressionSet.getVariableIndex(integrator.getPerDofVariableName(i)));
     for (int i = 0; i < stepVariable.size(); i++)
         stepVariableIndex.push_back(expressionSet.getVariableIndex(stepVariable[i]));
+
+    initialized = true;
 }
 
 ExpressionTreeNode ReferenceCustomDynamics::replaceDerivFunctions(const ExpressionTreeNode& node, ContextImpl& context) {
@@ -232,7 +234,7 @@ ExpressionTreeNode ReferenceCustomDynamics::replaceDerivFunctions(const Expressi
 void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, vector<Vec3>& atomCoordinates,
                                      vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& masses,
                                      map<string, double>& globals, vector<vector<Vec3> >& perDof, bool& forcesAreValid, double tolerance) {
-    if (invalidatesForces.size() == 0)
+    if (!initialized)
         initialize(context, masses, globals);
     int numSteps = stepType.size();
     globals.insert(context.getParameters().begin(), context.getParameters().end());
@@ -458,7 +460,7 @@ void ReferenceCustomDynamics::recordChangedParameters(OpenMM::ContextImpl& conte
 double ReferenceCustomDynamics::computeKineticEnergy(OpenMM::ContextImpl& context, int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
         std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses,
         std::map<std::string, double>& globals, std::vector<std::vector<OpenMM::Vec3> >& perDof, bool& forcesAreValid) {
-    if (invalidatesForces.size() == 0)
+    if (!initialized)
         initialize(context, masses, globals);
     globals.insert(context.getParameters().begin(), context.getParameters().end());
     for (auto& global : globals)
