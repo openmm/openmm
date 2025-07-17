@@ -116,10 +116,6 @@ public:
 
 private:
     /**
-     * Recalculate the target noise spectrum.
-     */
-    void calcSpectrum(ThreadPool& threads);
-    /**
      * Generate noise for the next segment.
      */
     void generateNoise(int numParticles, std::vector<double>& masses, ThreadPool& threads);

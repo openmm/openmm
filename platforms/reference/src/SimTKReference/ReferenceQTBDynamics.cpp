@@ -27,6 +27,7 @@
 #include "ReferenceVirtualSites.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/QTBIntegratorUtilities.h"
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -89,11 +90,10 @@ ReferenceQTBDynamics::ReferenceQTBDynamics(const System& system, const QTBIntegr
     // Calculate the target energy distribution.
 
     numFreq = (3*segmentLength+1)/2;
-    theta.resize(numFreq);
     cutoffFunction.resize(numFreq);
     double cutoff = integrator.getCutoffFrequency();
     double cutoffWidth = cutoff/100;
-    for (int i = 1; i < numFreq; i++) {
+    for (int i = 0; i < numFreq; i++) {
         double w = M_PI*i/(numFreq*getDeltaT());
         cutoffFunction[i] = 1.0/(1.0+exp((w-cutoff)/cutoffWidth));
     }
@@ -105,59 +105,6 @@ ReferenceQTBDynamics::ReferenceQTBDynamics(const System& system, const QTBIntegr
 }
 
 ReferenceQTBDynamics::~ReferenceQTBDynamics() {
-}
-
-void ReferenceQTBDynamics::calcSpectrum(ThreadPool& threads) {
-    // Compute the standard spectrum.
-
-    double hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
-    double kT = BOLTZ*getTemperature();
-    theta[0] = kT;
-    for (int i = 1; i < numFreq; i++) {
-        double w = M_PI*i/(numFreq*getDeltaT());
-        theta[i] = hbar*w*(0.5+1/(exp(hbar*w/kT)-1));
-    }
-
-    // Compute the deconvolved version.  The algorithm is described in the supplementary
-    // information in https://doi.org/10.1021/acs.jpclett.1c01722.
-
-    auto C = [&](double w0, double w) {
-        double t = w*w-w0*w0;
-        return (friction/M_PI)*w0*w0/(t*t+friction*friction*w*w);
-    };
-    vector<vector<double> > D(numFreq, vector<double>(numFreq));
-    vector<double> h(numFreq);
-    vector<double> fcurrent(numFreq), fnext(numFreq);
-    for (int i = 0; i < numFreq; i++)
-        fcurrent[i] = 0.5*theta[i];
-    double dw = M_PI/(numFreq*getDeltaT());
-    threads.execute([&] (ThreadPool& threads, int threadIndex) {
-        for (int i = threadIndex; i < numFreq; i += threads.getNumThreads()) {
-            double wi = M_PI*(i+0.5)/(numFreq*getDeltaT());
-            h[i] = 0.0;
-            for (int j = 0; j < numFreq; j++) {
-                double wj = M_PI*(j+0.5)/(numFreq*getDeltaT());
-                h[i] += dw*C(wj, wi)*fcurrent[j];
-                D[i][j] = 0.0;
-                for (int k = 0; k < numFreq; k++) {
-                    double wk = M_PI*(k+0.5)/(numFreq*getDeltaT());
-                    D[i][j] += dw*C(wk, wi)*C(wk, wj);
-                }
-            }
-        }
-    });
-    threads.waitForThreads();
-    for (int iteration = 0; iteration < 20; iteration++) {
-        for (int i = 0; i < numFreq; i++) {
-            double denom = 0.0;
-            for (int j = 0; j < numFreq; j++)
-                denom += dw*D[i][j]*fcurrent[j];
-            fnext[i] = fcurrent[i]*h[i]/denom;
-        }
-        fcurrent = fnext;
-    }
-    thetad = fnext;
-    lastTemperature = getTemperature();
 }
 
 void ReferenceQTBDynamics::updatePart1(int numParticles, vector<Vec3>& velocities, vector<Vec3>& forces) {
@@ -212,8 +159,10 @@ void ReferenceQTBDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordi
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     vector<Vec3>& forces = *data->forces;
     if (stepIndex%segmentLength == 0) {
-        if (lastTemperature != getTemperature() || thetad.size() == 0)
-            calcSpectrum(threads);
+        if (lastTemperature != getTemperature() || thetad.size() == 0) {
+            QTBIntegratorUtilities::calculateSpectrum(getTemperature(), friction, getDeltaT(), numFreq, theta, thetad, threads);
+            lastTemperature = getTemperature();
+        }
         adaptFriction(threads);
         generateNoise(numParticles, masses, threads);
         stepIndex = 0;
