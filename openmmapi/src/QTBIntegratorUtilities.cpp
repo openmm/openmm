@@ -1,6 +1,3 @@
-#ifndef OPENMM_H_
-#define OPENMM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,58 +29,61 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CMAPTorsionForce.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/CompoundIntegrator.h"
-#include "openmm/CustomBondForce.h"
-#include "openmm/CustomCentroidBondForce.h"
-#include "openmm/CustomCompoundBondForce.h"
-#include "openmm/CustomAngleForce.h"
-#include "openmm/CustomTorsionForce.h"
-#include "openmm/CustomExternalForce.h"
-#include "openmm/CustomCVForce.h"
-#include "openmm/CustomGBForce.h"
-#include "openmm/CustomHbondForce.h"
-#include "openmm/CustomIntegrator.h"
-#include "openmm/CustomManyParticleForce.h"
-#include "openmm/CustomNonbondedForce.h"
-#include "openmm/CustomVolumeForce.h"
-#include "openmm/DPDIntegrator.h"
-#include "openmm/Force.h"
-#include "openmm/GayBerneForce.h"
-#include "openmm/GBSAOBCForce.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/Integrator.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/LangevinMiddleIntegrator.h"
-#include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/MonteCarloAnisotropicBarostat.h"
-#include "openmm/MonteCarloBarostat.h"
-#include "openmm/MonteCarloFlexibleBarostat.h"
-#include "openmm/MonteCarloMembraneBarostat.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/Context.h"
-#include "openmm/OpenMMException.h"
-#include "openmm/PeriodicTorsionForce.h"
-#include "openmm/QTBIntegrator.h"
-#include "openmm/RBTorsionForce.h"
-#include "openmm/RMSDForce.h"
-#include "openmm/State.h"
-#include "openmm/System.h"
-#include "openmm/TabulatedFunction.h"
-#include "openmm/Units.h"
-#include "openmm/VariableLangevinIntegrator.h"
-#include "openmm/VariableVerletIntegrator.h"
-#include "openmm/Vec3.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/NoseHooverIntegrator.h"
-#include "openmm/NoseHooverChain.h"
-#include "openmm/VirtualSite.h"
-#include "openmm/Platform.h"
-#include "openmm/serialization/XmlSerializer.h"
-#include "openmm/ATMForce.h"
+#include "openmm/internal/QTBIntegratorUtilities.h"
+#include "SimTKOpenMMRealType.h"
 
-#endif /*OPENMM_H_*/
+using namespace OpenMM;
+using namespace std;
+
+void QTBIntegratorUtilities::calculateSpectrum(double temperature, double friction, double dt, int numFreq, vector<double>& theta, vector<double>& thetad, ThreadPool& threads) {
+    // Compute the standard spectrum.
+
+    double hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
+    double kT = BOLTZ*temperature;
+    theta.resize(numFreq);
+    theta[0] = kT;
+    for (int i = 1; i < numFreq; i++) {
+        double w = M_PI*i/(numFreq*dt);
+        theta[i] = hbar*w*(0.5+1/(exp(hbar*w/kT)-1));
+    }
+
+    // Compute the deconvolved version.  The algorithm is described in the supplementary
+    // information in https://doi.org/10.1021/acs.jpclett.1c01722.
+
+    auto C = [&](double w0, double w) {
+        double t = w*w-w0*w0;
+        return (friction/M_PI)*w0*w0/(t*t+friction*friction*w*w);
+    };
+    vector<vector<double> > D(numFreq, vector<double>(numFreq));
+    vector<double> h(numFreq);
+    vector<double> fcurrent(numFreq), fnext(numFreq);
+    for (int i = 0; i < numFreq; i++)
+        fcurrent[i] = 0.5*theta[i];
+    double dw = M_PI/(numFreq*dt);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) {
+        for (int i = threadIndex; i < numFreq; i += threads.getNumThreads()) {
+            double wi = M_PI*(i+0.5)/(numFreq*dt);
+            h[i] = 0.0;
+            for (int j = 0; j < numFreq; j++) {
+                double wj = M_PI*(j+0.5)/(numFreq*dt);
+                h[i] += dw*C(wj, wi)*fcurrent[j];
+                D[i][j] = 0.0;
+                for (int k = 0; k < numFreq; k++) {
+                    double wk = M_PI*(k+0.5)/(numFreq*dt);
+                    D[i][j] += dw*C(wk, wi)*C(wk, wj);
+                }
+            }
+        }
+    });
+    threads.waitForThreads();
+    for (int iteration = 0; iteration < 20; iteration++) {
+        for (int i = 0; i < numFreq; i++) {
+            double denom = 0.0;
+            for (int j = 0; j < numFreq; j++)
+                denom += dw*D[i][j]*fcurrent[j];
+            fnext[i] = fcurrent[i]*h[i]/denom;
+        }
+        fcurrent = fnext;
+    }
+    thetad = fnext;
+}
