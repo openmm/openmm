@@ -100,14 +100,16 @@ DEVICE mixed2 multiplyComplex(mixed2 c1, mixed2 c2) {
     return make_mixed2(c1.x*c2.x-c1.y*c2.y, c1.x*c2.y+c1.y*c2.x);
 }
 
+DEVICE mixed2 multiplyComplexConj(mixed2 c1, mixed2 c2) {
+    return make_mixed2(c1.x*c2.x+c1.y*c2.y, c1.x*c2.y-c1.y*c2.x);
+}
+
 /**
  * Generate the random force for the next segment.
  */
 KERNEL void generateRandomForce(int numAtoms, int segmentLength, mixed dt, mixed friction, GLOBAL float* RESTRICT noise,
         GLOBAL mixed* RESTRICT randomForce, GLOBAL mixed4* RESTRICT velm, GLOBAL mixed* RESTRICT thetad,
-        GLOBAL mixed* RESTRICT cutoffFunction, GLOBAL mixed2* RESTRICT workspace, float kT) {
-    mixed vscale = EXP(-dt*friction);
-    mixed noisescale = SQRT(kT*(1-vscale*vscale));
+        GLOBAL mixed* RESTRICT cutoffFunction, GLOBAL mixed2* RESTRICT workspace) {
     const int fftLength = 3*segmentLength;
     const int numFreq = (fftLength+1)/2;
     mixed2* data0 = &workspace[GROUP_ID*3*fftLength];
@@ -124,12 +126,14 @@ KERNEL void generateRandomForce(int numAtoms, int segmentLength, mixed dt, mixed
                 data0[j] = make_mixed2(noise[numAtoms*(3*j+axis)+atom], 0);
             SYNC_THREADS
             FFT_FORWARD
-            for (int j = LOCAL_ID; j < fftLength; j += LOCAL_SIZE) {
-                int k = min(j, fftLength-j);
-                mixed f = M_PI*k/(numFreq*dt);
+            for (int j = LOCAL_ID; j < numFreq; j += LOCAL_SIZE) {
+                mixed f = M_PI*j/(numFreq*dt);
                 mixed gamma = friction;//adaptedFriction[type][i];
                 mixed cw = (1 - 2*EXP(-dt*friction)*COS(f*dt) + EXP(-2*friction*dt)) / ((friction*friction+f*f)*dt*dt);
-                RECIP_DATA[j] *= SQRT(cutoffFunction[k]*thetad[k]*cw*gamma/friction);
+                mixed2 d = RECIP_DATA[j] * SQRT(cutoffFunction[j]*thetad[j]*cw*gamma/friction);
+                RECIP_DATA[j] = d;
+                if (j != 0 && j*2 != fftLength)
+                    RECIP_DATA[fftLength-j] = make_mixed2(d.x, -d.y);
             }
             SYNC_THREADS
             FFT_BACKWARD

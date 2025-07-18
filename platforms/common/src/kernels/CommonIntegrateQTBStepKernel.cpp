@@ -148,7 +148,6 @@ void CommonIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegr
         forceKernel->addArg(thetad);
         forceKernel->addArg(cutoffFunction);
         forceKernel->addArg(workspace);
-        forceKernel->addArg();
     }
     cc.getIntegrationUtilities().setNextStepSize(dt);
 
@@ -163,7 +162,6 @@ void CommonIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegr
         }
         noiseKernel->setArg(4, integration.prepareRandomNumbers(numAtoms*segmentLength));
         noiseKernel->execute(numAtoms*segmentLength);
-        forceKernel->setArg(10, (float) (BOLTZ*temperature));
         forceKernel->execute(3*numAtoms*128, 128);
         stepIndex = 0;
     }
@@ -213,6 +211,7 @@ string CommonIntegrateQTBStepKernel::createFFT(int size, int inputIndex, int& ou
     int L = size;
     int m = 1;
     string sign = (forward ? "1" : "-1");
+    string mult = (forward ? "multiplyComplex" : "multiplyComplexConj");
 
     // Factor size, generating an appropriate block of code for each factor.
 
@@ -277,12 +276,12 @@ string CommonIntegrateQTBStepKernel::createFFT(int size, int inputIndex, int& ou
             source<<"mixed2 t11 = make_mixed2(t5.y+b5.y, -(t5.x+b5.x));\n";
             source<<"mixed2 t12 = make_mixed2(t6.y+b5.y, -(t6.x+b5.x));\n";
             source<<"data"<<output<<"[base+6*j*"<<m<<"] = b0;\n";
-            source<<"data"<<output<<"[base+(6*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<size<<"/"<<(7*L)<<"], t7-t10);\n";
-            source<<"data"<<output<<"[base+(6*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*size)<<"/"<<(7*L)<<"], t9-t12);\n";
-            source<<"data"<<output<<"[base+(6*j+3)*"<<m<<"] = multiplyComplex(w[j*"<<(3*size)<<"/"<<(7*L)<<"], t8+t11);\n";
-            source<<"data"<<output<<"[base+(6*j+4)*"<<m<<"] = multiplyComplex(w[j*"<<(4*size)<<"/"<<(7*L)<<"], t8-t11);\n";
-            source<<"data"<<output<<"[base+(6*j+5)*"<<m<<"] = multiplyComplex(w[j*"<<(5*size)<<"/"<<(7*L)<<"], t9+t12);\n";
-            source<<"data"<<output<<"[base+(6*j+6)*"<<m<<"] = multiplyComplex(w[j*"<<(6*size)<<"/"<<(7*L)<<"], t7+t10);\n";
+            source<<"data"<<output<<"[base+(6*j+1)*"<<m<<"] = "<<mult<<"(w[j*"<<size<<"/"<<(7*L)<<"], t7-t10);\n";
+            source<<"data"<<output<<"[base+(6*j+2)*"<<m<<"] = "<<mult<<"(w[j*"<<(2*size)<<"/"<<(7*L)<<"], t9-t12);\n";
+            source<<"data"<<output<<"[base+(6*j+3)*"<<m<<"] = "<<mult<<"(w[j*"<<(3*size)<<"/"<<(7*L)<<"], t8+t11);\n";
+            source<<"data"<<output<<"[base+(6*j+4)*"<<m<<"] = "<<mult<<"(w[j*"<<(4*size)<<"/"<<(7*L)<<"], t8-t11);\n";
+            source<<"data"<<output<<"[base+(6*j+5)*"<<m<<"] = "<<mult<<"(w[j*"<<(5*size)<<"/"<<(7*L)<<"], t9+t12);\n";
+            source<<"data"<<output<<"[base+(6*j+6)*"<<m<<"] = "<<mult<<"(w[j*"<<(6*size)<<"/"<<(7*L)<<"], t7+t10);\n";
         }
         else if (radix == 5) {
             source<<"mixed2 c0 = data"<<input<<"[base];\n";
@@ -303,10 +302,10 @@ string CommonIntegrateQTBStepKernel::createFFT(int size, int inputIndex, int& ou
             source<<"mixed2 d9 = "<<sign<<"*make_mixed2(d2.y+"<<coeff<<"*d3.y, -d2.x-"<<coeff<<"*d3.x);\n";
             source<<"mixed2 d10 = "<<sign<<"*make_mixed2("<<coeff<<"*d2.y-d3.y, d3.x-"<<coeff<<"*d2.x);\n";
             source<<"data"<<output<<"[base+4*j*"<<m<<"] = c0+d4;\n";
-            source<<"data"<<output<<"[base+(4*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<size<<"/"<<(5*L)<<"], d7+d9);\n";
-            source<<"data"<<output<<"[base+(4*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*size)<<"/"<<(5*L)<<"], d8+d10);\n";
-            source<<"data"<<output<<"[base+(4*j+3)*"<<m<<"] = multiplyComplex(w[j*"<<(3*size)<<"/"<<(5*L)<<"], d8-d10);\n";
-            source<<"data"<<output<<"[base+(4*j+4)*"<<m<<"] = multiplyComplex(w[j*"<<(4*size)<<"/"<<(5*L)<<"], d7-d9);\n";
+            source<<"data"<<output<<"[base+(4*j+1)*"<<m<<"] = "<<mult<<"(w[j*"<<size<<"/"<<(5*L)<<"], d7+d9);\n";
+            source<<"data"<<output<<"[base+(4*j+2)*"<<m<<"] = "<<mult<<"(w[j*"<<(2*size)<<"/"<<(5*L)<<"], d8+d10);\n";
+            source<<"data"<<output<<"[base+(4*j+3)*"<<m<<"] = "<<mult<<"(w[j*"<<(3*size)<<"/"<<(5*L)<<"], d8-d10);\n";
+            source<<"data"<<output<<"[base+(4*j+4)*"<<m<<"] = "<<mult<<"(w[j*"<<(4*size)<<"/"<<(5*L)<<"], d7-d9);\n";
         }
         else if (radix == 4) {
             source<<"mixed2 c0 = data"<<input<<"[base];\n";
@@ -318,9 +317,9 @@ string CommonIntegrateQTBStepKernel::createFFT(int size, int inputIndex, int& ou
             source<<"mixed2 d2 = c1+c3;\n";
             source<<"mixed2 d3 = "<<sign<<"*make_mixed2(c1.y-c3.y, c3.x-c1.x);\n";
             source<<"data"<<output<<"[base+3*j*"<<m<<"] = d0+d2;\n";
-            source<<"data"<<output<<"[base+(3*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<size<<"/"<<(4*L)<<"], d1+d3);\n";
-            source<<"data"<<output<<"[base+(3*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*size)<<"/"<<(4*L)<<"], d0-d2);\n";
-            source<<"data"<<output<<"[base+(3*j+3)*"<<m<<"] = multiplyComplex(w[j*"<<(3*size)<<"/"<<(4*L)<<"], d1-d3);\n";
+            source<<"data"<<output<<"[base+(3*j+1)*"<<m<<"] = "<<mult<<"(w[j*"<<size<<"/"<<(4*L)<<"], d1+d3);\n";
+            source<<"data"<<output<<"[base+(3*j+2)*"<<m<<"] = "<<mult<<"(w[j*"<<(2*size)<<"/"<<(4*L)<<"], d0-d2);\n";
+            source<<"data"<<output<<"[base+(3*j+3)*"<<m<<"] = "<<mult<<"(w[j*"<<(3*size)<<"/"<<(4*L)<<"], d1-d3);\n";
         }
         else if (radix == 3) {
             source<<"mixed2 c0 = data"<<input<<"[base];\n";
@@ -330,14 +329,14 @@ string CommonIntegrateQTBStepKernel::createFFT(int size, int inputIndex, int& ou
             source<<"mixed2 d1 = c0-0.5f*d0;\n";
             source<<"mixed2 d2 = "<<sign<<"*"<<cc.doubleToString(sin(M_PI/3.0))<<"*make_mixed2(c1.y-c2.y, c2.x-c1.x);\n";
             source<<"data"<<output<<"[base+2*j*"<<m<<"] = c0+d0;\n";
-            source<<"data"<<output<<"[base+(2*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<size<<"/"<<(3*L)<<"], d1+d2);\n";
-            source<<"data"<<output<<"[base+(2*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*size)<<"/"<<(3*L)<<"], d1-d2);\n";
+            source<<"data"<<output<<"[base+(2*j+1)*"<<m<<"] = "<<mult<<"(w[j*"<<size<<"/"<<(3*L)<<"], d1+d2);\n";
+            source<<"data"<<output<<"[base+(2*j+2)*"<<m<<"] = "<<mult<<"(w[j*"<<(2*size)<<"/"<<(3*L)<<"], d1-d2);\n";
         }
         else if (radix == 2) {
             source<<"mixed2 c0 = data"<<input<<"[base];\n";
             source<<"mixed2 c1 = data"<<input<<"[base+"<<(L*m)<<"];\n";
             source<<"data"<<output<<"[base+j*"<<m<<"] = c0+c1;\n";
-            source<<"data"<<output<<"[base+(j+1)*"<<m<<"] = multiplyComplex(w[j*"<<size<<"/"<<(2*L)<<"], c0-c1);\n";
+            source<<"data"<<output<<"[base+(j+1)*"<<m<<"] = "<<mult<<"(w[j*"<<size<<"/"<<(2*L)<<"], c0-c1);\n";
         }
         source<<"}\n";
         m = m*radix;
