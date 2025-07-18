@@ -104,35 +104,39 @@ DEVICE mixed2 multiplyComplex(mixed2 c1, mixed2 c2) {
  * Generate the random force for the next segment.
  */
 KERNEL void generateRandomForce(int numAtoms, int segmentLength, mixed dt, mixed friction, GLOBAL float* RESTRICT noise,
-        GLOBAL mixed* RESTRICT randomForce, GLOBAL mixed4* RESTRICT velm, GLOBAL mixed* RESTRICT thetad, GLOBAL mixed* RESTRICT cutoffFunction, float kT) {
+        GLOBAL mixed* RESTRICT randomForce, GLOBAL mixed4* RESTRICT velm, GLOBAL mixed* RESTRICT thetad,
+        GLOBAL mixed* RESTRICT cutoffFunction, GLOBAL mixed2* RESTRICT workspace, float kT) {
     mixed vscale = EXP(-dt*friction);
     mixed noisescale = SQRT(kT*(1-vscale*vscale));
-    const int numFreq = (FFT_LENGTH+1)/2;
-    LOCAL mixed2 data0[FFT_LENGTH];
-    LOCAL mixed2 data1[FFT_LENGTH];
-    LOCAL mixed2 w[FFT_LENGTH];
-    for (int i = LOCAL_ID; i < FFT_LENGTH; i += LOCAL_SIZE)
-        w[i] = make_mixed2(cos(-i*2*M_PI/FFT_LENGTH), sin(-i*2*M_PI/FFT_LENGTH));
+    const int fftLength = 3*segmentLength;
+    const int numFreq = (fftLength+1)/2;
+    mixed2* data0 = &workspace[GROUP_ID*3*fftLength];
+    mixed2* data1 = &data0[fftLength];
+    mixed2* w = &data1[fftLength];
+    for (int i = LOCAL_ID; i < fftLength; i += LOCAL_SIZE)
+        w[i] = make_mixed2(cos(-i*2*M_PI/fftLength), sin(-i*2*M_PI/fftLength));
     for (int i = GROUP_ID; i < 3*numAtoms; i += NUM_GROUPS) {
         int atom = i/3;
         int axis = i%3;
         mixed invMass = velm[atom].w;
         if (invMass != 0) {
-            for (int j = LOCAL_ID; j < FFT_LENGTH; j += LOCAL_SIZE)
+            for (int j = LOCAL_ID; j < fftLength; j += LOCAL_SIZE)
                 data0[j] = make_mixed2(noise[numAtoms*(3*j+axis)+atom], 0);
             SYNC_THREADS
             FFT_FORWARD
-            for (int j = LOCAL_ID; j < FFT_LENGTH; j += LOCAL_SIZE) {
-                int k = min(j, FFT_LENGTH-j);
-                double f = M_PI*k/(numFreq*dt);
-                double gamma = friction;//adaptedFriction[type][i];
-                double cw = (1 - 2*EXP(-dt*friction)*COS(f*dt) + EXP(-2*friction*dt)) / ((friction*friction+f*f)*dt*dt);
-                RECIP_DATA[j] *= SQRT(cutoffFunction[j]*thetad[j]*cw*gamma/friction);
+            for (int j = LOCAL_ID; j < fftLength; j += LOCAL_SIZE) {
+                int k = min(j, fftLength-j);
+                mixed f = M_PI*k/(numFreq*dt);
+                mixed gamma = friction;//adaptedFriction[type][i];
+                mixed cw = (1 - 2*EXP(-dt*friction)*COS(f*dt) + EXP(-2*friction*dt)) / ((friction*friction+f*f)*dt*dt);
+                RECIP_DATA[j] *= SQRT(cutoffFunction[k]*thetad[k]*cw*gamma/friction);
             }
+            SYNC_THREADS
             FFT_BACKWARD
-            const mixed scale = SQRT(2*friction/(dt*invMass));
+            const mixed scale = SQRT(2*friction/(dt*invMass))/fftLength;
             for (int j = LOCAL_ID; j < segmentLength; j += LOCAL_SIZE)
                 randomForce[numAtoms*(3*j+axis)+atom] = scale*data0[segmentLength+j].x;
+            SYNC_THREADS
         }
     }
 }

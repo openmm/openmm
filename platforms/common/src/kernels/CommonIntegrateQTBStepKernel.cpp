@@ -56,6 +56,7 @@ void CommonIntegrateQTBStepKernel::initialize(const System& system, const QTBInt
     segmentVelocity.initialize(cc, 3*segmentLength*numParticles, elementSize, "segmentVelocity");
     oldDelta.initialize(cc, cc.getPaddedNumAtoms(), 4*elementSize, "oldDelta");
     thetad.initialize(cc, numFreq, elementSize, "thetad");
+    workspace.initialize(cc, 18*segmentLength*cc.getNumThreadBlocks(), elementSize, "workspace");
     cutoffFunction.initialize(cc, numFreq, elementSize, "cutoffFunction");
     vector<double> cf(numFreq);
     double cutoff = integrator.getCutoffFrequency();
@@ -68,7 +69,6 @@ void CommonIntegrateQTBStepKernel::initialize(const System& system, const QTBInt
 
     map<string, string> defines, replacements;
     defines["M_PI"] = cc.doubleToString(M_PI);
-    defines["FFT_LENGTH"] = cc.intToString(3*segmentLength);
     int outputIndex;
     replacements["FFT_FORWARD"] = createFFT(3*segmentLength, 0, outputIndex, true);
     replacements["RECIP_DATA"] = (outputIndex == 0 ? "data0" : "data1");
@@ -147,6 +147,7 @@ void CommonIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegr
         forceKernel->addArg(cc.getVelm());
         forceKernel->addArg(thetad);
         forceKernel->addArg(cutoffFunction);
+        forceKernel->addArg(workspace);
         forceKernel->addArg();
     }
     cc.getIntegrationUtilities().setNextStepSize(dt);
@@ -162,8 +163,8 @@ void CommonIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegr
         }
         noiseKernel->setArg(4, integration.prepareRandomNumbers(numAtoms*segmentLength));
         noiseKernel->execute(numAtoms*segmentLength);
-        forceKernel->setArg(9, (float) (BOLTZ*integrator.getTemperature()));
-        forceKernel->execute(3*numAtoms*64, 64);
+        forceKernel->setArg(10, (float) (BOLTZ*temperature));
+        forceKernel->execute(3*numAtoms*128, 128);
         stepIndex = 0;
     }
 
@@ -238,43 +239,43 @@ string CommonIntegrateQTBStepKernel::createFFT(int size, int inputIndex, int& ou
         source<<"int base = i;\n";
         source<<"int j = i/"<<m<<";\n";
         if (radix == 7) {
-            source<<"real2 c0 = data"<<input<<"[base];\n";
-            source<<"real2 c1 = data"<<input<<"[base+"<<(L*m)<<"];\n";
-            source<<"real2 c2 = data"<<input<<"[base+"<<(2*L*m)<<"];\n";
-            source<<"real2 c3 = data"<<input<<"[base+"<<(3*L*m)<<"];\n";
-            source<<"real2 c4 = data"<<input<<"[base+"<<(4*L*m)<<"];\n";
-            source<<"real2 c5 = data"<<input<<"[base+"<<(5*L*m)<<"];\n";
-            source<<"real2 c6 = data"<<input<<"[base+"<<(6*L*m)<<"];\n";
-            source<<"real2 d0 = c1+c6;\n";
-            source<<"real2 d1 = c1-c6;\n";
-            source<<"real2 d2 = c2+c5;\n";
-            source<<"real2 d3 = c2-c5;\n";
-            source<<"real2 d4 = c4+c3;\n";
-            source<<"real2 d5 = c4-c3;\n";
-            source<<"real2 d6 = d2+d0;\n";
-            source<<"real2 d7 = d5+d3;\n";
-            source<<"real2 b0 = c0+d6+d4;\n";
-            source<<"real2 b1 = "<<cc.doubleToString((cos(2*M_PI/7)+cos(4*M_PI/7)+cos(6*M_PI/7))/3-1)<<"*(d6+d4);\n";
-            source<<"real2 b2 = "<<cc.doubleToString((2*cos(2*M_PI/7)-cos(4*M_PI/7)-cos(6*M_PI/7))/3)<<"*(d0-d4);\n";
-            source<<"real2 b3 = "<<cc.doubleToString((cos(2*M_PI/7)-2*cos(4*M_PI/7)+cos(6*M_PI/7))/3)<<"*(d4-d2);\n";
-            source<<"real2 b4 = "<<cc.doubleToString((cos(2*M_PI/7)+cos(4*M_PI/7)-2*cos(6*M_PI/7))/3)<<"*(d2-d0);\n";
-            source<<"real2 b5 = -("<<sign<<")*"<<cc.doubleToString((sin(2*M_PI/7)+sin(4*M_PI/7)-sin(6*M_PI/7))/3)<<"*(d7+d1);\n";
-            source<<"real2 b6 = -("<<sign<<")*"<<cc.doubleToString((2*sin(2*M_PI/7)-sin(4*M_PI/7)+sin(6*M_PI/7))/3)<<"*(d1-d5);\n";
-            source<<"real2 b7 = -("<<sign<<")*"<<cc.doubleToString((sin(2*M_PI/7)-2*sin(4*M_PI/7)-sin(6*M_PI/7))/3)<<"*(d5-d3);\n";
-            source<<"real2 b8 = -("<<sign<<")*"<<cc.doubleToString((sin(2*M_PI/7)+sin(4*M_PI/7)+2*sin(6*M_PI/7))/3)<<"*(d3-d1);\n";
-            source<<"real2 t0 = b0+b1;\n";
-            source<<"real2 t1 = b2+b3;\n";
-            source<<"real2 t2 = b4-b3;\n";
-            source<<"real2 t3 = -b2-b4;\n";
-            source<<"real2 t4 = b6+b7;\n";
-            source<<"real2 t5 = b8-b7;\n";
-            source<<"real2 t6 = -b8-b6;\n";
-            source<<"real2 t7 = t0+t1;\n";
-            source<<"real2 t8 = t0+t2;\n";
-            source<<"real2 t9 = t0+t3;\n";
-            source<<"real2 t10 = (real2) (t4.y+b5.y, -(t4.x+b5.x));\n";
-            source<<"real2 t11 = (real2) (t5.y+b5.y, -(t5.x+b5.x));\n";
-            source<<"real2 t12 = (real2) (t6.y+b5.y, -(t6.x+b5.x));\n";
+            source<<"mixed2 c0 = data"<<input<<"[base];\n";
+            source<<"mixed2 c1 = data"<<input<<"[base+"<<(L*m)<<"];\n";
+            source<<"mixed2 c2 = data"<<input<<"[base+"<<(2*L*m)<<"];\n";
+            source<<"mixed2 c3 = data"<<input<<"[base+"<<(3*L*m)<<"];\n";
+            source<<"mixed2 c4 = data"<<input<<"[base+"<<(4*L*m)<<"];\n";
+            source<<"mixed2 c5 = data"<<input<<"[base+"<<(5*L*m)<<"];\n";
+            source<<"mixed2 c6 = data"<<input<<"[base+"<<(6*L*m)<<"];\n";
+            source<<"mixed2 d0 = c1+c6;\n";
+            source<<"mixed2 d1 = c1-c6;\n";
+            source<<"mixed2 d2 = c2+c5;\n";
+            source<<"mixed2 d3 = c2-c5;\n";
+            source<<"mixed2 d4 = c4+c3;\n";
+            source<<"mixed2 d5 = c4-c3;\n";
+            source<<"mixed2 d6 = d2+d0;\n";
+            source<<"mixed2 d7 = d5+d3;\n";
+            source<<"mixed2 b0 = c0+d6+d4;\n";
+            source<<"mixed2 b1 = "<<cc.doubleToString((cos(2*M_PI/7)+cos(4*M_PI/7)+cos(6*M_PI/7))/3-1)<<"*(d6+d4);\n";
+            source<<"mixed2 b2 = "<<cc.doubleToString((2*cos(2*M_PI/7)-cos(4*M_PI/7)-cos(6*M_PI/7))/3)<<"*(d0-d4);\n";
+            source<<"mixed2 b3 = "<<cc.doubleToString((cos(2*M_PI/7)-2*cos(4*M_PI/7)+cos(6*M_PI/7))/3)<<"*(d4-d2);\n";
+            source<<"mixed2 b4 = "<<cc.doubleToString((cos(2*M_PI/7)+cos(4*M_PI/7)-2*cos(6*M_PI/7))/3)<<"*(d2-d0);\n";
+            source<<"mixed2 b5 = -("<<sign<<")*"<<cc.doubleToString((sin(2*M_PI/7)+sin(4*M_PI/7)-sin(6*M_PI/7))/3)<<"*(d7+d1);\n";
+            source<<"mixed2 b6 = -("<<sign<<")*"<<cc.doubleToString((2*sin(2*M_PI/7)-sin(4*M_PI/7)+sin(6*M_PI/7))/3)<<"*(d1-d5);\n";
+            source<<"mixed2 b7 = -("<<sign<<")*"<<cc.doubleToString((sin(2*M_PI/7)-2*sin(4*M_PI/7)-sin(6*M_PI/7))/3)<<"*(d5-d3);\n";
+            source<<"mixed2 b8 = -("<<sign<<")*"<<cc.doubleToString((sin(2*M_PI/7)+sin(4*M_PI/7)+2*sin(6*M_PI/7))/3)<<"*(d3-d1);\n";
+            source<<"mixed2 t0 = b0+b1;\n";
+            source<<"mixed2 t1 = b2+b3;\n";
+            source<<"mixed2 t2 = b4-b3;\n";
+            source<<"mixed2 t3 = -b2-b4;\n";
+            source<<"mixed2 t4 = b6+b7;\n";
+            source<<"mixed2 t5 = b8-b7;\n";
+            source<<"mixed2 t6 = -b8-b6;\n";
+            source<<"mixed2 t7 = t0+t1;\n";
+            source<<"mixed2 t8 = t0+t2;\n";
+            source<<"mixed2 t9 = t0+t3;\n";
+            source<<"mixed2 t10 = make_mixed2(t4.y+b5.y, -(t4.x+b5.x));\n";
+            source<<"mixed2 t11 = make_mixed2(t5.y+b5.y, -(t5.x+b5.x));\n";
+            source<<"mixed2 t12 = make_mixed2(t6.y+b5.y, -(t6.x+b5.x));\n";
             source<<"data"<<output<<"[base+6*j*"<<m<<"] = b0;\n";
             source<<"data"<<output<<"[base+(6*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<size<<"/"<<(7*L)<<"], t7-t10);\n";
             source<<"data"<<output<<"[base+(6*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*size)<<"/"<<(7*L)<<"], t9-t12);\n";
@@ -284,23 +285,23 @@ string CommonIntegrateQTBStepKernel::createFFT(int size, int inputIndex, int& ou
             source<<"data"<<output<<"[base+(6*j+6)*"<<m<<"] = multiplyComplex(w[j*"<<(6*size)<<"/"<<(7*L)<<"], t7+t10);\n";
         }
         else if (radix == 5) {
-            source<<"real2 c0 = data"<<input<<"[base];\n";
-            source<<"real2 c1 = data"<<input<<"[base+"<<(L*m)<<"];\n";
-            source<<"real2 c2 = data"<<input<<"[base+"<<(2*L*m)<<"];\n";
-            source<<"real2 c3 = data"<<input<<"[base+"<<(3*L*m)<<"];\n";
-            source<<"real2 c4 = data"<<input<<"[base+"<<(4*L*m)<<"];\n";
-            source<<"real2 d0 = c1+c4;\n";
-            source<<"real2 d1 = c2+c3;\n";
-            source<<"real2 d2 = "<<cc.doubleToString(sin(0.4*M_PI))<<"*(c1-c4);\n";
-            source<<"real2 d3 = "<<cc.doubleToString(sin(0.4*M_PI))<<"*(c2-c3);\n";
-            source<<"real2 d4 = d0+d1;\n";
-            source<<"real2 d5 = "<<cc.doubleToString(0.25*sqrt(5.0))<<"*(d0-d1);\n";
-            source<<"real2 d6 = c0-0.25f*d4;\n";
-            source<<"real2 d7 = d6+d5;\n";
-            source<<"real2 d8 = d6-d5;\n";
+            source<<"mixed2 c0 = data"<<input<<"[base];\n";
+            source<<"mixed2 c1 = data"<<input<<"[base+"<<(L*m)<<"];\n";
+            source<<"mixed2 c2 = data"<<input<<"[base+"<<(2*L*m)<<"];\n";
+            source<<"mixed2 c3 = data"<<input<<"[base+"<<(3*L*m)<<"];\n";
+            source<<"mixed2 c4 = data"<<input<<"[base+"<<(4*L*m)<<"];\n";
+            source<<"mixed2 d0 = c1+c4;\n";
+            source<<"mixed2 d1 = c2+c3;\n";
+            source<<"mixed2 d2 = "<<cc.doubleToString(sin(0.4*M_PI))<<"*(c1-c4);\n";
+            source<<"mixed2 d3 = "<<cc.doubleToString(sin(0.4*M_PI))<<"*(c2-c3);\n";
+            source<<"mixed2 d4 = d0+d1;\n";
+            source<<"mixed2 d5 = "<<cc.doubleToString(0.25*sqrt(5.0))<<"*(d0-d1);\n";
+            source<<"mixed2 d6 = c0-0.25f*d4;\n";
+            source<<"mixed2 d7 = d6+d5;\n";
+            source<<"mixed2 d8 = d6-d5;\n";
             string coeff = cc.doubleToString(sin(0.2*M_PI)/sin(0.4*M_PI));
-            source<<"real2 d9 = "<<sign<<"*(real2) (d2.y+"<<coeff<<"*d3.y, -d2.x-"<<coeff<<"*d3.x);\n";
-            source<<"real2 d10 = "<<sign<<"*(real2) ("<<coeff<<"*d2.y-d3.y, d3.x-"<<coeff<<"*d2.x);\n";
+            source<<"mixed2 d9 = "<<sign<<"*make_mixed2(d2.y+"<<coeff<<"*d3.y, -d2.x-"<<coeff<<"*d3.x);\n";
+            source<<"mixed2 d10 = "<<sign<<"*make_mixed2("<<coeff<<"*d2.y-d3.y, d3.x-"<<coeff<<"*d2.x);\n";
             source<<"data"<<output<<"[base+4*j*"<<m<<"] = c0+d4;\n";
             source<<"data"<<output<<"[base+(4*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<size<<"/"<<(5*L)<<"], d7+d9);\n";
             source<<"data"<<output<<"[base+(4*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*size)<<"/"<<(5*L)<<"], d8+d10);\n";
@@ -308,33 +309,33 @@ string CommonIntegrateQTBStepKernel::createFFT(int size, int inputIndex, int& ou
             source<<"data"<<output<<"[base+(4*j+4)*"<<m<<"] = multiplyComplex(w[j*"<<(4*size)<<"/"<<(5*L)<<"], d7-d9);\n";
         }
         else if (radix == 4) {
-            source<<"real2 c0 = data"<<input<<"[base];\n";
-            source<<"real2 c1 = data"<<input<<"[base+"<<(L*m)<<"];\n";
-            source<<"real2 c2 = data"<<input<<"[base+"<<(2*L*m)<<"];\n";
-            source<<"real2 c3 = data"<<input<<"[base+"<<(3*L*m)<<"];\n";
-            source<<"real2 d0 = c0+c2;\n";
-            source<<"real2 d1 = c0-c2;\n";
-            source<<"real2 d2 = c1+c3;\n";
-            source<<"real2 d3 = "<<sign<<"*(real2) (c1.y-c3.y, c3.x-c1.x);\n";
+            source<<"mixed2 c0 = data"<<input<<"[base];\n";
+            source<<"mixed2 c1 = data"<<input<<"[base+"<<(L*m)<<"];\n";
+            source<<"mixed2 c2 = data"<<input<<"[base+"<<(2*L*m)<<"];\n";
+            source<<"mixed2 c3 = data"<<input<<"[base+"<<(3*L*m)<<"];\n";
+            source<<"mixed2 d0 = c0+c2;\n";
+            source<<"mixed2 d1 = c0-c2;\n";
+            source<<"mixed2 d2 = c1+c3;\n";
+            source<<"mixed2 d3 = "<<sign<<"*make_mixed2(c1.y-c3.y, c3.x-c1.x);\n";
             source<<"data"<<output<<"[base+3*j*"<<m<<"] = d0+d2;\n";
             source<<"data"<<output<<"[base+(3*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<size<<"/"<<(4*L)<<"], d1+d3);\n";
             source<<"data"<<output<<"[base+(3*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*size)<<"/"<<(4*L)<<"], d0-d2);\n";
             source<<"data"<<output<<"[base+(3*j+3)*"<<m<<"] = multiplyComplex(w[j*"<<(3*size)<<"/"<<(4*L)<<"], d1-d3);\n";
         }
         else if (radix == 3) {
-            source<<"real2 c0 = data"<<input<<"[base];\n";
-            source<<"real2 c1 = data"<<input<<"[base+"<<(L*m)<<"];\n";
-            source<<"real2 c2 = data"<<input<<"[base+"<<(2*L*m)<<"];\n";
-            source<<"real2 d0 = c1+c2;\n";
-            source<<"real2 d1 = c0-0.5f*d0;\n";
-            source<<"real2 d2 = "<<sign<<"*"<<cc.doubleToString(sin(M_PI/3.0))<<"*(real2) (c1.y-c2.y, c2.x-c1.x);\n";
+            source<<"mixed2 c0 = data"<<input<<"[base];\n";
+            source<<"mixed2 c1 = data"<<input<<"[base+"<<(L*m)<<"];\n";
+            source<<"mixed2 c2 = data"<<input<<"[base+"<<(2*L*m)<<"];\n";
+            source<<"mixed2 d0 = c1+c2;\n";
+            source<<"mixed2 d1 = c0-0.5f*d0;\n";
+            source<<"mixed2 d2 = "<<sign<<"*"<<cc.doubleToString(sin(M_PI/3.0))<<"*make_mixed2(c1.y-c2.y, c2.x-c1.x);\n";
             source<<"data"<<output<<"[base+2*j*"<<m<<"] = c0+d0;\n";
             source<<"data"<<output<<"[base+(2*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<size<<"/"<<(3*L)<<"], d1+d2);\n";
             source<<"data"<<output<<"[base+(2*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*size)<<"/"<<(3*L)<<"], d1-d2);\n";
         }
         else if (radix == 2) {
-            source<<"real2 c0 = data"<<input<<"[base];\n";
-            source<<"real2 c1 = data"<<input<<"[base+"<<(L*m)<<"];\n";
+            source<<"mixed2 c0 = data"<<input<<"[base];\n";
+            source<<"mixed2 c1 = data"<<input<<"[base+"<<(L*m)<<"];\n";
             source<<"data"<<output<<"[base+j*"<<m<<"] = c0+c1;\n";
             source<<"data"<<output<<"[base+(j+1)*"<<m<<"] = multiplyComplex(w[j*"<<size<<"/"<<(2*L)<<"], c0-c1);\n";
         }

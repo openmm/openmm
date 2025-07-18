@@ -101,7 +101,7 @@ private:
     ComputeContext& cc;
     int segmentLength, stepIndex, numFreq;
     double prevTemp, dt, friction;
-    ComputeArray oldDelta, noise, randomForce, segmentVelocity, thetad, cutoffFunction;
+    ComputeArray oldDelta, noise, randomForce, segmentVelocity, thetad, cutoffFunction, workspace;
     ComputeKernel kernel1, kernel2, kernel3, noiseKernel, forceKernel;
     bool hasInitializedKernels;
 };
