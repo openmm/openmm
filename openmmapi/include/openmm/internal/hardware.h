@@ -130,12 +130,49 @@ static int getNumProcessors() {
  * Get whether this is an x86 CPU that supports AVX.
  */
 static bool isAvxSupported() {
+#ifdef __AVX__
     int cpuInfo[4];
     cpuid(cpuInfo, 0);
     if (cpuInfo[0] >= 1) {
         cpuid(cpuInfo, 1);
         return ((cpuInfo[2] & ((int) 1 << 28)) != 0);
     }
+#endif /* __AVX__ */
+    return false;
+}
+
+/**
+ * Get whether this is an x86 CPU that supports AVX2.
+ */
+static bool isAvx2Supported() {
+#ifdef __AVX2__
+
+    // Provide an alternative implementation of CPUID to support AVX2. On older
+    // non-Windows OSes the hardware.h support for CPUID doesn't set the CX register
+    // properly and gives the wrong answer when detecting AVX2 and beyond. On Windows
+    // the cpuid seems to work as expected so can be used.
+
+#if !(defined(_WIN32) || defined(WIN32))
+    auto cpuid = [](int output[4], int functionnumber) {
+        int a, b, c, d;
+        __asm("cpuid" : "=a"(a),"=b"(b),"=c"(c),"=d"(d) : "a"(functionnumber), "c"(0) : );
+        output[0] = a;
+        output[1] = b;
+        output[2] = c;
+        output[3] = d;
+    };
+#endif
+
+    int cpuInfo[4];
+    cpuid(cpuInfo, 0);
+
+    if (cpuInfo[0] >= 7) {
+        cpuInfo[2] = 0;
+        cpuid(cpuInfo, 7);
+        return ((cpuInfo[1] & ((int) 1 << 5)) != 0);
+    }
+
+#endif /* __AVX2__ */
     return false;
 }
 
