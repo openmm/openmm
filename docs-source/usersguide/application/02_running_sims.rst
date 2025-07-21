@@ -590,31 +590,31 @@ for full references).
 
 .. tabularcolumns:: |l|L|
 
-=================================  ============================================
-File                               Parameters
-=================================  ============================================
-:file:`charmm36_2024.xml`          Protein, DNA, RNA, lipids, carbohydrates, and small molecules
-:file:`charmm36/water.xml`         Default CHARMM water model (a modified version of TIP3P\ :cite:`Jorgensen1983`) and ions
-:file:`charmm36/spce.xml`          SPC/E water model\ :cite:`Berendsen1987` and ions
-:file:`charmm36/tip3p-pme-b.xml`   TIP3P-PME-B water model\ :cite:`Price2004` and ions
-:file:`charmm36/tip3p-pme-f.xml`   TIP3P-PME-F water model\ :cite:`Price2004` and ions
-:file:`charmm36/tip4pew.xml`       TIP4P-Ew water model\ :cite:`Horn2004` and ions
-:file:`charmm36/tip4p2005.xml`     TIP4P-2005 water model\ :cite:`Abascal2005` and ions
-:file:`charmm36/tip5p.xml`         TIP5P water model\ :cite:`Mahoney2000` and ions
-:file:`charmm36/tip5pew.xml`       TIP5P-Ew water model\ :cite:`Rick2004` and ions
-=================================  ============================================
+=====================================  =========================================
+File                                   Parameters
+=====================================  =========================================
+:file:`charmm36_2024.xml`              Protein, DNA, RNA, lipids, carbohydrates, and small molecules
+:file:`charmm36_2024/water.xml`        Default CHARMM water model (a modified version of TIP3P\ :cite:`Jorgensen1983`) and ions
+:file:`charmm36_2024/spce.xml`         SPC/E water model\ :cite:`Berendsen1987` and ions
+:file:`charmm36_2024/tip3p-pme-b.xml`  TIP3P-PME-B water model\ :cite:`Price2004` and ions
+:file:`charmm36_2024/tip3p-pme-f.xml`  TIP3P-PME-F water model\ :cite:`Price2004` and ions
+:file:`charmm36_2024/tip4pew.xml`      TIP4P-Ew water model\ :cite:`Horn2004` and ions
+:file:`charmm36_2024/tip4p2005.xml`    TIP4P-2005 water model\ :cite:`Abascal2005` and ions
+:file:`charmm36_2024/tip5p.xml`        TIP5P water model\ :cite:`Mahoney2000` and ions
+:file:`charmm36_2024/tip5pew.xml`      TIP5P-Ew water model\ :cite:`Rick2004` and ions
+=====================================  =========================================
 
 The file :file:`charmm36_2024.xml` bundles everything but the water and ions into a single
 file.  In most cases, you can simply include that file, plus one of the water models,
-such as :file:`charmm36/water.xml`, which specifies the default CHARMM water model
+such as :file:`charmm36_2024/water.xml`, which specifies the default CHARMM water model
 (a modified version of TIP3P\ :cite:`Jorgensen1983`) and ions:
 ::
 
-    forcefield = ForceField('charmm36_2024.xml', 'charmm36/water.xml')
+    forcefield = ForceField('charmm36_2024.xml', 'charmm36_2024/water.xml')
 
-.. tip:: The solvent model XML files included under the :file:`charmm36/` directory
+.. tip:: The solvent model XML files included under the :file:`charmm36_2024/` directory
          include both water *and* ions compatible with that water model, so if you
-         mistakenly specify :file:`tip3p.xml` instead of :file:`charmm36/water.xml`,
+         mistakenly specify :file:`tip3p.xml` instead of :file:`charmm36_2024/water.xml`,
          you run the risk of having :class:`ForceField` raise an exception due to
          missing parameters for ions in your system.
 
@@ -640,6 +640,13 @@ such as :file:`charmm36/water.xml`, which specifies the default CHARMM water mod
          additional bonds and nonstandard residue definitions. If you're using files from
          `CHARMM-GUI <http://charmm-gui.org/>`_, it's easiest to load
          the PSF file directly, as discussed in Section :numref:`using-charmm-files`.
+
+.. warning:: Solvent model files in the :file:`charmm36_2024/` directory are
+             designed for use with :file:`charmm36_2024.xml`, and those in the
+             :file:`charmm36/` directory are designed for use with an older
+             release of the CHARMM force field found in :file:`charmm36.xml` and
+             described below.  Be sure to load the correct version of the
+             solvent model you wish to use along with the main force field file.
 
 .. warning:: Some residues and patches are not included in this port of
              CHARMM36, either due to a lack of support for certain CHARMM
@@ -764,6 +771,7 @@ File                           Force Field
 :code:`amber03.xml`            Amber03\ :cite:`Duan2003`
 :code:`amber10.xml`            Amber10 (documented in the AmberTools_ manual as `ff10`)
 :code:`charmm36.xml`           July 2017 release of the CHARMM36 force field without CHARMM36m protein parameters
+:code:`charmm36/*.xml`         Parameters for water models and ions specifically for use with :code:`charmm36.xml`
 :code:`charmm_polar_2013.xml`  2013 version of the CHARMM polarizable force field\ :cite:`Lopes2013`
 :code:`charmm_polar_2019.xml`  2019 version of the CHARMM polarizable force field\ :cite:`Lopes2013`
 =============================  ==================================================================================

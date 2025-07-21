@@ -156,8 +156,8 @@ public:
     /**
      * Get the ContextImpl is ComputeContext is associated with.
      */
-    ContextImpl& getContextImpl() {
-        return *platformData.context;
+    ContextImpl* getContextImpl() {
+        return platformData.context;
     }
     /**
      * Get a workspace used for accumulating energy when a simulation is parallelized across

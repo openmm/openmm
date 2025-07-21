@@ -144,7 +144,7 @@ public:
     /**
      * Get the ContextImpl is ComputeContext is associated with.
      */
-    virtual ContextImpl& getContextImpl() = 0;
+    virtual ContextImpl* getContextImpl() = 0;
     /**
      * Get a workspace used for accumulating energy when a simulation is parallelized across
      * multiple devices.
@@ -593,6 +593,26 @@ public:
      * expense of reduced simulation performance.
      */
     virtual void flushQueue() = 0;
+    /**
+     * Register a global parameter whose value should be stored in the array returned by
+     * getGlobalParamValues().  This may safely be called multiple times with the same
+     * parameter name, and it returns the same index each time.
+     * 
+     * @param name    the name of the parameter to register
+     * @return the index of the parameter in the array
+     */
+    int registerGlobalParam(const std::string& name);
+    /**
+     * Get the array which contains the values of global parameters.
+     */
+    ArrayInterface& getGlobalParamValues() {
+        return globalParamValues;
+    }
+    /**
+     * Make sure the values stored in the array returned by getGlobalParamValues() are
+     * up to date.
+     */
+    void updateGlobalParamValues();
 protected:
     struct Molecule;
     struct MoleculeGroup;
@@ -608,7 +628,7 @@ protected:
     double time;
     int numAtoms, paddedNumAtoms, computeForceCount, stepsSinceReorder;
     long long stepCount;
-    bool forceNextReorder, atomsWereReordered, forcesValid;
+    bool forceNextReorder, atomsWereReordered, forcesValid, hasInitializedGlobals;
     ComputeQueue defaultQueue, currentQueue;
     std::vector<ComputeForceInfo*> forces;
     std::vector<Molecule> molecules;
@@ -618,6 +638,9 @@ protected:
     std::vector<ReorderListener*> reorderListeners;
     std::vector<ForcePreComputation*> preComputations;
     std::vector<ForcePostComputation*> postComputations;
+    std::vector<std::string> globalParamNames;
+    std::vector<double> lastGlobalParamValues;
+    ComputeArray globalParamValues;
     WorkThread* workThread;
 };
 
