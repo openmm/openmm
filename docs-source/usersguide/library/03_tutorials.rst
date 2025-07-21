@@ -142,7 +142,7 @@ Visualizing the results
 
 You can output the results to a PDB file that could be visualized using programs
 like VMD (http://www.ks.uiuc.edu/Research/vmd/) or PyMol
-(http://pymol.sourceforge.net/).  To do this within Visual Studios:
+(https://www.pymol.org).  To do this within Visual Studios:
 
 #. Right-click on the project name HelloArgon (not one of the files) and select
    the “Properties” option.
@@ -232,7 +232,7 @@ Visualizing the results
 
 You can output the results to a PDB file that could be visualized using programs
 like VMD (http://www.ks.uiuc.edu/Research/vmd/) or PyMol
-(http://pymol.sourceforge.net/) by typing:
+(https://www.pymol.org) by typing:
 ::
 
     ./HelloArgon > argon.pdb

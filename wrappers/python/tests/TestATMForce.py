@@ -21,7 +21,7 @@ class TestATMForce(unittest.TestCase):
         atmforce = ATMForce(0.5, 0.5, 0, 0, 0,   0, 0, 0,  1.0)
         atmforce.addParticle()
         p = atmforce.addParticle()
-        atmforce.setParticleTransformation(p, ATMFixedDisplacement(Vec3(1., 0., 0.)))
+        atmforce.setParticleTransformation(p, FixedDisplacement(Vec3(1., 0., 0.)))
 
         atmforce.addForce(copy.copy(nbforce))
         system.removeForce(0)
@@ -49,6 +49,7 @@ class TestATMForce(unittest.TestCase):
         epert_expected = 69.4062*kilojoules_per_mole
         assert( abs(epot-epot_expected) < 1.e-3*kilojoules_per_mole )
         assert( abs(epert-epert_expected) < 1.e-3*kilojoules_per_mole )
+        assert isinstance(atmforce.getParticleTransformation(0), FixedDisplacement)
 
     def test3ParticlesNonbondedSwap(self):
         """Test coordinate swap"""
@@ -67,11 +68,11 @@ class TestATMForce(unittest.TestCase):
 
         #particle 1's coordinate is swapped with 2
         p = atmforce.addParticle()
-        atmforce.setParticleTransformation(p, ATMVectordistanceDisplacement(2,  1))
+        atmforce.setParticleTransformation(p, ParticleOffsetDisplacement(2,  1))
 
         #particle 2's coordinate is swapped with 1
         p = atmforce.addParticle()
-        atmforce.setParticleTransformation(p, ATMVectordistanceDisplacement(1,  2))
+        atmforce.setParticleTransformation(p, ParticleOffsetDisplacement(1,  2))
 
         atmforce.addForce(nbforce)
         system.addForce(atmforce)

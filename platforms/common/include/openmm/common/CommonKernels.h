@@ -300,9 +300,6 @@ private:
     ForceInfo* info;
     const System& system;
     ComputeParameterSet* params;
-    ComputeArray globals;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
 };
 
 /**
@@ -390,9 +387,6 @@ private:
     ForceInfo* info;
     const System& system;
     ComputeParameterSet* params;
-    ComputeArray globals;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
 };
 
 /**
@@ -522,9 +516,6 @@ private:
     ForceInfo* info;
     const System& system;
     ComputeParameterSet* params;
-    ComputeArray globals;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
 };
 
 /**
@@ -613,9 +604,6 @@ private:
     ForceInfo* info;
     const System& system;
     ComputeParameterSet* params;
-    ComputeArray globals;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
 };
 
 /**
@@ -657,9 +645,6 @@ private:
     ComputeContext& cc;
     ForceInfo* info;
     ComputeParameterSet* params;
-    ComputeArray globals;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
     std::map<std::string, int> tabulatedFunctionUpdateCount;
     const System& system;
@@ -701,14 +686,12 @@ public:
 private:
     class ForceInfo;
     int numGroups, numBonds;
-    bool needEnergyParamDerivs;
+    bool needGlobalParams, needEnergyParamDerivs;
     ComputeContext& cc;
     ForceInfo* info;
     ComputeParameterSet* params;
-    ComputeArray globals, groupParticles, groupWeights, groupOffsets;
+    ComputeArray groupParticles, groupWeights, groupOffsets;
     ComputeArray groupForces, bondGroups, centerPositions;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
     std::map<std::string, int> tabulatedFunctionUpdateCount;
     std::vector<void*> groupForcesArgs;
