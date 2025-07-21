@@ -195,7 +195,7 @@ class SwigInputBuilder:
 
         # Read all the XML files and merge them into a single document.
         self.doc = etree.ElementTree(etree.Element('root'))
-        for file in os.listdir(inputDirname):
+        for file in sorted(os.listdir(inputDirname)):
             if file.lower().endswith('xml'):
                 root = etree.parse(os.path.join(inputDirname, file)).getroot()
                 for node in root:
