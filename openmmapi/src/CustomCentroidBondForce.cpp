@@ -195,3 +195,35 @@ void CustomCentroidBondForce::setUsesPeriodicBoundaryConditions(bool periodic) {
 bool CustomCentroidBondForce::usesPeriodicBoundaryConditions() const {
     return usePeriodic;
 }
+
+int CustomCentroidBondForce::getNumGroupsPerBond() const {
+    return groupsPerBond;
+}
+
+int CustomCentroidBondForce::getNumGroups() const {
+    return groups.size();
+}
+
+int CustomCentroidBondForce::getNumBonds() const {
+    return bonds.size();
+}
+
+int CustomCentroidBondForce::getNumPerBondParameters() const {
+    return bondParameters.size();
+}
+
+int CustomCentroidBondForce::getNumGlobalParameters() const {
+    return globalParameters.size();
+}
+
+int CustomCentroidBondForce::getNumTabulatedFunctions() const {
+    return functions.size();
+}
+
+int CustomCentroidBondForce::getNumFunctions() const {
+    return functions.size();
+}
+
+int CustomCentroidBondForce::getNumEnergyParameterDerivatives() const {
+    return energyParameterDerivatives.size();
+}

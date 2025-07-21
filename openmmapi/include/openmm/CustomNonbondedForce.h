@@ -195,60 +195,42 @@ public:
     /**
      * Get the number of particles for which force field parameters have been defined.
      */
-    int getNumParticles() const {
-        return particles.size();
-    }
+    int getNumParticles() const;
     /**
      * Get the number of particle pairs whose interactions should be excluded.
      */
-    int getNumExclusions() const {
-        return exclusions.size();
-    }
+    int getNumExclusions() const;
     /**
      * Get the number of per-particle parameters that the interaction depends on.
      */
-    int getNumPerParticleParameters() const {
-        return parameters.size();
-    }
+    int getNumPerParticleParameters() const;
     /**
      * Get the number of global parameters that the interaction depends on.
      */
-    int getNumGlobalParameters() const {
-        return globalParameters.size();
-    }
+    int getNumGlobalParameters() const;
     /**
      * Get the number of tabulated functions that have been defined.
      */
-    int getNumTabulatedFunctions() const {
-        return functions.size();
-    }
+    int getNumTabulatedFunctions() const;
     /**
      * Get the number of tabulated functions that have been defined.
      *
      * @deprecated This method exists only for backward compatibility.  Use getNumTabulatedFunctions() instead.
      */
-    int getNumFunctions() const {
-        return functions.size();
-    }
+    int getNumFunctions() const;
     /**
      * Get the number of per-particle computed values the interaction depends on.
      */
-    int getNumComputedValues() const {
-        return computedValues.size();
-    }
+    int getNumComputedValues() const;
     /**
      * Get the number of interaction groups that have been defined.
      */
-    int getNumInteractionGroups() const {
-        return interactionGroups.size();
-    }
+    int getNumInteractionGroups() const;
     /**
      * Get the number of global parameters with respect to which the derivative of the energy
      * should be computed.
      */
-    int getNumEnergyParameterDerivatives() const {
-        return energyParameterDerivatives.size();
-    }
+    int getNumEnergyParameterDerivatives() const;
     /**
      * Get the algebraic expression that gives the interaction energy between two particles
      */

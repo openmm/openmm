@@ -84,28 +84,20 @@ public:
     /**
      * Get the number of collective variables that the interaction depends on.
      */
-    int getNumCollectiveVariables() const {
-        return variables.size();
-    }
+    int getNumCollectiveVariables() const;
     /**
      * Get the number of global parameters that the interaction depends on.
      */
-    int getNumGlobalParameters() const {
-        return globalParameters.size();
-    }
+    int getNumGlobalParameters() const;
     /**
      * Get the number of global parameters with respect to which the derivative of the energy
      * should be computed.
      */
-    int getNumEnergyParameterDerivatives() const {
-        return energyParameterDerivatives.size();
-    }
+    int getNumEnergyParameterDerivatives() const;
     /**
      * Get the number of tabulated functions that have been defined.
      */
-    int getNumTabulatedFunctions() const {
-        return functions.size();
-    }
+    int getNumTabulatedFunctions() const;
     /**
      * Get the algebraic expression that gives the energy of the system
      */

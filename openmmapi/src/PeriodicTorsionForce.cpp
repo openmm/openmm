@@ -99,3 +99,7 @@ void PeriodicTorsionForce::setUsesPeriodicBoundaryConditions(bool periodic) {
 bool PeriodicTorsionForce::usesPeriodicBoundaryConditions() const {
     return usePeriodic;
 }
+
+int PeriodicTorsionForce::getNumTorsions() const {
+    return periodicTorsions.size();
+}
