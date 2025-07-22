@@ -49,43 +49,9 @@ ReferenceQTBDynamics::ReferenceQTBDynamics(const System& system, const QTBIntegr
     noise.resize(3*3*segmentLength*numParticles);
     randomForce.resize(segmentLength*numParticles);
     segmentVelocity.resize(segmentLength*numParticles);
-    particleType.resize(numParticles);
     for (int i = 0; i < noise.size(); i++)
         noise[i] = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-
-    // Record information about groups defined by particle types.
-
-    map<int, int> typeIndex;
-    map<int, double> massTable;
-    const auto& types = integrator.getParticleTypes();
-    double defaultAdaptationRate = integrator.getDefaultAdaptationRate();
-    for (auto particle : types) {
-        int type = particle.second;
-        double mass = system.getParticleMass(particle.first);
-        if (typeIndex.find(type) == typeIndex.end()) {
-            typeIndex[type] = typeIndex.size();
-            double rate = defaultAdaptationRate;
-            const auto& typeRates = integrator.getTypeAdaptationRates();
-            if (typeRates.find(type) != typeRates.end())
-                rate = typeRates.at(type);
-            typeAdaptationRate.push_back(rate);
-            typeParticles.push_back(vector<int>());
-            typeMass.push_back(mass);
-            massTable[type] = mass;
-        }
-        if (mass != massTable[type])
-            throw OpenMMException("QTBIntegrator: All particles of the same type must have the same mass");
-        particleType[particle.first] = typeIndex[type];
-        typeParticles[type].push_back(particle.first);
-    }
-    for (int i = 0; i < system.getNumParticles(); i++)
-        if (types.find(i) == types.end()) {
-            // This particle's type isn't set, so define a new type for it.
-            particleType[i] = typeParticles.size();
-            typeAdaptationRate.push_back(defaultAdaptationRate);
-            typeParticles.push_back({i});
-            typeMass.push_back(system.getParticleMass(i));
-        }
+    QTBIntegratorUtilities::findTypes(system, integrator, particleType, typeParticles, typeMass, typeAdaptationRate);
 
     // Calculate the target energy distribution.
 

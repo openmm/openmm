@@ -31,9 +31,48 @@
 
 #include "openmm/internal/QTBIntegratorUtilities.h"
 #include "SimTKOpenMMRealType.h"
+#include <map>
 
 using namespace OpenMM;
 using namespace std;
+
+void QTBIntegratorUtilities::findTypes(const System& system, const QTBIntegrator& integrator, vector<int>& particleType,
+        vector<std::vector<int> >& typeParticles, vector<double>& typeMass, vector<double>& typeAdaptationRate) {
+    // Record information about groups defined by particle types.
+
+    particleType.resize(system.getNumParticles());
+    map<int, int> typeIndex;
+    map<int, double> massTable;
+    const auto& types = integrator.getParticleTypes();
+    double defaultAdaptationRate = integrator.getDefaultAdaptationRate();
+    for (auto particle : types) {
+        int type = particle.second;
+        double mass = system.getParticleMass(particle.first);
+        if (typeIndex.find(type) == typeIndex.end()) {
+            typeIndex[type] = typeIndex.size();
+            double rate = defaultAdaptationRate;
+            const auto& typeRates = integrator.getTypeAdaptationRates();
+            if (typeRates.find(type) != typeRates.end())
+                rate = typeRates.at(type);
+            typeAdaptationRate.push_back(rate);
+            typeParticles.push_back(vector<int>());
+            typeMass.push_back(mass);
+            massTable[type] = mass;
+        }
+        if (mass != massTable[type])
+            throw OpenMMException("QTBIntegrator: All particles of the same type must have the same mass");
+        particleType[particle.first] = typeIndex[type];
+        typeParticles[type].push_back(particle.first);
+    }
+    for (int i = 0; i < system.getNumParticles(); i++)
+        if (types.find(i) == types.end()) {
+            // This particle's type isn't set, so define a new type for it.
+            particleType[i] = typeParticles.size();
+            typeAdaptationRate.push_back(defaultAdaptationRate);
+            typeParticles.push_back({i});
+            typeMass.push_back(system.getParticleMass(i));
+        }
+}
 
 void QTBIntegratorUtilities::calculateSpectrum(double temperature, double friction, double dt, int numFreq, vector<double>& theta, vector<double>& thetad, ThreadPool& threads) {
     // Compute the standard spectrum.

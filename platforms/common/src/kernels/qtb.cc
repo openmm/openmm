@@ -109,7 +109,8 @@ DEVICE mixed2 multiplyComplexConj(mixed2 c1, mixed2 c2) {
  */
 KERNEL void generateRandomForce(int numAtoms, int segmentLength, mixed dt, mixed friction, GLOBAL float* RESTRICT noise,
         GLOBAL mixed* RESTRICT randomForce, GLOBAL mixed4* RESTRICT velm, GLOBAL mixed* RESTRICT thetad,
-        GLOBAL mixed* RESTRICT cutoffFunction, GLOBAL mixed2* RESTRICT workspace) {
+        GLOBAL mixed* RESTRICT cutoffFunction, GLOBAL int* RESTRICT particleType, GLOBAL mixed* RESTRICT adaptedFriction,
+        GLOBAL mixed2* RESTRICT workspace) {
     const int fftLength = 3*segmentLength;
     const int numFreq = (fftLength+1)/2;
     mixed2* data0 = &workspace[GROUP_ID*3*fftLength];
@@ -121,6 +122,7 @@ KERNEL void generateRandomForce(int numAtoms, int segmentLength, mixed dt, mixed
         int atom = i/3;
         int axis = i%3;
         mixed invMass = velm[atom].w;
+        int type = particleType[atom];
         if (invMass != 0) {
             for (int j = LOCAL_ID; j < fftLength; j += LOCAL_SIZE)
                 data0[j] = make_mixed2(noise[numAtoms*(3*j+axis)+atom], 0);
@@ -128,7 +130,7 @@ KERNEL void generateRandomForce(int numAtoms, int segmentLength, mixed dt, mixed
             FFT_FORWARD
             for (int j = LOCAL_ID; j < numFreq; j += LOCAL_SIZE) {
                 mixed f = M_PI*j/(numFreq*dt);
-                mixed gamma = friction;//adaptedFriction[type][i];
+                mixed gamma = adaptedFriction[type*numFreq+j];
                 mixed cw = (1 - 2*EXP(-dt*friction)*COS(f*dt) + EXP(-2*friction*dt)) / ((friction*friction+f*f)*dt*dt);
                 mixed2 d = RECIP_DATA[j] * SQRT(cutoffFunction[j]*thetad[j]*cw*gamma/friction);
                 RECIP_DATA[j] = d;
@@ -141,6 +143,60 @@ KERNEL void generateRandomForce(int numAtoms, int segmentLength, mixed dt, mixed
             for (int j = LOCAL_ID; j < segmentLength; j += LOCAL_SIZE)
                 randomForce[numAtoms*(3*j+axis)+atom] = scale*data0[segmentLength+j].x;
             SYNC_THREADS
+        }
+    }
+}
+
+/**
+ * Update the friction rates used for generating noise, part 1: compute the error in the
+ * fluctuation dissipation theorem.
+ */
+KERNEL void adaptFrictionPart1(int numAtoms, int segmentLength, GLOBAL mixed4* RESTRICT velm, GLOBAL int* RESTRICT particleType,
+        GLOBAL mixed* RESTRICT randomForce, GLOBAL mixed* RESTRICT segmentVelocity, GLOBAL mixed* RESTRICT adaptedFriction,
+        GLOBAL mm_ulong* RESTRICT dfdt, GLOBAL mixed2* RESTRICT workspace) {
+    const int numFreq = (segmentLength+1)/2;
+    mixed2* data0 = &workspace[GROUP_ID*3*segmentLength];
+    mixed2* data1 = &data0[segmentLength];
+    mixed2* w = &data1[segmentLength];
+    for (int i = LOCAL_ID; i < segmentLength; i += LOCAL_SIZE)
+        w[i] = make_mixed2(cos(-i*2*M_PI/segmentLength), sin(-i*2*M_PI/segmentLength));
+    for (int i = GROUP_ID; i < 3*numAtoms; i += NUM_GROUPS) {
+        int atom = i/3;
+        int axis = i%3;
+        int type = particleType[atom];
+        mixed invMass = velm[atom].w;
+        if (invMass != 0) {
+            // Pack the velocities and forces together so we can transform both at once.
+            for (int j = LOCAL_ID; j < segmentLength; j += LOCAL_SIZE)
+                data0[j] = make_mixed2(segmentVelocity[numAtoms*(3*j+axis)+atom], randomForce[numAtoms*(3*j+axis)+atom]);
+            SYNC_THREADS
+            ADAPTATION_FFT
+            for (int j = LOCAL_ID; j < numFreq; j += LOCAL_SIZE) {
+                mixed2 d1 = ADAPTATION_RECIP[j];
+                mixed2 d2 = (j == 0 ? ADAPTATION_RECIP[0] : ADAPTATION_RECIP[segmentLength-j]);
+                mixed2 v = 0.5f*make_mixed2(d1.x+d2.x, d1.y-d2.y);
+                mixed2 f = 0.5f*make_mixed2(d1.y+d2.y, -d1.x+d2.x);
+                mixed cvv = v.x*v.x + v.y*v.y;
+                mixed2 cvf = multiplyComplexConj(f, v);
+                mixed dfdtinc = adaptedFriction[type*numFreq+j]*cvv/invMass - cvf.x;
+                ATOMIC_ADD(&dfdt[type*numFreq+j], (mm_ulong) realToFixedPoint(dfdtinc));
+            }
+        }
+    }
+}
+
+/**
+ * Update the friction rates used for generating noise, part 2: update the friction based
+ * on the error.
+ */
+KERNEL void adaptFrictionPart2(int numTypes, int segmentLength, mixed dt, GLOBAL int* RESTRICT typeParticleCount,
+        GLOBAL float* RESTRICT typeAdaptationRate, GLOBAL mixed* RESTRICT adaptedFriction, GLOBAL mm_long* RESTRICT dfdt) {
+    int numFreq = (3*segmentLength+1)/2;
+    for (int type = GROUP_ID; type < numTypes; type += NUM_GROUPS) {
+        mixed scale = dt*typeAdaptationRate[type]/(3*typeParticleCount[type]*segmentLength)/(mixed) 0x100000000;
+        for (int i = LOCAL_ID; i < numFreq; i += LOCAL_SIZE) {
+            mixed delta = -scale*dfdt[type*numFreq+i];
+            adaptedFriction[type*numFreq+i] = max((mixed) 0, adaptedFriction[type*numFreq+i]+delta);
         }
     }
 }

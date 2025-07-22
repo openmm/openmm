@@ -99,10 +99,12 @@ public:
 private:
     std::string createFFT(int size, int inputIndex, int& outputIndex, bool forward);
     ComputeContext& cc;
-    int segmentLength, stepIndex, numFreq;
+    int segmentLength, stepIndex, numFreq, numTypes;
     double prevTemp, dt, friction;
+    std::vector<int> particleTypeVec;
     ComputeArray oldDelta, noise, randomForce, segmentVelocity, thetad, cutoffFunction, workspace;
-    ComputeKernel kernel1, kernel2, kernel3, noiseKernel, forceKernel;
+    ComputeArray particleType, typeParticleCount, typeAdaptationRate, adaptedFriction, dfdt;
+    ComputeKernel kernel1, kernel2, kernel3, noiseKernel, forceKernel, adapt1Kernel, adapt2Kernel;
     bool hasInitializedKernels;
 };
 

@@ -32,6 +32,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/QTBIntegrator.h"
+#include "openmm/System.h"
 #include "openmm/internal/ThreadPool.h"
 #include <vector>
 
@@ -43,6 +45,18 @@ namespace OpenMM {
 
 class OPENMM_EXPORT QTBIntegratorUtilities {
 public:
+    /**
+     * Identify unique particle types, and record the sets of particles with the same type.
+     * 
+     * @param system              the System being simulated
+     * @param integrator          the integrator defining the particle types
+     * @param particleType        on exit, element i is the type index of particle i
+     * @param typeParticles       on exit, element i contains the indices of all particles with type i
+     * @param typeMass            on exit, element i contains the mass of particles with type i
+     * @param typeAdaptationRate  on exit, element i contains the adaptation rate of particles with type i
+     */
+    static void findTypes(const System& system, const QTBIntegrator& integrator, std::vector<int>& particleType,
+            std::vector<std::vector<int> >& typeParticles, std::vector<double>& typeMass, std::vector<double>& typeAdaptationRate);
     /**
      * Calculate the target noise spectrum.
      * 

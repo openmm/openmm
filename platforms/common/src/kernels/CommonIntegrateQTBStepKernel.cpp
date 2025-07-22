@@ -66,6 +66,25 @@ void CommonIntegrateQTBStepKernel::initialize(const System& system, const QTBInt
         cf[i] = 1.0/(1.0+exp((w-cutoff)/cutoffWidth));
     }
     cutoffFunction.upload(cf, true);
+    vector<double> typeMassVec, typeAdaptationRateVec;
+    vector<vector<int> > typeParticles;
+    QTBIntegratorUtilities::findTypes(system, integrator, particleTypeVec, typeParticles, typeMassVec, typeAdaptationRateVec);
+    particleType.initialize<int>(cc, particleTypeVec.size(), "particleType");
+    particleType.upload(particleTypeVec);
+    typeAdaptationRate.initialize<float>(cc, typeAdaptationRateVec.size(), "typeAdaptationRate");
+    typeAdaptationRate.upload(typeAdaptationRateVec, true);
+    vector<int> typeParticleCountVec(typeParticles.size());
+    for (int i = 0; i < typeParticleCountVec.size(); i++)
+        typeParticleCountVec[i] = typeParticles[i].size();
+    typeParticleCount.initialize<int>(cc, typeParticleCountVec.size(), "typeParticleCount");
+    typeParticleCount.upload(typeParticleCountVec);
+    numTypes = typeParticles.size();
+    adaptedFriction.initialize(cc, numFreq*numTypes, elementSize, "adaptedFriction");
+    vector<double> adaptedFrictionVec(adaptedFriction.getSize(), friction);
+    adaptedFriction.upload(adaptedFrictionVec, true);
+    dfdt.initialize(cc, adaptedFriction.getSize(), sizeof(long long), "dfdt");
+
+    // Create the kernels.
 
     map<string, string> defines, replacements;
     defines["M_PI"] = cc.doubleToString(M_PI);
@@ -73,12 +92,16 @@ void CommonIntegrateQTBStepKernel::initialize(const System& system, const QTBInt
     replacements["FFT_FORWARD"] = createFFT(3*segmentLength, 0, outputIndex, true);
     replacements["RECIP_DATA"] = (outputIndex == 0 ? "data0" : "data1");
     replacements["FFT_BACKWARD"] = createFFT(3*segmentLength, outputIndex, outputIndex, false);
+    replacements["ADAPTATION_FFT"] = createFFT(segmentLength, 0, outputIndex, true);
+    replacements["ADAPTATION_RECIP"] = (outputIndex == 0 ? "data0" : "data1");
     ComputeProgram program = cc.compileProgram(cc.replaceStrings(CommonKernelSources::qtb, replacements), defines);
     kernel1 = program->createKernel("integrateQTBPart1");
     kernel2 = program->createKernel("integrateQTBPart2");
     kernel3 = program->createKernel("integrateQTBPart3");
     noiseKernel = program->createKernel("generateNoise");
     forceKernel = program->createKernel("generateRandomForce");
+    adapt1Kernel = program->createKernel("adaptFrictionPart1");
+    adapt2Kernel = program->createKernel("adaptFrictionPart2");
     stepIndex = 0;
     prevTemp = -1.0;
 }
@@ -147,7 +170,28 @@ void CommonIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegr
         forceKernel->addArg(cc.getVelm());
         forceKernel->addArg(thetad);
         forceKernel->addArg(cutoffFunction);
+        forceKernel->addArg(particleType);
+        forceKernel->addArg(adaptedFriction);
         forceKernel->addArg(workspace);
+        adapt1Kernel->addArg(numAtoms);
+        adapt1Kernel->addArg(segmentLength);
+        adapt1Kernel->addArg(cc.getVelm());
+        adapt1Kernel->addArg(particleType);
+        adapt1Kernel->addArg(randomForce);
+        adapt1Kernel->addArg(segmentVelocity);
+        adapt1Kernel->addArg(adaptedFriction);
+        adapt1Kernel->addArg(dfdt);
+        adapt1Kernel->addArg(workspace);
+        adapt2Kernel->addArg(numAtoms);
+        adapt2Kernel->addArg(segmentLength);
+        if (useDouble)
+            adapt2Kernel->addArg(dt);
+        else
+            adapt2Kernel->addArg((float) dt);
+        adapt2Kernel->addArg(typeParticleCount);
+        adapt2Kernel->addArg(typeAdaptationRate);
+        adapt2Kernel->addArg(adaptedFriction);
+        adapt2Kernel->addArg(dfdt);
     }
     cc.getIntegrationUtilities().setNextStepSize(dt);
 
@@ -160,6 +204,9 @@ void CommonIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegr
             thetad.upload(thetadVec, true);
             prevTemp = temperature;
         }
+        cc.clearBuffer(dfdt);
+        adapt1Kernel->execute(3*numAtoms*128, 128);
+        adapt2Kernel->execute(numTypes*128, 128);
         noiseKernel->setArg(4, integration.prepareRandomNumbers(numAtoms*segmentLength));
         noiseKernel->execute(numAtoms*segmentLength);
         forceKernel->execute(3*numAtoms*128, 128);
@@ -194,6 +241,22 @@ double CommonIntegrateQTBStepKernel::computeKineticEnergy(ContextImpl& context, 
 }
 
 void CommonIntegrateQTBStepKernel::getAdaptedFriction(ContextImpl& context, int particle, std::vector<double>& friction) const {
+    ASSERT_VALID_INDEX(particle, particleTypeVec);
+    int type = particleTypeVec[particle];
+    friction.resize(numFreq);
+    ContextSelector selector(cc);
+    if (cc.getUseMixedPrecision() || cc.getUseDoublePrecision()) {
+        vector<double> adaptedFrictionVec;
+        adaptedFriction.download(adaptedFrictionVec);
+        for (int i = 0; i < numFreq; i++)
+            friction[i] = adaptedFrictionVec[type*numFreq+i];
+    }
+    else {
+        vector<float> adaptedFrictionVec;
+        adaptedFriction.download(adaptedFrictionVec);
+        for (int i = 0; i < numFreq; i++)
+            friction[i] = adaptedFrictionVec[type*numFreq+i];
+    }
 }
 
 void CommonIntegrateQTBStepKernel::setAdaptedFriction(ContextImpl& context, int particle, const std::vector<double>& friction) {
