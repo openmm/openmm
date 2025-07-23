@@ -530,16 +530,16 @@ class TestAPIUnits(unittest.TestCase):
         """Tests the ATMForce API features"""
         force = ATMForce(0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.6, 0.8, -1.0);
 
-        #particle 0: fixed displacements, old interface
+        #particle 0: fixed displacements, 
         force.addParticle(Vec3(1, 2, 3), Vec3(4, 5, 6))
 
         #particle 1: fixed displacements using a Transformation object
         p = force.addParticle()
-        force.setParticleTransformation(p, ATMFixedDisplacement(Vec3(7, 8, 9), Vec3(10, 11, 12)))
+        force.setParticleTransformation(p, FixedDisplacement(Vec3(7, 8, 9), Vec3(10, 11, 12)))
 
         #particle 2: particle distance displacement 
         p = force.addParticle()
-        force.setParticleTransformation(p, ATMVectordistanceDisplacement(1, 0))
+        force.setParticleTransformation(p, ParticleOffsetDisplacement(1, 0))
 
         #particle 3: stationary particle
         force.addParticle()
@@ -558,13 +558,13 @@ class TestAPIUnits(unittest.TestCase):
         self.assertEqual(Vec3(1, 2, 3)*nanometers, d1)
         self.assertEqual(Vec3(4, 5, 6)*nanometers, d0)
 
-        fixed_displacement_transformation = force.getParticleFixedDisplacementTransformation(1)
+        fixed_displacement_transformation = force.getParticleTransformation(1)
         d1 = fixed_displacement_transformation.getFixedDisplacement1()
         d0 = fixed_displacement_transformation.getFixedDisplacement0()
         self.assertEqual(Vec3(7, 8, 9)*nanometers, d1)
         self.assertEqual(Vec3(10, 11, 12)*nanometers, d0)
 
-        vectordistance_displacement_transformation = force.getParticleVectordistanceDisplacementTransformation(2)
+        vectordistance_displacement_transformation = force.getParticleTransformation(2)
         j1 = vectordistance_displacement_transformation.getDestinationParticle1()
         i1 = vectordistance_displacement_transformation.getOriginParticle1()
         j0 = vectordistance_displacement_transformation.getDestinationParticle0()
@@ -573,20 +573,6 @@ class TestAPIUnits(unittest.TestCase):
         self.assertEqual( 0, i1)
         self.assertEqual(-1, j0)
         self.assertEqual(-1, i0)
-
-        transformation = force.getParticleTransformation(2)
-        transformationName = transformation.getName()
-        self.assertEqual("VectordistanceDisplacement", transformationName)
-        if transformationName == "VectordistanceDisplacement":
-            vectordistance_displacement_transformation = force.getParticleVectordistanceDisplacementTransformation(2)
-            j1 = vectordistance_displacement_transformation.getDestinationParticle1()
-            i1 = vectordistance_displacement_transformation.getOriginParticle1()
-            j0 = vectordistance_displacement_transformation.getDestinationParticle0()
-            i0 = vectordistance_displacement_transformation.getOriginParticle0()
-            self.assertEqual( 1, j1)
-            self.assertEqual( 0, i1)
-            self.assertEqual(-1, j0)
-            self.assertEqual(-1, i0)
 
         transformation = force.getParticleTransformation(3)
         d1, d0 = force.getParticleParameters(3)

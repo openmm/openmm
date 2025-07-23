@@ -301,8 +301,8 @@ public:
      *
      * @deprecated This method exists only for backward compatibility.  Use:
      *   const ATMForce::CoordinateTransformation& transformation = getParticleTransformation(index);
-     *   Vec3 displacement1 = dynamic_cast<const ATMFixedDisplacement*>(&transformation)->getFixedDisplacement1();
-     *   Vec3 displacement0 = dynamic_cast<const ATMFixedDisplacement*>(&transformation)->getFixedDisplacement0();
+     *   Vec3 displacement1 = dynamic_cast<const ATMForce::FixedDisplacement*>(&transformation)->getFixedDisplacement1();
+     *   Vec3 displacement0 = dynamic_cast<const ATMForce::FixedDisplacement*>(&transformation)->getFixedDisplacement0();
      *
      * @param index           the index in the force for the particle for which to get parameters
      * @param displacement1   the fixed lab-frame displacement of the particle for the target state in nm

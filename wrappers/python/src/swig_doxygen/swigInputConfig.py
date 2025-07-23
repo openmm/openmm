@@ -526,8 +526,6 @@ UNITS = {
 ("ATMForce", "getDefaultAcore") :  (None, ()),
 ("ATMForce", "getParticleParameters") : (None, ("unit.nanometer", "unit.nanometer")),
 ("ATMForce", "getParticleTransformation") : (None, ()),
-("ATMForce", "getParticleFixedDisplacementTransformation") : (None, ()),
-("ATMForce", "getParticleVectordistanceDisplacementTransformation") : (None, ()),
 ("FixedDisplacement", "getFixedDisplacement1") : ("unit.nanometer", ()),
 ("FixedDisplacement", "getFixedDisplacement0") : ("unit.nanometer", ()),
 }
