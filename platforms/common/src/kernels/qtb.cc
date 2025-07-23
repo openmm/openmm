@@ -82,17 +82,24 @@ KERNEL void integrateQTBPart3(int numAtoms, mixed dt, GLOBAL real4* RESTRICT pos
 }
 
 /**
- * Update the buffer of white noise for the next segment.
+ * Rotate the buffer of white noise.
  */
-KERNEL void generateNoise(int numAtoms, int segmentLength, GLOBAL float* RESTRICT noise, GLOBAL const float4* RESTRICT random, unsigned int randomIndex) {
+KERNEL void generateNoisePart1(int numAtoms, int segmentLength, GLOBAL float* RESTRICT noise) {
     int offset = 3*numAtoms*segmentLength;
     for (int i = GLOBAL_ID; i < 6*numAtoms*segmentLength; i += GLOBAL_SIZE)
         noise[i] = noise[i+offset];
+}
+
+/**
+ * Fill in the white noise for the next segment.
+ */
+KERNEL void generateNoisePart2(int numAtoms, int segmentLength, GLOBAL float* RESTRICT noise, GLOBAL const float4* RESTRICT random, unsigned int randomIndex) {
+    int offset = 6*numAtoms*segmentLength;
     for (int i = GLOBAL_ID; i < numAtoms*segmentLength; i += GLOBAL_SIZE) {
         float4 r = random[randomIndex+i];
-        noise[2*offset+i] = r.x;
-        noise[2*offset+numAtoms+i] = r.y;
-        noise[2*offset+2*numAtoms+i] = r.z;
+        noise[offset+i] = r.x;
+        noise[offset+numAtoms*segmentLength+i] = r.y;
+        noise[offset+2*numAtoms*segmentLength+i] = r.z;
     }
 }
 
@@ -113,9 +120,9 @@ KERNEL void generateRandomForce(int numAtoms, int segmentLength, mixed dt, mixed
         GLOBAL mixed2* RESTRICT workspace) {
     const int fftLength = 3*segmentLength;
     const int numFreq = (fftLength+1)/2;
-    mixed2* data0 = &workspace[GROUP_ID*3*fftLength];
-    mixed2* data1 = &data0[fftLength];
-    mixed2* w = &data1[fftLength];
+    GLOBAL mixed2* data0 = &workspace[GROUP_ID*3*fftLength];
+    GLOBAL mixed2* data1 = &data0[fftLength];
+    GLOBAL mixed2* w = &data1[fftLength];
     for (int i = LOCAL_ID; i < fftLength; i += LOCAL_SIZE)
         w[i] = make_mixed2(cos(-i*2*M_PI/fftLength), sin(-i*2*M_PI/fftLength));
     for (int i = GROUP_ID; i < 3*numAtoms; i += NUM_GROUPS) {
@@ -155,9 +162,9 @@ KERNEL void adaptFrictionPart1(int numAtoms, int segmentLength, GLOBAL mixed4* R
         GLOBAL mixed* RESTRICT randomForce, GLOBAL mixed* RESTRICT segmentVelocity, GLOBAL mixed* RESTRICT adaptedFriction,
         GLOBAL mm_ulong* RESTRICT dfdt, GLOBAL mixed2* RESTRICT workspace) {
     const int numFreq = (segmentLength+1)/2;
-    mixed2* data0 = &workspace[GROUP_ID*3*segmentLength];
-    mixed2* data1 = &data0[segmentLength];
-    mixed2* w = &data1[segmentLength];
+    GLOBAL mixed2* data0 = &workspace[GROUP_ID*3*segmentLength];
+    GLOBAL mixed2* data1 = &data0[segmentLength];
+    GLOBAL mixed2* w = &data1[segmentLength];
     for (int i = LOCAL_ID; i < segmentLength; i += LOCAL_SIZE)
         w[i] = make_mixed2(cos(-i*2*M_PI/segmentLength), sin(-i*2*M_PI/segmentLength));
     for (int i = GROUP_ID; i < 3*numAtoms; i += NUM_GROUPS) {

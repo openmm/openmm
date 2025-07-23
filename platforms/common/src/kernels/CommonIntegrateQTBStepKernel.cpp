@@ -98,7 +98,8 @@ void CommonIntegrateQTBStepKernel::initialize(const System& system, const QTBInt
     kernel1 = program->createKernel("integrateQTBPart1");
     kernel2 = program->createKernel("integrateQTBPart2");
     kernel3 = program->createKernel("integrateQTBPart3");
-    noiseKernel = program->createKernel("generateNoise");
+    noise1Kernel = program->createKernel("generateNoisePart1");
+    noise2Kernel = program->createKernel("generateNoisePart2");
     forceKernel = program->createKernel("generateRandomForce");
     adapt1Kernel = program->createKernel("adaptFrictionPart1");
     adapt2Kernel = program->createKernel("adaptFrictionPart2");
@@ -150,11 +151,14 @@ void CommonIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegr
         kernel3->addArg(oldDelta);
         if (cc.getUseMixedPrecision())
             kernel3->addArg(cc.getPosqCorrection());
-        noiseKernel->addArg(numAtoms);
-        noiseKernel->addArg(segmentLength);
-        noiseKernel->addArg(noise);
-        noiseKernel->addArg(integration.getRandom());
-        noiseKernel->addArg(); // Random index will be set just before it is executed.
+        noise1Kernel->addArg(numAtoms);
+        noise1Kernel->addArg(segmentLength);
+        noise1Kernel->addArg(noise);
+        noise2Kernel->addArg(numAtoms);
+        noise2Kernel->addArg(segmentLength);
+        noise2Kernel->addArg(noise);
+        noise2Kernel->addArg(integration.getRandom());
+        noise2Kernel->addArg(); // Random index will be set just before it is executed.
         forceKernel->addArg(numAtoms);
         forceKernel->addArg(segmentLength);
         if (useDouble) {
@@ -207,8 +211,9 @@ void CommonIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegr
         cc.clearBuffer(dfdt);
         adapt1Kernel->execute(3*numAtoms*128, 128);
         adapt2Kernel->execute(numTypes*128, 128);
-        noiseKernel->setArg(4, integration.prepareRandomNumbers(numAtoms*segmentLength));
-        noiseKernel->execute(numAtoms*segmentLength);
+        noise1Kernel->execute(6*numAtoms*segmentLength);
+        noise2Kernel->setArg(4, integration.prepareRandomNumbers(numAtoms*segmentLength));
+        noise2Kernel->execute(numAtoms*segmentLength);
         forceKernel->execute(3*numAtoms*128, 128);
         stepIndex = 0;
     }
@@ -296,11 +301,11 @@ void CommonIntegrateQTBStepKernel::createCheckpoint(ContextImpl& context, ostrea
     }
     else {
         randomForce.download(f);
-        stream.write((char*) f.data(), sizeof(double)*f.size());
+        stream.write((char*) f.data(), sizeof(float)*f.size());
         segmentVelocity.download(f);
-        stream.write((char*) f.data(), sizeof(double)*f.size());
+        stream.write((char*) f.data(), sizeof(float)*f.size());
         adaptedFriction.download(f);
-        stream.write((char*) f.data(), sizeof(double)*f.size());
+        stream.write((char*) f.data(), sizeof(float)*f.size());
     }
 }
 

@@ -104,7 +104,7 @@ private:
     std::vector<int> particleTypeVec;
     ComputeArray oldDelta, noise, randomForce, segmentVelocity, thetad, cutoffFunction, workspace;
     ComputeArray particleType, typeParticleCount, typeAdaptationRate, adaptedFriction, dfdt;
-    ComputeKernel kernel1, kernel2, kernel3, noiseKernel, forceKernel, adapt1Kernel, adapt2Kernel;
+    ComputeKernel kernel1, kernel2, kernel3, noise1Kernel, noise2Kernel, forceKernel, adapt1Kernel, adapt2Kernel;
     bool hasInitializedKernels;
 };
 
