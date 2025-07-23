@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2011-2020 Stanford University and Simbios.
+/* Portions copyright (c) 2011-2023 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -233,7 +233,7 @@ ExpressionTreeNode ReferenceCustomDynamics::replaceDerivFunctions(const Expressi
 
 void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, vector<Vec3>& atomCoordinates,
                                      vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& masses,
-                                     map<string, double>& globals, vector<vector<Vec3> >& perDof, bool& forcesAreValid, double tolerance) {
+                                     map<string, double>& globals, vector<vector<Vec3> >& perDof, bool& forcesAreValid, double tolerance, const Vec3* boxVectors) {
     if (!initialized)
         initialize(context, masses, globals);
     int numSteps = stepType.size();
@@ -353,7 +353,7 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
         }
         step = nextStep;
     }
-    getVirtualSites().computePositions(context.getSystem(), atomCoordinates);
+    getVirtualSites().computePositions(context.getSystem(), atomCoordinates, boxVectors);
     incrementTimeStep();
     recordChangedParameters(context, globals);
 }
