@@ -182,7 +182,7 @@ void CommonIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegr
         adapt1Kernel->addArg(adaptedFriction);
         adapt1Kernel->addArg(dfdt);
         adapt1Kernel->addArg(workspace);
-        adapt2Kernel->addArg(numAtoms);
+        adapt2Kernel->addArg(numTypes);
         adapt2Kernel->addArg(segmentLength);
         if (useDouble)
             adapt2Kernel->addArg(dt);
@@ -260,12 +260,79 @@ void CommonIntegrateQTBStepKernel::getAdaptedFriction(ContextImpl& context, int 
 }
 
 void CommonIntegrateQTBStepKernel::setAdaptedFriction(ContextImpl& context, int particle, const std::vector<double>& friction) {
+    ASSERT_VALID_INDEX(particle, particleTypeVec);
+    int type = particleTypeVec[particle];
+    ContextSelector selector(cc);
+    if (cc.getUseMixedPrecision() || cc.getUseDoublePrecision()) {
+        vector<double> adaptedFrictionVec;
+        adaptedFriction.download(adaptedFrictionVec);
+        for (int i = 0; i < numFreq; i++)
+            adaptedFrictionVec[type*numFreq+i] = friction[i];
+        adaptedFriction.upload(adaptedFrictionVec);
+    }
+    else {
+        vector<float> adaptedFrictionVec;
+        adaptedFriction.download(adaptedFrictionVec);
+        for (int i = 0; i < numFreq; i++)
+            adaptedFrictionVec[type*numFreq+i] = friction[i];
+        adaptedFriction.upload(adaptedFrictionVec);
+    }
 }
 
 void CommonIntegrateQTBStepKernel::createCheckpoint(ContextImpl& context, ostream& stream) const {
+    ContextSelector selector(cc);
+    stream.write((char*) &stepIndex, sizeof(int));
+    vector<float> f;
+    noise.download(f);
+    stream.write((char*) f.data(), sizeof(float)*f.size());
+    if (cc.getUseMixedPrecision() || cc.getUseDoublePrecision()) {
+        vector<double> d;
+        randomForce.download(d);
+        stream.write((char*) d.data(), sizeof(double)*d.size());
+        segmentVelocity.download(d);
+        stream.write((char*) d.data(), sizeof(double)*d.size());
+        adaptedFriction.download(d);
+        stream.write((char*) d.data(), sizeof(double)*d.size());
+    }
+    else {
+        randomForce.download(f);
+        stream.write((char*) f.data(), sizeof(double)*f.size());
+        segmentVelocity.download(f);
+        stream.write((char*) f.data(), sizeof(double)*f.size());
+        adaptedFriction.download(f);
+        stream.write((char*) f.data(), sizeof(double)*f.size());
+    }
 }
 
 void CommonIntegrateQTBStepKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
+    ContextSelector selector(cc);
+    stream.read((char*) &stepIndex, sizeof(int));
+    vector<float> f(noise.getSize());
+    stream.read((char*) f.data(), sizeof(float)*noise.getSize());
+    noise.upload(f);
+    if (cc.getUseMixedPrecision() || cc.getUseDoublePrecision()) {
+        vector<double> d;
+        d.resize(randomForce.getSize());
+        stream.read((char*) d.data(), sizeof(double)*d.size());
+        randomForce.upload(d);
+        d.resize(segmentVelocity.getSize());
+        stream.read((char*) d.data(), sizeof(double)*d.size());
+        segmentVelocity.upload(d);
+        d.resize(adaptedFriction.getSize());
+        stream.read((char*) d.data(), sizeof(double)*d.size());
+        adaptedFriction.upload(d);
+    }
+    else {
+        f.resize(randomForce.getSize());
+        stream.read((char*) f.data(), sizeof(float)*f.size());
+        randomForce.upload(f);
+        f.resize(segmentVelocity.getSize());
+        stream.read((char*) f.data(), sizeof(float)*f.size());
+        segmentVelocity.upload(f);
+        f.resize(adaptedFriction.getSize());
+        stream.read((char*) f.data(), sizeof(float)*f.size());
+        adaptedFriction.upload(f);
+    }
 }
 
 string CommonIntegrateQTBStepKernel::createFFT(int size, int inputIndex, int& outputIndex, bool forward) {

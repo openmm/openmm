@@ -844,6 +844,8 @@ void IntegrationUtilities::createCheckpoint(ostream& stream) {
     if (!random.isInitialized())
         return;
     stream.write((char*) &randomPos, sizeof(int));
+    int numRandom = random.getSize();
+    stream.write((char*) &numRandom, sizeof(int));
     vector<mm_float4> randomVec;
     random.download(randomVec);
     stream.write((char*) &randomVec[0], sizeof(mm_float4)*random.getSize());
@@ -856,6 +858,12 @@ void IntegrationUtilities::loadCheckpoint(istream& stream) {
     if (!random.isInitialized())
         return;
     stream.read((char*) &randomPos, sizeof(int));
+    int numRandom;
+    stream.read((char*) &numRandom, sizeof(int));
+    if (numRandom != random.getSize()) {
+        random.resize(numRandom);
+        randomKernel->setArg(0, numRandom);
+    }
     vector<mm_float4> randomVec(random.getSize());
     stream.read((char*) &randomVec[0], sizeof(mm_float4)*random.getSize());
     random.upload(randomVec);
