@@ -41,6 +41,7 @@ import warnings
 from math import sqrt, cos
 from copy import deepcopy
 from collections import Counter, defaultdict
+from difflib import SequenceMatcher
 import openmm as mm
 import openmm.unit as unit
 from . import element as elem
@@ -1878,23 +1879,49 @@ def _findMatchErrors(forcefield, res):
             messages.append(f'is missing {message}')
         if extra:
             message = joinMessages(f'{diff} {formatter(key, diff)}' for key, diff in sorted(extra))
-            messages.append(f'has {message} extra')
+            messages.append(f'has {message} too many')
         return joinMessages(messages)
 
     def formatAtomDiff(key, diff):
         """Formats a string describing an element associated with a different number of atoms."""
-        return (f'{elem.Element.getByAtomicNumber(key).symbol} atom' if key else 'site') + ('' if diff == 1 else 's')
+        return (f'{elem.Element.getByAtomicNumber(key).symbol} atom' if key else 'extra site') + ('' if diff == 1 else 's')
 
     def formatBondDiff(key, diff):
         """Formats a string describing elements associated with a different number of bonds."""
-        name1 = elem.Element.getByAtomicNumber(key[0]).symbol if key else 'site'
-        name2 = elem.Element.getByAtomicNumber(key[1]).symbol if key else 'site'
+        name1 = elem.Element.getByAtomicNumber(key[0]).symbol if key else 'extra site'
+        name2 = elem.Element.getByAtomicNumber(key[1]).symbol if key else 'extra site'
         return f'{name1}-{name2} bond' + ('' if diff == 1 else 's')
 
-    # Prepare fingerprints of the residue and templates based on counts of the
-    # elements of their atoms.
+    def pickBestMatch(bestMatches):
+        """If there are multiple best-scoring matches, pick one with the closest name to the residue.  Call only with a non-empty list."""
+        if not res.name:
+            return bestMatches[0]
+        return max(bestMatches, key=lambda match: SequenceMatcher(a=res.name.strip(), b=match.strip(), autojunk=False).ratio())
 
+    # First check to see if there are no templates in the force field.
+
+    if not forcefield._templates:
+        return f'The force field contains no residue templates.'
+
+    # Get all elements in all templates in the force field and see if this
+    # residue uses an element not supported.  Otherwise, prepare fingerprints of
+    # the residue and templates based on counts of the elements of their atoms.
+
+    supportedElements = set(elemToNum(atom.element) for template in forcefield._templates.values() for atom in template.atoms)
     residueAtomCounts = Counter(elemToNum(atom.element) for atom in res.atoms())
+    unsupportedElements = set(residueAtomCounts.keys()) - supportedElements
+    if unsupportedElements:
+        unsupportedMessage = joinMessages(formatAtomDiff(elemNum, 0) for elemNum in sorted(unsupportedElements))
+        return f'The residue contains {unsupportedMessage}, which are not supported by any template in the force field.'
+
+    # It will be useful to provide a special message if this is a terminal
+    # residue of the chain, since this is a common cause of topology problems.
+
+    chainResidues = list(res.chain.residues())
+    if len(chainResidues) > 1 and (res == chainResidues[0] or res == chainResidues[-1]):
+        terminalMessage = '  Is the chain terminated in a way that is unsupported by the force field?'
+    else:
+        terminalMessage = ''
 
     def makeTemplateAtomDiff(templateName):
         """Prepares a Counter describing the difference between a residue's and a template's atoms."""
@@ -1913,10 +1940,23 @@ def _findMatchErrors(forcefield, res):
         # If there are matches found and the best score's sum is non-zero
         # (an imperfect match), return.  Otherwise, if the best matches are
         # perfect, keep filtering with additional criteria.
-        return f'The set of atoms is similar to {bestMatches[0]}, but {formatDiffMessage(templatesAtomDiffs[bestMatches[0]], formatAtomDiff)}.'
+        bestMatch = pickBestMatch(bestMatches)
+        return f'The set of atoms is similar to {bestMatch}, but {formatDiffMessage(templatesAtomDiffs[bestMatch], formatAtomDiff)}.{terminalMessage}'
     bestMatches, bestScore = bestMatchAtom(templatesAtomDiffs, bestMatches, False)
     if bestMatches and bestScore[1]:
-        return f'The set of heavy atoms matches {bestMatches[0]}, but the residue {formatDiffMessage(templatesAtomDiffs[bestMatches[0]], formatAtomDiff)}.'
+        bestMatch = pickBestMatch(bestMatches)
+        bestMatchDiffs = templatesAtomDiffs[bestMatch]
+        # Give additional help in the special cases where the residue is missing
+        # sites or hydrogen atoms and nothing else.
+        if bestMatchDiffs[0] < 0 and all(diff == 0 for key, diff in bestMatchDiffs.items() if key != 0):
+            specialLabel = 'it' if bestMatchDiffs[0] == -1 else 'them'
+            specialMessage = f'  You may be able to add {specialLabel} with Modeller.addExtraParticles().'
+        elif bestMatchDiffs[1] < 0 and all(diff == 0 for key, diff in bestMatchDiffs.items() if key != 1):
+            specialLabel = 'it' if bestMatchDiffs[1] == -1 else 'them'
+            specialMessage = f'  You may be able to add {specialLabel} with Modeller.addHydrogens().'
+        else:
+            specialMessage = terminalMessage
+        return f'The set of heavy atoms matches {bestMatch}, but the residue {formatDiffMessage(bestMatchDiffs, formatAtomDiff)}.{specialMessage}'
 
     # We found templates that are atom-for-atom matches to the residue, so now
     # prepare fingerprints of the residue and templates based on their bonds.
@@ -1930,11 +1970,17 @@ def _findMatchErrors(forcefield, res):
         return counterSubtract(residueIntBondCounts, Counter(makeIntBondSpec((template.atoms[atom1], template.atoms[atom2])) for atom1, atom2 in template.bonds))
 
     # We only need to prepare data for the templates remaining in bestMatches.
+
     templatesIntBondDiffs = {templateName: makeTemplateIntBondDiff(templateName) for templateName in bestMatches}
 
     bestMatches, bestScore = bestMatchBond(templatesIntBondDiffs, bestMatches)
     if bestMatches and bestScore[1]:
-        return f'The set of atoms matches {bestMatches[0]}, but the residue {formatDiffMessage(templatesIntBondDiffs[bestMatches[0]], formatBondDiff)}.'
+        bestMatch = pickBestMatch(bestMatches)
+        if not tuple(res.internal_bonds()):
+            # Special message when the residue is missing all internal bonds.
+            return (f'The set of atoms matches {bestMatch}, but the residue has no bonds between its atoms.  '
+                'If the topology was read from a PDB, it may contain non-standard residues/names and/or be missing CONECT records.')
+        return f'The set of atoms matches {bestMatch}, but the residue {formatDiffMessage(templatesIntBondDiffs[bestMatch], formatBondDiff)}.'
 
     # Finally, check external bonds.  Normally these should always be from heavy
     # atoms, so don't do separate checks excluding vs. including non-heavy atoms
@@ -1951,14 +1997,24 @@ def _findMatchErrors(forcefield, res):
 
     bestMatches, bestScore = bestMatchAtom(templatesExtBondDiffs, bestMatches, False)
     if bestMatches and bestScore[1]:
-        return f'The residue matches {bestMatches[0]}, but the set of externally bonded atoms {formatDiffMessage(templatesExtBondDiffs[bestMatches[0]], formatAtomDiff)}.'
+        bestMatch = pickBestMatch(bestMatches)
+        bestMatchDiffs = templatesExtBondDiffs[bestMatch]
+        if all(value <= 0 for value in bestMatchDiffs.values()):
+            # Special message if external bonds are missing only, not different.
+            specialMessage = '  Is the chain missing a terminal capping group?'
+        else:
+            specialMessage = terminalMessage
+        return f'The atoms and bonds in the residue match {bestMatch}, but the set of externally bonded atoms {formatDiffMessage(bestMatchDiffs, formatAtomDiff)}.{specialMessage}'
 
     # If we have matches at this point, atoms and bonds match perfectly, so the
     # connectivity must be different.  If bestMatches is empty, something else
     # went wrong, so return a generic error message.
 
     if bestMatches:
-        return f'The atoms and bonds in the residue match {bestMatches[0]}, but the connectivity is different.'
+        # Display all possible matching templates at this point to try to help,
+        # since we can't give any more detailed information.
+        return f'The atoms and bonds in the residue match {joinMessages(bestMatches)}, but the connectivity is different.'
+
     return 'This might mean your input topology is missing some atoms or bonds, or possibly that you are using the wrong force field.'
 
 def _createResidueTemplate(residue):
