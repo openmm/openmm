@@ -61,15 +61,11 @@ public:
     /**
      * Get the number of maps that have been defined.
      */
-    int getNumMaps() const {
-        return maps.size();
-    }
+    int getNumMaps() const;
     /**
      * Get the number of CMAP torsion terms in the potential function
      */
-    int getNumTorsions() const {
-        return torsions.size();
-    }
+    int getNumTorsions() const;
     /**
      * Create a new map that can be used for torsion pairs.
      *

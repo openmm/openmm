@@ -104,28 +104,20 @@ public:
     /**
      * Get the number of torsions for which force field parameters have been defined.
      */
-    int getNumTorsions() const {
-        return torsions.size();
-    }
+    int getNumTorsions() const;
     /**
      * Get the number of per-torsion parameters that the interaction depends on.
      */
-    int getNumPerTorsionParameters() const {
-        return parameters.size();
-    }
+    int getNumPerTorsionParameters() const;
     /**
      * Get the number of global parameters that the interaction depends on.
      */
-    int getNumGlobalParameters() const {
-        return globalParameters.size();
-    }
+    int getNumGlobalParameters() const;
     /**
      * Get the number of global parameters with respect to which the derivative of the energy
      * should be computed.
      */
-    int getNumEnergyParameterDerivatives() const {
-        return energyParameterDerivatives.size();
-    }
+    int getNumEnergyParameterDerivatives() const;
     /**
      * Get the algebraic expression that gives the interaction energy for each torsion
      */

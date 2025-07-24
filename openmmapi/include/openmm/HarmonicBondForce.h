@@ -56,9 +56,7 @@ public:
     /**
      * Get the number of harmonic bond stretch terms in the potential function
      */
-    int getNumBonds() const {
-        return bonds.size();
-    }
+    int getNumBonds() const;
     /**
      * Add a bond term to the force field.
      *

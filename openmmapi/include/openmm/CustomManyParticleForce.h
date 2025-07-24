@@ -240,39 +240,27 @@ public:
     /**
      * Get the number of particles in each set for which the energy is evaluated
      */
-    int getNumParticlesPerSet() const {
-        return particlesPerSet;
-    }
+    int getNumParticlesPerSet() const;
     /**
      * Get the number of particles for which force field parameters have been defined.
      */
-    int getNumParticles() const {
-        return particles.size();
-    }
+    int getNumParticles() const;
     /**
      * Get the number of particle pairs whose interactions should be excluded.
      */
-    int getNumExclusions() const {
-        return exclusions.size();
-    }
+    int getNumExclusions() const;
     /**
      * Get the number of per-particle parameters that the interaction depends on.
      */
-    int getNumPerParticleParameters() const {
-        return particleParameters.size();
-    }
+    int getNumPerParticleParameters() const;
     /**
      * Get the number of global parameters that the interaction depends on.
      */
-    int getNumGlobalParameters() const {
-        return globalParameters.size();
-    }
+    int getNumGlobalParameters() const;
     /**
      * Get the number of tabulated functions that have been defined.
      */
-    int getNumTabulatedFunctions() const {
-        return functions.size();
-    }
+    int getNumTabulatedFunctions() const;
     /**
      * Get the algebraic expression that gives the interaction energy of each bond
      */

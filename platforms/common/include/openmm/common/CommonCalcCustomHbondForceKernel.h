@@ -73,19 +73,16 @@ public:
 private:
     class ForceInfo;
     int numDonors, numAcceptors;
-    bool hasInitializedKernel, useBoundingBoxes;
+    bool hasInitializedKernel, useBoundingBoxes, needGlobalParams;
     ComputeContext& cc;
     ForceInfo* info;
     ComputeParameterSet* donorParams;
     ComputeParameterSet* acceptorParams;
-    ComputeArray globals;
     ComputeArray donors;
     ComputeArray acceptors;
     ComputeArray donorExclusions;
     ComputeArray acceptorExclusions;
     ComputeArray donorBlockCenter, donorBlockSize, acceptorBlockCenter, acceptorBlockSize;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
     std::map<std::string, int> tabulatedFunctionUpdateCount;
     const System& system;

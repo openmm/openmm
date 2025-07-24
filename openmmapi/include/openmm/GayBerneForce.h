@@ -106,15 +106,11 @@ public:
     /**
      * Get the number of particles for which force field parameters have been defined.
      */
-    int getNumParticles() const {
-        return particles.size();
-    }
+    int getNumParticles() const;
     /**
      * Get the number of special interactions that should be calculated differently from other interactions.
      */
-    int getNumExceptions() const {
-        return exceptions.size();
-    }
+    int getNumExceptions() const;
     /**
      * Get the method used for handling long range interactions.
      */
