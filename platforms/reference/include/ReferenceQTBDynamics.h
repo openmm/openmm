@@ -67,10 +67,11 @@ public:
      * @param velocities          velocities
      * @param masses              atom masses
      * @param tolerance           the constraint tolerance
+     * @param boxVectors          the current periodic box vectors
      * @param threads      a ThreadPool to use for parallelization
      */
     void update(OpenMM::ContextImpl& context, std::vector<OpenMM::Vec3>& atomCoordinates,
-                std::vector<OpenMM::Vec3>& velocities, std::vector<double>& masses, double tolerance, ThreadPool& threads);
+                std::vector<OpenMM::Vec3>& velocities, std::vector<double>& masses, double tolerance, const Vec3* boxVectors, ThreadPool& threads);
 
     /**
      * The first stage of the update algorithm.

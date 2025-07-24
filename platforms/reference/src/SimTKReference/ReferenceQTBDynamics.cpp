@@ -108,7 +108,7 @@ void ReferenceQTBDynamics::updatePart3(OpenMM::ContextImpl& context, int numPart
 }
 
 void ReferenceQTBDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordinates, vector<Vec3>& velocities,
-            vector<double>& masses, double tolerance, ThreadPool& threads) {
+            vector<double>& masses, double tolerance, const Vec3* boxVectors, ThreadPool& threads) {
     int numParticles = context.getSystem().getNumParticles();
     ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
     if (inverseMasses.size() == 0) {
@@ -150,7 +150,7 @@ void ReferenceQTBDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordi
 
     updatePart3(context, numParticles, atomCoordinates, velocities, xPrime);
 
-    getVirtualSites().computePositions(context.getSystem(), atomCoordinates);
+    getVirtualSites().computePositions(context.getSystem(), atomCoordinates, boxVectors);
     incrementTimeStep();
     stepIndex += 1;
 }

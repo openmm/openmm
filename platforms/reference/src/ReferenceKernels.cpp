@@ -2924,7 +2924,7 @@ void ReferenceIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBInt
         dynamics->setVirtualSites(extractVirtualSites(context));
     }
     dynamics->setTemperature(integrator.getTemperature());
-    dynamics->update(context, posData, velData, masses, integrator.getConstraintTolerance(), extractThreadPool(context));
+    dynamics->update(context, posData, velData, masses, integrator.getConstraintTolerance(), extractBoxVectors(context), extractThreadPool(context));
     data.time += stepSize;
     data.stepCount++;
 }
