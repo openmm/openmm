@@ -48,23 +48,28 @@ using namespace std;
 void testHarmonic() {
     // Create a collection of uncoupled harmonic oscillators.
 
-    int numParticles = 10;
+    int numFrequencies = 10;
+    int numReplicas = 10;
+    int numParticles = numFrequencies*numReplicas;
     double temperature = 300.0;
     double mass = 1.0;
     System system;
-    vector<Vec3> positions;
+    vector<Vec3> positions(numParticles);
     vector<double> k;
     CustomExternalForce* force = new CustomExternalForce("0.5*k*(x*x+y*y+z*z)");
     system.addForce(force);
     force->addPerParticleParameter("k");
-    for (int i = 0; i < numParticles; i++) {
-        system.addParticle(mass);
-        positions.push_back(Vec3());
-        k.push_back(1000.0*(i+1)*(i+1));
-        force->addParticle(i, {k[i]});
-    }
     QTBIntegrator integrator(temperature, 10.0, 0.001);
     integrator.setCutoffFrequency(500.0);
+    for (int j = 0; j < numReplicas; j++) {
+        int base = system.getNumParticles();
+        for (int i = 0; i < numFrequencies; i++) {
+            system.addParticle(mass);
+            k.push_back(1000.0*(i+1)*(i+1));
+            force->addParticle(i+base, {k[i]});
+            integrator.setParticleType(i+base, i);
+        }
+    }
     Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(temperature);
@@ -73,21 +78,21 @@ void testHarmonic() {
 
     integrator.step(10000);
     vector<double> energy(numParticles, 0.0);
-    int numSteps = 100000;
+    int numSteps = 10000;
     for (int i = 0; i < numSteps; i++) {
         integrator.step(10);
         State state = context.getState(State::Positions);
         for (int j = 0; j < numParticles; j++) {
             Vec3 p = state.getPositions()[j];
-            energy[j] += 0.5*k[j]*p.dot(p);
+            energy[j%numFrequencies] += 0.5*k[j]*p.dot(p);
         }
     }
     for (int i = 0; i < numParticles; i++)
-        energy[i] /= numSteps;
+        energy[i] /= numSteps*numReplicas;
 
     // Compare to the expected distribution.
 
-    for (int i = 0; i < numParticles; i++) {
+    for (int i = 0; i < numFrequencies; i++) {
         double w = sqrt(k[i]/mass);
         double hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
         double kT = BOLTZ*temperature;
@@ -100,7 +105,7 @@ void testCoupledHarmonic() {
     // Create a collection of weakly coupled harmonic oscillators.
 
     int numFrequencies = 8;
-    int numReplicas = 4;
+    int numReplicas = 10;
     int numParticles = numFrequencies*numReplicas;
     double temperature = 10.0;
     double mass = 1.0;
@@ -114,7 +119,7 @@ void testCoupledHarmonic() {
     system.addForce(bonds);
     QTBIntegrator integrator(temperature, 50.0, 0.001);
     integrator.setCutoffFrequency(500.0);
-    integrator.setDefaultAdaptationRate(0.5);
+    integrator.setDefaultAdaptationRate(1.0);
     for (int j = 0; j < numReplicas; j++) {
         int base = system.getNumParticles();
         for (int i = 0; i < numFrequencies; i++) {
@@ -131,13 +136,20 @@ void testCoupledHarmonic() {
     context.setPositions(positions);
     context.setVelocitiesToTemperature(temperature);
 
-    // Compute the average energy of each particle over a simulation.
+    // Equilibrate with a high adaptation rate to let the spectrum converge.
 
-    integrator.step(200000);
+    for (int i = 0; i < 15; i++) {
+        integrator.step(10000);
+        // OpenCL on Mac hangs if we go too long without downloading anything.  I don't know why.
+        context.getState(State::Positions);
+    }
     integrator.setDefaultAdaptationRate(0.05);
     context.reinitialize(true);
+
+    // Compute the average energy of each particle over a simulation.
+
     vector<double> energy(numFrequencies, 0.0);
-    int numSteps = 50000;
+    int numSteps = 20000;
     for (int i = 0; i < numSteps; i++) {
         integrator.step(10);
         State state = context.getState(State::Positions);
