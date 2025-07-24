@@ -62,7 +62,7 @@ void QTBIntegratorUtilities::findTypes(const System& system, const QTBIntegrator
         if (mass != massTable[type])
             throw OpenMMException("QTBIntegrator: All particles of the same type must have the same mass");
         particleType[particle.first] = typeIndex[type];
-        typeParticles[type].push_back(particle.first);
+        typeParticles[typeIndex[type]].push_back(particle.first);
     }
     for (int i = 0; i < system.getNumParticles(); i++)
         if (types.find(i) == types.end()) {

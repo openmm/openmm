@@ -98,8 +98,7 @@ void CommonIntegrateQTBStepKernel::initialize(const System& system, const QTBInt
     kernel1 = program->createKernel("integrateQTBPart1");
     kernel2 = program->createKernel("integrateQTBPart2");
     kernel3 = program->createKernel("integrateQTBPart3");
-    noise1Kernel = program->createKernel("generateNoisePart1");
-    noise2Kernel = program->createKernel("generateNoisePart2");
+    noiseKernel = program->createKernel("generateNoise");
     forceKernel = program->createKernel("generateRandomForce");
     adapt1Kernel = program->createKernel("adaptFrictionPart1");
     adapt2Kernel = program->createKernel("adaptFrictionPart2");
@@ -151,15 +150,12 @@ void CommonIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegr
         kernel3->addArg(oldDelta);
         if (cc.getUseMixedPrecision())
             kernel3->addArg(cc.getPosqCorrection());
-        noise1Kernel->addArg(numAtoms);
-        noise1Kernel->addArg(segmentLength);
-        noise1Kernel->addArg(noise);
-        noise2Kernel->addArg(numAtoms);
-        noise2Kernel->addArg(segmentLength);
-        noise2Kernel->addArg(noise);
-        noise2Kernel->addArg(integration.getRandom());
-        noise2Kernel->addArg(); // Random index will be set just before it is executed.
-        forceKernel->addArg(numAtoms);
+        noiseKernel->addArg(numAtoms);
+        noiseKernel->addArg(segmentLength);
+        noiseKernel->addArg(noise);
+        noiseKernel->addArg(integration.getRandom());
+        noiseKernel->addArg(); // Random index will be set just before it is executed.
+       forceKernel->addArg(numAtoms);
         forceKernel->addArg(segmentLength);
         if (useDouble) {
             forceKernel->addArg(dt);
@@ -211,9 +207,8 @@ void CommonIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegr
         cc.clearBuffer(dfdt);
         adapt1Kernel->execute(3*numAtoms*128, 128);
         adapt2Kernel->execute(numTypes*128, 128);
-        noise1Kernel->execute(6*numAtoms*segmentLength);
-        noise2Kernel->setArg(4, integration.prepareRandomNumbers(numAtoms*segmentLength));
-        noise2Kernel->execute(numAtoms*segmentLength);
+        noiseKernel->setArg(4, integration.prepareRandomNumbers(3*numAtoms*segmentLength/4+1));
+        noiseKernel->execute(3*numAtoms*128, 128);
         forceKernel->execute(3*numAtoms*128, 128);
         stepIndex = 0;
     }

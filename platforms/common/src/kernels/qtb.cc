@@ -82,24 +82,29 @@ KERNEL void integrateQTBPart3(int numAtoms, mixed dt, GLOBAL real4* RESTRICT pos
 }
 
 /**
- * Rotate the buffer of white noise.
+ * Update the buffer of white noise.
  */
-KERNEL void generateNoisePart1(int numAtoms, int segmentLength, GLOBAL float* RESTRICT noise) {
-    int offset = 3*numAtoms*segmentLength;
-    for (int i = GLOBAL_ID; i < 6*numAtoms*segmentLength; i += GLOBAL_SIZE)
-        noise[i] = noise[i+offset];
-}
+KERNEL void generateNoise(int numAtoms, int segmentLength, GLOBAL float* RESTRICT noise, GLOBAL const float* RESTRICT random, unsigned int randomIndex) {
+    randomIndex = 4*randomIndex; // Interpret it as float instead of float4
+    int fftLength = 3*segmentLength;
+    for (int i = GROUP_ID; i < 3*numAtoms; i += NUM_GROUPS) {
+        // Copy segment 2 over to segment 1
 
-/**
- * Fill in the white noise for the next segment.
- */
-KERNEL void generateNoisePart2(int numAtoms, int segmentLength, GLOBAL float* RESTRICT noise, GLOBAL const float4* RESTRICT random, unsigned int randomIndex) {
-    int offset = 6*numAtoms*segmentLength;
-    for (int i = GLOBAL_ID; i < numAtoms*segmentLength; i += GLOBAL_SIZE) {
-        float4 r = random[randomIndex+i];
-        noise[offset+i] = r.x;
-        noise[offset+numAtoms*segmentLength+i] = r.y;
-        noise[offset+2*numAtoms*segmentLength+i] = r.z;
+        for (int j = LOCAL_ID; j < segmentLength; j += LOCAL_SIZE)
+            noise[i*fftLength+j] = noise[i*fftLength+j+segmentLength];
+        SYNC_THREADS
+
+        // Copy segment 3 over to segment 2
+
+        for (int j = LOCAL_ID; j < segmentLength; j += LOCAL_SIZE)
+            noise[i*fftLength+j+segmentLength] = noise[i*fftLength+j+2*segmentLength];
+        SYNC_THREADS
+ 
+        // Fill segment 3 with new random values.
+
+        for (int j = LOCAL_ID; j < segmentLength; j += LOCAL_SIZE)
+            noise[i*fftLength+j+2*segmentLength] = random[randomIndex+i*segmentLength+j];
+        SYNC_THREADS
     }
 }
 
@@ -132,7 +137,7 @@ KERNEL void generateRandomForce(int numAtoms, int segmentLength, mixed dt, mixed
         int type = particleType[atom];
         if (invMass != 0) {
             for (int j = LOCAL_ID; j < fftLength; j += LOCAL_SIZE)
-                data0[j] = make_mixed2(noise[numAtoms*(3*j+axis)+atom], 0);
+                data0[j] = make_mixed2(noise[i*fftLength+j], 0);
             SYNC_THREADS
             FFT_FORWARD
             for (int j = LOCAL_ID; j < numFreq; j += LOCAL_SIZE) {
