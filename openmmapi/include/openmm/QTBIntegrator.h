@@ -71,6 +71,12 @@ namespace OpenMM {
  * next segment.  Furthermore, changing the temperature is a potentially expensive
  * operation, since it requires performing a calculation whose cost scales as the
  * cube of the number of time steps in a segment.
+ * 
+ * One must be very careful when trying to compute velocity dependent thermodynamic
+ * quantities, such as the instantaneous temperature or instantaneous pressure.
+ * The standard calculations for these quantities assume the velocities follow a
+ * classical distribution.  They do not produce correct results for an adQTB
+ * simulation, in which the velocities follow a quantum distribution.
  */
 class OPENMM_EXPORT QTBIntegrator : public Integrator {
 public:
