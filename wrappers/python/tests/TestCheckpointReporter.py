@@ -1,6 +1,7 @@
 import os
 import unittest
 import tempfile
+from io import BytesIO, StringIO
 from openmm import app
 import openmm as mm
 from openmm import unit
@@ -40,6 +41,33 @@ class TestCheckpointReporter(unittest.TestCase):
         
                 newPositions = self.simulation.context.getState(getPositions=True).getPositions()
                 self.assertSequenceEqual(positions, newPositions)
+
+    def testFileObj(self):
+        """Test writing to a file object.  This should truncate so that only the most recent frame is present in the output."""
+
+        # Test checkpoint saving.
+
+        checkpointBuffer = BytesIO()
+        self.simulation.reporters.clear()
+        self.simulation.reporters.append(app.CheckpointReporter(checkpointBuffer, 1, writeState=False))
+        self.simulation.step(5)
+        checkpointData = checkpointBuffer.getvalue()
+
+        checkpointBuffer = BytesIO()
+        self.simulation.saveCheckpoint(checkpointBuffer)
+        self.assertSequenceEqual(checkpointData, checkpointBuffer.getvalue())
+
+        # Test state saving.
+
+        stateBuffer = StringIO()
+        self.simulation.reporters.clear()
+        self.simulation.reporters.append(app.CheckpointReporter(stateBuffer, 1, writeState=True))
+        self.simulation.step(5)
+        stateData = stateBuffer.getvalue()
+
+        stateBuffer = StringIO()
+        self.simulation.saveState(stateBuffer)
+        self.assertSequenceEqual(stateData, stateBuffer.getvalue())
 
 if __name__ == '__main__':
     unittest.main()
