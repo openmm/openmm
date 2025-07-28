@@ -831,6 +831,162 @@ class TestForceField(unittest.TestCase):
         self.assertEqual(templates[1].name, 'ALA')
         self.assertEqual(templates[2].name, 'CALA')
 
+    def test_matchErrorMessages(self):
+        """Test match error detection and diagnostics"""
+
+        # Load a force field to test with and prepare some lines with which to build topologies from PDB files.
+        forcefield = ForceField('amber14-all.xml', 'amber14/opc.xml')
+        pdbLines = [
+            'ATOM      0 CH3  ACE A   1       0       0       0                           C',
+            'ATOM      1 HH31 ACE A   1       0       0       0                           H',
+            'ATOM      2 HH32 ACE A   1       0       0       0                           H',
+            'ATOM      3 HH33 ACE A   1       0       0       0                           H',
+            'ATOM      4 C    ACE A   1       0       0       0                           C',
+            'ATOM      5 O    ACE A   1       0       0       0                           O',
+            'ATOM      6 N    GLY A   2       0       0       0                           N',
+            'ATOM      7 H    GLY A   2       0       0       0                           H',
+            'ATOM      8 CA   GLY A   2       0       0       0                           C',
+            'ATOM      9 HA2  GLY A   2       0       0       0                           H',
+            'ATOM     10 HA3  GLY A   2       0       0       0                           H',
+            'ATOM     11 C    GLY A   2       0       0       0                           C',
+            'ATOM     12 O    GLY A   2       0       0       0                           O',
+            'ATOM     13 N    NME A   3       0       0       0                           N',
+            'ATOM     14 H    NME A   3       0       0       0                           H',
+            'ATOM     15 CH3  NME A   3       0       0       0                           C',
+            'ATOM     16 HH31 NME A   3       0       0       0                           H',
+            'ATOM     17 HH32 NME A   3       0       0       0                           H',
+            'ATOM     18 HH33 NME A   3       0       0       0                           H',
+        ]
+
+        def makeSystem(lines):
+            return forcefield.createSystem(PDBFile(StringIO("\n".join(lines))).topology)
+
+        # This should succeed and not produce any match errors.
+        self.assertEqual(makeSystem(pdbLines).getNumParticles(), 19)
+
+        # Add an He atom and B atoms atom to GLY.
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*GLY.*The residue contains He atoms and B atoms, which are not supported by any template in the force field'):
+            makeSystem(pdbLines[:9] + [
+                'ATOM     19 X1   GLY A   2       0       0       0                          He',
+                'ATOM     20 X2   GLY A   2       0       0       0                           B',
+                'ATOM     21 X3   GLY A   2       0       0       0                           B',
+            ] + pdbLines[9:])
+
+        # Delete CA atom from GLY.
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*GLY.*The set of atoms is similar to GLY, but is missing 1 C atom'):
+            makeSystem(pdbLines[:8] + pdbLines[9:])
+
+        # Add an F atom to GLY.
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*GLY.*The set of atoms is similar to GLY, but has 1 F atom too many'):
+            makeSystem(pdbLines[:9] + [
+                'ATOM     19 X1   GLY A   2       0       0       0                           F',
+            ] + pdbLines[9:])
+
+        # Delete CA atom from GLY and add an F atom.
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*GLY.*The set of atoms is similar to GLY, but is missing 1 C atom and has 1 F atom too many'):
+            makeSystem(pdbLines[:8] + [
+                'ATOM     19 X1   GLY A   2       0       0       0                           F',
+            ] + pdbLines[9:])
+
+        # Add 1 F atom, 2 Cl atoms, and 1 Br atom to GLY.
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*GLY.*The set of atoms is similar to GLY, but has 1 F atom, 2 Cl atoms, and 1 Br atom too many'):
+            makeSystem(pdbLines[:9] + [
+                'ATOM     19 X1   GLY A   2       0       0       0                           F',
+                'ATOM     20 X2   GLY A   2       0       0       0                          Cl',
+                'ATOM     21 X3   GLY A   2       0       0       0                          Cl',
+                'ATOM     22 X4   GLY A   2       0       0       0                          Br',
+            ] + pdbLines[9:])
+
+        # Add a virtual site to GLY.
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*GLY.*The set of heavy atoms matches GLY, but the residue has 1 extra site too many'):
+            makeSystem(pdbLines[:9] + [
+                'ATOM     19 X1   GLY A   2       0       0       0                          EP',
+            ] + pdbLines[9:])
+
+        # Delete HA3 atom from GLY.
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*GLY.*The set of heavy atoms matches GLY, but the residue is missing 1 H atom.*You may be able to add it with.*addHydrogens'):
+            makeSystem(pdbLines[:10] + pdbLines[11:])
+
+        # Delete HA2 and HA3 atoms from GLY.
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*GLY.*The set of heavy atoms matches GLY, but the residue is missing 2 H atoms.*You may be able to add them with.*addHydrogens'):
+            makeSystem(pdbLines[:9] + pdbLines[11:])
+
+        # Delete HA3 atom from GLY and add a virtual site.
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*GLY.*The set of heavy atoms matches GLY, but the residue is missing 1 H atom and has 1 extra site too many'):
+            makeSystem(pdbLines[:10] + [
+                'ATOM     19 X1   GLY A   2       0       0       0                          EP',
+            ] + pdbLines[11:])
+
+        # Rename HA3 atom to remove the CA-HA3 bond.
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*GLY.*The set of atoms matches GLY, but the residue is missing 1 H-C bond'):
+            makeSystem(pdbLines[:10] + [
+                'ATOM     10 X1   GLY A   2       0       0       0                           H',
+            ] + pdbLines[11:])
+
+        # Add an extra N-O bond.
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*GLY.*The set of atoms matches GLY, but the residue has 1 N-O bond too many'):
+            makeSystem(pdbLines + [
+                'CONECT    6   12'
+            ])
+
+        # Remove an external bond to NME by renaming its N atom.
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*GLY.*The atoms and bonds in the residue match GLY, but the set of externally bonded atoms is missing 1 C atom'):
+            makeSystem(pdbLines[:13] + [
+                'ATOM     13 X1   NME A   3       0       0       0                           N',
+            ] + pdbLines[14:])
+
+        # Add an extra external bond to NME.
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*GLY.*The atoms and bonds in the residue match GLY, but the set of externally bonded atoms has 1 O atom too many'):
+            makeSystem(pdbLines + [
+                'CONECT   12   15'
+            ])
+
+        # Delete ACE so that a capping group is missing from GLY.
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*GLY.*The atoms and bonds in the residue match GLY, but the set of externally bonded atoms is missing 1 N atom.*Is the chain missing a terminal capping group?'):
+            makeSystem(pdbLines[6:])
+
+        # Keep the atom/bond element fingerprint the same but change the connectivity.
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*GLY.*The atoms and bonds in the residue match GLY, but the connectivity is different'):
+            # Rename O to break the C=O bond, but then reattach the O to the CA.
+            makeSystem(pdbLines[:12] + [
+                'ATOM     12 X1   GLY A   2       0       0       0                           O',
+            ] + pdbLines[13:] + [
+                'CONECT    8   12'
+            ])
+
+        # Make water with incorrect atom names so bonds will be missing.
+        pdbLines = [
+            'ATOM      0 X1   HOH A   1       0       0       0                           O',
+            'ATOM      1 X2   HOH A   1       0       0       0                           H',
+            'ATOM      2 X3   HOH A   1       0       0       0                           H',
+        ]
+
+        # Check for a special message when all bonds are missing.
+        forcefield = ForceField('opc3.xml')
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*HOH.*The set of atoms matches HOH, but the residue has no bonds between its atoms'):
+            makeSystem(pdbLines)
+
+        # Add a site to a residue with a force field that doesn't support sites.
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*HOH.*The residue contains extra sites, which are not supported by any template in the force field'):
+            makeSystem(pdbLines + [
+                'ATOM      3 X4   HOH A   1       0       0       0                          EP',
+            ])
+
+        # Load a force field so that 1 site will be missing.
+        forcefield = ForceField('opc.xml')
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*HOH.*The set of heavy atoms matches HOH, but the residue is missing 1 extra site.*You may be able to add it with.*addExtraParticles'):
+            makeSystem(pdbLines)
+
+        # Load a force field so that 2 sites will be missing.
+        forcefield = ForceField('tip5p.xml')
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*HOH.*The set of heavy atoms matches HOH, but the residue is missing 2 extra sites.*You may be able to add them with.*addExtraParticles'):
+            makeSystem(pdbLines)
+
+        # Use an empty force field so that there are no templates.
+        forcefield = ForceField()
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*HOH.*The force field contains no residue templates'):
+            makeSystem(pdbLines)
+
     def test_Wildcard(self):
         """Test that PeriodicTorsionForces using wildcard ('') for atom types / classes in the ffxml are correctly registered"""
 
