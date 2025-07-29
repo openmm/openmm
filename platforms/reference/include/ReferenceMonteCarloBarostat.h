@@ -37,6 +37,7 @@ class ReferenceMonteCarloBarostat {
 
        std::vector<double> savedAtomPositions[3];
        std::vector<std::vector<int> > molecules;
+       std::vector<double> masses;
 
    public:
 
@@ -46,7 +47,7 @@ class ReferenceMonteCarloBarostat {
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceMonteCarloBarostat(int numAtoms, const std::vector<std::vector<int> >& molecules);
+       ReferenceMonteCarloBarostat(int numAtoms, const std::vector<std::vector<int> >& molecules, const std::vector<double>& masses);
 
       /**---------------------------------------------------------------------------------------
 
@@ -90,6 +91,17 @@ class ReferenceMonteCarloBarostat {
 
       void restorePositions(std::vector<OpenMM::Vec3>& atomPositions);
 
+      /**---------------------------------------------------------------------------------------
+
+         Compute the kinetic energy of molecular center of mass translations.
+
+         @param velocities      atom velocities
+         @param ke              a vector to store the kinetic energy components into
+         @param components      the number of components to calculate
+
+         --------------------------------------------------------------------------------------- */
+
+      void computeMolecularKineticEnergy(const std::vector<OpenMM::Vec3>& velocities, std::vector<double>& ke, int components);
 };
 
 } // namespace OpenMM

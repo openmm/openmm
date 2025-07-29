@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -64,6 +64,7 @@ CpuPlatform::CpuPlatform() {
     deprecatedPropertyReplacements["CpuThreads"] = CpuThreads();
     CpuKernelFactory* factory = new CpuKernelFactory();
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
+    registerKernelFactory(UpdateStateDataKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
     registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcRBTorsionForceKernel::Name(), factory);
@@ -111,18 +112,19 @@ bool CpuPlatform::isProcessorSupported() {
 }
 
 void CpuPlatform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
-    ReferencePlatform::contextCreated(context, properties);
     const string& threadsPropValue = (properties.find(CpuThreads()) == properties.end() ?
             getPropertyDefaultValue(CpuThreads()) : properties.find(CpuThreads())->second);
+    map<string, string> refProperties = properties;
+    refProperties["Threads"] = threadsPropValue;
+    ReferencePlatform::contextCreated(context, refProperties);
     string deterministicForcesValue = (properties.find(CpuDeterministicForces()) == properties.end() ?
             getPropertyDefaultValue(CpuDeterministicForces()) : properties.find(CpuDeterministicForces())->second);
-    int numThreads;
-    stringstream(threadsPropValue) >> numThreads;
     transform(deterministicForcesValue.begin(), deterministicForcesValue.end(), deterministicForcesValue.begin(), ::tolower);
     bool deterministicForces = (deterministicForcesValue == "true");
-    PlatformData* data = new PlatformData(context.getSystem().getNumParticles(), numThreads, deterministicForces);
+    ReferencePlatform::PlatformData* refData = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    PlatformData* data = new PlatformData(context.getSystem().getNumParticles(), refData->threads, deterministicForces);
     contextData[&context] = data;
-    ReferenceConstraints& constraints = *(ReferenceConstraints*) reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData())->constraints;
+    ReferenceConstraints& constraints = *(ReferenceConstraints*) refData->constraints;
     if (constraints.settle != NULL) {
         CpuSETTLE* parallelSettle = new CpuSETTLE(context.getSystem(), *(ReferenceSETTLEAlgorithm*) constraints.settle, data->threads);
         delete constraints.settle;
@@ -146,10 +148,10 @@ const CpuPlatform::PlatformData& CpuPlatform::getPlatformData(const ContextImpl&
     return *contextData[&context];
 }
 
-CpuPlatform::PlatformData::PlatformData(int numParticles, int numThreads, bool deterministicForces) : posq(4*numParticles), threads(numThreads),
+CpuPlatform::PlatformData::PlatformData(int numParticles, ThreadPool& threads, bool deterministicForces) : posq(4*numParticles), threads(threads),
         deterministicForces(deterministicForces), numParticles(numParticles), neighborList(NULL), cutoff(0.0), paddedCutoff(0.0), anyExclusions(false),
         currentPosqIndex(-1), nextPosqIndex(0) {
-    numThreads = threads.getNumThreads();
+    int numThreads = threads.getNumThreads();
     threadForce.resize(numThreads);
     for (int i = 0; i < numThreads; i++)
         threadForce[i].resize(4*numParticles);

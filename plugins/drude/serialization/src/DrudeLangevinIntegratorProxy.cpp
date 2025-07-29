@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -50,6 +50,7 @@ void DrudeLangevinIntegratorProxy::serialize(const void* object, SerializationNo
     node.setDoubleProperty("drudeTemperature", integrator.getDrudeTemperature());
     node.setDoubleProperty("drudeFriction", integrator.getDrudeFriction());
     node.setIntProperty("randomSeed", integrator.getRandomNumberSeed());
+    node.setIntProperty("integrationForceGroups", integrator.getIntegrationForceGroups());
 }
 
 void* DrudeLangevinIntegratorProxy::deserialize(const SerializationNode& node) const {
@@ -60,5 +61,6 @@ void* DrudeLangevinIntegratorProxy::deserialize(const SerializationNode& node) c
             node.getDoubleProperty("drudeFriction"), node.getDoubleProperty("stepSize"));
     integrator->setConstraintTolerance(node.getDoubleProperty("constraintTolerance"));
     integrator->setRandomNumberSeed(node.getIntProperty("randomSeed"));
+    integrator->setIntegrationForceGroups(node.getIntProperty("integrationForceGroups", 0xFFFFFFFF));
     return integrator;
 }

@@ -4,6 +4,8 @@ Other Features
 ##############
 
 
+.. _periodic-boundary-conditions:
+
 Periodic Boundary Conditions
 ****************************
 

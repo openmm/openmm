@@ -7,6 +7,7 @@ from openmm import *
 from openmm.unit import *
 import openmm.app.element as elem
 
+inpcrd1 = AmberInpcrdFile('systems/alanine-dipeptide-explicit.inpcrd')
 inpcrd3 = AmberInpcrdFile('systems/ff14ipq.rst7')
 inpcrd4 = AmberInpcrdFile('systems/Mg_water.inpcrd')
 inpcrd7 = AmberInpcrdFile('systems/18protein.rst7')
@@ -472,6 +473,28 @@ class TestAmberPrmtopFile(unittest.TestCase):
                 for a1, a2 in bonds:
                     self.assertTrue(a1.element == elem.oxygen or a2.element == elem.oxygen)
                     self.assertTrue(a1.element == elem.hydrogen or a2.element == elem.hydrogen)
+
+    def testFlexibleConstraints(self):
+        """Test the flexibleConstraints option"""
+        energies = {}
+        forces = {}
+        for flexibleConstraints in [False, True]:
+            system = prmtop1.createSystem(nonbondedMethod=PME, constraints=HAngles, flexibleConstraints=flexibleConstraints)
+            for i, f in enumerate(system.getForces()):
+                f.setForceGroup(i)
+            integrator = VerletIntegrator(1.0*femtoseconds)
+            sim = Simulation(prmtop1.topology, system, integrator, Platform.getPlatform('Reference'))
+            sim.context.setPositions(inpcrd1.positions)
+            energies[flexibleConstraints] = {}
+            for i, f in enumerate(system.getForces()):
+                forces[i] = f
+                energies[flexibleConstraints][i] = sim.context.getState(getEnergy=True, groups={i}).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        for i, f in forces.items():
+            delta = 1e-5*abs(energies[True][i])
+            if isinstance(f, HarmonicBondForce) or isinstance(f, HarmonicAngleForce):
+                self.assertNotAlmostEqual(energies[True][i], energies[False][i], delta=delta)
+            else:
+                self.assertAlmostEqual(energies[True][i], energies[False][i], delta=delta)
 
 if __name__ == '__main__':
     unittest.main()

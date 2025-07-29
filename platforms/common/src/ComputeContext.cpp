@@ -45,13 +45,23 @@ const int ComputeContext::ThreadBlockSize = 64;
 const int ComputeContext::TileSize = 32;
 
 ComputeContext::ComputeContext(const System& system) : system(system), time(0.0), stepCount(0), computeForceCount(0), stepsSinceReorder(99999),
-        forceNextReorder(false), atomsWereReordered(false), forcesValid(false), thread(NULL) {
-    thread = new WorkThread();
+        forceNextReorder(false), atomsWereReordered(false), forcesValid(false), hasInitializedGlobals(false) {
+    workThread = new WorkThread();
 }
 
 ComputeContext::~ComputeContext() {
-    if (thread != NULL)
-        delete thread;
+}
+
+ComputeQueue ComputeContext::getCurrentQueue() {
+    return currentQueue;
+}
+
+void ComputeContext::setCurrentQueue(ComputeQueue queue) {
+    currentQueue = queue;
+}
+
+void ComputeContext::restoreDefaultQueue() {
+    currentQueue = defaultQueue;
 }
 
 void ComputeContext::addForce(ComputeForceInfo* force) {
@@ -698,9 +708,38 @@ int ComputeContext::findLegalFFTDimension(int minimum) {
     }
 }
 
+int ComputeContext::registerGlobalParam(const string& name) {
+    for (int i = 0; i < globalParamNames.size(); i++)
+        if (globalParamNames[i] == name)
+            return i;
+    globalParamNames.push_back(name);
+    return globalParamNames.size()-1;
+}
+
+void ComputeContext::updateGlobalParamValues() {
+    bool changed = false;
+    if (!hasInitializedGlobals) {
+        hasInitializedGlobals = true;
+        int elementSize = (getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+        globalParamValues.initialize(*this, max(1, (int) globalParamNames.size()), elementSize, "globalParameters");
+        lastGlobalParamValues.resize(globalParamValues.getSize(), 0.0);
+        if (globalParamNames.size() > 0)
+            changed = true;
+    }
+    for (int i = 0; i < globalParamNames.size(); i++) {
+        double value = getContextImpl()->getParameter(globalParamNames[i]);
+        if (value != lastGlobalParamValues[i]) {
+            lastGlobalParamValues[i] = value;
+            changed = true;
+        }
+    }
+    if (changed)
+        getGlobalParamValues().upload(lastGlobalParamValues, true);
+}
+
 struct ComputeContext::WorkThread::ThreadData {
     ThreadData(std::queue<ComputeContext::WorkTask*>& tasks, bool& waiting,  bool& finished, bool& threwException, OpenMMException& stashedException,
-            pthread_mutex_t& queueLock, pthread_cond_t& waitForTaskCondition, pthread_cond_t& queueEmptyCondition) :
+            mutex& queueLock, condition_variable& waitForTaskCondition, condition_variable& queueEmptyCondition) :
         tasks(tasks), waiting(waiting), finished(finished), threwException(threwException), stashedException(stashedException),
         queueLock(queueLock), waitForTaskCondition(waitForTaskCondition), queueEmptyCondition(queueEmptyCondition) {
     }
@@ -709,32 +748,33 @@ struct ComputeContext::WorkThread::ThreadData {
     bool& finished;
     bool& threwException;
     OpenMMException& stashedException;
-    pthread_mutex_t& queueLock;
-    pthread_cond_t& waitForTaskCondition;
-    pthread_cond_t& queueEmptyCondition;
+    mutex& queueLock;
+    condition_variable& waitForTaskCondition;
+    condition_variable& queueEmptyCondition;
 };
 
 static void* threadBody(void* args) {
     ComputeContext::WorkThread::ThreadData& data = *reinterpret_cast<ComputeContext::WorkThread::ThreadData*>(args);
     while (!data.finished || data.tasks.size() > 0) {
-        pthread_mutex_lock(&data.queueLock);
-        while (data.tasks.empty() && !data.finished) {
-            data.waiting = true;
-            pthread_cond_signal(&data.queueEmptyCondition);
-            pthread_cond_wait(&data.waitForTaskCondition, &data.queueLock);
-        }
-        // If we keep going after having caught an exception once, next tasks will likely throw too and we don't want the initial exception overshadowed.
-        while (data.threwException && !data.tasks.empty()) {
-            delete data.tasks.front();
-            data.tasks.pop();
-        }
         ComputeContext::WorkTask* task = NULL;
-        if (!data.tasks.empty()) {
-            data.waiting = false;
-            task = data.tasks.front();
-            data.tasks.pop();
+        {
+            unique_lock<mutex> lock(data.queueLock);
+            while (data.tasks.empty() && !data.finished) {
+                data.waiting = true;
+                data.queueEmptyCondition.notify_one();
+                data.waitForTaskCondition.wait(lock);
+            }
+            // If we keep going after having caught an exception once, next tasks will likely throw too and we don't want the initial exception overshadowed.
+            while (data.threwException && !data.tasks.empty()) {
+                delete data.tasks.front();
+                data.tasks.pop();
+            }
+            if (!data.tasks.empty()) {
+                data.waiting = false;
+                task = data.tasks.front();
+                data.tasks.pop();
+            }
         }
-        pthread_mutex_unlock(&data.queueLock);
         if (task != NULL) {
             try {
                 task->execute();
@@ -747,36 +787,29 @@ static void* threadBody(void* args) {
         }
     }
     data.waiting = true;
-    pthread_cond_signal(&data.queueEmptyCondition);
+    data.queueEmptyCondition.notify_one();
     delete &data;
     return 0;
 }
 
 ComputeContext::WorkThread::WorkThread() : waiting(true), finished(false), threwException(false), stashedException("Default WorkThread exception. This should never be thrown.") {
-    pthread_mutex_init(&queueLock, NULL);
-    pthread_cond_init(&waitForTaskCondition, NULL);
-    pthread_cond_init(&queueEmptyCondition, NULL);
     ThreadData* data = new ThreadData(tasks, waiting, finished, threwException, stashedException, queueLock, waitForTaskCondition, queueEmptyCondition);
-    pthread_create(&thread, NULL, threadBody, data);
+    workThread = thread(threadBody, data);
 }
 
 ComputeContext::WorkThread::~WorkThread() {
-    pthread_mutex_lock(&queueLock);
+    queueLock.lock();
     finished = true;
-    pthread_cond_broadcast(&waitForTaskCondition);
-    pthread_mutex_unlock(&queueLock);
-    pthread_join(thread, NULL);
-    pthread_mutex_destroy(&queueLock);
-    pthread_cond_destroy(&waitForTaskCondition);
-    pthread_cond_destroy(&queueEmptyCondition);
+    waitForTaskCondition.notify_all();
+    queueLock.unlock();
+    workThread.join();
 }
 
 void ComputeContext::WorkThread::addTask(ComputeContext::WorkTask* task) {
-    pthread_mutex_lock(&queueLock);
+    unique_lock<mutex> lock(queueLock);
     tasks.push(task);
     waiting = false;
-    pthread_cond_signal(&waitForTaskCondition);
-    pthread_mutex_unlock(&queueLock);
+    waitForTaskCondition.notify_one();
 }
 
 bool ComputeContext::WorkThread::isWaiting() {
@@ -788,14 +821,15 @@ bool ComputeContext::WorkThread::isFinished() {
 }
 
 bool ComputeContext::WorkThread::isCurrentThread() {
-    return (pthread_self() == thread);
+    return (this_thread::get_id() == workThread.get_id());
 }
 
 void ComputeContext::WorkThread::flush() {
-    pthread_mutex_lock(&queueLock);
-    while (!waiting)
-       pthread_cond_wait(&queueEmptyCondition, &queueLock);
-    pthread_mutex_unlock(&queueLock);
+    {
+        unique_lock<mutex> lock(queueLock);
+        while (!waiting)
+            queueEmptyCondition.wait(lock);
+    }
     if (threwException) {
         threwException = false;
         throw stashedException;

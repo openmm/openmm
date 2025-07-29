@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -308,6 +308,16 @@ double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, boo
     return referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().finishComputation(context, includeForce, includeEnergy, groups, valid);
 }
 
+void CpuUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
+    ReferenceUpdateStateDataKernel::createCheckpoint(context, stream);
+    data.random.createCheckpoint(stream);
+}
+
+void CpuUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
+    ReferenceUpdateStateDataKernel::loadCheckpoint(context, stream);
+    data.random.loadCheckpoint(stream);
+}
+
 void CpuCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
     numAngles = force.getNumAngles();
     angleIndexArray.resize(numAngles, vector<int>(3));
@@ -506,7 +516,6 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     numParticles = force.getNumParticles();
     exclusions.resize(numParticles);
     vector<int> nb14s;
-    map<int, int> nb14Index;
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
@@ -703,6 +712,12 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         }
         else
             nonbonded->calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, C6params, exclusions, forceData, includeEnergy ? &nonbondedEnergy : NULL);
+        if (ewald || pme || ljpme) {
+            // Add the correction for the neutralizing plasma.
+
+            double volume = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
+            energy -= totalCharge*totalCharge/(8*EPSILON0*volume*ewaldAlpha*ewaldAlpha);
+        }
     }
     energy += nonbondedEnergy;
     if (includeDirect) {
@@ -737,7 +752,11 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
         force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
-        if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
+        if (nb14Index.find(i) == nb14Index.end()) {
+            if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
+                throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
+        }
+        else
             nb14s.push_back(i);
     }
     if (nb14s.size() != num14)
@@ -752,6 +771,32 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
         force.getExceptionParameters(nb14s[i], particle1, particle2, baseExceptionParams[i][0], baseExceptionParams[i][1], baseExceptionParams[i][2]);
         bonded14IndexArray[i][0] = particle1;
         bonded14IndexArray[i][1] = particle2;
+    }
+    particleParamOffsets.clear();
+    exceptionParamOffsets.clear();
+    particleParamOffsets.resize(force.getNumParticles());
+    exceptionParamOffsets.resize(force.getNumExceptions());
+    for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+        string param;
+        int particle;
+        double charge, sigma, epsilon;
+        force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
+        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
+        if (paramPos == paramNames.end())
+            throw OpenMMException("updateParametersInContext: The parameter of a particle parameter offset has changed");
+        int paramIndex = paramPos-paramNames.begin();
+        particleParamOffsets[particle].push_back(make_tuple(charge, sigma, epsilon, paramIndex));
+    }
+    for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+        string param;
+        int exception;
+        double charge, sigma, epsilon;
+        force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
+        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
+        if (paramPos == paramNames.end())
+            throw OpenMMException("updateParametersInContext: The parameter of an exception parameter offset has changed");
+        int paramIndex = paramPos-paramNames.begin();
+        exceptionParamOffsets[nb14Index[exception]].push_back(make_tuple(charge, sigma, epsilon, paramIndex));
     }
     computeParameters(context, false);
     
@@ -804,6 +849,7 @@ void CpuCalcNonbondedForceKernel::computeParameters(ContextImpl& context, bool o
 
     if (hasParticleOffsets || !offsetsOnly) {
         double sumSquaredCharges = 0.0;
+        totalCharge = 0.0;
         for (int i = 0; i < numParticles; i++) {
             double charge = baseParticleParams[i][0];
             double sigma = baseParticleParams[i][1];
@@ -818,6 +864,7 @@ void CpuCalcNonbondedForceKernel::computeParameters(ContextImpl& context, bool o
             particleParams[i] = make_pair((float) (0.5*sigma), (float) (2.0*sqrt(epsilon)));
             C6params[i] = 8.0*pow(particleParams[i].first, 3.0) * particleParams[i].second;
             sumSquaredCharges += charge*charge;
+            totalCharge += charge;
         }
         if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
             ewaldSelfEnergy = -ONE_4PI_EPS0*ewaldAlpha*sumSquaredCharges/sqrt(M_PI);

@@ -50,7 +50,7 @@ void testIdealGas() {
     const int numParticles = 64;
     const int frequency = 10;
     const int steps = 1000;
-    const double pressure = 1.5;
+    const double pressure = 3.0;
     const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
     const double temp[] = {300.0, 600.0, 1000.0};
     const double initialVolume = numParticles*BOLTZ*temp[1]/pressureInMD;
@@ -83,20 +83,33 @@ void testIdealGas() {
 
         // Let it equilibrate.
 
-        integrator.step(10000);
+        integrator.step(5000);
 
         // Now run it for a while and see if the volume is correct.
 
         double volume = 0.0;
+        vector<double> avgPressure(6, 0.0);
         for (int j = 0; j < steps; ++j) {
             Vec3 box[3];
             context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
             volume += box[0][0]*box[1][1]*box[2][2];
             integrator.step(frequency);
+            vector<double> pressure;
+            barostat->computeCurrentPressure(context, pressure);
+            for (int j = 0; j < 6; j++)
+                avgPressure[j] += pressure[j];
         }
         volume /= steps;
         double expected = (numParticles+1)*BOLTZ*temp[i]/pressureInMD;
         ASSERT_USUALLY_EQUAL_TOL(expected, volume, 3/std::sqrt((double) steps));
+        for (int i = 0; i < 3; i++) {
+            avgPressure[i] /= steps;
+            ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[i], 0.2);
+        }
+        for (int i = 3; i < 6; i++) {
+            avgPressure[i] /= steps;
+            ASSERT_USUALLY_EQUAL_TOL(0.0, avgPressure[i], 0.4);
+        }
     }
 }
 
@@ -165,6 +178,65 @@ void testMoleculeScaling(bool rigid) {
             Vec3 expected(delta1[0]*boxScale[0], delta1[1]*boxScale[1], delta1[2]*boxScale[2]);
             ASSERT_EQUAL_VEC(expected, delta2, 1e-5);
         }
+    }
+}
+
+void testMolecularGas(bool rigid) {
+    const int numMolecules = 64;
+    const int frequency = 5;
+    const int steps = 5000;
+    const double pressure = 3.0;
+    const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
+    const double temp =300.0;
+    const double initialVolume = numMolecules*BOLTZ*temp/pressureInMD;
+    const double initialLength = std::pow(initialVolume, 1.0/3.0);
+
+    // Create a gas of noninteracting molecules.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.5*initialLength, 0), Vec3(0, 0, 2*initialLength));
+    MonteCarloFlexibleBarostat* barostat = new MonteCarloFlexibleBarostat(pressure, temp, frequency, rigid);
+    system.addForce(barostat);
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    bonds->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(bonds);
+    vector<Vec3> positions;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numMolecules; ++i) {
+        system.addParticle(1.0);
+        system.addParticle(1.0);
+        system.addParticle(1.0);
+        Vec3 pos(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
+        bonds->addBond(positions.size(), positions.size()+1, 0.1, 0.0);
+        bonds->addBond(positions.size(), positions.size()+2, 0.1, 0.0);
+        positions.push_back(pos);
+        positions.push_back(pos+Vec3(0.1, 0.0, 0.0));
+        positions.push_back(pos+Vec3(0.0, 0.1, 0.0));
+    }
+
+    // Simulate it and see if the pressure is correct.
+
+    LangevinIntegrator integrator(temp, 0.1, 0.005);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(temp);
+    integrator.step(5000);
+    vector<double> avgPressure(6, 0.0);
+    for (int j = 0; j < steps; ++j) {
+        integrator.step(frequency);
+        vector<double> pressure;
+        barostat->computeCurrentPressure(context, pressure);
+        for (int j = 0; j < 6; j++)
+            avgPressure[j] += pressure[j];
+    }
+    for (int i = 0; i < 3; i++) {
+        avgPressure[i] /= steps;
+        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[i], 0.2);
+    }
+    for (int i = 3; i < 6; i++) {
+        avgPressure[i] /= steps;
+        ASSERT_USUALLY_EQUAL_TOL(0.0, avgPressure[i], 0.4);
     }
 }
 
@@ -238,6 +310,8 @@ int main(int argc, char* argv[]) {
         testIdealGas();
         testMoleculeScaling(true);
         testMoleculeScaling(false);
+        testMolecularGas(true);
+        testMolecularGas(false);
         testRandomSeed();
         runPlatformTests();
     }

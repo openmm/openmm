@@ -388,7 +388,7 @@ Parameters:
     def deserialize(inputString):
       """Reconstruct an object that has been serialized as XML."""
       import re
-      match = re.search("<([^?]\S*)", inputString)
+      match = re.search(r"<([^?]\S*)", inputString)
       if match is None:
         raise ValueError("Invalid input string")
       type = match.groups()[0]

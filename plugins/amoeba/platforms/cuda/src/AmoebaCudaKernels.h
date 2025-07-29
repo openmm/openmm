@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,11 +30,10 @@
 #include "openmm/amoebaKernels.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
+#include "openmm/common/ComputeSort.h"
 #include "CudaContext.h"
 #include "CudaNonbondedUtilities.h"
-#include "CudaSort.h"
 #include "AmoebaCommonKernels.h"
-#include <cufft.h>
 
 namespace OpenMM {
 
@@ -44,29 +43,14 @@ namespace OpenMM {
 class CudaCalcAmoebaMultipoleForceKernel : public CommonCalcAmoebaMultipoleForceKernel {
 public:
     CudaCalcAmoebaMultipoleForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
-            CommonCalcAmoebaMultipoleForceKernel(name, platform, cu, system), hasInitializedFFT(false) {
+            CommonCalcAmoebaMultipoleForceKernel(name, platform, cu, system) {
     }
-    ~CudaCalcAmoebaMultipoleForceKernel();
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaMultipoleForce this kernel will be used for
-     */
-    void initialize(const System& system, const AmoebaMultipoleForce& force);
-    /**
-     * Compute the FFT.
-     */
-    void computeFFT(bool forward);
     /**
      * Get whether charge spreading should be done in fixed point.
      */
     bool useFixedPointChargeSpreading() const {
         return cc.getUseDoublePrecision();
     }
-private:
-    bool hasInitializedFFT;
-    cufftHandle fft;
 };
 
 /**
@@ -75,9 +59,8 @@ private:
 class CudaCalcHippoNonbondedForceKernel : public CommonCalcHippoNonbondedForceKernel {
 public:
     CudaCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
-            CommonCalcHippoNonbondedForceKernel(name, platform, cu, system), sort(NULL), hasInitializedFFT(false) {
+            CommonCalcHippoNonbondedForceKernel(name, platform, cu, system) {
     }
-    ~CudaCalcHippoNonbondedForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -85,10 +68,6 @@ public:
      * @param force      the HippoNonbondedForce this kernel will be used for
      */
     void initialize(const System& system, const HippoNonbondedForce& force);
-    /**
-     * Compute the FFT.
-     */
-    void computeFFT(bool forward, bool dispersion);
     /**
      * Get whether charge spreading should be done in fixed point.
      */
@@ -100,7 +79,7 @@ public:
      */
     void sortGridIndex();
 private:
-    class SortTrait : public CudaSort::SortTrait {
+    class SortTrait : public ComputeSortImpl::SortTrait {
         int getDataSize() const {return 8;}
         int getKeySize() const {return 4;}
         const char* getDataType() const {return "int2";}
@@ -110,9 +89,7 @@ private:
         const char* getMaxValue() const {return "make_int2(2147483647, 2147483647)";}
         const char* getSortKey() const {return "value.y";}
     };
-    bool hasInitializedFFT;
-    CudaSort* sort;
-    cufftHandle fftForward, fftBackward, dfftForward, dfftBackward;
+    ComputeSort sort;
 };
 
 } // namespace OpenMM

@@ -47,6 +47,7 @@
 #include "lepton/ParsedExpression.h"
 #include "lepton/Parser.h"
 #include <cmath>
+#include <limits>
 #include <map>
 #include <set>
 #include <sstream>
@@ -138,19 +139,33 @@ double ATMForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForce
     state0Energy = innerContextImpl0.calcForcesAndEnergy(includeForces, true);
     state1Energy = innerContextImpl1.calcForcesAndEnergy(includeForces, true);
 
-    // Compute the alchemical energy and forces.
+    // set global parameters for energy expression
 
     for (int i = 0; i < globalParameterNames.size(); i++)
         globalValues[i] = context.getParameter(globalParameterNames[i]);
+
+    // Protect against overflow when the hybrid potential function does
+    // not depend on u0 or u1 and their values are unbounded; typically at the endstates
+
+    double dEdu0 = u0DerivExpression.evaluate();
+    double dEdu1 = u1DerivExpression.evaluate();
+    double epsi = std::numeric_limits<float>::min();
+    double maxEnergy = std::numeric_limits<float>::max();
+    if(fabs(dEdu0) < epsi && (isnan(state0Energy) || isinf(state0Energy)))
+	state0Energy = maxEnergy;
+    if(fabs(dEdu1) < epsi && (isnan(state1Energy) || isinf(state1Energy)))
+	state1Energy = maxEnergy;
+
+    // Compute the alchemical energy and forces.
+
     combinedEnergy = energyExpression.evaluate();
     if (includeForces) {
-        double dEdu0 = u0DerivExpression.evaluate();
-        double dEdu1 = u1DerivExpression.evaluate();
         map<string, double> energyParamDerivs;
         for (int i = 0; i < paramDerivExpressions.size(); i++)
             energyParamDerivs[paramDerivNames[i]] += paramDerivExpressions[i].evaluate();
         kernel.getAs<CalcATMForceKernel>().applyForces(context, innerContextImpl0, innerContextImpl1, dEdu0, dEdu1, energyParamDerivs);
     }
+
     return (includeEnergy ? combinedEnergy : 0.0);
 }
 

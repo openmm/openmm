@@ -34,6 +34,7 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 from __future__ import division, absolute_import, print_function
 
 from functools import wraps
+from itertools import combinations
 from math import pi, cos, sin, sqrt
 import os
 import re
@@ -603,9 +604,9 @@ class CharmmPsfFile(object):
         - If any parameters that are necessary cannot be found, a
           MissingParameter exception is raised.
         - If any dihedral or improper parameters cannot be found, I will try
-          inserting wildcards (at either end for dihedrals and as the two
-          central atoms in impropers) and see if that matches.  Wild-cards
-          will apply ONLY if specific parameters cannot be found.
+          inserting wildcards (in up to three positions) and see if that
+          matches.  Wild-cards will apply ONLY if specific parameters cannot be
+          found.
         - This method will expand the dihedral_parameter_list attribute by
           adding a separate Dihedral object for each term for types that
           have a multi-term expansion
@@ -655,16 +656,11 @@ class CharmmPsfFile(object):
         for dih in self.dihedral_list:
             # Store the atoms
             a1, a2, a3, a4 = dih.atom1, dih.atom2, dih.atom3, dih.atom4
-            at1, at2, at3, at4 = a1.attype, a2.attype, a3.attype, a4.attype
-            # First see if the exact dihedral is specified
-            key = min((at1,at2,at3,at4), (at4,at3,at2,at1))
-            if not key in parmset.dihedral_types:
-                # Check for wild-cards
-                key = min(('X',at2,at3,'X'), ('X',at3,at2,'X'))
-                if not key in parmset.dihedral_types:
-                    raise MissingParameter('No dihedral parameters found for '
-                                           '%r' % dih)
-            dtlist = parmset.dihedral_types[key]
+            try:
+                at_list = [a1.attype, a2.attype, a3.attype, a4.attype]
+                dtlist = _match_with_wildcards(at_list, parmset.dihedral_types, 3)
+            except KeyError:
+                raise MissingParameter('No dihedral parameters found for %r' % dih)
             for i, dt in enumerate(dtlist):
                 self.dihedral_parameter_list.append(Dihedral(a1,a2,a3,a4,dt))
                 # See if we include the end-group interactions for this
@@ -678,18 +674,11 @@ class CharmmPsfFile(object):
         for imp in self.improper_list:
             # Store the atoms
             a1, a2, a3, a4 = imp.atom1, imp.atom2, imp.atom3, imp.atom4
-            at1, at2, at3, at4 = a1.attype, a2.attype, a3.attype, a4.attype
-            key = min((at1,at2,at3,at4), (at4,at3,at2,at1))
-            if not key in parmset.improper_types:
-                key = min((at1,'X', 'X',at4),(at4,'X','X',at1))
-                if not key in parmset.improper_types:
-                    raise MissingParameter('No improper dihedral parameters found for '
-                                           '%r' % imp)
             try:
-                imp.improper_type = parmset.improper_types[key]
+                at_list = [a1.attype, a2.attype, a3.attype, a4.attype]
+                imp.improper_type = _match_with_wildcards(at_list, parmset.improper_types, 3)
             except KeyError:
-                raise MissingParameter('No improper parameters found for %r' %
-                                       imp)
+                raise MissingParameter('No improper parameters found for %r' % imp)
         # Now do the cmaps. These will not have wild-cards
         for cmap in self.cmap_list:
             # Store the atoms for easy reference
@@ -1410,12 +1399,12 @@ class CharmmPsfFile(object):
                 idxa = pair[1]
                 parent_exclude_list[idx].append(idxa)
                 force.addException(idx, idxa, 0.0, 0.1, 0.0)
-            # If lonepairs and Drude particles are bonded to the same parent atom, add exception
-            for excludeterm in parent_exclude_list:
-                if(len(excludeterm) >= 2):
-                    for i in range(len(excludeterm)):
-                        for j in range(i):
-                            force.addException(excludeterm[j], excludeterm[i], 0.0, 0.1, 0.0)
+        # If lonepairs and Drude particles are bonded to the same parent atom, add exception
+        for excludeterm in parent_exclude_list:
+            if(len(excludeterm) >= 2):
+                for i in range(len(excludeterm)):
+                    for j in range(i):
+                        force.addException(excludeterm[j], excludeterm[i], 0.0, 0.1, 0.0)
         # Exclude 1-2 and 1-3 pairs as well as the lonepair/Drude attached onto them
         if nbxmod > 1:
             for ia1, ia2 in self.pair_12_list:
@@ -1851,6 +1840,26 @@ def _mbondi3_radii(atom_list):
         if atom.name == 'OXT':
             radii[i] = 1.4
     return radii  # Converted to nanometers above
+
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+def _match_with_wildcards(at_list, type_dict, max_wc_count):
+    """
+    Tries to find a match for at_list in type_dict.  If one can't be found,
+    tries to insert up to max_wc_count wildcards in different combinations.
+    Assumes that for a given key, min(key, key[::-1]) is the one in type_dict.
+    """
+
+    for wc_count in range(max_wc_count + 1):
+        for wc_indices in combinations(range(len(at_list)), wc_count):
+            key = list(at_list)
+            for wc_index in wc_indices:
+                key[wc_index] = 'X'
+            key = tuple(key)
+            key = min(key, key[::-1])
+            if key in type_dict:
+                return type_dict[key]
+    raise KeyError(key)
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

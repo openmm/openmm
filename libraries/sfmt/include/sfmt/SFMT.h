@@ -95,7 +95,7 @@ OPENMM_EXPORT int get_min_array_size64(void);
 OPENMM_EXPORT SFMTData* createSFMTData(void);
 OPENMM_EXPORT void deleteSFMTData(SFMTData* data);
 
-class SFMT {
+class OPENMM_EXPORT SFMT {
 public:
     SFMT() : data(createSFMTData()) {
     }

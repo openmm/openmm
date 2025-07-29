@@ -32,6 +32,7 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/AndersenThermostat.h"
 #include "openmm/Context.h"
+#include "openmm/LangevinIntegrator.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
@@ -220,6 +221,55 @@ void testMultipleDevices() {
     compareStates(s1, s9);
 }
 
+void testLangevin() {
+    const int numParticles = 10;
+    const double boxSize = 3.0;
+    System system;
+    NonbondedForce* nonbonded = new NonbondedForce();
+    system.addForce(nonbonded);
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        nonbonded->addParticle(i%2 == 0 ? 0.1 : -0.1, 0.2, 0.1);
+        positions[i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+    }
+    LangevinIntegrator integrator(300.0, 1.0, 0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+
+    // Run for a little while.
+
+    integrator.step(100);
+
+    // Record the current state and make a checkpoint.
+
+    State s1 = context.getState(State::Positions | State::Velocities | State::Parameters);
+    stringstream stream1(ios_base::out | ios_base::in | ios_base::binary);
+    context.createCheckpoint(stream1);
+
+    // Continue the simulation for a few more steps and record the state again.
+
+    integrator.step(10);
+    State s2 = context.getState(State::Positions | State::Velocities | State::Parameters);
+
+    // Restore from the checkpoint and see if everything gets restored correctly.
+
+    context.setPeriodicBoxVectors(Vec3(2*boxSize, 0, 0), Vec3(0, 2*boxSize, 0), Vec3(0, 0, 2*boxSize));
+    context.loadCheckpoint(stream1);
+    State s3 = context.getState(State::Positions | State::Velocities | State::Parameters);
+    compareStates(s1, s3);
+
+    // Now simulate from there and see if the trajectory is identical.
+
+    integrator.step(10);
+    State s4 = context.getState(State::Positions | State::Velocities | State::Parameters);
+    compareStates(s2, s4);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -227,6 +277,7 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         testSetState();
         testMultipleDevices();
+        testLangevin();
         runPlatformTests();
     }
     catch(const exception& e) {

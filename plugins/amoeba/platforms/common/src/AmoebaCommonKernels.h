@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,6 +32,7 @@
 #include "openmm/System.h"
 #include "openmm/common/ComputeContext.h"
 #include "openmm/common/ComputeArray.h"
+#include "openmm/common/FFT3D.h"
 #include "openmm/common/NonbondedUtilities.h"
 
 namespace OpenMM {
@@ -77,7 +78,6 @@ private:
 class CommonCalcAmoebaMultipoleForceKernel : public CalcAmoebaMultipoleForceKernel {
 public:
     CommonCalcAmoebaMultipoleForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system);
-    ~CommonCalcAmoebaMultipoleForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -153,10 +153,6 @@ public:
      */
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     /**
-     * Compute the FFT.
-     */
-    virtual void computeFFT(bool forward) = 0;
-    /**
      * Get whether charge spreading should be done in fixed point.
      */
     virtual bool useFixedPointChargeSpreading() const = 0;
@@ -171,7 +167,7 @@ protected:
     int numMultipoles, maxInducedIterations, maxExtrapolationOrder;
     int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
-    double pmeAlpha, inducedEpsilon;
+    double pmeAlpha, inducedEpsilon, totalCharge;
     bool usePME, hasQuadrupoles, hasInitializedScaleFactors, multipolesAreValid, hasCreatedEvent;
     AmoebaMultipoleForce::PolarizationType polarizationType;
     ComputeContext& cc;
@@ -238,6 +234,7 @@ protected:
     ComputeKernel pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel;
     ComputeKernel pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
     ComputeEvent syncEvent;
+    FFT3D fft;
     CommonCalcAmoebaGeneralizedKirkwoodForceKernel* gkKernel;
     static const int PmeOrder = 5;
     static const int MaxPrevDIISDipoles = 20;
@@ -432,10 +429,6 @@ public:
      */
     void initialize(const System& system, const HippoNonbondedForce& force);
     /**
-     * Compute the FFT.
-     */
-    virtual void computeFFT(bool forward, bool dispersion) = 0;
-    /**
      * Get whether charge spreading should be done in fixed point.
      */
     virtual bool useFixedPointChargeSpreading() const = 0;
@@ -512,7 +505,7 @@ protected:
     int numParticles, maxExtrapolationOrder, maxTiles, fieldThreadBlockSize;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
-    double pmeAlpha, dpmeAlpha, cutoff;
+    double pmeAlpha, dpmeAlpha, cutoff, totalCharge;
     bool usePME, hasInitializedKernels, multipolesAreValid;
     std::vector<double> extrapolationCoefficients;
     ComputeContext& cc;
@@ -534,6 +527,7 @@ protected:
     ComputeArray lastPositions;
     ComputeArray exceptionScales[6];
     ComputeArray exceptionAtoms;
+    FFT3D fft, dfft;
     ComputeKernel computeMomentsKernel, recordInducedDipolesKernel, mapTorqueKernel;
     ComputeKernel fixedFieldKernel, fixedFieldExceptionKernel, mutualFieldKernel, mutualFieldExceptionKernel, computeExceptionsKernel;
     ComputeKernel pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;

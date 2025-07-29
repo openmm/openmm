@@ -72,7 +72,6 @@ extern "C" __launch_bounds__(THREAD_BLOCK_SIZE) __global__ void computeNonbonded
     const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
     const unsigned int warp = blockIdx.x*(THREAD_BLOCK_SIZE/TILE_SIZE) + threadIdx.x/TILE_SIZE; // global warpIndex
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1); // index within the warp
-    const unsigned int tbx = threadIdx.x - tgx;           // block warpIndex
     mixed energy = 0;
     INIT_DERIVATIVES
 
@@ -250,9 +249,7 @@ extern "C" __launch_bounds__(THREAD_BLOCK_SIZE) __global__ void computeNonbonded
     int pos = (int) (startTileIndex+warp*numTileIndices/totalWarps);
     int end = (int) (startTileIndex+(warp+1)*numTileIndices/totalWarps);
     int skipBase = 0;
-    int currentSkipIndex = tbx;
-    int skipTiles;
-    skipTiles = -1;
+    int skipTiles = -1;
     for (; pos < end; pos++) {
 #endif
         real3 force = make_real3(0);
@@ -277,7 +274,7 @@ extern "C" __launch_bounds__(THREAD_BLOCK_SIZE) __global__ void computeNonbonded
 
         // Skip over tiles that have exclusions, since they were already processed.
 
-        while (SHFL(skipTiles, TILE_SIZE-1) < pos) {
+        while (BALLOT(skipTiles >= pos) == 0) {
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
                 skipTiles = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
@@ -285,11 +282,8 @@ extern "C" __launch_bounds__(THREAD_BLOCK_SIZE) __global__ void computeNonbonded
             else
                 skipTiles = end;
             skipBase += TILE_SIZE;
-            currentSkipIndex = 0;
         }
-        while (SHFL(skipTiles, currentSkipIndex) < pos)
-            currentSkipIndex++;
-        includeTile = (SHFL(skipTiles, currentSkipIndex) != pos);
+        includeTile = BALLOT(skipTiles == pos) == 0;
 #endif
         if (includeTile) {
             unsigned int atom1 = x*TILE_SIZE + tgx;

@@ -56,9 +56,9 @@ class XTCFile(object):
                 raise FileNotFoundError(f"The file '{self._filename}' does not exist.")
             self._modelCount = get_xtc_nframes(self._filename.encode("utf-8"))
             natoms = get_xtc_natoms(self._filename.encode("utf-8"))
-            if natoms != len(list(topology.atoms())):
+            if natoms != topology.getNumAtoms():
                 raise ValueError(
-                    f"The number of atoms in the topology ({len(list(topology.atoms()))}) does not match the number of atoms in the XTC file ({natoms})"
+                    f"The number of atoms in the topology ({topology.getNumAtoms()}) does not match the number of atoms in the XTC file ({natoms})"
                 )
         else:
             if os.path.isfile(self._filename) and os.path.getsize(self._filename) > 0:

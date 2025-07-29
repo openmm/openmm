@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,7 +37,7 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int length, bool uniform) :
+OpenCLSort::OpenCLSort(OpenCLContext& context, ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform) :
         context(context), trait(trait), dataLength(length), uniform(uniform) {
     // Create kernels.
 
@@ -105,24 +105,25 @@ OpenCLSort::~OpenCLSort() {
     delete trait;
 }
 
-void OpenCLSort::sort(OpenCLArray& data) {
+void OpenCLSort::sort(ArrayInterface& data) {
     if (data.getSize() != dataLength || data.getElementSize() != trait->getDataSize())
         throw OpenMMException("OpenCLSort called with different data size");
     if (data.getSize() == 0)
         return;
+    OpenCLArray& cldata = context.unwrap(data);
     if (isShortList) {
         // We can use a simpler sort kernel that does the entire operation in one kernel.
         
         try {
             if (useShortList2) {
-                shortList2Kernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
+                shortList2Kernel.setArg<cl::Buffer>(0, cldata.getDeviceBuffer());
                 shortList2Kernel.setArg<cl::Buffer>(1, buckets.getDeviceBuffer());
                 shortList2Kernel.setArg<cl_int>(2, dataLength);
                 context.executeKernel(shortList2Kernel, dataLength);
-                buckets.copyTo(data);
+                buckets.copyTo(cldata);
             }
             else {
-                shortListKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
+                shortListKernel.setArg<cl::Buffer>(0, cldata.getDeviceBuffer());
                 shortListKernel.setArg<cl_uint>(1, dataLength);
                 shortListKernel.setArg(2, dataLength*trait->getDataSize(), NULL);
                 context.executeKernel(shortListKernel, sortKernelSize, sortKernelSize);
@@ -140,8 +141,8 @@ void OpenCLSort::sort(OpenCLArray& data) {
     // Compute the range of data values.
 
     unsigned int numBuckets = bucketOffset.getSize();
-    computeRangeKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
-    computeRangeKernel.setArg<cl_uint>(1, data.getSize());
+    computeRangeKernel.setArg<cl::Buffer>(0, cldata.getDeviceBuffer());
+    computeRangeKernel.setArg<cl_uint>(1, cldata.getSize());
     computeRangeKernel.setArg<cl::Buffer>(2, dataRange.getDeviceBuffer());
     computeRangeKernel.setArg(3, rangeKernelSize*trait->getKeySize(), NULL);
     computeRangeKernel.setArg(4, rangeKernelSize*trait->getKeySize(), NULL);
@@ -151,14 +152,14 @@ void OpenCLSort::sort(OpenCLArray& data) {
 
     // Assign array elements to buckets.
 
-    assignElementsKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
-    assignElementsKernel.setArg<cl_int>(1, data.getSize());
+    assignElementsKernel.setArg<cl::Buffer>(0, cldata.getDeviceBuffer());
+    assignElementsKernel.setArg<cl_int>(1, cldata.getSize());
     assignElementsKernel.setArg<cl_int>(2, numBuckets);
     assignElementsKernel.setArg<cl::Buffer>(3, dataRange.getDeviceBuffer());
     assignElementsKernel.setArg<cl::Buffer>(4, bucketOffset.getDeviceBuffer());
     assignElementsKernel.setArg<cl::Buffer>(5, bucketOfElement.getDeviceBuffer());
     assignElementsKernel.setArg<cl::Buffer>(6, offsetInBucket.getDeviceBuffer());
-    context.executeKernel(assignElementsKernel, data.getSize());
+    context.executeKernel(assignElementsKernel, cldata.getSize());
 
     // Compute the position of each bucket.
 
@@ -169,20 +170,20 @@ void OpenCLSort::sort(OpenCLArray& data) {
 
     // Copy the data into the buckets.
 
-    copyToBucketsKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
+    copyToBucketsKernel.setArg<cl::Buffer>(0, cldata.getDeviceBuffer());
     copyToBucketsKernel.setArg<cl::Buffer>(1, buckets.getDeviceBuffer());
-    copyToBucketsKernel.setArg<cl_int>(2, data.getSize());
+    copyToBucketsKernel.setArg<cl_int>(2, cldata.getSize());
     copyToBucketsKernel.setArg<cl::Buffer>(3, bucketOffset.getDeviceBuffer());
     copyToBucketsKernel.setArg<cl::Buffer>(4, bucketOfElement.getDeviceBuffer());
     copyToBucketsKernel.setArg<cl::Buffer>(5, offsetInBucket.getDeviceBuffer());
-    context.executeKernel(copyToBucketsKernel, data.getSize());
+    context.executeKernel(copyToBucketsKernel, cldata.getSize());
 
     // Sort each bucket.
 
-    sortBucketsKernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
+    sortBucketsKernel.setArg<cl::Buffer>(0, cldata.getDeviceBuffer());
     sortBucketsKernel.setArg<cl::Buffer>(1, buckets.getDeviceBuffer());
     sortBucketsKernel.setArg<cl_int>(2, numBuckets);
     sortBucketsKernel.setArg<cl::Buffer>(3, bucketOffset.getDeviceBuffer());
     sortBucketsKernel.setArg(4, sortKernelSize*trait->getDataSize(), NULL);
-    context.executeKernel(sortBucketsKernel, ((data.getSize()+sortKernelSize-1)/sortKernelSize)*sortKernelSize, sortKernelSize);
+    context.executeKernel(sortBucketsKernel, ((cldata.getSize()+sortKernelSize-1)/sortKernelSize)*sortKernelSize, sortKernelSize);
 }

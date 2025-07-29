@@ -88,11 +88,11 @@ void testTransform(bool realToComplex, int xsize, int ysize, int zsize, double e
     HipArray grid1(context, original.size(), sizeof(Real2), "grid1");
     HipArray grid2(context, original.size(), sizeof(Real2), "grid2");
     grid1.upload(original);
-    HipFFT3D fft(context, xsize, ysize, zsize, realToComplex, context.getCurrentStream(), grid1, grid2);
+    HipFFT3D fft(context, xsize, ysize, zsize, realToComplex);
 
     // Perform a forward FFT, then verify the result is correct.
 
-    fft.execFFT(true);
+    fft.execFFT(grid1, grid2, true);
     vector<Real2> result;
     grid2.download(result);
     vector<size_t> shape = {(size_t) xsize, (size_t) ysize, (size_t) zsize};
@@ -113,7 +113,7 @@ void testTransform(bool realToComplex, int xsize, int ysize, int zsize, double e
 
     // Perform a backward transform and see if we get the original values.
 
-    fft.execFFT(false);
+    fft.execFFT(grid2, grid1, false);
     grid1.download(result);
     double scale = 1.0/(xsize*ysize*zsize);
     int valuesToCheck = (realToComplex ? original.size()/2 : original.size());

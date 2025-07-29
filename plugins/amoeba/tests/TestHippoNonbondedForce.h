@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1542,6 +1542,48 @@ void testChangingParameters() {
         ASSERT_EQUAL_VEC(state2.getForces()[i], state3.getForces()[i], 1e-5);
 }
 
+void testNeutralizingPlasmaCorrection() {
+    // Verify that the energy of a system with nonzero charge doesn't depend on alpha.
+
+    System system;
+    HippoNonbondedForce* force = new HippoNonbondedForce();
+    force->setNonbondedMethod(HippoNonbondedForce::PME);
+    system.addForce(force);
+    vector<double> d(3, 0.0), q(9, 0.0);
+    for (int i = 0; i < 2; i++) {
+        system.addParticle(1.0);
+        force->addParticle(1.0, d, q, 6.0, 50.0, 5000.0, 400.0, 0.04, 1.5, -2.4233, 40.0, 0.001, HippoNonbondedForce::NoAxisType, -1, -1, -1);
+    }
+    vector<Vec3> positions(2);
+    positions[0] = Vec3();
+    positions[1] = Vec3(0.3, 0.4, 0.0);
+
+    // Compute the energy.
+
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    double energy1 = context.getState(State::Energy).getPotentialEnergy();
+
+    // Change the cutoff distance, which will change alpha, and see if the energy is the same.
+
+    force->setCutoffDistance(0.7);
+    context.reinitialize(true);
+    double energy2 = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(energy1, energy2, 1e-4);
+
+    // Try changing a particle charge with updateParametersInContext() and make sure the
+    // energy changes by the correct amount.
+
+    force->setParticleParameters(0, 2.0, d, q, 6.0, 50.0, 5000.0, 400.0, 0.04, 1.5, -2.4233, 40.0, 0.001, HippoNonbondedForce::NoAxisType, -1, -1, -1);
+    force->updateParametersInContext(context);
+    double energy3 = context.getState(State::Energy).getPotentialEnergy();
+    force->setCutoffDistance(1.0);
+    context.reinitialize(true);
+    double energy4 = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(energy3, energy4, 1e-4);
+}
+
 int main(int argc, char* argv[]) {
     try {
         setupKernels(argc, argv);
@@ -1562,6 +1604,7 @@ int main(int argc, char* argv[]) {
         testWaterDimer();
         testWaterBox();
         testChangingParameters();
+        testNeutralizingPlasmaCorrection();
     }
     catch (const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
