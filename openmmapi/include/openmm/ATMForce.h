@@ -277,9 +277,12 @@ public:
      */
     int addParticle(const Vec3& displacement1, const Vec3& displacement0=Vec3());
 
+    /// @cond
+    //  Documentation is suppressed for the following forward declarations
     class CoordinateTransformation;
     class FixedDisplacement;
     class ParticleOffsetDisplacement;
+    /// @endcond
 
     /**
      * Add a particle to the force with a coordinate transformation method
