@@ -136,3 +136,15 @@ void CustomExternalForce::updateParametersInContext(Context& context) {
 bool CustomExternalForce::usesPeriodicBoundaryConditions() const {
     return (energyExpression.find("periodicdistance") != string::npos);
 }
+
+int CustomExternalForce::getNumParticles() const {
+    return particles.size();
+}
+
+int CustomExternalForce::getNumPerParticleParameters() const {
+    return parameters.size();
+}
+
+int CustomExternalForce::getNumGlobalParameters() const {
+    return globalParameters.size();
+}

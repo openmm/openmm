@@ -97,11 +97,12 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
          @param masses              atom masses
          @param maxStepSize         maximum time step
          @param tolerance           the constraint tolerance
+         @param boxVectors          the current periodic box vectors
 
          --------------------------------------------------------------------------------------- */
 
       void update(const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
-                  std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double maxStepSize, double tolerance);
+                  std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double maxStepSize, double tolerance, const Vec3* boxVectors);
 
       /**---------------------------------------------------------------------------------------
             

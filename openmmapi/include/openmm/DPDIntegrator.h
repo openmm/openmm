@@ -133,9 +133,7 @@ public:
     /**
      * Get the number of type pairs that have been added to the integrator.
      */
-    int getNumTypePairs() const {
-        return pairs.size();
-    }
+    int getNumTypePairs() const;
     /**
      * Add a type pair.  This overrides the default friction and cutoff distance for interactions
      * between particles of two particular types.
