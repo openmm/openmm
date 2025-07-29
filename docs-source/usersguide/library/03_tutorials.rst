@@ -1,7 +1,7 @@
 .. _openmm-tutorials:
 
-OpenMM Tutorials
-################
+OpenMM C++ API Tutorial Examples
+################################
 
 
 Example Files Overview
