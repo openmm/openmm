@@ -439,6 +439,7 @@ class SwigInputBuilder:
 
     def writeMethods(self, classNode):
         methodList=getClassMethodList(classNode, self.skipMethods)
+        fullClassName = getText("compoundname", classNode)
 
         #write only Constructors
         for items in methodList:
@@ -627,7 +628,7 @@ class SwigInputBuilder:
 
                 if addText:
                     self.fOutPythonappend.write("%pythonappend")
-                    self.fOutPythonappend.write(" OpenMM::%s::%s(" % key)
+                    self.fOutPythonappend.write(" %s::%s(" % (fullClassName, methName))
                     sepChar=''
                     outputIndex=0
                     for pNode in paramList:
