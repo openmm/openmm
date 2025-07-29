@@ -700,6 +700,13 @@ class GromacsTopFile(object):
                     atom_types.append(atom[1])
         has_nbfix_terms = any([pair in self._nonbondTypes for pair in combinations_with_replacement(sorted(set(atom_types)), 2)])
 
+        if has_nbfix_terms:
+            self._matchingNBFIX = {
+    		p: self._nonbondTypes[p]
+    		for p in combinations_with_replacement(sorted(set(atom_types)), 2)
+    		if p in self._nonbondTypes
+	    }
+
         # Create the System.
 
         sys = mm.System()
@@ -1153,24 +1160,29 @@ class GromacsTopFile(object):
         for exclusion in exclusions:
             nb.addException(exclusion[0], exclusion[1], 0.0, 1.0, 0.0, True)
 
-        if lj is not None:
-            # We're using a CustomNonbondedForce for LJ interactions, so also create a CustomBondForce
-            # to handle the exceptions.
-
-            pair_bond = mm.CustomBondForce('-C/r^6+A/r^12')
-            pair_bond.addPerBondParameter('C')
-            pair_bond.addPerBondParameter('A')
-            pair_bond.setName('LennardJonesExceptions')
-            sys.addForce(pair_bond)
+        if self._defaults[1] == '2':
             for pair in pairs:
-                nb.addException(pair[0], pair[1], pair[2], 1.0, 0.0, True)
-                pair_bond.addBond(pair[0], pair[1], [pair[3], pair[4]])
+                nb.addException(pair[0], pair[1], pair[2], pair[3], pair[4], True)
+
+        if lj is not None:
+            if self._defaults[1] == '2':
+               for pair in pairs:
+                  nb.addException(pair[0], pair[1], pair[2], pair[3], pair[4], True)
+            else:
+              # We're using a CustomNonbondedForce for LJ interactions, so also create a CustomBondForce
+              # to handle the exceptions.
+              # this part may need to be tested
+              pair_bond = mm.CustomBondForce('-C/r^6+A/r^12')
+              pair_bond.addPerBondParameter('C')
+              pair_bond.addPerBondParameter('A')
+              pair_bond.setName('LennardJonesExceptions')
+              sys.addForce(pair_bond)
+              for pair in pairs:
+                  nb.addException(pair[0], pair[1], pair[2], 1.0, 0.0, True)
+                  pair_bond.addBond(pair[0], pair[1], [pair[3], pair[4]])
             for i in range(nb.getNumExceptions()):
                 ii, jj, q, eps, sig = nb.getExceptionParameters(i)
                 lj.addExclusion(ii, jj)
-        elif self._defaults[1] == '2':
-            for pair in pairs:
-                nb.addException(pair[0], pair[1], pair[2], pair[3], pair[4], True)
 
         # Finish configuring the NonbondedForce.
 
@@ -1204,7 +1216,7 @@ class GromacsTopFile(object):
 
         if has_nbfix_terms:
             atom_nbfix_types = set([])
-            for pair in self._nonbondTypes:
+            for pair in self._matchingNBFIX:
                 atom_nbfix_types.add(pair[0])
                 atom_nbfix_types.add(pair[1])
 
@@ -1228,7 +1240,7 @@ class GromacsTopFile(object):
                     ljtype2 = (float(atom2[6]), float(atom2[7]))
                     if atom2 is atom:
                         lj_idx_list[j] = num_lj_types
-                    elif atom_type not in atom_nbfix_types:
+                    elif (atom_type not in atom_nbfix_types) and (atom_type2 not in atom_nbfix_types):
                         # Only non-NBFIXed atom types can be compressed
                         if ljtype == ljtype2:
                             lj_idx_list[j] = num_lj_types
@@ -1242,7 +1254,7 @@ class GromacsTopFile(object):
                 for j in range(num_lj_types):
                     namej = lj_type_list[j][0]
                     try:
-                        types = self._nonbondTypes[tuple(sorted((namei, namej)))]
+                        types = self._matchingNBFIX[tuple(sorted((namei, namej)))]
                         params = (float(types[3]), float(types[4]))
                         if self._defaults[1] == '2':
                             c6 = 4 * params[1] * params[0]**6
