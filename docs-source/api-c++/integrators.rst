@@ -57,6 +57,17 @@ The RPMD integrator implements Ring Polymer MD.
     generated/RPMDIntegrator
 
 
+Quantum Thermal Bath integrators
+================================
+
+The QTB integrator implements the adaptive quantum thermal bath (adQTB) method.
+
+.. toctree::
+    :maxdepth: 2
+
+    generated/QTBIntegrator
+
+
 Dissipative Particle Dynamics integrators
 =========================================
 
