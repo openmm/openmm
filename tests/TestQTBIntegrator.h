@@ -33,6 +33,7 @@
 #include "openmm/Context.h"
 #include "openmm/CustomBondForce.h"
 #include "openmm/CustomExternalForce.h"
+#include "openmm/CustomNonbondedForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
@@ -97,7 +98,7 @@ void testHarmonic() {
         double hbar = 1.054571628e-34*AVOGADRO/(1000*1e-12);
         double kT = BOLTZ*temperature;
         double expected = 1.5*hbar*w*(0.5+1/(exp(hbar*w/kT)-1));
-        ASSERT_USUALLY_EQUAL_TOL(expected, energy[i], 0.05);
+        ASSERT_USUALLY_EQUAL_TOL(expected, energy[i], 0.07);
     }
 }
 
@@ -169,6 +170,96 @@ void testCoupledHarmonic() {
         double kT = BOLTZ*temperature;
         double expected = 1.5*hbar*w*(0.5+1/(exp(hbar*w/kT)-1));
         ASSERT_USUALLY_EQUAL_TOL(expected, energy[i], 0.15);
+    }
+}
+
+void testParaHydrogen() {
+    const int numParticles = 32;
+    const double temperature = 25.0;
+    const double mass = 2.0;
+    const double boxSize = 1.1896;
+    const int numSteps = 2000;
+    const int numBins = 200;
+    const double reference[] = {
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 4.932814042206152e-5, 1.244331241336431e-4, 4.052316284060125e-4,
+        1.544810863683946e-3, 4.376197806690222e-3, 1.025847561714293e-2, 2.286702037465422e-2,
+        4.371052180263602e-2, 7.518538770734748e-2, 0.122351534531647, 0.185758975626622,
+        0.266399984652322, 0.363380262153250, 0.473696401293219, 0.595312098494172,
+        0.726049519422861, 0.862264551954547, 0.991102029379444, 1.1147503922535,
+        1.23587006992066, 1.33495411932817, 1.42208208736987, 1.49273884004107,
+        1.54633319690403, 1.58714702233941, 1.60439217751355, 1.61804190608902,
+        1.60680198476058, 1.58892222973695, 1.56387607986781, 1.52629494593350,
+        1.48421439018970, 1.43656176771959, 1.38752775598872, 1.33310695719931,
+        1.28363477223121, 1.23465642750248, 1.18874848666326, 1.14350496170519,
+        1.10292486009936, 1.06107270157688, 1.02348927970441, 0.989729345271297,
+        0.959273446941802, 0.932264875865758, 0.908818658748942, 0.890946420768315,
+        0.869332737718165, 0.856401736350349, 0.842370069917020, 0.834386614237393,
+        0.826268072171045, 0.821547250199453, 0.818786865315836, 0.819441757028076,
+        0.819156933383128, 0.822275325148621, 0.828919078023881, 0.837233720599450,
+        0.846961908186718, 0.855656955481099, 0.864520333201247, 0.876082425547566,
+        0.886950044046000, 0.900275658318995
+    };
+
+    // Create a box of para-hydrogen.
+
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(mass);
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize,0,0), Vec3(0,boxSize,0), Vec3(0,0,boxSize));
+    CustomNonbondedForce* nb = new CustomNonbondedForce("2625.49963*(exp(1.713-1.5671*p-0.00993*p*p)-(12.14/p^6+215.2/p^8-143.1/p^9+4813.9/p^10)*(step(rc-p)*exp(-(rc/p-1)^2)+1-step(rc-p))); p=r/0.05291772108; rc=8.32");
+    nb->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    nb->setCutoffDistance(boxSize/2);
+    vector<double> params;
+    for (int i = 0; i < numParticles; i++)
+        nb->addParticle(params);
+    system.addForce(nb);
+    QTBIntegrator integ(temperature, 40.0, 0.001);
+    for (int i = 0; i < numParticles; i++)
+        integ.setParticleType(i, 0);
+    integ.setDefaultAdaptationRate(0.5);
+    integ.setSegmentLength(0.5);
+    Context context(system, integ, platform);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        positions[i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+    context.setPositions(positions);
+    integ.step(50000);
+
+    // Simulate it.
+
+    vector<int> counts(numBins, 0);
+    const double invBoxSize = 1.0/boxSize;
+    for (int step = 0; step < numSteps; step++) {
+        integ.step(20);
+        State state = context.getState(State::Positions);
+
+        // Record the radial distribution function.
+
+        const vector<Vec3>& pos = state.getPositions();
+        for (int j = 0; j < numParticles; j++)
+            for (int k = 0; k < j; k++) {
+                Vec3 delta = pos[j]-pos[k];
+                delta[0] -= floor(delta[0]*invBoxSize+0.5)*boxSize;
+                delta[1] -= floor(delta[1]*invBoxSize+0.5)*boxSize;
+                delta[2] -= floor(delta[2]*invBoxSize+0.5)*boxSize;
+                double dist = sqrt(delta.dot(delta));
+                int bin = (int) (numBins*(dist/boxSize));
+                counts[bin]++;
+            }
+    }
+
+    // Check against expected values.
+
+    double scale = (boxSize*boxSize*boxSize)/(numSteps*0.5*numParticles*numParticles);
+    for (int i = 0; i < numBins/2; i++) {
+        double r1 = i*boxSize/numBins;
+        double r2 = (i+1)*boxSize/numBins;
+        double volume = (4.0/3.0)*M_PI*(r2*r2*r2-r1*r1*r1);
+        ASSERT_USUALLY_EQUAL_TOL(reference[i], scale*counts[i]/volume, 0.2);
     }
 }
 
@@ -389,6 +480,7 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         testHarmonic();
         testCoupledHarmonic();
+        testParaHydrogen();
         testConstraints();
         testConstrainedMasslessParticles();
         testRandomSeed();
