@@ -213,7 +213,7 @@ class TestGromacsTopFile(unittest.TestCase):
             if i == 4:
                 wc = -wc
             self.assertAlmostEqual(wc, vs.getWeightCross())
-
+    
     def test_GROMOS(self):
         """Test a system using the GROMOS 54a7 force field."""
 
@@ -239,6 +239,108 @@ class TestGromacsTopFile(unittest.TestCase):
         assert_allclose(-6.23055e+03+4.36880e+03, energy['NonbondedForce'], rtol=1e-4)
         total = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
         assert_allclose(-1.77020e+02, total, rtol=1e-3)
+
+    def test_NBFIX(self):
+        """Test systems using NBFIX with and without pairtypes and different combination rules."""
+
+        gro = GromacsGroFile('systems/apgr.gro')
+
+        # NBFIX, pairtypes, combination rule 1
+        top = GromacsTopFile('systems/apgr.nbfix.pairs.comb1.top')
+        system = top.createSystem(nonbondedMethod=NoCutoff,switchDistance=None,constraints=None,useDispersionCorrection=False)
+        context = Context(system, VerletIntegrator(1*femtosecond), Platform.getPlatform('Reference'))
+        context.setPositions(gro.positions)
+        energy=context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        assert_allclose(energy, -986.713,rtol=1E-2)
+
+        # NBFIX, pairtypes, combination rule 2 
+        top = GromacsTopFile('systems/apgr.nbfix.pairs.comb2.top')
+        system = top.createSystem(nonbondedMethod=NoCutoff,switchDistance=None,constraints=None,useDispersionCorrection=False)
+        context = Context(system, VerletIntegrator(1*femtosecond), Platform.getPlatform('Reference'))
+        context.setPositions(gro.positions)
+        energy=context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        assert_allclose(energy, -986.485,rtol=1E-2)
+
+        # NBFIX, pairtypes, combination rule 3
+        top = GromacsTopFile('systems/apgr.nbfix.pairs.comb3.top')
+        system = top.createSystem(nonbondedMethod=NoCutoff,switchDistance=None,constraints=None,useDispersionCorrection=False)
+        context = Context(system, VerletIntegrator(1*femtosecond), Platform.getPlatform('Reference'))
+        context.setPositions(gro.positions)
+        energy=context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        assert_allclose(energy, -986.713,rtol=1E-2)
+
+        # NBFIX, no pairtypes, combination rule 1
+        top = GromacsTopFile('systems/apgr.nbfix.nopairs.comb1.top')
+        system = top.createSystem(nonbondedMethod=NoCutoff,switchDistance=None,constraints=None,useDispersionCorrection=False)
+        context = Context(system, VerletIntegrator(1*femtosecond), Platform.getPlatform('Reference'))
+        context.setPositions(gro.positions)
+        energy=context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        assert_allclose(energy, -912.181,rtol=1E-2)
+
+        # NBFIX, no pairtypes, combination rule 2 
+        top = GromacsTopFile('systems/apgr.nbfix.nopairs.comb2.top')
+        system = top.createSystem(nonbondedMethod=NoCutoff,switchDistance=None,constraints=None,useDispersionCorrection=False)
+        context = Context(system, VerletIntegrator(1*femtosecond), Platform.getPlatform('Reference'))
+        context.setPositions(gro.positions)
+        energy=context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        assert_allclose(energy, -903.437,rtol=1E-2)
+
+        # NBFIX, no pairtypes, combination rule 3
+        top = GromacsTopFile('systems/apgr.nbfix.nopairs.comb3.top')
+        system = top.createSystem(nonbondedMethod=NoCutoff,switchDistance=None,constraints=None,useDispersionCorrection=False)
+        context = Context(system, VerletIntegrator(1*femtosecond), Platform.getPlatform('Reference'))
+        context.setPositions(gro.positions)
+        energy=context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        assert_allclose(energy, -912.181,rtol=1E-2)
+
+        # no NBFIX, pairtypes, combination rule 1
+        top = GromacsTopFile('systems/apgr.nonbfix.pairs.comb1.top')
+        system = top.createSystem(nonbondedMethod=NoCutoff,switchDistance=None,constraints=None,useDispersionCorrection=False)
+        context = Context(system, VerletIntegrator(1*femtosecond), Platform.getPlatform('Reference'))
+        context.setPositions(gro.positions)
+        energy=context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        assert_allclose(energy, -993.104,rtol=1E-2)
+
+        # no NBFIX, pairtypes, combination rule 2 
+        top = GromacsTopFile('systems/apgr.nonbfix.pairs.comb2.top')
+        system = top.createSystem(nonbondedMethod=NoCutoff,switchDistance=None,constraints=None,useDispersionCorrection=False)
+        context = Context(system, VerletIntegrator(1*femtosecond), Platform.getPlatform('Reference'))
+        context.setPositions(gro.positions)
+        energy=context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        assert_allclose(energy, -992.685,rtol=1E-2)
+
+        # no NBFIX, pairtypes, combination rule 3
+        top = GromacsTopFile('systems/apgr.nonbfix.pairs.comb3.top')
+        system = top.createSystem(nonbondedMethod=NoCutoff,switchDistance=None,constraints=None,useDispersionCorrection=False)
+        context = Context(system, VerletIntegrator(1*femtosecond), Platform.getPlatform('Reference'))
+        context.setPositions(gro.positions)
+        energy=context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        assert_allclose(energy, -993.104,rtol=1E-2)
+
+        # NBFIX, no pairtypes, combination rule 1
+        top = GromacsTopFile('systems/apgr.nonbfix.nopairs.comb1.top')
+        system = top.createSystem(nonbondedMethod=NoCutoff,switchDistance=None,constraints=None,useDispersionCorrection=False)
+        context = Context(system, VerletIntegrator(1*femtosecond), Platform.getPlatform('Reference'))
+        context.setPositions(gro.positions)
+        energy=context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        assert_allclose(energy, -918.572,rtol=1E-2)
+
+        # NBFIX, no pairtypes, combination rule 2 
+        top = GromacsTopFile('systems/apgr.nonbfix.nopairs.comb2.top')
+        system = top.createSystem(nonbondedMethod=NoCutoff,switchDistance=None,constraints=None,useDispersionCorrection=False)
+        context = Context(system, VerletIntegrator(1*femtosecond), Platform.getPlatform('Reference'))
+        context.setPositions(gro.positions)
+        energy=context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        assert_allclose(energy, -909.637,rtol=1E-2)
+
+        # NBFIX, no pairtypes, combination rule 3
+        top = GromacsTopFile('systems/apgr.nonbfix.nopairs.comb3.top')
+        system = top.createSystem(nonbondedMethod=NoCutoff,switchDistance=None,constraints=None,useDispersionCorrection=False)
+        context = Context(system, VerletIntegrator(1*femtosecond), Platform.getPlatform('Reference'))
+        context.setPositions(gro.positions)
+        energy=context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        assert_allclose(energy, -918.572,rtol=1E-2)
+
 
 if __name__ == '__main__':
     unittest.main()
