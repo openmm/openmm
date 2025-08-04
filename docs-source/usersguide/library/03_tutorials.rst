@@ -1,8 +1,10 @@
 .. _openmm-tutorials:
 
-OpenMM C++ API Tutorial Examples
-################################
+OpenMM C++ API Examples
+#######################
 
+This chapter describes examples provided with OpenMM demonstrating how to use
+the OpenMM C++ API (as well as the C and Fortran API wrappers).
 
 Example Files Overview
 **********************
