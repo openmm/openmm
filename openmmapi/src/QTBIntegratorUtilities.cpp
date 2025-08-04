@@ -49,7 +49,8 @@ void QTBIntegratorUtilities::findTypes(const System& system, const QTBIntegrator
         int type = particle.second;
         double mass = system.getParticleMass(particle.first);
         if (typeIndex.find(type) == typeIndex.end()) {
-            typeIndex[type] = typeIndex.size();
+            int index = typeIndex.size();
+            typeIndex[type] = index;
             double rate = defaultAdaptationRate;
             const auto& typeRates = integrator.getTypeAdaptationRates();
             if (typeRates.find(type) != typeRates.end())
