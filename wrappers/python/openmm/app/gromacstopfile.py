@@ -357,7 +357,7 @@ class GromacsTopFile(object):
         if len(fields) < 3:
             raise ValueError('Too few fields in [ bonds ] line: '+line)
         if fields[2] not in ('1', '2'):
-                raise ValueError('Unsupported function type in [ bonds ] line: '+line)
+            raise ValueError('Unsupported function type in [ bonds ] line: '+line)
         self._currentMoleculeType.bonds.append(fields)
 
     def _processAngle(self, line):
@@ -710,11 +710,11 @@ class GromacsTopFile(object):
     		if p in self._nonbondTypes
 	    }
             if self._defaults[1] == '3':
-               for v in self._matchingNBFIX.values():
-                   sigma=float(v[3])
-                   epsilon=float(v[4])
-                   v[3]=4*epsilon*sigma**6
-                   v[4]=4*epsilon*sigma**12
+                for v in self._matchingNBFIX.values():
+                    sigma=float(v[3])
+                    epsilon=float(v[4])
+                    v[3]=4*epsilon*sigma**6
+                    v[4]=4*epsilon*sigma**12
 
         # Create the System.
 
@@ -737,10 +737,10 @@ class GromacsTopFile(object):
         else:
             # used for LJ interactions when combination rules are 1 or 3
             if self._defaults[1] in ('1', '3'):
-              lj = mm.CustomNonbondedForce('A1*A2/r^12-C1*C2/r^6')
-              lj.addPerParticleParameter('C')
-              lj.addPerParticleParameter('A')
-              sys.addForce(lj)
+                lj = mm.CustomNonbondedForce('A1*A2/r^12-C1*C2/r^6')
+                lj.addPerParticleParameter('C')
+                lj.addPerParticleParameter('A')
+                sys.addForce(lj)
         bonds = {}
         angles = {}
         periodic = None
@@ -1066,30 +1066,24 @@ class GromacsTopFile(object):
                     atom2params = nb.getParticleParameters(baseAtomIndex+atoms[1])
                     atom1params = [x.value_in_unit_system(unit.md_unit_system) for x in atom1params]
                     atom2params = [x.value_in_unit_system(unit.md_unit_system) for x in atom2params]
+
+                    def convertParams(params):
+                        if self._defaults[1] == '3':
+                           # convert from sigma/epsilon given in topology file for combination rule 3 according to GROMACS convention
+                           sigma=params[0]
+                           epsilon=params[1]
+                           return [4*epsilon*sigma**6, 4*epsilon*sigma**12]
+                        return params
+                        
                     if len(fields) >= 5:
                         # extra parameters given for 1-4 interactions as part of the pair entry
-                        sigma,epsilon = (float(x) for x in fields[3:5])
-                        if self._defaults[1] == '3':
-                           # convert from sigma/epsilon given in topology file for combination rule 3 according to GROMACS convention
-                           params=[4*epsilon*sigma**6, 4*epsilon*sigma**12]
-                        else:
-                           params = [sigma, epsilon]
+                        params = convertParams([float(x) for x in fields[3:5]])
                     elif types in self._pairTypes:
                         # parameters given under pairTypes
-                        sigma,epsilon = (float(x) for x in self._pairTypes[types][3:5])
-                        if self._defaults[1] == '3':
-                           # convert from sigma/epsilon given in topology file for combination rule 3 according to GROMACS convention
-                           params=[4*epsilon*sigma**6, 4*epsilon*sigma**12]
-                        else:
-                           params = [sigma, epsilon]
+                        params = convertParams([float(x) for x in self._pairTypes[types][3:5]])
                     elif types[::-1] in self._pairTypes:
                         # parameters given under pairTypes
-                        sigma,epsilon = (float(x) for x in self._pairTypes[types[::-1]][3:5])
-                        if self._defaults[1] == '3':
-                           # convert from sigma/epsilon given in topology file for combination rule 3 according to GROMACS convention
-                           params=[4*epsilon*sigma**6, 4*epsilon*sigma**12]
-                        else:
-                           params = [sigma, epsilon]
+                        params = convertParams([float(x) for x in self._pairTypes[types[::-1]][3:5]])
                     elif not self._genpairs:
                         raise ValueError('No pair parameters defined for atom '
                                          'types %s and gen-pairs is "no"' % types)
@@ -1166,17 +1160,15 @@ class GromacsTopFile(object):
                 charge_prod = fudgeQQ*q1*q4
                 epsilon = math.sqrt(abs(eps1 * eps4))
                 if self._defaults[1] == '2':
-                   rmin14 = (rmin1 + rmin4) / 2
+                    rmin14 = (rmin1 + rmin4) / 2
                 else:
-                   rmin14 = math.sqrt(rmin1 * rmin4)
-                # this ignores pairs given in the topology file and 
-                # and parameters are generated for all pairs via standard combining rules
-                # ignoring different 1-4 parameters given via pairtypes
-                # they will be overwritten later
+                    rmin14 = math.sqrt(rmin1 * rmin4)
+                # Parameters are generated via standard combining rules.
+                # If different 1-4 parameters are given via pairtypes they will be overwritten below.
                 if self._defaults[1] == '3':
-                   nb.addException(tor[0], tor[3], charge_prod, 4*epsilon*rmin14**6, 4*epsilon*rmin14**12)
+                    nb.addException(tor[0], tor[3], charge_prod, 4*epsilon*rmin14**6, 4*epsilon*rmin14**12)
                 else:
-                   nb.addException(tor[0], tor[3], charge_prod, rmin14, epsilon)
+                    nb.addException(tor[0], tor[3], charge_prod, rmin14, epsilon)
                 excluded_atom_pairs.add(key)
 
             # Add excluded atoms
@@ -1207,24 +1199,26 @@ class GromacsTopFile(object):
             nb.addException(pair[0], pair[1], pair[2], pair[3], pair[4], True)
 
         if self._defaults[1] in ('1', '3'):
-           # for combination rules 1/3 we handle exceptions (1-4 interactions) via a custom formula
-           pair_bond = mm.CustomBondForce('-C/r^6+A/r^12')
-           pair_bond.addPerBondParameter('C')
-           pair_bond.addPerBondParameter('A')
-           pair_bond.setName('LennardJonesExceptions')
-           sys.addForce(pair_bond)
-           for i in range(nb.getNumExceptions()):
-              ii, jj, q, sig, eps = nb.getExceptionParameters(i)
-              if (eps.value_in_unit(unit.kilojoule_per_mole))>1E-50:
-                 nb.addException(ii,jj,q, 1.0, 0.0, True)
-                 pair_bond.addBond(ii,jj,[sig,eps])
-              if lj is not None:
-                 lj.addExclusion(ii, jj)
+           # We're using a CustomNonbondedForce for LJ interactions, so also create a CustomBondForce
+           # to handle the exceptions
+ 
+            pair_bond = mm.CustomBondForce('-C/r^6+A/r^12')
+            pair_bond.addPerBondParameter('C')
+            pair_bond.addPerBondParameter('A')
+            pair_bond.setName('LennardJonesExceptions')
+            sys.addForce(pair_bond)
+            for i in range(nb.getNumExceptions()):
+                ii, jj, q, sig, eps = nb.getExceptionParameters(i)
+                if (eps.value_in_unit(unit.kilojoule_per_mole))>0:
+                    nb.addException(ii,jj,q, 1.0, 0.0, True)
+                    pair_bond.addBond(ii,jj,[sig,eps])
+                if lj is not None:
+                    lj.addExclusion(ii, jj)
 
         if ljnbfix is not None:
-           for i in range(nb.getNumExceptions()):
-              ii, jj, q, eps, sig = nb.getExceptionParameters(i)
-              ljnbfix.addExclusion(ii, jj)
+            for i in range(nb.getNumExceptions()):
+                ii, jj, q, eps, sig = nb.getExceptionParameters(i)
+                ljnbfix.addExclusion(ii, jj)
            
         # Finish configuring the NonbondedForce.
 
@@ -1239,9 +1233,10 @@ class GromacsTopFile(object):
         nb.setEwaldErrorTolerance(ewaldErrorTolerance)
 
         if useDispersionCorrection is None and nonbondedMethod in (ff.PME, ff.LJPME, ff.Ewald, ff.CutoffPeriodic):
-           useDispersionCorrection=True
- 
-        nb.setUseDispersionCorrection(bool(useDispersionCorrection))
+            useDispersionCorrection=True
+
+        if useDispersionCorrection is not None: 
+            nb.setUseDispersionCorrection(bool(useDispersionCorrection))
 
         if switchDistance is not None:
             nb.setUseSwitchingFunction(True)
