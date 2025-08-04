@@ -1089,5 +1089,22 @@ class TestAPIUnits(unittest.TestCase):
         integrator = CustomIntegrator(1.0*femtoseconds)
         self.assertEqual(integrator.getStepSize(), 1.0*femtoseconds)
 
+    def testQTBIntegrator(self):
+        """ Tests the LangevinIntegrator API features """
+        integrator = QTBIntegrator(300, 0.1, 0.001)
+        self.assertEqual(integrator.getTemperature(), 300*kelvin)
+        self.assertEqual(integrator.getFriction(), 0.1/picosecond)
+        self.assertEqual(integrator.getStepSize(), 0.001*picosecond)
+
+        integrator = QTBIntegrator(300*kelvin, 0.1/microsecond, 1*femtosecond)
+        self.assertEqual(integrator.getTemperature(), 300*kelvin)
+        self.assertAlmostEqualUnit(integrator.getFriction(), 0.1/microsecond)
+        self.assertEqual(integrator.getStepSize(), 1*femtosecond)
+
+        integrator.setSegmentLength(0.5)
+        self.assertEqual(integrator.getSegmentLength(), 0.5*picosecond)
+        integrator.setSegmentLength(100*femtosecond)
+        self.assertEqual(integrator.getSegmentLength(), 0.1*picosecond)
+
 if __name__ == '__main__':
     unittest.main()
