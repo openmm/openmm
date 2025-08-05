@@ -1,6 +1,3 @@
-#ifndef OPENMM_H_
-#define OPENMM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,58 +29,56 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CMAPTorsionForce.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/CompoundIntegrator.h"
-#include "openmm/CustomBondForce.h"
-#include "openmm/CustomCentroidBondForce.h"
-#include "openmm/CustomCompoundBondForce.h"
-#include "openmm/CustomAngleForce.h"
-#include "openmm/CustomTorsionForce.h"
-#include "openmm/CustomExternalForce.h"
-#include "openmm/CustomCVForce.h"
-#include "openmm/CustomGBForce.h"
-#include "openmm/CustomHbondForce.h"
-#include "openmm/CustomIntegrator.h"
-#include "openmm/CustomManyParticleForce.h"
-#include "openmm/CustomNonbondedForce.h"
-#include "openmm/CustomVolumeForce.h"
-#include "openmm/DPDIntegrator.h"
-#include "openmm/Force.h"
-#include "openmm/GayBerneForce.h"
-#include "openmm/GBSAOBCForce.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/Integrator.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/LangevinMiddleIntegrator.h"
-#include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/MonteCarloAnisotropicBarostat.h"
-#include "openmm/MonteCarloBarostat.h"
-#include "openmm/MonteCarloFlexibleBarostat.h"
-#include "openmm/MonteCarloMembraneBarostat.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
-#include "openmm/PeriodicTorsionForce.h"
-#include "openmm/RBTorsionForce.h"
-#include "openmm/RGForce.h"
-#include "openmm/RMSDForce.h"
-#include "openmm/State.h"
-#include "openmm/System.h"
-#include "openmm/TabulatedFunction.h"
-#include "openmm/Units.h"
-#include "openmm/VariableLangevinIntegrator.h"
-#include "openmm/VariableVerletIntegrator.h"
-#include "openmm/Vec3.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/NoseHooverIntegrator.h"
-#include "openmm/NoseHooverChain.h"
-#include "openmm/VirtualSite.h"
-#include "openmm/Platform.h"
-#include "openmm/serialization/XmlSerializer.h"
-#include "openmm/ATMForce.h"
+#include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/RGForceImpl.h"
+#include "openmm/kernels.h"
+#include <set>
+#include <sstream>
 
-#endif /*OPENMM_H_*/
+using namespace OpenMM;
+using namespace std;
+
+RGForceImpl::RGForceImpl(const RGForce& owner) : owner(owner) {
+    forceGroup = owner.getForceGroup();
+}
+
+RGForceImpl::~RGForceImpl() {
+}
+
+void RGForceImpl::initialize(ContextImpl& context) {
+    kernel = context.getPlatform().createKernel(CalcRGForceKernel::Name(), context);
+
+    // Check for errors in the specification of particles.
+    const System& system = context.getSystem();
+    int numParticles = system.getNumParticles();
+    set<int> particles;
+    for (int i : owner.getParticles()) {
+        if (i < 0 || i >= numParticles) {
+            stringstream msg;
+            msg << "RGForce: Illegal particle index for Rg: ";
+            msg << i;
+            throw OpenMMException(msg.str());
+        }
+        if (particles.find(i) != particles.end()) {
+            stringstream msg;
+            msg << "RGForce: Duplicated particle index for Rg: ";
+            msg << i;
+            throw OpenMMException(msg.str());
+        }
+        particles.insert(i);
+    }
+    kernel.getAs<CalcRGForceKernel>().initialize(context.getSystem(), owner);
+}
+
+double RGForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&(1<<forceGroup)) != 0)
+        return kernel.getAs<CalcRGForceKernel>().execute(context, includeForces, includeEnergy);
+    return 0.0;
+}
+
+vector<string> RGForceImpl::getKernelNames() {
+    vector<string> names;
+    names.push_back(CalcRGForceKernel::Name());
+    return names;
+}

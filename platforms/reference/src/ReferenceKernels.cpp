@@ -61,6 +61,7 @@
 #include "ReferencePointFunctions.h"
 #include "ReferenceProperDihedralBond.h"
 #include "ReferenceRbDihedralBond.h"
+#include "ReferenceRGForce.h"
 #include "ReferenceRMSDForce.h"
 #include "ReferenceTabulatedFunction.h"
 #include "ReferenceVariableStochasticDynamics.h"
@@ -2305,6 +2306,20 @@ void ReferenceCalcRMSDForceKernel::copyParametersToContext(ContextImpl& context,
     center /= particles.size();
     for (Vec3& p : referencePos)
         p -= center;
+}
+
+void ReferenceCalcRGForceKernel::initialize(const System& system, const RGForce& force) {
+    particles = force.getParticles();
+    if (particles.size() == 0)
+        for (int i = 0; i < system.getNumParticles(); i++)
+            particles.push_back(i);
+}
+
+double ReferenceCalcRGForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
+    ReferenceRGForce rg(particles);
+    return rg.calculateIxn(posData, forceData);
 }
 
 ReferenceIntegrateVerletStepKernel::~ReferenceIntegrateVerletStepKernel() {
