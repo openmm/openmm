@@ -6,13 +6,13 @@
 
 ### Introduction
 
-[OpenMM](http://openmm.org) is a toolkit for molecular simulation. It can be used either as a stand-alone application for running simulations, or as a library you call from your own code. It
+[OpenMM](https://openmm.org) is a toolkit for molecular simulation. It can be used either as a stand-alone application for running simulations, or as a library you call from your own code. It
 provides a combination of extreme flexibility (through custom forces and integrators), openness, and high performance (especially on recent GPUs) that make it truly unique among simulation codes.  
 
 ### Getting Help
 
 Need help using OpenMM?  There are several places that you can find it:
-- [Documentation](http://docs.openmm.org/):
+- [Documentation](https://docs.openmm.org/):
   - [User Manual](https://docs.openmm.org/latest/userguide/)
   - [Python API Reference](https://docs.openmm.org/latest/api-python/)
   - [C++ API Reference](https://docs.openmm.org/latest/api-c++/)

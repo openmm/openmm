@@ -1,3 +1,6 @@
+License
+*******
+
 Portions copyright (c) 2011-2025 Stanford University and the Authors
 
 Contributors: Peter Eastman
@@ -21,9 +24,8 @@ OUT OF OR IN CONNECTION WITH THE DOCUMENT OR THE USE OR OTHER DEALINGS IN THE
 DOCUMENT.
 
 Acknowledgments
+***************
 
-OpenMM software and all related activities, such as this manual, are funded by
-the Simbios National Center for Biomedical Computing through the National
-Institutes of Health Roadmap for Medical Research, Grant U54 GM072970.
-Information on the National Centers can be found at
-https://commonfund.nih.gov/bioinformatics.
+OpenMM research and development activities are supported by various individuals
+and funded from a number of sources: for up-to-date information, consult
+https://openmm.org/development.

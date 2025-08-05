@@ -1,3 +1,6 @@
+License
+*******
+
 Portions copyright (c) 2008-2025 Stanford University and the Authors
 
 Contributors:  Kyle Beauchamp, Christopher Bruns, John Chodera, Peter Eastman, Mark

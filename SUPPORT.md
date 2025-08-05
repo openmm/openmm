@@ -10,5 +10,5 @@ you want to suggest a change to the code, or if you think you have found a bug,
 open an issue.  The core developers monitor both, so don't worry if you aren't
 sure which one is most appropriate for your question.  We will see it either way.
 
-You also may want to consult the [documentation](http://docs.openmm.org/).  It is quite
+You also may want to consult the [documentation](https://docs.openmm.org/).  It is quite
 thorough, and you may be able to find the answer to your question.
