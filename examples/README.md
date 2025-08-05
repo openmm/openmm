@@ -15,6 +15,10 @@ reading from:
 - GROMACS format files (see `python-examples/simulateGromacs.py`)
 - PDB (Protein Data Bank) files (to be used with OpenMM-compatible force fields; see `python-examples/simulatePdb.py`)
 
+These examples can also be found in the
+[Running Simulations chapter](https://docs.openmm.org/latest/userguide/application/02_running_sims.html)
+of the user guide, along with explanations of how they work.
+
 ### C++ API examples
 
 The examples in `cpp-examples` demonstrate the use of OpenMM's C++ API, and also
@@ -25,4 +29,4 @@ show how to use its C and Fortran bindings.  For more information, see
 
 You can also find:
 - [Extra utility scripts](extras/README.md) in `extras`
-- A suite of benchmarks for OpenMM in `Benchmarks`
+- A suite of benchmarks for OpenMM in `benchmarks`
