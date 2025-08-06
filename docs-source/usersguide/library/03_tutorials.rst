@@ -1,14 +1,16 @@
 .. _openmm-tutorials:
 
-OpenMM Tutorials
-################
+OpenMM C++ API Examples
+#######################
 
+This chapter describes examples provided with OpenMM demonstrating how to use
+the OpenMM C++ API (as well as the C and Fortran API wrappers).
 
 Example Files Overview
 **********************
 
-Four example files are provided in the examples folder, each designed with
-a specific objective.
+Four example files are provided in the :code:`examples/cpp-examples` folder,
+each designed with a specific objective.
 
 * **HelloArgon:**  A very simple example intended for verifying that you
   have installed OpenMM correctly.  It also introduces you to the basic classes
@@ -246,7 +248,7 @@ and C examples.
 The Fortran compiler needs to load a version of the libstdc++.dylib library that
 is compatible with the version of gcc used to build OpenMM;   OpenMM for Mac is
 compiled using gcc 4.2.  If you are compiling with a different version, edit the
-Makefile and add the following flag to FCPPLIBS: :code:`–L/usr/lib/gcc/i686
+Makefile and add the following flag to FCPPLIBS: :code:`-L/usr/lib/gcc/i686
 -apple-darwin10/4.2.1`\ .
 
 When the Makefile has been updated, type:

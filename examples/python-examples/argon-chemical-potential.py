@@ -7,8 +7,8 @@
 #
 # REQUIREMENTS
 #
-# numpy - Scientific computing package - http://numpy.scipy.org
-# pymbar - Python implementation of MBAR - https://simtk.org/home/pymbar
+# numpy - Scientific computing package - https://numpy.org/
+# pymbar - Python implementation of MBAR - https://github.com/choderalab/pymbar
 #
 # REFERENCES
 #

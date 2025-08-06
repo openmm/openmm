@@ -25,8 +25,11 @@ Online Resources
 ****************
 
 You can find more documentation and other material at our website
-http://openmm.org.   Among other things there is a discussion forum,
-a wiki, and videos of lectures on using OpenMM.
+https://openmm.org/.  In particular, you may want to consult the
+`Python API documentation <https://docs.openmm.org/latest/api-python/>`__ or the
+`C++ API documentation <https://docs.openmm.org/latest/api-c++/>`__, read the
+`Frequently Asked Questions (FAQ) <https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions>`__,
+or browse the `discussion forum on GitHub <https://github.com/openmm/openmm/discussions>`__.
 
 
 Referencing OpenMM
@@ -48,8 +51,6 @@ citations of our publication will help demonstrate the value of OpenMM.
 Acknowledgments
 ***************
 
-OpenMM software and all related activities, such as this manual, are funded by
-the Simbios National Center for Biomedical Computing through the National
-Institutes of Health Roadmap for Medical Research, Grant U54 GM072970, and by
-National Institutes of Health grant R01-GM062868.
-
+OpenMM research and development activities are supported by various individuals
+and funded from a number of sources: for up-to-date information, consult
+https://openmm.org/development.
