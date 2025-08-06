@@ -70,14 +70,15 @@ be combined in arbitrary ways.
     generated/MonteCarloBarostat
     generated/MonteCarloFlexibleBarostat
     generated/MonteCarloMembraneBarostat
+    generated/RGForce
     generated/RMSDForce
     generated/RPMDMonteCarloBarostat
 
 
 .. _custom-forces:
 
-Customizing ``Force``
-=====================
+Custom Forces
+=============
 
 OpenMM provides a number of classes that make it easier to implement custom
 forces for common scenarios. These classes implement constructors that take an
