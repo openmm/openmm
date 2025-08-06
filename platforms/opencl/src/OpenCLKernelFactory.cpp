@@ -120,6 +120,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new OpenCLCalcATMForceKernel(name, platform, cl);
     if (name == CalcCustomCPPForceKernel::Name())
         return new CommonCalcCustomCPPForceKernel(name, platform, context, cl);
+    if (name == CalcRGForceKernel::Name())
+        return new CommonCalcRGForceKernel(name, platform, cl);
     if (name == CalcRMSDForceKernel::Name())
         return new CommonCalcRMSDForceKernel(name, platform, cl);
     if (name == CalcCustomManyParticleForceKernel::Name())

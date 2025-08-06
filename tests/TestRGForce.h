@@ -32,6 +32,7 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/RGForce.h"
 #include "openmm/Context.h"
+#include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include "sfmt/SFMT.h"
@@ -110,14 +111,18 @@ void testRG(bool allParticles) {
 }
 
 void testEnergyConservation() {
-    const int numParticles = 30;
+    const int numParticles = 50;
     System system;
     vector<Vec3> positions(numParticles);
     vector<int> particles;
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
+    NonbondedForce* nb = new NonbondedForce(); // Add a nonbonded force to activate reordering on the GPU
+    nb->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    system.addForce(nb);
     for (int i = 0; i < numParticles; ++i) {
         system.addParticle(2.0);
+        nb->addParticle(0.0, 0.1, 0.01);
         positions[i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*5;
         if (genrand_real2(sfmt) < 0.5)
             particles.push_back(i);
