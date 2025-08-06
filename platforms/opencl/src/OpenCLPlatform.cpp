@@ -141,7 +141,7 @@ bool OpenCLPlatform::isPlatformSupported() {
     if (major < 14 || (major == 14 && minor < 3))
         // 14.3.0 is the darwin release corresponding to OS X 10.10.3. Versions prior to that
         // contained a number of serious bugs in the Apple OpenCL libraries.
-        // (See https://github.com/SimTk/openmm/issues/395 for example.)
+        // (See https://github.com/openmm/openmm/issues/395 for example.)
         return false;
 #endif
 

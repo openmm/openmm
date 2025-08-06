@@ -1,7 +1,6 @@
 # ----------------------------------------------------------------------
-# Microsoft NMakefile for OpenMM Preview Release 4 "hello world" examples.
+# Microsoft NMakefile for OpenMM "hello world" examples.
 # August 19, 2009.
-# See https://simtk.org/home/openmm.
 # ----------------------------------------------------------------------
 # This assumes you have gcc compilers for whatever language you are
 # using: cl for C++ and C, ifort for Fortran 95.

@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-//           OpenMM(tm) HelloArgon example in C++ (June 2009)
+//                 OpenMM HelloArgon example in C++ (June 2009)
 // -----------------------------------------------------------------------------
 // This program demonstrates a simple molecular simulation using the OpenMM
 // API for GPU-accelerated molecular dynamics simulation. The primary goal is
