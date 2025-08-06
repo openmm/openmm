@@ -684,7 +684,7 @@ class GromacsTopFile(object):
         switchDistance : float=None
             The distance at which the potential energy switching function is turned on for
             Lennard-Jones interactions. If this is None, no switching function will be used.
-        useDispersionCorrection : bool=None
+        useDispersionCorrection : bool=True
             Long-range correction for dispersion (Lennard-Jones) interaction
 
         Returns
