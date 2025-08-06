@@ -653,7 +653,7 @@ class GromacsTopFile(object):
 
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer, constraints=None,
                      rigidWater=True, ewaldErrorTolerance=0.0005, removeCMMotion=True, hydrogenMass=None, 
-                     switchDistance=None, useDispersionCorrection=None):
+                     switchDistance=None, useDispersionCorrection=True):
         """Construct an OpenMM System representing the topology described by this
         top file.
 
@@ -1232,10 +1232,7 @@ class GromacsTopFile(object):
         nb.setCutoffDistance(nonbondedCutoff)
         nb.setEwaldErrorTolerance(ewaldErrorTolerance)
 
-        if useDispersionCorrection is None and nonbondedMethod in (ff.PME, ff.LJPME, ff.Ewald, ff.CutoffPeriodic):
-            useDispersionCorrection=True
-
-        if useDispersionCorrection is not None: 
+        if nonbondedMethod in (ff.PME, ff.LJPME, ff.Ewald, ff.CutoffPeriodic):
             nb.setUseDispersionCorrection(bool(useDispersionCorrection))
 
         if switchDistance is not None:
