@@ -213,7 +213,7 @@ class TestGromacsTopFile(unittest.TestCase):
             if i == 4:
                 wc = -wc
             self.assertAlmostEqual(wc, vs.getWeightCross())
-
+    
     def test_GROMOS(self):
         """Test a system using the GROMOS 54a7 force field."""
 
@@ -239,6 +239,34 @@ class TestGromacsTopFile(unittest.TestCase):
         assert_allclose(-6.23055e+03+4.36880e+03, energy['NonbondedForce'], rtol=1e-4)
         total = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
         assert_allclose(-1.77020e+02, total, rtol=1e-3)
+
+    def test_NBFIX(self):
+        """Test systems using NBFIX with and without pairtypes and different combination rules."""
+
+        gro = GromacsGroFile('systems/apgr.gro')
+
+        energies = {
+           'apgr.nbfix.pairs.comb1.top': -986.713,
+           'apgr.nbfix.pairs.comb2.top': -986.485,
+           'apgr.nbfix.pairs.comb3.top': -986.713,
+           'apgr.nbfix.nopairs.comb1.top': -912.181,
+           'apgr.nbfix.nopairs.comb2.top': -903.437,
+           'apgr.nbfix.nopairs.comb3.top': -912.181,
+           'apgr.nonbfix.pairs.comb1.top': -993.104,
+           'apgr.nonbfix.pairs.comb2.top': -992.685,
+           'apgr.nonbfix.pairs.comb3.top': -993.104,
+           'apgr.nonbfix.nopairs.comb1.top': -918.572,
+           'apgr.nonbfix.nopairs.comb2.top': -909.637,
+           'apgr.nonbfix.nopairs.comb3.top': -918.572
+        }
+        
+        for topfile, expected in energies.items():   
+           top = GromacsTopFile(f'systems/{topfile}')
+           system = top.createSystem(nonbondedMethod=NoCutoff,switchDistance=None,constraints=None,useDispersionCorrection=False)
+           context = Context(system, VerletIntegrator(1*femtosecond), Platform.getPlatform('Reference'))
+           context.setPositions(gro.positions)
+           energy=context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+           assert_allclose(energy, expected, rtol=1E-6)
 
 if __name__ == '__main__':
     unittest.main()
