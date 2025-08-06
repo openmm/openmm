@@ -22,6 +22,7 @@
  */
 
 #include "ReferenceRGForce.h"
+#include <cmath>
 
 using namespace OpenMM;
 using namespace std;
