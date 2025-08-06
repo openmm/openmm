@@ -127,6 +127,12 @@ void AmoebaReferenceHippoNonbondedForce::checkChiralCenterAtParticle(MultipolePa
     Vec3 deltaBD   = particleZ.position - particleY.position;
     Vec3 deltaCD   = particleX.position - particleY.position;
 
+    if (_nonbondedMethod == HippoNonbondedForce::PME) {
+        getPeriodicDelta(deltaAD);
+        getPeriodicDelta(deltaBD);
+        getPeriodicDelta(deltaCD);
+    }
+
     Vec3 deltaC    = deltaBD.cross(deltaCD);
     double volume = deltaC.dot(deltaAD);
 
@@ -164,6 +170,8 @@ void AmoebaReferenceHippoNonbondedForce::applyRotationMatrixToParticle( Multipol
 
     Vec3 vectorX, vectorY;
     Vec3 vectorZ = particleZ->position - particleI.position;
+    if (_nonbondedMethod == HippoNonbondedForce::PME)
+        getPeriodicDelta(vectorZ);
     normalizeVec3(vectorZ);
 
     // branch based on axis type
@@ -179,6 +187,8 @@ void AmoebaReferenceHippoNonbondedForce::applyRotationMatrixToParticle( Multipol
     }
     else {
         vectorX = particleX->position - particleI.position;
+        if (_nonbondedMethod == HippoNonbondedForce::PME)
+            getPeriodicDelta(vectorX);
         if (axisType == HippoNonbondedForce::Bisector) {
 
             // bisector
@@ -198,6 +208,8 @@ void AmoebaReferenceHippoNonbondedForce::applyRotationMatrixToParticle( Multipol
             normalizeVec3(vectorX);
 
             vectorY  = particleY->position - particleI.position;
+            if (_nonbondedMethod == HippoNonbondedForce::PME)
+                getPeriodicDelta(vectorY);
             normalizeVec3(vectorY);
 
             vectorX += vectorY;
@@ -212,6 +224,8 @@ void AmoebaReferenceHippoNonbondedForce::applyRotationMatrixToParticle( Multipol
             normalizeVec3(vectorX);
 
             vectorY   = particleY->position - particleI.position;
+            if (_nonbondedMethod == HippoNonbondedForce::PME)
+                getPeriodicDelta(vectorY);
             normalizeVec3(vectorY);
 
             vectorZ  += vectorX +  vectorY;
@@ -1145,14 +1159,22 @@ void AmoebaReferenceHippoNonbondedForce::mapTorqueToForceForParticle(const Multi
         return;
 
     Vec3 vectorU = particleI.position - particleU.position;
+    if (_nonbondedMethod == HippoNonbondedForce::PME)
+        getPeriodicDelta(vectorU);
     norms[U] = normalizeVec3(vectorU);
     Vec3 vectorV = particleI.position - particleV.position;
+    if (_nonbondedMethod == HippoNonbondedForce::PME)
+        getPeriodicDelta(vectorV);
     norms[V] = normalizeVec3(vectorV);
     Vec3 vectorW;
-    if (particleW && (axisType == HippoNonbondedForce::ZBisect || axisType == HippoNonbondedForce::ThreeFold))
+    if (particleW && (axisType == HippoNonbondedForce::ZBisect || axisType == HippoNonbondedForce::ThreeFold)) {
         vectorW = particleW->position - particleI.position;
-    else
+        if (_nonbondedMethod == HippoNonbondedForce::PME)
+            getPeriodicDelta(vectorW);
+    }
+    else {
         vectorW = vectorU.cross(vectorV);
+    }
     norms[W]  = normalizeVec3(vectorW);
 
     Vec3 vectorUV, vectorUW, vectorVW;

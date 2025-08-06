@@ -370,6 +370,12 @@ void AmoebaReferenceMultipoleForce::checkChiralCenterAtParticle(MultipoleParticl
     Vec3 deltaBD   = particleZ.position - particleY.position;
     Vec3 deltaCD   = particleX.position - particleY.position;
 
+    if (_nonbondedMethod == NonbondedMethod::PME) {
+        getPeriodicDelta(deltaAD);
+        getPeriodicDelta(deltaBD);
+        getPeriodicDelta(deltaCD);
+    }
+
     Vec3 deltaC    = deltaBD.cross(deltaCD);
     double volume = deltaC.dot(deltaAD);
 
@@ -415,6 +421,8 @@ void AmoebaReferenceMultipoleForce::applyRotationMatrixToParticle(      Multipol
 
     Vec3 vectorX, vectorY;
     Vec3 vectorZ = particleZ->position - particleI.position;
+    if (_nonbondedMethod == NonbondedMethod::PME)
+        getPeriodicDelta(vectorZ);
     normalizeVec3(vectorZ);
 
     // branch based on axis type
@@ -430,6 +438,8 @@ void AmoebaReferenceMultipoleForce::applyRotationMatrixToParticle(      Multipol
     }
     else {
         vectorX = particleX->position - particleI.position;
+        if (_nonbondedMethod == NonbondedMethod::PME)
+            getPeriodicDelta(vectorX);
         if (axisType == AmoebaMultipoleForce::Bisector) {
 
             // bisector
@@ -449,6 +459,8 @@ void AmoebaReferenceMultipoleForce::applyRotationMatrixToParticle(      Multipol
             normalizeVec3(vectorX);
 
             vectorY  = particleY->position - particleI.position;
+            if (_nonbondedMethod == NonbondedMethod::PME)
+                getPeriodicDelta(vectorY);
             normalizeVec3(vectorY);
 
             vectorX += vectorY;
@@ -463,6 +475,8 @@ void AmoebaReferenceMultipoleForce::applyRotationMatrixToParticle(      Multipol
             normalizeVec3(vectorX);
 
             vectorY   = particleY->position - particleI.position;
+            if (_nonbondedMethod == NonbondedMethod::PME)
+                getPeriodicDelta(vectorY);
             normalizeVec3(vectorY);
 
             vectorZ  += vectorX +  vectorY;
@@ -1519,16 +1533,24 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForceForParticle(const MultipoleP
     }
 
     Vec3 vectorU = particleU.position - particleI.position;
+    if (_nonbondedMethod == NonbondedMethod::PME)
+        getPeriodicDelta(vectorU);
     norms[U] = normalizeVec3(vectorU);
 
     Vec3 vectorV = particleV.position - particleI.position;
+    if (_nonbondedMethod == NonbondedMethod::PME)
+        getPeriodicDelta(vectorV);
     norms[V] = normalizeVec3(vectorV);
 
     Vec3 vectorW;
-    if (particleW && (axisType == AmoebaMultipoleForce::ZBisect || axisType == AmoebaMultipoleForce::ThreeFold))
+    if (particleW && (axisType == AmoebaMultipoleForce::ZBisect || axisType == AmoebaMultipoleForce::ThreeFold)) {
          vectorW = particleW->position - particleI.position;
-    else
+        if (_nonbondedMethod == NonbondedMethod::PME)
+            getPeriodicDelta(vectorW);
+    }
+    else {
          vectorW = vectorU.cross(vectorV);
+    }
     norms[W]  = normalizeVec3(vectorW);
 
     Vec3 vectorUV, vectorUW, vectorVW;

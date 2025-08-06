@@ -490,6 +490,10 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
     computeMomentsKernel->addArg(labQuadrupoles);
     computeMomentsKernel->addArg(sphericalDipoles);
     computeMomentsKernel->addArg(sphericalQuadrupoles);
+    if (usePME) {
+        for (int i = 0; i < 5; ++i)
+            computeMomentsKernel->addArg();
+    }
     recordInducedDipolesKernel = program->createKernel("recordInducedDipoles");
     recordInducedDipolesKernel->addArg(field);
     recordInducedDipolesKernel->addArg(fieldPolar);
@@ -504,6 +508,10 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
     mapTorqueKernel->addArg(torque);
     mapTorqueKernel->addArg(cc.getPosq());
     mapTorqueKernel->addArg(multipoleParticles);
+    if (usePME) {
+        for (int i = 0; i < 5; ++i)
+            mapTorqueKernel->addArg();
+    }
     computePotentialKernel = program->createKernel("computePotentialAtPoints");
     computePotentialKernel->addArg(cc.getPosq());
     computePotentialKernel->addArg(labDipoles);
@@ -1064,6 +1072,8 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
     
     // Compute the lab frame moments.
 
+    if (usePME)
+        setPeriodicBoxArgs(cc, computeMomentsKernel, 8);
     computeMomentsKernel->execute(cc.getNumAtoms());
     int startTileIndex = nb.getStartTileIndex();
     int numTileIndices = nb.getNumTiles();
@@ -1215,6 +1225,8 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
 
     // Map torques to force.
 
+    if (usePME)
+        setPeriodicBoxArgs(cc, mapTorqueKernel, 4);
     mapTorqueKernel->execute(cc.getNumAtoms());
     
     // Record the current atom positions so we can tell later if they have changed.
@@ -2621,6 +2633,10 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
     computeMomentsKernel->addArg(labQuadrupoles[2]);
     computeMomentsKernel->addArg(labQuadrupoles[3]);
     computeMomentsKernel->addArg(labQuadrupoles[4]);
+    if (usePME) {
+        for (int i = 0; i < 5; ++i)
+            computeMomentsKernel->addArg();
+    }
     recordInducedDipolesKernel = program->createKernel("recordInducedDipoles");
     recordInducedDipolesKernel->addArg(field);
     recordInducedDipolesKernel->addArg(inducedDipole);
@@ -2630,6 +2646,10 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
     mapTorqueKernel->addArg(torque);
     mapTorqueKernel->addArg(cc.getPosq());
     mapTorqueKernel->addArg(multipoleParticles);
+    if (usePME) {
+        for (int i = 0; i < 5; ++i)
+            mapTorqueKernel->addArg();
+    }
     program = cc.compileProgram(CommonAmoebaKernelSources::multipoleInducedField, defines);
     initExtrapolatedKernel = program->createKernel("initExtrapolatedDipoles");
     initExtrapolatedKernel->addArg(inducedDipole);
@@ -3232,6 +3252,8 @@ double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool i
 
     // Compute the lab frame moments.
 
+    if (usePME)
+        setPeriodicBoxArgs(cc, computeMomentsKernel, 10);
     computeMomentsKernel->execute(cc.getNumAtoms());
 
     if (usePME) {
@@ -3436,6 +3458,8 @@ void CommonCalcHippoNonbondedForceKernel::computeExtrapolatedDipoles() {
 }
 
 void CommonCalcHippoNonbondedForceKernel::addTorquesToForces() {
+    if (usePME)
+        setPeriodicBoxArgs(cc, mapTorqueKernel, 4);
     mapTorqueKernel->execute(cc.getNumAtoms());
 }
 
