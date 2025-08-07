@@ -257,7 +257,8 @@ class TestGromacsTopFile(unittest.TestCase):
            'apgr.nonbfix.pairs.comb3.top': -993.104,
            'apgr.nonbfix.nopairs.comb1.top': -918.572,
            'apgr.nonbfix.nopairs.comb2.top': -909.637,
-           'apgr.nonbfix.nopairs.comb3.top': -918.572
+           'apgr.nonbfix.nopairs.comb3.top': -918.572,
+           'apgr.nbfix.nopairs.comb2.fudge.top': -856.721
         }
         
         for topfile, expected in energies.items():   

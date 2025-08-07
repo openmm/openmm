@@ -1158,7 +1158,7 @@ class GromacsTopFile(object):
                 eps4 = float(params4[7])
 
                 charge_prod = fudgeQQ*q1*q4
-                epsilon = math.sqrt(abs(eps1 * eps4))
+                epsilon = math.sqrt(abs(eps1 * eps4))*fudgeLJ
                 if self._defaults[1] == '2':
                     rmin14 = (rmin1 + rmin4) / 2
                 else:
