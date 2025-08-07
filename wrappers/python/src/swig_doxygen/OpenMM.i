@@ -45,6 +45,7 @@ using namespace OpenMM;
 
 %}
 
+%feature("flatnested", "1");
 %feature("autodoc", "0");
 %nodefaultctor;
 
