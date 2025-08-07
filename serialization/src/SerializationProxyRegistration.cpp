@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -63,6 +63,7 @@
 #include "openmm/NoseHooverIntegrator.h"
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/RBTorsionForce.h"
+#include "openmm/RGForce.h"
 #include "openmm/RMSDForce.h"
 #include "openmm/System.h"
 #include "openmm/TabulatedFunction.h"
@@ -105,6 +106,7 @@
 #include "openmm/serialization/NoseHooverIntegratorProxy.h"
 #include "openmm/serialization/PeriodicTorsionForceProxy.h"
 #include "openmm/serialization/RBTorsionForceProxy.h"
+#include "openmm/serialization/RGForceProxy.h"
 #include "openmm/serialization/RMSDForceProxy.h"
 #include "openmm/serialization/StateProxy.h"
 #include "openmm/serialization/SystemProxy.h"
@@ -168,6 +170,7 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(NoseHooverIntegrator), new NoseHooverIntegratorProxy());
     SerializationProxy::registerProxy(typeid(PeriodicTorsionForce), new PeriodicTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(RBTorsionForce), new RBTorsionForceProxy());
+    SerializationProxy::registerProxy(typeid(RGForce), new RGForceProxy());
     SerializationProxy::registerProxy(typeid(RMSDForce), new RMSDForceProxy());
     SerializationProxy::registerProxy(typeid(System), new SystemProxy());
     SerializationProxy::registerProxy(typeid(State), new StateProxy());

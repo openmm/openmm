@@ -122,6 +122,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CudaCalcATMForceKernel(name, platform, cu);
     if (name == CalcCustomCPPForceKernel::Name())
         return new CommonCalcCustomCPPForceKernel(name, platform, context, cu);
+    if (name == CalcRGForceKernel::Name())
+        return new CommonCalcRGForceKernel(name, platform, cu);
     if (name == CalcRMSDForceKernel::Name())
         return new CommonCalcRMSDForceKernel(name, platform, cu);
     if (name == CalcCustomManyParticleForceKernel::Name())

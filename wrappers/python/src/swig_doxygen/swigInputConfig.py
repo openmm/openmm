@@ -490,6 +490,7 @@ UNITS = {
 ("RMSDForce", "getReferencePositions") : ("unit.nanometer", ()),
 ("RMSDForce", "setReferencePositions") : (None, ("unit.nanometer",)),
 ("RMSDForce", "getParticles") : (None, ()),
+("RGForce", "getParticles") : (None, ()),
 ("NoseHooverChain", "NoseHooverChain") : (None, ("unit.kelvin", "unit.kelvin", "unit.picosecond**-1", "unit.picosecond**-1", None, None, None, None, None, None, None)),
 ("NoseHooverChain", "getThermostatedPairs") : (None, ()),
 ("NoseHooverChain", "getThermostatedAtoms") : (None, ()),

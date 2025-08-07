@@ -3592,6 +3592,90 @@ void CommonCalcRMSDForceKernel::copyParametersToContext(ContextImpl& context, co
     cc.invalidateMolecules(info);
 }
 
+class CommonCalcRGForceKernel::ReorderListener : public ComputeContext::ReorderListener {
+public:
+    ReorderListener(ComputeContext& cc, const vector<int>& particleIndices, ArrayInterface& particles) : cc(cc),
+            particleIndices(particleIndices), particles(particles) {
+    }
+    void execute() {
+        vector<int> particleVec(particles.getSize());
+        const vector<int>& order = cc.getAtomIndex();
+        vector<int> invOrder(cc.getPaddedNumAtoms());
+        for (int i = 0; i < order.size(); i++)
+            invOrder[order[i]] = i;
+        for (int i = 0; i < particleIndices.size(); i++)
+            particleVec[i] = invOrder[particleIndices[i]];
+        particles.upload(particleVec);
+    }
+private:
+    ComputeContext& cc;
+    const vector<int>& particleIndices;
+    ArrayInterface& particles;
+};
+
+void CommonCalcRGForceKernel::initialize(const System& system, const RGForce& force) {
+    // Create data structures.
+
+    ContextSelector selector(cc);
+    bool useDouble = cc.getUseDoublePrecision();
+    int elementSize = (useDouble ? sizeof(double) : sizeof(float));
+    int numParticles = force.getParticles().size();
+    if (numParticles == 0)
+        numParticles = system.getNumParticles();
+    particles.initialize<int>(cc, numParticles, "particles");
+    centerBuffer.initialize(cc, 3*(cc.getNumThreadBlocks()+1), elementSize, "centerBuffer");
+    rgBuffer.initialize(cc, cc.getNumThreadBlocks(), elementSize, "rgBuffer");
+
+    // Create the kernels.
+
+    blockSize = min(256, cc.getMaxThreadBlockSize());
+    map<string, string> defines;
+    defines["THREAD_BLOCK_SIZE"] = cc.intToString(blockSize);
+    defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::rg, defines);
+    centerKernel = program->createKernel("computeCenterPosition");
+    rgKernel = program->createKernel("computeRg");
+    forceKernel = program->createKernel("computeForces");
+    centerKernel->addArg(numParticles);
+    centerKernel->addArg(cc.getPosq());
+    centerKernel->addArg(particles);
+    centerKernel->addArg(centerBuffer);
+    rgKernel->addArg(numParticles);
+    rgKernel->addArg(cc.getPosq());
+    rgKernel->addArg(particles);
+    rgKernel->addArg(centerBuffer);
+    rgKernel->addArg(rgBuffer);
+    forceKernel->addArg(numParticles);
+    forceKernel->addArg(cc.getPosq());
+    forceKernel->addArg(particles);
+    forceKernel->addArg(centerBuffer);
+    forceKernel->addArg(rgBuffer);
+    forceKernel->addArg(cc.getLongForceBuffer());
+    forceKernel->addArg(cc.getEnergyBuffer());
+
+    // Create the listener for updating the list of particles.
+
+    if (force.getParticles().size() == 0) {
+        vector<int> particleVec(numParticles);
+        for (int i = 0; i < numParticles; i++)
+            particleVec[i] = i;
+        particles.upload(particleVec);
+    }
+    else {
+        ReorderListener* listener = new ReorderListener(cc, force.getParticles(), particles);
+        cc.addReorderListener(listener);
+        listener->execute();
+    }
+}
+
+double CommonCalcRGForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    ContextSelector selector(cc);
+    centerKernel->execute(particles.getSize(), blockSize);
+    rgKernel->execute(particles.getSize(), blockSize);
+    forceKernel->execute(particles.getSize(), blockSize);
+    return 0.0;
+}
+
 void CommonApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
     ContextSelector selector(cc);
     randomSeed = thermostat.getRandomNumberSeed();

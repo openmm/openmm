@@ -1148,6 +1148,33 @@ private:
 };
 
 /**
+ * This kernel is invoked by RGForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcRGForceKernel : public CalcRGForceKernel {
+public:
+    ReferenceCalcRGForceKernel(std::string name, const Platform& platform) : CalcRGForceKernel(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the RGForce this kernel will be used for
+     */
+    void initialize(const System& system, const RGForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    std::vector<int> particles;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class ReferenceIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
