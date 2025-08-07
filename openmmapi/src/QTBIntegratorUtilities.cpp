@@ -94,28 +94,47 @@ void QTBIntegratorUtilities::calculateSpectrum(double temperature, double fricti
         double t = w*w-w0*w0;
         return (friction/M_PI)*w0*w0/(t*t+friction*friction*w*w);
     };
+    double dw = M_PI/(numFreq*dt);
+
+    // Normalize the kernel to reduce error at low frequencies.
+
+    vector<double> sum(numFreq, 0.0), scale(numFreq);
+    for (int i = 0; i < numFreq; i++) {
+        double wi = M_PI*(i+0.5)/(numFreq*dt);
+        for (int j = 0; j < numFreq; j++) {
+            double wj = M_PI*(j+0.5)/(numFreq*dt);
+            sum[i] += C(wi, wj)*dw;
+        }
+    }
+    for (int i = 0; i < numFreq; i++)
+        scale[i] = 0.5/sum[i];
+
+    // Compute intermediate quantities.
+
     vector<vector<double> > D(numFreq, vector<double>(numFreq));
     vector<double> h(numFreq);
     vector<double> fcurrent(numFreq), fnext(numFreq);
     for (int i = 0; i < numFreq; i++)
         fcurrent[i] = 0.5*theta[i];
-    double dw = M_PI/(numFreq*dt);
     threads.execute([&] (ThreadPool& threads, int threadIndex) {
         for (int i = threadIndex; i < numFreq; i += threads.getNumThreads()) {
             double wi = M_PI*(i+0.5)/(numFreq*dt);
             h[i] = 0.0;
             for (int j = 0; j < numFreq; j++) {
                 double wj = M_PI*(j+0.5)/(numFreq*dt);
-                h[i] += dw*C(wj, wi)*fcurrent[j];
+                h[i] += dw*C(wj, wi)*fcurrent[j]*scale[j];
                 D[i][j] = 0.0;
                 for (int k = 0; k < numFreq; k++) {
                     double wk = M_PI*(k+0.5)/(numFreq*dt);
-                    D[i][j] += dw*C(wk, wi)*C(wk, wj);
+                    D[i][j] += dw*C(wk, wi)*C(wk, wj)*scale[k]*scale[k];
                 }
             }
         }
     });
     threads.waitForThreads();
+
+    // Perform the iteration.
+
     for (int iteration = 0; iteration < 20; iteration++) {
         for (int i = 0; i < numFreq; i++) {
             double denom = 0.0;
