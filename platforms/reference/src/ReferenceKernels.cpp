@@ -60,6 +60,7 @@
 #include "ReferenceNoseHooverDynamics.h"
 #include "ReferencePointFunctions.h"
 #include "ReferenceProperDihedralBond.h"
+#include "ReferenceQTBDynamics.h"
 #include "ReferenceRbDihedralBond.h"
 #include "ReferenceRMSDForce.h"
 #include "ReferenceTabulatedFunction.h"
@@ -2897,6 +2898,55 @@ void ReferenceIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDInt
 
 double ReferenceIntegrateDPDStepKernel::computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator) {
     return computeShiftedKineticEnergy(context, masses, 0.0);
+}
+
+ReferenceIntegrateQTBStepKernel::~ReferenceIntegrateQTBStepKernel() {
+    if (dynamics != NULL)
+        delete dynamics;
+}
+
+void ReferenceIntegrateQTBStepKernel::initialize(const System& system, const QTBIntegrator& integrator) {
+    int numParticles = system.getNumParticles();
+    masses.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = system.getParticleMass(i);
+    SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
+    dynamics = new ReferenceQTBDynamics(system, integrator);
+}
+
+void ReferenceIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegrator& integrator) {
+    double stepSize = integrator.getStepSize();
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& velData = extractVelocities(context);
+    if (!hasInitialized) {
+        hasInitialized = true;
+        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        dynamics->setVirtualSites(extractVirtualSites(context));
+    }
+    dynamics->setTemperature(integrator.getTemperature());
+    dynamics->update(context, posData, velData, masses, integrator.getConstraintTolerance(), extractBoxVectors(context), extractThreadPool(context));
+    data.time += stepSize;
+    data.stepCount++;
+}
+
+double ReferenceIntegrateQTBStepKernel::computeKineticEnergy(ContextImpl& context, const QTBIntegrator& integrator) {
+    return computeShiftedKineticEnergy(context, masses, 0.0);
+}
+
+void ReferenceIntegrateQTBStepKernel::getAdaptedFriction(ContextImpl& context, int particle, std::vector<double>& friction) const {
+    dynamics->getAdaptedFriction(particle, friction);
+}
+
+void ReferenceIntegrateQTBStepKernel::setAdaptedFriction(ContextImpl& context, int particle, const std::vector<double>& friction) {
+    dynamics->setAdaptedFriction(particle, friction);
+}
+
+void ReferenceIntegrateQTBStepKernel::createCheckpoint(ContextImpl& context, ostream& stream) const {
+    dynamics->createCheckpoint(stream);
+}
+
+void ReferenceIntegrateQTBStepKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
+    dynamics->loadCheckpoint(stream);
 }
 
 ReferenceApplyAndersenThermostatKernel::~ReferenceApplyAndersenThermostatKernel() {
