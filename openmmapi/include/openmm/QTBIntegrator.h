@@ -153,29 +153,26 @@ public:
     void setParticleType(int index, int type);
     /**
      * Get the default adaptation rate.  This is the rate used for particles whose
-     * rate has not been otherwise specified with setTypeAdaptationRate().  It is a
-     * unitless quantity determining how much the noise spectrum changes after each
-     * segment.
+     * rate has not been otherwise specified with setTypeAdaptationRate().  It
+     * determines how much the noise spectrum changes after each segment.
      */
     double getDefaultAdaptationRate() const;
     /**
      * Set the default adaptation rate.  This is the rate used for particles whose
-     * rate has not been otherwise specified with setTypeAdaptationRate().  It is a
-     * unitless quantity determining how much the noise spectrum changes after each
-     * segment.
+     * rate has not been otherwise specified with setTypeAdaptationRate().  It
+     * determines how much the noise spectrum changes after each segment.
      */
     void setDefaultAdaptationRate(double rate);
     /**
      * Get a map whose keys are particle types and whose values are adaptation rates.
      * These are the rates used for particles whose rates have been specified with
-     * setTypeAdaptationRate().  The rate is a unitless quantity determining how much
-     * the noise spectrum changes after each segment.
+     * setTypeAdaptationRate().  The rate determines how much the noise spectrum
+     * changes after each segment.
      */
     const std::map<int, double>& getTypeAdaptationRates() const;
     /**
-     * Set the adaptation rate to use for particles of a given type.  The rate is a
-     * unitless quantity determining how much the noise spectrum changes after each
-     * segment.
+     * Set the adaptation rate to use for particles of a given type.  The rate
+     * determines how much the noise spectrum changes after each segment.
      */
     void setTypeAdaptationRate(int type, double rate);
     /**

@@ -351,9 +351,11 @@ We then select new friction coefficients according to
 .. math::
    \gamma_r^{k+1}(\omega) = \gamma_r^k(\omega) - A \Delta_{FDT}^k(\omega)
 
-where :math:`k` is the index of the segment and the adaptation rate :math:`A` is
-a constant that may vary between degrees of freedom.  Random noise for the next
-segment is generated based on the new spectrum, and the simulation continues.
+where :math:`k` is the index of the segment and the adaptation rate :math:`A`
+may vary between degrees of freedom.  Random noise for the next segment is
+generated based on the new spectrum, and the simulation continues.  The value of
+:math:`A` generally needs to be determined by trial and error to find a value
+that produces fast adaptation and good convergence.
 
 This process is much more robust if data is pooled over all degrees of freedom
 that are expected to be equivalent.  One specifies a type index for each
