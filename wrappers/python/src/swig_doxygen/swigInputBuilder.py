@@ -21,6 +21,9 @@ docTags = {'emphasis':'i', 'bold':'b', 'itemizedlist':'ul', 'listitem':'li', 'pr
            'superscript': 'sup', 'subscript':'sub', 'verbatim': 'verbatim'}
 typeSubstitutions = {'double':'float', 'long long':'int', 'string':'str'}
 vectorPattern = re.compile("vector\<(.*)>")
+setPattern = re.compile("set\<(.*)>")
+mapPattern = re.compile("map\<(.*)\,(.*)>")
+pairPattern = re.compile("pair\<(.*)\,(.*)>")
 
 def is_method_abstract(argstring):
     return argstring.split(")")[-1].find("=0") >= 0
@@ -166,12 +169,22 @@ def docstringTypemap(cpptype):
     if pytype.startswith('std::'):
         pytype = pytype[5:]
     pytype = pytype.strip('&')
+    pytype = pytype.strip('*')
     pytype = pytype.strip()
     if pytype in typeSubstitutions:
         pytype = typeSubstitutions[pytype]
     match = vectorPattern.match(pytype)
     if match is not None:
         pytype = f'Sequence[{docstringTypemap(match[1])}]'
+    match = setPattern.match(pytype)
+    if match is not None:
+        pytype = f'set[{docstringTypemap(match[1])}]'
+    match = mapPattern.match(pytype)
+    if match is not None:
+        pytype = f'Mapping[{docstringTypemap(match[1])}, {docstringTypemap(match[2])}]'
+    match = pairPattern.match(pytype)
+    if match is not None:
+        pytype = f'tuple[{docstringTypemap(match[1])}, {docstringTypemap(match[2])}]'
     return pytype
 
 
