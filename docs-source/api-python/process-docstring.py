@@ -86,6 +86,18 @@ substitutions = {'double':'float', 'long long':'int', 'string':'str',
                  'seti':'set[int]'
                 }
 
+def convert_type(type):
+    if type in substitutions:
+        type = substitutions[type]
+    if '<' in type:
+        match = re.match('vector<(.*?),.*>', type)
+        if match is not None:
+            type = f'tuple[{convert_type(match[1])}]'
+        match = re.match('map<(.*?),(.*?),.*>', type)
+        if match is not None:
+            type = f'Mapping[{convert_type(match[1])}, {convert_type(match[2])}]'
+    return type
+
 def process_signature(app, what, name, obj, options, signature, return_annotation):
     if return_annotation is not None:
         # Convert C++ types to Python types
@@ -93,8 +105,7 @@ def process_signature(app, what, name, obj, options, signature, return_annotatio
             return_annotation = return_annotation[5:]
         if return_annotation.endswith(' const &'):
             return_annotation = return_annotation[:-8]
-        if return_annotation in substitutions:
-            return_annotation = substitutions[return_annotation]
+        return_annotation = convert_type(return_annotation)
     return (signature, return_annotation)
 
 
