@@ -72,8 +72,35 @@ def process_docstring(app, what, name, obj, options, lines):
     lines[:] = [(l if not l.isspace() else '') for l in joined.split(linesep)]
 
 
+substitutions = {'double':'float', 'long long':'int', 'string':'str',
+                 'pairii':'tuple[int, int]',
+                 'vectord':'tuple[float, ...]',
+                 'vectorvectorvectord':'tuple[tuple[tuple[float, ...], ...], ...]',
+                 'vectori':'tuple[int, ...]',
+                 'vectorvectori':'tuple[tuple[int, ...], ...]',
+                 'vectorpairii':'tuple[tuple[int, int], ...]',
+                 'vectorstring':'tuple[str, ...]',
+                 'mapstringstring':'Mapping[str, str]',
+                 'mapstringdouble':'Mapping[str, float]',
+                 'mapii':'Mapping[int, int]',
+                 'seti':'set[int]'
+                }
+
+def process_signature(app, what, name, obj, options, signature, return_annotation):
+    if return_annotation is not None:
+        # Convert C++ types to Python types
+        if return_annotation.startswith('std::'):
+            return_annotation = return_annotation[5:]
+        if return_annotation.endswith(' const &'):
+            return_annotation = return_annotation[:-8]
+        if return_annotation in substitutions:
+            return_annotation = substitutions[return_annotation]
+    return (signature, return_annotation)
+
+
 def setup(app):
     app.connect('autodoc-process-docstring', process_docstring)
+    app.connect('autodoc-process-signature', process_signature)
 
 
 def test():
