@@ -69,6 +69,7 @@ class ReferenceVariableVerletDynamics;
 class ReferenceVerletDynamics;
 class ReferenceCustomDynamics;
 class ReferenceDPDDynamics;
+class ReferenceQTBDynamics;
 
 /**
  * This kernel is invoked at the beginning and end of force and energy computations.  It gives the
@@ -1544,6 +1545,76 @@ private:
     ReferencePlatform::PlatformData& data;
     ReferenceDPDDynamics* dynamics;
     std::vector<double> masses;
+};
+
+/**
+ * This kernel is invoked by QTBIntegrator to take one time step.
+ */
+class ReferenceIntegrateQTBStepKernel : public IntegrateQTBStepKernel {
+public:
+    ReferenceIntegrateQTBStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateQTBStepKernel(name, platform),
+        data(data), dynamics(NULL), hasInitialized(false) {
+    }
+    ~ReferenceIntegrateQTBStepKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the QTBIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const QTBIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the QTBIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const QTBIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the QTBIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const QTBIntegrator& integrator);
+    /**
+     * Get the adapted friction coefficients for a particle.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param particle   the index of the particle for which to get the friction
+     * @param friction   the adapted friction coefficients used in generating the
+     *                   random force
+     */
+    void getAdaptedFriction(ContextImpl& context, int particle, std::vector<double>& friction) const;
+    /**
+     * Set the adapted friction coefficients for a particle.  This affects the
+     * specified particle, and all others that have the same type.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param particle   the index of the particle for which to get the friction
+     * @param friction   the adapted friction coefficients used in generating the
+     *                   random force
+     */
+    void setAdaptedFriction(ContextImpl& context, int particle, const std::vector<double>& friction);
+    /**
+     * Write the adapted friction to a checkpoint.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param stream     the stream to write the checkpoint to
+     */
+    void createCheckpoint(ContextImpl& context, std::ostream& stream) const;
+    /**
+     * Load the adapted friction from a checkpoint.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param stream     the stream to read the checkpoint from
+     */
+    void loadCheckpoint(ContextImpl& context, std::istream& stream);
+private:
+    ReferencePlatform::PlatformData& data;
+    ReferenceQTBDynamics* dynamics;
+    std::vector<double> masses;
+    bool hasInitialized;
 };
 
 /**
