@@ -51,6 +51,12 @@ def process_docstring(app, what, name, obj, options, lines):
                 s = linesep + s
             newline = '.. verbatim::' + linesep
             return newline + '    ' + s.replace(linesep, linesep + '    ')
+    def replace_code(m):
+        s = m.group(1)
+        if not s.startswith(linesep):
+            s = linesep + s
+        newline = linesep + '.. code-block:: python' + linesep
+        return newline + '    ' + s.replace(linesep, linesep + '    ')
     def replace_subscript(m):
         """ Replace subscript tags. """
         return r'\ :sub:`{}`\ '.format(m.group(1))
@@ -68,6 +74,8 @@ def process_docstring(app, what, name, obj, options, lines):
     joined = re.sub(r'<verbatim>(.*?)</verbatim>', repl4, joined)
     joined = re.sub(r'<sub>(.*?)</sub>', replace_subscript, joined)
     joined = re.sub(r'<sup>(.*?)</sup>', replace_superscript, joined)
+    joined = re.sub(r'<c\+\+>(.*?)</c\+\+>', '', joined)
+    joined = re.sub(r'<python>(.*?)</python>', replace_code, joined)
 
     lines[:] = [(l if not l.isspace() else '') for l in joined.split(linesep)]
 
@@ -90,10 +98,10 @@ def convert_type(type):
     if type in substitutions:
         type = substitutions[type]
     if '<' in type:
-        match = re.match('vector<(.*?),.*>', type)
+        match = re.match(r'vector<(.*?),.*>', type)
         if match is not None:
             type = f'tuple[{convert_type(match[1])}]'
-        match = re.match('map<(.*?),(.*?),.*>', type)
+        match = re.match(r'map<(.*?),(.*?),.*>', type)
         if match is not None:
             type = f'Mapping[{convert_type(match[1])}, {convert_type(match[2])}]'
     return type

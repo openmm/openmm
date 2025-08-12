@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -129,13 +129,18 @@ namespace OpenMM {
  * integrator:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomIntegrator integrator(0.001);
- *    integrator.addComputePerDof("v", "v+0.5*dt*f/m");
- *    integrator.addComputePerDof("x", "x+dt*v");
- *    integrator.addComputePerDof("v", "v+0.5*dt*f/m");
- *
+ * <c++>
+ * CustomIntegrator integrator(0.001);
+ * integrator.addComputePerDof("v", "v+0.5*dt*f/m");
+ * integrator.addComputePerDof("x", "x+dt*v");
+ * integrator.addComputePerDof("v", "v+0.5*dt*f/m");
+ * </c++>
+ * <python>
+ * integrator = CustomIntegrator(0.001)
+ * integrator.addComputePerDof("v", "v+0.5*dt*f/m")
+ * integrator.addComputePerDof("x", "x+dt*v")
+ * integrator.addComputePerDof("v", "v+0.5*dt*f/m")
+ * </python>
  * \endverbatim
  *
  * The first step updates the velocities based on the current forces.
@@ -155,18 +160,28 @@ namespace OpenMM {
  * both these problems, using the RATTLE algorithm to apply constraints:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomIntegrator integrator(0.001);
- *    integrator.addPerDofVariable("x1", 0);
- *    integrator.addUpdateContextState();
- *    integrator.addComputePerDof("v", "v+0.5*dt*f/m");
- *    integrator.addComputePerDof("x", "x+dt*v");
- *    integrator.addComputePerDof("x1", "x");
- *    integrator.addConstrainPositions();
- *    integrator.addComputePerDof("v", "v+0.5*dt*f/m+(x-x1)/dt");
- *    integrator.addConstrainVelocities();
- *
+ * <c++>
+ * CustomIntegrator integrator(0.001);
+ * integrator.addPerDofVariable("x1", 0);
+ * integrator.addUpdateContextState();
+ * integrator.addComputePerDof("v", "v+0.5*dt*f/m");
+ * integrator.addComputePerDof("x", "x+dt*v");
+ * integrator.addComputePerDof("x1", "x");
+ * integrator.addConstrainPositions();
+ * integrator.addComputePerDof("v", "v+0.5*dt*f/m+(x-x1)/dt");
+ * integrator.addConstrainVelocities();
+ * </c++>
+ * <python>
+ * integrator = CustomIntegrator(0.001)
+ * integrator.addPerDofVariable("x1", 0)
+ * integrator.addUpdateContextState()
+ * integrator.addComputePerDof("v", "v+0.5*dt*f/m")
+ * integrator.addComputePerDof("x", "x+dt*v")
+ * integrator.addComputePerDof("x1", "x")
+ * integrator.addConstrainPositions()
+ * integrator.addComputePerDof("v", "v+0.5*dt*f/m+(x-x1)/dt")
+ * integrator.addConstrainVelocities()
+ * </python>
  * \endverbatim
  *
  * CustomIntegrator can be used to implement multiple time step integrators.  The
@@ -175,17 +190,25 @@ namespace OpenMM {
  * It evaluates the "fast" forces four times as often as the "slow" forces.
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomIntegrator integrator(0.004);
- *    integrator.addComputePerDof("v", "v+0.5*dt*f1/m");
- *    for (int i = 0; i &lt; 4; i++) {
- *        integrator.addComputePerDof("v", "v+0.5*(dt/4)*f0/m");
- *        integrator.addComputePerDof("x", "x+(dt/4)*v");
- *        integrator.addComputePerDof("v", "v+0.5*(dt/4)*f0/m");
- *    }
- *    integrator.addComputePerDof("v", "v+0.5*dt*f1/m");
- *
+ * <c++>
+ * CustomIntegrator integrator(0.004);
+ * integrator.addComputePerDof("v", "v+0.5*dt*f1/m");
+ * for (int i = 0; i < 4; i++) {
+ *     integrator.addComputePerDof("v", "v+0.5*(dt/4)*f0/m");
+ *     integrator.addComputePerDof("x", "x+(dt/4)*v");
+ *     integrator.addComputePerDof("v", "v+0.5*(dt/4)*f0/m");
+ * }
+ * integrator.addComputePerDof("v", "v+0.5*dt*f1/m");
+ * </c++>
+ * <python>
+ * integrator = CustomIntegrator(0.004)
+ * integrator.addComputePerDof("v", "v+0.5*dt*f1/m")
+ * for i in range(4):
+ *     integrator.addComputePerDof("v", "v+0.5*(dt/4)*f0/m")
+ *     integrator.addComputePerDof("x", "x+(dt/4)*v")
+ *     integrator.addComputePerDof("v", "v+0.5*(dt/4)*f0/m")
+ * integrator.addComputePerDof("v", "v+0.5*dt*f1/m")
+ * </python>
  * \endverbatim
  *
  * The sequence of computations in a CustomIntegrator can include flow control in
@@ -203,12 +226,16 @@ namespace OpenMM {
  *
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    integrator.beginIfBlock("uniform < acceptanceProbability");
- *    integrator.addComputePerDof("x", "xnew");
- *    integrator.endBlock();
- *
+ * <c++>
+ * integrator.beginIfBlock("uniform < acceptanceProbability");
+ * integrator.addComputePerDof("x", "xnew");
+ * integrator.endBlock();
+ * </c++>
+ * <python>
+ * integrator.beginIfBlock("uniform < acceptanceProbability")
+ * integrator.addComputePerDof("x", "xnew")
+ * integrator.endBlock()
+ * </python>
  * \endverbatim
  *
  * The condition in an "if" or "while" block is evaluated globally, so it may
@@ -228,10 +255,12 @@ namespace OpenMM {
  * particle and stores it into a per-DOF variable.
  * 
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    integrator.addComputePerDof("angularMomentum", "m*cross(x, v)");
- *
+ * <c++>
+ * integrator.addComputePerDof("angularMomentum", "m*cross(x, v)");
+ * </c++>
+ * <python>
+ * integrator.addComputePerDof("angularMomentum", "m*cross(x, v)")
+ * </python>
  * \endverbatim
  * 
  * Here are two more examples that may be useful as starting points for writing
@@ -241,40 +270,64 @@ namespace OpenMM {
  * constraints once in each time step.
  * 
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomIntegrator integrator(dt);
- *    integrator.addPerDofVariable("x0", 0);
- *    integrator.addUpdateContextState();
- *    integrator.addComputePerDof("x0", "x");
- *    integrator.addComputePerDof("v", "v+dt*f/m");
- *    integrator.addComputePerDof("x", "x+dt*v");
- *    integrator.addConstrainPositions();
- *    integrator.addComputePerDof("v", "(x-x0)/dt");
- *
+ * <c++>
+ * CustomIntegrator integrator(dt);
+ * integrator.addPerDofVariable("x0", 0);
+ * integrator.addUpdateContextState();
+ * integrator.addComputePerDof("x0", "x");
+ * integrator.addComputePerDof("v", "v+dt*f/m");
+ * integrator.addComputePerDof("x", "x+dt*v");
+ * integrator.addConstrainPositions();
+ * integrator.addComputePerDof("v", "(x-x0)/dt");
+ * </c++>
+ * <python>
+ * integrator = CustomIntegrator(dt)
+ * integrator.addPerDofVariable("x0", 0)
+ * integrator.addUpdateContextState()
+ * integrator.addComputePerDof("x0", "x")
+ * integrator.addComputePerDof("v", "v+dt*f/m")
+ * integrator.addComputePerDof("x", "x+dt*v")
+ * integrator.addConstrainPositions()
+ * integrator.addComputePerDof("v", "(x-x0)/dt")
+ * </python>
  * \endverbatim
  * 
  * The second one implements the algorithm used by the standard
  * LangevinMiddleIntegrator class.  kB is Boltzmann's constant.
  * 
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomIntegrator integrator(dt);
- *    integrator.addGlobalVariable("a", exp(-friction*dt));
- *    integrator.addGlobalVariable("b", sqrt(1-exp(-2*friction*dt)));
- *    integrator.addGlobalVariable("kT", kB*temperature);
- *    integrator.addPerDofVariable("x1", 0);
- *    integrator.addUpdateContextState();
- *    integrator.addComputePerDof("v", "v + dt*f/m");
- *    integrator.addConstrainVelocities();
- *    integrator.addComputePerDof("x", "x + 0.5*dt*v");
- *    integrator.addComputePerDof("v", "a*v + b*sqrt(kT/m)*gaussian");
- *    integrator.addComputePerDof("x", "x + 0.5*dt*v");
- *    integrator.addComputePerDof("x1", "x");
- *    integrator.addConstrainPositions();
- *    integrator.addComputePerDof("v", "v + (x-x1)/dt");
- *
+ * <c++>
+ * CustomIntegrator integrator(dt);
+ * integrator.addGlobalVariable("a", exp(-friction*dt));
+ * integrator.addGlobalVariable("b", sqrt(1-exp(-2*friction*dt)));
+ * integrator.addGlobalVariable("kT", kB*temperature);
+ * integrator.addPerDofVariable("x1", 0);
+ * integrator.addUpdateContextState();
+ * integrator.addComputePerDof("v", "v + dt*f/m");
+ * integrator.addConstrainVelocities();
+ * integrator.addComputePerDof("x", "x + 0.5*dt*v");
+ * integrator.addComputePerDof("v", "a*v + b*sqrt(kT/m)*gaussian");
+ * integrator.addComputePerDof("x", "x + 0.5*dt*v");
+ * integrator.addComputePerDof("x1", "x");
+ * integrator.addConstrainPositions();
+ * integrator.addComputePerDof("v", "v + (x-x1)/dt");
+ * </c++>
+ * <python>
+ * integrator = CustomIntegrator(dt)
+ * integrator.addGlobalVariable("a", exp(-friction*dt))
+ * integrator.addGlobalVariable("b", sqrt(1-exp(-2*friction*dt)))
+ * integrator.addGlobalVariable("kT", kB*temperature)
+ * integrator.addPerDofVariable("x1", 0)
+ * integrator.addUpdateContextState()
+ * integrator.addComputePerDof("v", "v + dt*f/m")
+ * integrator.addConstrainVelocities()
+ * integrator.addComputePerDof("x", "x + 0.5*dt*v")
+ * integrator.addComputePerDof("v", "a*v + b*sqrt(kT/m)*gaussian")
+ * integrator.addComputePerDof("x", "x + 0.5*dt*v")
+ * integrator.addComputePerDof("x1", "x")
+ * integrator.addConstrainPositions()
+ * integrator.addComputePerDof("v", "v + (x-x1)/dt")
+ * </python>
  * \endverbatim
  * 
  * Another feature of CustomIntegrator is that it can use derivatives of the
@@ -303,10 +356,12 @@ namespace OpenMM {
  * when using a leapfrog algorithm:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    integrator.setKineticEnergyExpression("m*v1*v1/2; v1=v+0.5*dt*f/m");
- *
+ * <c++>
+ * integrator.setKineticEnergyExpression("m*v1*v1/2; v1=v+0.5*dt*f/m");
+ * </c++>
+ * <python>
+ * integrator.setKineticEnergyExpression("m*v1*v1/2; v1=v+0.5*dt*f/m")
+ * </python>
  * \endverbatim
  *
  * The kinetic energy expression may depend on the following pre-defined variables:

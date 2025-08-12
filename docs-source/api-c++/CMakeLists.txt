@@ -19,7 +19,9 @@ configure_file(
 add_custom_command(
     OUTPUT "${WRAPPER_DOXYGEN_DIR}/xml/index.xml"
     COMMAND "${DOXYGEN_EXECUTABLE}"
+    COMMAND "${PYTHON_EXECUTABLE}" "${CMAKE_CURRENT_BINARY_DIR}/process-docstring.py" "${WRAPPER_DOXYGEN_DIR}/xml"
     DEPENDS "${WRAPPER_DOXYGEN_DIR}/Doxyfile"
+            "${CMAKE_CURRENT_BINARY_DIR}/process-docstring.py"
     WORKING_DIRECTORY "${WRAPPER_DOXYGEN_DIR}"
     COMMENT "Parsing OpenMM header files with Doxygen..."
 )
