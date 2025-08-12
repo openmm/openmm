@@ -900,7 +900,7 @@ int pme_exec_charge_derivatives(pme_t pme,
     /* Routine is called with coordinates in x, a box, and charges in q */
 
     Vec3 recipBoxVectors[3];
-    invert_box_vectors(periodicBoxVectors, recipBoxVectors);
+    ReferenceForce::invertBoxVectors(periodicBoxVectors, recipBoxVectors);
     
     /* Before we can do the actual interpolation, we need to recalculate and update
      * the indices for each particle in the charge grid (initialized in pme_init()),
