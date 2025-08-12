@@ -2836,12 +2836,14 @@ class LennardJonesGenerator(object):
         self.force.addTabulatedFunction('bcoef', mm.Discrete2DFunction(numLjTypes, numLjTypes, bcoef))
         self.force.addPerParticleParameter('type')
         self.force.setName('LennardJones')
-        if nonbondedMethod in [CutoffPeriodic, Ewald, PME, LJPME]:
+        if nonbondedMethod in [CutoffPeriodic, Ewald, PME]:
             self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffPeriodic)
         elif nonbondedMethod is NoCutoff:
             self.force.setNonbondedMethod(mm.CustomNonbondedForce.NoCutoff)
         elif nonbondedMethod is CutoffNonPeriodic:
             self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffNonPeriodic)
+        elif nonbondedMethod is LJPME:
+            raise ValueError('LJPME is not supported by LennardJonesForce')
         else:
             raise AssertionError('Unrecognized nonbonded method [%s]' % nonbondedMethod)
         if args['switchDistance'] is not None:

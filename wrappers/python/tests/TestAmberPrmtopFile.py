@@ -39,6 +39,12 @@ class TestAmberPrmtopFile(unittest.TestCase):
                                 f.getNonbondedMethod()==methodMap[method]
                                 for f in forces))
 
+    def test_LJPME_NBFIX(self):
+        """Test LJPME with NBFIX."""
+
+        with self.assertRaisesRegex(ValueError, 'LJPME is not supported'):
+            prmtop3.createSystem(nonbondedMethod=LJPME)
+
     def test_Cutoff(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
 
