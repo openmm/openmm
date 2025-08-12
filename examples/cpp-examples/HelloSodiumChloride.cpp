@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-//           OpenMM(tm) HelloSodiumChloride example in C++ (June 2009)
+//             OpenMM HelloSodiumChloride example in C++ (June 2009)
 // -----------------------------------------------------------------------------
 // This is a complete, self-contained "hello world" example demonstrating 
 // GPU-accelerated constant temperature simulation of a very simple system with

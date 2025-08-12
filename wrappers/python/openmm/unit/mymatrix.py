@@ -1,5 +1,5 @@
 """
-Pure python inversion of small matrices, to avoid requiring numpy or similar in SimTK.
+Pure python inversion of small matrices, to avoid requiring numpy or similar in OpenMM.
 
 This is part of the OpenMM molecular simulation toolkit originating from
 Simbios, the NIH National Center for Physics-Based Simulation of

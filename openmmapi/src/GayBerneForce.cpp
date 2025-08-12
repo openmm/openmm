@@ -178,3 +178,11 @@ ForceImpl* GayBerneForce::createImpl() const {
 void GayBerneForce::updateParametersInContext(Context& context) {
     dynamic_cast<GayBerneForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
+
+int GayBerneForce::getNumParticles() const {
+    return particles.size();
+}
+
+int GayBerneForce::getNumExceptions() const {
+    return exceptions.size();
+}

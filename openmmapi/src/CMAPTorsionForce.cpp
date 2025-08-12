@@ -107,3 +107,11 @@ void CMAPTorsionForce::setUsesPeriodicBoundaryConditions(bool periodic) {
 bool CMAPTorsionForce::usesPeriodicBoundaryConditions() const {
     return usePeriodic;
 }
+
+int CMAPTorsionForce::getNumMaps() const {
+    return maps.size();
+}
+
+int CMAPTorsionForce::getNumTorsions() const {
+    return torsions.size();
+}

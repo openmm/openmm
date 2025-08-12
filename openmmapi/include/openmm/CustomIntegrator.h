@@ -389,27 +389,19 @@ public:
     /**
      * Get the number of global variables that have been defined.
      */
-    int getNumGlobalVariables() const {
-        return globalNames.size();
-    }
+    int getNumGlobalVariables() const;
     /**
      * Get the number of per-DOF variables that have been defined.
      */
-    int getNumPerDofVariables() const {
-        return perDofNames.size();
-    }
+    int getNumPerDofVariables() const;
     /**
      * Get the number of computation steps that have been added.
      */
-    int getNumComputations() const {
-        return computations.size();
-    }
+    int getNumComputations() const;
     /**
      * Get the number of tabulated functions that have been defined.
      */
-    int getNumTabulatedFunctions() const {
-        return functions.size();
-    }
+    int getNumTabulatedFunctions() const;
     /**
      * Define a new global variable.
      *

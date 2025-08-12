@@ -77,9 +77,7 @@ public:
     /**
      * Get the number of global parameters that the energy depends on.
      */
-    int getNumGlobalParameters() const {
-        return globalParameters.size();
-    }
+    int getNumGlobalParameters() const;
     /**
      * Get the algebraic expression that defines the energy.
      */

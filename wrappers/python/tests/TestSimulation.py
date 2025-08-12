@@ -1,6 +1,7 @@
 import unittest
 import tempfile
 from datetime import datetime, timedelta
+from io import BytesIO, StringIO
 from openmm import *
 from openmm.app import *
 from openmm.unit import *
@@ -97,6 +98,77 @@ class TestSimulation(unittest.TestCase):
         state = simulation.context.getState(getPositions=True, getVelocities=True)
         self.assertEqual(initialState.getPositions(), state.getPositions())
         self.assertEqual(initialState.getVelocities(), state.getVelocities())
+
+    def testSafeSave(self):
+        """Test that the safe saving feature works as expected."""
+        pdb = PDBFile('systems/alanine-dipeptide-implicit.pdb')
+        ff = ForceField('amber99sb.xml', 'tip3p.xml')
+        system = ff.createSystem(pdb.topology)
+        integrator = VerletIntegrator(0.001*picoseconds)
+
+        # Create a Simulation.
+
+        simulation = Simulation(pdb.topology, system, integrator, Platform.getPlatform('Reference'))
+        simulation.context.setPositions(pdb.positions)
+        simulation.context.setVelocitiesToTemperature(300*kelvin)
+
+        # Get reference checkpoint and state data.
+
+        checkpointBuffer = BytesIO()
+        simulation.saveCheckpoint(checkpointBuffer)
+        checkpointData = checkpointBuffer.getvalue()
+
+        stateBuffer = StringIO()
+        simulation.saveState(stateBuffer)
+        stateData = stateBuffer.getvalue()
+
+        # Try a safe save of a checkpoint.
+
+        with tempfile.TemporaryDirectory() as directory:
+            tempPath = os.path.join(directory, 'testSafeSaveCheckpoint.dat')
+
+            # Make a file that should get overwritten by the safe save, and some that shouldn't.
+
+            with open(tempPath, 'w') as testFile:
+                testFile.write('Test')
+            with open(f'{tempPath}.0.tmp', 'w') as testFile:
+                testFile.write('Test0')
+            with open(f'{tempPath}.1.tmp', 'w') as testFile:
+                testFile.write('Test1')
+
+            # Perform and verify the safe save and that the contents of the test files were not overwritten.
+
+            simulation.saveCheckpoint(tempPath)
+            with open(tempPath, 'rb') as checkpointFile:
+                self.assertSequenceEqual(checkpointData, checkpointFile.read())
+            with open(f'{tempPath}.0.tmp', 'r') as testFile:
+                self.assertSequenceEqual('Test0', testFile.read())
+            with open(f'{tempPath}.1.tmp', 'r') as testFile:
+                self.assertSequenceEqual('Test1', testFile.read())
+
+        # Try a safe save of a state.
+
+        with tempfile.TemporaryDirectory() as directory:
+            tempPath = os.path.join(directory, 'testSafeSaveState.dat')
+
+            # Make a file that should get overwritten by the safe save, and some that shouldn't.
+
+            with open(tempPath, 'w') as testFile:
+                testFile.write('Test')
+            with open(f'{tempPath}.0.tmp', 'w') as testFile:
+                testFile.write('Test0')
+            with open(f'{tempPath}.1.tmp', 'w') as testFile:
+                testFile.write('Test1')
+
+            # Perform and verify the safe save and that the contents of the test files were not overwritten.
+
+            simulation.saveState(tempPath)
+            with open(tempPath, 'r') as stateFile:
+                self.assertSequenceEqual(stateData, stateFile.read())
+            with open(f'{tempPath}.0.tmp', 'r') as testFile:
+                self.assertSequenceEqual('Test0', testFile.read())
+            with open(f'{tempPath}.1.tmp', 'r') as testFile:
+                self.assertSequenceEqual('Test1', testFile.read())
 
     def testStep(self):
         """Test the step() method."""

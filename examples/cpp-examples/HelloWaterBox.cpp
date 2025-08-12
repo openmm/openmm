@@ -1,5 +1,5 @@
 /* -----------------------------------------------------------------------------
- *              OpenMM(tm) HelloWaterBox example in C++ (June 2009)
+ *                OpenMM HelloWaterBox example in C++ (June 2009)
  * -----------------------------------------------------------------------------
  * This is a complete, self-contained "hello world" example demonstrating 
  * GPU-accelerated simulation of a system with both bonded and nonbonded forces, 

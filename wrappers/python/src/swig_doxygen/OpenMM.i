@@ -11,9 +11,9 @@
 namespace std {
   %template(pairii) pair<int,int>;
   %template(vectord) vector<double>;
-  %template(vectorddd) vector< vector< vector<double> > >;
+  %template(vectorvectorvectord) vector< vector< vector<double> > >;
   %template(vectori) vector<int>;
-  %template(vectorii) vector < vector<int> >;
+  %template(vectorvectori) vector < vector<int> >;
   %template(vectorpairii) vector< pair<int,int> >;
   %template(vectorstring) vector<string>;
   %template(mapstringstring) map<string,string>;
@@ -45,6 +45,7 @@ using namespace OpenMM;
 
 %}
 
+%feature("flatnested", "1");
 %feature("autodoc", "0");
 %nodefaultctor;
 

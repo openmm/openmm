@@ -21,7 +21,7 @@ source_suffix = ".rst"
 master_doc = "index"
 
 project = u"OpenMM C++ API"
-copyright = u"2015, Stanford University and the Authors"
+copyright = u"2015-2025, Stanford University and the Authors"
 
 version = "@OPENMM_MAJOR_VERSION@.@OPENMM_MINOR_VERSION@"
 release = "@OPENMM_MAJOR_VERSION@.@OPENMM_MINOR_VERSION@"

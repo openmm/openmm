@@ -69,6 +69,7 @@
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/PeriodicTorsionForce.h"
+#include "openmm/QTBIntegrator.h"
 #include "openmm/RBTorsionForce.h"
 #include "openmm/RMSDForce.h"
 #include "openmm/State.h"

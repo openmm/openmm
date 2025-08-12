@@ -1,7 +1,6 @@
 # ----------------------------------------------------------------------
-# Makefile for OpenMM Preview Release 4 workshop "hello world" examples.
+# Makefile for OpenMM "hello world" examples.
 # August 18, 2009
-# See https://simtk.org/home/openmm.
 # ----------------------------------------------------------------------
 # This assumes you have gcc compilers for whatever language you are
 # using: g++ for C++ and C, gfortran for Fortran 95.
