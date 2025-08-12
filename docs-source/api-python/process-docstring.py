@@ -72,8 +72,46 @@ def process_docstring(app, what, name, obj, options, lines):
     lines[:] = [(l if not l.isspace() else '') for l in joined.split(linesep)]
 
 
+substitutions = {'double':'float', 'long long':'int', 'string':'str',
+                 'pairii':'tuple[int, int]',
+                 'vectord':'tuple[float, ...]',
+                 'vectorvectorvectord':'tuple[tuple[tuple[float, ...], ...], ...]',
+                 'vectori':'tuple[int, ...]',
+                 'vectorvectori':'tuple[tuple[int, ...], ...]',
+                 'vectorpairii':'tuple[tuple[int, int], ...]',
+                 'vectorstring':'tuple[str, ...]',
+                 'mapstringstring':'Mapping[str, str]',
+                 'mapstringdouble':'Mapping[str, float]',
+                 'mapii':'Mapping[int, int]',
+                 'seti':'set[int]'
+                }
+
+def convert_type(type):
+    if type in substitutions:
+        type = substitutions[type]
+    if '<' in type:
+        match = re.match('vector<(.*?),.*>', type)
+        if match is not None:
+            type = f'tuple[{convert_type(match[1])}]'
+        match = re.match('map<(.*?),(.*?),.*>', type)
+        if match is not None:
+            type = f'Mapping[{convert_type(match[1])}, {convert_type(match[2])}]'
+    return type
+
+def process_signature(app, what, name, obj, options, signature, return_annotation):
+    if return_annotation is not None:
+        # Convert C++ types to Python types
+        if return_annotation.startswith('std::'):
+            return_annotation = return_annotation[5:]
+        if return_annotation.endswith(' const &'):
+            return_annotation = return_annotation[:-8]
+        return_annotation = convert_type(return_annotation)
+    return (signature, return_annotation)
+
+
 def setup(app):
     app.connect('autodoc-process-docstring', process_docstring)
+    app.connect('autodoc-process-signature', process_signature)
 
 
 def test():

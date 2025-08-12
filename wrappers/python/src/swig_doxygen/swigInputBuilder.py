@@ -19,6 +19,11 @@ except ImportError:
 INDENT = "   "
 docTags = {'emphasis':'i', 'bold':'b', 'itemizedlist':'ul', 'listitem':'li', 'preformatted':'pre', 'computeroutput':'tt', 
            'superscript': 'sup', 'subscript':'sub', 'verbatim': 'verbatim'}
+typeSubstitutions = {'double':'float', 'long long':'int', 'string':'str'}
+vectorPattern = re.compile("vector\<(.*)>")
+setPattern = re.compile("set\<(.*)>")
+mapPattern = re.compile("map\<(.*)\,(.*)>")
+pairPattern = re.compile("pair\<(.*)\,(.*)>")
 
 def is_method_abstract(argstring):
     return argstring.split(")")[-1].find("=0") >= 0
@@ -158,13 +163,29 @@ def docstringTypemap(cpptype):
     This doesn't need to be perfectly accurate -- it's not used for generating
     the actual swig wrapper code. It's only used for generating the docstrings.
     """
-    pytype = cpptype
+    pytype = cpptype.strip()
     if pytype.startswith('const '):
         pytype = pytype[6:]
     if pytype.startswith('std::'):
         pytype = pytype[5:]
     pytype = pytype.strip('&')
-    return pytype.strip()
+    pytype = pytype.strip('*')
+    pytype = pytype.strip()
+    if pytype in typeSubstitutions:
+        pytype = typeSubstitutions[pytype]
+    match = vectorPattern.match(pytype)
+    if match is not None:
+        pytype = f'Sequence[{docstringTypemap(match[1])}]'
+    match = setPattern.match(pytype)
+    if match is not None:
+        pytype = f'set[{docstringTypemap(match[1])}]'
+    match = mapPattern.match(pytype)
+    if match is not None:
+        pytype = f'Mapping[{docstringTypemap(match[1])}, {docstringTypemap(match[2])}]'
+    match = pairPattern.match(pytype)
+    if match is not None:
+        pytype = f'tuple[{docstringTypemap(match[1])}, {docstringTypemap(match[2])}]'
+    return pytype
 
 
 class SwigInputBuilder:
