@@ -80,14 +80,22 @@ namespace OpenMM {
  * The energy change is dialed using an alchemical parameter Lambda, which in this case is set to 1/2:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    ATMForce *atmforce = new ATMForce("u0 + Lambda*(u1 - u0)");
- *    atm->addGlobalParameter("Lambda", 0.5);
- *    atm->addParticle();
- *    atm->addParticle(new ATMForce::FixedDisplacement(Vec3(1, 0, 0)));
- *    CustomBondForce* force = new CustomBondForce("0.5*r^2");
- *    atm->addForce(force);
+ * <c++>
+ * ATMForce *atmforce = new ATMForce("u0 + Lambda*(u1 - u0)");
+ * atm->addGlobalParameter("Lambda", 0.5);
+ * atm->addParticle();
+ * atm->addParticle(new ATMForce::FixedDisplacement(Vec3(1, 0, 0)));
+ * CustomBondForce* force = new CustomBondForce("0.5*r^2");
+ * atm->addForce(force);
+ * </c++>
+ * <python>
+ * atmforce = ATMForce("u0 + Lambda*(u1 - u0)")
+ * atm.addGlobalParameter("Lambda", 0.5)
+ * atm.addParticle()
+ * atm.addParticle(FixedDisplacement(Vec3(1, 0, 0)))
+ * force = CustomBondForce("0.5*r^2")
+ * atm.addForce(force)
+ * </python>
  * \endverbatim
  *
  * Note that calling addParticle() without arguments is equivalent to a zero fixed displacement.
@@ -98,15 +106,24 @@ namespace OpenMM {
  * pos[2]-pos[1] going from the second particle to the third particle, 
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    ATMForce *atmforce = new ATMForce("u0 + Lambda*(u1 - u0)");
- *    atm->addGlobalParameter("Lambda", 0.5);
- *    atm->addParticle(new ATMForce::ParticleOffsetDisplacement(2, 1));
- *    atm->addParticle();
- *    atm->addParticle();
- *    CustomBondForce* force = new CustomBondForce("0.5*r^2");
- *    atm->addForce(force);
+ * <c++>
+ * ATMForce *atmforce = new ATMForce("u0 + Lambda*(u1 - u0)");
+ * atm->addGlobalParameter("Lambda", 0.5);
+ * atm->addParticle(new ATMForce::ParticleOffsetDisplacement(2, 1));
+ * atm->addParticle();
+ * atm->addParticle();
+ * CustomBondForce* force = new CustomBondForce("0.5*r^2");
+ * atm->addForce(force);
+ * </c++>
+ * <python>
+ * atmforce = ATMForce("u0 + Lambda*(u1 - u0)")
+ * atm.addGlobalParameter("Lambda", 0.5)
+ * atm.addParticle(ParticleOffsetDisplacement(2, 1))
+ * atm.addParticle()
+ * atm.addParticle()
+ * force = CustomBondForce("0.5*r^2")
+ * atm.addForce(force)
+ * </python>
  * \endverbatim
  *
  * where ParticleOffsetDisplacement is the class that describes this particular type of coordinate transformation.
@@ -136,9 +153,12 @@ namespace OpenMM {
  * The ATMForce is then added to the System as any other Force
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *  system.addForce(atmforce);
+ * <c++>
+ * system.addForce(atmforce);
+ * </c++>
+ * <python>
+ * system.addForce(atmforce)
+ * </python>
  * \endverbatim
  *
  * after which it will be used for energy/force evaluations for molecular dynamics and energy optimization.
@@ -151,18 +171,24 @@ namespace OpenMM {
  * vectors to the fixed displacement transformation given to addParticle(). For example, with:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    atm->addParticle(new ATMForce::FixedDisplacement(Vec3(1, 0, 0), Vec3(-1, 0, 0)));
+ * <c++>
+ * atm->addParticle(new ATMForce::FixedDisplacement(Vec3(1, 0, 0), Vec3(-1, 0, 0)));
+ * </c++>
+ * <python>
+ * atm.addParticle(FixedDisplacement(Vec3(1, 0, 0), Vec3(-1, 0, 0)))
+ * </python>
  * \endverbatim
  * 
  * the energy u1 will be computed after displacing the particle in the positive x direction, and
  * u0 will be computed after displacing it in the negative x direction. Similarly,
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    atm->addParticle(new ATMForce::ParticleOffsetDisplacement(4, 3, 2, 1));
+ * <c++>
+ * atm->addParticle(new ATMForce::ParticleOffsetDisplacement(4, 3, 2, 1));
+ * </c++>
+ * <python>
+ * atm.addParticle(ParticleOffsetDisplacement(4, 3, 2, 1))
+ * </python>
  * \endverbatim
  *
  * adds a particle whose position is displaced by pos[4]-pos[3] before calculating u1 and by pos[2]-pos[1] before calculating u0.
