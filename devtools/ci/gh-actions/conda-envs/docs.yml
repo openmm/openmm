@@ -13,6 +13,6 @@ dependencies:
 - swig
 - doxygen
 - setuptools
-- sphinx==4.0.2
+- sphinx
 - sphinxcontrib-bibtex
 - breathe>=4.30,<5.0

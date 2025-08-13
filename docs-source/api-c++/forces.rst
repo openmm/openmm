@@ -76,8 +76,8 @@ be combined in arbitrary ways.
 
 .. _custom-forces:
 
-Customizing ``Force``
-=====================
+Custom Forces
+=============
 
 OpenMM provides a number of classes that make it easier to implement custom
 forces for common scenarios. These classes implement constructors that take an

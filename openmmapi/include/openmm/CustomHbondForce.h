@@ -79,21 +79,27 @@ namespace OpenMM {
  * to keep the distance between a1 and d1, and the angle formed by a1-d1-d2, near ideal values:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomHbondForce* force = new CustomHbondForce("k*(distance(a1,d1)-r0)^2*(angle(a1,d1,d2)-theta0)^2");
- *
+ * <c++>
+ * CustomHbondForce* force = new CustomHbondForce("k*(distance(a1,d1)-r0)^2*(angle(a1,d1,d2)-theta0)^2");
+ * </c++>
+ * <python>
+ * force = CustomHbondForce("k*(distance(a1,d1)-r0)^2*(angle(a1,d1,d2)-theta0)^2")
+ * </python>
  * \endverbatim
  *
  * This force depends on three parameters: k, r0, and theta0.  The following code defines these as per-donor parameters:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    force->addPerDonorParameter("k");
- *    force->addPerDonorParameter("r0");
- *    force->addPerDonorParameter("theta0");
- *
+ * <c++>
+ * force->addPerDonorParameter("k");
+ * force->addPerDonorParameter("r0");
+ * force->addPerDonorParameter("theta0");
+ * </c++>
+ * <python>
+ * force.addPerDonorParameter("k")
+ * force.addPerDonorParameter("r0")
+ * force.addPerDonorParameter("theta0")
+ * </python>
  * \endverbatim
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
