@@ -47,7 +47,7 @@ namespace OpenMM {
 class CommonCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     CommonCalcNonbondedForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcNonbondedForceKernel(name, platform),
-            hasInitializedKernel(false), cc(cc), pmeio(NULL) {
+            hasInitializedKernel(false), cc(cc), pmeio(NULL), stepsToSort(0) {
     }
     ~CommonCalcNonbondedForceKernel();
     /**
@@ -168,6 +168,7 @@ private:
     double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha, totalCharge;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
+    int stepsToSort;
     bool usePmeQueue, deviceIsCpu, useFixedPointChargeSpreading, useCpuPme;
     bool hasCoulomb, hasLJ, doLJPME, usePosqCharges, recomputeParams, hasOffsets;
     NonbondedMethod nonbondedMethod;

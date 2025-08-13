@@ -34,6 +34,7 @@
 #include "openmm/common/CommonCalcCustomNonbondedForceKernel.h"
 #include "openmm/common/CommonIntegrateCustomStepKernel.h"
 #include "openmm/common/CommonIntegrateNoseHooverStepKernel.h"
+#include "openmm/common/CommonIntegrateQTBStepKernel.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
@@ -142,6 +143,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new CommonIntegrateCustomStepKernel(name, platform, cl);
     if (name == IntegrateDPDStepKernel::Name())
         return new CommonIntegrateDPDStepKernel(name, platform, cl);
+    if (name == IntegrateQTBStepKernel::Name())
+        return new CommonIntegrateQTBStepKernel(name, platform, cl);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new CommonApplyAndersenThermostatKernel(name, platform, cl);
     if (name == IntegrateNoseHooverStepKernel::Name())

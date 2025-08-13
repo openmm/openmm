@@ -287,6 +287,8 @@ class TestCharmmFiles(unittest.TestCase):
         # Check some illegal options
         self.assertRaises(ValueError, lambda:
                     psf.createSystem(params, nonbondedMethod=5))
+        self.assertRaisesRegex(ValueError, 'LJPME is not supported', lambda:
+                    psf.createSystem(params, nonbondedMethod=LJPME))
         self.assertRaises(TypeError, lambda:
                     psf.createSystem(params, nonbondedMethod=PME,
                                      nonbondedCutoff=1*radian)
@@ -301,6 +303,9 @@ class TestCharmmFiles(unittest.TestCase):
                          nonbondedCutoff=1.2)
         psf.createSystem(params, nonbondedMethod=PME, switchDistance=0.8,
                          nonbondedCutoff=1.2*nanometer)
+
+        psf_no_nbfix = CharmmPsfFile('systems/ala_ala_ala.psf', unitCellDimensions=Vec3(30, 30, 30)*angstroms)
+        psf_no_nbfix.createSystem(self.params, nonbondedMethod=LJPME)
 
     def test_ImplicitSolventForces(self):
         """Compute forces for different implicit solvent types, and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""

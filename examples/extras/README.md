@@ -1,5 +1,4 @@
-OpenMM extra utility scripts
-============================
+## OpenMM extra utility scripts
 
 This directory contains standalone utility scripts for use with OpenMM.
 

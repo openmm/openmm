@@ -1037,6 +1037,8 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
 
     # Copy the exceptions as exclusions to the CustomNonbondedForce if we have
     # NBFIX terms
+    if nbfix and nonbondedMethod == 'LJPME':
+        raise ValueError('LJPME is not supported with modified off-diagonal Lennard-Jones coefficients')
     if nbfix or has_1264:
         for i in range(force.getNumExceptions()):
             ii, jj, chg, sig, eps = force.getExceptionParameters(i)

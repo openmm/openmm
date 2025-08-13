@@ -19,6 +19,11 @@ except ImportError:
 INDENT = "   "
 docTags = {'emphasis':'i', 'bold':'b', 'itemizedlist':'ul', 'listitem':'li', 'preformatted':'pre', 'computeroutput':'tt', 
            'superscript': 'sup', 'subscript':'sub', 'verbatim': 'verbatim'}
+typeSubstitutions = {'double':'float', 'long long':'int', 'string':'str'}
+vectorPattern = re.compile("vector\<(.*)>")
+setPattern = re.compile("set\<(.*)>")
+mapPattern = re.compile("map\<(.*)\,(.*)>")
+pairPattern = re.compile("pair\<(.*)\,(.*)>")
 
 def is_method_abstract(argstring):
     return argstring.split(")")[-1].find("=0") >= 0
@@ -107,6 +112,11 @@ def stripOpenmmPrefix(name, rePattern=OPENMM_RE_PATTERN):
     except:
         return name
 
+def stripClassPrefix(className):
+    if className.startswith("OpenMM::"):
+        className = className[8:]
+    return className
+
 def findNodes(parent, path, **args):
     nodes = []
     for node in parent.findall(path):
@@ -158,13 +168,29 @@ def docstringTypemap(cpptype):
     This doesn't need to be perfectly accurate -- it's not used for generating
     the actual swig wrapper code. It's only used for generating the docstrings.
     """
-    pytype = cpptype
+    pytype = cpptype.strip()
     if pytype.startswith('const '):
         pytype = pytype[6:]
     if pytype.startswith('std::'):
         pytype = pytype[5:]
     pytype = pytype.strip('&')
-    return pytype.strip()
+    pytype = pytype.strip('*')
+    pytype = pytype.strip()
+    if pytype in typeSubstitutions:
+        pytype = typeSubstitutions[pytype]
+    match = vectorPattern.match(pytype)
+    if match is not None:
+        pytype = f'Sequence[{docstringTypemap(match[1])}]'
+    match = setPattern.match(pytype)
+    if match is not None:
+        pytype = f'set[{docstringTypemap(match[1])}]'
+    match = mapPattern.match(pytype)
+    if match is not None:
+        pytype = f'Mapping[{docstringTypemap(match[1])}, {docstringTypemap(match[2])}]'
+    match = pairPattern.match(pytype)
+    if match is not None:
+        pytype = f'tuple[{docstringTypemap(match[1])}, {docstringTypemap(match[2])}]'
+    return pytype
 
 
 class SwigInputBuilder:
@@ -190,7 +216,7 @@ class SwigInputBuilder:
 
         # Read all the XML files and merge them into a single document.
         self.doc = etree.ElementTree(etree.Element('root'))
-        for file in os.listdir(inputDirname):
+        for file in sorted(os.listdir(inputDirname)):
             if file.lower().endswith('xml'):
                 root = etree.parse(os.path.join(inputDirname, file)).getroot()
                 for node in root:
@@ -250,6 +276,7 @@ class SwigInputBuilder:
         forceSubclassList = []
         integratorSubclassList = []
         tabulatedFunctionSubclassList = []
+        coordinateTransformationSubclassList = []
         for classNode in findNodes(self.doc.getroot(), "compounddef", kind="class", prot="public"):
             className = getText("compoundname", classNode)
             shortClassName=stripOpenmmPrefix(className)
@@ -266,6 +293,8 @@ class SwigInputBuilder:
                         integratorSubclassList.append(shortClassName)
                     elif baseName == 'OpenMM::TabulatedFunction':
                         tabulatedFunctionSubclassList.append(shortClassName)
+                    elif baseName == 'OpenMM::ATMForce::CoordinateTransformation':
+                        coordinateTransformationSubclassList.append(shortClassName)
         # We need to include subclasses of DrudeIntegrator, but not DrudeIntegrator itself.
         integratorSubclassList.remove('DrudeIntegrator')
 
@@ -319,6 +348,11 @@ class SwigInputBuilder:
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
 
+        self.fOut.write("%factory(OpenMM::ATMForce::CoordinateTransformation& OpenMM::ATMForce::getParticleTransformation")
+        for name in sorted(coordinateTransformationSubclassList):
+            self.fOut.write(",\n         OpenMM::ATMForce::%s" % name)
+        self.fOut.write(");\n\n")
+
         for classNode in self._orderedClassNodes:
             methodList=getClassMethodList(classNode, self.skipMethods)
             for items in methodList:
@@ -360,7 +394,7 @@ class SwigInputBuilder:
                 if isConstructors:
                     hasConstructor=True
 
-            className = stripOpenmmPrefix(getText("compoundname", classNode))
+            className = stripClassPrefix(getText("compoundname", classNode))
             # If has a constructor then tell swig tell to make a copy method
             if hasConstructor:
                 self.fOut.write("%%copyctor %s ;\n" % className)
@@ -370,7 +404,7 @@ class SwigInputBuilder:
     def writeClassDeclarations(self):
         self.fOut.write("\n/* Class Declarations */\n\n")
         for classNode in self._orderedClassNodes:
-            className = stripOpenmmPrefix(getText("compoundname", classNode))
+            className = stripClassPrefix(getText("compoundname", classNode))
             if self.fOutDocstring:
                 dNode = classNode.find('detaileddescription')
                 if dNode is not None:
@@ -384,14 +418,20 @@ class SwigInputBuilder:
 
             for baseNodePnt in findNodes(classNode, "basecompoundref", prot="public"):
                 if "refid" in baseNodePnt.attrib:
-                    baseName = stripOpenmmPrefix(getText(".", baseNodePnt))
+                    baseName = stripClassPrefix(getText(".", baseNodePnt))
                     self.fOut.write(" : public %s" % baseName)
             self.fOut.write(" {\n")
             self.fOut.write("public:\n")
+            self.writeInnerClasses(classNode)
             self.writeEnumerations(classNode)
             self.writeMethods(classNode)
             self.fOut.write("};\n\n")
         self.fOut.write("\n")
+
+    def writeInnerClasses(self, classNode):
+        for inner in findNodes(classNode, "innerclass", prot="public"):
+            name = getNodeText(inner).split("::")[-1];
+            self.fOut.write(f"  class {name};\n")
 
     def writeEnumerations(self, classNode):
         enumNodes = []
@@ -420,6 +460,7 @@ class SwigInputBuilder:
 
     def writeMethods(self, classNode):
         methodList=getClassMethodList(classNode, self.skipMethods)
+        fullClassName = getText("compoundname", classNode)
 
         #write only Constructors
         for items in methodList:
@@ -608,7 +649,7 @@ class SwigInputBuilder:
 
                 if addText:
                     self.fOutPythonappend.write("%pythonappend")
-                    self.fOutPythonappend.write(" OpenMM::%s::%s(" % key)
+                    self.fOutPythonappend.write(" %s::%s(" % (fullClassName, methName))
                     sepChar=''
                     outputIndex=0
                     for pNode in paramList:
