@@ -54,8 +54,9 @@ public:
      * @param cc                     the compute context (should be selected)
      * @param numParticles           the number of particles
      * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles (should be positive)
+     * @param paddedProblemSize      the padded number of electrode particles
      */
-    CommonConstantPotentialSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles);
+    CommonConstantPotentialSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles, int paddedProblemSize);
     virtual ~CommonConstantPotentialSolver();
     /**
      * Sets up solver kernels.  Should be called by derived classes if
@@ -94,7 +95,7 @@ public:
     virtual void getGuessChargeArrays(std::vector<ComputeArray*>& arrays);
 
 protected:
-    int numParticles, numElectrodeParticles;
+    int numParticles, numElectrodeParticles, paddedProblemSize;
     bool valid, hasSavedSolution;
     Vec3 savedBoxVectors[3];
     ComputeArray savedPositions;
@@ -125,8 +126,9 @@ public:
      * @param cc                     the compute context (should be selected)
      * @param numParticles           the number of particles
      * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
+     * @param paddedProblemSize      the padded number of electrode particles
      */
-    CommonConstantPotentialMatrixSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles);
+    CommonConstantPotentialMatrixSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles, int paddedProblemSize);
     /**
      * Sets up solver kernels.
      * 
@@ -181,9 +183,10 @@ public:
      * @param cc                     the compute context (should be selected)
      * @param numParticles           the number of particles
      * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
+     * @param paddedProblemSize      the padded number of electrode particles
      * @param precond                whether or not to use a preconditioner
      */
-    CommonConstantPotentialCGSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles, bool precond);
+    CommonConstantPotentialCGSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles, int paddedProblemSize, bool precond);
     /**
      * Sets up solver kernels.
      * 
@@ -295,7 +298,7 @@ private:
     ForceInfo* info;
     CommonConstantPotentialSolver* solver;
     bool hasInitializedKernel, hasElectrodes, mustUpdateNonElectrodeCharges, mustUpdateElectrodeCharges, pmeShouldSort;
-    int numParticles, numElectrodeParticles, numElectrodes;
+    int numParticles, numElectrodeParticles, numElectrodes, chunkSize, chunkCount, paddedProblemSize;
     ComputeArray charges;
     ComputeArray nonElectrodeCharges;
     ComputeArray electrodeCharges;

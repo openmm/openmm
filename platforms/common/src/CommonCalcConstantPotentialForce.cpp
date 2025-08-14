@@ -93,8 +93,8 @@ private:
 
 class CommonCalcConstantPotentialForceKernel::ReorderListener : public ComputeContext::ReorderListener {
 public:
-    ReorderListener(ComputeContext& cc, int numElectrodeParticles, const vector<int>& sysToElec, const vector<int>& elecToSys) :
-            cc(cc), numElectrodeParticles(numElectrodeParticles), sysToElec(sysToElec), elecToSys(elecToSys) {
+    ReorderListener(ComputeContext& cc, int numElectrodeParticles, int paddedProblemSize, const vector<int>& sysToElec, const vector<int>& elecToSys) :
+            cc(cc), numElectrodeParticles(numElectrodeParticles), paddedProblemSize(paddedProblemSize), sysToElec(sysToElec), elecToSys(elecToSys) {
         numParticles = cc.getNumAtoms();
         lastOrder.assign(cc.getAtomIndex().begin(), cc.getAtomIndex().end());
     }
@@ -110,7 +110,7 @@ public:
         for (int index = 0; index < chargeArrays.size(); index++) {
             ComputeArray* chargeArray = chargeArrays[index];
 
-            vector<double> charges(numElectrodeParticles), swap(numElectrodeParticles);
+            vector<double> charges(paddedProblemSize), swap(numElectrodeParticles);
             chargeArray->download(charges, true);
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
                 swap[sysToElec[lastOrder[elecToSys[ii]]]] = charges[ii];
@@ -124,22 +124,22 @@ public:
     }
 private:
     ComputeContext& cc;
-    int numParticles;
-    int numElectrodeParticles;
+    int numParticles, numElectrodeParticles, paddedProblemSize;
     const vector<int>& sysToElec;
     const vector<int>& elecToSys;
     vector<int> lastOrder;
     vector<ComputeArray*> chargeArrays;
 };
 
-CommonConstantPotentialSolver::CommonConstantPotentialSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles) :
+CommonConstantPotentialSolver::CommonConstantPotentialSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles, int paddedProblemSize) :
     numParticles(numParticles),
     numElectrodeParticles(numElectrodeParticles),
+    paddedProblemSize(paddedProblemSize),
     valid(false),
     hasSavedSolution(false)
 {
     savedPositions.initialize(cc, cc.getPosq().getSize(), cc.getPosq().getElementSize(), "savedPositions");
-    savedCharges.initialize(cc, numElectrodeParticles, cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "savedCharges");
+    savedCharges.initialize(cc, paddedProblemSize, cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "savedCharges");
     checkSavedPositionsKernelResult.initialize<int>(cc, 1, "checkSavedPositionsKernelResult");
 }
 
@@ -204,10 +204,10 @@ void CommonConstantPotentialSolver::getGuessChargeArrays(vector<ComputeArray*>& 
     arrays.clear();
 }
 
-CommonConstantPotentialMatrixSolver::CommonConstantPotentialMatrixSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles) : CommonConstantPotentialSolver(cc, numParticles, numElectrodeParticles) {
+CommonConstantPotentialMatrixSolver::CommonConstantPotentialMatrixSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles, int paddedProblemSize) : CommonConstantPotentialSolver(cc, numParticles, numElectrodeParticles, paddedProblemSize) {
     int elementSize = cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float);
     electrodePosData.initialize(cc, numElectrodeParticles, cc.getPosq().getElementSize(), "electrodePosData");
-    capacitance.initialize(cc, (size_t) numElectrodeParticles * numElectrodeParticles, elementSize, "capacitance");
+    capacitance.initialize(cc, (size_t) paddedProblemSize * paddedProblemSize, elementSize, "capacitance");
     constraintVector.initialize(cc, numElectrodeParticles, elementSize, "constraintVector");
     checkSavedElectrodePositionsKernelResult.initialize<int>(cc, 1, "checkSavedElectrodePositionsKernelResult");
 }
@@ -219,6 +219,9 @@ void CommonConstantPotentialMatrixSolver::compileKernels(CommonCalcConstantPoten
     defines["NUM_PARTICLES"] = kernel.cc.intToString(numParticles);
     defines["NUM_ELECTRODE_PARTICLES"] = kernel.cc.intToString(numElectrodeParticles);
     defines["THREAD_BLOCK_SIZE"] = kernel.cc.intToString(kernel.threadBlockSize);
+    defines["CHUNK_SIZE"] = kernel.cc.intToString(kernel.chunkSize);
+    defines["CHUNK_COUNT"] = kernel.cc.intToString(kernel.chunkCount);
+    defines["PADDED_PROBLEM_SIZE"] = kernel.cc.intToString(kernel.paddedProblemSize);
     if (kernel.useChargeConstraint) {
         defines["USE_CHARGE_CONSTRAINT"] = "1";
     }
@@ -299,7 +302,7 @@ void CommonConstantPotentialMatrixSolver::ensureValid(CommonCalcConstantPotentia
     boxVectors[2] = kernel.boxVectors[2];
     saveElectrodePositionsKernel->execute(numElectrodeParticles);
 
-    TNT::Array2D<double> A(numElectrodeParticles, numElectrodeParticles);
+    TNT::Array2D<double> A(paddedProblemSize, paddedProblemSize);
     vector<double> dUdQ0(numElectrodeParticles);
     vector<double> dUdQ(numElectrodeParticles);
 
@@ -309,7 +312,7 @@ void CommonConstantPotentialMatrixSolver::ensureValid(CommonCalcConstantPotentia
     kernel.doDerivatives();
     kernel.chargeDerivatives.download(dUdQ0, true);
 
-    vector<double> electrodeCharges(numElectrodeParticles);
+    vector<double> electrodeCharges(paddedProblemSize);
     for (int ii = 0; ii < numElectrodeParticles; ii++) {
         // Get derivatives when one electrode charge is set.
         electrodeCharges[ii] = 1.0;
@@ -325,6 +328,14 @@ void CommonConstantPotentialMatrixSolver::ensureValid(CommonCalcConstantPotentia
             A[ii][jj] = A[jj][ii] = dUdQ[jj] - dUdQ0[jj];
         }
         A[ii][ii] = dUdQ[ii] - dUdQ0[ii];
+        for (int jj = numElectrodeParticles; jj < paddedProblemSize; jj++) {
+            A[ii][jj] = A[jj][ii] = 0.0;
+        }
+    }
+    for (int ii = numElectrodeParticles; ii < paddedProblemSize; ii++) {
+        for (int jj = numElectrodeParticles; jj < paddedProblemSize; jj++) {
+            A[ii][jj] = ii == jj ? 1.0 : 0.0;
+        }
     }
 
     // Compute Cholesky decomposition representation of the inverse.
@@ -337,7 +348,7 @@ void CommonConstantPotentialMatrixSolver::ensureValid(CommonCalcConstantPotentia
     TNT::Array2D<double> choleskyLower = choleskyInverse.getL();
     vector<double> hostCapacitance(capacitance.getSize());
     size_t index = 0;
-    for (int ii = 0; ii < numElectrodeParticles; ii++) {
+    for (int ii = 0; ii < paddedProblemSize; ii++) {
         double scale = 1.0 / choleskyLower[ii][ii];
 
         // Load the lower triangle.
@@ -349,7 +360,7 @@ void CommonConstantPotentialMatrixSolver::ensureValid(CommonCalcConstantPotentia
         hostCapacitance[index++] = scale;
 
         // Load the transpose of the lower triangle into the upper triangle.
-        for (int jj = ii + 1; jj < numElectrodeParticles; jj++) {
+        for (int jj = ii + 1; jj < paddedProblemSize; jj++) {
             hostCapacitance[index++] = choleskyLower[jj][ii] * scale;
         }
     }
@@ -362,7 +373,7 @@ void CommonConstantPotentialMatrixSolver::ensureValid(CommonCalcConstantPotentia
     // and is scaled so that adding it to a vector of charges increases the
     // total charge by 1 (making it easy to calculate the necessary offset).
     if (kernel.useChargeConstraint) {
-        TNT::Array1D<double> solution = choleskyInverse.solve(TNT::Array1D<double>(numElectrodeParticles, 1.0));
+        TNT::Array1D<double> solution = choleskyInverse.solve(TNT::Array1D<double>(paddedProblemSize, 1.0));
         vector<double> hostConstraintVector(static_cast<double*>(solution), static_cast<double*>(solution) + numElectrodeParticles);
 
         double constraintScaleInv = 0.0;
@@ -378,17 +389,17 @@ void CommonConstantPotentialMatrixSolver::ensureValid(CommonCalcConstantPotentia
     }
 }
 
-CommonConstantPotentialCGSolver::CommonConstantPotentialCGSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles, bool precond) :
-        CommonConstantPotentialSolver(cc, numParticles, numElectrodeParticles), precondRequested(precond) {
+CommonConstantPotentialCGSolver::CommonConstantPotentialCGSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles, int paddedProblemSize, bool precond) :
+        CommonConstantPotentialSolver(cc, numParticles, numElectrodeParticles, paddedProblemSize), precondRequested(precond) {
     int elementSize = cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float);
-    q.initialize(cc, numElectrodeParticles, elementSize, "q");
+    q.initialize(cc, paddedProblemSize, elementSize, "q");
     grad.initialize(cc, numElectrodeParticles, elementSize, "grad");
     projGrad.initialize(cc, numElectrodeParticles, elementSize, "projGrad");
     precGrad.initialize(cc, numElectrodeParticles, elementSize, "precGrad");
     qStep.initialize(cc, numElectrodeParticles, elementSize, "qStep");
     gradStep.initialize(cc, numElectrodeParticles, elementSize, "gradStep");
     grad0.initialize(cc, numElectrodeParticles, elementSize, "grad0");
-    qLast.initialize(cc, numElectrodeParticles, elementSize, "qLast");
+    qLast.initialize(cc, paddedProblemSize, elementSize, "qLast");
     paramScale.initialize(cc, 1, elementSize, "paramScale");
     convergedResult.initialize(cc, 1, sizeof(int), "convergedResult");
     if (precondRequested) {
@@ -781,6 +792,10 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
     numElectrodeParticles = hostElecToSys.size();
     hasElectrodes = (numElectrodeParticles != 0);
 
+    chunkSize = 32;
+    chunkCount = (numElectrodeParticles + chunkSize - 1) / chunkSize;
+    paddedProblemSize = chunkCount * chunkSize;
+
     // Clear charges on electrode particles.
     for (int ii = 0; ii < numElectrodeParticles; ii++) {
         setCharges[hostElecToSys[ii]] = 0.0;
@@ -885,12 +900,12 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
     cgErrorTol = force.getCGErrorTolerance();
     if (method == ConstantPotentialForce::Matrix) {
         if (hasElectrodes) {
-            solver = new CommonConstantPotentialMatrixSolver(cc, numParticles, numElectrodeParticles);
+            solver = new CommonConstantPotentialMatrixSolver(cc, numParticles, numElectrodeParticles, paddedProblemSize);
         }
     }
     else if (method == ConstantPotentialForce::CG) {
         if (hasElectrodes) {
-            solver = new CommonConstantPotentialCGSolver(cc, numParticles, numElectrodeParticles, force.getUsePreconditioner());
+            solver = new CommonConstantPotentialCGSolver(cc, numParticles, numElectrodeParticles, paddedProblemSize, force.getUsePreconditioner());
         }
     }
     else {
@@ -903,8 +918,8 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
     nonElectrodeCharges.initialize(cc, cc.getPaddedNumAtoms(), elementSize, "nonElectrodeCharges");
     nonElectrodeCharges.upload(hostNonElectrodeCharges, true);
     if (hasElectrodes) {
-        hostElectrodeCharges.resize(numElectrodeParticles);
-        electrodeCharges.initialize(cc, numElectrodeParticles, elementSize, "electrodeCharges");
+        hostElectrodeCharges.resize(paddedProblemSize);
+        electrodeCharges.initialize(cc, paddedProblemSize, elementSize, "electrodeCharges");
         electrodeCharges.upload(hostElectrodeCharges, true);
         chargeDerivatives.initialize(cc, numElectrodeParticles, elementSize, "chargeDerivatives");
         chargeDerivativesFixed.initialize<int64_t>(cc, numElectrodeParticles, "chargeDerivativesFixed");
@@ -931,7 +946,7 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
     posCellOffsets.upload(hostPosCellOffsets);
 
     // Create a reorder listener to swap electrode guess charges.
-    ReorderListener* listener = new ReorderListener(cc, numElectrodeParticles, hostSysToElec, hostElecToSys);
+    ReorderListener* listener = new ReorderListener(cc, numElectrodeParticles, paddedProblemSize, hostSysToElec, hostElecToSys);
     if (hasElectrodes) {
         vector<ComputeArray*> guessChargeArrays;
         solver->getGuessChargeArrays(guessChargeArrays);

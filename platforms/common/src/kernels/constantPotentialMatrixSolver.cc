@@ -1,5 +1,3 @@
-#define CHUNK_SIZE 32
-
 DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) {
     const int thread = LOCAL_ID;
     SYNC_THREADS;
@@ -44,64 +42,71 @@ KERNEL void solve(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT 
 ) {
     // This kernel expects to be executed in a single thread block.
 
-    const int NUM_CHUNKS = NUM_ELECTRODE_PARTICLES / CHUNK_SIZE;
+    LOCAL volatile real chunkCharges[CHUNK_SIZE];
 
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
         electrodeCharges[ii] = -chargeDerivatives[ii];
     }
     SYNC_THREADS;
 
-    LOCAL volatile real chunkCharges[CHUNK_SIZE];
-    for (int jj = 0; jj < NUM_CHUNKS * CHUNK_SIZE; jj += CHUNK_SIZE) {
+    // Cholesky solve step 1 (outer loop over chunks of rows).
+
+    for (int jj = 0; jj < PADDED_PROBLEM_SIZE; jj += CHUNK_SIZE) {
         if (LOCAL_ID < CHUNK_SIZE) {
-            chunkCharges[LOCAL_ID] = electrodeCharges[jj + LOCAL_ID];
-            SYNC_WARPS;
+            real threadCharge = electrodeCharges[jj + LOCAL_ID];
             for (int k = 0; k < CHUNK_SIZE - 1; k++) {
+                const real chargeOffset = __shfl_sync(0xffffffff, threadCharge, k);
                 if (LOCAL_ID > k) {
-                    chunkCharges[LOCAL_ID] -= chunkCharges[k] * capacitance[(mm_long) (jj + k) * NUM_ELECTRODE_PARTICLES + (LOCAL_ID + jj)];
+                    threadCharge -= chargeOffset * capacitance[(mm_long) (jj + k) * PADDED_PROBLEM_SIZE + (LOCAL_ID + jj)];
                 }
-                SYNC_WARPS;
             }
-            electrodeCharges[jj + LOCAL_ID] = chunkCharges[LOCAL_ID];
+            SYNC_WARPS;
+            electrodeCharges[jj + LOCAL_ID] = chunkCharges[LOCAL_ID] = threadCharge;
         }
         SYNC_THREADS;
         for (int ii = LOCAL_ID + jj + CHUNK_SIZE; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
             real chargeOffset = 0;
             for (int k = 0; k < CHUNK_SIZE; k++) {
-                chargeOffset += chunkCharges[k] * capacitance[(mm_long) (jj + k) * NUM_ELECTRODE_PARTICLES + ii];
+                chargeOffset += chunkCharges[k] * capacitance[(mm_long) (jj + k) * PADDED_PROBLEM_SIZE + ii];
             }
             electrodeCharges[ii] -= chargeOffset;
         }
         SYNC_THREADS;
     }
-    for (int jj = NUM_CHUNKS * CHUNK_SIZE; jj < NUM_ELECTRODE_PARTICLES; jj++) {
-        const mm_long offset = (mm_long) jj * NUM_ELECTRODE_PARTICLES;
-        for (int ii = LOCAL_ID + jj + 1; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            electrodeCharges[ii] -= electrodeCharges[jj] * capacitance[offset + ii];
-        }
-        SYNC_THREADS;
-    }
 
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        const mm_long offset = (mm_long) ii * NUM_ELECTRODE_PARTICLES;
+        const mm_long offset = (mm_long) ii * PADDED_PROBLEM_SIZE;
         electrodeCharges[ii] *= capacitance[offset + ii];
     }
     SYNC_THREADS;
 
-    // Cholesky solve step 2 (outer loop over columns).
+    // Cholesky solve step 2 (outer loop over chunks of columns).
 
-    for (int jj = NUM_ELECTRODE_PARTICLES - 1; jj >= 0; jj--) {
-        const mm_long offset = (mm_long) jj * NUM_ELECTRODE_PARTICLES;
-
+    for (int jj = PADDED_PROBLEM_SIZE - CHUNK_SIZE; jj >= 0; jj -= CHUNK_SIZE) {
+        if (LOCAL_ID < CHUNK_SIZE) {
+            real threadCharge = electrodeCharges[jj + LOCAL_ID];
+            for (int k = CHUNK_SIZE - 1; k >= 0; k--) {
+                const real chargeOffset = __shfl_sync(0xffffffff, threadCharge, k);
+                if (LOCAL_ID < k) {
+                    threadCharge -= chargeOffset * capacitance[(mm_long) (jj + k) * PADDED_PROBLEM_SIZE + (LOCAL_ID + jj)];
+                }
+            }
+            SYNC_WARPS;
+            electrodeCharges[jj + LOCAL_ID] = chunkCharges[LOCAL_ID] = threadCharge;
+        }
+        SYNC_THREADS;
         for (int ii = LOCAL_ID; ii < jj; ii += LOCAL_SIZE) {
-            // Retrieve capacitance[ii, jj] by retrieving capacitance[jj, ii] from the upper triangle.
-            electrodeCharges[ii] -= electrodeCharges[jj] * capacitance[offset + ii];
+            real chargeOffset = 0;
+            for (int k = 0; k < CHUNK_SIZE; k++) {
+                chargeOffset += chunkCharges[k] * capacitance[(mm_long) (jj + k) * PADDED_PROBLEM_SIZE + ii];
+            }
+            electrodeCharges[ii] -= chargeOffset;
         }
         SYNC_THREADS;
     }
 
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        const mm_long offset = (mm_long) ii * NUM_ELECTRODE_PARTICLES;
+        const mm_long offset = (mm_long) ii * PADDED_PROBLEM_SIZE;
         electrodeCharges[ii] *= capacitance[offset + ii];
     }
     SYNC_THREADS;
