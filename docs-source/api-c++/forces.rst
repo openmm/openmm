@@ -70,6 +70,7 @@ be combined in arbitrary ways.
     generated/MonteCarloBarostat
     generated/MonteCarloFlexibleBarostat
     generated/MonteCarloMembraneBarostat
+    generated/RGForce
     generated/RMSDForce
     generated/RPMDMonteCarloBarostat
 
