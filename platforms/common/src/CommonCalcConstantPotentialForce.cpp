@@ -338,18 +338,19 @@ void CommonConstantPotentialMatrixSolver::ensureValid(CommonCalcConstantPotentia
     vector<double> hostCapacitance(capacitance.getSize());
     size_t index = 0;
     for (int ii = 0; ii < numElectrodeParticles; ii++) {
+        double scale = 1.0 / choleskyLower[ii][ii];
+
         // Load the lower triangle.
         for (int jj = 0; jj < ii; jj++) {
-            hostCapacitance[index++] = choleskyLower[ii][jj];
+            hostCapacitance[index++] = choleskyLower[ii][jj] * scale;
         }
 
-        // A Cholesky solve uses the lower triangle as is but divides by the
-        // diagonal elements, so take their reciprocals now. 
-        hostCapacitance[index++] = 1.0 / choleskyLower[ii][ii];
+        // Load the reciprocal of the diagonal element.
+        hostCapacitance[index++] = scale;
 
         // Load the transpose of the lower triangle into the upper triangle.
         for (int jj = ii + 1; jj < numElectrodeParticles; jj++) {
-            hostCapacitance[index++] = choleskyLower[jj][ii];
+            hostCapacitance[index++] = choleskyLower[jj][ii] * scale;
         }
     }
     capacitance.upload(hostCapacitance, true);
