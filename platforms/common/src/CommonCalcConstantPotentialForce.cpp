@@ -225,6 +225,9 @@ void CommonConstantPotentialMatrixSolver::compileKernels(CommonCalcConstantPoten
     if (kernel.useChargeConstraint) {
         defines["USE_CHARGE_CONSTRAINT"] = "1";
     }
+    if (kernel.deviceIsCpu) {
+        defines["DEVICE_IS_CPU"] = "1";
+    }
     ComputeProgram program = kernel.cc.compileProgram(CommonKernelSources::constantPotentialMatrixSolver, defines);
 
     checkSavedElectrodePositionsKernel = program->createKernel("checkSavedElectrodePositions");
@@ -424,7 +427,9 @@ void CommonConstantPotentialCGSolver::compileKernels(CommonCalcConstantPotential
     if (precondRequested) {
         defines["PRECOND_REQUESTED"] = "1";
     }
-
+    if (kernel.deviceIsCpu) {
+        defines["DEVICE_IS_CPU"] = "1";
+    }
     ComputeProgram program = kernel.cc.compileProgram(CommonKernelSources::constantPotentialCGSolver, defines);
 
     solveInitializeStep1Kernel = program->createKernel("solveInitializeStep1");

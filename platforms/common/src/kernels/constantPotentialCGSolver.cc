@@ -36,6 +36,14 @@ DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
             temp[0] = value;
         }
     }
+#elif defined(DEVICE_IS_CPU)
+    temp[thread] = value;
+    for (int step = LOCAL_SIZE / 2; step > 0; step >>= 1) {
+        SYNC_THREADS;
+        if(thread < step) {
+            temp[thread] += temp[thread + step];
+        }
+    }
 #else
     temp[thread] = value;
     for (int step = LOCAL_SIZE / 2; step >= WARP_SIZE; step >>= 1) {
@@ -96,6 +104,14 @@ DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offse
         }
         if (!lane) {
             temp[0] = value;
+        }
+    }
+#elif defined(DEVICE_IS_CPU)
+    temp[thread] = value;
+    for (int step = LOCAL_SIZE / 2; step > 0; step >>= 1) {
+        SYNC_THREADS;
+        if(thread < step) {
+            temp[thread] += temp[thread + step];
         }
     }
 #else
@@ -216,6 +232,14 @@ DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offse
         }
         if (!lane) {
             temp[0] = value;
+        }
+    }
+#elif defined(DEVICE_IS_CPU)
+    temp[thread] = value;
+    for (int step = LOCAL_SIZE / 2; step > 0; step >>= 1) {
+        SYNC_THREADS;
+        if(thread < step) {
+            temp[thread] = compensatedAdd3(temp[thread], temp[thread + step]);
         }
     }
 #else
