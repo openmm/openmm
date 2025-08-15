@@ -1,28 +1,57 @@
-#if CHUNK_SIZE > 1
+#define WARP_SIZE 32
+
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-#define WARP_SHUFFLE(local, index) __shfl_sync(0xffffffff, local, index)
+    #define WARP_SHUFFLE(local, index) __shfl_sync(0xffffffff, local, index)
+    #define WARP_SHUFFLE_DOWN(local, offset) __shfl_down_sync(0xffffffff, local, offset)
 #elif defined(USE_HIP)
-#define WARP_SHUFFLE(local, index) __shfl(local, index)
+    #define WARP_SHUFFLE(local, index) __shfl(local, index)
+    #define WARP_SHUFFLE_DOWN(local, offset) __shfl_down(local, offset)
 #endif
+
+#ifdef WARP_SHUFFLE_DOWN
+    #define TEMP_SIZE WARP_SIZE
+#else
+    #define TEMP_SIZE THREAD_BLOCK_SIZE
 #endif
 
 DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) {
     const int thread = LOCAL_ID;
     SYNC_THREADS;
-    temp[thread] = value;
+#ifdef WARP_SHUFFLE_DOWN
+    const int warp = thread / WARP_SIZE;
+    const int lane = thread % WARP_SIZE;
+    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+        value += WARP_SHUFFLE_DOWN(value, step);
+    }
+    if (!lane) {
+        temp[warp] = value;
+    }
     SYNC_THREADS;
-    for (int step = 1; step < 16; step *= 2) {
-        if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread] = temp[thread] + temp[thread + step];
+    if (!warp) {
+        value = temp[lane];
+        for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+            value += WARP_SHUFFLE_DOWN(value, step);
         }
-        SYNC_WARPS;
+        if (!lane) {
+            temp[0] = value;
+        }
     }
-    for (int step = 16; step < LOCAL_SIZE; step *= 2) {
-        if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread] = temp[thread] + temp[thread + step];
-        }
+#else
+    temp[thread] = value;
+    for (int step = LOCAL_SIZE / 2; step >= WARP_SIZE; step >>= 1) {
         SYNC_THREADS;
+        if(thread < step) {
+            temp[thread] += temp[thread + step];
+        }
     }
+    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+        SYNC_WARPS;
+        if(thread < step) {
+            temp[thread] += temp[thread + step];
+        }
+    }
+#endif
+    SYNC_THREADS;
     return temp[0];
 }
 
@@ -63,7 +92,8 @@ KERNEL void solve(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT 
 
     for (int jj = 0; jj < PADDED_PROBLEM_SIZE; jj += CHUNK_SIZE) {
         if (LOCAL_ID < CHUNK_SIZE) {
-#ifdef WARP_SHUFFLE
+#if CHUNK_SIZE > 1
+    #ifdef WARP_SHUFFLE
             real threadCharge = electrodeCharges[jj + LOCAL_ID];
             for (int k = 0; k < CHUNK_SIZE - 1; k++) {
                 const real chargeShuffled = WARP_SHUFFLE(threadCharge, k);
@@ -73,7 +103,7 @@ KERNEL void solve(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT 
             }
             SYNC_WARPS;
             electrodeCharges[jj + LOCAL_ID] = chunkCharges[LOCAL_ID] = threadCharge;
-#elif CHUNK_SIZE > 1
+    #else
             chunkCharges[LOCAL_ID] = electrodeCharges[jj + LOCAL_ID];
             for (int k = 0; k < CHUNK_SIZE - 1; k++) {
                 SYNC_WARPS;
@@ -83,6 +113,7 @@ KERNEL void solve(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT 
             }
             SYNC_WARPS;
             electrodeCharges[jj + LOCAL_ID] = chunkCharges[LOCAL_ID];
+    #endif
 #endif
         }
         SYNC_THREADS;
@@ -109,7 +140,8 @@ KERNEL void solve(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT 
 
     for (int jj = PADDED_PROBLEM_SIZE - CHUNK_SIZE; jj >= 0; jj -= CHUNK_SIZE) {
         if (LOCAL_ID < CHUNK_SIZE) {
-#ifdef WARP_SHUFFLE
+#if CHUNK_SIZE > 1
+    #ifdef WARP_SHUFFLE
             real threadCharge = electrodeCharges[jj + LOCAL_ID];
             for (int k = CHUNK_SIZE - 1; k >= 0; k--) {
                 const real chargeShuffled = WARP_SHUFFLE(threadCharge, k);
@@ -119,7 +151,7 @@ KERNEL void solve(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT 
             }
             SYNC_WARPS;
             electrodeCharges[jj + LOCAL_ID] = chunkCharges[LOCAL_ID] = threadCharge;
-#elif CHUNK_SIZE > 1
+    #else
             chunkCharges[LOCAL_ID] = electrodeCharges[jj + LOCAL_ID];
             for (int k = CHUNK_SIZE - 1; k >= 0; k--) {
                 SYNC_WARPS;
@@ -129,6 +161,7 @@ KERNEL void solve(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT 
             }
             SYNC_WARPS;
             electrodeCharges[jj + LOCAL_ID] = chunkCharges[LOCAL_ID];
+    #endif
 #endif
         }
         SYNC_THREADS;

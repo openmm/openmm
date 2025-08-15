@@ -792,7 +792,7 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
     numElectrodeParticles = hostElecToSys.size();
     hasElectrodes = (numElectrodeParticles != 0);
 
-    chunkSize = cc.getSIMDWidth();
+    chunkSize = deviceIsCpu ? 1 : 32;
     chunkCount = (numElectrodeParticles + chunkSize - 1) / chunkSize;
     paddedProblemSize = chunkCount * chunkSize;
 

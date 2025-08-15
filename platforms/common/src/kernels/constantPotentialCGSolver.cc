@@ -1,31 +1,57 @@
-#define REDUCE_BODY_1 \
-    const int thread = LOCAL_ID; \
-    SYNC_THREADS; \
-    temp[thread] = value; \
-    SYNC_THREADS; \
-    for (int step = 1; step < 16; step *= 2) { \
-        if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
+#define WARP_SIZE 32
 
-#define REDUCE_BODY_2 \
-        } \
-        SYNC_WARPS; \
-    } \
-    for (int step = 16; step < LOCAL_SIZE; step *= 2) { \
-        if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+    #define WARP_SHUFFLE_DOWN(local, offset) __shfl_down_sync(0xffffffff, local, offset)
+#elif defined(USE_HIP)
+    #define WARP_SHUFFLE_DOWN(local, offset) __shfl_down(local, offset)
+#endif
 
-#define REDUCE_BODY_3 \
-        } \
-        SYNC_THREADS; \
-    }
+#ifdef WARP_SHUFFLE_DOWN
+    #define TEMP_SIZE WARP_SIZE
+#else
+    #define TEMP_SIZE THREAD_BLOCK_SIZE
+#endif
 
 // Sum value from each thread (using temp).  Use real type variables (float on
 // single and mixed precision modes, double on double precision mode).
 DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
-    REDUCE_BODY_1
-    temp[thread] = temp[thread] + temp[thread + step];
-    REDUCE_BODY_2
-    temp[thread] = temp[thread] + temp[thread + step];
-    REDUCE_BODY_3
+    const int thread = LOCAL_ID;
+    SYNC_THREADS;
+#ifdef WARP_SHUFFLE_DOWN
+    const int warp = thread / WARP_SIZE;
+    const int lane = thread % WARP_SIZE;
+    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+        value += WARP_SHUFFLE_DOWN(value, step);
+    }
+    if (!lane) {
+        temp[warp] = value;
+    }
+    SYNC_THREADS;
+    if (!warp) {
+        value = temp[lane];
+        for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+            value += WARP_SHUFFLE_DOWN(value, step);
+        }
+        if (!lane) {
+            temp[0] = value;
+        }
+    }
+#else
+    temp[thread] = value;
+    for (int step = LOCAL_SIZE / 2; step >= WARP_SIZE; step >>= 1) {
+        SYNC_THREADS;
+        if(thread < step) {
+            temp[thread] += temp[thread + step];
+        }
+    }
+    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+        SYNC_WARPS;
+        if(thread < step) {
+            temp[thread] += temp[thread + step];
+        }
+    }
+#endif
+    SYNC_THREADS;
     return temp[0];
 }
 
@@ -51,11 +77,43 @@ DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
 
 // Sum value from each thread (using temp) and return (sum + offset) * scale.
 DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offset, real scale) {
-    REDUCE_BODY_1
-    temp[thread] = temp[thread] + temp[thread + step];
-    REDUCE_BODY_2
-    temp[thread] = temp[thread] + temp[thread + step];
-    REDUCE_BODY_3
+    const int thread = LOCAL_ID;
+    SYNC_THREADS;
+#ifdef WARP_SHUFFLE_DOWN
+    const int warp = thread / WARP_SIZE;
+    const int lane = thread % WARP_SIZE;
+    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+        value += WARP_SHUFFLE_DOWN(value, step);
+    }
+    if (!lane) {
+        temp[warp] = value;
+    }
+    SYNC_THREADS;
+    if (!warp) {
+        value = temp[lane];
+        for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+            value += WARP_SHUFFLE_DOWN(value, step);
+        }
+        if (!lane) {
+            temp[0] = value;
+        }
+    }
+#else
+    temp[thread] = value;
+    for (int step = LOCAL_SIZE / 2; step >= WARP_SIZE; step >>= 1) {
+        SYNC_THREADS;
+        if(thread < step) {
+            temp[thread] += temp[thread + step];
+        }
+    }
+    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+        SYNC_WARPS;
+        if(thread < step) {
+            temp[thread] += temp[thread + step];
+        }
+    }
+#endif
+    SYNC_THREADS;
     return (temp[0] + offset) * scale;
 }
 
@@ -139,11 +197,43 @@ DEVICE inline float compensatedMultiply3(float2 x, float2 y) {
 
 // Sum value from each thread (using temp) and return (sum + offset) * scale.
 DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offset, real scale) {
-    REDUCE_BODY_1
-    temp[thread] = compensatedAdd3(temp[thread], temp[thread + step]);
-    REDUCE_BODY_2
-    temp[thread] = compensatedAdd3(temp[thread], temp[thread + step]);
-    REDUCE_BODY_3
+    const int thread = LOCAL_ID;
+    SYNC_THREADS;
+#ifdef WARP_SHUFFLE_DOWN
+    const int warp = thread / WARP_SIZE;
+    const int lane = thread % WARP_SIZE;
+    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+        value = compensatedAdd3(value, WARP_SHUFFLE_DOWN(value, step));
+    }
+    if (!lane) {
+        temp[warp] = value;
+    }
+    SYNC_THREADS;
+    if (!warp) {
+        value = temp[lane];
+        for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+            value = compensatedAdd3(value, WARP_SHUFFLE_DOWN(value, step));
+        }
+        if (!lane) {
+            temp[0] = value;
+        }
+    }
+#else
+    temp[thread] = value;
+    for (int step = LOCAL_SIZE / 2; step >= WARP_SIZE; step >>= 1) {
+        SYNC_THREADS;
+        if(thread < step) {
+            temp[thread] = compensatedAdd3(temp[thread], temp[thread + step]);
+        }
+    }
+    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+        SYNC_WARPS;
+        if(thread < step) {
+            temp[thread] = compensatedAdd3(temp[thread], temp[thread + step]);
+        }
+    }
+#endif
+    SYNC_THREADS;
     return compensatedMultiply2(compensatedAdd2(temp[0], offset), scale);
 }
 
@@ -157,7 +247,7 @@ KERNEL void solveInitializeStep1(GLOBAL real* RESTRICT electrodeCharges, GLOBAL 
     // This kernel expects to be executed in a single thread block.
 
 #ifdef USE_CHARGE_CONSTRAINT
-    LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
+    LOCAL volatile ACCUM tempAccum[TEMP_SIZE];
 #endif
 
     // Set initial guess charges as linear extrapolations from the current and
@@ -186,9 +276,9 @@ KERNEL void solveInitializeStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL
     // This kernel expects to be executed in a single thread block.
 
 #ifdef USE_CHARGE_CONSTRAINT
-    LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
+    LOCAL volatile ACCUM tempAccum[TEMP_SIZE];
 #endif
-    LOCAL volatile real temp[THREAD_BLOCK_SIZE];
+    LOCAL volatile real temp[TEMP_SIZE];
 
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
         grad[ii] = chargeDerivatives[ii];
@@ -230,7 +320,7 @@ KERNEL void solveInitializeStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL
     // This kernel expects to be executed in a single thread block.
 
 #if defined(PRECOND_REQUESTED) && defined(USE_CHARGE_CONSTRAINT)
-    LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
+    LOCAL volatile ACCUM tempAccum[TEMP_SIZE];
 #endif
 
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
@@ -280,9 +370,9 @@ KERNEL void solveLoopStep1(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* 
     // This kernel expects to be executed in a single thread block.
 
 #ifdef USE_CHARGE_CONSTRAINT
-    LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
+    LOCAL volatile ACCUM tempAccum[TEMP_SIZE];
 #endif
-    LOCAL volatile real temp[THREAD_BLOCK_SIZE];
+    LOCAL volatile real temp[TEMP_SIZE];
 
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
         gradStep[ii] = chargeDerivatives[ii] - grad0[ii];
@@ -368,9 +458,9 @@ KERNEL void solveLoopStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real*
     }
 
 #ifdef USE_CHARGE_CONSTRAINT
-    LOCAL volatile ACCUM tempAccum[THREAD_BLOCK_SIZE];
+    LOCAL volatile ACCUM tempAccum[TEMP_SIZE];
 #endif
-    LOCAL volatile real temp[THREAD_BLOCK_SIZE];
+    LOCAL volatile real temp[TEMP_SIZE];
 
     if (recomputeGradient) {
         for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {

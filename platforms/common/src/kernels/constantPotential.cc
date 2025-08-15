@@ -1,3 +1,17 @@
+#define WARP_SIZE 32
+
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+    #define WARP_SHUFFLE_DOWN(local, offset) __shfl_down_sync(0xffffffff, local, offset)
+#elif defined(USE_HIP)
+    #define WARP_SHUFFLE_DOWN(local, offset) __shfl_down(local, offset)
+#endif
+
+#ifdef WARP_SHUFFLE_DOWN
+    #define TEMP_SIZE WARP_SIZE
+#else
+    #define TEMP_SIZE THREAD_BLOCK_SIZE
+#endif
+
 #ifdef USE_HIP
     #define ALIGN alignas(16)
 #else
@@ -12,20 +26,41 @@ typedef struct ALIGN {
 DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) {
     const int thread = LOCAL_ID;
     SYNC_THREADS;
-    temp[thread] = value;
+#ifdef WARP_SHUFFLE_DOWN
+    const int warp = thread / WARP_SIZE;
+    const int lane = thread % WARP_SIZE;
+    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+        value += WARP_SHUFFLE_DOWN(value, step);
+    }
+    if (!lane) {
+        temp[warp] = value;
+    }
     SYNC_THREADS;
-    for (int step = 1; step < 16; step *= 2) {
-        if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread] = temp[thread] + temp[thread + step];
+    if (!warp) {
+        value = temp[lane];
+        for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+            value += WARP_SHUFFLE_DOWN(value, step);
         }
-        SYNC_WARPS;
+        if (!lane) {
+            temp[0] = value;
+        }
     }
-    for (int step = 16; step < LOCAL_SIZE; step *= 2) {
-        if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread] = temp[thread] + temp[thread + step];
-        }
+#else
+    temp[thread] = value;
+    for (int step = LOCAL_SIZE / 2; step >= WARP_SIZE; step >>= 1) {
         SYNC_THREADS;
+        if(thread < step) {
+            temp[thread] += temp[thread + step];
+        }
     }
+    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+        SYNC_WARPS;
+        if(thread < step) {
+            temp[thread] += temp[thread + step];
+        }
+    }
+#endif
+    SYNC_THREADS;
     return temp[0];
 }
 
@@ -68,7 +103,7 @@ KERNEL void getTotalCharge(
 ) {
     // This kernel expects to be executed in a single thread block.
 
-    LOCAL volatile real temp[THREAD_BLOCK_SIZE];
+    LOCAL volatile real temp[TEMP_SIZE];
 
     real totalCharge = 0;
     for (int i = LOCAL_ID; i < NUM_PARTICLES; i += LOCAL_SIZE) {
