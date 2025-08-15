@@ -1,9 +1,9 @@
+#if CHUNK_SIZE > 1
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-#define HAS_WARP_SHUFFLE
 #define WARP_SHUFFLE(local, index) __shfl_sync(0xffffffff, local, index)
 #elif defined(USE_HIP)
-#define HAS_WARP_SHUFFLE
 #define WARP_SHUFFLE(local, index) __shfl(local, index)
+#endif
 #endif
 
 DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) {
@@ -50,7 +50,9 @@ KERNEL void solve(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT 
 ) {
     // This kernel expects to be executed in a single thread block.
 
+#if CHUNK_SIZE > 1
     LOCAL volatile real chunkCharges[CHUNK_SIZE];
+#endif
 
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
         electrodeCharges[ii] = -chargeDerivatives[ii];
@@ -61,22 +63,22 @@ KERNEL void solve(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT 
 
     for (int jj = 0; jj < PADDED_PROBLEM_SIZE; jj += CHUNK_SIZE) {
         if (LOCAL_ID < CHUNK_SIZE) {
-#ifdef HAS_WARP_SHUFFLE
+#ifdef WARP_SHUFFLE
             real threadCharge = electrodeCharges[jj + LOCAL_ID];
             for (int k = 0; k < CHUNK_SIZE - 1; k++) {
-                const real chargeOffset = __shfl_sync(0xffffffff, threadCharge, k);
+                const real chargeShuffled = WARP_SHUFFLE(threadCharge, k);
                 if (LOCAL_ID > k) {
-                    threadCharge -= chargeOffset * capacitance[(mm_long) (jj + k) * PADDED_PROBLEM_SIZE + (LOCAL_ID + jj)];
+                    threadCharge -= chargeShuffled * capacitance[(mm_long) (jj + k) * PADDED_PROBLEM_SIZE + (jj + LOCAL_ID)];
                 }
             }
             SYNC_WARPS;
             electrodeCharges[jj + LOCAL_ID] = chunkCharges[LOCAL_ID] = threadCharge;
-#else
+#elif CHUNK_SIZE > 1
             chunkCharges[LOCAL_ID] = electrodeCharges[jj + LOCAL_ID];
             for (int k = 0; k < CHUNK_SIZE - 1; k++) {
                 SYNC_WARPS;
                 if (LOCAL_ID > k) {
-                    chunkCharges[LOCAL_ID] -= chunkCharges[k] * capacitance[(mm_long) (jj + k) * PADDED_PROBLEM_SIZE + (LOCAL_ID + jj)];
+                    chunkCharges[LOCAL_ID] -= chunkCharges[k] * capacitance[(mm_long) (jj + k) * PADDED_PROBLEM_SIZE + (jj + LOCAL_ID)];
                 }
             }
             SYNC_WARPS;
@@ -84,12 +86,16 @@ KERNEL void solve(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT 
 #endif
         }
         SYNC_THREADS;
-        for (int ii = LOCAL_ID + jj + CHUNK_SIZE; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
+        for (int ii = jj + CHUNK_SIZE + LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
+#if CHUNK_SIZE > 1
             real chargeOffset = 0;
             for (int k = 0; k < CHUNK_SIZE; k++) {
                 chargeOffset += chunkCharges[k] * capacitance[(mm_long) (jj + k) * PADDED_PROBLEM_SIZE + ii];
             }
             electrodeCharges[ii] -= chargeOffset;
+#else
+            electrodeCharges[ii] -= electrodeCharges[jj] * capacitance[(mm_long) jj * PADDED_PROBLEM_SIZE + ii];
+#endif
         }
         SYNC_THREADS;
     }
@@ -103,22 +109,22 @@ KERNEL void solve(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT 
 
     for (int jj = PADDED_PROBLEM_SIZE - CHUNK_SIZE; jj >= 0; jj -= CHUNK_SIZE) {
         if (LOCAL_ID < CHUNK_SIZE) {
-#ifdef HAS_WARP_SHUFFLE
+#ifdef WARP_SHUFFLE
             real threadCharge = electrodeCharges[jj + LOCAL_ID];
             for (int k = CHUNK_SIZE - 1; k >= 0; k--) {
-                const real chargeOffset = __shfl_sync(0xffffffff, threadCharge, k);
+                const real chargeShuffled = WARP_SHUFFLE(threadCharge, k);
                 if (LOCAL_ID < k) {
-                    threadCharge -= chargeOffset * capacitance[(mm_long) (jj + k) * PADDED_PROBLEM_SIZE + (LOCAL_ID + jj)];
+                    threadCharge -= chargeShuffled * capacitance[(mm_long) (jj + k) * PADDED_PROBLEM_SIZE + (jj + LOCAL_ID)];
                 }
             }
             SYNC_WARPS;
             electrodeCharges[jj + LOCAL_ID] = chunkCharges[LOCAL_ID] = threadCharge;
-#else
+#elif CHUNK_SIZE > 1
             chunkCharges[LOCAL_ID] = electrodeCharges[jj + LOCAL_ID];
             for (int k = CHUNK_SIZE - 1; k >= 0; k--) {
                 SYNC_WARPS;
                 if (LOCAL_ID < k) {
-                    chunkCharges[LOCAL_ID] -= chunkCharges[k] * capacitance[(mm_long) (jj + k) * PADDED_PROBLEM_SIZE + (LOCAL_ID + jj)];
+                    chunkCharges[LOCAL_ID] -= chunkCharges[k] * capacitance[(mm_long) (jj + k) * PADDED_PROBLEM_SIZE + (jj + LOCAL_ID)];
                 }
             }
             SYNC_WARPS;
@@ -127,11 +133,15 @@ KERNEL void solve(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT 
         }
         SYNC_THREADS;
         for (int ii = LOCAL_ID; ii < jj; ii += LOCAL_SIZE) {
+#if CHUNK_SIZE > 1
             real chargeOffset = 0;
             for (int k = 0; k < CHUNK_SIZE; k++) {
                 chargeOffset += chunkCharges[k] * capacitance[(mm_long) (jj + k) * PADDED_PROBLEM_SIZE + ii];
             }
             electrodeCharges[ii] -= chargeOffset;
+#else
+            electrodeCharges[ii] -= electrodeCharges[jj] * capacitance[(mm_long) jj * PADDED_PROBLEM_SIZE + ii];
+#endif
         }
         SYNC_THREADS;
     }

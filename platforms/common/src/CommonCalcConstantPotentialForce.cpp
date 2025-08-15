@@ -396,7 +396,7 @@ CommonConstantPotentialCGSolver::CommonConstantPotentialCGSolver(ComputeContext&
     grad.initialize(cc, numElectrodeParticles, elementSize, "grad");
     projGrad.initialize(cc, numElectrodeParticles, elementSize, "projGrad");
     precGrad.initialize(cc, numElectrodeParticles, elementSize, "precGrad");
-    qStep.initialize(cc, numElectrodeParticles, elementSize, "qStep");
+    qStep.initialize(cc, paddedProblemSize, elementSize, "qStep");
     gradStep.initialize(cc, numElectrodeParticles, elementSize, "gradStep");
     grad0.initialize(cc, numElectrodeParticles, elementSize, "grad0");
     qLast.initialize(cc, paddedProblemSize, elementSize, "qLast");
