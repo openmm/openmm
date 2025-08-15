@@ -11,7 +11,7 @@
  *                                                                            *
  * Portions copyright (c) 2013-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
- * Contributors:                                                              *
+ * Contributors: Evan Pretti                                                  *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
  * copy of this software and associated documentation files (the "Software"), *
@@ -63,19 +63,22 @@ public:
      * @param gridy        the y size of the PME grid
      * @param gridz        the z size of the PME grid
      * @param numParticles the number of particles in the system
+     * @param indices      indices of particles to compute charge derivatives for
      * @param alpha        the Ewald blending parameter
      * @param deterministic whether it should attempt to make the resulting forces deterministic
      */
-    void initialize(int xsize, int ysize, int zsize, int numParticles, double alpha, bool deterministic);
+    void initialize(int xsize, int ysize, int zsize, int numParticles, const std::vector<int>& indices, double alpha, bool deterministic);
     ~CpuCalcPmeReciprocalForceKernel();
     /**
      * Begin computing the force and energy.
-     * 
-     * @param io                  an object that coordinates data transfer
-     * @param periodicBoxVectors  the vectors defining the periodic box (measured in nm)
-     * @param includeEnergy       true if potential energy should be computed
+     *
+     * @param io                        an object that coordinates data transfer
+     * @param periodicBoxVectors        the vectors defining the periodic box (measured in nm)
+     * @param includeEnergy             true if potential energy should be computed
+     * @param includeForces             true if forces should be computed
+     * @param includeChargeDerivatives  true if charge derivatives should be computed
      */
-    void beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy);
+    void beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy, bool includeForces, bool includeChargeDerivatives);
     /**
      * Finish computing the force and energy.
      * 
@@ -111,11 +114,13 @@ private:
     int findFFTDimension(int minimum);
     static bool hasInitializedThreads;
     static int numThreads;
-    int gridx, gridy, gridz, numParticles;
+    int gridx, gridy, gridz, numParticles, numIndices;
     double alpha;
     bool deterministic;
     bool isFinished, isDeleted;
+    std::vector<int> chargeIndices;
     std::vector<float> force;
+    std::vector<float> chargeDerivatives;
     std::vector<float> bsplineModuli[3];
     std::vector<float> recipEterm;
     Vec3 lastBoxVectors[3];
@@ -133,7 +138,7 @@ private:
     float energy;
     float* posq;
     Vec3 periodicBoxVectors[3], recipBoxVectors[3];
-    bool includeEnergy;
+    bool includeEnergy, includeForces, includeChargeDerivatives;
     std::atomic<int> atomicCounter;
 };
 
