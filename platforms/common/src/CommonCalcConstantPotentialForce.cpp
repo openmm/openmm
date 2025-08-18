@@ -403,6 +403,7 @@ CommonConstantPotentialCGSolver::CommonConstantPotentialCGSolver(ComputeContext&
     gradStep.initialize(cc, numElectrodeParticles, elementSize, "gradStep");
     grad0.initialize(cc, numElectrodeParticles, elementSize, "grad0");
     qLast.initialize(cc, paddedProblemSize, elementSize, "qLast");
+    blockResults.initialize(cc, cc.getNumThreadBlocks(), 3 * elementSize, "blockResults");
     paramScale.initialize(cc, 1, elementSize, "paramScale");
     convergedResult.initialize(cc, 1, sizeof(int), "convergedResult");
     if (precondRequested) {
@@ -421,6 +422,7 @@ void CommonConstantPotentialCGSolver::compileKernels(CommonCalcConstantPotential
     defines["ERROR_TARGET"] = kernel.cc.doubleToString(kernel.cgErrorTol * kernel.cgErrorTol * numElectrodeParticles);
     defines["NUM_ELECTRODE_PARTICLES"] = kernel.cc.intToString(numElectrodeParticles);
     defines["THREAD_BLOCK_SIZE"] = kernel.cc.intToString(kernel.threadBlockSize);
+    defines["THREAD_BLOCK_COUNT"] = kernel.cc.intToString(kernel.cc.getNumThreadBlocks());
     if (kernel.useChargeConstraint) {
         defines["USE_CHARGE_CONSTRAINT"] = "1";
     }
@@ -486,7 +488,31 @@ void CommonConstantPotentialCGSolver::compileKernels(CommonCalcConstantPotential
         solveLoopStep2Kernel->addArg(precondVector);
         solveLoopStep2Kernel->addArg(); // precondActivated
     }
+
+    solveLoopBlocksStep1Kernel = program->createKernel("solveLoopBlocksStep1");
+    solveLoopBlocksStep1Kernel->addArg(kernel.chargeDerivatives);
+    solveLoopBlocksStep1Kernel->addArg(grad);
+    solveLoopBlocksStep1Kernel->addArg(qStep);
+    solveLoopBlocksStep1Kernel->addArg(gradStep);
+    solveLoopBlocksStep1Kernel->addArg(grad0);
+    solveLoopBlocksStep1Kernel->addArg(blockResults);
+
+    solveLoopBlocksStep2Kernel = program->createKernel("solveLoopBlocksStep2");
+    solveLoopBlocksStep2Kernel->addArg(kernel.electrodeCharges);
+    solveLoopBlocksStep2Kernel->addArg(q);
+    solveLoopBlocksStep2Kernel->addArg(grad);
+    solveLoopBlocksStep2Kernel->addArg(qStep);
+    solveLoopBlocksStep2Kernel->addArg(gradStep);
+    solveLoopBlocksStep2Kernel->addArg(blockResults);
+    solveLoopBlocksStep2Kernel->addArg(paramScale);
+    solveLoopBlocksStep2Kernel->addArg(convergedResult);
+    solveLoopBlocksStep2Kernel->addArg(); // recomputeGradient
+    if (kernel.useChargeConstraint) {
+        solveLoopBlocksStep2Kernel->addArg(); // chargeTarget
+    }
 }
+
+#define USE_BLOCKS_KERNEL
 
 void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForceKernel& kernel) {
     ensureValid(kernel);
@@ -494,11 +520,19 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
     if (kernel.useChargeConstraint) {
         if (kernel.cc.getUseDoublePrecision()) {
             solveInitializeStep1Kernel->setArg(2, kernel.chargeTarget);
+#ifndef USE_BLOCKS_KERNEL
             solveLoopStep1Kernel->setArg(10, kernel.chargeTarget);
+#else
+            solveLoopBlocksStep2Kernel->setArg(9, kernel.chargeTarget);
+#endif
         }
         else {
             solveInitializeStep1Kernel->setArg(2, (float) kernel.chargeTarget);
+#ifndef USE_BLOCKS_KERNEL
             solveLoopStep1Kernel->setArg(10, (float) kernel.chargeTarget);
+#else
+            solveLoopBlocksStep2Kernel->setArg(9, (float) kernel.chargeTarget);
+#endif
         }
     }
     if (precondRequested) {
@@ -541,14 +575,25 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
         // Periodically recompute the gradient vector instead of updating it to
         // reduce the accumulation of roundoff error.
         bool recomputeGradient = (iter != 0 && iter % 32 == 0);
+#ifndef USE_BLOCKS_KERNEL
         solveLoopStep1Kernel->setArg(9, (int) recomputeGradient);
+#else
+        solveLoopBlocksStep2Kernel->setArg(8, (int) recomputeGradient);
+#endif
         solveLoopStep2Kernel->setArg(8, (int) recomputeGradient);
 
+#ifndef USE_BLOCKS_KERNEL
         solveLoopStep1Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
+#else
+        kernel.cc.clearBuffer(blockResults);
+        solveLoopBlocksStep1Kernel->execute(numElectrodeParticles);
+        solveLoopBlocksStep2Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
+#endif
 
         if (recomputeGradient) {
             kernel.mustUpdateElectrodeCharges = true;
             kernel.doDerivatives();
+            kernel.chargeDerivatives.copyTo(grad);
         }
 
         solveLoopStep2Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);

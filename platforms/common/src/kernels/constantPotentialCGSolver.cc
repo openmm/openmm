@@ -18,6 +18,7 @@ DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
     const int thread = LOCAL_ID;
     SYNC_THREADS;
 #ifdef WARP_SHUFFLE_DOWN
+    const int warpCount = LOCAL_SIZE / WARP_SIZE;
     const int warp = thread / WARP_SIZE;
     const int lane = thread % WARP_SIZE;
     for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
@@ -28,7 +29,7 @@ DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
     }
     SYNC_THREADS;
     if (!warp) {
-        value = temp[lane];
+        value = lane < warpCount ? temp[lane] : 0;
         for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
             value += WARP_SHUFFLE_DOWN(value, step);
         }
@@ -63,6 +64,80 @@ DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
     return temp[0];
 }
 
+// Perform reduceReal() operation on three variables simultaneously.
+DEVICE real3 reduce3Real(real value1, real value2, real value3, LOCAL_ARG volatile real* temp) {
+    const int thread = LOCAL_ID;
+    SYNC_THREADS;
+#ifdef WARP_SHUFFLE_DOWN
+    const int warpCount = LOCAL_SIZE / WARP_SIZE;
+    const int warp = thread / WARP_SIZE;
+    const int lane = thread % WARP_SIZE;
+    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+        value1 += WARP_SHUFFLE_DOWN(value1, step);
+        value2 += WARP_SHUFFLE_DOWN(value2, step);
+        value3 += WARP_SHUFFLE_DOWN(value3, step);
+    }
+    if (!lane) {
+        temp[3 * warp] = value1;
+        temp[3 * warp + 1] = value2;
+        temp[3 * warp + 2] = value3;
+    }
+    SYNC_THREADS;
+    if (!warp) {
+        value1 = value2 = value3 = 0;
+        if (lane < warpCount) {
+            value1 = temp[3 * lane];
+            value2 = temp[3 * lane + 1];
+            value3 = temp[3 * lane + 2];
+        }
+        for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+            value1 += WARP_SHUFFLE_DOWN(value1, step);
+            value2 += WARP_SHUFFLE_DOWN(value2, step);
+            value3 += WARP_SHUFFLE_DOWN(value3, step);
+        }
+        if (!lane) {
+            temp[0] = value1;
+            temp[1] = value2;
+            temp[2] = value3;
+        }
+    }
+#elif defined(DEVICE_IS_CPU)
+    temp[3 * thread] = value1;
+    temp[3 * thread + 1] = value2;
+    temp[3 * thread + 2] = value3;
+    for (int step = LOCAL_SIZE / 2; step > 0; step >>= 1) {
+        SYNC_THREADS;
+        if(thread < step) {
+            temp[3 * thread] += temp[3 * (thread + step)];
+            temp[3 * thread + 1] += temp[3 * (thread + step) + 1];
+            temp[3 * thread + 2] += temp[3 * (thread + step) + 2];
+        }
+    }
+#else
+    temp[3 * thread] = value1;
+    temp[3 * thread + 1] = value2;
+    temp[3 * thread + 2] = value3;
+    for (int step = LOCAL_SIZE / 2; step >= WARP_SIZE; step >>= 1) {
+        SYNC_THREADS;
+        if(thread < step) {
+            temp[3 * thread] += temp[3 * (thread + step)];
+            temp[3 * thread + 1] += temp[3 * (thread + step) + 1];
+            temp[3 * thread + 2] += temp[3 * (thread + step) + 2];
+        }
+    }
+    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+        SYNC_WARPS;
+        if(thread < step) {
+            temp[3 * thread] += temp[3 * (thread + step)];
+            temp[3 * thread + 1] += temp[3 * (thread + step) + 1];
+            temp[3 * thread + 2] += temp[3 * (thread + step) + 2];
+        }
+    }
+#endif
+    SYNC_THREADS;
+    return make_real3(temp[0], temp[1], temp[2]);
+}
+
 // We need more than single precision for accumulation regardless of the mode
 // selected, so use double if double precision is supported, and otherwise use
 // double-float arithmetic.  In the latter case, use float2 with .x storing the
@@ -88,6 +163,7 @@ DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offse
     const int thread = LOCAL_ID;
     SYNC_THREADS;
 #ifdef WARP_SHUFFLE_DOWN
+    const int warpCount = LOCAL_SIZE / WARP_SIZE;
     const int warp = thread / WARP_SIZE;
     const int lane = thread % WARP_SIZE;
     for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
@@ -98,7 +174,7 @@ DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offse
     }
     SYNC_THREADS;
     if (!warp) {
-        value = temp[lane];
+        value = lane < warpCount ? temp[lane] : 0;
         for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
             value += WARP_SHUFFLE_DOWN(value, step);
         }
@@ -216,6 +292,7 @@ DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offse
     const int thread = LOCAL_ID;
     SYNC_THREADS;
 #ifdef WARP_SHUFFLE_DOWN
+    const int warpCount = LOCAL_SIZE / WARP_SIZE;
     const int warp = thread / WARP_SIZE;
     const int lane = thread % WARP_SIZE;
     for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
@@ -226,7 +303,7 @@ DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offse
     }
     SYNC_THREADS;
     if (!warp) {
-        value = temp[lane];
+        value = lane < warpCount ? temp[lane] : ACCUM_ZERO;
         for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
             value = compensatedAdd3(value, WARP_SHUFFLE_DOWN(value, step));
         }
@@ -486,12 +563,6 @@ KERNEL void solveLoopStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real*
 #endif
     LOCAL volatile real temp[TEMP_SIZE];
 
-    if (recomputeGradient) {
-        for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            grad[ii] = chargeDerivatives[ii];
-        }
-    }
-
     // Project the current gradient without preconditioning.
 #ifdef USE_CHARGE_CONSTRAINT
     ACCUM offsetAccum = ACCUM_ZERO;
@@ -577,4 +648,115 @@ KERNEL void solveLoopStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real*
         qStep[ii] = ACCUM_APPLY(qStep[ii], offset);
     }
 #endif
+}
+
+KERNEL void solveLoopBlocksStep1(
+    GLOBAL real* RESTRICT chargeDerivatives,
+    GLOBAL real* RESTRICT grad,
+    GLOBAL real* RESTRICT qStep,
+    GLOBAL real* RESTRICT gradStep,
+    GLOBAL real* RESTRICT grad0,
+    GLOBAL real* RESTRICT blockResults
+) {
+    // This kernel can be executed across multiple thread blocks.
+
+    LOCAL volatile real temp[3 * TEMP_SIZE];
+
+    for (int ii = GLOBAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += GLOBAL_SIZE) {
+        gradStep[ii] = chargeDerivatives[ii] - grad0[ii];
+    }
+
+    // Perform sums to evaluate A qStep as a stopping criterion, the scalar
+    // 1 / (qStep^T A qStep), and the conjugate gradient parameter alpha.
+    real blockError = 0, blockParamScale = 0, blockAlpha = 0;
+    for (int ii = GLOBAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += GLOBAL_SIZE) {
+        blockError += gradStep[ii] * gradStep[ii];
+        blockParamScale += qStep[ii] * gradStep[ii];
+        blockAlpha -= qStep[ii] * grad[ii];
+    }
+
+    const real3 reduceResult = reduce3Real(blockError, blockParamScale, blockAlpha, temp);
+
+    if (LOCAL_ID == 0) {
+        blockResults[3 * GROUP_ID] = reduceResult.x;
+        blockResults[3 * GROUP_ID + 1] = reduceResult.y;
+        blockResults[3 * GROUP_ID + 2] = reduceResult.z;
+    }
+}
+
+KERNEL void solveLoopBlocksStep2(
+    GLOBAL real* RESTRICT electrodeCharges,
+    GLOBAL real* RESTRICT q,
+    GLOBAL real* RESTRICT grad,
+    GLOBAL real* RESTRICT qStep,
+    GLOBAL real* RESTRICT gradStep,
+    GLOBAL real* RESTRICT blockResults,
+    GLOBAL real* RESTRICT paramScaleResult,
+    GLOBAL int* RESTRICT convergedResult,
+    int recomputeGradient
+#ifdef USE_CHARGE_CONSTRAINT
+    , real chargeTarget
+#endif
+) {
+    // This kernel expects to be executed in a single thread block.
+
+    LOCAL volatile real temp[3 * TEMP_SIZE];
+#ifdef USE_CHARGE_CONSTRAINT
+    LOCAL volatile ACCUM tempAccum[TEMP_SIZE];
+#endif
+
+    real error = 0, paramScale = 0, alpha = 0;
+    for (int ii = LOCAL_ID; ii < THREAD_BLOCK_COUNT; ii += LOCAL_SIZE) {
+        error += blockResults[3 * ii];
+        paramScale += blockResults[3 * ii + 1];
+        alpha += blockResults[3 * ii + 2];
+    }
+
+    const real3 reduceResult = reduce3Real(error, paramScale, alpha, temp);
+    error = reduceResult.x;
+    paramScale = 1 / reduceResult.y;
+    alpha = reduceResult.z * paramScale;
+
+    // If A qStep is small enough, stop to prevent, e.g., division by zero in
+    // the calculation of alpha, or too large step sizes.
+    const bool converged = (error <= ERROR_TARGET);
+    if (LOCAL_ID == 0) {
+        paramScaleResult[0] = paramScale;
+        convergedResult[0] = (int) converged;
+    }
+
+    // If the first convergence check succeeded, do not do any more work.
+    if (converged) {
+        return;
+    }
+
+    // Update the charge vector.
+    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
+        q[ii] += alpha * qStep[ii];
+    }
+
+#ifdef USE_CHARGE_CONSTRAINT
+    // Remove any accumulated drift from the charge vector.  This would be zero
+    // in exact arithmetic, but error can accumulate over time in finite
+    // precision.
+    ACCUM offsetAccum = ACCUM_ZERO;
+    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
+        offsetAccum = ACCUM_ADD(offsetAccum, -q[ii]);
+    }
+    const ACCUM offset = reduceAccum(offsetAccum, tempAccum, chargeTarget, 1 / (real) NUM_ELECTRODE_PARTICLES);
+    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
+        q[ii] = ACCUM_APPLY(q[ii], offset);
+    }
+#endif
+
+    if (recomputeGradient) {
+        for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
+            electrodeCharges[ii] = q[ii];
+        }
+    }
+    else {
+        for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
+            grad[ii] += alpha * gradStep[ii];
+        }
+    }
 }

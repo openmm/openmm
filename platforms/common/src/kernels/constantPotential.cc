@@ -27,6 +27,7 @@ DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) {
     const int thread = LOCAL_ID;
     SYNC_THREADS;
 #ifdef WARP_SHUFFLE_DOWN
+    const int warpCount = LOCAL_SIZE / WARP_SIZE;
     const int warp = thread / WARP_SIZE;
     const int lane = thread % WARP_SIZE;
     for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
@@ -37,7 +38,7 @@ DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) {
     }
     SYNC_THREADS;
     if (!warp) {
-        value = temp[lane];
+        value = lane < warpCount ? temp[lane] : 0;
         for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
             value += WARP_SHUFFLE_DOWN(value, step);
         }
