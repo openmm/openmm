@@ -47,7 +47,7 @@ namespace OpenMM {
  * The interaction energy is 2*k*sin^2(theta/2), where theta is the rotation angle
  * and k is a user defined force constant.  When the particles are close to the target
  * orientation, this approximately equals the harmonic form (k/2)*theta^2.  For larger
- * angles, force is reduced from the harmonic form, and it goes to zero at theta=pi/2.
+ * angles, the force is reduced from the harmonic form, and it goes to zero at theta=pi/2.
  * This avoids the discontinuity in the force that would be present if the force were
  * nonzero at pi/2.
  */
