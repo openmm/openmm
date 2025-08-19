@@ -12,6 +12,14 @@
     #define TEMP_SIZE THREAD_BLOCK_SIZE
 #endif
 
+typedef struct {
+    real gradStepSq, qStepGradStep, qStepGrad, q, qStep;
+} BlockSums1;
+
+typedef struct {
+    real projGradSq, precGradStep, precGrad;
+} BlockSums2;
+
 // Sum value from each thread (using temp).  Use real type variables (float on
 // single and mixed precision modes, double on double precision mode).
 DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
@@ -64,8 +72,8 @@ DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
     return temp[0];
 }
 
-// Perform reduceReal() operation on three variables simultaneously.
-DEVICE real3 reduce3Real(real value1, real value2, real value3, LOCAL_ARG volatile real* temp) {
+// Performs the equivalent of reduceReal() on 5 values simultaneously.
+DEVICE BlockSums1 reduceBlockSums1(BlockSums1 value, LOCAL_ARG BlockSums1* temp) {
     const int thread = LOCAL_ID;
     SYNC_THREADS;
 #ifdef WARP_SHUFFLE_DOWN
@@ -73,69 +81,133 @@ DEVICE real3 reduce3Real(real value1, real value2, real value3, LOCAL_ARG volati
     const int warp = thread / WARP_SIZE;
     const int lane = thread % WARP_SIZE;
     for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
-        value1 += WARP_SHUFFLE_DOWN(value1, step);
-        value2 += WARP_SHUFFLE_DOWN(value2, step);
-        value3 += WARP_SHUFFLE_DOWN(value3, step);
+        value.gradStepSq += WARP_SHUFFLE_DOWN(value.gradStepSq, step);
+        value.qStepGradStep += WARP_SHUFFLE_DOWN(value.qStepGradStep, step);
+        value.qStepGrad += WARP_SHUFFLE_DOWN(value.qStepGrad, step);
+        value.q += WARP_SHUFFLE_DOWN(value.q, step);
+        value.qStep += WARP_SHUFFLE_DOWN(value.qStep, step);
     }
     if (!lane) {
-        temp[3 * warp] = value1;
-        temp[3 * warp + 1] = value2;
-        temp[3 * warp + 2] = value3;
+        temp[warp] = value;
     }
     SYNC_THREADS;
     if (!warp) {
-        value1 = value2 = value3 = 0;
+        value.gradStepSq = value.qStepGradStep = value.qStepGrad = value.q = value.qStep = 0;
         if (lane < warpCount) {
-            value1 = temp[3 * lane];
-            value2 = temp[3 * lane + 1];
-            value3 = temp[3 * lane + 2];
+            value = temp[lane];
         }
         for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
-            value1 += WARP_SHUFFLE_DOWN(value1, step);
-            value2 += WARP_SHUFFLE_DOWN(value2, step);
-            value3 += WARP_SHUFFLE_DOWN(value3, step);
+            value.gradStepSq += WARP_SHUFFLE_DOWN(value.gradStepSq, step);
+            value.qStepGradStep += WARP_SHUFFLE_DOWN(value.qStepGradStep, step);
+            value.qStepGrad += WARP_SHUFFLE_DOWN(value.qStepGrad, step);
+            value.q += WARP_SHUFFLE_DOWN(value.q, step);
+            value.qStep += WARP_SHUFFLE_DOWN(value.qStep, step);
         }
         if (!lane) {
-            temp[0] = value1;
-            temp[1] = value2;
-            temp[2] = value3;
+            temp[0] = value;
         }
     }
 #elif defined(DEVICE_IS_CPU)
-    temp[3 * thread] = value1;
-    temp[3 * thread + 1] = value2;
-    temp[3 * thread + 2] = value3;
+    temp[thread] = value;
     for (int step = LOCAL_SIZE / 2; step > 0; step >>= 1) {
         SYNC_THREADS;
         if(thread < step) {
-            temp[3 * thread] += temp[3 * (thread + step)];
-            temp[3 * thread + 1] += temp[3 * (thread + step) + 1];
-            temp[3 * thread + 2] += temp[3 * (thread + step) + 2];
+            temp[thread].gradStepSq += temp[thread + step].gradStepSq;
+            temp[thread].qStepGradStep += temp[thread + step].qStepGradStep;
+            temp[thread].qStepGrad += temp[thread + step].qStepGrad;
+            temp[thread].q += temp[thread + step].q;
+            temp[thread].qStep += temp[thread + step].qStep;
         }
     }
 #else
-    temp[3 * thread] = value1;
-    temp[3 * thread + 1] = value2;
-    temp[3 * thread + 2] = value3;
+    temp[thread] = value;
     for (int step = LOCAL_SIZE / 2; step >= WARP_SIZE; step >>= 1) {
         SYNC_THREADS;
         if(thread < step) {
-            temp[3 * thread] += temp[3 * (thread + step)];
-            temp[3 * thread + 1] += temp[3 * (thread + step) + 1];
-            temp[3 * thread + 2] += temp[3 * (thread + step) + 2];
+            temp[thread].gradStepSq += temp[thread + step].gradStepSq;
+            temp[thread].qStepGradStep += temp[thread + step].qStepGradStep;
+            temp[thread].qStepGrad += temp[thread + step].qStepGrad;
+            temp[thread].q += temp[thread + step].q;
+            temp[thread].qStep += temp[thread + step].qStep;
         }
     }
     for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
         SYNC_WARPS;
         if(thread < step) {
-            temp[3 * thread] += temp[3 * (thread + step)];
-            temp[3 * thread + 1] += temp[3 * (thread + step) + 1];
-            temp[3 * thread + 2] += temp[3 * (thread + step) + 2];
+            temp[thread].gradStepSq += temp[thread + step].gradStepSq;
+            temp[thread].qStepGradStep += temp[thread + step].qStepGradStep;
+            temp[thread].qStepGrad += temp[thread + step].qStepGrad;
+            temp[thread].q += temp[thread + step].q;
+            temp[thread].qStep += temp[thread + step].qStep;
         }
     }
 #endif
     SYNC_THREADS;
-    return make_real3(temp[0], temp[1], temp[2]);
+    return temp[0];
+}
+
+// Performs the equivalent of reduceReal() on 3 values simultaneously.
+DEVICE BlockSums2 reduceBlockSums2(BlockSums2 value, LOCAL_ARG BlockSums2* temp) {
+    const int thread = LOCAL_ID;
+    SYNC_THREADS;
+#ifdef WARP_SHUFFLE_DOWN
+    const int warpCount = LOCAL_SIZE / WARP_SIZE;
+    const int warp = thread / WARP_SIZE;
+    const int lane = thread % WARP_SIZE;
+    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+        value.projGradSq += WARP_SHUFFLE_DOWN(value.projGradSq, step);
+        value.precGradStep += WARP_SHUFFLE_DOWN(value.precGradStep, step);
+        value.precGrad += WARP_SHUFFLE_DOWN(value.precGrad, step);
+    }
+    if (!lane) {
+        temp[warp] = value;
+    }
+    SYNC_THREADS;
+    if (!warp) {
+        value.projGradSq = value.precGradStep = value.precGrad = 0;
+        if (lane < warpCount) {
+            value = temp[lane];
+        }
+        for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+            value.projGradSq += WARP_SHUFFLE_DOWN(value.projGradSq, step);
+            value.precGradStep += WARP_SHUFFLE_DOWN(value.precGradStep, step);
+            value.precGrad += WARP_SHUFFLE_DOWN(value.precGrad, step);
+        }
+        if (!lane) {
+            temp[0] = value;
+        }
+    }
+#elif defined(DEVICE_IS_CPU)
+    temp[thread] = value;
+    for (int step = LOCAL_SIZE / 2; step > 0; step >>= 1) {
+        SYNC_THREADS;
+        if(thread < step) {
+            temp[thread].projGradSq += temp[thread + step].projGradSq;
+            temp[thread].precGradStep += temp[thread + step].precGradStep;
+            temp[thread].precGrad += temp[thread + step].precGrad;
+        }
+    }
+#else
+    temp[thread] = value;
+    for (int step = LOCAL_SIZE / 2; step >= WARP_SIZE; step >>= 1) {
+        SYNC_THREADS;
+        if(thread < step) {
+            temp[thread].projGradSq += temp[thread + step].projGradSq;
+            temp[thread].precGradStep += temp[thread + step].precGradStep;
+            temp[thread].precGrad += temp[thread + step].precGrad;
+        }
+    }
+    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
+        SYNC_WARPS;
+        if(thread < step) {
+            temp[thread].projGradSq += temp[thread + step].projGradSq;
+            temp[thread].precGradStep += temp[thread + step].precGradStep;
+            temp[thread].precGrad += temp[thread + step].precGrad;
+        }
+    }
+#endif
+    SYNC_THREADS;
+    return temp[0];
 }
 
 // We need more than single precision for accumulation regardless of the mode
@@ -376,10 +448,10 @@ KERNEL void solveInitializeStep1(GLOBAL real* RESTRICT electrodeCharges, GLOBAL 
 KERNEL void solveInitializeStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad, GLOBAL int* RESTRICT convergedResult) {
     // This kernel expects to be executed in a single thread block.
 
+    LOCAL volatile real temp[TEMP_SIZE];
 #ifdef USE_CHARGE_CONSTRAINT
     LOCAL volatile ACCUM tempAccum[TEMP_SIZE];
 #endif
-    LOCAL volatile real temp[TEMP_SIZE];
 
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
         grad[ii] = chargeDerivatives[ii];
@@ -461,60 +533,88 @@ KERNEL void solveInitializeStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL
     }
 }
 
-KERNEL void solveLoopStep1(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT q, GLOBAL real* RESTRICT grad,
-    GLOBAL real* RESTRICT qStep, GLOBAL real* RESTRICT gradStep, GLOBAL real* RESTRICT grad0, GLOBAL real* RESTRICT paramScaleResult,
-    GLOBAL int* RESTRICT convergedResult, int recomputeGradient
+KERNEL void solveLoopStep1(
+    GLOBAL real* RESTRICT chargeDerivatives,
+    GLOBAL real* RESTRICT q,
+    GLOBAL real* RESTRICT grad,
+    GLOBAL real* RESTRICT qStep,
+    GLOBAL real* RESTRICT gradStep,
+    GLOBAL real* RESTRICT grad0,
+    GLOBAL BlockSums1* RESTRICT blockSums1Buffer
+) {
+    // This kernel can be executed across multiple thread blocks.
+
+    LOCAL BlockSums1 temp[TEMP_SIZE];
+
+    for (int ii = GLOBAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += GLOBAL_SIZE) {
+        gradStep[ii] = chargeDerivatives[ii] - grad0[ii];
+    }
+
+    // Reduce values within each block and store results.
+    BlockSums1 blockSums1 = {0, 0, 0, 0, 0};
+    for (int ii = GLOBAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += GLOBAL_SIZE) {
+        blockSums1.gradStepSq += gradStep[ii] * gradStep[ii];
+        blockSums1.qStepGradStep += qStep[ii] * gradStep[ii];
+        blockSums1.qStepGrad += qStep[ii] * grad[ii];
+        blockSums1.q += q[ii];
+        blockSums1.qStep += qStep[ii];
+    }
+    blockSums1 = reduceBlockSums1(blockSums1, temp);
+
+    if (LOCAL_ID == 0) {
+        blockSums1Buffer[GROUP_ID] = blockSums1;
+    }
+}
+
+KERNEL void solveLoopStep2(
+    GLOBAL BlockSums1* RESTRICT blockSums1Buffer,
+    GLOBAL int* RESTRICT convergedResult
+) {
+    // This kernel expects to be executed in a single thread block.
+
+    LOCAL BlockSums1 tempSums[TEMP_SIZE];
+
+    // Reduce values from all blocks.
+    BlockSums1 blockSums1 = {0, 0, 0, 0, 0};
+    for (int ii = LOCAL_ID; ii < THREAD_BLOCK_COUNT; ii += LOCAL_SIZE) {
+        blockSums1.gradStepSq += blockSums1Buffer[ii].gradStepSq;
+        blockSums1.qStepGradStep += blockSums1Buffer[ii].qStepGradStep;
+        blockSums1.qStepGrad += blockSums1Buffer[ii].qStepGrad;
+        blockSums1.q += blockSums1Buffer[ii].q;
+        blockSums1.qStep += blockSums1Buffer[ii].qStep;
+    }
+    blockSums1 = reduceBlockSums1(blockSums1, tempSums);
+
+    if (LOCAL_ID == 0) {
+        blockSums1Buffer[0] = blockSums1;
+        // If A qStep is small enough, stop to prevent, e.g., division by zero
+        // in the calculation of alpha, or too large step sizes.
+        convergedResult[0] = (int) (blockSums1.gradStepSq <= ERROR_TARGET);
+    }
+}
+
+KERNEL void solveLoopStep3(
+    GLOBAL real* RESTRICT q,
+    GLOBAL real* RESTRICT grad,
+    GLOBAL real* RESTRICT qStep,
+    GLOBAL real* RESTRICT gradStep,
+    GLOBAL BlockSums1* RESTRICT blockSums1Buffer,
+    GLOBAL int* RESTRICT convergedResult
 #ifdef USE_CHARGE_CONSTRAINT
     , real chargeTarget
 #endif
 ) {
-    // This kernel expects to be executed in a single thread block.
+    // This kernel can be executed across multiple thread blocks.
 
-#ifdef USE_CHARGE_CONSTRAINT
-    LOCAL volatile ACCUM tempAccum[TEMP_SIZE];
-#endif
-    LOCAL volatile real temp[TEMP_SIZE];
-
-    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        gradStep[ii] = chargeDerivatives[ii] - grad0[ii];
-    }
-
-    // If A qStep is small enough, stop to prevent, e.g., division by zero in
-    // the calculation of alpha, or too large step sizes.
-    real error = 0;
-    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        error += gradStep[ii] * gradStep[ii];
-    }
-    error = reduceReal(error, temp);
-    const bool converged = (error <= ERROR_TARGET);
-    if (LOCAL_ID == 0) {
-        convergedResult[0] = (int) converged;
-    }
-
-    // If the first convergence check succeeded, do not do any more work.
-    if (converged) {
+    if (convergedResult[0] != 0) {
         return;
     }
 
-    // Evaluate the scalar 1 / (qStep^T A qStep).
-    real paramScale = 0;
-    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        paramScale += qStep[ii] * gradStep[ii];
-    }
-    paramScale = 1 / reduceReal(paramScale, temp);
-    if (LOCAL_ID == 0) {
-        paramScaleResult[0] = paramScale;
-    }
-
-    // Evaluate the conjugate gradient parameter alpha.
-    real alpha = 0;
-    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        alpha -= qStep[ii] * grad[ii];
-    }
-    alpha = reduceReal(alpha, temp) * paramScale;
+    const BlockSums1 blockSums1 = blockSums1Buffer[0];
+    const real alpha = -blockSums1.qStepGrad / blockSums1.qStepGradStep;
 
     // Update the charge vector.
-    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
+    for (int ii = GLOBAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += GLOBAL_SIZE) {
         q[ii] += alpha * qStep[ii];
     }
 
@@ -522,46 +622,42 @@ KERNEL void solveLoopStep1(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* 
     // Remove any accumulated drift from the charge vector.  This would be zero
     // in exact arithmetic, but error can accumulate over time in finite
     // precision.
-    ACCUM offsetAccum = ACCUM_ZERO;
-    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        offsetAccum = ACCUM_ADD(offsetAccum, -q[ii]);
-    }
-    const ACCUM offset = reduceAccum(offsetAccum, tempAccum, chargeTarget, 1 / (real) NUM_ELECTRODE_PARTICLES);
-    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        q[ii] = ACCUM_APPLY(q[ii], offset);
+    const real offset = (chargeTarget - (blockSums1.q + alpha * blockSums1.qStep)) / NUM_ELECTRODE_PARTICLES;
+    for (int ii = GLOBAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += GLOBAL_SIZE) {
+        q[ii] += offset;
     }
 #endif
 
-    if (recomputeGradient) {
-        for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            electrodeCharges[ii] = q[ii];
-        }
-    }
-    else {
-        for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            grad[ii] += alpha * gradStep[ii];
-        }
+    // Update the gradient vector.  If on this iteration, the gradient is to be
+    // recomputed, the contents of grad will be overwritten.
+    for (int ii = GLOBAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += GLOBAL_SIZE) {
+        grad[ii] += alpha * gradStep[ii];
     }
 }
 
-KERNEL void solveLoopStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad, GLOBAL real* RESTRICT precGrad,
-    GLOBAL real* RESTRICT qStep, GLOBAL real* RESTRICT gradStep, GLOBAL real* RESTRICT paramScale, GLOBAL int* RESTRICT convergedResult, int recomputeGradient
+KERNEL void solveLoopStep4(
+    GLOBAL real* RESTRICT grad,
+    GLOBAL real* RESTRICT projGrad,
+    GLOBAL real* RESTRICT precGrad,
+    GLOBAL real* RESTRICT gradStep,
+    GLOBAL BlockSums2* RESTRICT blockSums2Buffer,
+    GLOBAL int* RESTRICT convergedResult
 #ifdef PRECOND_REQUESTED
-    , GLOBAL ACCUM* RESTRICT precondVector, int precondActivated
+    , GLOBAL ACCUM* RESTRICT precondVector,
+    int precondActivated
 #endif
 ) {
     // This kernel expects to be executed in a single thread block.
 
-    // If the first kernel indicated convergence, stop (the kernel is still
-    // launched so that we only need to download convergedResult once).
     if (convergedResult[0] != 0) {
         return;
     }
 
+    LOCAL volatile real temp[TEMP_SIZE];
+    LOCAL BlockSums2 tempSums[TEMP_SIZE];
 #ifdef USE_CHARGE_CONSTRAINT
     LOCAL volatile ACCUM tempAccum[TEMP_SIZE];
 #endif
-    LOCAL volatile real temp[TEMP_SIZE];
 
     // Project the current gradient without preconditioning.
 #ifdef USE_CHARGE_CONSTRAINT
@@ -578,22 +674,6 @@ KERNEL void solveLoopStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real*
         projGrad[ii] = grad[ii];
     }
 #endif
-    
-    // Check for convergence.
-    real error = 0;
-    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        error += projGrad[ii] * projGrad[ii];
-    }
-    error = reduceReal(error, temp);
-    const bool converged = (error <= ERROR_TARGET);
-    if (LOCAL_ID == 0) {
-        convergedResult[0] = (int) converged;
-    }
-
-    // If the second convergence check succeeded, do not do any more work.
-    if (converged) {
-        return;
-    }
 
     // Project the current gradient with preconditioning.
 #ifdef PRECOND_REQUESTED
@@ -622,15 +702,42 @@ KERNEL void solveLoopStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real*
     }
 #endif
 
-    // Evaluate the conjugate gradient parameter beta.
-    real beta = 0;
+    // Reduce values to be used by all blocks in the final kernel.
+    BlockSums2 blockSums2 = {0, 0, 0};
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        beta += precGrad[ii] * gradStep[ii];
+        blockSums2.projGradSq += projGrad[ii] * projGrad[ii];
+        blockSums2.precGradStep += precGrad[ii] * gradStep[ii];
+        blockSums2.precGrad += precGrad[ii];
     }
-    beta = reduceReal(beta, temp) * paramScale[0];
+    blockSums2 = reduceBlockSums2(blockSums2, tempSums);
+
+    if (LOCAL_ID == 0) {
+        blockSums2Buffer[0] = blockSums2;
+        convergedResult[0] = (int) (blockSums2.projGradSq <= ERROR_TARGET);
+    }
+}
+
+KERNEL void solveLoopStep5(
+    GLOBAL real* RESTRICT precGrad,
+    GLOBAL real* RESTRICT qStep,
+    GLOBAL BlockSums1* RESTRICT blockSums1Buffer,
+    GLOBAL BlockSums2* RESTRICT blockSums2Buffer,
+    GLOBAL int* RESTRICT convergedResult
+) {
+    // This kernel can be executed across multiple thread blocks.
+
+    if (convergedResult[0] != 0) {
+        return;
+    }
+
+    const BlockSums1 blockSums1 = blockSums1Buffer[0];
+    const BlockSums2 blockSums2 = blockSums2Buffer[0];
+
+    // Evaluate the conjugate gradient parameter beta.
+    const real beta = blockSums2.precGradStep / blockSums1.qStepGradStep;
 
     // Update the step vector.
-    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
+    for (int ii = GLOBAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += GLOBAL_SIZE) {
         qStep[ii] = beta * qStep[ii] - precGrad[ii];
     }
 
@@ -638,125 +745,9 @@ KERNEL void solveLoopStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real*
     // Project out any deviation off of the constraint plane from the step
     // vector.  This would be zero in exact arithmetic, but error can accumulate
     // over time in finite precision.
-
-    offsetAccum = ACCUM_ZERO;
-    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        offsetAccum = ACCUM_ADD(offsetAccum, qStep[ii]);
-    }
-    offset = reduceAccum(offsetAccum, tempAccum, 0, -1 / (real) NUM_ELECTRODE_PARTICLES);
-    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        qStep[ii] = ACCUM_APPLY(qStep[ii], offset);
-    }
-#endif
-}
-
-KERNEL void solveLoopBlocksStep1(
-    GLOBAL real* RESTRICT chargeDerivatives,
-    GLOBAL real* RESTRICT grad,
-    GLOBAL real* RESTRICT qStep,
-    GLOBAL real* RESTRICT gradStep,
-    GLOBAL real* RESTRICT grad0,
-    GLOBAL real* RESTRICT blockResults
-) {
-    // This kernel can be executed across multiple thread blocks.
-
-    LOCAL volatile real temp[3 * TEMP_SIZE];
-
+    const real offset = (beta * blockSums1.qStep - blockSums2.precGrad) / NUM_ELECTRODE_PARTICLES;
     for (int ii = GLOBAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += GLOBAL_SIZE) {
-        gradStep[ii] = chargeDerivatives[ii] - grad0[ii];
-    }
-
-    // Perform sums to evaluate A qStep as a stopping criterion, the scalar
-    // 1 / (qStep^T A qStep), and the conjugate gradient parameter alpha.
-    real blockError = 0, blockParamScale = 0, blockAlpha = 0;
-    for (int ii = GLOBAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += GLOBAL_SIZE) {
-        blockError += gradStep[ii] * gradStep[ii];
-        blockParamScale += qStep[ii] * gradStep[ii];
-        blockAlpha -= qStep[ii] * grad[ii];
-    }
-
-    const real3 reduceResult = reduce3Real(blockError, blockParamScale, blockAlpha, temp);
-
-    if (LOCAL_ID == 0) {
-        blockResults[3 * GROUP_ID] = reduceResult.x;
-        blockResults[3 * GROUP_ID + 1] = reduceResult.y;
-        blockResults[3 * GROUP_ID + 2] = reduceResult.z;
-    }
-}
-
-KERNEL void solveLoopBlocksStep2(
-    GLOBAL real* RESTRICT electrodeCharges,
-    GLOBAL real* RESTRICT q,
-    GLOBAL real* RESTRICT grad,
-    GLOBAL real* RESTRICT qStep,
-    GLOBAL real* RESTRICT gradStep,
-    GLOBAL real* RESTRICT blockResults,
-    GLOBAL real* RESTRICT paramScaleResult,
-    GLOBAL int* RESTRICT convergedResult,
-    int recomputeGradient
-#ifdef USE_CHARGE_CONSTRAINT
-    , real chargeTarget
-#endif
-) {
-    // This kernel expects to be executed in a single thread block.
-
-    LOCAL volatile real temp[3 * TEMP_SIZE];
-#ifdef USE_CHARGE_CONSTRAINT
-    LOCAL volatile ACCUM tempAccum[TEMP_SIZE];
-#endif
-
-    real error = 0, paramScale = 0, alpha = 0;
-    for (int ii = LOCAL_ID; ii < THREAD_BLOCK_COUNT; ii += LOCAL_SIZE) {
-        error += blockResults[3 * ii];
-        paramScale += blockResults[3 * ii + 1];
-        alpha += blockResults[3 * ii + 2];
-    }
-
-    const real3 reduceResult = reduce3Real(error, paramScale, alpha, temp);
-    error = reduceResult.x;
-    paramScale = 1 / reduceResult.y;
-    alpha = reduceResult.z * paramScale;
-
-    // If A qStep is small enough, stop to prevent, e.g., division by zero in
-    // the calculation of alpha, or too large step sizes.
-    const bool converged = (error <= ERROR_TARGET);
-    if (LOCAL_ID == 0) {
-        paramScaleResult[0] = paramScale;
-        convergedResult[0] = (int) converged;
-    }
-
-    // If the first convergence check succeeded, do not do any more work.
-    if (converged) {
-        return;
-    }
-
-    // Update the charge vector.
-    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        q[ii] += alpha * qStep[ii];
-    }
-
-#ifdef USE_CHARGE_CONSTRAINT
-    // Remove any accumulated drift from the charge vector.  This would be zero
-    // in exact arithmetic, but error can accumulate over time in finite
-    // precision.
-    ACCUM offsetAccum = ACCUM_ZERO;
-    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        offsetAccum = ACCUM_ADD(offsetAccum, -q[ii]);
-    }
-    const ACCUM offset = reduceAccum(offsetAccum, tempAccum, chargeTarget, 1 / (real) NUM_ELECTRODE_PARTICLES);
-    for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        q[ii] = ACCUM_APPLY(q[ii], offset);
+        qStep[ii] -= offset;
     }
 #endif
-
-    if (recomputeGradient) {
-        for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            electrodeCharges[ii] = q[ii];
-        }
-    }
-    else {
-        for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-            grad[ii] += alpha * gradStep[ii];
-        }
-    }
 }

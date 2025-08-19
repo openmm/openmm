@@ -168,16 +168,17 @@ private:
     ComputeArray gradStep;
     ComputeArray grad0;
     ComputeArray qLast;
-    ComputeArray blockResults;
-    ComputeArray paramScale;
+    ComputeArray blockSums1;
+    ComputeArray blockSums2;
     ComputeArray convergedResult;
     ComputeKernel solveInitializeStep1Kernel;
     ComputeKernel solveInitializeStep2Kernel;
     ComputeKernel solveInitializeStep3Kernel;
     ComputeKernel solveLoopStep1Kernel;
     ComputeKernel solveLoopStep2Kernel;
-    ComputeKernel solveLoopBlocksStep1Kernel;
-    ComputeKernel solveLoopBlocksStep2Kernel;
+    ComputeKernel solveLoopStep3Kernel;
+    ComputeKernel solveLoopStep4Kernel;
+    ComputeKernel solveLoopStep5Kernel;
 
 public:
     /**
