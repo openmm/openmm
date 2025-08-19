@@ -67,6 +67,7 @@
 #include "openmm/NonbondedForce.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
+#include "openmm/OrientationRestraintForce.h"
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/QTBIntegrator.h"
 #include "openmm/RBTorsionForce.h"
