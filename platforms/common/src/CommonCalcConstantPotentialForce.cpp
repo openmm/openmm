@@ -149,7 +149,6 @@ CommonConstantPotentialSolver::~CommonConstantPotentialSolver() {
 void CommonConstantPotentialSolver::compileKernels(CommonCalcConstantPotentialForceKernel& kernel) {
     map<string, string> defines;
     defines["NUM_PARTICLES"] = kernel.cc.intToString(numParticles);
-    defines["THREAD_BLOCK_SIZE"] = kernel.cc.intToString(kernel.threadBlockSize);
     ComputeProgram program = kernel.cc.compileProgram(CommonKernelSources::constantPotentialSolver, defines);
 
     checkSavedPositionsKernel = program->createKernel("checkSavedPositions");
@@ -177,7 +176,7 @@ void CommonConstantPotentialSolver::solve(CommonCalcConstantPotentialForceKernel
     }
     if (hasSavedSolution) {
         kernel.cc.clearBuffer(checkSavedPositionsKernelResult);
-        checkSavedPositionsKernel->execute(numParticles, kernel.threadBlockSize);
+        checkSavedPositionsKernel->execute(numParticles);
         int result;
         checkSavedPositionsKernelResult.download(&result);
         if (result) {
@@ -218,15 +217,12 @@ void CommonConstantPotentialMatrixSolver::compileKernels(CommonCalcConstantPoten
     map<string, string> defines;
     defines["NUM_PARTICLES"] = kernel.cc.intToString(numParticles);
     defines["NUM_ELECTRODE_PARTICLES"] = kernel.cc.intToString(numElectrodeParticles);
-    defines["THREAD_BLOCK_SIZE"] = kernel.cc.intToString(kernel.threadBlockSize);
+    defines["THREAD_BLOCK_SIZE"] = kernel.cc.intToString(kernel.maxThreadBlockSize);
     defines["CHUNK_SIZE"] = kernel.cc.intToString(kernel.chunkSize);
     defines["CHUNK_COUNT"] = kernel.cc.intToString(kernel.chunkCount);
     defines["PADDED_PROBLEM_SIZE"] = kernel.cc.intToString(kernel.paddedProblemSize);
     if (kernel.useChargeConstraint) {
         defines["USE_CHARGE_CONSTRAINT"] = "1";
-    }
-    if (kernel.deviceIsCpu) {
-        defines["DEVICE_IS_CPU"] = "1";
     }
     ComputeProgram program = kernel.cc.compileProgram(CommonKernelSources::constantPotentialMatrixSolver, defines);
 
@@ -269,7 +265,7 @@ void CommonConstantPotentialMatrixSolver::solveImpl(CommonCalcConstantPotentialF
             solveKernel->setArg(4, (float) kernel.chargeTarget);
         }
     }
-    solveKernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
+    solveKernel->execute(kernel.maxThreadBlockSize, kernel.maxThreadBlockSize);
     kernel.mustUpdateElectrodeCharges = true;
 }
 
@@ -286,7 +282,7 @@ void CommonConstantPotentialMatrixSolver::ensureValid(CommonCalcConstantPotentia
     }
     if (valid) {
         kernel.cc.clearBuffer(checkSavedElectrodePositionsKernelResult);
-        checkSavedElectrodePositionsKernel->execute(numElectrodeParticles, kernel.threadBlockSize);
+        checkSavedElectrodePositionsKernel->execute(numElectrodeParticles);
         int result;
         checkSavedElectrodePositionsKernelResult.download(&result);
         if (result) {
@@ -395,6 +391,8 @@ void CommonConstantPotentialMatrixSolver::ensureValid(CommonCalcConstantPotentia
 CommonConstantPotentialCGSolver::CommonConstantPotentialCGSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles, int paddedProblemSize, bool precond) :
         CommonConstantPotentialSolver(cc, numParticles, numElectrodeParticles, paddedProblemSize), precondRequested(precond) {
     int elementSize = cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float);
+    threadBlockCount = cc.getNumThreadBlocks();
+    threadBlockSize = min(cc.getMaxThreadBlockSize(), cc.computeThreadBlockSize(max(5 * elementSize, 4 * elementSize + (int) sizeof(double))));
     q.initialize(cc, paddedProblemSize, elementSize, "q");
     grad.initialize(cc, numElectrodeParticles, elementSize, "grad");
     projGrad.initialize(cc, numElectrodeParticles, elementSize, "projGrad");
@@ -403,7 +401,7 @@ CommonConstantPotentialCGSolver::CommonConstantPotentialCGSolver(ComputeContext&
     gradStep.initialize(cc, numElectrodeParticles, elementSize, "gradStep");
     grad0.initialize(cc, numElectrodeParticles, elementSize, "grad0");
     qLast.initialize(cc, paddedProblemSize, elementSize, "qLast");
-    blockSums1.initialize(cc, cc.getNumThreadBlocks(), 5 * elementSize, "blockSums1");
+    blockSums1.initialize(cc, threadBlockCount, 5 * elementSize, "blockSums1");
     blockSums2.initialize(cc, 1, 3 * elementSize, "blockSums2");
     convergedResult.initialize(cc, 1, sizeof(int), "convergedResult");
     if (precondRequested) {
@@ -421,16 +419,13 @@ void CommonConstantPotentialCGSolver::compileKernels(CommonCalcConstantPotential
     map<string, string> defines;
     defines["ERROR_TARGET"] = kernel.cc.doubleToString(kernel.cgErrorTol * kernel.cgErrorTol * numElectrodeParticles);
     defines["NUM_ELECTRODE_PARTICLES"] = kernel.cc.intToString(numElectrodeParticles);
-    defines["THREAD_BLOCK_SIZE"] = kernel.cc.intToString(kernel.threadBlockSize);
-    defines["THREAD_BLOCK_COUNT"] = kernel.cc.intToString(kernel.cc.getNumThreadBlocks());
+    defines["THREAD_BLOCK_SIZE"] = kernel.cc.intToString(threadBlockSize);
+    defines["THREAD_BLOCK_COUNT"] = kernel.cc.intToString(threadBlockCount);
     if (kernel.useChargeConstraint) {
         defines["USE_CHARGE_CONSTRAINT"] = "1";
     }
     if (precondRequested) {
         defines["PRECOND_REQUESTED"] = "1";
-    }
-    if (kernel.deviceIsCpu) {
-        defines["DEVICE_IS_CPU"] = "1";
     }
     ComputeProgram program = kernel.cc.compileProgram(CommonKernelSources::constantPotentialCGSolver, defines);
 
@@ -524,12 +519,12 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
     int converged;
 
     // Evaluate the initial gradient Aq - b.
-    solveInitializeStep1Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
+    solveInitializeStep1Kernel->execute(threadBlockSize, threadBlockSize);
     kernel.mustUpdateElectrodeCharges = true;
     kernel.doDerivatives();
 
     // Check for convergence at the initial guess charges.
-    solveInitializeStep2Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
+    solveInitializeStep2Kernel->execute(threadBlockSize, threadBlockSize);
     convergedResult.download(&converged);
     if (converged) {
         return;
@@ -543,7 +538,7 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
     kernel.doDerivatives();
 
     // Prepare for conjugate gradient iterations.
-    solveInitializeStep3Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
+    solveInitializeStep3Kernel->execute(threadBlockSize, threadBlockSize);
     kernel.cc.clearBuffer(blockSums1);
 
     // Perform conjugate gradient iterations.
@@ -554,9 +549,9 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
         kernel.mustUpdateElectrodeCharges = true;
         kernel.doDerivatives();
 
-        solveLoopStep1Kernel->execute(numElectrodeParticles);
-        solveLoopStep2Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
-        solveLoopStep3Kernel->execute(numElectrodeParticles);
+        solveLoopStep1Kernel->execute(numElectrodeParticles, threadBlockSize);
+        solveLoopStep2Kernel->execute(threadBlockSize, threadBlockSize);
+        solveLoopStep3Kernel->execute(numElectrodeParticles, threadBlockSize);
 
         // Periodically recompute the gradient vector instead of updating it to
         // reduce the accumulation of roundoff error.
@@ -566,8 +561,8 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
             kernel.chargeDerivatives.copyTo(grad);
         }
 
-        solveLoopStep4Kernel->execute(kernel.threadBlockSize, kernel.threadBlockSize);
-        solveLoopStep5Kernel->execute(numElectrodeParticles);
+        solveLoopStep4Kernel->execute(threadBlockSize, threadBlockSize);
+        solveLoopStep5Kernel->execute(numElectrodeParticles, threadBlockSize);
         convergedResult.download(&converged);
         if (converged) {
             break;
@@ -725,7 +720,7 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
 
     forceGroup = force.getForceGroup();
 
-    threadBlockSize = cc.getMaxThreadBlockSize();
+    maxThreadBlockSize = cc.getMaxThreadBlockSize();
     int elementSize = cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float);
 
     this->deviceIsCpu = deviceIsCpu;
@@ -1165,7 +1160,7 @@ void CommonCalcConstantPotentialForceKernel::ensureInitialized(ContextImpl& cont
     defines["NUM_EXCLUSION_TILES"] = cc.intToString(nb.getExclusionTiles().getSize());
     defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
     defines["PLASMA_SCALE"] = cc.doubleToString(PLASMA_SCALE);
-    defines["THREAD_BLOCK_SIZE"] = cc.intToString(threadBlockSize);
+    defines["THREAD_BLOCK_SIZE"] = cc.intToString(maxThreadBlockSize);
     defines["TILE_SIZE"] = cc.intToString(ComputeContext::TileSize);
     defines["WORK_GROUP_SIZE"] = cc.intToString(nb.getForceThreadBlockSize());
     if (usePosqCharges) {
@@ -1270,7 +1265,7 @@ double CommonCalcConstantPotentialForceKernel::doEnergyForces(bool includeForces
 
     // Ewald neutralizing plasma and per-particle energy.
     if (includeEnergy || includeForces) {
-        getTotalChargeKernel->execute(threadBlockSize, threadBlockSize);
+        getTotalChargeKernel->execute(maxThreadBlockSize, maxThreadBlockSize);
         if (cc.getUseDoublePrecision()) {
             evaluateSelfEnergyForcesKernel->setArg(9, mm_double4(externalField[0], externalField[1], externalField[2], 0));
         }
@@ -1304,7 +1299,7 @@ void CommonCalcConstantPotentialForceKernel::doDerivatives() {
     evaluateDirectDerivativesKernel->execute(nb.getNumForceThreadBlocks() * nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
 
     // Ewald neutralizing plasma and per-particle derivatives.
-    getTotalChargeKernel->execute(threadBlockSize, threadBlockSize);
+    getTotalChargeKernel->execute(maxThreadBlockSize, maxThreadBlockSize);
     finishDerivativesKernel->execute(numElectrodeParticles);
 }
 

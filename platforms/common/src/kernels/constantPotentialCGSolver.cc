@@ -45,30 +45,23 @@ DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
             temp[0] = value;
         }
     }
-#elif defined(DEVICE_IS_CPU)
-    temp[thread] = value;
-    for (int step = LOCAL_SIZE / 2; step > 0; step >>= 1) {
-        SYNC_THREADS;
-        if(thread < step) {
-            temp[thread] += temp[thread + step];
-        }
-    }
+    SYNC_THREADS;
 #else
     temp[thread] = value;
-    for (int step = LOCAL_SIZE / 2; step >= WARP_SIZE; step >>= 1) {
-        SYNC_THREADS;
-        if(thread < step) {
+    SYNC_THREADS;
+    for (int step = 1; step < WARP_SIZE / 2; step <<= 1) {
+        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
             temp[thread] += temp[thread + step];
         }
-    }
-    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
         SYNC_WARPS;
-        if(thread < step) {
+    }
+    for (int step = WARP_SIZE / 2; step < LOCAL_SIZE; step <<= 1) {
+        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
             temp[thread] += temp[thread + step];
         }
+        SYNC_THREADS;
     }
 #endif
-    SYNC_THREADS;
     return temp[0];
 }
 
@@ -107,42 +100,31 @@ DEVICE BlockSums1 reduceBlockSums1(BlockSums1 value, LOCAL_ARG BlockSums1* temp)
             temp[0] = value;
         }
     }
-#elif defined(DEVICE_IS_CPU)
-    temp[thread] = value;
-    for (int step = LOCAL_SIZE / 2; step > 0; step >>= 1) {
-        SYNC_THREADS;
-        if(thread < step) {
-            temp[thread].gradStepSq += temp[thread + step].gradStepSq;
-            temp[thread].qStepGradStep += temp[thread + step].qStepGradStep;
-            temp[thread].qStepGrad += temp[thread + step].qStepGrad;
-            temp[thread].q += temp[thread + step].q;
-            temp[thread].qStep += temp[thread + step].qStep;
-        }
-    }
+    SYNC_THREADS;
 #else
     temp[thread] = value;
-    for (int step = LOCAL_SIZE / 2; step >= WARP_SIZE; step >>= 1) {
-        SYNC_THREADS;
-        if(thread < step) {
+    SYNC_THREADS;
+    for (int step = 1; step < WARP_SIZE / 2; step <<= 1) {
+        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
             temp[thread].gradStepSq += temp[thread + step].gradStepSq;
             temp[thread].qStepGradStep += temp[thread + step].qStepGradStep;
             temp[thread].qStepGrad += temp[thread + step].qStepGrad;
             temp[thread].q += temp[thread + step].q;
             temp[thread].qStep += temp[thread + step].qStep;
         }
-    }
-    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
         SYNC_WARPS;
-        if(thread < step) {
+    }
+    for (int step = WARP_SIZE / 2; step < LOCAL_SIZE; step <<= 1) {
+        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
             temp[thread].gradStepSq += temp[thread + step].gradStepSq;
             temp[thread].qStepGradStep += temp[thread + step].qStepGradStep;
             temp[thread].qStepGrad += temp[thread + step].qStepGrad;
             temp[thread].q += temp[thread + step].q;
             temp[thread].qStep += temp[thread + step].qStep;
         }
+        SYNC_THREADS;
     }
 #endif
-    SYNC_THREADS;
     return temp[0];
 }
 
@@ -177,36 +159,27 @@ DEVICE BlockSums2 reduceBlockSums2(BlockSums2 value, LOCAL_ARG BlockSums2* temp)
             temp[0] = value;
         }
     }
-#elif defined(DEVICE_IS_CPU)
-    temp[thread] = value;
-    for (int step = LOCAL_SIZE / 2; step > 0; step >>= 1) {
-        SYNC_THREADS;
-        if(thread < step) {
-            temp[thread].projGradSq += temp[thread + step].projGradSq;
-            temp[thread].precGradStep += temp[thread + step].precGradStep;
-            temp[thread].precGrad += temp[thread + step].precGrad;
-        }
-    }
+    SYNC_THREADS;
 #else
     temp[thread] = value;
-    for (int step = LOCAL_SIZE / 2; step >= WARP_SIZE; step >>= 1) {
-        SYNC_THREADS;
-        if(thread < step) {
+    SYNC_THREADS;
+    for (int step = 1; step < WARP_SIZE / 2; step <<= 1) {
+        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
             temp[thread].projGradSq += temp[thread + step].projGradSq;
             temp[thread].precGradStep += temp[thread + step].precGradStep;
             temp[thread].precGrad += temp[thread + step].precGrad;
         }
-    }
-    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
         SYNC_WARPS;
-        if(thread < step) {
+    }
+    for (int step = WARP_SIZE / 2; step < LOCAL_SIZE; step <<= 1) {
+        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
             temp[thread].projGradSq += temp[thread + step].projGradSq;
             temp[thread].precGradStep += temp[thread + step].precGradStep;
             temp[thread].precGrad += temp[thread + step].precGrad;
         }
+        SYNC_THREADS;
     }
 #endif
-    SYNC_THREADS;
     return temp[0];
 }
 
@@ -254,30 +227,23 @@ DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offse
             temp[0] = value;
         }
     }
-#elif defined(DEVICE_IS_CPU)
-    temp[thread] = value;
-    for (int step = LOCAL_SIZE / 2; step > 0; step >>= 1) {
-        SYNC_THREADS;
-        if(thread < step) {
-            temp[thread] += temp[thread + step];
-        }
-    }
+    SYNC_THREADS;
 #else
     temp[thread] = value;
-    for (int step = LOCAL_SIZE / 2; step >= WARP_SIZE; step >>= 1) {
-        SYNC_THREADS;
-        if(thread < step) {
+    SYNC_THREADS;
+    for (int step = 1; step < WARP_SIZE / 2; step <<= 1) {
+        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
             temp[thread] += temp[thread + step];
         }
-    }
-    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
         SYNC_WARPS;
-        if(thread < step) {
+    }
+    for (int step = WARP_SIZE / 2; step < LOCAL_SIZE; step <<= 1) {
+        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
             temp[thread] += temp[thread + step];
         }
+        SYNC_THREADS;
     }
 #endif
-    SYNC_THREADS;
     return (temp[0] + offset) * scale;
 }
 
@@ -383,30 +349,23 @@ DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offse
             temp[0] = value;
         }
     }
-#elif defined(DEVICE_IS_CPU)
-    temp[thread] = value;
-    for (int step = LOCAL_SIZE / 2; step > 0; step >>= 1) {
-        SYNC_THREADS;
-        if(thread < step) {
-            temp[thread] = compensatedAdd3(temp[thread], temp[thread + step]);
-        }
-    }
+    SYNC_THREADS;
 #else
     temp[thread] = value;
-    for (int step = LOCAL_SIZE / 2; step >= WARP_SIZE; step >>= 1) {
-        SYNC_THREADS;
-        if(thread < step) {
+    SYNC_THREADS;
+    for (int step = 1; step < WARP_SIZE / 2; step <<= 1) {
+        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
             temp[thread] = compensatedAdd3(temp[thread], temp[thread + step]);
         }
-    }
-    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
         SYNC_WARPS;
-        if(thread < step) {
+    }
+    for (int step = WARP_SIZE / 2; step < LOCAL_SIZE; step <<= 1) {
+        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
             temp[thread] = compensatedAdd3(temp[thread], temp[thread + step]);
         }
+        SYNC_THREADS;
     }
 #endif
-    SYNC_THREADS;
     return compensatedMultiply2(compensatedAdd2(temp[0], offset), scale);
 }
 

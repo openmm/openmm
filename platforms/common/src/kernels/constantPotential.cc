@@ -46,30 +46,23 @@ DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) {
             temp[0] = value;
         }
     }
-#elif defined(DEVICE_IS_CPU)
-    temp[thread] = value;
-    for (int step = LOCAL_SIZE / 2; step > 0; step >>= 1) {
-        SYNC_THREADS;
-        if(thread < step) {
-            temp[thread] += temp[thread + step];
-        }
-    }
+    SYNC_THREADS;
 #else
     temp[thread] = value;
-    for (int step = LOCAL_SIZE / 2; step >= WARP_SIZE; step >>= 1) {
-        SYNC_THREADS;
-        if(thread < step) {
+    SYNC_THREADS;
+    for (int step = 1; step < WARP_SIZE / 2; step <<= 1) {
+        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
             temp[thread] += temp[thread + step];
         }
-    }
-    for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
         SYNC_WARPS;
-        if(thread < step) {
+    }
+    for (int step = WARP_SIZE / 2; step < LOCAL_SIZE; step <<= 1) {
+        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
             temp[thread] += temp[thread + step];
         }
+        SYNC_THREADS;
     }
 #endif
-    SYNC_THREADS;
     return temp[0];
 }
 

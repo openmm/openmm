@@ -159,6 +159,7 @@ class CommonConstantPotentialCGSolver : public CommonConstantPotentialSolver {
 private:
     Vec3 boxVectors[3];
     bool precondRequested, precondActivated;
+    int threadBlockCount, threadBlockSize;
     ComputeArray precondVector;
     ComputeArray q;
     ComputeArray grad;
@@ -349,7 +350,7 @@ private:
     ConstantPotentialForce::ConstantPotentialMethod method;
     Vec3 boxVectors[3], externalField;
     double cutoff, ewaldAlpha, chargeTarget, cgErrorTol;
-    int threadBlockSize, gridSizeX, gridSizeY, gridSizeZ;
+    int maxThreadBlockSize, gridSizeX, gridSizeY, gridSizeZ;
     bool deviceIsCpu, useFixedPointChargeSpreading, usePosqCharges, useChargeConstraint;
     int forceGroup;
     static const int PmeOrder = 5;
