@@ -1148,21 +1148,30 @@ class GromacsTopFile(object):
                 key = min((tor[0], tor[3]),
                           (tor[3], tor[0]))
                 if key in excluded_atom_pairs: continue # multiterm...
-                params1 = self._atomTypes[atom_types[tor[0]]]
-                params4 = self._atomTypes[atom_types[tor[3]]]
-                q1 = atom_charges[tor[0]]
-                rmin1 = float(params1[6])
-                eps1 = float(params1[7])
-                q4 = atom_charges[tor[3]]
-                rmin4 = float(params4[6])
-                eps4 = float(params4[7])
 
+                q1 = atom_charges[tor[0]]
+                q4 = atom_charges[tor[3]]
                 charge_prod = fudgeQQ*q1*q4
-                epsilon = math.sqrt(abs(eps1 * eps4))*fudgeLJ
-                if self._defaults[1] == '2':
-                    rmin14 = (rmin1 + rmin4) / 2
-                else:
-                    rmin14 = math.sqrt(rmin1 * rmin4)
+
+                try:
+                    # use NBFix for 1-4 interactions if available to match GROMACS
+                    types = self._matchingNBFIX[tuple(sorted((atom_types[tor[0]],atom_types[tor[3]])))]
+                    params = (float(types[3]), float(types[4]))
+                    rmin14=params[0]
+                    epsilon=params[1]*fudgeLJ
+                except KeyError:
+                    params1 = self._atomTypes[atom_types[tor[0]]]
+                    params4 = self._atomTypes[atom_types[tor[3]]]
+                    rmin1 = float(params1[6])
+                    eps1 = float(params1[7])
+                    rmin4 = float(params4[6])
+                    eps4 = float(params4[7])
+                    epsilon = math.sqrt(abs(eps1 * eps4))*fudgeLJ
+                    if self._defaults[1] == '2':
+                        rmin14 = (rmin1 + rmin4) / 2
+                    else:
+                        rmin14 = math.sqrt(rmin1 * rmin4)
+
                 # Parameters are generated via standard combining rules.
                 # If different 1-4 parameters are given via pairtypes they will be overwritten below.
                 if self._defaults[1] == '3':
@@ -1194,7 +1203,7 @@ class GromacsTopFile(object):
             nb.addException(exclusion[0], exclusion[1], 0.0, 1.0, 0.0, True)
 
         # this will overwrite the pairs from the pairlist
-        # if nbfix, this will only overwrite paris if we have pairtype parameters 
+        # if nbfix, this will only overwrite pairs if we have pairtype parameters 
         for pair in pairs:
             nb.addException(pair[0], pair[1], pair[2], pair[3], pair[4], True)
 
