@@ -121,6 +121,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new OpenCLCalcATMForceKernel(name, platform, cl);
     if (name == CalcCustomCPPForceKernel::Name())
         return new CommonCalcCustomCPPForceKernel(name, platform, context, cl);
+    if (name == CalcOrientationRestraintForceKernel::Name())
+        return new CommonCalcOrientationRestraintForceKernel(name, platform, cl);
     if (name == CalcRGForceKernel::Name())
         return new CommonCalcRGForceKernel(name, platform, cl);
     if (name == CalcRMSDForceKernel::Name())

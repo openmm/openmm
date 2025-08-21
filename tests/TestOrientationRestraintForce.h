@@ -30,8 +30,9 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "openmm/OrientationRestraintForce.h"
 #include "openmm/Context.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/OrientationRestraintForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include "sfmt/SFMT.h"
@@ -88,30 +89,37 @@ void testOrientationRestraint() {
         ASSERT_EQUAL_TOL(2*k*s*s, state.getPotentialEnergy(), 1e-6);
     }
 
-    // Use a finite difference approximation to check the force on every particle.
+    // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
 
-    for (int i = 0; i < numParticles; ++i)
-        positions[i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*10;
-    context.setPositions(positions);
-    vector<Vec3> forces = context.getState(State::Forces).getForces();
-    for (int particle = 0; particle < numParticles; particle++) {
-        for (int axis = 0; axis < 3; axis++) {
-            vector<Vec3> pos2 = positions;
-            double delta = 0.01;
-            pos2[particle][axis] = positions[particle][axis]+delta;
-            context.setPositions(pos2);
-            double e1 = context.getState(State::Energy).getPotentialEnergy();
-            pos2[particle][axis] = positions[particle][axis]-delta;
-            context.setPositions(pos2);
-            double e2 = context.getState(State::Energy).getPotentialEnergy();
-            ASSERT_EQUAL_TOL((e1-e2)/delta, forces[particle][axis], 1e-4);
+    for (int i = 0; i < 20; i++) {
+        for (int j = 0; j < numParticles; ++j)
+            positions[j] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*10;
+        context.setPositions(positions);
+        vector<Vec3> forces = context.getState(State::Forces).getForces();
+        double norm = 0.0;
+        for (int i = 0; i < forces.size(); ++i)
+            norm += forces[i].dot(forces[i]);
+        norm = sqrt(norm);
+        const double stepSize = 0.01;
+        double step = 0.5*stepSize/norm;
+        vector<Vec3> positions2(numParticles), positions3(numParticles);
+        for (int i = 0; i < positions.size(); ++i) {
+            Vec3 p = positions[i];
+            Vec3 f = forces[i];
+            positions2[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+            positions3[i] = Vec3(p[0]+f[0]*step, p[1]+f[1]*step, p[2]+f[2]*step);
         }
+        context.setPositions(positions2);
+        State state2 = context.getState(State::Energy);
+        context.setPositions(positions3);
+        State state3 = context.getState(State::Energy);
+        ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state3.getPotentialEnergy())/stepSize, 1e-3);
     }
 
     // When the current positions equal the reference positions, all forces should be zero.
 
     context.setPositions(referencePos);
-    forces = context.getState(State::Forces).getForces();
+    vector<Vec3> forces = context.getState(State::Forces).getForces();
     Vec3 zero;
     for (int i = 0; i < numParticles; i++)
         ASSERT_EQUAL_VEC(zero, forces[i], 1e-4);
@@ -130,12 +138,66 @@ void testOrientationRestraint() {
     ASSERT_EQUAL_TOL(0.0, e3, 1e-6);
 }
 
+void testEnergyConservation() {
+    const int numParticles = 50;
+    System system;
+    vector<Vec3> referencePos(numParticles);
+    vector<Vec3> positions(numParticles);
+    vector<int> particles;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    NonbondedForce* nb = new NonbondedForce(); // Add a nonbonded force to activate reordering on the GPU
+    nb->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    system.addForce(nb);
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(2.0);
+        nb->addParticle(0.0, 0.1, 0.01);
+        positions[i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*5;
+        referencePos[i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*5;
+        if (genrand_real2(sfmt) < 0.5)
+            particles.push_back(i);
+    }
+    OrientationRestraintForce* force = new OrientationRestraintForce(10.0, referencePos, particles);
+    system.addForce(force);
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(300.0, 0);
+    integrator.step(5);
+    State initialState = context.getState(State::Energy);
+    double energy = initialState.getPotentialEnergy()+initialState.getKineticEnergy();
+    for (int i = 0; i < 100; i++) {
+        integrator.step(5);
+        State state = context.getState(State::Energy);
+        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy()+state.getKineticEnergy(), 1e-4);
+    }
+
+    // If we modify the reference positions, the energy should change.
+
+    for (int i = 0; i < numParticles; ++i)
+        referencePos[i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*5;
+    force->setReferencePositions(referencePos);
+    force->updateParametersInContext(context);
+    State state2 = context.getState(State::Energy);
+    double energy2 = state2.getPotentialEnergy()+state2.getKineticEnergy();
+    ASSERT(fabs(energy-energy2) > 1e-3);
+
+    // Make sure it's still conserved.
+
+    for (int i = 0; i < 100; i++) {
+        integrator.step(5);
+        State state = context.getState(State::Energy);
+        ASSERT_EQUAL_TOL(energy2, state.getPotentialEnergy()+state.getKineticEnergy(), 1e-4);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
         testOrientationRestraint();
+        testEnergyConservation();
         runPlatformTests();
     }
     catch(const exception& e) {

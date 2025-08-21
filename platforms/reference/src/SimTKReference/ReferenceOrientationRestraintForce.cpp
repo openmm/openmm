@@ -99,9 +99,11 @@ double ReferenceOrientationRestraintForce::calculateIxn(vector<Vec3>& atomCoordi
 
     if (q[0]*q[0] < 1.0) {
         double theta = 2*asin(sqrt(1.0-q[0]*q[0]));
-        double dxdq = -8.0*k*sin(theta/2)*cos(theta/2)/sqrt(1.0-q[0]*q[0]);
-        for (int i = 0; i < numParticles; i++) {
-            const Vec3& p = referencePos[particles[i]];
+        double dxdq = 4.0*k*sin(theta/2)*cos(theta/2)/sqrt(1.0-q[0]*q[0]);
+        if (vectors[0][3] > 0)
+            dxdq = -dxdq;
+        for (int index = 0; index < numParticles; index++) {
+            const Vec3& p = referencePos[particles[index]];
             Vec3 ds[4][4] = {
                 {Vec3(p[0], p[1], p[2]), Vec3(0.0, -p[2], p[1]), Vec3(p[2], 0.0, -p[0]), Vec3(-p[1], p[0], 0.0)},
                 {Vec3(0.0, -p[2], p[1]), Vec3(p[0], -p[1], -p[2]), Vec3(p[1], p[0], 0.0), Vec3(p[2], 0.0, p[0])},
@@ -116,7 +118,7 @@ double ReferenceOrientationRestraintForce::calculateIxn(vector<Vec3>& atomCoordi
                            (vectors[i][0]*vectors[0][0]) / (values[3]-values[0])) * vectors[j][3] * ds[i][j];
                 }
             }
-            forces[particles[i]] -= dxdq*dq;
+            forces[particles[index]] -= dxdq*dq;
         }
     }
     return energy;
