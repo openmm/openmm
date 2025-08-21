@@ -84,6 +84,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcATMForceKernel(name, platform);
     if (name == CalcCustomCPPForceKernel::Name())
         return new ReferenceCalcCustomCPPForceKernel(name, platform);
+    if (name == CalcRGForceKernel::Name())
+        return new ReferenceCalcRGForceKernel(name, platform);
     if (name == CalcRMSDForceKernel::Name())
         return new ReferenceCalcRMSDForceKernel(name, platform);
     if (name == CalcCustomManyParticleForceKernel::Name())
@@ -106,6 +108,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceIntegrateCustomStepKernel(name, platform, data);
     if (name == IntegrateDPDStepKernel::Name())
         return new ReferenceIntegrateDPDStepKernel(name, platform, data);
+    if (name == IntegrateQTBStepKernel::Name())
+        return new ReferenceIntegrateQTBStepKernel(name, platform, data);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new ReferenceApplyAndersenThermostatKernel(name, platform);
     if (name == ApplyMonteCarloBarostatKernel::Name())

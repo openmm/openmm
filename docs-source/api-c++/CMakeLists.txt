@@ -19,7 +19,9 @@ configure_file(
 add_custom_command(
     OUTPUT "${WRAPPER_DOXYGEN_DIR}/xml/index.xml"
     COMMAND "${DOXYGEN_EXECUTABLE}"
+    COMMAND "${PYTHON_EXECUTABLE}" "${CMAKE_CURRENT_BINARY_DIR}/process-docstring.py" "${WRAPPER_DOXYGEN_DIR}/xml"
     DEPENDS "${WRAPPER_DOXYGEN_DIR}/Doxyfile"
+            "${CMAKE_CURRENT_BINARY_DIR}/process-docstring.py"
     WORKING_DIRECTORY "${WRAPPER_DOXYGEN_DIR}"
     COMMENT "Parsing OpenMM header files with Doxygen..."
 )
@@ -56,6 +58,7 @@ add_custom_command(
 
 add_custom_command(
     OUTPUT "${CMAKE_BINARY_DIR}/api-c++/index.html"
+    COMMAND "${CMAKE_COMMAND}" -E rm "${CMAKE_CURRENT_BINARY_DIR}/generated/*::*"
     COMMAND "${PYTHON_EXECUTABLE}" -m sphinx . "${CMAKE_BINARY_DIR}/api-c++" -W --keep-going # Promote warnings to errors to catch undocumented classes
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/conf.py"

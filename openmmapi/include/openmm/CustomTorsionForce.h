@@ -57,29 +57,36 @@ namespace OpenMM {
  * As an example, the following code creates a CustomTorsionForce that implements a periodic potential:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomTorsionForce* force = new CustomTorsionForce("0.5*k*(1-cos(theta-theta0))");
- *
+ * <c++>
+ * CustomTorsionForce* force = new CustomTorsionForce("0.5*k*(1-cos(theta-theta0))");
+ * </c++>
+ * <python>
+ * force = CustomTorsionForce("0.5*k*(1-cos(theta-theta0))")
+ * </python>
  * \endverbatim
  *
  * This force depends on two parameters: the spring constant k and equilibrium angle theta0.  The following code defines these parameters:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    force->addPerTorsionParameter("k");
- *    force->addPerTorsionParameter("theta0");
- *
+ * <c++>
+ * force->addPerTorsionParameter("k");
+ * force->addPerTorsionParameter("theta0");
+ * </c++>
+ * <python>
+ * force.addPerTorsionParameter("k")
+ * force.addPerTorsionParameter("theta0")
+ * </python>
  * \endverbatim
  *
  * If a harmonic restraint is desired, it is important to be careful of the domain for theta, using an idiom like this:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomTorsionForce* force = new CustomTorsionForce("0.5*k*min(dtheta, 2*pi-dtheta)^2; dtheta = abs(theta-theta0); pi = 3.1415926535");
- *
+ * <c++>
+ * CustomTorsionForce* force = new CustomTorsionForce("0.5*k*min(dtheta, 2*pi-dtheta)^2; dtheta = abs(theta-theta0); pi = 3.1415926535");
+ * </c++>
+ * <python>
+ * force = CustomTorsionForce("0.5*k*min(dtheta, 2*pi-dtheta)^2; dtheta = abs(theta-theta0); pi = 3.1415926535")
+ * </python>
  * \endverbatim
  *
  * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.

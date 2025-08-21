@@ -368,12 +368,14 @@ class DesmondDMSFile(object):
         nb.setEwaldErrorTolerance(ewaldErrorTolerance)
         if cnb is not None:
             nb.setUseDispersionCorrection(False)
-            if nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME, ff.LJPME):
+            if nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME):
                 cnb.setNonbondedMethod(methodMap[ff.CutoffPeriodic])
                 cnb.setCutoffDistance(nonbondedCutoff)
             elif nonbondedMethod == ff.CutoffNonPeriodic:
                 cnb.setNonbondedMethod(methodMap[ff.CutoffNonPeriodic])
                 cnb.setCutoffDistance(nonbondedCutoff)
+            elif nonbondedMethod is ff.LJPME:
+                raise ValueError('LJPME is not supported with OPLS combining rules')
             else:
                 cnb.setNonbondedMethod(methodMap[ff.NoCutoff])
             cnb.setUseSwitchingFunction(False)

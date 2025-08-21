@@ -1217,6 +1217,8 @@ class CharmmPsfFile(object):
                 force.addParticle(atm.charge, sigma_scale*atm.type.rmin*length_conv,
                                   abs(atm.type.epsilon*ene_conv))
         else:
+            if nonbondedMethod is ff.LJPME:
+                raise ValueError('LJPME is not supported when NBFIX terms are present')
             for atm in self.atom_list:
                 force.addParticle(atm.charge, 1.0, 0.0)
             # Now add the custom nonbonded force that implements NBFIX. First

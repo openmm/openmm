@@ -37,7 +37,19 @@ class TestDesmondDMSFile(unittest.TestCase):
             self.assertTrue(any(isinstance(f, NonbondedForce) and 
                                 f.getNonbondedMethod()==methodMap[method] 
                                 for f in forces))
-                                
+
+    def test_LJPME_OPLS(self):
+        """Test LJPME with and without OPLS mixing rules."""
+
+        system = self.dms_opls1.createSystem(nonbondedMethod=LJPME, OPLS=False)
+        forces = system.getForces()
+        self.assertTrue(any(isinstance(f, NonbondedForce) and
+                            f.getNonbondedMethod()==NonbondedForce.LJPME
+                            for f in forces))
+
+        with self.assertRaisesRegex(ValueError, 'LJPME is not supported'):
+            self.dms_opls1.createSystem(nonbondedMethod=LJPME, OPLS=True)
+
     def test_Cutoff(self):
         """Test to make sure the nonbondedCutoff parameter is passed correctly."""
 

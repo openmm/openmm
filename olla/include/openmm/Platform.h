@@ -53,10 +53,12 @@ class KernelFactory;
  * To get a Platform object, call
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    Platform& platform = Platform::findPlatform(kernelNames);
- *
+ * <c++>
+ * Platform& platform = Platform::findPlatform(kernelNames);
+ * </c++>
+ * <python>
+ * platform = Platform.findPlatform(kernelNames)
+ * </python>
  * \endverbatim
  *
  * passing in the names of all kernels that will be required for the calculation you plan to perform.  It

@@ -87,19 +87,27 @@ namespace OpenMM {
  * centers of mass of two groups of particles.
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomCentroidBondForce* force = new CustomCentroidBondForce(2, "0.5*k*distance(g1,g2)^2");
- *    force->addPerBondParameter("k");
- *    force->addGroup(particles1);
- *    force->addGroup(particles2);
- *    vector<int> bondGroups;
- *    bondGroups.push_back(0);
- *    bondGroups.push_back(1);
- *    vector<double> bondParameters;
- *    bondParameters.push_back(k);
- *    force->addBond(bondGroups, bondParameters);
- *
+ * <c++>
+ * CustomCentroidBondForce* force = new CustomCentroidBondForce(2, "0.5*k*distance(g1,g2)^2");
+ * force->addPerBondParameter("k");
+ * force->addGroup(particles1);
+ * force->addGroup(particles2);
+ * vector<int> bondGroups;
+ * bondGroups.push_back(0);
+ * bondGroups.push_back(1);
+ * vector<double> bondParameters;
+ * bondParameters.push_back(k);
+ * force->addBond(bondGroups, bondParameters);
+ * </c++>
+ * <python>
+ * force = CustomCentroidBondForce(2, "0.5*k*distance(g1,g2)^2")
+ * force.addPerBondParameter("k")
+ * force.addGroup(particles1)
+ * force.addGroup(particles2)
+ * bondGroups = [0, 1]
+ * bondParameters = [k]
+ * force.addBond(bondGroups, bondParameters)
+ * </python>
  * \endverbatim
  * 
  * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
@@ -119,10 +127,12 @@ namespace OpenMM {
  * from group g1 to the midpoint between groups g2 and g3.
  * 
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomCentroidBondForce* force = new CustomCentroidBondForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)");
- *
+ * <c++>
+ * CustomCentroidBondForce* force = new CustomCentroidBondForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)");
+ * </c++>
+ * <python>
+ * force = CustomCentroidBondForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)")
+ * </python>
  * \endverbatim
  *
  * In addition, you can call addTabulatedFunction() to define a new function based on tabulated values.  You specify the function by

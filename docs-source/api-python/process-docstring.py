@@ -51,6 +51,12 @@ def process_docstring(app, what, name, obj, options, lines):
                 s = linesep + s
             newline = '.. verbatim::' + linesep
             return newline + '    ' + s.replace(linesep, linesep + '    ')
+    def replace_code(m):
+        s = m.group(1)
+        if not s.startswith(linesep):
+            s = linesep + s
+        newline = linesep + '.. code-block:: python' + linesep
+        return newline + '    ' + s.replace(linesep, linesep + '    ')
     def replace_subscript(m):
         """ Replace subscript tags. """
         return r'\ :sub:`{}`\ '.format(m.group(1))
@@ -68,12 +74,52 @@ def process_docstring(app, what, name, obj, options, lines):
     joined = re.sub(r'<verbatim>(.*?)</verbatim>', repl4, joined)
     joined = re.sub(r'<sub>(.*?)</sub>', replace_subscript, joined)
     joined = re.sub(r'<sup>(.*?)</sup>', replace_superscript, joined)
+    joined = re.sub(r'<c\+\+>(.*?)</c\+\+>', '', joined)
+    joined = re.sub(r'<python>(.*?)</python>', replace_code, joined)
 
     lines[:] = [(l if not l.isspace() else '') for l in joined.split(linesep)]
 
 
+substitutions = {'double':'float', 'long long':'int', 'string':'str',
+                 'pairii':'tuple[int, int]',
+                 'vectord':'tuple[float, ...]',
+                 'vectorvectorvectord':'tuple[tuple[tuple[float, ...], ...], ...]',
+                 'vectori':'tuple[int, ...]',
+                 'vectorvectori':'tuple[tuple[int, ...], ...]',
+                 'vectorpairii':'tuple[tuple[int, int], ...]',
+                 'vectorstring':'tuple[str, ...]',
+                 'mapstringstring':'Mapping[str, str]',
+                 'mapstringdouble':'Mapping[str, float]',
+                 'mapii':'Mapping[int, int]',
+                 'seti':'set[int]'
+                }
+
+def convert_type(type):
+    if type in substitutions:
+        type = substitutions[type]
+    if '<' in type:
+        match = re.match(r'vector<(.*?),.*>', type)
+        if match is not None:
+            type = f'tuple[{convert_type(match[1])}]'
+        match = re.match(r'map<(.*?),(.*?),.*>', type)
+        if match is not None:
+            type = f'Mapping[{convert_type(match[1])}, {convert_type(match[2])}]'
+    return type
+
+def process_signature(app, what, name, obj, options, signature, return_annotation):
+    if return_annotation is not None:
+        # Convert C++ types to Python types
+        if return_annotation.startswith('std::'):
+            return_annotation = return_annotation[5:]
+        if return_annotation.endswith(' const &'):
+            return_annotation = return_annotation[:-8]
+        return_annotation = convert_type(return_annotation)
+    return (signature, return_annotation)
+
+
 def setup(app):
     app.connect('autodoc-process-docstring', process_docstring)
+    app.connect('autodoc-process-signature', process_signature)
 
 
 def test():

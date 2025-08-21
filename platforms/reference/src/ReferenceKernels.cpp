@@ -60,7 +60,9 @@
 #include "ReferenceNoseHooverDynamics.h"
 #include "ReferencePointFunctions.h"
 #include "ReferenceProperDihedralBond.h"
+#include "ReferenceQTBDynamics.h"
 #include "ReferenceRbDihedralBond.h"
+#include "ReferenceRGForce.h"
 #include "ReferenceRMSDForce.h"
 #include "ReferenceTabulatedFunction.h"
 #include "ReferenceVariableStochasticDynamics.h"
@@ -2307,6 +2309,20 @@ void ReferenceCalcRMSDForceKernel::copyParametersToContext(ContextImpl& context,
         p -= center;
 }
 
+void ReferenceCalcRGForceKernel::initialize(const System& system, const RGForce& force) {
+    particles = force.getParticles();
+    if (particles.size() == 0)
+        for (int i = 0; i < system.getNumParticles(); i++)
+            particles.push_back(i);
+}
+
+double ReferenceCalcRGForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
+    ReferenceRGForce rg(particles);
+    return rg.calculateIxn(posData, forceData);
+}
+
 ReferenceIntegrateVerletStepKernel::~ReferenceIntegrateVerletStepKernel() {
     if (dynamics)
         delete dynamics;
@@ -2899,6 +2915,55 @@ double ReferenceIntegrateDPDStepKernel::computeKineticEnergy(ContextImpl& contex
     return computeShiftedKineticEnergy(context, masses, 0.0);
 }
 
+ReferenceIntegrateQTBStepKernel::~ReferenceIntegrateQTBStepKernel() {
+    if (dynamics != NULL)
+        delete dynamics;
+}
+
+void ReferenceIntegrateQTBStepKernel::initialize(const System& system, const QTBIntegrator& integrator) {
+    int numParticles = system.getNumParticles();
+    masses.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = system.getParticleMass(i);
+    SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
+    dynamics = new ReferenceQTBDynamics(system, integrator);
+}
+
+void ReferenceIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegrator& integrator) {
+    double stepSize = integrator.getStepSize();
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& velData = extractVelocities(context);
+    if (!hasInitialized) {
+        hasInitialized = true;
+        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        dynamics->setVirtualSites(extractVirtualSites(context));
+    }
+    dynamics->setTemperature(integrator.getTemperature());
+    dynamics->update(context, posData, velData, masses, integrator.getConstraintTolerance(), extractBoxVectors(context), extractThreadPool(context));
+    data.time += stepSize;
+    data.stepCount++;
+}
+
+double ReferenceIntegrateQTBStepKernel::computeKineticEnergy(ContextImpl& context, const QTBIntegrator& integrator) {
+    return computeShiftedKineticEnergy(context, masses, 0.0);
+}
+
+void ReferenceIntegrateQTBStepKernel::getAdaptedFriction(ContextImpl& context, int particle, std::vector<double>& friction) const {
+    dynamics->getAdaptedFriction(particle, friction);
+}
+
+void ReferenceIntegrateQTBStepKernel::setAdaptedFriction(ContextImpl& context, int particle, const std::vector<double>& friction) {
+    dynamics->setAdaptedFriction(particle, friction);
+}
+
+void ReferenceIntegrateQTBStepKernel::createCheckpoint(ContextImpl& context, ostream& stream) const {
+    dynamics->createCheckpoint(stream);
+}
+
+void ReferenceIntegrateQTBStepKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
+    dynamics->loadCheckpoint(stream);
+}
+
 ReferenceApplyAndersenThermostatKernel::~ReferenceApplyAndersenThermostatKernel() {
     if (thermostat)
         delete thermostat;
@@ -3003,17 +3068,90 @@ void ReferenceRemoveCMMotionKernel::execute(ContextImpl& context) {
     }
 }
 
+void ReferenceCalcATMForceKernel::loadParams(int numParticles, const ATMForce& force) {
+    //vector displacements
+    displacement1.resize(numParticles);
+    displacement0.resize(numParticles);
+    //particle distance displacements
+    pj1.resize(numParticles);
+    pi1.resize(numParticles);
+    pj0.resize(numParticles);
+    pi0.resize(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        const ATMForce::CoordinateTransformation& transformation = force.getParticleTransformation(i);
+        if (dynamic_cast<const ATMForce::FixedDisplacement*>(&transformation) != NULL) {
+            const ATMForce::FixedDisplacement* fd = dynamic_cast<const ATMForce::FixedDisplacement*>(&transformation);
+            const Vec3 d1 = fd->getFixedDisplacement1();
+            const Vec3 d0 = fd->getFixedDisplacement0();
+            displacement1[i] = d1;
+            displacement0[i] = d0;
+            pj1[i] = pi1[i] = pj0[i] = pi0[i] = -1;
+        }
+        else if (dynamic_cast<const ATMForce::ParticleOffsetDisplacement*>(&transformation) != NULL) {
+          const ATMForce::ParticleOffsetDisplacement* vd = dynamic_cast<const ATMForce::ParticleOffsetDisplacement*>(&transformation);
+            displacement1[i] = Vec3(0, 0, 0);
+            displacement0[i] = Vec3(0, 0, 0);
+            pj1[i] = vd->getDestinationParticle1();
+            pi1[i] = vd->getOriginParticle1();
+            pj0[i] = vd->getDestinationParticle0();
+            pi0[i] = vd->getOriginParticle0();
+        }
+        else {
+            throw OpenMMException("loadParams(): invalid particle Transformation");
+        }
+    }
+}
+
 void ReferenceCalcATMForceKernel::initialize(const System& system, const ATMForce& force) {
     numParticles = force.getNumParticles();
-
     //displacement map
     displ1.resize(numParticles);
     displ0.resize(numParticles);
-    for (int i = 0; i < numParticles; i++) {
-        Vec3 displacement1, displacement0;
-        force.getParticleParameters(i, displacement1, displacement0 );
-        displ1[i] = displacement1;
-        displ0[i] = displacement0;
+    //load particle parameters from the force object
+    loadParams(numParticles, force);
+}
+
+void ReferenceCalcATMForceKernel::setDisplacements(vector<Vec3>& pos){
+  numParticles = pos.size();
+
+  for (int i = 0; i < numParticles; i++) {
+    if (pj1[i] >= 0 && pi1[i] >= 0){
+        displ1[i] = pos[pj1[i]] - pos[pi1[i]];
+        if (pi0[i] >= 0 && pj0[i] >= 0){
+            displ0[i] = pos[pj0[i]] - pos[pi0[i]];
+        }else{
+            displ0[i] = Vec3();
+        }
+    }else{
+        displ1[i] = displacement1[i];
+        displ0[i] = displacement0[i];
+    }
+  }
+}
+
+
+//Add forces from variable displacements
+void ReferenceCalcATMForceKernel::displForces(vector<Vec3>& force0, vector<Vec3>& force1){
+    vector<Vec3> dforce1(numParticles), dforce0(numParticles);
+
+    for (int i = 0; i < numParticles; i++){
+        if (pj1[i] >= 0 && pi1[i] >= 0){
+            dforce1[pj1[i]] += force1[i];
+            dforce1[pi1[i]] -= force1[i];
+        }
+    }
+    for (int i = 0; i < numParticles; i++){
+        force1[i] += dforce1[i];
+    }
+
+    for (int i = 0; i < numParticles; i++){
+        if (pj0[i] >= 0 && pi0[i] >= 0){
+            dforce0[pj0[i]] += force0[i];
+            dforce0[pi0[i]] -= force0[i];
+        }
+    }
+    for (int i = 0; i < numParticles; i++){
+        force0[i] += dforce0[i];
     }
 }
 
@@ -3023,15 +3161,17 @@ void ReferenceCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl&
     vector<Vec3>& force0 = extractForces(innerContext0);
     vector<Vec3>& force1 = extractForces(innerContext1);
 
-    //update forces and
+    //add gradients from variable displacements
+    displForces(force0, force1);
+
     //protects from infinite forces when the hybrid potential does
     //not depend on u1 or u0, typically at the endpoints
     double epsi = std::numeric_limits<float>::min();
     for (int i = 0; i < force.size(); i++) {
         if (fabs(dEdu0) > epsi)
-	    force[i] += dEdu0*force0[i];
-	if (fabs(dEdu1) > epsi)
-	    force[i] += dEdu1*force1[i];
+            force[i] += dEdu0*force0[i];
+        if (fabs(dEdu1) > epsi)
+            force[i] += dEdu1*force1[i];
     }
 
     map<string, double>& derivs = extractEnergyParameterDerivatives(context);
@@ -3041,6 +3181,9 @@ void ReferenceCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl&
 
 void ReferenceCalcATMForceKernel::copyState(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1) {
     vector<Vec3>& pos = extractPositions(context);
+
+    //calculate displacement vectors
+    setDisplacements(pos);
 
     //in the initial state, particles are displaced by displ0
     vector<Vec3> pos0(pos);
@@ -3079,12 +3222,7 @@ void ReferenceCalcATMForceKernel::copyParametersToContext(ContextImpl& context, 
           throw OpenMMException("copyParametersToContext: The number of ATMForce particles has changed");
     displ1.resize(numParticles);
     displ0.resize(numParticles);
-    for (int i = 0; i < numParticles; i++) {
-        Vec3 displacement1, displacement0;
-        force.getParticleParameters(i, displacement1, displacement0 );
-        displ1[i] = displacement1;
-        displ0[i] = displacement0;
-    }
+    loadParams(numParticles, force);
 }
 
 void ReferenceCalcCustomCPPForceKernel::initialize(const System& system, CustomCPPForceImpl& force) {

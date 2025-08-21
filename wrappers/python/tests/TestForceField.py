@@ -1314,6 +1314,10 @@ class TestForceField(unittest.TestCase):
         ene2 = state2.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         self.assertAlmostEqual(ene, ene2)
 
+        # LJPME should be forbidden with LennardJonesForce since it makes a CustomNonbondedForce to handle NBFix
+        with self.assertRaisesRegex(ValueError, 'LJPME is not supported'):
+            ff.createSystem(pdb.topology, nonbondedMethod=LJPME)
+
     def test_NBFix(self):
         """Test using LennardJonesGenerator to implement NBFix terms."""
         # Create a chain of seven atoms.

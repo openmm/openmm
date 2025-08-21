@@ -1239,6 +1239,8 @@ class GromacsTopFile(object):
             nb.setUseSwitchingFunction(True)
             nb.setSwitchingDistance(switchDistance)
 
+        if not (lj is None and ljnbfix is None) and nonbondedMethod is ff.LJPME:
+            raise ValueError('LJPME is not supported with active nonbond_params or combining rules other than 2')
         if lj is not None:
             methodMap = {ff.NoCutoff:mm.CustomNonbondedForce.NoCutoff,
                          ff.CutoffNonPeriodic:mm.CustomNonbondedForce.CutoffNonPeriodic,

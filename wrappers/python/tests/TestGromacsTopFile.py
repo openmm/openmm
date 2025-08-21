@@ -36,6 +36,36 @@ class TestGromacsTopFile(unittest.TestCase):
                                 f.getNonbondedMethod()==methodMap[method]
                                 for f in forces))
 
+    def test_LJPME_mixing(self):
+        """Test that LJPME is not allowed with non-standard LJ mixing or NBFIX."""
+
+        tests = {
+           'apgr.nbfix.pairs.comb1.top': False,
+           'apgr.nbfix.pairs.comb2.top': False,
+           'apgr.nbfix.pairs.comb3.top': False,
+           'apgr.nbfix.nopairs.comb1.top': False,
+           'apgr.nbfix.nopairs.comb2.top': False,
+           'apgr.nbfix.nopairs.comb3.top': False,
+           'apgr.nonbfix.pairs.comb1.top': False,
+           'apgr.nonbfix.pairs.comb2.top': True,
+           'apgr.nonbfix.pairs.comb3.top': False,
+           'apgr.nonbfix.nopairs.comb1.top': False,
+           'apgr.nonbfix.nopairs.comb2.top': True,
+           'apgr.nonbfix.nopairs.comb3.top': False,
+        }
+
+        for topfile, ljpme_allowed in tests.items():
+            top = GromacsTopFile(f'systems/{topfile}', unitCellDimensions=Vec3(30, 30, 30)*angstroms)
+            if ljpme_allowed:
+                system = top.createSystem(nonbondedMethod=LJPME)
+                forces = system.getForces()
+                self.assertTrue(any(isinstance(f, NonbondedForce) and
+                                    f.getNonbondedMethod()==NonbondedForce.LJPME
+                                    for f in forces))
+            else:
+                with self.assertRaisesRegex(ValueError, 'LJPME is not supported'):
+                    top.createSystem(nonbondedMethod=LJPME)
+
     def test_ff99SBILDN(self):
         """ Test Gromacs topology #define replacement as used in ff99SB-ILDN """
         top = GromacsTopFile('systems/aidilnaaaaa.top')

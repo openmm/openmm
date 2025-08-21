@@ -294,3 +294,102 @@ on the types of the particles.
 
 The integration is done using the same LFMiddle discretization used for
 LangevinIntegrator. :cite:`Zhang2019`
+
+QTBIntegrator
+*************
+
+This integrator implements the Adaptive Quantum Thermal Bath (adQTB) algorithm.
+:cite:`Mangaud2019`  This is a fast method for approximating nuclear quantum
+effects by applying a Langevin thermostat whose random force varies with
+frequency to match the expected energy of a quantum harmonic oscillator.
+
+It integrates the Langevin equation
+
+.. math::
+   m_i\frac{d\mathbf{v}_i}{dt}=\mathbf{f}_i-\gamma_f m_i \mathbf{v}_i+\mathbf{R}_i
+
+Unlike LangevinIntegrator, for which the random noise force :math:`\mathbf{R}_i`
+is uncorrelated white noise, in this case its cross correlation function is given
+by
+
+.. math::
+   C(\omega) = 2 m_i \gamma_r \theta(\omega, T)
+
+where
+
+.. math::
+   \theta(\omega, T) = \hbar \omega \left( \frac{1}{2} + \frac{1}{e^{\hbar \omega / k_B T} - 1} \right)
+
+In the limit of high temperature, :math:`\theta(\omega, T) \approx k_B T`,
+reproducing the classical behavior.  In the limit of low temperature,
+:math:`\theta(\omega, T) \approx \hbar \omega / 2`, which is the ground state
+energy of a quantum harmonic oscillator with frequency :math:`\omega`.
+
+A problem that can arise with this method is zero-point energy leakage.  The
+thermostat drives the system toward the desired quantum energy distribution, but
+the classical dynamics of the system causes it to continuously relax toward the
+classical distribution.  The result is too much energy in the low frequency modes
+and too little energy in the high frequency modes.  A solution is to allow the
+two friction coefficients to differ.  The coefficient :math:`\gamma_f` appearing
+in the friction term of the Langevin equation is fixed as a constant.  The
+coefficient :math:`\gamma_r` that determines the magnitude of the random force
+becomes frequency dependent, :math:`\gamma_r(\omega)`.  Its spectrum is dynamically
+adjusted to produce the correct distribution of energy between modes.
+
+In practice, the simulation is divided into short segments, typically on the
+order of 1000 time steps.  At the end of each segment, we calculate the velocity
+autocorrelation function :math:`C_{vv}(\omega)` of each degree of freedom, as
+well as the correlation :math:`C_{vR}(\omega)` between the velocity and random
+force :math:`\mathbf{R}`.  From these we can calculate the amount by which the
+fluctuation-dissipation theorem is violated at each frequency:
+
+.. math::
+   \Delta_{FDT}(\omega) = \mathrm{Re}[C_{vR}(\omega)] - m \gamma_r(\omega) C_{vv}(\omega)
+
+We then select new friction coefficients according to
+
+.. math::
+   \gamma_r^{k+1}(\omega) = \gamma_r^k(\omega) - A \Delta_{FDT}^k(\omega)
+
+where :math:`k` is the index of the segment and the adaptation rate :math:`A`
+may vary between degrees of freedom.  Random noise for the next segment is
+generated based on the new spectrum, and the simulation continues.  The value of
+:math:`A` generally needs to be determined by trial and error to find a value
+that produces fast adaptation and good convergence.
+
+This process is much more robust if data is pooled over all degrees of freedom
+that are expected to be equivalent.  One specifies a type index for each
+particle.  :math:`\Delta_{FDT}(\omega)` is computed as the average over all
+three coordinates of all particles with the same type.  The more particles that
+are averaged over, the larger :math:`A` can be, leading to faster adaptation.
+
+When running simulations with adQTB, it is critical to equilibrate the system
+long enough for :math:`\gamma_r(\omega)` to converge.  Until it does, the
+simulation does not explore the correct distribution of states.
+
+Simulations with adQTB tend to require a larger friction coefficient
+:math:`\gamma_f` than is usual in fully classical simulations, typically 10
+ps\ :sup:`-1` or more.  If the friction is too low, it is impossible to fully
+compensate for zero-point energy leakage.  Even reducing the random force to
+zero may still leave too much energy in low frequency modes.  It is important
+to check the converged spectrum of :math:`\gamma_r(\omega)`.  If it is close to
+zero at some frequencies, that suggests :math:`\gamma_f` needs to be increased.
+
+A possible consequence of the large friction coefficient is unwanted broadening
+of spectral peaks, leading to a less accurate energy spectrum.  This is
+compensated through a deconvolution procedure. :cite:`Mauger2021`  The target
+spectrum :math:`\theta(\omega, T)` is replaced with a deconvolved version
+:math:`\tilde{\theta}(\omega, T)` related to it by
+
+.. math::
+   \frac{\theta(\omega_0, T)}{2} = \int \frac{d\omega}{\pi} \frac{\gamma \omega_0^2}{(\omega^2-\omega_0^2)^2 + \gamma^2\omega^2} \tilde{\theta}(\omega, T)
+
+An iterative procedure is used to solve for :math:`\tilde{\theta}(\omega, T)`,
+which is then used in place of :math:`\theta(\omega, T)` when computing the
+random force.
+
+One must be very careful when trying to compute velocity dependent thermodynamic
+quantities, such as the instantaneous temperature or instantaneous pressure.
+The standard calculations for these quantities assume the velocities follow a
+classical distribution.  They do not produce correct results for an adQTB
+simulation, in which the velocities follow a quantum distribution.
