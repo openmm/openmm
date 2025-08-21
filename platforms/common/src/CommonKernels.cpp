@@ -3873,7 +3873,7 @@ double CommonCalcOrientationRestraintForceKernel::executeImpl(ContextImpl& conte
                 mm_double4(vectors[0][0], vectors[0][1], vectors[0][2], vectors[0][3]),
                 mm_double4(vectors[1][0], vectors[1][1], vectors[1][2], vectors[1][3]),
                 mm_double4(vectors[2][0], vectors[2][1], vectors[2][2], vectors[2][3]),
-                mm_double4(vectors[1][0], vectors[3][1], vectors[3][2], vectors[3][3])
+                mm_double4(vectors[3][0], vectors[3][1], vectors[3][2], vectors[3][3])
             };
             eigenvectors.upload(v);
         }
