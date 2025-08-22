@@ -1,7 +1,7 @@
 /*
  * Reference implementation of PME reciprocal space interactions.
  *
- * Copyright (c) 2009-2023, Erik Lindahl, Rossen Apostolov, Szilard Pall, Peter Eastman
+ * Copyright (c) 2009-2025, Erik Lindahl, Rossen Apostolov, Szilard Pall, Peter Eastman, Evan Pretti
  * All rights reserved.
  * Contact: lindahl@cbr.su.se Stockholm University, Sweden.
  *
@@ -459,25 +459,24 @@ pme_reciprocal_convolution(pme_t     pme,
 
             for (kz=0;kz<nz;kz++)
             {
-                /* If the net charge of the system is 0.0, there will not be any DC (direct current, zero frequency) component. However,
-                 * we can still handle charged systems through a charge correction, in which case the DC
-                 * component should be excluded from recprocal space. We will anyway run into problems below when dividing with the
-                 * frequency if it is zero...
-                 *
-                 * In cuda you could probably work around this by setting something to 0.0 instead, but the short story is that we
-                 * should skip the zero frequency case!
+                /* Pointer to the grid cell in question */
+                ptr       = pme->grid + kx*ny*nz + ky*nz + kz;
+
+                /* The zero frequency term is undefined due to division by the frequency below.  Set this term to zero;
+                 * in the case that the net charge of the system is non-zero, this is equivalent to applying a uniform
+                 * neutralizing background charge density.  The contribution to the energy and charge derivatives of
+                 * this neutralizing plasma is applied elsewhere.  If this term is not zeroed, however, energies and
+                 * forces will be unaffected but charge derivatives for non-neutral systems will be incorrect!
                  */
                 if (kx==0 && ky==0 && kz==0)
                 {
+                    *ptr = 0;
                     continue;
                 }
 
                 /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
                 mz        = (kz<maxkz) ? kz : (kz-nz);
                 mhz       = mx*recipBoxVectors[2][0]+my*recipBoxVectors[2][1]+mz*recipBoxVectors[2][2];
-
-                /* Pointer to the grid cell in question */
-                ptr       = pme->grid + kx*ny*nz + ky*nz + kz;
 
                 /* Get grid data for this frequency */
                 d1        = ptr->real();
@@ -707,6 +706,95 @@ pme_grid_interpolate_force(pme_t pme,
 }
 
 
+static void
+pme_grid_interpolate_charge_derivatives(pme_t pme,
+                                        const Vec3 recipBoxVectors[3],
+                                        const vector<double>& charges,
+                                        vector<double>& chargeDerivatives,
+                                        const vector<int>& chargeIndices)
+{
+    int       nderiv, ideriv, i;
+    int       ix,iy,iz;
+    int       x0index,y0index,z0index;
+    int       xindex,yindex,zindex;
+    int       index;
+    int       order;
+    double    q;
+    double *  thetax;
+    double *  thetay;
+    double *  thetaz;
+    double    tx,ty,tz;
+    double    dq;
+    double    gridvalue;
+    int       nx,ny,nz;
+
+    nx    = pme->ngrid[0];
+    ny    = pme->ngrid[1];
+    nz    = pme->ngrid[2];
+
+    order = pme->order;
+
+    /* This is similar to pme_grid_interpolate_force() */
+    
+    nderiv = chargeIndices.size();
+    for (ideriv=0;ideriv<nderiv;ideriv++)
+    {
+        i = chargeIndices[ideriv];
+        dq = 0;
+
+        q = charges[i];
+
+        /* Grid index for the actual atom position */
+        x0index = pme->particleindex[i][0];
+        y0index = pme->particleindex[i][1];
+        z0index = pme->particleindex[i][2];
+
+        /* Bspline factors for this atom in each dimension , calculated from fractional coordinates */
+        thetax  = &(pme->bsplines_theta[0][i*order]);
+        thetay  = &(pme->bsplines_theta[1][i*order]);
+        thetaz  = &(pme->bsplines_theta[2][i*order]);
+
+        /* See pme_grid_spread_charge() for comments about the order here, and only interpolation in one direction */
+
+        /* Since we will add order^3 (typically 5*5*5=125) terms to the charge
+         * derivative on each particle, we use a temporary dq variable, and only
+         * add it to memory forces[] at the end.
+         */
+        for (ix=0;ix<order;ix++)
+        {
+            xindex = (x0index + ix) % pme->ngrid[0];
+            /* Get the bspline factor with respect to the x coordinate */
+            tx     = thetax[ix];
+
+            for (iy=0;iy<order;iy++)
+            {
+                yindex = (y0index + iy) % pme->ngrid[1];
+                /* bspline wrt y */
+                ty     = thetay[iy];
+
+                for (iz=0;iz<order;iz++)
+                {
+                    /* Can be optimized, but we keep it simple here */
+                    zindex    = (z0index + iz) % pme->ngrid[2];
+                    /* bspline wrt z */
+                    tz        = thetaz[iz];
+                    index     = xindex*pme->ngrid[1]*pme->ngrid[2] + yindex*pme->ngrid[2] + zindex;
+
+                    /* Get the fft+convoluted+ifft:d data from the grid, which must be real by definition */
+                    /* Checking that the imaginary part is indeed zero might be a good check :-) */
+                    gridvalue = pme->grid[index].real();
+
+                    /* The d component of the force is calculated by taking the derived bspline in dimension d, normal bsplines in the other two */
+                    dq       += tx*ty*tz*gridvalue;
+                }
+            }
+        }
+
+        chargeDerivatives[ideriv] += dq;
+    }
+}
+
+
 
 /* EXPORTED ROUTINES */
 
@@ -797,6 +885,56 @@ int pme_exec(pme_t       pme,
 
     /* Get the particle forces from the grid and bsplines in the pme structure */
     pme_grid_interpolate_force(pme,recipBoxVectors,charges,forces);
+
+    return 0;
+}
+
+
+int pme_exec_charge_derivatives(pme_t pme,
+                                const vector<Vec3>& atomCoordinates,
+                                vector<double>& chargeDerivatives,
+                                const vector<int>& chargeIndices,
+                                const vector<double>& charges,
+                                const Vec3 periodicBoxVectors[3])
+{
+    /* Routine is called with coordinates in x, a box, and charges in q */
+
+    Vec3 recipBoxVectors[3];
+    ReferenceForce::invertBoxVectors(periodicBoxVectors, recipBoxVectors);
+    
+    /* Before we can do the actual interpolation, we need to recalculate and update
+     * the indices for each particle in the charge grid (initialized in pme_init()),
+     * and what its fractional offset in this grid cell is.
+     */
+
+    /* Update charge grid indices and fractional offsets for each atom.
+     * The indices/fractions are stored internally in the pme datatype
+     */
+    pme_update_grid_index_and_fraction(pme,atomCoordinates,periodicBoxVectors,recipBoxVectors);
+
+    /* Calculate bsplines (and their differentials) from current fractional coordinates, store in pme structure */
+    pme_update_bsplines(pme);
+
+    /* Spread the charges on grid (using newly calculated bsplines in the pme structure) */
+    pme_grid_spread_charge(pme, charges);
+
+    /* do 3d-fft */
+    vector<size_t> shape = {(size_t) pme->ngrid[0], (size_t) pme->ngrid[1], (size_t) pme->ngrid[2]};
+    vector<size_t> axes = {0, 1, 2};
+    vector<ptrdiff_t> stride = {(ptrdiff_t) (pme->ngrid[1]*pme->ngrid[2]*sizeof(complex<double>)),
+                                (ptrdiff_t) (pme->ngrid[2]*sizeof(complex<double>)),
+                                (ptrdiff_t) sizeof(complex<double>)};
+    pocketfft::c2c(shape, stride, stride, axes, true, pme->grid, pme->grid, 1.0, 0);
+
+    /* solve in k-space */
+    double energy;
+    pme_reciprocal_convolution(pme,periodicBoxVectors,recipBoxVectors,&energy);
+
+    /* do 3d-invfft */
+    pocketfft::c2c(shape, stride, stride, axes, false, pme->grid, pme->grid, 1.0, 0);
+
+    /* Get the charge derivatives from the grid and bsplines in the pme structure */
+    pme_grid_interpolate_charge_derivatives(pme,recipBoxVectors,charges,chargeDerivatives,chargeIndices);
 
     return 0;
 }
