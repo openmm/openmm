@@ -3745,7 +3745,7 @@ void CommonCalcOrientationRestraintForceKernel::initialize(const System& system,
         numParticles = system.getNumParticles();
     referencePos.initialize(cc, system.getNumParticles(), 4*elementSize, "referencePos");
     particles.initialize<int>(cc, numParticles, "particles");
-    buffer.initialize(cc, 13, elementSize, "buffer");
+    buffer.initialize(cc, 9, elementSize, "buffer");
     eigenvectors.initialize(cc, 4, 4*elementSize, "eigenvectors");
     listener = new ReorderListener(cc, particleVec, centeredPositions, referencePos);
     cc.addReorderListener(listener);
@@ -3793,14 +3793,6 @@ void CommonCalcOrientationRestraintForceKernel::recordParameters(const Orientati
         p -= center;
     particles.upload(particleVec);
     listener->execute();
-
-    // Record the sum of the norms of the reference positions.
-
-    sumNormRef = 0.0;
-    for (int i : particleVec) {
-        Vec3 p = centeredPositions[i];
-        sumNormRef += p.dot(p);
-    }
 }
 
 double CommonCalcOrientationRestraintForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {

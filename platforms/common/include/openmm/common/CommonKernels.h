@@ -1239,7 +1239,7 @@ private:
     ComputeContext& cc;
     ForceInfo* info;
     int blockSize;
-    double k, sumNormRef;
+    double k;
     std::vector<int> particleVec;
     std::vector<Vec3> centeredPositions;
     ComputeArray referencePos, particles, buffer, eigenvectors;

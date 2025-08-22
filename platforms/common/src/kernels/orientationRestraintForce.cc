@@ -38,7 +38,6 @@ KERNEL void computeCorrelationMatrix(int numParticles, GLOBAL const real4* RESTR
     // Compute the correlation matrix.
 
     real R[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
-    real sum = 0;
     for (int i = LOCAL_ID; i < numParticles; i += LOCAL_SIZE) {
         int index = particles[i];
         real3 pos = trimTo3(posq[index]) - center;
@@ -52,24 +51,17 @@ KERNEL void computeCorrelationMatrix(int numParticles, GLOBAL const real4* RESTR
         R[2][0] += refPos.z*pos.x;
         R[2][1] += refPos.z*pos.y;
         R[2][2] += refPos.z*pos.z;
-        sum += dot(pos, pos);
     }
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
             R[i][j] = reduceValue(R[i][j], temp);
-    sum = reduceValue(sum, temp);
 
     // Copy everything into the output buffer to send back to the host.
 
-    if (LOCAL_ID == 0) {
+    if (LOCAL_ID == 0)
         for (int i = 0; i < 3; i++)
             for (int j = 0; j < 3; j++)
                 buffer[3*i+j] = R[i][j];
-        buffer[9] = sum;
-        buffer[10] = center.x;
-        buffer[11] = center.y;
-        buffer[12] = center.z;
-    }
 }
 
 /**
