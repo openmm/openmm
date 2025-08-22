@@ -122,6 +122,8 @@ KernelImpl* HipKernelFactory::createKernelImpl(std::string name, const Platform&
         return new HipCalcCustomCVForceKernel(name, platform, cu);
     if (name == CalcCustomCPPForceKernel::Name())
         return new CommonCalcCustomCPPForceKernel(name, platform, context, cu);
+    if (name == CalcOrientationRestraintForceKernel::Name())
+        return new CommonCalcOrientationRestraintForceKernel(name, platform, cu);
     if (name == CalcRGForceKernel::Name())
         return new CommonCalcRGForceKernel(name, platform, cu);
     if (name == CalcRMSDForceKernel::Name())

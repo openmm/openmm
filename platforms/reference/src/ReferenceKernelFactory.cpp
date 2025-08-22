@@ -84,6 +84,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcATMForceKernel(name, platform);
     if (name == CalcCustomCPPForceKernel::Name())
         return new ReferenceCalcCustomCPPForceKernel(name, platform);
+    if (name == CalcOrientationRestraintForceKernel::Name())
+        return new ReferenceCalcOrientationRestraintForceKernel(name, platform);
     if (name == CalcRGForceKernel::Name())
         return new ReferenceCalcRGForceKernel(name, platform);
     if (name == CalcRMSDForceKernel::Name())
