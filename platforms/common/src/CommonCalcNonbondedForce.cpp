@@ -420,7 +420,7 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
                 // Create the CPU PME kernel.
 
                 try {
-                    cpuPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), cc.getContextImpl());
+                    cpuPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), *cc.getContextImpl());
                     cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha, false);
                     ComputeProgram program = cc.compileProgram(CommonKernelSources::pme, pmeDefines);
                     ComputeKernel addForcesKernel = program->createKernel("addForces");
@@ -655,15 +655,9 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
         int particle;
         double charge, sigma, epsilon;
         force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
-        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
-        int paramIndex;
-        if (paramPos == paramNames.end()) {
-            paramIndex = paramNames.size();
-            paramNames.push_back(param);
-        }
-        else
-            paramIndex = paramPos-paramNames.begin();
-        particleOffsetVec[particle].push_back(mm_float4(charge, sigma, epsilon, paramIndex));
+        int paramIndex = cc.registerGlobalParam(param);
+        paramIndices[param] = paramIndex;
+        particleOffsetVec[particle].push_back(mm_float4(charge, sigma, epsilon, (float) paramIndex));
     }
     for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
         string param;
@@ -673,17 +667,12 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
         int index = exceptionIndex[exception];
         if (index < startIndex || index >= endIndex)
             continue;
-        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
-        int paramIndex;
-        if (paramPos == paramNames.end()) {
-            paramIndex = paramNames.size();
-            paramNames.push_back(param);
-        }
-        else
-            paramIndex = paramPos-paramNames.begin();
-        exceptionOffsetVec[index-startIndex].push_back(mm_float4(charge, sigma, epsilon, paramIndex));
+        int paramIndex = cc.registerGlobalParam(param);
+        paramIndices[param] = paramIndex;
+        exceptionOffsetVec[index-startIndex].push_back(mm_float4(charge, sigma, epsilon, (float) paramIndex));
     }
-    paramValues.resize(paramNames.size(), 0.0);
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        paramValues[force.getGlobalParameterName(i)] = force.getGlobalParameterDefaultValue(i);
     particleParamOffsets.initialize<mm_float4>(cc, max(force.getNumParticleParameterOffsets(), 1), "particleParamOffsets");
     particleOffsetIndices.initialize<int>(cc, cc.getPaddedNumAtoms()+1, "particleOffsetIndices");
     vector<int> particleOffsetIndicesVec, exceptionOffsetIndicesVec;
@@ -711,9 +700,6 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
         exceptionParamOffsets.upload(e);
         exceptionOffsetIndices.upload(exceptionOffsetIndicesVec);
     }
-    globalParams.initialize(cc, max((int) paramValues.size(), 1), cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "globalParams");
-    if (paramValues.size() > 0)
-        globalParams.upload(paramValues, true);
     chargeBuffer.initialize(cc, cc.getNumThreadBlocks(), cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "chargeBuffer");
     cc.clearBuffer(chargeBuffer);
     recomputeParams = true;
@@ -734,7 +720,7 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         hasInitializedKernel = true;
         computeParamsKernel->addArg(cc.getEnergyBuffer());
         computeParamsKernel->addArg();
-        computeParamsKernel->addArg(globalParams);
+        computeParamsKernel->addArg(cc.getGlobalParamValues());
         computeParamsKernel->addArg(cc.getPaddedNumAtoms());
         computeParamsKernel->addArg(baseParticleParams);
         computeParamsKernel->addArg(cc.getPosq());
@@ -894,17 +880,12 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
 
     // Update particle and exception parameters.
 
-    bool paramChanged = false;
-    for (int i = 0; i < paramNames.size(); i++) {
-        double value = context.getParameter(paramNames[i]);
-        if (value != paramValues[i]) {
-            paramValues[i] = value;;
-            paramChanged = true;
+    for (auto param : paramValues) {
+        double value = context.getParameter(param.first);
+        if (value != param.second) {
+            paramValues[param.first] = value;
+            recomputeParams = true;
         }
-    }
-    if (paramChanged) {
-        recomputeParams = true;
-        globalParams.upload(paramValues, true);
     }
     double energy = 0.0;
     if (includeReciprocal && (pmeGrid1.isInitialized() || cosSinSums.isInitialized())) {
@@ -979,19 +960,24 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         // Execute the reciprocal space kernels.
 
         if (hasCoulomb) {
-            setPeriodicBoxArgs(cc, pmeGridIndexKernel, 2);
-            if (cc.getUseDoublePrecision()) {
-                pmeGridIndexKernel->setArg(7, recipBoxVectors[0]);
-                pmeGridIndexKernel->setArg(8, recipBoxVectors[1]);
-                pmeGridIndexKernel->setArg(9, recipBoxVectors[2]);
+            if (stepsToSort <= 0 || doLJPME || cc.getNumAtoms() > 15000) {
+                setPeriodicBoxArgs(cc, pmeGridIndexKernel, 2);
+                if (cc.getUseDoublePrecision()) {
+                    pmeGridIndexKernel->setArg(7, recipBoxVectors[0]);
+                    pmeGridIndexKernel->setArg(8, recipBoxVectors[1]);
+                    pmeGridIndexKernel->setArg(9, recipBoxVectors[2]);
+                }
+                else {
+                    pmeGridIndexKernel->setArg(7, recipBoxVectorsFloat[0]);
+                    pmeGridIndexKernel->setArg(8, recipBoxVectorsFloat[1]);
+                    pmeGridIndexKernel->setArg(9, recipBoxVectorsFloat[2]);
+                }
+                pmeGridIndexKernel->execute(cc.getNumAtoms());
+                sort->sort(pmeAtomGridIndex);
+                stepsToSort = 3;
             }
-            else {
-                pmeGridIndexKernel->setArg(7, recipBoxVectorsFloat[0]);
-                pmeGridIndexKernel->setArg(8, recipBoxVectorsFloat[1]);
-                pmeGridIndexKernel->setArg(9, recipBoxVectorsFloat[2]);
-            }
-            pmeGridIndexKernel->execute(cc.getNumAtoms());
-            sort->sort(pmeAtomGridIndex);
+            else
+                stepsToSort--;
             setPeriodicBoxArgs(cc, pmeSpreadChargeKernel, 2);
             if (cc.getUseDoublePrecision()) {
                 pmeSpreadChargeKernel->setArg(7, recipBoxVectors[0]);
@@ -1057,8 +1043,7 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 pmeDispersionGridIndexKernel->setArg(9, recipBoxVectorsFloat[2]);
             }
             pmeDispersionGridIndexKernel->execute(cc.getNumAtoms());
-            if (!hasCoulomb)
-                sort->sort(pmeAtomGridIndex);
+            sort->sort(pmeAtomGridIndex);
             if (useFixedPointChargeSpreading)
                 cc.clearBuffer(pmeGrid2);
             else
@@ -1223,11 +1208,10 @@ void CommonCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
         int particle;
         double charge, sigma, epsilon;
         force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
-        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
-        if (paramPos == paramNames.end())
+        auto paramIndex = paramIndices.find(param);
+        if (paramIndex == paramIndices.end())
             throw OpenMMException("updateParametersInContext: The parameter of a particle parameter offset has changed");
-        int paramIndex = paramPos-paramNames.begin();
-        particleOffsetVec[particle].push_back(mm_float4(charge, sigma, epsilon, paramIndex));
+        particleOffsetVec[particle].push_back(mm_float4(charge, sigma, epsilon, paramIndex->second));
     }
     for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
         string param;
@@ -1237,11 +1221,10 @@ void CommonCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
         int index = exceptionIndex[exception];
         if (index < startIndex || index >= endIndex)
             continue;
-        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
-        if (paramPos == paramNames.end())
+        auto paramIndex = paramIndices.find(param);
+        if (paramIndex == paramIndices.end())
             throw OpenMMException("updateParametersInContext: The parameter of an exception parameter offset has changed");
-        int paramIndex = paramPos-paramNames.begin();
-        exceptionOffsetVec[index-startIndex].push_back(mm_float4(charge, sigma, epsilon, paramIndex));
+        exceptionOffsetVec[index-startIndex].push_back(mm_float4(charge, sigma, epsilon, paramIndex->second));
     }
     if (max(force.getNumParticleParameterOffsets(), 1) != particleParamOffsets.getSize())
         throw OpenMMException("updateParametersInContext: The number of particle parameter offsets has changed");

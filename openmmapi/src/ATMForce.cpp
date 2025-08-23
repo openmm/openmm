@@ -38,9 +38,11 @@
 #include "openmm/internal/ATMForceImpl.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/AssertionUtilities.h"
+#include <openmm/Vec3.h>
 #include <iostream>
 #include <cmath>
 #include <string>
+#include <map>
 
 using namespace OpenMM;
 using namespace std;
@@ -65,7 +67,7 @@ ATMForce::ATMForce(double lambda1, double lambda2, double alpha, double uh, doub
                                 "fsc = (z^Acore-1)/(z^Acore+1);"
                                 "z = 1 + 2*(y/Acore) + 2*(y/Acore)^2;"
                                 "y = (u-Ubcore)/(Umax-Ubcore);"
-	                        "u = select(step(Direction), 1, -1)*(u1-u0)";
+                                "u = select(step(Direction), 1, -1)*(u1-u0)";
     setEnergyFunction(referencePotExpression + alchemicalPotExpression + softCoreExpression);
     addGlobalParameter(Lambda1(), lambda1);
     addGlobalParameter(Lambda2(), lambda2);
@@ -81,6 +83,10 @@ ATMForce::ATMForce(double lambda1, double lambda2, double alpha, double uh, doub
 ATMForce::~ATMForce() {
     for (Force* force : forces)
         delete force;
+    for (ParticleInfo particle : particles) {
+        if (particle.transformation)
+            delete particle.transformation;
+    }
 }
 
 const string& ATMForce::getEnergyFunction() const {
@@ -91,21 +97,49 @@ void ATMForce::setEnergyFunction(const std::string& energy) {
     energyExpression = energy;
 }
 
+int ATMForce::addParticle() {
+    particles.push_back(ParticleInfo(particles.size(), new ATMForce::FixedDisplacement(Vec3(0, 0, 0), Vec3(0, 0, 0))));
+    return particles.size()-1;
+}
 int ATMForce::addParticle(const Vec3& displacement1, const Vec3& displacement0) {
-    particles.push_back(ParticleInfo(particles.size(), displacement1, displacement0));
+    FixedDisplacement* fd = new FixedDisplacement(displacement1, displacement0);
+    particles.push_back(ParticleInfo(particles.size(), fd));
+    return particles.size()-1;
+}
+
+int ATMForce::addParticle(ATMForce::CoordinateTransformation* transformation) {
+    particles.push_back(ParticleInfo(particles.size(), transformation));
     return particles.size()-1;
 }
 
 void ATMForce::getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0) const {
     ASSERT_VALID_INDEX(index, particles);
-    displacement1 = particles[index].displacement1;
-    displacement0 = particles[index].displacement0;
+    CoordinateTransformation* transformation = particles[index].transformation;
+    const FixedDisplacement* displacement = dynamic_cast<const FixedDisplacement*>(transformation);
+    if (displacement == nullptr)
+        throw OpenMMException("getParticleParameters: the transformation for this particle is not a FixedDisplacement");
+    displacement1 = displacement->getFixedDisplacement1();
+    displacement0 = displacement->getFixedDisplacement0();
+}
+
+const ATMForce::CoordinateTransformation& ATMForce::getParticleTransformation(int index) const {
+    ASSERT_VALID_INDEX(index, particles);
+    return *(particles[index].transformation);
 }
 
 void ATMForce::setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0) {
     ASSERT_VALID_INDEX(index, particles);
-    particles[index].displacement1 = displacement1;
-    particles[index].displacement0 = displacement0;
+    if (particles[index].transformation)
+        delete particles[index].transformation;
+    FixedDisplacement* fd = new FixedDisplacement(displacement1, displacement0);
+    particles[index].transformation = fd;
+}
+
+void ATMForce::setParticleTransformation(int index, ATMForce::CoordinateTransformation* transformation) {
+    ASSERT_VALID_INDEX(index, particles);
+    if (particles[index].transformation)
+        delete particles[index].transformation;
+    particles[index].transformation = transformation;
 }
 
 int ATMForce::addForce(Force* force) {
@@ -176,3 +210,18 @@ void ATMForce::getPerturbationEnergy(OpenMM::Context& context, double& u0, doubl
     dynamic_cast<ATMForceImpl&>(getImplInContext(context)).getPerturbationEnergy(getContextImpl(context), u0, u1, energy);
 }
 
+int ATMForce::getNumParticles() const {
+    return particles.size();
+}
+
+int ATMForce::getNumForces() const {
+    return forces.size();
+}
+
+int ATMForce::getNumGlobalParameters() const {
+    return globalParameters.size();
+}
+
+int ATMForce::getNumEnergyParameterDerivatives() const {
+    return energyParameterDerivatives.size();
+}

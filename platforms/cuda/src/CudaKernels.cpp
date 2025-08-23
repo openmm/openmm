@@ -61,6 +61,7 @@ void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool 
     cu.setForcesValid(true);
     ContextSelector selector(cu);
     cu.clearAutoclearBuffers();
+    cu.updateGlobalParamValues();
     for (auto computation : cu.getPreComputations())
         computation->computeForceAndEnergy(includeForces, includeEnergy, groups);
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();

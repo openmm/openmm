@@ -161,3 +161,19 @@ void CustomTorsionForce::setUsesPeriodicBoundaryConditions(bool periodic) {
 bool CustomTorsionForce::usesPeriodicBoundaryConditions() const {
     return usePeriodic;
 }
+
+int CustomTorsionForce::getNumTorsions() const {
+    return torsions.size();
+}
+
+int CustomTorsionForce::getNumPerTorsionParameters() const {
+    return parameters.size();
+}
+
+int CustomTorsionForce::getNumGlobalParameters() const {
+    return globalParameters.size();
+}
+
+int CustomTorsionForce::getNumEnergyParameterDerivatives() const {
+    return energyParameterDerivatives.size();
+}

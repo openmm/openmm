@@ -300,9 +300,6 @@ private:
     ForceInfo* info;
     const System& system;
     ComputeParameterSet* params;
-    ComputeArray globals;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
 };
 
 /**
@@ -390,9 +387,6 @@ private:
     ForceInfo* info;
     const System& system;
     ComputeParameterSet* params;
-    ComputeArray globals;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
 };
 
 /**
@@ -522,9 +516,6 @@ private:
     ForceInfo* info;
     const System& system;
     ComputeParameterSet* params;
-    ComputeArray globals;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
 };
 
 /**
@@ -613,9 +604,6 @@ private:
     ForceInfo* info;
     const System& system;
     ComputeParameterSet* params;
-    ComputeArray globals;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
 };
 
 /**
@@ -657,9 +645,6 @@ private:
     ComputeContext& cc;
     ForceInfo* info;
     ComputeParameterSet* params;
-    ComputeArray globals;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
     std::map<std::string, int> tabulatedFunctionUpdateCount;
     const System& system;
@@ -701,14 +686,12 @@ public:
 private:
     class ForceInfo;
     int numGroups, numBonds;
-    bool needEnergyParamDerivs;
+    bool needGlobalParams, needEnergyParamDerivs;
     ComputeContext& cc;
     ForceInfo* info;
     ComputeParameterSet* params;
-    ComputeArray globals, groupParticles, groupWeights, groupOffsets;
+    ComputeArray groupParticles, groupWeights, groupOffsets;
     ComputeArray groupForces, bondGroups, centerPositions;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
     std::map<std::string, int> tabulatedFunctionUpdateCount;
     std::vector<void*> groupForcesArgs;
@@ -1176,6 +1159,37 @@ private:
 };
 
 /**
+ * This kernel is invoked by RGForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CommonCalcRGForceKernel : public CalcRGForceKernel {
+public:
+    CommonCalcRGForceKernel(std::string name, const Platform& platform, ComputeContext& cc) : CalcRGForceKernel(name, platform), cc(cc) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the RGForce this kernel will be used for
+     */
+    void initialize(const System& system, const RGForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    class ReorderListener;
+    ComputeContext& cc;
+    int blockSize;
+    ComputeArray particles, centerBuffer, rgBuffer;
+    ComputeKernel centerKernel, rgKernel, forceKernel;
+};
+
+/**
  * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
  */
 class CommonApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
@@ -1316,18 +1330,25 @@ public:
      * Get the ComputeContext corresponding to the inner Context.
      */
     virtual ComputeContext& getInnerComputeContext(ContextImpl& innerContext) = 0;
-    
+
 private:
     class ReorderListener;
-    
+
     void initKernels(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1);
-    
+    void loadParams(int numParticles, const ATMForce& force, std::vector<Vec3>& d1, std::vector<Vec3>& d0, std::vector<int>& j1, std::vector<int>& i1, std::vector<int>& j0, std::vector<int>& i0);
+
     bool hasInitializedKernel;
     ComputeContext& cc;
-    ComputeArray displ1;
-    ComputeArray displ0;
+    ComputeArray displ1, displ0;               // actual displacements used in calculation
+    ComputeArray displacement1, displacement0; // fixed lab-frame displacements
+    ComputeArray displParticles;               // variable displacements based on atom positions
+                                               // int4 arranged as (pDestination1, pOrigin1, pDestination0, pOrigin0  
     ComputeArray invAtomOrder, inner0InvAtomOrder, inner1InvAtomOrder;
+    ComputeArray dforce0, dforce1;             // forces due to variable displacements
     ComputeKernel copyStateKernel;
+    ComputeKernel setDisplacementsKernel;
+    ComputeKernel resetDisplForceKernel;
+    ComputeKernel displForceKernel;
     ComputeKernel hybridForceKernel;
 
     int numParticles;

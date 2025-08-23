@@ -790,3 +790,21 @@ This force is normally used with a CustomCVForce (see Section :numref:`customcvf
 One rarely wants a force whose energy exactly equals the RMSD, but there are many
 situations where it is useful to have a restraining or biasing force that depends
 on the RMSD in some way.
+
+RGForce
+*********
+
+RGForce computes the radius of gyration (Rg) of a set of particle positions:
+
+.. math::
+   \text{Rg} = \sqrt{\frac{\sum_{i} \| \mathbf{x}_i - \mathbf{x}_c \|^2}{N}}
+
+where :math:`\mathbf{x}_c` is the center position,
+
+.. math::
+   \mathbf{x}_c = \frac{\sum_{i} \mathbf{x}_i}{N}
+
+This force is normally used with a CustomCVForce (see Section :numref:`customcvforce`).
+One rarely wants a force whose energy exactly equals Rg, but there are many
+situations where it is useful to have a restraining or biasing force that depends
+on Rg in some way.

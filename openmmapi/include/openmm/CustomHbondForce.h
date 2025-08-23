@@ -79,21 +79,27 @@ namespace OpenMM {
  * to keep the distance between a1 and d1, and the angle formed by a1-d1-d2, near ideal values:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomHbondForce* force = new CustomHbondForce("k*(distance(a1,d1)-r0)^2*(angle(a1,d1,d2)-theta0)^2");
- *
+ * <c++>
+ * CustomHbondForce* force = new CustomHbondForce("k*(distance(a1,d1)-r0)^2*(angle(a1,d1,d2)-theta0)^2");
+ * </c++>
+ * <python>
+ * force = CustomHbondForce("k*(distance(a1,d1)-r0)^2*(angle(a1,d1,d2)-theta0)^2")
+ * </python>
  * \endverbatim
  *
  * This force depends on three parameters: k, r0, and theta0.  The following code defines these as per-donor parameters:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    force->addPerDonorParameter("k");
- *    force->addPerDonorParameter("r0");
- *    force->addPerDonorParameter("theta0");
- *
+ * <c++>
+ * force->addPerDonorParameter("k");
+ * force->addPerDonorParameter("r0");
+ * force->addPerDonorParameter("theta0");
+ * </c++>
+ * <python>
+ * force.addPerDonorParameter("k")
+ * force.addPerDonorParameter("r0")
+ * force.addPerDonorParameter("theta0")
+ * </python>
  * \endverbatim
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
@@ -138,53 +144,37 @@ public:
     /**
      * Get the number of donors for which force field parameters have been defined.
      */
-    int getNumDonors() const {
-        return donors.size();
-    }
+    int getNumDonors() const;
     /**
      * Get the number of acceptors for which force field parameters have been defined.
      */
-    int getNumAcceptors() const {
-        return acceptors.size();
-    }
+    int getNumAcceptors() const;
     /**
      * Get the number of donor-acceptor pairs whose interactions should be excluded.
      */
-    int getNumExclusions() const {
-        return exclusions.size();
-    }
+    int getNumExclusions() const;
     /**
      * Get the number of per-donor parameters that the interaction depends on.
      */
-    int getNumPerDonorParameters() const {
-        return donorParameters.size();
-    }
+    int getNumPerDonorParameters() const;
     /**
      * Get the number of per-acceptor parameters that the interaction depends on.
      */
-    int getNumPerAcceptorParameters() const {
-        return acceptorParameters.size();
-    }
+    int getNumPerAcceptorParameters() const;
     /**
      * Get the number of global parameters that the interaction depends on.
      */
-    int getNumGlobalParameters() const {
-        return globalParameters.size();
-    }
+    int getNumGlobalParameters() const;
     /**
      * Get the number of tabulated functions that have been defined.
      */
-    int getNumTabulatedFunctions() const {
-        return functions.size();
-    }
+    int getNumTabulatedFunctions() const;
     /**
      * Get the number of tabulated functions that have been defined.
      *
      * @deprecated This method exists only for backward compatibility.  Use getNumTabulatedFunctions() instead.
      */
-    int getNumFunctions() const {
-        return functions.size();
-    }
+    int getNumFunctions() const;
     /**
      * Get the algebraic expression that gives the interaction energy between a donor and an acceptor
      */

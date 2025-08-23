@@ -108,7 +108,7 @@ public:
 
 class OPENMM_EXPORT_COMMON OpenCLPlatform::PlatformData {
 public:
-    PlatformData(const System& system, const std::string& platformPropValue, const std::string& deviceIndexProperty, const std::string& precisionProperty,
+    PlatformData(const System& system, ContextImpl* context, const std::string& platformPropValue, const std::string& deviceIndexProperty, const std::string& precisionProperty,
             const std::string& cpuPmeProperty, const std::string& pmeStreamProperty, int numThreads, ContextImpl* originalContext);
     ~PlatformData();
     void initializeContexts(const System& system);

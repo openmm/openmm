@@ -59,7 +59,7 @@ master_doc = "index"
 
 # General information about the project.
 project = u"OpenMM User Guide"
-copyright = u"2008-2017, Stanford University"
+copyright = u"2008-2025, Stanford University"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

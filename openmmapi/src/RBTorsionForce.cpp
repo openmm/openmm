@@ -88,3 +88,7 @@ void RBTorsionForce::setUsesPeriodicBoundaryConditions(bool periodic) {
 bool RBTorsionForce::usesPeriodicBoundaryConditions() const {
     return usePeriodic;
 }
+
+int RBTorsionForce::getNumTorsions() const {
+    return rbTorsions.size();
+}

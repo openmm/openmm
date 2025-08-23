@@ -381,3 +381,23 @@ bool NonbondedForce::getExceptionsUsePeriodicBoundaryConditions() const {
 void NonbondedForce::setExceptionsUsePeriodicBoundaryConditions(bool periodic) {
     exceptionsUsePeriodic = periodic;
 }
+
+int NonbondedForce::getNumParticles() const {
+    return particles.size();
+}
+
+int NonbondedForce::getNumExceptions() const {
+    return exceptions.size();
+}
+
+int NonbondedForce::getNumGlobalParameters() const {
+    return globalParameters.size();
+}
+
+int NonbondedForce::getNumParticleParameterOffsets() const {
+    return particleOffsets.size();
+}
+
+int NonbondedForce::getNumExceptionParameterOffsets() const {
+    return exceptionOffsets.size();
+}

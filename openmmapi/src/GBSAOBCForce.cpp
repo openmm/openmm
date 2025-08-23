@@ -84,3 +84,7 @@ ForceImpl* GBSAOBCForce::createImpl() const {
 void GBSAOBCForce::updateParametersInContext(Context& context) {
     dynamic_cast<GBSAOBCForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
+
+int GBSAOBCForce::getNumParticles() const {
+    return particles.size();
+}

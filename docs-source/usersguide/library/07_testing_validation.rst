@@ -9,25 +9,16 @@ produces correct results.  Furthermore, it must work correctly on a variety of
 hardware platforms (e.g. different models of GPU), software platforms (e.g.
 operating systems and OpenCL implementations), and types of simulations.
 
-Three types of tests are used to validate OpenMM:
+OpenMM includes unit tests, which are small tests designed to test specific features
+or pieces of code in isolation.  For example, a test of HarmonicBondForce might
+create a System with just a few particles and bonds, compute the forces and
+energy, and compare them to the analytically expected values.  There are
+thousands of unit tests that collectively cover all of OpenMM.
 
-* **Unit tests:** These are small tests designed to test specific features
-  or pieces of code in isolation.  For example, a test of HarmonicBondForce might
-  create a System with just a few particles and bonds, compute the forces and
-  energy, and compare them to the analytically expected values.  There are
-  thousands of unit tests that collectively cover all of OpenMM.
+In addition, a direct comparison has been made of the individual forces computed
+by OpenMM to those computed by other programs for a collection of biomolecules.
 
-* **System tests:** Whereas unit tests validate small features in
-  isolation, system tests are designed to validate the entire library as a whole.
-  They simulate realistic models of biomolecules and perform tests that are likely
-  to fail if any problem exists anywhere in the library.
-
-* **Direct comparison between OpenMM and other programs:**  The third type
-  of validation performed is a direct comparison of the individual forces computed
-  by OpenMM to those computed by other programs for a collection of biomolecules.
-
-
-Each type of test is outlined in greater detail below; a discussion of the
+Each of these types of tests is outlined in greater detail below; a discussion of the
 current status of the tests is then given.
 
 
@@ -58,51 +49,11 @@ suite took to execute.  Otherwise it prints an error message.  If any tests
 failed, you can then run them individually (each one is a separate executable)
 to get more details on what went wrong.
 
-System tests
-============
-
-Several different types of system tests are performed.  Each type is run for a
-variety of systems, including both proteins and nucleic acids, and involving
-both implicit and explicit solvent.  The full suite of tests is repeated for
-both the CUDA and OpenCL platforms, using both single and double precision (and
-for the integration tests, mixed precision as well), on a variety of operating
-systems and hardware.  There are four types of tests:
-
-* **Consistency between platforms:** The forces and energy are computed
-  using the platform being tested, then compared to ones computed with the
-  Reference platform.  The results are required to agree to within a small
-  tolerance.
-* **Energy-force consistency:** This verifies that the force really is the
-  gradient of the energy.   It first computes the vector of forces for a given
-  conformation.  It then generates four other conformations by displacing the
-  particle positions by small amounts along the force direction.  It computes the
-  energy of each one, uses those to calculate a fourth order finite difference
-  approximation to the derivative along that direction, and compares it to the
-  actual forces.  They are required to agree to within a small tolerance.
-* **Energy conservation:** The system is simulated at constant energy using
-  a Verlet integrator, and the total energy is periodically recorded.  A linear
-  regression is used to estimate the rate of energy drift.  In addition, all
-  constrained distances are monitored during the simulation to make sure they
-  never differ from the expected values by more than the constraint tolerance.
-* **Thermostability:** The system is simulated at constant temperature
-  using a Langevin integrator.  The mean kinetic energy over the course of the
-  simulation is computed and compared to the expected value based on the
-  temperature.  In addition, all constrained distances are monitored during the
-  simulation to make sure they never differ from the expected values by more than
-  the constraint tolerance.
-
-
-If you want to run the system tests yourself, they can be found in the
-Subversion repository at https://simtk.org/svn/pyopenmm/trunk/test/system-tests.
-Check out that directory, then execute the runAllTests.sh shell script.  It will
-create a series of files with detailed information about the results of the
-tests.  Be aware that running the full test suite may take a long time (possibly
-several days) depending on the speed of your GPU.
 
 Direct comparisons between OpenMM and other programs
 ====================================================
 
-As a final check, identical systems are set up in OpenMM and in another program
+As another check, identical systems are set up in OpenMM and in another program
 (Gromacs 4.5 or Tinker 6.1), each one is used to compute the forces on atoms,
 and the results are directly compared to each other.
 

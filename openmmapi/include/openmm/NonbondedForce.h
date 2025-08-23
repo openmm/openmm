@@ -153,33 +153,23 @@ public:
     /**
      * Get the number of particles for which force field parameters have been defined.
      */
-    int getNumParticles() const {
-        return particles.size();
-    }
+    int getNumParticles() const;
     /**
      * Get the number of special interactions that should be calculated differently from other interactions.
      */
-    int getNumExceptions() const {
-        return exceptions.size();
-    }
+    int getNumExceptions() const;
     /**
      * Get the number of global parameters that have been added.
      */
-    int getNumGlobalParameters() const {
-        return globalParameters.size();
-    }
+    int getNumGlobalParameters() const;
     /**
      * Get the number of particles parameter offsets that have been added.
      */
-    int getNumParticleParameterOffsets() const {
-        return particleOffsets.size();
-    }
+    int getNumParticleParameterOffsets() const;
     /**
      * Get the number of exception parameter offsets that have been added.
      */
-    int getNumExceptionParameterOffsets() const {
-        return exceptionOffsets.size();
-    }
+    int getNumExceptionParameterOffsets() const;
     /**
      * Get the method used for handling long range nonbonded interactions.
      */

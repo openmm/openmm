@@ -91,6 +91,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         throw OpenMMException("CustomGBForce does not support using multiple devices");
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
     cutoff = force.getCutoffDistance();
+    needGlobalParams = (force.getNumGlobalParameters() > 0);
     bool useExclusionsForValue = false;
     numComputedValues = force.getNumComputedValues();
     vector<string> computedValueNames(numComputedValues);
@@ -119,8 +120,6 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
     int numParams = force.getNumPerParticleParameters();
     params = new ComputeParameterSet(cc, force.getNumPerParticleParameters(), paddedNumParticles, "customGBParameters", true);
     computedValues = new ComputeParameterSet(cc, numComputedValues, paddedNumParticles, "customGBComputedValues", true, cc.getUseDoublePrecision());
-    if (force.getNumGlobalParameters() > 0)
-        globals.initialize<float>(cc, force.getNumGlobalParameters(), "customGBGlobals");
     vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
     vector<vector<int> > exclusionList(numParticles);
     for (int i = 0; i < numParticles; i++) {
@@ -162,17 +161,6 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
             tableArgs << width;
         tableArgs << "* RESTRICT " << arrayName;
     }
-
-    // Record the global parameters.
-
-    globalParamNames.resize(force.getNumGlobalParameters());
-    globalParamValues.resize(force.getNumGlobalParameters());
-    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-        globalParamNames[i] = force.getGlobalParameterName(i);
-        globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
-    }
-    if (globals.isInitialized())
-        globals.upload(globalParamValues);
 
     // Record derivatives of expressions needed for the chain rule terms.
 
@@ -221,7 +209,6 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
             energyParamDerivExpressions[i].push_back(ex.differentiate(force.getEnergyParameterDerivativeName(j)).optimize());
     }
     bool deviceIsCpu = cc.getIsCPU();
-    int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
     valueBuffers.initialize<long long>(cc, cc.getPaddedNumAtoms(), "customGBValueBuffers");
     longEnergyDerivs.initialize<long long>(cc, numComputedValues*cc.getPaddedNumAtoms(), "customGBLongEnergyDerivatives");
     energyDerivs = new ComputeParameterSet(cc, numComputedValues, cc.getPaddedNumAtoms(), "customGBEnergyDerivatives", true);
@@ -260,7 +247,8 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         }
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
-            string value = "globals["+cc.intToString(i)+"]";
+            int index = cc.registerGlobalParam(name);
+            string value = "globals["+cc.intToString(index)+"]";
             variables.push_back(makeVariable(name, value));
         }
         map<string, Lepton::ParsedExpression> n2ValueExpressions;
@@ -281,7 +269,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         replacements["COMPUTE_VALUE"] = n2ValueStr;
         stringstream extraArgs, atomParams, loadLocal1, loadLocal2, load1, load2, tempDerivs1, tempDerivs2, storeDeriv1, storeDeriv2;
         if (force.getNumGlobalParameters() > 0)
-            extraArgs << ", GLOBAL const float* globals";
+            extraArgs << ", GLOBAL const real* globals";
         pairValueUsesParam.resize(params->getParameterInfos().size(), false);
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
             ComputeParameterInfo& buffer = params->getParameterInfos()[i];
@@ -351,7 +339,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
 
         stringstream reductionSource, extraArgs, deriv0;
         if (force.getNumGlobalParameters() > 0)
-            extraArgs << ", GLOBAL const float* globals";
+            extraArgs << ", GLOBAL const real* globals";
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
             ComputeParameterInfo& buffer = params->getParameterInfos()[i];
             string paramName = "params"+cc.intToString(i+1);
@@ -378,8 +366,10 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         variables["z"] = "pos.z";
         for (int i = 0; i < force.getNumPerParticleParameters(); i++)
             variables[force.getPerParticleParameterName(i)] = "params"+params->getParameterSuffix(i, "[index]");
-        for (int i = 0; i < force.getNumGlobalParameters(); i++)
-            variables[force.getGlobalParameterName(i)] = "globals["+cc.intToString(i)+"]";
+        for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+            int index = cc.registerGlobalParam(force.getGlobalParameterName(i));
+            variables[force.getGlobalParameterName(i)] = "globals["+cc.intToString(index)+"]";
+        }
         for (int i = 1; i < numComputedValues; i++) {
             variables[computedValueNames[i-1]] = "local_values"+computedValues->getParameterSuffix(i-1);
             map<string, Lepton::ParsedExpression> valueExpressions;
@@ -433,8 +423,10 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
             variables.push_back(makeVariable(computedValueNames[i]+"1", "values"+computedValues->getParameterSuffix(i, "1")));
             variables.push_back(makeVariable(computedValueNames[i]+"2", "values"+computedValues->getParameterSuffix(i, "2")));
         }
-        for (int i = 0; i < force.getNumGlobalParameters(); i++)
-            variables.push_back(makeVariable(force.getGlobalParameterName(i), "globals["+cc.intToString(i)+"]"));
+        for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+            int index = cc.registerGlobalParam(force.getGlobalParameterName(i));
+            variables.push_back(makeVariable(force.getGlobalParameterName(i), "globals["+cc.intToString(index)+"]"));
+        }
         stringstream n2EnergySource;
         bool anyExclusions = (force.getNumExclusions() > 0);
         for (int i = 0; i < force.getNumEnergyTerms(); i++) {
@@ -467,7 +459,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         replacements["COMPUTE_INTERACTION"] = n2EnergyStr;
         stringstream extraArgs, atomParams, loadLocal1, loadLocal2, clearLocal, load1, load2, declare1, recordDeriv, storeDerivs1, storeDerivs2, initParamDerivs, saveParamDerivs;
         if (force.getNumGlobalParameters() > 0)
-            extraArgs << ", GLOBAL const float* globals";
+            extraArgs << ", GLOBAL const real* globals";
         pairEnergyUsesParam.resize(params->getParameterInfos().size(), false);
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
             ComputeParameterInfo& buffer = params->getParameterInfos()[i];
@@ -555,7 +547,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
 
         stringstream compute, extraArgs, reduce, initParamDerivs, saveParamDerivs;
         if (force.getNumGlobalParameters() > 0)
-            extraArgs << ", GLOBAL const float* globals";
+            extraArgs << ", GLOBAL const real* globals";
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
             ComputeParameterInfo& buffer = params->getParameterInfos()[i];
             string paramName = "params"+cc.intToString(i+1);
@@ -601,8 +593,10 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         variables["z"] = "pos.z";
         for (int i = 0; i < force.getNumPerParticleParameters(); i++)
             variables[force.getPerParticleParameterName(i)] = "params"+params->getParameterSuffix(i, "[index]");
-        for (int i = 0; i < force.getNumGlobalParameters(); i++)
-            variables[force.getGlobalParameterName(i)] = "globals["+cc.intToString(i)+"]";
+        for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+            int index = cc.registerGlobalParam(force.getGlobalParameterName(i));
+            variables[force.getGlobalParameterName(i)] = "globals["+cc.intToString(index)+"]";
+        }
         for (int i = 0; i < numComputedValues; i++)
             variables[computedValueNames[i]] = "values"+computedValues->getParameterSuffix(i, "[index]");
         map<string, Lepton::ParsedExpression> expressions;
@@ -671,7 +665,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
 
         stringstream compute, extraArgs, initParamDerivs, saveParamDerivs;
         if (force.getNumGlobalParameters() > 0)
-            extraArgs << ", GLOBAL const float* globals";
+            extraArgs << ", GLOBAL const real* globals";
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
             ComputeParameterInfo& buffer = params->getParameterInfos()[i];
             string paramName = "params"+cc.intToString(i+1);
@@ -707,8 +701,10 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         variables["z"] = "pos.z";
         for (int i = 0; i < force.getNumPerParticleParameters(); i++)
             variables[force.getPerParticleParameterName(i)] = "params"+params->getParameterSuffix(i, "[index]");
-        for (int i = 0; i < force.getNumGlobalParameters(); i++)
-            variables[force.getGlobalParameterName(i)] = "globals["+cc.intToString(i)+"]";
+        for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+            int index = cc.registerGlobalParam(force.getGlobalParameterName(i));
+            variables[force.getGlobalParameterName(i)] = "globals["+cc.intToString(index)+"]";
+        }
         for (int i = 0; i < numComputedValues; i++)
             variables[computedValueNames[i]] = "values"+computedValues->getParameterSuffix(i, "[index]");
         if (needParameterGradient) {
@@ -757,7 +753,8 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         vector<pair<ExpressionTreeNode, string> > globalVariables;
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
-            string value = "globals["+cc.intToString(i)+"]";
+            int index = cc.registerGlobalParam(force.getGlobalParameterName(i));
+            string value = "globals["+cc.intToString(index)+"]";
             globalVariables.push_back(makeVariable(name, prefix+value));
         }
         vector<pair<ExpressionTreeNode, string> > variables = globalVariables;
@@ -818,10 +815,8 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
                 parameters.push_back(ComputeParameterInfo(buffer.getArray(), paramName, buffer.getComponentType(), buffer.getNumComponents()));
             }
         }
-        if (globals.isInitialized()) {
-            globals.upload(globalParamValues);
-            arguments.push_back(ComputeParameterInfo(globals, prefix+"globals", "float", 1));
-        }
+        if (needGlobalParams)
+            arguments.push_back(ComputeParameterInfo(cc.getGlobalParamValues(), prefix+"globals", "real", 1));
         nb.addInteraction(useCutoff, usePeriodic, force.getNumExclusions() > 0, cutoff, exclusionList, source, force.getForceGroup());
         for (auto param : parameters)
             nb.addParameter(param);
@@ -835,9 +830,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
 
 double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     ContextSelector selector(cc);
-    bool deviceIsCpu = cc.getIsCPU();
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
-    int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
 
@@ -893,8 +886,8 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         }
         else
             pairValueKernel->addArg(numAtomBlocks*(numAtomBlocks+1)/2);
-        if (globals.isInitialized())
-            pairValueKernel->addArg(globals);
+        if (needGlobalParams)
+            pairValueKernel->addArg(cc.getGlobalParamValues());
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
             if (pairValueUsesParam[i]) {
                 ComputeParameterInfo& buffer = params->getParameterInfos()[i];
@@ -907,8 +900,8 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             pairValueKernel->addArg(function);
         perParticleValueKernel->addArg(cc.getPosq());
         perParticleValueKernel->addArg(valueBuffers);
-        if (globals.isInitialized())
-            perParticleValueKernel->addArg(globals);
+        if (needGlobalParams)
+            perParticleValueKernel->addArg(cc.getGlobalParamValues());
         for (auto& buffer : params->getParameterInfos())
             perParticleValueKernel->addArg(buffer.getArray());
         for (auto& buffer : computedValues->getParameterInfos())
@@ -938,8 +931,8 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         }
         else
             pairEnergyKernel->addArg(numAtomBlocks*(numAtomBlocks+1)/2);
-        if (globals.isInitialized())
-            pairEnergyKernel->addArg(globals);
+        if (needGlobalParams)
+            pairEnergyKernel->addArg(cc.getGlobalParamValues());
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
             if (pairEnergyUsesParam[i]) {
                 ComputeParameterInfo& buffer = params->getParameterInfos()[i];
@@ -960,8 +953,8 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         perParticleEnergyKernel->addArg(cc.getEnergyBuffer());
         perParticleEnergyKernel->addArg(cc.getPosq());
         perParticleEnergyKernel->addArg(cc.getLongForceBuffer());
-        if (globals.isInitialized())
-            perParticleEnergyKernel->addArg(globals);
+        if (needGlobalParams)
+            perParticleEnergyKernel->addArg(cc.getGlobalParamValues());
         for (auto& buffer : params->getParameterInfos())
             perParticleEnergyKernel->addArg(buffer.getArray());
         for (auto& buffer : computedValues->getParameterInfos())
@@ -978,8 +971,8 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         if (needParameterGradient || needEnergyParamDerivs) {
             gradientChainRuleKernel->addArg(cc.getPosq());
             gradientChainRuleKernel->addArg(cc.getLongForceBuffer());
-            if (globals.isInitialized())
-                gradientChainRuleKernel->addArg(globals);
+            if (needGlobalParams)
+                gradientChainRuleKernel->addArg(cc.getGlobalParamValues());
             for (auto& buffer : params->getParameterInfos())
                 gradientChainRuleKernel->addArg(buffer.getArray());
             for (auto& buffer : computedValues->getParameterInfos())
@@ -995,17 +988,6 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             for (auto& function : tabulatedFunctionArrays)
                 gradientChainRuleKernel->addArg(function);
         }
-    }
-    if (globals.isInitialized()) {
-        bool changed = false;
-        for (int i = 0; i < (int) globalParamNames.size(); i++) {
-            float value = (float) context.getParameter(globalParamNames[i]);
-            if (value != globalParamValues[i])
-                changed = true;
-            globalParamValues[i] = value;
-        }
-        if (changed)
-            globals.upload(globalParamValues);
     }
     pairEnergyKernel->setArg(5, (int) includeEnergy);
     if (nb.getUseCutoff()) {

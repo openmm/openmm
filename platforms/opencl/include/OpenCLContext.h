@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -199,8 +199,8 @@ public:
     /**
      * Get the ContextImpl is ComputeContext is associated with.
      */
-    ContextImpl& getContextImpl() {
-        return *platformData.context;
+    ContextImpl* getContextImpl() {
+        return platformData.context;
     }
     /**
      * Get a workspace used for accumulating energy when a simulation is parallelized across
@@ -404,66 +404,6 @@ public:
      * Sum the buffer containing energy.
      */
     double reduceEnergy();
-    /**
-     * Get the current simulation time.
-     */
-    double getTime() {
-        return time;
-    }
-    /**
-     * Set the current simulation time.
-     */
-    void setTime(double t) {
-        time = t;
-    }
-    /**
-     * Get the number of integration steps that have been taken.
-     */
-    long long getStepCount() {
-        return stepCount;
-    }
-    /**
-     * Set the number of integration steps that have been taken.
-     */
-    void setStepCount(long long steps) {
-        stepCount = steps;
-    }
-    /**
-     * Get the number of times forces or energy has been computed.
-     */
-    int getComputeForceCount() {
-        return computeForceCount;
-    }
-    /**
-     * Set the number of times forces or energy has been computed.
-     */
-    void setComputeForceCount(int count) {
-        computeForceCount = count;
-    }
-    /**
-     * Get the number of time steps since the atoms were reordered.
-     */
-    int getStepsSinceReorder() const {
-        return stepsSinceReorder;
-    }
-    /**
-     * Set the number of time steps since the atoms were reordered.
-     */
-    void setStepsSinceReorder(int steps) {
-        stepsSinceReorder = steps;
-    }
-    /**
-     * Get the flag that marks whether the current force evaluation is valid.
-     */
-    bool getForcesValid() const {
-        return forcesValid;
-    }
-    /**
-     * Get the flag that marks whether the current force evaluation is valid.
-     */
-    void setForcesValid(bool valid) {
-        forcesValid = valid;
-    }
     /**
      * Get the number of blocks of TileSize atoms.
      */

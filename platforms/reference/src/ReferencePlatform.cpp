@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,6 +35,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "SimTKOpenMMRealType.h"
 #include "openmm/Vec3.h"
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;
@@ -64,6 +65,7 @@ ReferencePlatform::ReferencePlatform() {
     registerKernelFactory(CalcCustomCPPForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCVForceKernel::Name(), factory);
     registerKernelFactory(CalcATMForceKernel::Name(), factory);
+    registerKernelFactory(CalcRGForceKernel::Name(), factory);
     registerKernelFactory(CalcRMSDForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomManyParticleForceKernel::Name(), factory);
     registerKernelFactory(CalcGayBerneForceKernel::Name(), factory);
@@ -75,6 +77,7 @@ ReferencePlatform::ReferencePlatform() {
     registerKernelFactory(IntegrateVariableVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateCustomStepKernel::Name(), factory);
     registerKernelFactory(IntegrateDPDStepKernel::Name(), factory);
+    registerKernelFactory(IntegrateQTBStepKernel::Name(), factory);
     registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
     registerKernelFactory(ApplyMonteCarloBarostatKernel::Name(), factory);
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
@@ -89,7 +92,10 @@ bool ReferencePlatform::supportsDoublePrecision() const {
 }
 
 void ReferencePlatform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
-    context.setPlatformData(new PlatformData(context.getSystem()));
+    int numThreads = 0;
+    if (properties.find("Threads") != properties.end())
+        stringstream(properties.at("Threads")) >> numThreads;
+    context.setPlatformData(new PlatformData(context.getSystem(), numThreads));
 }
 
 void ReferencePlatform::contextDestroyed(ContextImpl& context) const {
@@ -97,7 +103,8 @@ void ReferencePlatform::contextDestroyed(ContextImpl& context) const {
     delete data;
 }
 
-ReferencePlatform::PlatformData::PlatformData(const System& system) : time(0.0), stepCount(0), numParticles(system.getNumParticles()) {
+ReferencePlatform::PlatformData::PlatformData(const System& system, int numThreads) : time(0.0), stepCount(0),
+        numParticles(system.getNumParticles()), threads(numThreads) {
     positions = new vector<Vec3>(numParticles);
     velocities = new vector<Vec3>(numParticles);
     forces = new vector<Vec3>(numParticles);

@@ -198,3 +198,31 @@ void CustomCompoundBondForce::setUsesPeriodicBoundaryConditions(bool periodic) {
 bool CustomCompoundBondForce::usesPeriodicBoundaryConditions() const {
     return usePeriodic;
 }
+
+int CustomCompoundBondForce::getNumParticlesPerBond() const {
+    return particlesPerBond;
+}
+
+int CustomCompoundBondForce::getNumBonds() const {
+    return bonds.size();
+}
+
+int CustomCompoundBondForce::getNumPerBondParameters() const {
+    return bondParameters.size();
+}
+
+int CustomCompoundBondForce::getNumGlobalParameters() const {
+    return globalParameters.size();
+}
+
+int CustomCompoundBondForce::getNumEnergyParameterDerivatives() const {
+    return energyParameterDerivatives.size();
+}
+
+int CustomCompoundBondForce::getNumTabulatedFunctions() const {
+    return functions.size();
+}
+
+int CustomCompoundBondForce::getNumFunctions() const {
+    return functions.size();
+}

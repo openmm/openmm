@@ -47,7 +47,7 @@ namespace OpenMM {
 class CommonCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     CommonCalcNonbondedForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcNonbondedForceKernel(name, platform),
-            hasInitializedKernel(false), cc(cc), pmeio(NULL) {
+            hasInitializedKernel(false), cc(cc), pmeio(NULL), stepsToSort(0) {
     }
     ~CommonCalcNonbondedForceKernel();
     /**
@@ -132,7 +132,6 @@ private:
     ComputeArray exceptionParamOffsets;
     ComputeArray particleOffsetIndices;
     ComputeArray exceptionOffsetIndices;
-    ComputeArray globalParams;
     ComputeArray cosSinSums;
     ComputeArray pmeGrid1;
     ComputeArray pmeGrid2;
@@ -163,11 +162,13 @@ private:
     std::map<std::string, std::string> pmeDefines;
     std::vector<std::pair<int, int> > exceptionAtoms;
     std::vector<std::string> paramNames;
-    std::vector<double> paramValues;
+    std::map<std::string, int> paramIndices;
+    std::map<std::string, double> paramValues;
     std::map<int, int> exceptionIndex;
     double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha, totalCharge;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
+    int stepsToSort;
     bool usePmeQueue, deviceIsCpu, useFixedPointChargeSpreading, useCpuPme;
     bool hasCoulomb, hasLJ, doLJPME, usePosqCharges, recomputeParams, hasOffsets;
     NonbondedMethod nonbondedMethod;

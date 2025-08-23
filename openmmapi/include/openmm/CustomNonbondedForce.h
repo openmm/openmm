@@ -67,20 +67,25 @@ namespace OpenMM {
  * As an example, the following code creates a CustomNonbondedForce that implements a 12-6 Lennard-Jones potential:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomNonbondedForce* force = new CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); epsilon=sqrt(epsilon1*epsilon2)");
- *
+ * <c++>
+ * CustomNonbondedForce* force = new CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); epsilon=sqrt(epsilon1*epsilon2)");
+ * </c++>
+ * <python>
+ * force = CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); epsilon=sqrt(epsilon1*epsilon2)")
+ * </python>
  * \endverbatim
  *
  * This force depends on two parameters: sigma and epsilon.  The following code defines these as per-particle parameters:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    force->addPerParticleParameter("sigma");
- *    force->addPerParticleParameter("epsilon");
- *
+ * <c++>
+ * force->addPerParticleParameter("sigma");
+ * force->addPerParticleParameter("epsilon");
+ * </c++>
+ * <python>
+ * force.addPerParticleParameter("sigma")
+ * force.addPerParticleParameter("epsilon")
+ * </python>
  * \endverbatim
  *
  * The expression <i>must</i> be symmetric with respect to the two particles.  It typically will only be evaluated once
@@ -94,15 +99,22 @@ namespace OpenMM {
  * code uses a global parameter (lambda) to interpolate between two different sigma values for each particle (sigmaA and sigmaB).
  * 
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomNonbondedForce* force = new CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); epsilon=sqrt(epsilon1*epsilon2)");
- *    force->addComputedValue("sigma", "(1-lambda)*sigmaA + lambda*sigmaB");
- *    force->addGlobalParameter("lambda", 0);
- *    force->addPerParticleParameter("sigmaA");
- *    force->addPerParticleParameter("sigmaB");
- *    force->addPerParticleParameter("epsilon");
- *
+ * <c++>
+ * CustomNonbondedForce* force = new CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); epsilon=sqrt(epsilon1*epsilon2)");
+ * force->addComputedValue("sigma", "(1-lambda)*sigmaA + lambda*sigmaB");
+ * force->addGlobalParameter("lambda", 0);
+ * force->addPerParticleParameter("sigmaA");
+ * force->addPerParticleParameter("sigmaB");
+ * force->addPerParticleParameter("epsilon");
+ * </c++>
+ * <python>
+ * force = CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); epsilon=sqrt(epsilon1*epsilon2)")
+ * force.addComputedValue("sigma", "(1-lambda)*sigmaA + lambda*sigmaB")
+ * force.addGlobalParameter("lambda", 0)
+ * force.addPerParticleParameter("sigmaA")
+ * force.addPerParticleParameter("sigmaB")
+ * force.addPerParticleParameter("epsilon")
+ * </python>
  * \endverbatim
  *
  * You could, of course, embed the computation of sigma directly into the energy expression, but then it would need to be
@@ -195,60 +207,42 @@ public:
     /**
      * Get the number of particles for which force field parameters have been defined.
      */
-    int getNumParticles() const {
-        return particles.size();
-    }
+    int getNumParticles() const;
     /**
      * Get the number of particle pairs whose interactions should be excluded.
      */
-    int getNumExclusions() const {
-        return exclusions.size();
-    }
+    int getNumExclusions() const;
     /**
      * Get the number of per-particle parameters that the interaction depends on.
      */
-    int getNumPerParticleParameters() const {
-        return parameters.size();
-    }
+    int getNumPerParticleParameters() const;
     /**
      * Get the number of global parameters that the interaction depends on.
      */
-    int getNumGlobalParameters() const {
-        return globalParameters.size();
-    }
+    int getNumGlobalParameters() const;
     /**
      * Get the number of tabulated functions that have been defined.
      */
-    int getNumTabulatedFunctions() const {
-        return functions.size();
-    }
+    int getNumTabulatedFunctions() const;
     /**
      * Get the number of tabulated functions that have been defined.
      *
      * @deprecated This method exists only for backward compatibility.  Use getNumTabulatedFunctions() instead.
      */
-    int getNumFunctions() const {
-        return functions.size();
-    }
+    int getNumFunctions() const;
     /**
      * Get the number of per-particle computed values the interaction depends on.
      */
-    int getNumComputedValues() const {
-        return computedValues.size();
-    }
+    int getNumComputedValues() const;
     /**
      * Get the number of interaction groups that have been defined.
      */
-    int getNumInteractionGroups() const {
-        return interactionGroups.size();
-    }
+    int getNumInteractionGroups() const;
     /**
      * Get the number of global parameters with respect to which the derivative of the energy
      * should be computed.
      */
-    int getNumEnergyParameterDerivatives() const {
-        return energyParameterDerivatives.size();
-    }
+    int getNumEnergyParameterDerivatives() const;
     /**
      * Get the algebraic expression that gives the interaction energy between two particles
      */

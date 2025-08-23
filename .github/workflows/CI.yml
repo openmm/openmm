@@ -538,7 +538,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         name: "Prepare base dependencies"
         with:
-          python-version: "3.7"
+          python-version: "3.13"
           activate-environment: build
           environment-file: devtools/ci/gh-actions/conda-envs/docs.yml
           auto-activate-base: false
@@ -626,7 +626,7 @@ jobs:
           AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: 'us-west-1'
+          AWS_REGION: 'us-east-1'
           SOURCE_DIR: 'build/api-docs'
           DEST_DIR: 'development'
 
@@ -634,19 +634,19 @@ jobs:
         shell: bash -l {0}
         env:
           # Pipe-seperated list of domains to skip
-          SKIP_DOMAIN: support.amd.com|www.pnas.org|doi.org|commonfund.nih.gov
+          SKIP_DOMAIN: support.amd.com|www.pnas.org|doi.org|commonfund.nih.gov|openmm.org/development
         run: |
           set +e
           # Linkinator accepts regex for its --skip argument, so we
           # should pre-process the domains into the relevant pattern
           SKIP_REGEX=$(python -c "print(
-            '^(https?://)?([a-zA-Z0-9\-_.]+\.)?', # Optionally match protocol and subdomains
-            '(',                                  # Open sub-pattern for domain names
-              '$SKIP_DOMAIN'.replace('.', '\.'),     # Escape out periods
-            ')',                                  # Close sub-pattern of domains
-            '(/.*)?$',                            # only match if this is the end of the domain name
-            sep='',                               # Concatenate the above strings exactly
-            end=''                                # No newline at end of print()
+            r'^(https?://)?([a-zA-Z0-9\-_.]+\.)?', # Optionally match protocol and subdomains
+            '(',                                   # Open sub-pattern for domain names
+              '$SKIP_DOMAIN'.replace('.', r'\.'),  # Escape out periods
+            ')',                                   # Close sub-pattern of domains
+            '(/.*)?$',                             # only match if this is the end of the domain name
+            sep='',                                # Concatenate the above strings exactly
+            end=''                                 # No newline at end of print()
           )")
           for d in api-c++ api-python developerguide userguide; do
             echo "::group:: Check ${d}"
