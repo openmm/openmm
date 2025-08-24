@@ -47,19 +47,19 @@ namespace OpenMM {
 /**
  * Identify normal particles (not part of a pair) and Drude particle pairs.
  */
-  void findParticlesAndPairs(const System &system, vector<int>& normalParticles, vector<pair<int, int> >& pairParticles, DrudeForce *drudeForce) {
+void findParticlesAndPairs(const System &system, vector<int>& normalParticles, vector<pair<int, int> >& pairParticles, DrudeForce *drudeForce) {
     // Find the underlying Drude force object
     const DrudeForce* force = drudeForce;
     if (!force) {
-	for (int i = 0; i < system.getNumForces(); i++)
-	  if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
-	      if (force == NULL)
-		  force = dynamic_cast<const DrudeForce*>(&system.getForce(i));
-	      else
-		  throw OpenMMException("The System contains multiple DrudeForces");
-	  }
-	if (force == NULL)
-	    throw OpenMMException("The System does not contain a DrudeForce");
+        for (int i = 0; i < system.getNumForces(); i++)
+            if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
+                if (force == NULL)
+                    force = dynamic_cast<const DrudeForce*>(&system.getForce(i));
+                else
+                    throw OpenMMException("The System contains multiple DrudeForces");
+            }
+        if (force == NULL)
+            throw OpenMMException("The System does not contain a DrudeForce");
     }
     // Figure out which particles are individual and which are Drude pairs
     set<int> particles;
@@ -76,7 +76,7 @@ namespace OpenMM {
     normalParticles.insert(normalParticles.begin(), particles.begin(), particles.end());
 }
 
-  vector<Vec3> assignDrudeVelocities(const System &system, double temperature, double drudeTemperature, int randomSeed, DrudeForce *drudeForce) {
+vector<Vec3> assignDrudeVelocities(const System &system, double temperature, double drudeTemperature, int randomSeed, DrudeForce *drudeForce) {
     vector<int> normalParticles;
     vector<pair<int, int> > pairParticles;
     findParticlesAndPairs(system, normalParticles, pairParticles, drudeForce);
@@ -136,15 +136,15 @@ namespace OpenMM {
 /**
  * Computes the instantaneous temperatures of the system and the internal Drude motion and returns a pair (T_system, T_drude)
  */
-  pair<double, double> computeTemperaturesFromVelocities(const System& system, const vector<Vec3>& velocities, DrudeForce *drudeForce) {
+pair<double, double> computeTemperaturesFromVelocities(const System& system, const vector<Vec3>& velocities, DrudeForce *drudeForce) {
     vector<int> normalParticles;
     vector<pair<int, int> > pairParticles;
     findParticlesAndPairs(system, normalParticles, pairParticles, drudeForce);
     double energy = 0.0, drudeEnergy = 0;
     int dof = 0, drudeDof = 0;
-    
+
     // Kinetic energy and degrees of freedom from normal particles.
-    
+
     for (int i : normalParticles) {
         double mass = system.getParticleMass(i);
         if (mass > 0) {
@@ -152,25 +152,25 @@ namespace OpenMM {
             dof += 3;
         }
     }
-    
+
     // Kinetic energy and degrees of freedom from Drude particle pairs.
-    
+
     for (auto pair : pairParticles) {
         int p1 = pair.first;
         int p2 = pair.second;
         double mass1 = system.getParticleMass(p1);
         double mass2 = system.getParticleMass(p2);
-	double reducedMass = (mass1*mass2)/(mass1+mass2);
+        double reducedMass = (mass1*mass2)/(mass1+mass2);
         if (mass1 != 0 || mass2 != 0) {
             Vec3 momentum = mass1*velocities[p1] + mass2*velocities[p2];
             energy += momentum.dot(momentum)/(mass1+mass2);
-	    Vec3 drudeVelocity = velocities[p1] - velocities[p2];
+            Vec3 drudeVelocity = velocities[p1] - velocities[p2];
             drudeEnergy += reducedMass*drudeVelocity.dot(drudeVelocity);
-	    dof += 3;
-	    drudeDof += 3;
+            dof += 3;
+            drudeDof += 3;
         }
     }
-    
+
     // Reduce degrees of freedom for constraints.
 
     for (int i = 0; i < system.getNumConstraints(); i++) {

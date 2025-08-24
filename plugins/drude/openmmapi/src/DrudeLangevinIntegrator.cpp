@@ -62,7 +62,7 @@ DrudeLangevinIntegrator::DrudeLangevinIntegrator(double temperature, double fric
 
 DrudeLangevinIntegrator::~DrudeLangevinIntegrator() {
     if (drudeForce) {
-	delete drudeForce;
+        delete drudeForce;
     }
 }
 
@@ -73,18 +73,18 @@ void DrudeLangevinIntegrator::initialize(ContextImpl& contextRef) {
     const System& system = contextRef.getSystem();
 
     if (isDrudeForceSet()) {
-	force = &getDrudeForce();
+        force = &getDrudeForce();
     }
     else {
-	for (int i = 0; i < system.getNumForces(); i++)
-	  if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
-	      if (force == NULL)
-		  force = dynamic_cast<const DrudeForce*>(&system.getForce(i));
-	      else
-		  throw OpenMMException("The System contains multiple DrudeForces");
-	  }
-	if (force == NULL)
-	    throw OpenMMException("The System does not contain a DrudeForce");
+        for (int i = 0; i < system.getNumForces(); i++)
+            if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
+                if (force == NULL)
+                  force = dynamic_cast<const DrudeForce*>(&system.getForce(i));
+                else
+                    throw OpenMMException("The System contains multiple DrudeForces");
+            }
+        if (force == NULL)
+            throw OpenMMException("The System does not contain a DrudeForce");
     }
     context = &contextRef;
     owner = &contextRef.getOwner();
