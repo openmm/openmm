@@ -68,7 +68,7 @@ DrudeNoseHooverIntegrator::DrudeNoseHooverIntegrator(double temperature, double 
 
 DrudeNoseHooverIntegrator::~DrudeNoseHooverIntegrator() {
     if (drudeForce != nullptr) {
-	delete drudeForce;
+        delete drudeForce;
     }
 }
 

@@ -54,7 +54,7 @@ DrudeSCFIntegrator::DrudeSCFIntegrator(double stepSize) : DrudeIntegrator(stepSi
 
 DrudeSCFIntegrator::~DrudeSCFIntegrator() {
     if (drudeForce) {
-	delete drudeForce;
+        delete drudeForce;
     }
 }
 
@@ -65,18 +65,18 @@ void DrudeSCFIntegrator::initialize(ContextImpl& contextRef) {
     const DrudeForce* force = NULL;
     const System& system = contextRef.getSystem();
     if (isDrudeForceSet()) {
-	force = &getDrudeForce();
+        force = &getDrudeForce();
     }
     else {
-	for (int i = 0; i < system.getNumForces(); i++)
-	    if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
-		if (force == NULL)
-		    force = dynamic_cast<const DrudeForce*>(&system.getForce(i));
-		else
-		    throw OpenMMException("The System contains multiple DrudeForces");
-	    }
-	if (force == NULL)
-	    throw OpenMMException("The System does not contain a DrudeForce");
+        for (int i = 0; i < system.getNumForces(); i++)
+            if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
+                if (force == NULL)
+                    force = dynamic_cast<const DrudeForce*>(&system.getForce(i));
+                else
+                    throw OpenMMException("The System contains multiple DrudeForces");
+            }
+        if (force == NULL)
+            throw OpenMMException("The System does not contain a DrudeForce");
     }
     if (getMaxDrudeDistance() != 0.0)
         throw OpenMMException("DrudeSCFIntegrator does not currently support setting max Drude distance");
@@ -108,7 +108,7 @@ double DrudeSCFIntegrator::computeKineticEnergy() {
 
 void DrudeSCFIntegrator::step(int steps) {
     if (context == NULL)
-        throw OpenMMException("This Integrator is not bound to a context!");    
+        throw OpenMMException("This Integrator is not bound to a context!");
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         context->calcForcesAndEnergy(true, false);
