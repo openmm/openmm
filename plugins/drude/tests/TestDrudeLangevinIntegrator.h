@@ -38,6 +38,7 @@
 #include "openmm/DrudeForce.h"
 #include "openmm/DrudeLangevinIntegrator.h"
 #include "SimTKOpenMMUtilities.h"
+#include "openmm/serialization/XmlSerializer.h"
 #include <iostream>
 #include <vector>
 
@@ -66,6 +67,7 @@ void testSinglePair() {
     positions[1] = Vec3(0, 0, 0);
     DrudeLangevinIntegrator integ(temperature, 20.0, temperatureDrude, 20.0, 0.003);
     integ.setMaxDrudeDistance(maxDistance);
+    integ.setDrudeForce(XmlSerializer::clone<DrudeForce>(*drude));
     Context context(system, integ, platform);
     context.setPositions(positions);
 

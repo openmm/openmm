@@ -34,6 +34,7 @@
 
 #include "openmm/DrudeIntegrator.h"
 #include "openmm/Kernel.h"
+#include "openmm/DrudeForce.h"
 #include "openmm/internal/windowsExportDrude.h"
 
 namespace OpenMM {
@@ -44,7 +45,7 @@ namespace OpenMM {
  * adjusted to minimize the potential energy.
  * 
  * This Integrator requires the System to include a DrudeForce, which it uses to identify the Drude
- * particles.
+ * particles, or that a DrudeForce is provided by calling setDrudeForce.
  */
 
 class OPENMM_EXPORT_DRUDE DrudeSCFIntegrator : public DrudeIntegrator {
@@ -55,6 +56,7 @@ public:
      * @param stepSize       the step size with which to integrator the system (in picoseconds)
      */
     DrudeSCFIntegrator(double stepSize);
+    ~DrudeSCFIntegrator();
     /**
      * Get the error tolerance to use when minimizing the potential energy.  This roughly corresponds
      * to the maximum allowed force magnitude on the Drude particles after minimization.
@@ -77,6 +79,7 @@ public:
      * @param steps   the number of time steps to take
      */
     void step(int steps) override;
+
 protected:
     /**
      * This will be called by the Context when it is created.  It informs the Integrator

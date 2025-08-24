@@ -45,7 +45,7 @@ using std::vector;
 using std::pair;
 
 namespace OpenMM {
-	pair<double, double> computeTemperaturesFromVelocities(const System& system, const vector<Vec3>& velocities);
+  pair<double, double> computeTemperaturesFromVelocities(const System& system, const vector<Vec3>& velocities, DrudeForce *drudeForce);
 }
 
 DrudeLangevinIntegrator::DrudeLangevinIntegrator(double temperature, double frictionCoeff, double drudeTemperature, double drudeFrictionCoeff, double stepSize) : DrudeIntegrator(stepSize) {
@@ -57,6 +57,13 @@ DrudeLangevinIntegrator::DrudeLangevinIntegrator(double temperature, double fric
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
     setRandomNumberSeed(0);
+    drudeForce = nullptr;
+}
+
+DrudeLangevinIntegrator::~DrudeLangevinIntegrator() {
+    if (drudeForce) {
+        delete drudeForce;
+    }
 }
 
 void DrudeLangevinIntegrator::initialize(ContextImpl& contextRef) {
@@ -64,15 +71,21 @@ void DrudeLangevinIntegrator::initialize(ContextImpl& contextRef) {
         throw OpenMMException("This Integrator is already bound to a context");
     const DrudeForce* force = NULL;
     const System& system = contextRef.getSystem();
-    for (int i = 0; i < system.getNumForces(); i++)
-        if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
-            if (force == NULL)
-                force = dynamic_cast<const DrudeForce*>(&system.getForce(i));
-            else
-                throw OpenMMException("The System contains multiple DrudeForces");
-        }
-    if (force == NULL)
-        throw OpenMMException("The System does not contain a DrudeForce");
+
+    if (isDrudeForceSet()) {
+        force = &getDrudeForce();
+    }
+    else {
+        for (int i = 0; i < system.getNumForces(); i++)
+            if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
+                if (force == NULL)
+                  force = dynamic_cast<const DrudeForce*>(&system.getForce(i));
+                else
+                    throw OpenMMException("The System contains multiple DrudeForces");
+            }
+        if (force == NULL)
+            throw OpenMMException("The System does not contain a DrudeForce");
+    }
     context = &contextRef;
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateDrudeLangevinStepKernel::Name(), contextRef);
@@ -127,7 +140,7 @@ double DrudeLangevinIntegrator::computeSystemTemperature() {
     context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
     vector<Vec3> velocities;
     context->computeShiftedVelocities(getVelocityTimeOffset(), velocities);
-    return computeTemperaturesFromVelocities(context->getSystem(), velocities).first;
+    return computeTemperaturesFromVelocities(context->getSystem(), velocities, drudeForce).first;
 }
 
 double DrudeLangevinIntegrator::computeDrudeTemperature() {
@@ -136,6 +149,5 @@ double DrudeLangevinIntegrator::computeDrudeTemperature() {
     context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
     vector<Vec3> velocities;
     context->computeShiftedVelocities(getVelocityTimeOffset(), velocities);
-    return computeTemperaturesFromVelocities(context->getSystem(), velocities).second;
+    return computeTemperaturesFromVelocities(context->getSystem(), velocities, drudeForce).second;
 } 
-
