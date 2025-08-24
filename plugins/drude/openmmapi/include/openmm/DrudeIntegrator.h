@@ -104,10 +104,12 @@ public:
         return randomNumberSeed;
     }
 
-    
     /**
      * Set the DrudeForce object used to identify the Drude particles.
      *
+     * Normally, the DrudeForce stored in the System is used to identify the Drude particles. 
+     * This method is used in special cases when the DrudeForce is not part of the System's Forces.
+     * The DrudeForce provided here supersedes the one in the System, if present.
      * The DrudeForce should have been created on the heap with the
      * "new" operator. The DrudeIntegrator takes over ownership of it, 
      * and deletes the Force when the DrudeIntegrator itself is deleted.
@@ -117,19 +119,21 @@ public:
     void setDrudeForce(DrudeForce* force);
 
     /**
-     * Queries whether a DrudeForce has been set
+     * Queries whether a DrudeForce has been set with setDrudeForce()
      *
      * @return   True if a DrudeForce is set, False otherwise
      */
     bool isDrudeForceSet() const;
-    
+
     /**
-     * Get the stored DrudeForce object if one was set.
+     * Get the stored DrudeForce object if one was set with setDrudeForce().
+     * An error occurs if a DrudeForce was not set. Query isDrudeForceSet() prior
+     * to calling this method.
      *
      * @return   a reference to the DrudeForce
      */
     const DrudeForce& getDrudeForce() const;
-    
+
  protected:
     /**
      * This will be called by the Context when it is created.  It informs the Integrator

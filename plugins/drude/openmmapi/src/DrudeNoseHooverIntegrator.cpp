@@ -97,18 +97,18 @@ void DrudeNoseHooverIntegrator::initialize(ContextImpl& contextRef) {
     const System& system = context->getSystem();
     const DrudeForce* drudeForce = NULL;
     if (isDrudeForceSet()) {
-	drudeForce = &getDrudeForce();
+        drudeForce = &getDrudeForce();
     }
     else {
-	for (int i = 0; i < system.getNumForces(); i++)
-	  if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
-	      if (drudeForce == NULL)
-		  drudeForce = dynamic_cast<const DrudeForce*>(&system.getForce(i));
-	      else
-		  throw OpenMMException("The System contains multiple DrudeForces");
-	  }
-	if (drudeForce == NULL)
-	    throw OpenMMException("The System does not contain a DrudeForce");
+        for (int i = 0; i < system.getNumForces(); i++)
+            if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
+                if (drudeForce == NULL)
+                    drudeForce = dynamic_cast<const DrudeForce*>(&system.getForce(i));
+                else
+                    throw OpenMMException("The System contains multiple DrudeForces");
+            }
+        if (drudeForce == NULL)
+            throw OpenMMException("The System does not contain a DrudeForce");
     }
     if (drudeForce == NULL)
         throw OpenMMException("The System does not contain a DrudeForce");
@@ -188,21 +188,21 @@ std::vector<Vec3> DrudeNoseHooverIntegrator::getVelocitiesForTemperature(const S
 
 void DrudeNoseHooverIntegrator::setDrudeForce(DrudeForce* force) {
     if (drudeForce) {
-      delete drudeForce;
+        delete drudeForce;
     }
     drudeForce = force;
 }
 
 bool DrudeNoseHooverIntegrator::isDrudeForceSet() const {
     if (!drudeForce) {
-	return false;
+        return false;
     }
     return true;
 }
 
 const DrudeForce& DrudeNoseHooverIntegrator::getDrudeForce() const {
     if (!drudeForce) {
-	throw OpenMMException("getDrudeForce: a DrudeForce has not been set.");
+        throw OpenMMException("getDrudeForce: a DrudeForce has not been set.");
     }
     return *drudeForce;
 }

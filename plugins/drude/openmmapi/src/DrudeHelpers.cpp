@@ -68,7 +68,7 @@ namespace OpenMM {
     for (int i = 0; i < force->getNumParticles(); i++) {
         int p, p1, p2, p3, p4;
         double charge, polarizability, aniso12, aniso34;
-        drudeForce->getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
+        force->getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
         particles.erase(p);
         particles.erase(p1);
         pairParticles.emplace_back(p, p1);

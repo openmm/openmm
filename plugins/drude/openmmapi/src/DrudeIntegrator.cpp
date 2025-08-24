@@ -63,24 +63,23 @@ void DrudeIntegrator::setMaxDrudeDistance(double distance) {
     maxDrudeDistance = distance;
 }
 
-  
 void DrudeIntegrator::setDrudeForce(DrudeForce* force) {
     if (drudeForce) {
-	delete drudeForce;
+        delete drudeForce;
     }
     drudeForce = force;
 }
 
 bool DrudeIntegrator::isDrudeForceSet() const {
     if (!drudeForce) {
-	return false;
+        return false;
     }
     return true;
 }
 
 const DrudeForce& DrudeIntegrator::getDrudeForce() const {
     if (!drudeForce) {
-	throw OpenMMException("getDrudeForce: a DrudeForce has not been set.");
+        throw OpenMMException("getDrudeForce: a DrudeForce has not been set.");
     }
     return *drudeForce;
 }

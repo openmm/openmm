@@ -43,6 +43,7 @@
 #include "openmm/DrudeForce.h"
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
+#include "openmm/serialization/XmlSerializer.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -265,6 +266,7 @@ void testInitialTemperature() {
     system.addForce(cmm);
 
     DrudeNoseHooverIntegrator integrator(targetTemperature, 25, drudeTemperature, 25, 0.001);
+    integrator.setDrudeForce(XmlSerializer::clone<DrudeForce>(*drude));
     Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(targetTemperature);
