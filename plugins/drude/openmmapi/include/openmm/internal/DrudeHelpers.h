@@ -1,3 +1,6 @@
+#ifndef OPENMM_DRUDEHELPERS_H_
+#define OPENMM_DRUDEHELPERS_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -29,67 +32,29 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/DrudeSCFIntegrator.h"
-#include "openmm/DrudeKernels.h"
-#include "openmm/Context.h"
-#include "openmm/OpenMMException.h"
+#include "openmm/DrudeForce.h"
+#include "openmm/System.h"
 #include "openmm/internal/ContextImpl.h"
-#include "openmm/internal/DrudeHelpers.h"
-#include <cmath>
-#include <ctime>
-#include <string>
 
-using namespace OpenMM;
-using std::string;
-using std::vector;
+namespace OpenMM {
 
-DrudeSCFIntegrator::DrudeSCFIntegrator(double stepSize) : DrudeIntegrator(stepSize)
-{
-    setDrudeTemperature(0.0);  // This is only used to initialize velocities for this integrator
-    setStepSize(stepSize);
-    setMinimizationErrorTolerance(1.0);
-    setConstraintTolerance(1e-5);
-    setMaxDrudeDistance(0.0);
+/**
+ * Find the DrudeForce contained in the System.
+ */
+const DrudeForce* getDrudeForce(const ContextImpl& context);
+
+/**
+ * Identify normal particles (not part of a pair) and Drude particle pairs.
+ */
+void findParticlesAndPairs(const ContextImpl& context, std::vector<int>& normalParticles, std::vector<std::pair<int, int> >& pairParticles);
+
+std::vector<Vec3> assignDrudeVelocities(const ContextImpl& context, double temperature, double drudeTemperature, int randomSeed);
+
+/**
+ * Computes the instantaneous temperatures of the system and the internal Drude motion and returns a pair (T_system, T_drude)
+ */
+std::pair<double, double> computeTemperaturesFromVelocities(const ContextImpl& context, const std::vector<Vec3>& velocities);
+
 }
 
-void DrudeSCFIntegrator::initialize(ContextImpl& contextRef) {
-    if (owner != NULL && &contextRef.getOwner() != owner)
-        throw OpenMMException("This Integrator is already bound to a context");
-    const DrudeForce* force = getDrudeForce(contextRef);
-    if (getMaxDrudeDistance() != 0.0)
-        throw OpenMMException("DrudeSCFIntegrator does not currently support setting max Drude distance");
-    context = &contextRef;
-    owner = &contextRef.getOwner();
-    kernel = context->getPlatform().createKernel(IntegrateDrudeSCFStepKernel::Name(), contextRef);
-    kernel.getAs<IntegrateDrudeSCFStepKernel>().initialize(contextRef.getSystem(), *this, *force);
-}
-
-void DrudeSCFIntegrator::setMinimizationErrorTolerance(double tol) {
-    if (tol <= 0)
-        throw OpenMMException("Minimization error tolerance must be positive");
-    tolerance = tol;
-}
-
-void DrudeSCFIntegrator::cleanup() {
-    kernel = Kernel();
-}
-
-vector<string> DrudeSCFIntegrator::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(IntegrateDrudeSCFStepKernel::Name());
-    return names;
-}
-
-double DrudeSCFIntegrator::computeKineticEnergy() {
-    return kernel.getAs<IntegrateDrudeSCFStepKernel>().computeKineticEnergy(*context, *this);
-}
-
-void DrudeSCFIntegrator::step(int steps) {
-    if (context == NULL)
-        throw OpenMMException("This Integrator is not bound to a context!");    
-    for (int i = 0; i < steps; ++i) {
-        context->updateContextState();
-        context->calcForcesAndEnergy(true, false);
-        kernel.getAs<IntegrateDrudeSCFStepKernel>().execute(*context, *this);
-    }
-}
+#endif /*OPENMM_DRUDEHELPERS_H_*/
