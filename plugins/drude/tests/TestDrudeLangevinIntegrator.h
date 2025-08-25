@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -31,6 +31,7 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
+#include "openmm/CustomCVForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
@@ -44,7 +45,7 @@
 using namespace OpenMM;
 using namespace std;
 
-void testSinglePair() {
+void testSinglePair(bool contained) {
     const double temperature = 300.0;
     const double temperatureDrude = 10.0;
     const double k = ONE_4PI_EPS0*1.5;
@@ -60,7 +61,13 @@ void testSinglePair() {
     system.addParticle(mass2);
     DrudeForce* drude = new DrudeForce();
     drude->addParticle(1, 0, -1, -1, -1, charge, alpha, 1, 1);
-    system.addForce(drude);
+    if (contained) {
+        CustomCVForce* cv = new CustomCVForce("x");
+        cv->addCollectiveVariable("x", drude);
+        system.addForce(cv);
+    }
+    else
+        system.addForce(drude);
     vector<Vec3> positions(2);
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(0, 0, 0);
@@ -297,10 +304,11 @@ void runPlatformTests();
 int main(int argc, char* argv[]) {
     try {
         setupKernels(argc, argv);
-        testInitialTemperature();
-        testSinglePair();
+        testSinglePair(false);
+        testSinglePair(true);
         testWater();
         testForceEnergyConsistency();
+        testInitialTemperature();
         runPlatformTests();
     }
     catch(const std::exception& e) {

@@ -9,7 +9,7 @@
  * https://github.com/Gallicchio-Lab/openmm-atmmetaforce-plugin               *
  * with support from the National Science Foundation CAREER 1750511           *
  *                                                                            *
- * Portions copyright (c) 2021-2024 by the Authors                            *
+ * Portions copyright (c) 2021-2025 by the Authors                            *
  * Authors: Emilio Gallicchio                                                 *
  * Contributors: Peter Eastman                                                *
  *                                                                            *
@@ -202,4 +202,11 @@ void ATMForceImpl::getPerturbationEnergy(ContextImpl& context, double& u1, doubl
     u0 = state0Energy;
     u1 = state1Energy;
     energy = combinedEnergy;
+}
+
+vector<const Force*> ATMForceImpl::getContainedForces() const {
+    vector<const Force*> forces;
+    for (int i = 0; i < owner.getNumForces(); i++)
+        forces.push_back(&owner.getForce(i));
+    return forces;
 }

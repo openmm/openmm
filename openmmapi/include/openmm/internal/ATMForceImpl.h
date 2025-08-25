@@ -36,7 +36,7 @@ public:
     std::vector<std::pair<int, int> > getBondedParticles() const;
     void updateParametersInContext(ContextImpl& context);
     void getPerturbationEnergy(ContextImpl& context, double& u1, double& u0, double& energy);
-
+    std::vector<const Force*> getContainedForces() const;
 private:
     const ATMForce& owner;
     Kernel kernel;

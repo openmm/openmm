@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,14 +29,14 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/internal/DrudeHelpers.h"
 #include "sfmt/SFMT.h"
 #include "SimTKOpenMMRealType.h"
 #include "openmm/CMMotionRemover.h"
-#include "openmm/DrudeForce.h"
 #include "openmm/DrudeLangevinIntegrator.h"
 #include "openmm/Context.h"
-#include "openmm/System.h"
 #include "openmm/OpenMMException.h"
+#include "openmm/internal/ForceImpl.h"
 
 #include <set>
 
@@ -45,20 +45,42 @@ using namespace std;
 namespace OpenMM {
 
 /**
- * Identify normal particles (not part of a pair) and Drude particle pairs.
+ * Find the DrudeForce contained in the System.
  */
-void findParticlesAndPairs(const System &system, vector<int>& normalParticles, vector<pair<int, int> >& pairParticles) {
-    // Find the underlying Drude force object
-    const DrudeForce* drudeForce = NULL;
+const DrudeForce* getDrudeForce(const ContextImpl& context) {
+    const DrudeForce* force = NULL;
+    const System& system = context.getSystem();
     for (int i = 0; i < system.getNumForces(); i++)
         if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
-            if (drudeForce == NULL)
-                drudeForce = dynamic_cast<const DrudeForce*>(&system.getForce(i));
+            if (force == NULL)
+                force = dynamic_cast<const DrudeForce*>(&system.getForce(i));
             else
                 throw OpenMMException("The System contains multiple DrudeForces");
         }
-    if (drudeForce == NULL)
-        throw OpenMMException("The System does not contain a DrudeForce");
+    if (force != NULL)
+        return force;
+
+    // The System doesn't directly contain a DrudeForce.  Look for one inside another force.
+
+    for (const ForceImpl* impl : context.getForceImpls())
+        for (const Force* f : impl->getContainedForces())
+            if (dynamic_cast<const DrudeForce*>(f) != NULL) {
+                if (force == NULL)
+                    force = dynamic_cast<const DrudeForce*>(f);
+                else
+                    throw OpenMMException("The System contains multiple DrudeForces");
+            }
+    if (force != NULL)
+        return force;
+    throw OpenMMException("The System does not contain a DrudeForce");
+}
+
+/**
+ * Identify normal particles (not part of a pair) and Drude particle pairs.
+ */
+void findParticlesAndPairs(const ContextImpl& context, vector<int>& normalParticles, vector<pair<int, int> >& pairParticles) {
+    const System& system = context.getSystem();
+    const DrudeForce* drudeForce = getDrudeForce(context);
 
     // Figure out which particles are individual and which are Drude pairs
     set<int> particles;
@@ -75,10 +97,11 @@ void findParticlesAndPairs(const System &system, vector<int>& normalParticles, v
     normalParticles.insert(normalParticles.begin(), particles.begin(), particles.end());
 }
 
-vector<Vec3> assignDrudeVelocities(const System &system, double temperature, double drudeTemperature, int randomSeed) {
+vector<Vec3> assignDrudeVelocities(const ContextImpl& context, double temperature, double drudeTemperature, int randomSeed) {
+    const System& system = context.getSystem();
     vector<int> normalParticles;
     vector<pair<int, int> > pairParticles;
-    findParticlesAndPairs(system, normalParticles, pairParticles);
+    findParticlesAndPairs(context, normalParticles, pairParticles);
 
     // Generate the list of Gaussian random numbers.
     OpenMM_SFMT::SFMT sfmt;
@@ -135,10 +158,11 @@ vector<Vec3> assignDrudeVelocities(const System &system, double temperature, dou
 /**
  * Computes the instantaneous temperatures of the system and the internal Drude motion and returns a pair (T_system, T_drude)
  */
-pair<double, double> computeTemperaturesFromVelocities(const System& system, const vector<Vec3>& velocities) {
+pair<double, double> computeTemperaturesFromVelocities(const ContextImpl& context, const vector<Vec3>& velocities) {
+    const System& system = context.getSystem();
     vector<int> normalParticles;
     vector<pair<int, int> > pairParticles;
-    findParticlesAndPairs(system, normalParticles, pairParticles);
+    findParticlesAndPairs(context, normalParticles, pairParticles);
     double energy = 0.0, drudeEnergy = 0;
     int dof = 0, drudeDof = 0;
     
