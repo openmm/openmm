@@ -410,6 +410,10 @@ CommonConstantPotentialCGSolver::CommonConstantPotentialCGSolver(ComputeContext&
         precondVector.initialize(cc, numElectrodeParticles, sizeof(double), "precondVector");
     }
 
+    convergedDownloadStartEvent = cc.createEvent();
+    convergedDownloadFinishEvent = cc.createEvent();
+    convergedDownloadQueue = cc.createQueue();
+
     cc.clearBuffer(qLast);
 }
 
@@ -443,6 +447,7 @@ void CommonConstantPotentialCGSolver::compileKernels(CommonCalcConstantPotential
     solveInitializeStep2Kernel->addArg(convergedResult);
 
     solveInitializeStep3Kernel = program->createKernel("solveInitializeStep3");
+    solveInitializeStep3Kernel->addArg(kernel.electrodeCharges);
     solveInitializeStep3Kernel->addArg(kernel.chargeDerivatives);
     solveInitializeStep3Kernel->addArg(grad);
     solveInitializeStep3Kernel->addArg(projGrad);
@@ -491,6 +496,7 @@ void CommonConstantPotentialCGSolver::compileKernels(CommonCalcConstantPotential
     }
 
     solveLoopStep5Kernel = program->createKernel("solveLoopStep5");
+    solveLoopStep5Kernel->addArg(kernel.electrodeCharges);
     solveLoopStep5Kernel->addArg(precGrad);
     solveLoopStep5Kernel->addArg(qStep);
     solveLoopStep5Kernel->addArg(blockSums1);
@@ -512,7 +518,7 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
         }
     }
     if (precondRequested) {
-        solveInitializeStep3Kernel->setArg(7, (int) precondActivated);
+        solveInitializeStep3Kernel->setArg(8, (int) precondActivated);
         solveLoopStep4Kernel->setArg(7, (int) precondActivated);
     }
 
@@ -542,12 +548,26 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
     kernel.cc.clearBuffer(blockSums1);
 
     // Perform conjugate gradient iterations.
-    converged = 0;
+    int* convergedPinned = (int*) kernel.cc.getPinnedBuffer();
     for (int iter = 0; iter <= numElectrodeParticles; iter++) {
         // Evaluate the matrix-vector product A qStep.
-        qStep.copyTo(kernel.electrodeCharges);
         kernel.mustUpdateElectrodeCharges = true;
-        kernel.doDerivatives();
+        if (iter > 0) {
+            // This is a subsequent iteration; check for convergence.  We can
+            // start clearing buffers for the derivatives while we wait for the
+            // flag to finish being copied from the device back to the host.
+            kernel.initDoDerivatives();
+            kernel.initPmeExecute();
+            convergedDownloadFinishEvent->wait();
+            converged = *convergedPinned;
+            if (converged) {
+                break;
+            }
+            kernel.doDerivatives(false);
+        } else {
+            // This is the first iteration; evaluate derivatives normally.
+            kernel.doDerivatives();
+        }
 
         solveLoopStep1Kernel->execute(numElectrodeParticles, threadBlockSize);
         solveLoopStep2Kernel->execute(threadBlockSize, threadBlockSize);
@@ -562,10 +582,20 @@ void CommonConstantPotentialCGSolver::solveImpl(CommonCalcConstantPotentialForce
         }
 
         solveLoopStep4Kernel->execute(threadBlockSize, threadBlockSize);
+
+        convergedDownloadStartEvent->enqueue();
+        kernel.cc.setCurrentQueue(convergedDownloadQueue);
+        convergedDownloadStartEvent->queueWait(convergedDownloadQueue);
+        convergedResult.download(convergedPinned, false);
+        convergedDownloadFinishEvent->enqueue();
+        kernel.cc.restoreDefaultQueue();
+
         solveLoopStep5Kernel->execute(numElectrodeParticles, threadBlockSize);
-        convergedResult.download(&converged);
-        if (converged) {
-            break;
+
+        if (iter == numElectrodeParticles) {
+            // No more iterations are allowed: download the convergence flag.
+            convergedDownloadFinishEvent->wait();
+            converged = *convergedPinned;
         }
     }
 
@@ -1278,7 +1308,7 @@ double CommonCalcConstantPotentialForceKernel::doEnergyForces(bool includeForces
     return 0.0;
 }
 
-void CommonCalcConstantPotentialForceKernel::doDerivatives() {
+void CommonCalcConstantPotentialForceKernel::initDoDerivatives() {
     if (mustUpdateNonElectrodeCharges) {
         updateNonElectrodeChargesKernel->execute(numParticles);
         mustUpdateNonElectrodeCharges = false;
@@ -1292,8 +1322,14 @@ void CommonCalcConstantPotentialForceKernel::doDerivatives() {
 
     cc.clearBuffer(chargeDerivatives);
     cc.clearBuffer(chargeDerivativesFixed);
+}
 
-    pmeExecute(false, false, true);
+void CommonCalcConstantPotentialForceKernel::doDerivatives(bool init) {
+    if (init) {
+        initDoDerivatives();
+    }
+
+    pmeExecute(false, false, true, init);
 
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
     evaluateDirectDerivativesKernel->execute(nb.getNumForceThreadBlocks() * nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
@@ -1467,12 +1503,18 @@ void CommonCalcConstantPotentialForceKernel::pmeCompileKernels() {
     }
 }
 
-void CommonCalcConstantPotentialForceKernel::pmeExecute(bool includeEnergy, bool includeForces, bool includeChargeDerivatives) {
+void CommonCalcConstantPotentialForceKernel::initPmeExecute() {
     if (useFixedPointChargeSpreading) {
         cc.clearBuffer(pmeGrid2);
     }
     else {
         cc.clearBuffer(pmeGrid1);
+    }
+}
+
+void CommonCalcConstantPotentialForceKernel::pmeExecute(bool includeEnergy, bool includeForces, bool includeChargeDerivatives, bool init) {
+    if (init) {
+        initPmeExecute();
     }
     if (pmeShouldSort) {
         pmeGridIndexKernel->execute(cc.getNumAtoms());

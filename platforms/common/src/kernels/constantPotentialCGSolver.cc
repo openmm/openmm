@@ -443,7 +443,7 @@ KERNEL void solveInitializeStep2(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL
     }
 }
 
-KERNEL void solveInitializeStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad,
+KERNEL void solveInitializeStep3(GLOBAL real* RESTRICT electrodeCharges, GLOBAL real* RESTRICT chargeDerivatives, GLOBAL real* RESTRICT grad, GLOBAL real* RESTRICT projGrad,
     GLOBAL real* RESTRICT precGrad, GLOBAL real* RESTRICT qStep, GLOBAL real* RESTRICT grad0
 #ifdef PRECOND_REQUESTED
     , GLOBAL ACCUM* RESTRICT precondVector, int precondActivated
@@ -488,7 +488,7 @@ KERNEL void solveInitializeStep3(GLOBAL real* RESTRICT chargeDerivatives, GLOBAL
 
     // Initialize step vector for conjugate gradient iterations.
     for (int ii = LOCAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += LOCAL_SIZE) {
-        qStep[ii] = -precGrad[ii];
+        electrodeCharges[ii] = qStep[ii] = -precGrad[ii];
     }
 }
 
@@ -677,6 +677,7 @@ KERNEL void solveLoopStep4(
 }
 
 KERNEL void solveLoopStep5(
+    GLOBAL real* RESTRICT electrodeCharges,
     GLOBAL real* RESTRICT precGrad,
     GLOBAL real* RESTRICT qStep,
     GLOBAL BlockSums1* RESTRICT blockSums1Buffer,
@@ -709,4 +710,9 @@ KERNEL void solveLoopStep5(
         qStep[ii] -= offset;
     }
 #endif
+
+    // Prepare for the next derivative calculation.
+    for (int ii = GLOBAL_ID; ii < NUM_ELECTRODE_PARTICLES; ii += GLOBAL_SIZE) {
+        electrodeCharges[ii] = qStep[ii];
+    }
 }

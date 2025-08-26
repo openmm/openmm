@@ -180,6 +180,9 @@ private:
     ComputeKernel solveLoopStep3Kernel;
     ComputeKernel solveLoopStep4Kernel;
     ComputeKernel solveLoopStep5Kernel;
+    ComputeEvent convergedDownloadStartEvent;
+    ComputeEvent convergedDownloadFinishEvent;
+    ComputeQueue convergedDownloadQueue;
 
 public:
     /**
@@ -282,10 +285,12 @@ public:
 private:
     void ensureInitialized(ContextImpl& context);
     double doEnergyForces(bool includeForces, bool includeEnergy);
-    void doDerivatives();
+    void initDoDerivatives();
+    void doDerivatives(bool init = true);
     void pmeSetup();
     void pmeCompileKernels();
-    void pmeExecute(bool includeEnergy, bool includeForces, bool includeChargeDerivatives);
+    void initPmeExecute();
+    void pmeExecute(bool includeEnergy, bool includeForces, bool includeChargeDerivatives, bool init = true);
     void setKernelInputs(bool includeEnergy, bool includeForces);
     class SortTrait : public ComputeSortImpl::SortTrait {
         int getDataSize() const {return 8;}
