@@ -58,6 +58,7 @@
 #include "ReferenceMonteCarloBarostat.h"
 #include "ReferenceNoseHooverChain.h"
 #include "ReferenceNoseHooverDynamics.h"
+#include "ReferenceOrientationRestraintForce.h"
 #include "ReferencePointFunctions.h"
 #include "ReferenceProperDihedralBond.h"
 #include "ReferenceQTBDynamics.h"
@@ -2321,6 +2322,45 @@ double ReferenceCalcRGForceKernel::execute(ContextImpl& context, bool includeFor
     vector<Vec3>& forceData = extractForces(context);
     ReferenceRGForce rg(particles);
     return rg.calculateIxn(posData, forceData);
+}
+
+void ReferenceCalcOrientationRestraintForceKernel::initialize(const System& system, const OrientationRestraintForce& force) {
+    k = force.getK();
+    particles = force.getParticles();
+    if (particles.size() == 0)
+        for (int i = 0; i < system.getNumParticles(); i++)
+            particles.push_back(i);
+    referencePos = force.getReferencePositions();
+    Vec3 center;
+    for (int i : particles)
+        center += referencePos[i];
+    center /= particles.size();
+    for (Vec3& p : referencePos)
+        p -= center;
+}
+
+double ReferenceCalcOrientationRestraintForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
+    ReferenceOrientationRestraintForce f(k, referencePos, particles);
+    return f.calculateIxn(posData, forceData);
+}
+
+void ReferenceCalcOrientationRestraintForceKernel::copyParametersToContext(ContextImpl& context, const OrientationRestraintForce& force) {
+    if (referencePos.size() != force.getReferencePositions().size())
+        throw OpenMMException("updateParametersInContext: The number of reference positions has changed");
+    k = force.getK();
+    particles = force.getParticles();
+    if (particles.size() == 0)
+        for (int i = 0; i < referencePos.size(); i++)
+            particles.push_back(i);
+    referencePos = force.getReferencePositions();
+    Vec3 center;
+    for (int i : particles)
+        center += referencePos[i];
+    center /= particles.size();
+    for (Vec3& p : referencePos)
+        p -= center;
 }
 
 ReferenceIntegrateVerletStepKernel::~ReferenceIntegrateVerletStepKernel() {
