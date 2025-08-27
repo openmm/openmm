@@ -1109,7 +1109,7 @@ class ForceField(object):
 
         return unmatched_residues
 
-    def getMatchingTemplates(self, topology, ignoreExternalBonds=False):
+    def getMatchingTemplates(self, topology, ignoreExternalBonds=False, residueTemplates=dict()):
         """Return a list of forcefield residue templates matching residues in the specified topology.
 
         .. CAUTION:: This method is experimental, and its API is subject to change.
@@ -1120,6 +1120,12 @@ class ForceField(object):
             The Topology whose residues are to be checked against the forcefield residue templates.
         ignoreExternalBonds : bool=False
             If true, ignore external bonds when matching residues to templates.
+        residueTemplates : dict=dict()
+            Specifies which template to use for particular residues.  The keys should be Residue
+            objects from the Topology, and the values should be the names of the templates to
+            use for them.  This is useful when a ForceField contains multiple templates that
+            can match the same residue (e.g Fe2+ and Fe3+ templates in the ForceField for a
+            monoatomic iron ion in the Topology).
         Returns
         -------
         templates : list of _TemplateData
@@ -1133,7 +1139,13 @@ class ForceField(object):
         templates = list() # list of templates matching the corresponding residues
         for residue in topology.residues():
             # Attempt to match one of the existing templates.
-            [template, matches] = self._getResidueTemplateMatches(residue, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
+            if residue in residueTemplates:
+                # Make sure the specified template matches.
+                template = self._templates[residueTemplates[residue]]
+                matches = compiled.matchResidueToTemplate(residue, template, bondedToAtom, False, False)
+            else:
+                # Attempt to match one of the existing templates.
+                [template, matches] = self._getResidueTemplateMatches(residue, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
             # Raise an exception if we have found no templates that match.
             if matches is None:
                 raise ValueError('No template found for chainid <%s> resid <%s> resname <%s> (residue index within topology %d).\n%s' % (residue.chain.id, residue.id, residue.name, residue.index, _findMatchErrors(self, residue)))
@@ -1142,7 +1154,7 @@ class ForceField(object):
 
         return templates
 
-    def generateTemplatesForUnmatchedResidues(self, topology):
+    def generateTemplatesForUnmatchedResidues(self, topology, residueTemplates=dict()):
         """Generate forcefield residue templates for residues in specified topology for which no forcefield templates are available.
 
         .. CAUTION:: This method is experimental, and its API is subject to change.
@@ -1160,10 +1172,16 @@ class ForceField(object):
         residues : list of Residue
             List of Residue objects that were used to generate the templates.
             `residues[index]` is the Residue that was used to generate the template `templates[index]`
+        residueTemplates : dict=dict()
+            Specifies which template to use for particular residues.  The keys should be Residue
+            objects from the Topology, and the values should be the names of the templates to
+            use for them.  This is useful when a ForceField contains multiple templates that
+            can match the same residue (e.g Fe2+ and Fe3+ templates in the ForceField for a
+            monoatomic iron ion in the Topology).
 
         """
         # Get a non-unique list of unmatched residues.
-        unmatched_residues = self.getUnmatchedResidues(topology)
+        unmatched_residues = self.getUnmatchedResidues(topology, residueTemplates=residueTemplates)
         # Generate a unique list of unmatched residues by comparing fingerprints.
         bondedToAtom = self._buildBondedToAtomList(topology)
         unique_unmatched_residues = list() # list of unique unmatched Residue objects from topology
