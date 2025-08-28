@@ -49,8 +49,8 @@ using std::vector;
 using std::pair;
 
 namespace OpenMM {
-    extern std::vector<Vec3> assignDrudeVelocities(const System &system, double temperature, double drudeTemperature, int randomSeed);
-    pair<double, double> computeTemperaturesFromVelocities(const System& system, const vector<Vec3>& velocities);
+    extern std::vector<Vec3> assignDrudeVelocities(const System &system, double temperature, double drudeTemperature, int randomSeed, DrudeForce *drudeForce);
+    pair<double, double> computeTemperaturesFromVelocities(const System& system, const vector<Vec3>& velocities, DrudeForce *drudeForce);
 }
 
 
@@ -63,9 +63,14 @@ DrudeNoseHooverIntegrator::DrudeNoseHooverIntegrator(double temperature, double 
     addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int, int>>(), temperature,
                            collisionFrequency, drudeTemperature, drudeCollisionFrequency,
                            chainLength, numMTS, numYoshidaSuzuki);
+    drudeForce = nullptr;
 }
 
-DrudeNoseHooverIntegrator::~DrudeNoseHooverIntegrator() { }
+DrudeNoseHooverIntegrator::~DrudeNoseHooverIntegrator() {
+    if (drudeForce != nullptr) {
+        delete drudeForce;
+    }
+}
 
 double DrudeNoseHooverIntegrator::getMaxDrudeDistance() const {
     return maxPairDistance_;
@@ -91,21 +96,29 @@ void DrudeNoseHooverIntegrator::initialize(ContextImpl& contextRef) {
     // check for drude particles and build the Nose-Hoover Chains
     const System& system = context->getSystem();
     const DrudeForce* drudeForce = NULL;
+    if (isDrudeForceSet()) {
+        drudeForce = &getDrudeForce();
+    }
+    else {
+        for (int i = 0; i < system.getNumForces(); i++)
+            if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
+                if (drudeForce == NULL)
+                    drudeForce = dynamic_cast<const DrudeForce*>(&system.getForce(i));
+                else
+                    throw OpenMMException("The System contains multiple DrudeForces");
+            }
+        if (drudeForce == NULL)
+            throw OpenMMException("The System does not contain a DrudeForce");
+    }
+    if (drudeForce == NULL)
+        throw OpenMMException("The System does not contain a DrudeForce");
 
     bool hasCMMotionRemover = false;
     for (int i = 0; i < system.getNumForces(); i++){
-        if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
-            if (drudeForce == NULL)
-                drudeForce = dynamic_cast<const DrudeForce*>(&system.getForce(i));
-            else
-                throw OpenMMException("The System contains multiple DrudeForces");
-        }
         if (dynamic_cast<const CMMotionRemover*>(&system.getForce(i))) {
             hasCMMotionRemover = true;
         }
     }
-    if (drudeForce == NULL)
-        throw OpenMMException("The System does not contain a DrudeForce");
     if (!hasCMMotionRemover) {
         std::cout << "Warning: Did not find a center-of-mass motion remover in the system. "
                      "This is problematic when using Drude." << std::endl;
@@ -154,7 +167,7 @@ double DrudeNoseHooverIntegrator::computeSystemTemperature() {
     context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
     vector<Vec3> velocities;
     context->computeShiftedVelocities(getVelocityTimeOffset(), velocities);
-    return computeTemperaturesFromVelocities(context->getSystem(), velocities).first;
+    return computeTemperaturesFromVelocities(context->getSystem(), velocities, drudeForce).first;
 }
 
 double DrudeNoseHooverIntegrator::computeDrudeTemperature() {
@@ -170,6 +183,26 @@ double DrudeNoseHooverIntegrator::computeDrudeTemperature() {
 
 std::vector<Vec3> DrudeNoseHooverIntegrator::getVelocitiesForTemperature(const System &system, double temperature,
                                                                          int randomSeedIn) const {
-    return assignDrudeVelocities(system, temperature, drudeTemperature, randomSeedIn);
+    return assignDrudeVelocities(system, temperature, drudeTemperature, randomSeedIn, drudeForce);
 }
 
+void DrudeNoseHooverIntegrator::setDrudeForce(DrudeForce* force) {
+    if (drudeForce) {
+        delete drudeForce;
+    }
+    drudeForce = force;
+}
+
+bool DrudeNoseHooverIntegrator::isDrudeForceSet() const {
+    if (!drudeForce) {
+        return false;
+    }
+    return true;
+}
+
+const DrudeForce& DrudeNoseHooverIntegrator::getDrudeForce() const {
+    if (!drudeForce) {
+        throw OpenMMException("getDrudeForce: a DrudeForce has not been set.");
+    }
+    return *drudeForce;
+}
