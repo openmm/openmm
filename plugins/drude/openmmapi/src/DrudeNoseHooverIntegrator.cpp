@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2019-2025 Stanford University and the Authors.      *
  * Authors: Andreas Krämer and Andrew C. Simmonett                            *
  * Contributors: Peter Eastman                                                *
  *                                                                            *
@@ -33,11 +33,12 @@
 #include "SimTKOpenMMRealType.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
-#include "openmm/internal/ContextImpl.h"
 #include "openmm/DrudeKernels.h"
 #include "openmm/DrudeForce.h"
 #include "openmm/CMMotionRemover.h"
 #include "openmm/kernels.h"
+#include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/DrudeHelpers.h"
 #include <ctime>
 #include <iostream>
 #include <string>
@@ -47,12 +48,6 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 using std::pair;
-
-namespace OpenMM {
-    extern std::vector<Vec3> assignDrudeVelocities(const System &system, double temperature, double drudeTemperature, int randomSeed);
-    pair<double, double> computeTemperaturesFromVelocities(const System& system, const vector<Vec3>& velocities);
-}
-
 
 DrudeNoseHooverIntegrator::DrudeNoseHooverIntegrator(double temperature, double collisionFrequency, 
                                                      double drudeTemperature, double drudeCollisionFrequency,
@@ -90,22 +85,14 @@ void DrudeNoseHooverIntegrator::initialize(ContextImpl& contextRef) {
 
     // check for drude particles and build the Nose-Hoover Chains
     const System& system = context->getSystem();
-    const DrudeForce* drudeForce = NULL;
+    const DrudeForce* drudeForce = getDrudeForce(contextRef);
 
-    bool hasCMMotionRemover = false;
-    for (int i = 0; i < system.getNumForces(); i++){
-        if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
-            if (drudeForce == NULL)
-                drudeForce = dynamic_cast<const DrudeForce*>(&system.getForce(i));
-            else
-                throw OpenMMException("The System contains multiple DrudeForces");
-        }
-        if (dynamic_cast<const CMMotionRemover*>(&system.getForce(i))) {
-            hasCMMotionRemover = true;
-        }
-    }
     if (drudeForce == NULL)
         throw OpenMMException("The System does not contain a DrudeForce");
+    bool hasCMMotionRemover = false;
+    for (int i = 0; i < system.getNumForces(); i++)
+        if (dynamic_cast<const CMMotionRemover*>(&system.getForce(i)))
+            hasCMMotionRemover = true;
     if (!hasCMMotionRemover) {
         std::cout << "Warning: Did not find a center-of-mass motion remover in the system. "
                      "This is problematic when using Drude." << std::endl;
@@ -154,7 +141,7 @@ double DrudeNoseHooverIntegrator::computeSystemTemperature() {
     context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
     vector<Vec3> velocities;
     context->computeShiftedVelocities(getVelocityTimeOffset(), velocities);
-    return computeTemperaturesFromVelocities(context->getSystem(), velocities).first;
+    return computeTemperaturesFromVelocities(*context, velocities).first;
 }
 
 double DrudeNoseHooverIntegrator::computeDrudeTemperature() {
@@ -170,6 +157,6 @@ double DrudeNoseHooverIntegrator::computeDrudeTemperature() {
 
 std::vector<Vec3> DrudeNoseHooverIntegrator::getVelocitiesForTemperature(const System &system, double temperature,
                                                                          int randomSeedIn) const {
-    return assignDrudeVelocities(system, temperature, drudeTemperature, randomSeedIn);
+    return assignDrudeVelocities(*context, temperature, drudeTemperature, randomSeedIn);
 }
 
