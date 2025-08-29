@@ -321,6 +321,8 @@ systems and parameter values, but no guarantees are made.  It is important to
 validate your own simulations, and identify parameter values that produce
 acceptable accuracy for each system.
 
+.. _coulomb-interaction-pme:
+
 Coulomb Interaction With Particle Mesh Ewald
 ============================================
 
@@ -460,6 +462,101 @@ where :math:`r_i` is the atomic radius of particle *i*\ , :math:`r_i` is
 its atomic radius, and :math:`r_\mathit{solvent}` is the solvent radius, which is taken
 to be 0.14 nm.  The default value for the energy scale :math:`E_{SA}` is 2.25936 kJ/mol/nm\ :sup:`2`\ .
 
+ConstantPotentialForce
+**********************
+
+This force is an implementation of the periodic finite field constant potential
+method :cite:`Dufils2019`.  The constant potential method implements Coulomb
+interactions between particles using the particle mesh Ewald method as described
+in section :numref:`coulomb-interaction-pme`.  Unlike Coulomb interactions
+implemented by a NonbondedForce that use fixed charges, the constant potential
+method allows certain particles in a system to be designated electrode particles
+whose charges can fluctuate.  Additionally, instead of point charges, these
+electrode particles have Gaussian charge densities, are held at given electric
+potentials, and can optionally employ a simple Thomas-Fermi metallicity model
+:cite:`Scalfi2020`.  Finally, an electric field can be applied to all charged
+particles in the system.  For a given configuration of all particles, the
+charges on electrode particles are set to minimize the total electrostatic
+energy, given by
+
+.. math::
+   E=E_{PME}+E_{gauss}+E_{self}+E_{field}+E_{potential}+E_{TF}
+
+Here :math:`E_{PME}` is the interaction of point particles computed by the
+particle mesh Ewald method.  Now
+
+.. math::
+   E_{gauss}=-\frac{1}{2}\sum_{i,j}q_iq_i\frac{\text{erfc}\left(\eta_{ij}r_{ij}\right)}{r_{ij}}
+
+with :math:`\eta_{ij}=1/\sqrt{w_i^2+w_j^2}`, where :math:`w_i=0` for a
+non-electrode (point) particle and :math:`w_i>0` for an electrode particle.  No
+term is included in the sum when :math:`i=j` or :math:`w_i=w_j=0`.  Note that in
+OpenMM's implementation, specification of an electrode requires the Gaussian
+width :math:`w_i`, while the reciprocal width :math:`\eta_i=1/w_i` is often used
+in the literature.  In addition to this correction to interactions between
+particles, the presence of Gaussian charge densities on electrode particles
+contributes a self-interaction energy:
+
+.. math::
+   E_{self}=\frac{1}{\sqrt{2\pi}}\sum_{i\in\text{elec}}\frac{q_i^2}{w_i}
+
+Next, for the electric field :math:`\mathbf{E}` (on all particles) and applied
+potential (:math:`\Psi_i` on electrode particles :math:`i`),
+
+.. math::
+   E_{field}=-\sum_{i}q_i\mathbf{r}_i\cdot\mathbf{E}
+
+.. math::
+   E_{potential}=-\sum_{i\in\text{elec}}q_i\Psi_i
+
+Finally, for the Thomas-Fermi contribution on the electrode particles,
+
+.. math::
+   E_{TF}=2\pi\sum_{i\in\text{elec}}q_i^2\left(\frac{\ell_{TF,i}^2}{v_{TF,i}}\right)
+
+where :math:`\ell_{TF,i}` is the Thomas-Fermi length and :math:`v_{TF,i}` is a
+characteristic volume scale (often referred to as a "Voronoi volume" in other
+implementations).  In OpenMM's implementation, the parameter
+:math:`\ell_{TF,i}^2/v_{TF,i}` is specified as a single Thomas-Fermi parameter,
+with units of reciprocal length, for all particles in an electrode.
+
+Besides these additional terms, and the fluctuating nature of electrode
+particles, there are a few other important differences between the
+implementation of electrostatic interactions in ConstantPotentialForce and that
+in NonbondedForce using PME:
+
+1. ConstantPotentialForce does not include any capability for computing
+   Lennard-Jones interactions.  If Lennard-Jones interactions as NonbondedForce
+   computes them are desired, a separate NonbondedForce should be added to the
+   system with the appropriate sigma and epsilon parameters set, and with all
+   charges set to zero.
+
+2. For the solved charges on electrode particles to be valid, all particles in
+   the system must use a single ConstantPotentialForce.  Setting charges in more
+   than one ConstantPotentialForce, or a NonbondedForce, will produce invalid
+   results, as the solution of electrode charges requires global minimization of
+   the total electrostatic energy of the system.
+
+3. The Gaussian charge correction to pairwise interactions given by
+   :math:`E_{gauss}` above is calculated using the minimum image convention and
+   truncated with a fixed cutoff :math:`r_{cut}`.  If decreasing :math:`r_{cut}`
+   to tune PME performance, ensure it stays large enough with respect to the
+   largest Gaussian width :math:`w_i` in the system.  Using the formula for the
+   direct space error in section :numref:`coulomb-interaction-pme` with
+   :math:`1/w_i` in place of :math:`\alpha` (owing to the similarities in the
+   functional forms of these terms), :math:`r_{cut}\ge2.7w_{max}` should be
+   sufficient for the default error tolerance :math:`\delta=5\times10^{-4}`.
+
+ConstantPotentialForce provides two algorithms to solve for electrode charges.
+The matrix solver precomputes a capacitance matrix for the system before a
+simulation and solves directly for charges, while the conjugate gradient (CG)
+solver finds charges iteratively without requiring a matrix inversion.  The
+matrix solver may be faster if the number of electrode particles is small
+enough, although it cannot be used unless the electrode particles are fixed in
+place during a simulation by setting their masses to zero.  Unless the positions
+of electrode particles are allowed to fluctuate (in which case only the CG
+solver can be used), both solvers can be benchmarked on a given problem to find
+the one with the best performance.
 
 GayBerneForce
 *************

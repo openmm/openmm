@@ -37,6 +37,7 @@
 #include "openmm/CMAPTorsionForce.h"
 #include "openmm/CMMotionRemover.h"
 #include "openmm/CompoundIntegrator.h"
+#include "openmm/ConstantPotentialForce.h"
 #include "openmm/CustomBondForce.h"
 #include "openmm/CustomCentroidBondForce.h"
 #include "openmm/CustomCompoundBondForce.h"

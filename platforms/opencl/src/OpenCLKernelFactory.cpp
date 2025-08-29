@@ -101,6 +101,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new CommonCalcCustomTorsionForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcNonbondedForceKernel::Name())
         return new OpenCLCalcNonbondedForceKernel(name, platform, cl, context.getSystem());
+    if (name == CalcConstantPotentialForceKernel::Name())
+        return new OpenCLCalcConstantPotentialForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomNonbondedForceKernel::Name())
         return new CommonCalcCustomNonbondedForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcGBSAOBCForceKernel::Name())
