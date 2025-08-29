@@ -199,6 +199,7 @@ KERNEL void adaptFrictionPart1(int numAtoms, int segmentLength, GLOBAL const mix
                 mixed dfdtinc = adaptedFriction[type*numFreq+j]*cvv/invMass - cvf.x;
                 ATOMIC_ADD(&dfdt[type*numFreq+j], (mm_ulong) realToFixedPoint(dfdtinc));
             }
+            SYNC_THREADS
         }
     }
 }
