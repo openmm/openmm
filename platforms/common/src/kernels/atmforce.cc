@@ -26,47 +26,6 @@ KERNEL void hybridForce(int numParticles,
     }
 }
 
-KERNEL void setDisplacements(int numParticles,
-                             GLOBAL real4* RESTRICT posq,
-                         GLOBAL real4* RESTRICT displacement0,
-                             GLOBAL real4* RESTRICT displacement1,
-                             GLOBAL int4* displParticles,
-                             GLOBAL int* RESTRICT atomOrder,
-                             GLOBAL int* RESTRICT invAtomOrder,
-                             GLOBAL real4* RESTRICT displ0,
-                             GLOBAL real4* RESTRICT displ1) {
-    for (int index = GLOBAL_ID; index < numParticles; index += GLOBAL_SIZE) {
-        int atom = atomOrder[index];
-        int pj1 = displParticles[atom].x;
-        int pi1 = displParticles[atom].y;
-        int pj0 = displParticles[atom].z;
-        int pi0 = displParticles[atom].w;
-        if (pj1 >= 0 && pi1 >= 0) {
-            // variable system coordinate displacements
-            int indexj1 = invAtomOrder[pj1];
-            int indexi1 = invAtomOrder[pi1];
-            displ1[atom] = make_real4((real) posq[indexj1].x- posq[indexi1].x,
-                                      (real) posq[indexj1].y- posq[indexi1].y,
-                                      (real) posq[indexj1].z- posq[indexi1].z, (real) 0);
-            if (pj0 >= 0 && pi0 >= 0) {
-                int indexj0 = invAtomOrder[pj0];
-                int indexi0 = invAtomOrder[pi0];
-                displ0[atom] = make_real4((real) posq[indexj0].x - posq[indexi0].x,
-                                          (real) posq[indexj0].y - posq[indexi0].y,
-                                          (real) posq[indexj0].z - posq[indexi0].z, (real) 0);
-            }
-            else {
-                displ0[atom] = make_real4((real) 0, (real) 0, (real) 0, (real) 0);
-            }
-        }
-        else {
-            //fixed lab frame displacement
-            displ1[atom] = displacement1[atom];
-            displ0[atom] = displacement0[atom];
-        }
-    }
-}
-
 //reset variable displacement forces
 KERNEL void resetDisplForce(int numParticles,
                             int paddedNumParticles,
@@ -134,9 +93,11 @@ KERNEL void copyState(int numParticles,
                       GLOBAL real4* RESTRICT posq,
                       GLOBAL real4* RESTRICT posq0,
                       GLOBAL real4* RESTRICT posq1,
-                      GLOBAL real4* RESTRICT displ0,
-                      GLOBAL real4* RESTRICT displ1,
+                      GLOBAL real4* RESTRICT displacement0,
+                      GLOBAL real4* RESTRICT displacement1,
+                      GLOBAL int4* displParticles,
                       GLOBAL int* RESTRICT atomOrder,
+                      GLOBAL int* RESTRICT invAtomOrder,
                       GLOBAL int* RESTRICT inner0InvAtomOrder,
                       GLOBAL int* RESTRICT inner1InvAtomOrder
 #ifdef USE_MIXED_PRECISION
@@ -146,12 +107,41 @@ KERNEL void copyState(int numParticles,
                       GLOBAL real4* RESTRICT posq1Correction
 #endif
                     ) {
+
     for (int i = GLOBAL_ID; i < numParticles; i += GLOBAL_SIZE) {
         int atom = atomOrder[i];
+
+        //default fixed lab frame displacement
+        real4 displ0 = displacement0[atom];
+        real4 displ1 = displacement1[atom];
+        //override with variable displacements if set
+        int pj1 = displParticles[atom].x;
+        int pi1 = displParticles[atom].y;
+        int pj0 = displParticles[atom].z;
+        int pi0 = displParticles[atom].w;
+        if (pj1 >= 0 && pi1 >= 0) {
+            // variable system coordinate displacements
+            int indexj1 = invAtomOrder[pj1];
+            int indexi1 = invAtomOrder[pi1];
+            displ1 = make_real4((real) posq[indexj1].x- posq[indexi1].x,
+                                (real) posq[indexj1].y- posq[indexi1].y,
+                                (real) posq[indexj1].z- posq[indexi1].z, (real) 0);
+            if (pj0 >= 0 && pi0 >= 0) {
+                int indexj0 = invAtomOrder[pj0];
+                int indexi0 = invAtomOrder[pi0];
+                displ0 = make_real4((real) posq[indexj0].x - posq[indexi0].x,
+                                    (real) posq[indexj0].y - posq[indexi0].y,
+                                    (real) posq[indexj0].z - posq[indexi0].z, (real) 0);
+            }
+            else {
+                displ0 = make_real4((real) 0, (real) 0, (real) 0, (real) 0);
+            }
+        }
+
         int index0 = inner0InvAtomOrder[atom];
         int index1 = inner1InvAtomOrder[atom];
-        real4 p0 = posq[i] + make_real4((real) displ0[atom].x, (real) displ0[atom].y, (real) displ0[atom].z, 0);
-        real4 p1 = posq[i] + make_real4((real) displ1[atom].x, (real) displ1[atom].y, (real) displ1[atom].z, 0);
+        real4 p0 = posq[i] + make_real4((real) displ0.x, (real) displ0.y, (real) displ0.z, 0);
+        real4 p1 = posq[i] + make_real4((real) displ1.x, (real) displ1.y, (real) displ1.z, 0);
         p0.w = posq0[i].w;
         p1.w = posq1[i].w;
         posq0[index0] = p0;

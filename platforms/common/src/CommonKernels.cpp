@@ -4141,10 +4141,8 @@ void CommonCalcATMForceKernel::initialize(const System& system, const ATMForce& 
             displVector0[p] = mm_double4(d0[p][0], d0[p][1], d0[p][2], 0);
             displParticlesVector[p] = mm_int4(j1[p], i1[p], j0[p], i0[p]);
         }
-        displ1.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "displ1");
         displacement1.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "displacement1");
         displacement1.upload(displVector1);
-        displ0.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "displ0");
         displacement0.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "displacement0");
         displacement0.upload(displVector0);
     }
@@ -4156,10 +4154,8 @@ void CommonCalcATMForceKernel::initialize(const System& system, const ATMForce& 
             displVector0[p] = mm_float4(d0[p][0], d0[p][1], d0[p][2], 0);
             displParticlesVector[p] = mm_int4(j1[p], i1[p], j0[p], i0[p]);
         }
-        displ1.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ1");
         displacement1.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displacement1");
         displacement1.upload(displVector1);
-        displ0.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ0");
         displacement0.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displacement0");
         displacement0.upload(displVector0);
     }
@@ -4203,27 +4199,17 @@ void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& in
 
         ComputeProgram program = cc.compileProgram(CommonKernelSources::atmforce);
 
-        //create the setDisplacements kernel
-        setDisplacementsKernel = program->createKernel("setDisplacements");
-        setDisplacementsKernel->addArg(numParticles);
-        setDisplacementsKernel->addArg(cc.getPosq());
-        setDisplacementsKernel->addArg(displacement0);
-        setDisplacementsKernel->addArg(displacement1);
-        setDisplacementsKernel->addArg(displParticles);
-        setDisplacementsKernel->addArg(cc.getAtomIndexArray());
-        setDisplacementsKernel->addArg(invAtomOrder);
-        setDisplacementsKernel->addArg(displ0);
-        setDisplacementsKernel->addArg(displ1);
-
         //create CopyState kernel
         copyStateKernel = program->createKernel("copyState");
         copyStateKernel->addArg(numParticles);
         copyStateKernel->addArg(cc.getPosq());
         copyStateKernel->addArg(cc0.getPosq());
         copyStateKernel->addArg(cc1.getPosq());
-        copyStateKernel->addArg(displ0);
-        copyStateKernel->addArg(displ1);
+        copyStateKernel->addArg(displacement0);
+        copyStateKernel->addArg(displacement1);
+        copyStateKernel->addArg(displParticles);
         copyStateKernel->addArg(cc.getAtomIndexArray());
+        copyStateKernel->addArg(invAtomOrder);
         copyStateKernel->addArg(inner0InvAtomOrder);
         copyStateKernel->addArg(inner1InvAtomOrder);
         if (cc.getUseMixedPrecision()) {
@@ -4313,7 +4299,6 @@ void CommonCalcATMForceKernel::copyState(ContextImpl& context,
     cc0.reorderAtoms();
     cc1.reorderAtoms();
 
-    setDisplacementsKernel->execute(numParticles);
     copyStateKernel->execute(numParticles);
 
     map<string, double> innerParameters0 = innerContext0.getParameters();
