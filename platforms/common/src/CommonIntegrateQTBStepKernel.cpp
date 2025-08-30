@@ -92,7 +92,7 @@ void CommonIntegrateQTBStepKernel::initialize(const System& system, const QTBInt
     replacements["FFT_FORWARD"] = createFFT(3*segmentLength, 0, outputIndex, true);
     replacements["RECIP_DATA"] = (outputIndex == 0 ? "data0" : "data1");
     replacements["FFT_BACKWARD"] = createFFT(3*segmentLength, outputIndex, outputIndex, false);
-    replacements["ADAPTATION_FFT"] = createFFT(segmentLength, 0, outputIndex, true);
+    replacements["ADAPTATION_FFT"] = createFFT(3*segmentLength, 0, outputIndex, true);
     replacements["ADAPTATION_RECIP"] = (outputIndex == 0 ? "data0" : "data1");
     ComputeProgram program = cc.compileProgram(cc.replaceStrings(CommonKernelSources::qtb, replacements), defines);
     kernel1 = program->createKernel("integrateQTBPart1");
