@@ -110,10 +110,12 @@ Another option is to specify a padding distance:
 
     modeller.addSolvent(forcefield, padding=1.0*nanometers)
 
-This determines the largest size of the solute along any axis (x, y, or z).  It
-then creates a cubic box of width (solute size)+2*(padding).  The above line
-guarantees that no part of the solute comes closer than 1 nm to any edge of the
-box.
+A bounding sphere containing the solute is determined, and the box size is set
+to (sphere diameter)+(padding).  This guarantees no atom in the solute will come
+closer than the padding distance to any atom of another periodic copy.  If the
+sphere diameter is less than the padding distance, the box size is set to
+2*(padding) to ensure no atom is closer than the padding distance to two periodic
+copies of any other atom.
 
 Finally, you can specify the exact number of solvent molecules (including both
 water and ions) to add.  This is useful when you want to solvate several different
@@ -122,6 +124,15 @@ amount of solvent:
 ::
 
     modeller.addSolvent(forcefield, numAdded=5000)
+
+By default, the ``padding`` and ``numAdded`` options create a cubic box.  You
+can optionally specify a different shape:
+::
+
+    modeller.addSolvent(forcefield, padding=1.0*nanometers, boxShape='dodecahedron')
+
+Allowed values are ``'cube'``, ``'dodecahedron'`` (a rhombic dodecahedron), and
+``'octahedron'`` (a truncated octahedron).
 
 By default, :meth:`addSolvent` creates TIP3P water molecules, but it also supports other
 water models:
