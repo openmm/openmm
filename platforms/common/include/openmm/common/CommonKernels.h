@@ -1397,14 +1397,12 @@ private:
 
     bool hasInitializedKernel;
     ComputeContext& cc;
-    ComputeArray displ1, displ0;               // actual displacements used in calculation
     ComputeArray displacement1, displacement0; // fixed lab-frame displacements
     ComputeArray displParticles;               // variable displacements based on atom positions
                                                // int4 arranged as (pDestination1, pOrigin1, pDestination0, pOrigin0  
     ComputeArray invAtomOrder, inner0InvAtomOrder, inner1InvAtomOrder;
     ComputeArray dforce0, dforce1;             // forces due to variable displacements
     ComputeKernel copyStateKernel;
-    ComputeKernel setDisplacementsKernel;
     ComputeKernel resetDisplForceKernel;
     ComputeKernel displForceKernel;
     ComputeKernel hybridForceKernel;
