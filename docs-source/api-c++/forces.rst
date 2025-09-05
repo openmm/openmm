@@ -24,6 +24,7 @@ These classes implement forces that are widely used in biomolecular simulation.
 .. toctree::
     :maxdepth: 2
 
+    generated/ConstantPotentialForce
     generated/CMAPTorsionForce
     generated/DrudeForce
     generated/GBSAOBCForce
