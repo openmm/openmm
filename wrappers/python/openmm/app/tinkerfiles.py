@@ -183,28 +183,58 @@ class TinkerFiles:
             if "multipole" not in forces:
                 forces["multipole"] = []
             fields = allLines[lineIndex]
-            multipoles = [fields[-1]]
-            axisInfo = fields[1:-1]
+            type = int(fields[1])
+            axis = [int(x) for x in fields[2:-1]]
+            charge = float(fields[-1])
             lineIndex += 1
             fields = allLines[lineIndex]
-            multipoles.append(fields[0])
-            multipoles.append(fields[1])
-            multipoles.append(fields[2])
+            dipole = [float(x) for x in fields[:3]]
             lineIndex += 1
             fields = allLines[lineIndex]
-            multipoles.append(fields[0])
+            quadrupole = [fields[0]]
             lineIndex += 1
             fields = allLines[lineIndex]
-            multipoles.append(fields[0])
-            multipoles.append(fields[1])
+            quadrupole.append(fields[0])
+            quadrupole.append(fields[1])
             lineIndex += 1
             fields = allLines[lineIndex]
-            multipoles.append(fields[0])
-            multipoles.append(fields[1])
-            multipoles.append(fields[2])
+            quadrupole.append(fields[0])
+            quadrupole.append(fields[1])
+            quadrupole.append(fields[2])
             lineIndex += 1
-            multipoleInfo = [axisInfo, multipoles]
-            forces["multipole"].append(multipoleInfo)
+            quadrupole = [float(x) for x in quadrupole]
+            forces["multipole"].append([type, axis, charge, dipole, quadrupole])
+            return lineIndex
+
+        def addPolarize(
+            lineIndex: int, allLines: List[List[str]], forces: Dict[str, Any]
+        ) -> int:
+            """
+            Parse and store polarization data from the key file.
+
+            Parameters
+            ----------
+            lineIndex : int
+                The current line index in the key file.
+            allLines : list of list of str
+                All lines from the key file, split into fields.
+            forces : dict
+                The forces dictionary to store the parsed data.
+
+            Returns
+            -------
+            int
+                The updated line index after parsing the multipole force data.
+            """
+            if "polarize" not in forces:
+                forces["polarize"] = []
+            fields = allLines[lineIndex]
+            type = int(fields[1])
+            polarizability = float(fields[2])
+            thole = float(fields[3])
+            group = [int(x) for x in fields[4:]]
+            lineIndex += 1
+            forces["polarize"].append([type, polarizability, thole, group])
             return lineIndex
 
         @staticmethod
@@ -252,6 +282,7 @@ class TinkerFiles:
             "angtor": 1,
             "vdw": 1,
             "multipole": addMultipole,
+            "polarize": addPolarize,
             "tortors": addTorTor,
         }
 
@@ -408,6 +439,7 @@ class TinkerFiles:
         polarization: str = "mutual",
         mutualInducedTargetEpsilon: float = 0.00001,
         implicitSolvent: bool = False,
+        ewaldErrorTolerance = 0.0005,
         *args,
         **kwargs,
     ) -> Any:
@@ -440,6 +472,8 @@ class TinkerFiles:
             Only used if polarization="mutual".
         implicitSolvent : bool, optional, default=False
             If True, solvent will be modeled implicitly.
+        ewaldErrorTolerance : float=0.0005
+            The error tolerance to use if nonbondedMethod is Ewald, PME, or LJPME.
 
         Returns
         -------
@@ -455,6 +489,9 @@ class TinkerFiles:
             AmoebaStretchBendForce,
             AmoebaTorsionForce,
             AmoebaPiTorsionForce,
+            AmoebaMultipoleForceBuilder,
+            MultipoleParams,
+            PolarizationParams
         )
         import openmm as mm
 
@@ -756,8 +793,18 @@ class TinkerFiles:
         pass
         # Add AmoebaVdw force
         pass
+
         # Add AmoebaMultipole force
-        pass
+        builder = AmoebaMultipoleForceBuilder()
+        for type, axis, charge, dipole, quadrupole in self._forces["multipole"]:
+             builder.registerMultipoleParams(type, MultipoleParams(axis, charge, dipole, quadrupole))
+        for type, polarizability, thole, group in self._forces["polarize"]:
+            builder.registerPolarizationParams(type, PolarizationParams(polarizability, thole, group))
+        force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff, ewaldErrorTolerance, polarization, mutualInducedTargetEpsilon, 60)
+        atomTypes = [int(atom.atomType) for atom in self.atoms]
+        bonds = [(a1.index, a2.index) for a1, a2 in self.topology.bonds()]
+        builder.addMultipoles(force, atomTypes, list(self.topology.atoms()), bonds)
+
         # Add AmoebaWcaDispersion force
         pass
         # Add AmoebaGeneralizedKirkwood force

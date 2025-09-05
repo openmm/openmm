@@ -316,25 +316,9 @@ class MultipoleParams(namedtuple('MultipoleParams', ['kIndices', 'charge', 'dipo
         # Tinker encodes the axis type based on the number of indices, and whether they are positive or negative.
         # Work out the axis type and correct atom type indices.
 
-        kIndicesLen = len(kIndices)
-        if (kIndicesLen > 3):
-            ky = kIndices[3]
-        else:
-            ky = 0
-
-        if (kIndicesLen > 2):
-            kx = kIndices[2]
-        else:
-            kx = 0
-
-        if (kIndicesLen > 1):
-            kz = kIndices[1]
-        else:
-            kz = 0
-
         while len(kIndices) < 4:
             kIndices.append(0)
-
+        kz, kx, ky = kIndices[1:4]
         axisType = mm.AmoebaMultipoleForce.ZThenX
         if kz == 0:
             axisType = mm.AmoebaMultipoleForce.NoAxisType
@@ -346,11 +330,9 @@ class MultipoleParams(namedtuple('MultipoleParams', ['kIndices', 'charge', 'dipo
             axisType = mm.AmoebaMultipoleForce.ZBisect
         if kz < 0 and kx < 0 and ky  < 0:
             axisType = mm.AmoebaMultipoleForce.ThreeFold
-
         kIndices[1] = abs(kz)
         kIndices[2] = abs(kx)
         kIndices[3] = abs(ky)
-
         return tuple.__new__(cls, (kIndices, charge, dipole, quadrupole, axisType))
 
 
@@ -371,6 +353,7 @@ class AmoebaMultipoleForceBuilder(object):
         self.polarizationParams[type] = params
 
     def getForce(self, sys, nonbondedMethod, nonbondedCutoff, ewaldErrorTolerance, polarization, mutualInducedTargetEpsilon, mutualInducedMaxIterations):
+        """Get the AmoebaMultipoleForce.  If there is not already one present in the System, create a new one and add it."""
         existing = [f for f in sys.getForces() if isinstance(f, mm.AmoebaMultipoleForce)]
         if len(existing) == 0:
             force = mm.AmoebaMultipoleForce()
@@ -397,22 +380,20 @@ class AmoebaMultipoleForceBuilder(object):
         return force
 
     def addMultipoles(self, force, atomTypes, atoms, bonds):
+        """Add multipoles to the AmoebaMultipoleForce."""
         self.buildBondedParticleSets(len(atoms), bonds)
         for atomIndex, t in enumerate(atomTypes):
             if t in self.multipoleParams:
                 multipoleList = self.multipoleParams[t]
-                hit = 0
+                hit = False
                 savedMultipoleParams = None
 
                 # assign multipole parameters via only 1-2 connected atoms
 
                 for multipoleParams in multipoleList:
-                    if (hit != 0):
+                    if hit:
                         break
-                    kIndices = multipoleParams.kIndices
-                    kz = kIndices[1]
-                    kx = kIndices[2]
-                    ky = kIndices[3]
+                    kz, kx, ky = multipoleParams.kIndices[1:4]
 
                     # assign multipole parameters
                     #    (1) get bonded partners
@@ -423,12 +404,12 @@ class AmoebaMultipoleForceBuilder(object):
                     xaxis = -1
                     yaxis = -1
                     for bondedAtomZIndex in bondedAtomIndices:
-                       if (hit != 0):
+                       if hit:
                            break
                        bondedAtomZType = atomTypes[bondedAtomZIndex]
                        if bondedAtomZType == kz:
                           for bondedAtomXIndex in bondedAtomIndices:
-                              if bondedAtomXIndex == bondedAtomZIndex or hit != 0:
+                              if bondedAtomXIndex == bondedAtomZIndex or hit:
                                   continue
                               bondedAtomXType = atomTypes[bondedAtomXIndex]
                               if bondedAtomXType == kx:
@@ -444,12 +425,11 @@ class AmoebaMultipoleForceBuilder(object):
                                               bondedAtomX1Type = atomTypes[bondedAtomXIndex2]
                                               if bondedAtomX1Type == kx and bondedAtomXIndex2 != bondedAtomZIndex and bondedAtomXIndex2 < xaxis:
                                                   xaxis = bondedAtomXIndex2
-
                                       savedMultipoleParams = multipoleParams
-                                      hit = 1
+                                      hit = True
                                   else:
                                       for bondedAtomYIndex in bondedAtomIndices:
-                                          if bondedAtomYIndex == bondedAtomZIndex or bondedAtomYIndex == bondedAtomXIndex or hit != 0:
+                                          if bondedAtomYIndex == bondedAtomZIndex or bondedAtomYIndex == bondedAtomXIndex or hit:
                                               continue
                                           bondedAtomYType = atomTypes[bondedAtomYIndex]
                                           if bondedAtomYType == ky:
@@ -457,17 +437,14 @@ class AmoebaMultipoleForceBuilder(object):
                                               xaxis = bondedAtomXIndex
                                               yaxis = bondedAtomYIndex
                                               savedMultipoleParams = multipoleParams
-                                              hit = 2
+                                              hit = True
 
                 # assign multipole parameters via 1-2 and 1-3 connected atoms
 
                 for multipoleParams in multipoleList:
-                    if hit != 0:
+                    if hit:
                         break
-                    kIndices = multipoleParams.kIndices
-                    kz = kIndices[1]
-                    kx = kIndices[2]
-                    ky = kIndices[3]
+                    kz, kx, ky = multipoleParams.kIndices[1:4]
 
                     # assign multipole parameters
                     #    (1) get bonded partners
@@ -475,22 +452,16 @@ class AmoebaMultipoleForceBuilder(object):
 
                     bondedAtom12Indices = self.bonded12ParticleSets[atomIndex]
                     bondedAtom13Indices = self.bonded13ParticleSets[atomIndex]
-
                     zaxis = -1
                     xaxis = -1
                     yaxis = -1
-
                     for bondedAtomZIndex in bondedAtom12Indices:
-
-                       if hit != 0:
+                       if hit:
                            break
-
                        bondedAtomZType = atomTypes[bondedAtomZIndex]
-
-                       if (bondedAtomZType == kz):
+                       if bondedAtomZType == kz:
                           for bondedAtomXIndex in bondedAtom13Indices:
-
-                              if bondedAtomXIndex == bondedAtomZIndex or hit != 0:
+                              if bondedAtomXIndex == bondedAtomZIndex or hit:
                                   continue
                               bondedAtomXType = atomTypes[bondedAtomXIndex]
                               if bondedAtomXType == kx and bondedAtomZIndex in self.bonded12ParticleSets[bondedAtomXIndex]:
@@ -506,10 +477,10 @@ class AmoebaMultipoleForceBuilder(object):
                                               xaxis = bondedAtomXIndex2
 
                                       savedMultipoleParams = multipoleParams
-                                      hit = 3
+                                      hit = True
                                   else:
                                       for bondedAtomYIndex in bondedAtom13Indices:
-                                          if bondedAtomYIndex == bondedAtomZIndex or bondedAtomYIndex == bondedAtomXIndex or hit != 0:
+                                          if bondedAtomYIndex == bondedAtomZIndex or bondedAtomYIndex == bondedAtomXIndex or hit:
                                               continue
                                           bondedAtomYType = atomTypes[bondedAtomYIndex]
                                           if bondedAtomYType == ky and bondedAtomZIndex in self.bonded12ParticleSets[bondedAtomYIndex]:
@@ -517,50 +488,42 @@ class AmoebaMultipoleForceBuilder(object):
                                               xaxis = bondedAtomXIndex
                                               yaxis = bondedAtomYIndex
                                               savedMultipoleParams = multipoleParams
-                                              hit = 4
+                                              hit = True
 
                 # assign multipole parameters via only a z-defining atom
 
                 for multipoleParams in multipoleList:
-                    if hit != 0:
+                    if hit:
                         break
-                    kIndices = multipoleParams.kIndices
-                    kz = kIndices[1]
-                    kx = kIndices[2]
+                    kz, kx = multipoleParams.kIndices[1:3]
                     zaxis = -1
                     xaxis = -1
                     yaxis = -1
-
                     for bondedAtomZIndex in bondedAtom12Indices:
-                        if hit != 0:
+                        if hit:
                             break
                         bondedAtomZType = atomTypes[bondedAtomZIndex]
                         if kx == 0 and kz == bondedAtomZType:
                             zaxis = bondedAtomZIndex
                             savedMultipoleParams = multipoleParams
-                            hit = 5
+                            hit = True
 
                 # assign multipole parameters via no connected atoms
 
                 for multipoleParams in multipoleList:
-                    if hit != 0:
+                    if hit:
                         break
-                    kIndices = multipoleParams.kIndices
-                    kz = kIndices[1]
+                    kz = multipoleParams.kIndices[1]
                     zaxis = -1
                     xaxis = -1
                     yaxis = -1
-
                     if kz == 0:
                         savedMultipoleParams = multipoleParams
-                        hit = 6
+                        hit = True
 
                 # add particle if there was a hit
 
-                if hit != 0:
-
-#                    atom.multipoleParams = savedMultipoleParams
-#                    atom.polarizationGroups = dict()
+                if hit:
                     polarizationParams = self.polarizationParams[t]
                     pdamp = 0 if polarizationParams.thole == 0 else pow(polarizationParams.polarizability, 1.0/6.0)
                     newIndex = force.addMultipole(savedMultipoleParams.charge, savedMultipoleParams.dipole, savedMultipoleParams.quadrupole, savedMultipoleParams.axisType,
@@ -572,13 +535,13 @@ class AmoebaMultipoleForceBuilder(object):
                         force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.Covalent15, tuple(self.bonded15ParticleSets[atomIndex]))
                     else:
                         atom = atoms[atomIndex]
-                        raise ValueError("Atom %s of %s %d is out of sync!." %(atom.name, atom.residue.name, atom.residue.index))
+                        raise ValueError("Atom %d (%s of %s %d) is out of sync!." %(atomIndex, atom.name, atom.residue.name, atom.residue.index))
                 else:
                     atom = atoms[atomIndex]
-                    raise ValueError("Atom %s of %s %d was not assigned." %(atom.name, atom.residue.name, atom.residue.index))
+                    raise ValueError("Atom %d (%s of %s %d) was not assigned." %(atomIndex, atom.name, atom.residue.name, atom.residue.index))
             else:
                 atom = atoms[atomIndex]
-                raise ValueError('No multipole type for atom %s %s %d' % (atom.name, atom.residue.name, atom.residue.index))
+                raise ValueError('No multipole type for atom %d (%s %s %d)' % (atomIndex, atom.name, atom.residue.name, atom.residue.index))
 
         # Set up the polarization groups.
 
@@ -657,20 +620,21 @@ class AmoebaMultipoleForceBuilder(object):
         self.bonded15ParticleSets = bonded15ParticleSets
 
     def setPolarGroups(self, force, atomTypes):
+        """Assign covalent maps to atoms based on polarization groups."""
         groupSetsForAtom = [[] for _ in range(force.getNumMultipoles())]
-        polarizationGroupForAtom = [{} for _ in range(force.getNumMultipoles())]
+        polarizationGroupForAtom = [set() for _ in range(force.getNumMultipoles())]
         for atomIndex in range(len(atomTypes)):
 
             # assign multipole parameters via only 1-2 connected atoms
 
             groupTypes = self.polarizationParams[atomTypes[atomIndex]].groupAtomTypes
             bondedAtomIndices = self.bonded12ParticleSets[atomIndex]
-            polarizationGroupForAtom[atomIndex][atomIndex] = 1
+            polarizationGroupForAtom[atomIndex].add(atomIndex)
             for bondedAtomIndex in bondedAtomIndices:
                 bondedAtomType = atomTypes[bondedAtomIndex]
                 if bondedAtomType in groupTypes:
-                    polarizationGroupForAtom[atomIndex][bondedAtomIndex] = 1
-                    polarizationGroupForAtom[bondedAtomIndex][atomIndex] = 1
+                    polarizationGroupForAtom[atomIndex].add(bondedAtomIndex)
+                    polarizationGroupForAtom[bondedAtomIndex].add(atomIndex)
 
         # pgrp11
 
@@ -686,7 +650,7 @@ class AmoebaMultipoleForceBuilder(object):
             visited.add(atomIndex)
             while len(notVisited) > 0:
                 nextAtom = notVisited.pop()
-                if (nextAtom not in visited):
+                if nextAtom not in visited:
                    visited.add(nextAtom)
                    for ii in polarizationGroupForAtom[nextAtom]:
                        group.add(ii)
