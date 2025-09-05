@@ -2,4 +2,5 @@
  <Include file="amber19/protein.ff19SB.xml"/>
  <Include file="amber19/DNA.OL21.xml"/>
  <Include file="amber14/RNA.OL3.xml"/>
+ <Include file="amber19/lipid21.xml"/>
 </ForceField>

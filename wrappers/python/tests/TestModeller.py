@@ -1234,47 +1234,48 @@ class TestModeller(unittest.TestCase):
         """Test adding a membrane to a realistic system."""
 
         mol = PDBxFile('systems/gpcr.cif')
-        modeller = Modeller(mol.topology, mol.positions)
-        ff = ForceField('amber14-all.xml', 'amber14/tip3p.xml')
+        for ff_files in [['amber14-all.xml', 'amber14/tip3p.xml'], ['amber19-all.xml', 'amber19/opc3.xml']]:
+            modeller = Modeller(mol.topology, mol.positions)
+            ff = ForceField(*ff_files)
 
-        # Add a membrane around the GPCR
-        modeller.addMembrane(ff, minimumPadding=1.1*nanometers, ionicStrength=1*molar)
+            # Add a membrane around the GPCR
+            modeller.addMembrane(ff, minimumPadding=1.1*nanometers, ionicStrength=1*molar)
 
-        # Make sure we added everything correctly
-        resCount = defaultdict(int)
-        for res in modeller.topology.residues():
-            resCount[res.name] += 1
+            # Make sure we added everything correctly
+            resCount = defaultdict(int)
+            for res in modeller.topology.residues():
+                resCount[res.name] += 1
 
-        self.assertEqual(16, resCount['ALA'])
-        self.assertEqual(226, resCount['POP'])  # 2x128 - overlapping
-        self.assertTrue(resCount['HOH'] > 1)
+            self.assertEqual(16, resCount['ALA'])
+            self.assertEqual(226, resCount['POP'])  # 2x128 - overlapping
+            self.assertTrue(resCount['HOH'] > 1)
 
-        deltaQ = resCount['CL'] - resCount['NA']
-        self.assertEqual(deltaQ, 10)  # protein net q: +10
+            deltaQ = resCount['CL'] - resCount['NA']
+            self.assertEqual(deltaQ, 10)  # protein net q: +10
 
-        # Check _addIons did the right thing.
-        expected_ion_fraction = 1.0*molar/(55.4*molar)
+            # Check _addIons did the right thing.
+            expected_ion_fraction = 1.0*molar/(55.4*molar)
 
-        total_water = resCount['HOH']
-        total_water_ions = resCount['HOH'] + resCount['CL'] + resCount['NA']
+            total_water = resCount['HOH']
+            total_water_ions = resCount['HOH'] + resCount['CL'] + resCount['NA']
 
-        # total_water_ions - protein charge
-        expected_sodium = math.floor((total_water_ions-10)*expected_ion_fraction+0.5)
-        expected_chlorine = expected_sodium + 10
+            # total_water_ions - protein charge
+            expected_sodium = math.floor((total_water_ions-10)*expected_ion_fraction+0.5)
+            expected_chlorine = expected_sodium + 10
 
-        self.assertEqual(resCount['CL'], expected_chlorine)
-        self.assertEqual(resCount['NA'], expected_sodium)
+            self.assertEqual(resCount['CL'], expected_chlorine)
+            self.assertEqual(resCount['NA'], expected_sodium)
 
-        # Check lipid numbering for repetitions
-        lipidIdList = [(r.chain.id, r.id) for r in modeller.topology.residues()
-                       if r.name == 'POP']
-        self.assertEqual(len(lipidIdList), len(set(lipidIdList)))
+            # Check lipid numbering for repetitions
+            lipidIdList = [(r.chain.id, r.id) for r in modeller.topology.residues()
+                        if r.name == 'POP']
+            self.assertEqual(len(lipidIdList), len(set(lipidIdList)))
 
-        # Check dimensions to see if padding was respected
-        originalSize = max(mol.positions) - min(mol.positions)
-        newSize = modeller.topology.getUnitCellDimensions()
-        for i in range(3):
-            self.assertTrue(newSize[i] >= originalSize[i]+1.1*nanometers)
+            # Check dimensions to see if padding was respected
+            originalSize = max(mol.positions) - min(mol.positions)
+            newSize = modeller.topology.getUnitCellDimensions()
+            for i in range(3):
+                self.assertTrue(newSize[i] >= originalSize[i]+1.1*nanometers)
 
     def test_bondTypeAndOrderPreserved(self):
         """ Check that bond type and order are preserved across multiple operations. 
