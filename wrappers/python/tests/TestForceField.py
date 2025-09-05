@@ -987,6 +987,18 @@ class TestForceField(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'No template found for residue.*HOH.*The force field contains no residue templates'):
             makeSystem(pdbLines)
 
+        # Make water with an extra site and an (invalid) bond to it.
+        pdbLines = [
+            'ATOM      0 O    HOH A   1       0       0       0                           O',
+            'ATOM      1 H1   HOH A   1       0       0       0                           H',
+            'ATOM      2 H2   HOH A   1       0       0       0                           H',
+            'ATOM      3 M    HOH A   1       0       0       0                          EP',
+            'CONECT    0    3'
+        ]
+        forcefield = ForceField('opc.xml')
+        with self.assertRaisesRegex(ValueError, 'No template found for residue.*HOH.*The set of atoms matches HOH, but the residue has 1 extra site-O bond too many'):
+            makeSystem(pdbLines)
+
     def test_Wildcard(self):
         """Test that PeriodicTorsionForces using wildcard ('') for atom types / classes in the ffxml are correctly registered"""
 
