@@ -317,6 +317,7 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
     paramsDefines["ONE_4PI_EPS0"] = cc.doubleToString(ONE_4PI_EPS0);
     paramsDefines["EPSILON0"] = cc.doubleToString(EPSILON0);
     paramsDefines["WORK_GROUP_SIZE"] = cc.intToString(cc.ThreadBlockSize);
+    paramsDefines["CHARGE_BUFFER_SIZE"] = cc.intToString(cc.getNumThreadBlocks());
     hasOffsets = (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0);
     if (hasOffsets)
         paramsDefines["HAS_OFFSETS"] = "1";
