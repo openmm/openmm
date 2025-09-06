@@ -115,7 +115,7 @@ KERNEL void computePlasmaCorrection(GLOBAL real* RESTRICT chargeBuffer, GLOBAL m
         real alpha, real volume) {
     LOCAL real temp[WORK_GROUP_SIZE];
     real sum = 0;
-    for (unsigned int index = LOCAL_ID; index < NUM_GROUPS; index += LOCAL_SIZE)
+    for (unsigned int index = LOCAL_ID; index < CHARGE_BUFFER_SIZE; index += LOCAL_SIZE)
         sum += chargeBuffer[index];
     temp[LOCAL_ID] = sum;
     for (int i = 1; i < WORK_GROUP_SIZE; i *= 2) {
