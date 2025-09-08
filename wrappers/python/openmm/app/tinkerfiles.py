@@ -281,6 +281,8 @@ class TinkerFiles:
             "strtor": 1,
             "angtor": 1,
             "vdw": 1,
+            "vdwpair": 1,
+            "vdwpr": 1,
             "multipole": addMultipole,
             "polarize": addPolarize,
             "tortors": addTorTor,
@@ -490,6 +492,7 @@ class TinkerFiles:
             AmoebaTorsionForce,
             AmoebaPiTorsionForce,
             AmoebaMultipoleForceBuilder,
+            AmoebaVdwForceBuilder,
             MultipoleParams,
             PolarizationParams
         )
@@ -791,8 +794,24 @@ class TinkerFiles:
 
         # Add AmoebaTorsionTorsion force
         pass
+
         # Add AmoebaVdw force
-        pass
+        builder = AmoebaVdwForceBuilder(self._scalars['vdwtype'], self._scalars['radiusrule'], self._scalars['radiustype'],
+                                        self._scalars['radiussize'], self._scalars['epsilonrule'], float(self._scalars['vdw-13-scale']),
+                                        float(self._scalars['vdw-14-scale']), float(self._scalars['vdw-15-scale']))
+        for params in self._forces['vdw']:
+            reduction = 0.0 if len(params) < 4 else float(params[3])
+            builder.registerClassParams(int(params[0]), float(params[1]), float(params[2]), reduction)
+        pairs = self._forces.get('vdwpair', None)
+        if pairs is None:
+            pairs = self._forces.get('vdwpr', None)
+        if pairs is not None:
+            for params in pairs:
+                builder.registerPairParams(int(params[0]), int(params[1]), float(params[2]), float(params[3]))
+        force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff, True)
+        atomClasses = [int(atom.atomClass) for atom in self.atoms]
+        bonds = [(a1.index, a2.index) for a1, a2 in self.topology.bonds()]
+        builder.addParticles(force, atomClasses, list(self.topology.atoms()), bonds)
 
         # Add AmoebaMultipole force
         builder = AmoebaMultipoleForceBuilder()
@@ -802,7 +821,6 @@ class TinkerFiles:
             builder.registerPolarizationParams(type, PolarizationParams(polarizability, thole, group))
         force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff, ewaldErrorTolerance, polarization, mutualInducedTargetEpsilon, 60)
         atomTypes = [int(atom.atomType) for atom in self.atoms]
-        bonds = [(a1.index, a2.index) for a1, a2 in self.topology.bonds()]
         builder.addMultipoles(force, atomTypes, list(self.topology.atoms()), bonds)
 
         # Add AmoebaWcaDispersion force
