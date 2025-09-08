@@ -4921,35 +4921,26 @@ class AmoebaVdwGenerator(object):
     #=============================================================================================
 
     def __init__(self, type, radiusrule, radiustype, radiussize, epsilonrule, vdw13Scale, vdw14Scale, vdw15Scale):
-
         self.type = type
-
         self.radiusrule = radiusrule
         self.radiustype = radiustype
         self.radiussize = radiussize
-
         self.epsilonrule = epsilonrule
-
         self.vdw13Scale = vdw13Scale
         self.vdw14Scale = vdw14Scale
         self.vdw15Scale = vdw15Scale
+        self.params = {}
+        self.pairs = []
 
     #=============================================================================================
 
     @staticmethod
     def parseElement(element, forceField):
-
-        # <AmoebaVdwForce type="BUFFERED-14-7" radiusrule="CUBIC-MEAN" radiustype="R-MIN" radiussize="DIAMETER" epsilonrule="HHG" vdw-13-scale="0.0" vdw-14-scale="1.0" vdw-15-scale="1.0" >
-        #   <Vdw class="1" sigma="0.371" epsilon="0.46024" reduction="1.0" />
-        #   <Vdw class="2" sigma="0.382" epsilon="0.422584" reduction="1.0" />
-
         existing = [f for f in forceField._forces if isinstance(f, AmoebaVdwGenerator)]
         if len(existing) == 0:
             generator = AmoebaVdwGenerator(element.attrib['type'], element.attrib['radiusrule'], element.attrib['radiustype'], element.attrib['radiussize'], element.attrib['epsilonrule'],
                                         float(element.attrib['vdw-13-scale']), float(element.attrib['vdw-14-scale']), float(element.attrib['vdw-15-scale']))
             forceField.registerGenerator(generator)
-            generator.params = {}
-            generator.pairs = []
         else:
             # Multiple <AmoebaVdwForce> tags were found, probably in different files.  Simply add more types to the existing one.
             generator = existing[0]
@@ -4964,7 +4955,7 @@ class AmoebaVdwGenerator(object):
             generator.params[vdw.attrib['class']] = tuple(float(vdw.attrib[name]) for name in ('sigma', 'epsilon', 'reduction'))
         for pair in element.findall('Pair'):
             generator.pairs.append((pair.attrib['class1'], pair.attrib['class2'], float(pair.attrib['sigma']), float(pair.attrib['epsilon'])))
-        generator.classNameForType = dict((t.name, t.atomClass) for t in forceField._atomTypes.values())
+        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     #=============================================================================================
 
@@ -4981,118 +4972,14 @@ class AmoebaVdwGenerator(object):
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-
-        potentialMap = {'BUFFERED-14-7':0, 'LENNARD-JONES':1}
-        sigmaMap = {'ARITHMETIC':1, 'GEOMETRIC':1, 'CUBIC-MEAN':1}
-        epsilonMap = {'ARITHMETIC':1, 'GEOMETRIC':1, 'HARMONIC':1, 'W-H':1, 'HHG':1}
-
-        force = mm.AmoebaVdwForce()
-        sys.addForce(force)
-
-        # Potential function
-
-        if (self.type.upper() in potentialMap):
-            force.setPotentialFunction(potentialMap[self.type.upper()])
-        else:
-            stringList = ' '.join(str(x) for x in potentialMap.keys())
-            raise ValueError("AmoebaVdwGenerator: potential type %s not recognized; valid values are %s; using default." % (self.type, stringList))
-
-        # sigma and epsilon combining rules
-
-        if ('sigmaCombiningRule' in args):
-            sigmaRule = args['sigmaCombiningRule'].upper()
-            if (sigmaRule.upper() in sigmaMap):
-                force.setSigmaCombiningRule(sigmaRule.upper())
-            else:
-                stringList = ' ' . join(str(x) for x in sigmaMap.keys())
-                raise ValueError( "AmoebaVdwGenerator: sigma combining rule %s not recognized; valid values are %s; using default." % (sigmaRule, stringList) )
-        else:
-            force.setSigmaCombiningRule(self.radiusrule)
-
-        if ('epsilonCombiningRule' in args):
-            epsilonRule = args['epsilonCombiningRule'].upper()
-            if (epsilonRule.upper() in epsilonMap):
-                force.setEpsilonCombiningRule(epsilonRule.upper())
-            else:
-                stringList = ' ' . join(str(x) for x in epsilonMap.keys())
-                raise ValueError( "AmoebaVdwGenerator: epsilon combining rule %s not recognized; valid values are %s; using default." % (epsilonRule, stringList) )
-        else:
-            force.setEpsilonCombiningRule(self.epsilonrule)
-
-        # cutoff
-
-        if ('vdwCutoff' in args):
-            force.setCutoff(args['vdwCutoff'])
-        else:
-            force.setCutoff(nonbondedCutoff)
-
-        # dispersion correction
-
-        if ('useDispersionCorrection' in args):
-            force.setUseDispersionCorrection(bool(args['useDispersionCorrection']))
-
-        if (nonbondedMethod == PME):
-            force.setNonbondedMethod(mm.AmoebaVdwForce.CutoffPeriodic)
-
-        # Define types
-
-        sigmaScale = 1
-        if self.radiustype == 'SIGMA':
-            sigmaScale = 1.122462048309372
-        if self.radiussize == 'DIAMETER':
-            sigmaScale = 0.5
-        classToTypeMap = {}
-        for className in self.params:
-            sigma, epsilon, _ = self.params[className]
-            classToTypeMap[className] = force.addParticleType(sigma*sigmaScale, epsilon)
-
-        # add particles to force
-
-        for (i, atom) in enumerate(data.atoms):
-            className = self.classNameForType[data.atomType[atom]]
-            _, _, reduction = self.params[className]
-            # ivIndex = index of bonded partner for hydrogens; otherwise ivIndex = particle index
-
-            ivIndex = i
-            if atom.element == elem.hydrogen and len(data.atomBonds[i]) == 1:
-                bondIndex = data.atomBonds[i][0]
-                if (data.bonds[bondIndex].atom1 == i):
-                    ivIndex = data.bonds[bondIndex].atom2
-                else:
-                    ivIndex = data.bonds[bondIndex].atom1
-
-            force.addParticle(ivIndex, classToTypeMap[className], reduction)
-
-        # Add pairs
-
-        for c1, c2, sigma, epsilon in self.pairs:
-            force.addTypePair(classToTypeMap[c1], classToTypeMap[c2], sigma, epsilon)
-
-        # set combining rules
-
-        # set particle exclusions: self, 1-2 and 1-3 bonds
-        # (1) collect in bondedParticleSets[i], 1-2 indices for all bonded partners of particle i
-        # (2) add 1-2,1-3 and self to exclusion set
-
-        bondedParticleSets = AmoebaVdwGenerator.getBondedParticleSets(sys, data)
-
-        for (i,atom) in enumerate(data.atoms):
-
-            # 1-2 partners
-
-            exclusionSet = bondedParticleSets[i].copy()
-
-            # 1-3 partners
-
-            if (self.vdw13Scale == 0.0):
-                for bondedParticle in bondedParticleSets[i]:
-                    exclusionSet = exclusionSet.union(bondedParticleSets[bondedParticle])
-
-            # self
-
-            exclusionSet.add(i)
-
-            force.setParticleExclusions(i, tuple(exclusionSet))
+        builder = amoebaforces.AmoebaVdwForceBuilder(self.type, self.radiusrule, self.radiustype, self.radiussize, self.epsilonrule, self.vdw13Scale, self.vdw14Scale, self.vdw15Scale)
+        for atomClass, params in self.params.items():
+            builder.registerClassParams(int(atomClass), *params)
+        for params in self.pairs:
+            builder.registerPairParams(int(params[0]), int(params[1]), params[2], params[3])
+        force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff, args.get('useDispersionCorrection', True))
+        atomClasses = [self.classNameForType[data.atomType[atom]] for atom in data.atoms]
+        builder.addParticles(force, atomClasses, data.atoms, _findBondsForExclusions(data, sys))
 
 parsers["AmoebaVdwForce"] = AmoebaVdwGenerator.parseElement
 
@@ -5175,8 +5062,7 @@ class AmoebaMultipoleGenerator(object):
         force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff, args.get('ewaldErrorTolerance', 1e-4), args.get('polarization', 'mutual'),
                                  args.get('mutualInducedTargetEpsilon', 1e-5), args.get('mutualInducedMaxIterations', 60))
         atomTypes = [int(data.atomType[atom]) for atom in data.atoms]
-        bonds = [(bond.atom1, bond.atom2) for bond in data.bonds]
-        builder.addMultipoles(force, atomTypes, data.atoms, bonds)
+        builder.addMultipoles(force, atomTypes, data.atoms, _findBondsForExclusions(data, sys))
 
 parsers["AmoebaMultipoleForce"] = AmoebaMultipoleGenerator.parseElement
 

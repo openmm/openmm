@@ -7,8 +7,8 @@ Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
 Portions copyright (c) 2025 Stanford University and the Authors.
-Authors: Joao Morado
-Contributors: Peter Eastman
+Authors: Joao Morado, Peter Eastman
+Contributors:
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -35,6 +35,7 @@ import math
 from collections import defaultdict, namedtuple
 import openmm as mm
 import openmm.app.forcefield as ff
+from openmm.app import element
 
 
 class AmoebaBondForce:
@@ -723,3 +724,115 @@ class AmoebaMultipoleForceBuilder(object):
         for atomIndex in range(len(atomTypes)):
             groupSetsForAtom[atomIndex][3] = sorted(groupSetsForAtom[atomIndex][3])
             force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.PolarizationCovalent14, groupSetsForAtom[atomIndex][3])
+
+
+class AmoebaVdwForceBuilder(object):
+    """AmoebaVdwForce for AMOEBA force field"""
+
+    def __init__(self, type, radiusrule, radiustype, radiussize, epsilonrule, vdw13Scale, vdw14Scale, vdw15Scale):
+        if vdw13Scale != 0.0 and vdw13Scale != 1.0:
+            raise ValueError('AmoebaVdwForce: the only supported values for vdw-13-scale are 0 or 1')
+        if vdw14Scale != 1.0:
+            raise ValueError('AmoebaVdwForce: the only supported value for vdw-14-scale is 1')
+        if vdw15Scale != 1.0:
+            raise ValueError('AmoebaVdwForce: the only supported value for vdw-15-scale is 1')
+        self.type = type.upper()
+        self.radiusrule = radiusrule.upper()
+        self.radiustype = radiustype
+        self.radiussize = radiussize
+        self.epsilonrule = epsilonrule.upper()
+        self.vdw13Scale = vdw13Scale
+        self.classParams = {}
+        self.pairParams = []
+
+    def registerClassParams(self, atomClass, sigma, epsilon, reduction):
+        self.classParams[atomClass] = (sigma, epsilon, reduction)
+
+    def registerPairParams(self, class1, class2, sigma, epsilon):
+        self.pairParams.append((class1, class2, sigma, epsilon))
+
+    def getForce(self, sys, nonbondedMethod, nonbondedCutoff, useDispersionCorrection):
+        """Get the AmoebaVdwForce.  If there is not already one present in the System, create a new one and add it."""
+        existing = [f for f in sys.getForces() if isinstance(f, mm.AmoebaVdwForce)]
+        if len(existing) == 0:
+            force = mm.AmoebaVdwForce()
+            sys.addForce(force)
+        else:
+            force = existing[0]
+        force.setCutoff(nonbondedCutoff)
+        force.setUseDispersionCorrection(useDispersionCorrection)
+        if (nonbondedMethod == ff.PME):
+            force.setNonbondedMethod(mm.AmoebaVdwForce.CutoffPeriodic)
+        potentialMap = {'BUFFERED-14-7':0, 'LENNARD-JONES':1}
+        allowedSigma = ['ARITHMETIC', 'GEOMETRIC', 'CUBIC-MEAN']
+        allowedEpsilon = ['ARITHMETIC', 'GEOMETRIC', 'HARMONIC', 'W-H', 'HHG']
+        if self.type not in potentialMap:
+            raise ValueError("AmoebaVdwForce: potential type %s not recognized; valid values are %s." % (self.type, ', '.join(potentialMap.keys())))
+        if self.radiusrule not in allowedSigma:
+            raise ValueError("AmoebaVdwForce: sigma combining rule %s not recognized; valid values are %s." % (self.radiusrule, ', '.join(allowedSigma)))
+        if self.epsilonrule not in allowedEpsilon:
+            raise ValueError("AmoebaVdwForce: epsilon combining rule %s not recognized; valid values are %s." % (self.epsilonrule, ', '.join(allowedEpsilon)))
+        force.setPotentialFunction(potentialMap[self.type])
+        force.setSigmaCombiningRule(self.radiusrule)
+        force.setEpsilonCombiningRule(self.epsilonrule)
+        return force
+
+    def addParticles(self, force, atomClasses, atoms, bonds):
+        """Add particles to the AmoebaVdwForce."""
+
+        # Define types
+
+        sigmaScale = 1
+        if self.radiustype == 'SIGMA':
+            sigmaScale = 1.122462048309372
+        if self.radiussize == 'DIAMETER':
+            sigmaScale = 0.5
+        classToTypeMap = {}
+        for className in self.classParams:
+            sigma, epsilon, _ = self.classParams[className]
+            classToTypeMap[className] = force.addParticleType(sigma*sigmaScale, epsilon)
+
+        # Record what other atoms each atom is bonded to.
+
+        bondedParticleSets = [set() for _ in range(len(atoms))]
+        for atom1, atom2 in bonds:
+            bondedParticleSets[atom1].add(atom2)
+            bondedParticleSets[atom2].add(atom1)
+
+        # add particles to force
+
+        for i, atom in enumerate(atoms):
+            className = atomClasses[i]
+            _, _, reduction = self.classParams[className]
+            # ivIndex = index of bonded partner for hydrogens; otherwise ivIndex = particle index
+            ivIndex = i
+            if atom.element == element.hydrogen and len(bondedParticleSets[i]) == 1:
+                ivIndex = list(bondedParticleSets[i])[0]
+            force.addParticle(ivIndex, classToTypeMap[className], reduction)
+
+        # Add pairs
+
+        for c1, c2, sigma, epsilon in self.pairParams:
+            force.addTypePair(classToTypeMap[c1], classToTypeMap[c2], sigma, epsilon)
+
+        # set combining rules
+
+        # set particle exclusions: self, 1-2 and 1-3 bonds
+        # (1) collect in bondedParticleSets[i], 1-2 indices for all bonded partners of particle i
+        # (2) add 1-2,1-3 and self to exclusion set
+
+        for i in range(len(atoms)):
+            # 1-2 partners
+
+            exclusionSet = bondedParticleSets[i].copy()
+
+            # 1-3 partners
+
+            if self.vdw13Scale == 0.0:
+                for bondedParticle in bondedParticleSets[i]:
+                    exclusionSet = exclusionSet.union(bondedParticleSets[bondedParticle])
+
+            # self
+
+            exclusionSet.add(i)
+            force.setParticleExclusions(i, tuple(exclusionSet))
