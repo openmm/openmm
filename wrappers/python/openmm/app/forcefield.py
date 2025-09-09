@@ -1888,8 +1888,8 @@ def _findMatchErrors(forcefield, res):
 
     def formatBondDiff(key, diff):
         """Formats a string describing elements associated with a different number of bonds."""
-        name1 = elem.Element.getByAtomicNumber(key[0]).symbol if key else 'extra site'
-        name2 = elem.Element.getByAtomicNumber(key[1]).symbol if key else 'extra site'
+        name1 = elem.Element.getByAtomicNumber(key[0]).symbol if key[0] else 'extra site'
+        name2 = elem.Element.getByAtomicNumber(key[1]).symbol if key[1] else 'extra site'
         return f'{name1}-{name2} bond' + ('' if diff == 1 else 's')
 
     def pickBestMatch(bestMatches):
