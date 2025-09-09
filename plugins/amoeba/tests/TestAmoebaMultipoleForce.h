@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -3261,6 +3261,48 @@ void testZOnly() {
     ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state3.getPotentialEnergy()+norm*delta, 1e-3)
 }
 
+void testNeutralizingPlasmaCorrection() {
+    // Verify that the energy of a system with nonzero charge doesn't depend on alpha.
+
+    System system;
+    AmoebaMultipoleForce* force = new AmoebaMultipoleForce();
+    force->setNonbondedMethod(AmoebaMultipoleForce::PME);
+    system.addForce(force);
+    vector<double> d(3, -.0), q(9, 0.0);
+    for (int i = 0; i < 2; i++) {
+        system.addParticle(1.0);
+        force->addMultipole(1.0, d, q, AmoebaMultipoleForce::NoAxisType, 0, 0, 0, 0.39, 0.33, 0.001);
+    }
+    vector<Vec3> positions(2);
+    positions[0] = Vec3();
+    positions[1] = Vec3(0.3, 0.4, 0.0);
+
+    // Compute the energy.
+
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    double energy1 = context.getState(State::Energy).getPotentialEnergy();
+
+    // Change the cutoff distance, which will change alpha, and see if the energy is the same.
+
+    force->setCutoffDistance(0.7);
+    context.reinitialize(true);
+    double energy2 = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(energy1, energy2, 1e-4);
+
+    // Try changing a particle charge with updateParametersInContext() and make sure the
+    // energy changes by the correct amount.
+
+    force->setMultipoleParameters(0, 2.0, d, q, AmoebaMultipoleForce::NoAxisType, 0, 0, 0, 0.39, 0.33, 0.001);
+    force->updateParametersInContext(context);
+    double energy3 = context.getState(State::Energy).getPotentialEnergy();
+    force->setCutoffDistance(1.0);
+    context.reinitialize(true);
+    double energy4 = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(energy3, energy4, 1e-4);
+}
+
 void setupKernels(int argc, char* argv[]);
 void runPlatformTests();
 
@@ -3318,6 +3360,7 @@ int main(int argc, char* argv[]) {
         // test the ZOnly axis type.
         
         testZOnly();
+        testNeutralizingPlasmaCorrection();
 
         runPlatformTests();
     }

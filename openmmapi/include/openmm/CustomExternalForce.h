@@ -57,22 +57,29 @@ namespace OpenMM {
  * via a harmonic potential:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomExternalForce* force = new CustomExternalForce("k*((x-x0)^2+(y-y0)^2+(z-z0)^2)");
- *
+ * <c++>
+ * CustomExternalForce* force = new CustomExternalForce("k*((x-x0)^2+(y-y0)^2+(z-z0)^2)");
+ * </c++>
+ * <python>
+ * force = CustomExternalForce("k*((x-x0)^2+(y-y0)^2+(z-z0)^2)")
+ * </python>
  * \endverbatim
  *
  * This force depends on four parameters: the spring constant k and equilibrium coordinates x0, y0, and z0.  The following code defines these parameters:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    force->addGlobalParameter("k", 100.0);
- *    force->addPerParticleParameter("x0");
- *    force->addPerParticleParameter("y0");
- *    force->addPerParticleParameter("z0");
- *
+ * <c++>
+ * force->addGlobalParameter("k", 100.0);
+ * force->addPerParticleParameter("x0");
+ * force->addPerParticleParameter("y0");
+ * force->addPerParticleParameter("z0");
+ * </c++>
+ * <python>
+ * force.addGlobalParameter("k", 100.0)
+ * force.addPerParticleParameter("x0")
+ * force.addPerParticleParameter("y0")
+ * force.addPerParticleParameter("z0")
+ * </python>
  * \endverbatim
  *
  * Special care is needed in systems that use periodic boundary conditions.  In that case, each particle really represents
@@ -82,10 +89,12 @@ namespace OpenMM {
  * periodic copies of the points (x1, y1, z1) and (x2, y2, z2).  For example, the force given above would be rewritten as
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomExternalForce* force = new CustomExternalForce("k*periodicdistance(x, y, z, x0, y0, z0)^2");
- *
+ * <c++>
+ * CustomExternalForce* force = new CustomExternalForce("k*periodicdistance(x, y, z, x0, y0, z0)^2");
+ * </c++>
+ * <python>
+ * force = CustomExternalForce("k*periodicdistance(x, y, z, x0, y0, z0)^2")
+ * </python>
  * \endverbatim
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
@@ -106,21 +115,15 @@ public:
     /**
      * Get the number of particles for which force field parameters have been defined.
      */
-    int getNumParticles() const {
-        return particles.size();
-    }
+    int getNumParticles() const;
     /**
      * Get the number of per-particle parameters that the force depends on
      */
-    int getNumPerParticleParameters() const {
-        return parameters.size();
-    }
+    int getNumPerParticleParameters() const;
     /**
      * Get the number of global parameters that the force depends on.
      */
-    int getNumGlobalParameters() const {
-        return globalParameters.size();
-    }
+    int getNumGlobalParameters() const;
     /**
      * Get the algebraic expression that gives the potential energy of each particle
      */

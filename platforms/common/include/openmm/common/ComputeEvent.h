@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,17 +27,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include "ComputeQueue.h"
 #include <memory>
 
 namespace OpenMM {
 
 /**
- * This abstract class represents an event for synchronization between the host and
- * device.  It is created by calling createEvent() on a ComputeContext, which returns
- * an instance of a platform-specific subclass.  To use it, call enqueue() immediately
- * after starting an asynchronous operation, such as a kernel invocation or non-blocking
- * data transfer.  Then at a later point call wait().  This will cause the host to block
- * until all operations started before the call to enequeue() have completed.
+ * This abstract class represents an event for synchronization between the host and device,
+ * or between queues on the same device.  It is created by calling createEvent() on a ComputeContext,
+ * which returns an instance of a platform-specific subclass.  To use it, call enqueue() immediately
+ * after starting an asynchronous operation, such as a kernel invocation or non-blocking data
+ * transfer.  Then at a later point call wait() or queueWait().  This will cause the host or a
+ * specified queue to block until all operations started before the call to enequeue() have completed.
  * 
  * Instead of referring to this class directly, it is best to use a ComputeEvent, which is
  * a typedef for a shared_ptr to a ComputeEventImpl.  This allows you to treat it as having
@@ -56,6 +57,11 @@ public:
      * Block until all operations started before the call to enqueue() have completed.
      */
     virtual void wait() = 0;
+    /**
+     * Enqueue a barrier that causes a specified ComputeQueue to block until all
+     * operations started before the call to enqueue() have completed.
+     */
+    virtual void queueWait(ComputeQueue queue) = 0;
 };
 
 typedef std::shared_ptr<ComputeEventImpl> ComputeEvent;

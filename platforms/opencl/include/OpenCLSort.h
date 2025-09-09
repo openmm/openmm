@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,6 +29,7 @@
 
 #include "OpenCLArray.h"
 #include "OpenCLContext.h"
+#include "openmm/common/ComputeSort.h"
 #include "openmm/common/windowsExportCommon.h"
 
 namespace OpenMM {
@@ -41,7 +42,7 @@ namespace OpenMM {
  * sort and the key for sorting it.  Here is an example of a trait class for
  * sorting floats:
  * 
- * class FloatTrait : public OpenCLSort::SortTrait {
+ * class FloatTrait : public ComputeSortImpl::SortTrait {
  *     int getDataSize() const {return 4;}
  *     int getKeySize() const {return 4;}
  *     const char* getDataType() const {return "float";}
@@ -66,9 +67,8 @@ namespace OpenMM {
  * elements).
  */
     
-class OPENMM_EXPORT_COMMON OpenCLSort {
+class OPENMM_EXPORT_COMMON OpenCLSort : public ComputeSortImpl {
 public:
-    class SortTrait;
     /**
      * Create an OpenCLSort object for sorting data of a particular type.
      *
@@ -82,15 +82,15 @@ public:
      *                   of the algorithm to be tuned for faster performance on the expected
      *                   distribution.
      */
-    OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int length, bool uniform=true);
+    OpenCLSort(OpenCLContext& context, ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform=true);
     ~OpenCLSort();
     /**
      * Sort an array.
      */
-    void sort(OpenCLArray& data);
+    void sort(ArrayInterface& data);
 private:
     OpenCLContext& context;
-    SortTrait* trait;
+    ComputeSortImpl::SortTrait* trait;
     OpenCLArray dataRange;
     OpenCLArray bucketOfElement;
     OpenCLArray offsetInBucket;
@@ -99,47 +99,6 @@ private:
     cl::Kernel shortListKernel, shortList2Kernel, computeRangeKernel, assignElementsKernel, computeBucketPositionsKernel, copyToBucketsKernel, sortBucketsKernel;
     unsigned int dataLength, rangeKernelSize, positionsKernelSize, sortKernelSize;
     bool isShortList, useShortList2, uniform;
-};
-
-/**
- * A subclass of SortTrait defines the type of value to sort, and the key for sorting them.
- */
-class OpenCLSort::SortTrait {
-public:
-    virtual ~SortTrait() {
-    }
-    /**
-     * Get the size of each data value in bytes.
-     */
-    virtual int getDataSize() const = 0;
-    /**
-     * Get the size of each key value in bytes.
-     */
-    virtual int getKeySize() const = 0;
-    /**
-     * Get the data type of the values to sort.
-     */
-    virtual const char* getDataType() const = 0;
-    /**
-     * Get the data type of the sorting key.
-     */
-    virtual const char* getKeyType() const = 0;
-    /**
-     * Get the minimum value a key can take.
-     */
-    virtual const char* getMinKey() const = 0;
-    /**
-     * Get the maximum value a key can take.
-     */
-    virtual const char* getMaxKey() const = 0;
-    /**
-     * Get a value whose key is guaranteed to equal getMaxKey().
-     */
-    virtual const char* getMaxValue() const = 0;
-    /**
-     * Get the CUDA code to select the key from the data value.
-     */
-    virtual const char* getSortKey() const = 0;
 };
 
 } // namespace OpenMM

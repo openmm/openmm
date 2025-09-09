@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CudaArray.h"
+#include "openmm/common/ComputeSort.h"
 #include "openmm/common/windowsExportCommon.h"
 #include "CudaContext.h"
 
@@ -41,7 +42,7 @@ namespace OpenMM {
  * sort and the key for sorting it.  Here is an example of a trait class for
  * sorting floats:
  * 
- * class FloatTrait : public CudaSort::SortTrait {
+ * class FloatTrait : public ComputeSortImpl::SortTrait {
  *     int getDataSize() const {return 4;}
  *     int getKeySize() const {return 4;}
  *     const char* getDataType() const {return "float";}
@@ -66,9 +67,8 @@ namespace OpenMM {
  * elements).
  */
     
-class OPENMM_EXPORT_COMMON CudaSort {
+class OPENMM_EXPORT_COMMON CudaSort : public ComputeSortImpl {
 public:
-    class SortTrait;
     /**
      * Create a CudaSort object for sorting data of a particular type.
      *
@@ -82,15 +82,15 @@ public:
      *                   of the algorithm to be tuned for faster performance on the expected
      *                   distribution.
      */
-    CudaSort(CudaContext& context, SortTrait* trait, unsigned int length, bool uniform=true);
+    CudaSort(CudaContext& context, ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform=true);
     ~CudaSort();
     /**
      * Sort an array.
      */
-    void sort(CudaArray& data);
+    void sort(ArrayInterface& data);
 private:
     CudaContext& context;
-    SortTrait* trait;
+    ComputeSortImpl::SortTrait* trait;
     CudaArray dataRange;
     CudaArray bucketOfElement;
     CudaArray offsetInBucket;
@@ -100,48 +100,6 @@ private:
     unsigned int dataLength, rangeKernelSize, positionsKernelSize, sortKernelSize;
     bool isShortList, uniform;
 };
-
-/**
- * A subclass of SortTrait defines the type of value to sort, and the key for sorting them.
- */
-class CudaSort::SortTrait {
-public:
-    virtual ~SortTrait() {
-    }
-    /**
-     * Get the size of each data value in bytes.
-     */
-    virtual int getDataSize() const = 0;
-    /**
-     * Get the size of each key value in bytes.
-     */
-    virtual int getKeySize() const = 0;
-    /**
-     * Get the data type of the values to sort.
-     */
-    virtual const char* getDataType() const = 0;
-    /**
-     * Get the data type of the sorting key.
-     */
-    virtual const char* getKeyType() const = 0;
-    /**
-     * Get the minimum value a key can take.
-     */
-    virtual const char* getMinKey() const = 0;
-    /**
-     * Get the maximum value a key can take.
-     */
-    virtual const char* getMaxKey() const = 0;
-    /**
-     * Get a value whose key is guaranteed to equal getMaxKey().
-     */
-    virtual const char* getMaxValue() const = 0;
-    /**
-     * Get the CUDA code to select the key from the data value.
-     */
-    virtual const char* getSortKey() const = 0;
-};
-
 
 } // namespace OpenMM
 

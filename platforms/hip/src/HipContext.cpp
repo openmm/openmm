@@ -39,6 +39,7 @@
 #include "HipNonbondedUtilities.h"
 #include "HipProgram.h"
 #include "HipQueue.h"
+#include "HipSort.h"
 #include "openmm/common/ComputeArray.h"
 #include "openmm/common/ContextSelector.h"
 #include "SHA1.h"
@@ -173,11 +174,14 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
 
     // GPUs starting from CDNA1 and RDNA3 support atomic add for floats (global_atomic_add_f32),
     // which can be used in PME. Older GPUs use fixed point charge spreading instead.
-    this->supportsHardwareFloatGlobalAtomicAdd = true;
-    if (gpuArchitecture.find("gfx900") == 0 ||
-        gpuArchitecture.find("gfx906") == 0 ||
-        gpuArchitecture.find("gfx10") == 0) {
-        this->supportsHardwareFloatGlobalAtomicAdd = false;
+    // RDNA4 also has this instruction but benchmarks show that it is very slow compared to
+    // global_atomic_add_u64.
+    this->supportsHardwareFloatGlobalAtomicAdd = false;
+    if (gpuArchitecture.find("gfx908") == 0 ||
+        gpuArchitecture.find("gfx90a") == 0 ||
+        gpuArchitecture.find("gfx94") == 0 ||
+        gpuArchitecture.find("gfx11") == 0) {
+        this->supportsHardwareFloatGlobalAtomicAdd = true;
     }
 
     contextIsValid = true;
@@ -350,6 +354,7 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
     nonbonded = new HipNonbondedUtilities(*this);
     integration = new HipIntegrationUtilities(*this, system);
     expression = new HipExpressionUtilities(*this);
+    clearBuffer(posq);
 }
 
 HipContext::~HipContext() {
@@ -691,8 +696,12 @@ ComputeEvent HipContext::createEvent() {
     return shared_ptr<ComputeEventImpl>(new HipEvent(*this));
 }
 
-HipFFT3D* HipContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
-    return new HipFFT3D(*this, xsize, ysize, zsize, realToComplex);
+ComputeSort HipContext::createSort(ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform) {
+    return shared_ptr<ComputeSortImpl>(new HipSort(*this, trait, length, uniform));
+}
+
+FFT3D HipContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
+    return FFT3D(new HipFFT3D(*this, xsize, ysize, zsize, realToComplex));
 }
 
 int HipContext::findLegalFFTDimension(int minimum) {

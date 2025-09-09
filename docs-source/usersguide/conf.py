@@ -59,7 +59,7 @@ master_doc = "index"
 
 # General information about the project.
 project = u"OpenMM User Guide"
-copyright = u"2008-2017, Stanford University"
+copyright = u"2008-2025, Stanford University"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -242,7 +242,7 @@ latex_elements = {
     \\captionsetup[figure]{labelformat=empty}
     % Backwards compatibility for sphinx < 1.5
     \\let\\DUspan\\null % force DUspan to be defined
-    \\renewcommand{\DUspan}[2]{%
+    \\renewcommand{\\DUspan}[2]{%
         \\IfEqCase{#1}{%
             {code}{\\small{}\\texttt{#2}\\normalsize{}}
         }[\\PackageError{DUspan}{Unrecognized option passed to DUspan: #1}{}]%

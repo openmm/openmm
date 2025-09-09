@@ -244,3 +244,39 @@ ForceImpl* CustomGBForce::createImpl() const {
 void CustomGBForce::updateParametersInContext(Context& context) {
     dynamic_cast<CustomGBForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
+
+int CustomGBForce::getNumParticles() const {
+    return particles.size();
+}
+
+int CustomGBForce::getNumExclusions() const {
+    return exclusions.size();
+}
+
+int CustomGBForce::getNumPerParticleParameters() const {
+    return parameters.size();
+}
+
+int CustomGBForce::getNumGlobalParameters() const {
+    return globalParameters.size();
+}
+
+int CustomGBForce::getNumEnergyParameterDerivatives() const {
+    return energyParameterDerivatives.size();
+}
+
+int CustomGBForce::getNumTabulatedFunctions() const {
+    return functions.size();
+}
+
+int CustomGBForce::getNumFunctions() const {
+    return functions.size();
+}
+
+int CustomGBForce::getNumComputedValues() const {
+    return computedValues.size();
+}
+
+int CustomGBForce::getNumEnergyTerms() const {
+    return energyTerms.size();
+}

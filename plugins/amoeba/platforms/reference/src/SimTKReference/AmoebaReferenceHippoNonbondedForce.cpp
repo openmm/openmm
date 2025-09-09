@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2022 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2025 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -28,6 +28,7 @@
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "ReferencePME.h"
 #include "SimTKOpenMMRealType.h"
+#include "ReferenceForce.h"
 #include "jama_svd.h"
 #include <algorithm>
 #ifdef _MSC_VER
@@ -1478,12 +1479,7 @@ void AmoebaReferencePmeHippoNonbondedForce::setPeriodicBoxSize(OpenMM::Vec3* vec
     _periodicBoxVectors[0] = vectors[0];
     _periodicBoxVectors[1] = vectors[1];
     _periodicBoxVectors[2] = vectors[2];
-    double determinant = vectors[0][0]*vectors[1][1]*vectors[2][2];
-    assert(determinant > 0);
-    double scale = 1.0/determinant;
-    _recipBoxVectors[0] = Vec3(vectors[1][1]*vectors[2][2], 0, 0)*scale;
-    _recipBoxVectors[1] = Vec3(-vectors[1][0]*vectors[2][2], vectors[0][0]*vectors[2][2], 0)*scale;
-    _recipBoxVectors[2] = Vec3(vectors[1][0]*vectors[2][1]-vectors[1][1]*vectors[2][0], -vectors[0][0]*vectors[2][1], vectors[0][0]*vectors[1][1])*scale;
+    ReferenceForce::invertBoxVectors(vectors, _recipBoxVectors);
 };
 
 void AmoebaReferencePmeHippoNonbondedForce::resizePmeArrays() {
@@ -2503,9 +2499,11 @@ double AmoebaReferencePmeHippoNonbondedForce::calculatePmeSelfEnergy(const vecto
     double dii = 0.0;
     double qii = 0.0;
     double c6ii = 0.0;
+    double totalCharge = 0.0;
     for (int i = 0; i < _numParticles; i++) {
         const MultipoleParticleData& particleI = particleData[i];
         double charge = particleI.coreCharge + particleI.valenceCharge;
+        totalCharge += charge;
         cii += charge*charge;
         dii += particleI.dipole.dot(particleI.dipole);
         qii += particleI.quadrupole[QXX]*particleI.quadrupole[QXX] +
@@ -2519,7 +2517,11 @@ double AmoebaReferencePmeHippoNonbondedForce::calculatePmeSelfEnergy(const vecto
     double term = 2*_alphaEwald*_alphaEwald;
     double fterm = -_electric*_alphaEwald/SQRT_PI;
     double alpha3 = _dalphaEwald*_dalphaEwald*_dalphaEwald;
-    return fterm*(cii + term*(dii/3+2*term*qii/5)) + alpha3*alpha3*c6ii/12;
+    double energy = fterm*(cii + term*(dii/3+2*term*qii/5)) + alpha3*alpha3*c6ii/12;
+    // Correction for the neutralizing plasma.
+    double volume = _periodicBoxVectors[0][0] * _periodicBoxVectors[1][1] * _periodicBoxVectors[2][2];
+    energy -= totalCharge*totalCharge/(8*EPSILON0*volume*_alphaEwald*_alphaEwald);
+    return energy;
 }
 
 void AmoebaReferencePmeHippoNonbondedForce::calculatePmeSelfTorque(const vector<MultipoleParticleData>& particleData,

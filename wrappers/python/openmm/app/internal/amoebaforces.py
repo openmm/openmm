@@ -7,8 +7,8 @@ Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
 Portions copyright (c) 2025 Stanford University and the Authors.
-Authors: Joao Morado
-Contributors: Peter Eastman
+Authors: Joao Morado, Peter Eastman
+Contributors:
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -32,8 +32,10 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 __author__ = "Joao Morado"
 
 import math
-
+from collections import defaultdict, namedtuple
 import openmm as mm
+import openmm.app.forcefield as ff
+from openmm.app import element
 
 
 class AmoebaBondForce:
@@ -308,3 +310,529 @@ class AmoebaStretchBendForce:
     @staticmethod
     def addStretchBend(force, atom1, atom2, atom3, r12, r23, theta0, k1, k2):
         force.addBond((atom1, atom2, atom3), (r12, r23, theta0, k1, k2))
+
+
+class MultipoleParams(namedtuple('MultipoleParams', ['kIndices', 'charge', 'dipole', 'quadrupole', 'axisType'])):
+    def __new__(cls, kIndices, charge, dipole, quadrupole):
+        # Tinker encodes the axis type based on the number of indices, and whether they are positive or negative.
+        # Work out the axis type and correct atom type indices.
+
+        while len(kIndices) < 4:
+            kIndices.append(0)
+        kz, kx, ky = kIndices[1:4]
+        axisType = mm.AmoebaMultipoleForce.ZThenX
+        if kz == 0:
+            axisType = mm.AmoebaMultipoleForce.NoAxisType
+        if kz != 0 and kx == 0:
+            axisType = mm.AmoebaMultipoleForce.ZOnly
+        if kz < 0 or kx < 0:
+            axisType = mm.AmoebaMultipoleForce.Bisector
+        if kx < 0 and ky < 0:
+            axisType = mm.AmoebaMultipoleForce.ZBisect
+        if kz < 0 and kx < 0 and ky  < 0:
+            axisType = mm.AmoebaMultipoleForce.ThreeFold
+        kIndices[1] = abs(kz)
+        kIndices[2] = abs(kx)
+        kIndices[3] = abs(ky)
+        return tuple.__new__(cls, (kIndices, charge, dipole, quadrupole, axisType))
+
+
+PolarizationParams = namedtuple('PolarizationParams', ['polarizability', 'thole', 'groupAtomTypes'])
+
+
+class AmoebaMultipoleForceBuilder(object):
+    """Multipole force for AMOEBA force field"""
+
+    def __init__(self):
+        self.multipoleParams = defaultdict(list)
+        self.polarizationParams = defaultdict(dict)
+
+    def registerMultipoleParams(self, type, params):
+        self.multipoleParams[type].append(params)
+
+    def registerPolarizationParams(self, type, params):
+        self.polarizationParams[type] = params
+
+    def getForce(self, sys, nonbondedMethod, nonbondedCutoff, ewaldErrorTolerance, polarization, mutualInducedTargetEpsilon, mutualInducedMaxIterations):
+        """Get the AmoebaMultipoleForce.  If there is not already one present in the System, create a new one and add it."""
+        existing = [f for f in sys.getForces() if isinstance(f, mm.AmoebaMultipoleForce)]
+        if len(existing) == 0:
+            force = mm.AmoebaMultipoleForce()
+            sys.addForce(force)
+        else:
+            force = existing[0]
+        methodMap = {ff.NoCutoff: mm.AmoebaMultipoleForce.NoCutoff,
+                     ff.PME: mm.AmoebaMultipoleForce.PME}
+        if nonbondedMethod not in methodMap:
+            raise ValueError('Invalid nonbonded method for AmoebaMultipoleForce')
+        force.setNonbondedMethod(methodMap[nonbondedMethod])
+        force.setCutoffDistance(nonbondedCutoff)
+        force.setEwaldErrorTolerance(ewaldErrorTolerance)
+        if polarization.lower() == 'direct':
+            force.setPolarizationType(mm.AmoebaMultipoleForce.Direct)
+        elif polarization.lower() == 'extrapolated':
+            force.setPolarizationType(mm.AmoebaMultipoleForce.Extrapolated)
+        elif polarization.lower() == 'mutual':
+            force.setPolarizationType(mm.AmoebaMultipoleForce.Mutual)
+        else:
+            raise ValueError('Invalid polarization type for AmoebaMultipoleForce: '+polarization)
+        force.setMutualInducedTargetEpsilon(mutualInducedTargetEpsilon)
+        force.setMutualInducedMaxIterations(mutualInducedMaxIterations)
+        return force
+
+    def addMultipoles(self, force, atomTypes, atoms, bonds):
+        """Add multipoles to the AmoebaMultipoleForce."""
+        self.buildBondedParticleSets(len(atoms), bonds)
+        for atomIndex, t in enumerate(atomTypes):
+            if t in self.multipoleParams:
+                multipoleList = self.multipoleParams[t]
+                hit = False
+                savedMultipoleParams = None
+
+                # assign multipole parameters via only 1-2 connected atoms
+
+                for multipoleParams in multipoleList:
+                    if hit:
+                        break
+                    kz, kx, ky = multipoleParams.kIndices[1:4]
+
+                    # assign multipole parameters
+                    #    (1) get bonded partners
+                    #    (2) match parameter types
+
+                    bondedAtomIndices = self.bonded12ParticleSets[atomIndex]
+                    zaxis = -1
+                    xaxis = -1
+                    yaxis = -1
+                    for bondedAtomZIndex in bondedAtomIndices:
+                       if hit:
+                           break
+                       bondedAtomZType = atomTypes[bondedAtomZIndex]
+                       if bondedAtomZType == kz:
+                          for bondedAtomXIndex in bondedAtomIndices:
+                              if bondedAtomXIndex == bondedAtomZIndex or hit:
+                                  continue
+                              bondedAtomXType = atomTypes[bondedAtomXIndex]
+                              if bondedAtomXType == kx:
+                                  if ky == 0:
+                                      zaxis = bondedAtomZIndex
+                                      xaxis = bondedAtomXIndex
+                                      if bondedAtomXType == bondedAtomZType and xaxis < zaxis:
+                                          swapI = zaxis
+                                          zaxis = xaxis
+                                          xaxis = swapI
+                                      else:
+                                          for bondedAtomXIndex2 in bondedAtomIndices:
+                                              bondedAtomX1Type = atomTypes[bondedAtomXIndex2]
+                                              if bondedAtomX1Type == kx and bondedAtomXIndex2 != bondedAtomZIndex and bondedAtomXIndex2 < xaxis:
+                                                  xaxis = bondedAtomXIndex2
+                                      savedMultipoleParams = multipoleParams
+                                      hit = True
+                                  else:
+                                      for bondedAtomYIndex in bondedAtomIndices:
+                                          if bondedAtomYIndex == bondedAtomZIndex or bondedAtomYIndex == bondedAtomXIndex or hit:
+                                              continue
+                                          bondedAtomYType = atomTypes[bondedAtomYIndex]
+                                          if bondedAtomYType == ky:
+                                              zaxis = bondedAtomZIndex
+                                              xaxis = bondedAtomXIndex
+                                              yaxis = bondedAtomYIndex
+                                              savedMultipoleParams = multipoleParams
+                                              hit = True
+
+                # assign multipole parameters via 1-2 and 1-3 connected atoms
+
+                for multipoleParams in multipoleList:
+                    if hit:
+                        break
+                    kz, kx, ky = multipoleParams.kIndices[1:4]
+
+                    # assign multipole parameters
+                    #    (1) get bonded partners
+                    #    (2) match parameter types
+
+                    bondedAtom12Indices = self.bonded12ParticleSets[atomIndex]
+                    bondedAtom13Indices = self.bonded13ParticleSets[atomIndex]
+                    zaxis = -1
+                    xaxis = -1
+                    yaxis = -1
+                    for bondedAtomZIndex in bondedAtom12Indices:
+                       if hit:
+                           break
+                       bondedAtomZType = atomTypes[bondedAtomZIndex]
+                       if bondedAtomZType == kz:
+                          for bondedAtomXIndex in bondedAtom13Indices:
+                              if bondedAtomXIndex == bondedAtomZIndex or hit:
+                                  continue
+                              bondedAtomXType = atomTypes[bondedAtomXIndex]
+                              if bondedAtomXType == kx and bondedAtomZIndex in self.bonded12ParticleSets[bondedAtomXIndex]:
+                                  if ky == 0:
+                                      zaxis = bondedAtomZIndex
+                                      xaxis = bondedAtomXIndex
+
+                                      # select xaxis w/ smallest index
+
+                                      for bondedAtomXIndex2 in bondedAtom13Indices:
+                                          bondedAtomX1Type = atomTypes[bondedAtomXIndex2]
+                                          if bondedAtomX1Type == kx and bondedAtomXIndex2 != bondedAtomZIndex and bondedAtomZIndex in self.bonded12ParticleSets[bondedAtomXIndex2] and bondedAtomXIndex2 < xaxis:
+                                              xaxis = bondedAtomXIndex2
+
+                                      savedMultipoleParams = multipoleParams
+                                      hit = True
+                                  else:
+                                      for bondedAtomYIndex in bondedAtom13Indices:
+                                          if bondedAtomYIndex == bondedAtomZIndex or bondedAtomYIndex == bondedAtomXIndex or hit:
+                                              continue
+                                          bondedAtomYType = atomTypes[bondedAtomYIndex]
+                                          if bondedAtomYType == ky and bondedAtomZIndex in self.bonded12ParticleSets[bondedAtomYIndex]:
+                                              zaxis = bondedAtomZIndex
+                                              xaxis = bondedAtomXIndex
+                                              yaxis = bondedAtomYIndex
+                                              savedMultipoleParams = multipoleParams
+                                              hit = True
+
+                # assign multipole parameters via only a z-defining atom
+
+                for multipoleParams in multipoleList:
+                    if hit:
+                        break
+                    kz, kx = multipoleParams.kIndices[1:3]
+                    zaxis = -1
+                    xaxis = -1
+                    yaxis = -1
+                    for bondedAtomZIndex in bondedAtom12Indices:
+                        if hit:
+                            break
+                        bondedAtomZType = atomTypes[bondedAtomZIndex]
+                        if kx == 0 and kz == bondedAtomZType:
+                            zaxis = bondedAtomZIndex
+                            savedMultipoleParams = multipoleParams
+                            hit = True
+
+                # assign multipole parameters via no connected atoms
+
+                for multipoleParams in multipoleList:
+                    if hit:
+                        break
+                    kz = multipoleParams.kIndices[1]
+                    zaxis = -1
+                    xaxis = -1
+                    yaxis = -1
+                    if kz == 0:
+                        savedMultipoleParams = multipoleParams
+                        hit = True
+
+                # add particle if there was a hit
+
+                if hit:
+                    polarizationParams = self.polarizationParams[t]
+                    pdamp = 0 if polarizationParams.thole == 0 else pow(polarizationParams.polarizability, 1.0/6.0)
+                    newIndex = force.addMultipole(savedMultipoleParams.charge, savedMultipoleParams.dipole, savedMultipoleParams.quadrupole, savedMultipoleParams.axisType,
+                                                                 zaxis, xaxis, yaxis, polarizationParams.thole, pdamp, polarizationParams.polarizability)
+                    if atomIndex == newIndex:
+                        force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.Covalent12, tuple(self.bonded12ParticleSets[atomIndex]))
+                        force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.Covalent13, tuple(self.bonded13ParticleSets[atomIndex]))
+                        force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.Covalent14, tuple(self.bonded14ParticleSets[atomIndex]))
+                        force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.Covalent15, tuple(self.bonded15ParticleSets[atomIndex]))
+                    else:
+                        atom = atoms[atomIndex]
+                        raise ValueError("Atom %d (%s of %s %d) is out of sync!." %(atomIndex, atom.name, atom.residue.name, atom.residue.index))
+                else:
+                    atom = atoms[atomIndex]
+                    raise ValueError("Atom %d (%s of %s %d) was not assigned." %(atomIndex, atom.name, atom.residue.name, atom.residue.index))
+            else:
+                atom = atoms[atomIndex]
+                raise ValueError('No multipole type for atom %d (%s %s %d)' % (atomIndex, atom.name, atom.residue.name, atom.residue.index))
+
+        # Set up the polarization groups.
+
+        self.setPolarGroups(force, atomTypes)
+
+    def buildBondedParticleSets(self, numAtoms, bonds):
+        """Identify sets of particles that are separated by various numbers of bonds."""
+
+        # 1-2
+
+        bonded12ParticleSets = [set() for _ in range(numAtoms)]
+        for atom1, atom2 in bonds:
+            bonded12ParticleSets[atom1].add(atom2)
+            bonded12ParticleSets[atom2].add(atom1)
+
+        # 1-3
+
+        bonded13ParticleSets = []
+        for i in range(numAtoms):
+            bonded13Set = set()
+            bonded12ParticleSet = bonded12ParticleSets[i]
+            for j in bonded12ParticleSet:
+                bonded13Set = bonded13Set.union(bonded12ParticleSets[j])
+
+            # remove 1-2 and self from set
+
+            bonded13Set = bonded13Set - bonded12ParticleSet
+            selfSet = set()
+            selfSet.add(i)
+            bonded13Set = bonded13Set - selfSet
+            bonded13Set = set(sorted(bonded13Set))
+            bonded13ParticleSets.append(bonded13Set)
+
+        # 1-4
+
+        bonded14ParticleSets = []
+        for i in range(numAtoms):
+            bonded14Set = set()
+            bonded13ParticleSet = bonded13ParticleSets[i]
+            for j in bonded13ParticleSet:
+                bonded14Set = bonded14Set.union(bonded12ParticleSets[j])
+
+            # remove 1-3, 1-2 and self from set
+
+            bonded14Set = bonded14Set - bonded12ParticleSets[i]
+            bonded14Set = bonded14Set - bonded13ParticleSet
+            selfSet = set()
+            selfSet.add(i)
+            bonded14Set = bonded14Set - selfSet
+            bonded14Set = set(sorted(bonded14Set))
+            bonded14ParticleSets.append(bonded14Set)
+
+        # 1-5
+
+        bonded15ParticleSets = []
+        for i in range(numAtoms):
+            bonded15Set = set()
+            bonded14ParticleSet = bonded14ParticleSets[i]
+            for j in bonded14ParticleSet:
+                bonded15Set = bonded15Set.union(bonded12ParticleSets[j])
+
+            # remove 1-4, 1-3, 1-2 and self from set
+
+            bonded15Set = bonded15Set - bonded12ParticleSets[i]
+            bonded15Set = bonded15Set - bonded13ParticleSets[i]
+            bonded15Set = bonded15Set - bonded14ParticleSet
+            selfSet = set()
+            selfSet.add(i)
+            bonded15Set = bonded15Set - selfSet
+            bonded15Set = set(sorted(bonded15Set))
+            bonded15ParticleSets.append(bonded15Set)
+
+        self.bonded12ParticleSets = bonded12ParticleSets
+        self.bonded13ParticleSets = bonded13ParticleSets
+        self.bonded14ParticleSets = bonded14ParticleSets
+        self.bonded15ParticleSets = bonded15ParticleSets
+
+    def setPolarGroups(self, force, atomTypes):
+        """Assign covalent maps to atoms based on polarization groups."""
+        groupSetsForAtom = [[] for _ in range(force.getNumMultipoles())]
+        polarizationGroupForAtom = [set() for _ in range(force.getNumMultipoles())]
+        for atomIndex in range(len(atomTypes)):
+
+            # assign multipole parameters via only 1-2 connected atoms
+
+            groupTypes = self.polarizationParams[atomTypes[atomIndex]].groupAtomTypes
+            bondedAtomIndices = self.bonded12ParticleSets[atomIndex]
+            polarizationGroupForAtom[atomIndex].add(atomIndex)
+            for bondedAtomIndex in bondedAtomIndices:
+                bondedAtomType = atomTypes[bondedAtomIndex]
+                if bondedAtomType in groupTypes:
+                    polarizationGroupForAtom[atomIndex].add(bondedAtomIndex)
+                    polarizationGroupForAtom[bondedAtomIndex].add(atomIndex)
+
+        # pgrp11
+
+        for atomIndex in range(len(atomTypes)):
+            if len(groupSetsForAtom[atomIndex]) > 0:
+                continue
+            group = set()
+            visited = set()
+            notVisited = set()
+            for pgrpAtomIndex in polarizationGroupForAtom[atomIndex]:
+                group.add(pgrpAtomIndex)
+                notVisited.add(pgrpAtomIndex)
+            visited.add(atomIndex)
+            while len(notVisited) > 0:
+                nextAtom = notVisited.pop()
+                if nextAtom not in visited:
+                   visited.add(nextAtom)
+                   for ii in polarizationGroupForAtom[nextAtom]:
+                       group.add(ii)
+                       if ii not in visited:
+                           notVisited.add(ii)
+            pGroup = group
+            for pgrpAtomIndex in group:
+                groupSetsForAtom[pgrpAtomIndex].append(pGroup)
+
+        for atomIndex in range(len(atomTypes)):
+            groupSetsForAtom[atomIndex][0] = sorted(groupSetsForAtom[atomIndex][0])
+            force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.PolarizationCovalent11, groupSetsForAtom[atomIndex][0])
+
+        # pgrp12
+
+        for atomIndex in range(len(atomTypes)):
+            if len(groupSetsForAtom[atomIndex]) > 1:
+                continue
+            pgrp11 = set(groupSetsForAtom[atomIndex][0])
+            pgrp12 = set()
+            for pgrpAtomIndex in pgrp11:
+                for bonded12 in self.bonded12ParticleSets[pgrpAtomIndex]:
+                    pgrp12 = pgrp12.union(groupSetsForAtom[bonded12][0])
+            pgrp12 = pgrp12 - pgrp11
+            for pgrpAtomIndex in pgrp11:
+                groupSetsForAtom[pgrpAtomIndex].append(pgrp12)
+
+        for atomIndex in range(len(atomTypes)):
+            groupSetsForAtom[atomIndex][1] = sorted(groupSetsForAtom[atomIndex][1])
+            force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.PolarizationCovalent12, groupSetsForAtom[atomIndex][1])
+
+        # pgrp13
+
+        for atomIndex in range(len(atomTypes)):
+            if len(groupSetsForAtom[atomIndex]) > 2:
+                continue
+            pgrp11 = set(groupSetsForAtom[atomIndex][0])
+            pgrp12 = set(groupSetsForAtom[atomIndex][1])
+            pgrp13 = set()
+            for pgrpAtomIndex in pgrp12:
+                for bonded12 in self.bonded12ParticleSets[pgrpAtomIndex]:
+                    pgrp13 = pgrp13.union(groupSetsForAtom[bonded12][0])
+            pgrp13 = pgrp13 - pgrp12
+            pgrp13 = pgrp13 - set(pgrp11)
+            for pgrpAtomIndex in pgrp11:
+                groupSetsForAtom[pgrpAtomIndex].append(pgrp13)
+
+        for atomIndex in range(len(atomTypes)):
+            groupSetsForAtom[atomIndex][2] = sorted(groupSetsForAtom[atomIndex][2])
+            force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.PolarizationCovalent13, groupSetsForAtom[atomIndex][2])
+
+        # pgrp14
+
+        for atomIndex in range(len(atomTypes)):
+            if len(groupSetsForAtom[atomIndex]) > 3:
+                continue
+            pgrp11 = set(groupSetsForAtom[atomIndex][0])
+            pgrp12 = set(groupSetsForAtom[atomIndex][1])
+            pgrp13 = set(groupSetsForAtom[atomIndex][2])
+            pgrp14 = set()
+            for pgrpAtomIndex in pgrp13:
+                for bonded12 in self.bonded12ParticleSets[pgrpAtomIndex]:
+                    pgrp14 = pgrp14.union(groupSetsForAtom[bonded12][0])
+            pgrp14 = pgrp14 - pgrp13
+            pgrp14 = pgrp14 - pgrp12
+            pgrp14 = pgrp14 - set(pgrp11)
+            for pgrpAtomIndex in pgrp11:
+                groupSetsForAtom[pgrpAtomIndex].append(pgrp14)
+
+        for atomIndex in range(len(atomTypes)):
+            groupSetsForAtom[atomIndex][3] = sorted(groupSetsForAtom[atomIndex][3])
+            force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.PolarizationCovalent14, groupSetsForAtom[atomIndex][3])
+
+
+class AmoebaVdwForceBuilder(object):
+    """AmoebaVdwForce for AMOEBA force field"""
+
+    def __init__(self, type, radiusrule, radiustype, radiussize, epsilonrule, vdw13Scale, vdw14Scale, vdw15Scale):
+        if vdw13Scale != 0.0 and vdw13Scale != 1.0:
+            raise ValueError('AmoebaVdwForce: the only supported values for vdw-13-scale are 0 or 1')
+        if vdw14Scale != 1.0:
+            raise ValueError('AmoebaVdwForce: the only supported value for vdw-14-scale is 1')
+        if vdw15Scale != 1.0:
+            raise ValueError('AmoebaVdwForce: the only supported value for vdw-15-scale is 1')
+        self.type = type.upper()
+        self.radiusrule = radiusrule.upper()
+        self.radiustype = radiustype
+        self.radiussize = radiussize
+        self.epsilonrule = epsilonrule.upper()
+        self.vdw13Scale = vdw13Scale
+        self.classParams = {}
+        self.pairParams = []
+
+    def registerClassParams(self, atomClass, sigma, epsilon, reduction):
+        self.classParams[atomClass] = (sigma, epsilon, reduction)
+
+    def registerPairParams(self, class1, class2, sigma, epsilon):
+        self.pairParams.append((class1, class2, sigma, epsilon))
+
+    def getForce(self, sys, nonbondedMethod, nonbondedCutoff, useDispersionCorrection):
+        """Get the AmoebaVdwForce.  If there is not already one present in the System, create a new one and add it."""
+        existing = [f for f in sys.getForces() if isinstance(f, mm.AmoebaVdwForce)]
+        if len(existing) == 0:
+            force = mm.AmoebaVdwForce()
+            sys.addForce(force)
+        else:
+            force = existing[0]
+        force.setCutoff(nonbondedCutoff)
+        force.setUseDispersionCorrection(useDispersionCorrection)
+        if (nonbondedMethod == ff.PME):
+            force.setNonbondedMethod(mm.AmoebaVdwForce.CutoffPeriodic)
+        potentialMap = {'BUFFERED-14-7':0, 'LENNARD-JONES':1}
+        allowedSigma = ['ARITHMETIC', 'GEOMETRIC', 'CUBIC-MEAN']
+        allowedEpsilon = ['ARITHMETIC', 'GEOMETRIC', 'HARMONIC', 'W-H', 'HHG']
+        if self.type not in potentialMap:
+            raise ValueError("AmoebaVdwForce: potential type %s not recognized; valid values are %s." % (self.type, ', '.join(potentialMap.keys())))
+        if self.radiusrule not in allowedSigma:
+            raise ValueError("AmoebaVdwForce: sigma combining rule %s not recognized; valid values are %s." % (self.radiusrule, ', '.join(allowedSigma)))
+        if self.epsilonrule not in allowedEpsilon:
+            raise ValueError("AmoebaVdwForce: epsilon combining rule %s not recognized; valid values are %s." % (self.epsilonrule, ', '.join(allowedEpsilon)))
+        force.setPotentialFunction(potentialMap[self.type])
+        force.setSigmaCombiningRule(self.radiusrule)
+        force.setEpsilonCombiningRule(self.epsilonrule)
+        return force
+
+    def addParticles(self, force, atomClasses, atoms, bonds):
+        """Add particles to the AmoebaVdwForce."""
+
+        # Define types
+
+        sigmaScale = 1
+        if self.radiustype == 'SIGMA':
+            sigmaScale = 1.122462048309372
+        if self.radiussize == 'DIAMETER':
+            sigmaScale = 0.5
+        classToTypeMap = {}
+        for className in self.classParams:
+            sigma, epsilon, _ = self.classParams[className]
+            classToTypeMap[className] = force.addParticleType(sigma*sigmaScale, epsilon)
+
+        # Record what other atoms each atom is bonded to.
+
+        bondedParticleSets = [set() for _ in range(len(atoms))]
+        for atom1, atom2 in bonds:
+            bondedParticleSets[atom1].add(atom2)
+            bondedParticleSets[atom2].add(atom1)
+
+        # add particles to force
+
+        for i, atom in enumerate(atoms):
+            className = atomClasses[i]
+            _, _, reduction = self.classParams[className]
+            # ivIndex = index of bonded partner for hydrogens; otherwise ivIndex = particle index
+            ivIndex = i
+            if atom.element == element.hydrogen and len(bondedParticleSets[i]) == 1:
+                ivIndex = list(bondedParticleSets[i])[0]
+            force.addParticle(ivIndex, classToTypeMap[className], reduction)
+
+        # Add pairs
+
+        for c1, c2, sigma, epsilon in self.pairParams:
+            force.addTypePair(classToTypeMap[c1], classToTypeMap[c2], sigma, epsilon)
+
+        # set combining rules
+
+        # set particle exclusions: self, 1-2 and 1-3 bonds
+        # (1) collect in bondedParticleSets[i], 1-2 indices for all bonded partners of particle i
+        # (2) add 1-2,1-3 and self to exclusion set
+
+        for i in range(len(atoms)):
+            # 1-2 partners
+
+            exclusionSet = bondedParticleSets[i].copy()
+
+            # 1-3 partners
+
+            if self.vdw13Scale == 0.0:
+                for bondedParticle in bondedParticleSets[i]:
+                    exclusionSet = exclusionSet.union(bondedParticleSets[bondedParticle])
+
+            # self
+
+            exclusionSet.add(i)
+            force.setParticleExclusions(i, tuple(exclusionSet))

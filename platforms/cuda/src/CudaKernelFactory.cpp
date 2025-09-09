@@ -36,6 +36,7 @@
 #include "openmm/common/CommonCalcCustomNonbondedForceKernel.h"
 #include "openmm/common/CommonIntegrateCustomStepKernel.h"
 #include "openmm/common/CommonIntegrateNoseHooverStepKernel.h"
+#include "openmm/common/CommonIntegrateQTBStepKernel.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
@@ -122,6 +123,10 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CudaCalcATMForceKernel(name, platform, cu);
     if (name == CalcCustomCPPForceKernel::Name())
         return new CommonCalcCustomCPPForceKernel(name, platform, context, cu);
+    if (name == CalcOrientationRestraintForceKernel::Name())
+        return new CommonCalcOrientationRestraintForceKernel(name, platform, cu);
+    if (name == CalcRGForceKernel::Name())
+        return new CommonCalcRGForceKernel(name, platform, cu);
     if (name == CalcRMSDForceKernel::Name())
         return new CommonCalcRMSDForceKernel(name, platform, cu);
     if (name == CalcCustomManyParticleForceKernel::Name())
@@ -142,6 +147,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CommonIntegrateCustomStepKernel(name, platform, cu);
     if (name == IntegrateDPDStepKernel::Name())
         return new CommonIntegrateDPDStepKernel(name, platform, cu);
+    if (name == IntegrateQTBStepKernel::Name())
+        return new CommonIntegrateQTBStepKernel(name, platform, cu);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new CommonApplyAndersenThermostatKernel(name, platform, cu);
     if (name == IntegrateNoseHooverStepKernel::Name())

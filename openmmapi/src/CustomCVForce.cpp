@@ -162,3 +162,19 @@ bool CustomCVForce::usesPeriodicBoundaryConditions() const {
             return true;
     return false;
 }
+
+int CustomCVForce::getNumCollectiveVariables() const {
+    return variables.size();
+}
+
+int CustomCVForce::getNumGlobalParameters() const {
+    return globalParameters.size();
+}
+
+int CustomCVForce::getNumEnergyParameterDerivatives() const {
+    return energyParameterDerivatives.size();
+}
+
+int CustomCVForce::getNumTabulatedFunctions() const {
+    return functions.size();
+}

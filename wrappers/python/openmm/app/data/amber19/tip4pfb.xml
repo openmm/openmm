@@ -1,0 +1,326 @@
+<ForceField>
+ <Info>
+    <DateGenerated>2017-11-25</DateGenerated>
+    <Source Source="parm/frcmod.ionsjc_tip4pew" md5hash="7aa9de49a8df5ebc45f74e1f47d13c2a" sourcePackage="AmberTools" sourcePackageVersion="17">parm/frcmod.ionsjc_tip4pew</Source>
+    <Source Source="parm/frcmod.ions234lm_126_tip4pew" md5hash="3902b775a0fe5d42cab716a82c183747" sourcePackage="AmberTools" sourcePackageVersion="17">parm/frcmod.ions234lm_126_tip4pew</Source>
+    <Source Source="lib/atomic_ions.lib" md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="17">lib/atomic_ions.lib</Source>
+    <Source Source="tip4pfb.xml" md5hash="5da20fd20f6aefc31c499fc7c635bf69" sourcePackage="OpenMM" sourcePackageVersion="7.2">tip4pfb.xml</Source>
+    <Reference>Joung, I.S., and Cheatham, Thomas E. (2008). Determination of Alkali and Halide Monovalent Ion Parameters for Use in Explicitly Solvated Biomolecular Simulations. J. Phys. Chem. B 112, 9020-9041.</Reference>
+    <Reference>Joung, I.S., and Cheatham, T.E. (2009). Molecular Dynamics Simulations of the Dynamic and Energetic Properties of Alkali and Halide Ions Using Water-Model-Specific Ion Parameters. J. Phys. Chem. B 113, 13279q13290.</Reference>
+    <Reference>Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013). Rational Design of Particle Mesh Ewald Compatible Lennard-Jones Parameters for +2 Metal Cations in Explicit Solvent. J. Chem. Theory Comput. 9, 2733-2748.</Reference>
+    <Reference>Lee-Ping Wang, Todd J. Martinez and Vijay S. Pande. (2014). Building force fields - an automatic, systematic and reproducible approach. Journal of Physical Chemistry Letters, 5, 1885-1891.</Reference>
+  </Info>
+  <AtomTypes>
+  <Type class="tip4pfb_standard-Li+" element="Li" mass="6.94" name="tip4pfb_standard-Li+"/>
+    <Type class="tip4pfb_standard-Na+" element="Na" mass="22.99" name="tip4pfb_standard-Na+"/>
+    <Type class="tip4pfb_standard-K+" element="K" mass="39.1" name="tip4pfb_standard-K+"/>
+    <Type class="tip4pfb_standard-Rb+" element="Rb" mass="85.47" name="tip4pfb_standard-Rb+"/>
+    <Type class="tip4pfb_standard-Cs+" element="Cs" mass="132.91" name="tip4pfb_standard-Cs+"/>
+    <Type class="tip4pfb_standard-F-" element="F" mass="19.0" name="tip4pfb_standard-F-"/>
+    <Type class="tip4pfb_standard-Cl-" element="Cl" mass="35.45" name="tip4pfb_standard-Cl-"/>
+    <Type class="tip4pfb_standard-Br-" element="Br" mass="79.9" name="tip4pfb_standard-Br-"/>
+    <Type class="tip4pfb_standard-I-" element="I" mass="126.9" name="tip4pfb_standard-I-"/>
+    <Type class="tip4pfb_standard-Be2+" element="Be" mass="9.01" name="tip4pfb_standard-Be2+"/>
+    <Type class="tip4pfb_standard-Cu2+" element="Cu" mass="63.55" name="tip4pfb_standard-Cu2+"/>
+    <Type class="tip4pfb_standard-Ni2+" element="Ni" mass="58.69" name="tip4pfb_standard-Ni2+"/>
+    <Type class="tip4pfb_standard-Pt2+" element="Pt" mass="195.08" name="tip4pfb_standard-Pt2+"/>
+    <Type class="tip4pfb_standard-Zn2+" element="Zn" mass="65.4" name="tip4pfb_standard-Zn2+"/>
+    <Type class="tip4pfb_standard-Co2+" element="Co" mass="58.93" name="tip4pfb_standard-Co2+"/>
+    <Type class="tip4pfb_standard-Pd2+" element="Pd" mass="106.42" name="tip4pfb_standard-Pd2+"/>
+    <Type class="tip4pfb_standard-Ag2+" element="Ag" mass="107.87" name="tip4pfb_standard-Ag2+"/>
+    <Type class="tip4pfb_standard-Cr2+" element="Cr" mass="52.0" name="tip4pfb_standard-Cr2+"/>
+    <Type class="tip4pfb_standard-Fe2+" element="Fe" mass="55.85" name="tip4pfb_standard-Fe2+"/>
+    <Type class="tip4pfb_standard-Mg2+" element="Mg" mass="24.305" name="tip4pfb_standard-Mg2+"/>
+    <Type class="tip4pfb_standard-V2+" element="V" mass="50.94" name="tip4pfb_standard-V2+"/>
+    <Type class="tip4pfb_standard-Mn2+" element="Mn" mass="54.94" name="tip4pfb_standard-Mn2+"/>
+    <Type class="tip4pfb_standard-Hg2+" element="Hg" mass="200.59" name="tip4pfb_standard-Hg2+"/>
+    <Type class="tip4pfb_standard-Cd2+" element="Cd" mass="112.41" name="tip4pfb_standard-Cd2+"/>
+    <Type class="tip4pfb_standard-Yb2+" element="Yb" mass="173.05" name="tip4pfb_standard-Yb2+"/>
+    <Type class="tip4pfb_standard-Ca2+" element="Ca" mass="40.08" name="tip4pfb_standard-Ca2+"/>
+    <Type class="tip4pfb_standard-Sn2+" element="Sn" mass="118.71" name="tip4pfb_standard-Sn2+"/>
+    <Type class="tip4pfb_standard-Pb2+" element="Pb" mass="207.2" name="tip4pfb_standard-Pb2+"/>
+    <Type class="tip4pfb_standard-Eu2+" element="Eu" mass="151.96" name="tip4pfb_standard-Eu2+"/>
+    <Type class="tip4pfb_standard-Sr2+" element="Sr" mass="87.62" name="tip4pfb_standard-Sr2+"/>
+    <Type class="tip4pfb_standard-Sm2+" element="Sm" mass="150.36" name="tip4pfb_standard-Sm2+"/>
+    <Type class="tip4pfb_standard-Ba2+" element="Ba" mass="137.33" name="tip4pfb_standard-Ba2+"/>
+    <Type class="tip4pfb_standard-Ra2+" element="Ra" mass="226.03" name="tip4pfb_standard-Ra2+"/>
+    <Type class="tip4pfb_standard-Al3+" element="Al" mass="26.98" name="tip4pfb_standard-Al3+"/>
+    <Type class="tip4pfb_standard-Fe3+" element="Fe" mass="55.85" name="tip4pfb_standard-Fe3+"/>
+    <Type class="tip4pfb_standard-Cr3+" element="Cr" mass="52.0" name="tip4pfb_standard-Cr3+"/>
+    <Type class="tip4pfb_standard-In3+" element="In" mass="114.82" name="tip4pfb_standard-In3+"/>
+    <Type class="tip4pfb_standard-Tl3+" element="Tl" mass="204.38" name="tip4pfb_standard-Tl3+"/>
+    <Type class="tip4pfb_standard-Y3+" element="Y" mass="88.91" name="tip4pfb_standard-Y3+"/>
+    <Type class="tip4pfb_standard-La3+" element="La" mass="138.91" name="tip4pfb_standard-La3+"/>
+    <Type class="tip4pfb_standard-Ce3+" element="Ce" mass="140.12" name="tip4pfb_standard-Ce3+"/>
+    <Type class="tip4pfb_standard-Pr3+" element="Pr" mass="140.91" name="tip4pfb_standard-Pr3+"/>
+    <Type class="tip4pfb_standard-Nd3+" element="Nd" mass="144.24" name="tip4pfb_standard-Nd3+"/>
+    <Type class="tip4pfb_standard-Sm3+" element="Sm" mass="150.36" name="tip4pfb_standard-Sm3+"/>
+    <Type class="tip4pfb_standard-Eu3+" element="Eu" mass="151.96" name="tip4pfb_standard-Eu3+"/>
+    <Type class="tip4pfb_standard-Gd3+" element="Gd" mass="157.25" name="tip4pfb_standard-Gd3+"/>
+    <Type class="tip4pfb_standard-Tb3+" element="Tb" mass="158.93" name="tip4pfb_standard-Tb3+"/>
+    <Type class="tip4pfb_standard-Dy3+" element="Dy" mass="162.5" name="tip4pfb_standard-Dy3+"/>
+    <Type class="tip4pfb_standard-Er3+" element="Er" mass="167.26" name="tip4pfb_standard-Er3+"/>
+    <Type class="tip4pfb_standard-Tm3+" element="Tm" mass="168.93" name="tip4pfb_standard-Tm3+"/>
+    <Type class="tip4pfb_standard-Lu3+" element="Lu" mass="174.97" name="tip4pfb_standard-Lu3+"/>
+    <Type class="tip4pfb_standard-Hf4+" element="Hf" mass="178.49" name="tip4pfb_standard-Hf4+"/>
+    <Type class="tip4pfb_standard-Zr4+" element="Zr" mass="91.22" name="tip4pfb_standard-Zr4+"/>
+    <Type class="tip4pfb_standard-Ce4+" element="Ce" mass="140.12" name="tip4pfb_standard-Ce4+"/>
+    <Type class="tip4pfb_standard-U4+" element="U" mass="238.03" name="tip4pfb_standard-U4+"/>
+    <Type class="tip4pfb_standard-Pu4+" element="Pu" mass="244.06" name="tip4pfb_standard-Pu4+"/>
+    <Type class="tip4pfb_standard-Th4+" element="Th" mass="232.04" name="tip4pfb_standard-Th4+"/>
+   <Type name="tip4p-fb-O" class="tip4p-fb-O" element="O" mass="15.99943"/>
+  <Type name="tip4p-fb-H" class="tip4p-fb-H" element="H" mass="1.007947"/>
+  <Type name="tip4p-fb-M" class="tip4p-fb-M" mass="0"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="AL">
+      <Atom charge="3.0" name="AL" type="tip4pfb_standard-Al3+"/>
+    </Residue>
+    <Residue name="Ag">
+      <Atom charge="2.0" name="Ag" type="tip4pfb_standard-Ag2+"/>
+    </Residue>
+    <Residue name="BA">
+      <Atom charge="2.0" name="BA" type="tip4pfb_standard-Ba2+"/>
+    </Residue>
+    <Residue name="BR">
+      <Atom charge="-1.0" name="BR" type="tip4pfb_standard-Br-"/>
+    </Residue>
+    <Residue name="Be">
+      <Atom charge="2.0" name="Be" type="tip4pfb_standard-Be2+"/>
+    </Residue>
+    <Residue name="CA">
+      <Atom charge="2.0" name="CA" type="tip4pfb_standard-Ca2+"/>
+    </Residue>
+    <Residue name="CD">
+      <Atom charge="2.0" name="CD" type="tip4pfb_standard-Cd2+"/>
+    </Residue>
+    <Residue name="CE">
+      <Atom charge="3.0" name="CE" type="tip4pfb_standard-Ce3+"/>
+    </Residue>
+    <Residue name="CL">
+      <Atom charge="-1.0" name="CL" type="tip4pfb_standard-Cl-"/>
+    </Residue>
+    <Residue name="CO">
+      <Atom charge="2.0" name="CO" type="tip4pfb_standard-Co2+"/>
+    </Residue>
+    <Residue name="CR">
+      <Atom charge="3.0" name="CR" type="tip4pfb_standard-Cr3+"/>
+    </Residue>
+    <Residue name="CS">
+      <Atom charge="1.0" name="CS" type="tip4pfb_standard-Cs+"/>
+    </Residue>
+    <Residue name="CU">
+      <Atom charge="2.0" name="CU" type="tip4pfb_standard-Cu2+"/>
+    </Residue>
+    <Residue name="Ce">
+      <Atom charge="4.0" name="Ce" type="tip4pfb_standard-Ce4+"/>
+    </Residue>
+    <Residue name="Cr">
+      <Atom charge="2.0" name="Cr" type="tip4pfb_standard-Cr2+"/>
+    </Residue>
+    <Residue name="Dy">
+      <Atom charge="3.0" name="Dy" type="tip4pfb_standard-Dy3+"/>
+    </Residue>
+    <Residue name="EU">
+      <Atom charge="2.0" name="EU" type="tip4pfb_standard-Eu2+"/>
+    </Residue>
+    <Residue name="EU3">
+      <Atom charge="3.0" name="EU3" type="tip4pfb_standard-Eu3+"/>
+    </Residue>
+    <Residue name="Er">
+      <Atom charge="3.0" name="Er" type="tip4pfb_standard-Er3+"/>
+    </Residue>
+    <Residue name="F">
+      <Atom charge="-1.0" name="F" type="tip4pfb_standard-F-"/>
+    </Residue>
+    <Residue name="FE">
+      <Atom charge="3.0" name="FE" type="tip4pfb_standard-Fe3+"/>
+    </Residue>
+    <Residue name="FE2">
+      <Atom charge="2.0" name="FE2" type="tip4pfb_standard-Fe2+"/>
+    </Residue>
+    <Residue name="GD3">
+      <Atom charge="3.0" name="GD" type="tip4pfb_standard-Gd3+"/>
+    </Residue>
+    <Residue name="HG">
+      <Atom charge="2.0" name="HG" type="tip4pfb_standard-Hg2+"/>
+    </Residue>
+    <Residue name="Hf">
+      <Atom charge="4.0" name="Hf" type="tip4pfb_standard-Hf4+"/>
+    </Residue>
+    <Residue name="IN">
+      <Atom charge="3.0" name="IN" type="tip4pfb_standard-In3+"/>
+    </Residue>
+    <Residue name="IOD">
+      <Atom charge="-1.0" name="I" type="tip4pfb_standard-I-"/>
+    </Residue>
+    <Residue name="K">
+      <Atom charge="1.0" name="K" type="tip4pfb_standard-K+"/>
+    </Residue>
+    <Residue name="LA">
+      <Atom charge="3.0" name="LA" type="tip4pfb_standard-La3+"/>
+    </Residue>
+    <Residue name="LI">
+      <Atom charge="1.0" name="LI" type="tip4pfb_standard-Li+"/>
+    </Residue>
+    <Residue name="LU">
+      <Atom charge="3.0" name="LU" type="tip4pfb_standard-Lu3+"/>
+    </Residue>
+    <Residue name="MG">
+      <Atom charge="2.0" name="MG" type="tip4pfb_standard-Mg2+"/>
+    </Residue>
+    <Residue name="MN">
+      <Atom charge="2.0" name="MN" type="tip4pfb_standard-Mn2+"/>
+    </Residue>
+    <Residue name="NA">
+      <Atom charge="1.0" name="NA" type="tip4pfb_standard-Na+"/>
+    </Residue>
+    <Residue name="NI">
+      <Atom charge="2.0" name="NI" type="tip4pfb_standard-Ni2+"/>
+    </Residue>
+    <Residue name="Nd">
+      <Atom charge="3.0" name="Nd" type="tip4pfb_standard-Nd3+"/>
+    </Residue>
+    <Residue name="PB">
+      <Atom charge="2.0" name="PB" type="tip4pfb_standard-Pb2+"/>
+    </Residue>
+    <Residue name="PD">
+      <Atom charge="2.0" name="PD" type="tip4pfb_standard-Pd2+"/>
+    </Residue>
+    <Residue name="PR">
+      <Atom charge="3.0" name="PR" type="tip4pfb_standard-Pr3+"/>
+    </Residue>
+    <Residue name="PT">
+      <Atom charge="2.0" name="PT" type="tip4pfb_standard-Pt2+"/>
+    </Residue>
+    <Residue name="Pu">
+      <Atom charge="4.0" name="Pu" type="tip4pfb_standard-Pu4+"/>
+    </Residue>
+    <Residue name="RB">
+      <Atom charge="1.0" name="RB" type="tip4pfb_standard-Rb+"/>
+    </Residue>
+    <Residue name="Ra">
+      <Atom charge="2.0" name="Ra" type="tip4pfb_standard-Ra2+"/>
+    </Residue>
+    <Residue name="SM">
+      <Atom charge="3.0" name="SM" type="tip4pfb_standard-Sm3+"/>
+    </Residue>
+    <Residue name="SR">
+      <Atom charge="2.0" name="SR" type="tip4pfb_standard-Sr2+"/>
+    </Residue>
+    <Residue name="Sm">
+      <Atom charge="2.0" name="Sm" type="tip4pfb_standard-Sm2+"/>
+    </Residue>
+    <Residue name="Sn">
+      <Atom charge="2.0" name="Sn" type="tip4pfb_standard-Sn2+"/>
+    </Residue>
+    <Residue name="TB">
+      <Atom charge="3.0" name="TB" type="tip4pfb_standard-Tb3+"/>
+    </Residue>
+    <Residue name="Th">
+      <Atom charge="4.0" name="Th" type="tip4pfb_standard-Th4+"/>
+    </Residue>
+    <Residue name="Tl">
+      <Atom charge="3.0" name="Tl" type="tip4pfb_standard-Tl3+"/>
+    </Residue>
+    <Residue name="Tm">
+      <Atom charge="3.0" name="Tm" type="tip4pfb_standard-Tm3+"/>
+    </Residue>
+    <Residue name="U4+">
+      <Atom charge="4.0" name="U" type="tip4pfb_standard-U4+"/>
+    </Residue>
+    <Residue name="V2+">
+      <Atom charge="2.0" name="V2+" type="tip4pfb_standard-V2+"/>
+    </Residue>
+    <Residue name="Y">
+      <Atom charge="3.0" name="Y" type="tip4pfb_standard-Y3+"/>
+    </Residue>
+    <Residue name="YB2">
+      <Atom charge="2.0" name="YB2" type="tip4pfb_standard-Yb2+"/>
+    </Residue>
+    <Residue name="ZN">
+      <Atom charge="2.0" name="ZN" type="tip4pfb_standard-Zn2+"/>
+    </Residue>
+    <Residue name="Zr">
+      <Atom charge="4.0" name="Zr" type="tip4pfb_standard-Zr4+"/>
+    </Residue>
+   <Residue name="HOH">
+   <Atom name="O" type="tip4p-fb-O" charge="0"/>
+   <Atom name="H1" type="tip4p-fb-H" charge="5.258681106763e-01"/>
+   <Atom name="H2" type="tip4p-fb-H" charge="5.258681106763e-01"/>
+   <Atom name="M" type="tip4p-fb-M" charge="-1.0517362213526e+00"/>
+   <VirtualSite type="average3" index="3" atom1="0" atom2="1" atom3="2" weight1="8.203146574531e-01" weight2="8.984267127345e-02" weight3="8.984267127345e-02"/>
+   <Bond atomName1="O" atomName2="H1"/>
+   <Bond atomName1="O" atomName2="H2"/>
+  </Residue>
+ </Residues>
+ <HarmonicBondForce>
+  <Bond type1="tip4p-fb-O" type2="tip4p-fb-H" length="0.09572" k="462750.4"/>
+ </HarmonicBondForce>
+ <HarmonicAngleForce>
+  <Angle type1="tip4p-fb-H" type2="tip4p-fb-O" type3="tip4p-fb-H" angle="1.82421813418" k="836.8"/>
+ </HarmonicAngleForce>
+ <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="0.4350874656" sigma="0.14396923285147886" type="tip4pfb_standard-Li+"/>
+    <Atom epsilon="0.7047424999999999" sigma="0.21844836568801118" type="tip4pfb_standard-Na+"/>
+    <Atom epsilon="1.1692819784000001" sigma="0.2833057923686279" type="tip4pfb_standard-K+"/>
+    <Atom epsilon="1.8122970896000001" sigma="0.304509181860368" type="tip4pfb_standard-Rb+"/>
+    <Atom epsilon="1.6503026512" sigma="0.3364033559697921" type="tip4pfb_standard-Cs+"/>
+    <Atom epsilon="0.0065906368" sigma="0.4522201893280362" type="tip4pfb_standard-F-"/>
+    <Atom epsilon="0.048791716" sigma="0.49177609241346726" type="tip4pfb_standard-Cl-"/>
+    <Atom epsilon="0.1270986232" sigma="0.4932015303624918" type="tip4pfb_standard-Br-"/>
+    <Atom epsilon="0.1745071088" sigma="0.5259866031900563" type="tip4pfb_standard-I-"/>
+    <Atom epsilon="4.853439999999999e-06" sigma="0.1635690046505663" type="tip4pfb_standard-Be2+"/>
+    <Atom epsilon="0.00424537928" sigma="0.2129247936355411" type="tip4pfb_standard-Cu2+"/>
+    <Atom epsilon="0.00651925776" sigma="0.21755746696987088" type="tip4pfb_standard-Ni2+"/>
+    <Atom epsilon="0.01034627888" sigma="0.2229028592787129" type="tip4pfb_standard-Pt2+"/>
+    <Atom epsilon="0.01050071032" sigma="0.22308103902234097" type="tip4pfb_standard-Zn2+"/>
+    <Atom epsilon="0.01748020808" sigma="0.2294955097929514" type="tip4pfb_standard-Co2+"/>
+    <Atom epsilon="0.01748020808" sigma="0.2294955097929514" type="tip4pfb_standard-Pd2+"/>
+    <Atom epsilon="0.027520218160000002" sigma="0.23573180081993375" type="tip4pfb_standard-Ag2+"/>
+    <Atom epsilon="0.03111050856" sigma="0.23751359825621443" type="tip4pfb_standard-Cr2+"/>
+    <Atom epsilon="0.035064095680000004" sigma="0.23929539569249514" type="tip4pfb_standard-Fe2+"/>
+    <Atom epsilon="0.03940482832" sigma="0.24107719312877582" type="tip4pfb_standard-Mg2+"/>
+    <Atom epsilon="0.03940482832" sigma="0.24107719312877582" type="tip4pfb_standard-V2+"/>
+    <Atom epsilon="0.06639731856" sigma="0.24962982082292307" type="tip4pfb_standard-Mn2+"/>
+    <Atom epsilon="0.06639731856" sigma="0.24962982082292307" type="tip4pfb_standard-Hg2+"/>
+    <Atom epsilon="0.0698627584" sigma="0.2505207195410634" type="tip4pfb_standard-Cd2+"/>
+    <Atom epsilon="0.45559312408" sigma="0.29470929596082424" type="tip4pfb_standard-Yb2+"/>
+    <Atom epsilon="0.46311578872000003" sigma="0.29524383519170844" type="tip4pfb_standard-Ca2+"/>
+    <Atom epsilon="0.49648724720000004" sigma="0.29756017185887335" type="tip4pfb_standard-Sn2+"/>
+    <Atom epsilon="0.7530346464" sigma="0.3132399892981433" type="tip4pfb_standard-Pb2+"/>
+    <Atom epsilon="0.9712365224" sigma="0.3248216726339677" type="tip4pfb_standard-Eu2+"/>
+    <Atom epsilon="0.985288068" sigma="0.32553439160847997" type="tip4pfb_standard-Sr2+"/>
+    <Atom epsilon="1.02424478992" sigma="0.3274943687883887" type="tip4pfb_standard-Sm2+"/>
+    <Atom epsilon="1.8181297948000001" sigma="0.3652684744375391" type="tip4pfb_standard-Ba2+"/>
+    <Atom epsilon="1.8181297948000001" sigma="0.3652684744375391" type="tip4pfb_standard-Ra2+"/>
+    <Atom epsilon="0.01678206584" sigma="0.22896097056206718" type="tip4pfb_standard-Al3+"/>
+    <Atom epsilon="0.05043699032" sigma="0.2449971474885933" type="tip4pfb_standard-Fe3+"/>
+    <Atom epsilon="0.03111050856" sigma="0.23751359825621443" type="tip4pfb_standard-Cr3+"/>
+    <Atom epsilon="0.10650049832000001" sigma="0.2583606282606984" type="tip4pfb_standard-In3+"/>
+    <Atom epsilon="0.16579982824" sigma="0.2676259749293579" type="tip4pfb_standard-Tl3+"/>
+    <Atom epsilon="0.31158691504" sigma="0.2833057923686279" type="tip4pfb_standard-Y3+"/>
+    <Atom epsilon="0.59811815528" sigma="0.30415282237311186" type="tip4pfb_standard-La3+"/>
+    <Atom epsilon="0.66295839824" sigma="0.3080727767329294" type="tip4pfb_standard-Ce3+"/>
+    <Atom epsilon="0.64198735344" sigma="0.30682551852753287" type="tip4pfb_standard-Pr3+"/>
+    <Atom epsilon="0.49387597096" sigma="0.2973819921152453" type="tip4pfb_standard-Nd3+"/>
+    <Atom epsilon="0.43830358088" sigma="0.29346203775542773" type="tip4pfb_standard-Sm3+"/>
+    <Atom epsilon="0.4580931896" sigma="0.29488747570445234" type="tip4pfb_standard-Eu3+"/>
+    <Atom epsilon="0.35748949536" sigma="0.2872257467284454" type="tip4pfb_standard-Gd3+"/>
+    <Atom epsilon="0.37289213824" sigma="0.28847300493384187" type="tip4pfb_standard-Tb3+"/>
+    <Atom epsilon="0.32577870832" sigma="0.28455305057402436" type="tip4pfb_standard-Dy3+"/>
+    <Atom epsilon="0.31158691504" sigma="0.2833057923686279" type="tip4pfb_standard-Er3+"/>
+    <Atom epsilon="0.31158691504" sigma="0.2833057923686279" type="tip4pfb_standard-Tm3+"/>
+    <Atom epsilon="0.28625681168" sigma="0.280989455701463" type="tip4pfb_standard-Lu3+"/>
+    <Atom epsilon="0.14196839183999999" sigma="0.26424055980042466" type="tip4pfb_standard-Hf4+"/>
+    <Atom epsilon="0.16712607256" sigma="0.26780415467298596" type="tip4pfb_standard-Zr4+"/>
+    <Atom epsilon="0.48867542632000005" sigma="0.29702563262798914" type="tip4pfb_standard-Ce4+"/>
+    <Atom epsilon="0.48867542632000005" sigma="0.29702563262798914" type="tip4pfb_standard-U4+"/>
+    <Atom epsilon="0.43343181496" sigma="0.29310567826817163" type="tip4pfb_standard-Pu4+"/>
+    <Atom epsilon="0.5502288444000001" sigma="0.3011237667314347" type="tip4pfb_standard-Th4+"/>
+   <Atom type="tip4p-fb-O" sigma="3.165552430462e-01" epsilon="7.492790213533e-01"/>
+  <Atom type="tip4p-fb-H" sigma="1" epsilon="0"/>
+  <Atom type="tip4p-fb-M" sigma="1" epsilon="0"/>
+ </NonbondedForce>
+</ForceField>

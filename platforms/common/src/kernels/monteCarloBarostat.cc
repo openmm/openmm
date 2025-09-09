@@ -79,7 +79,7 @@ KERNEL void computeMolecularKineticEnergy(int numMolecules, GLOBAL mixed4* RESTR
             molVel += mass*trimTo3(v);
             molMass += mass;
         }
-        molVel *= RECIP((mixed) numAtoms);
+        molVel *= RECIP((mixed) molMass);
 #if COMPONENTS == 1
         ke[0] += 0.5f*molMass*dot(molVel, molVel);
 #else
@@ -106,5 +106,6 @@ KERNEL void computeMolecularKineticEnergy(int numMolecules, GLOBAL mixed4* RESTR
         }
         if (LOCAL_ID == 0)
             buffers[j][GROUP_ID] = tempBuffer[0];
+        SYNC_THREADS;
     }
 }

@@ -56,9 +56,7 @@ public:
     /**
      * Get the number of harmonic bond angle terms in the potential function
      */
-    int getNumAngles() const {
-        return angles.size();
-    }
+    int getNumAngles() const;
     /**
      * Add an angle term to the force field.
      *

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2025 Stanford University and the Authors.      *
  * Portions copyright (c) 2020 Advanced Micro Devices, Inc.                   *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -49,6 +49,11 @@ public:
      * Block until all operations started before the call to enqueue() have completed.
      */
     void wait();
+    /**
+     * Enqueue a barrier that causes a specified ComputeQueue to block until all
+     * operations started before the call to enqueue() have completed.
+     */
+    void queueWait(ComputeQueue queue);
 private:
     HipContext& context;
     hipEvent_t event;

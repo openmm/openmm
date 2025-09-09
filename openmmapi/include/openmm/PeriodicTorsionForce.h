@@ -56,9 +56,7 @@ public:
     /**
      * Get the number of periodic torsion terms in the potential function
      */
-    int getNumTorsions() const {
-        return periodicTorsions.size();
-    }
+    int getNumTorsions() const;
     /**
      * Add a periodic torsion term to the force field.
      *

@@ -56,8 +56,11 @@
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/KernelImpl.h"
 #include "openmm/MonteCarloBarostat.h"
+#include "openmm/OrientationRestraintForce.h"
 #include "openmm/PeriodicTorsionForce.h"
+#include "openmm/QTBIntegrator.h"
 #include "openmm/RBTorsionForce.h"
+#include "openmm/RGForce.h"
 #include "openmm/RMSDForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
@@ -1071,6 +1074,69 @@ public:
 };
 
 /**
+ * This kernel is invoked by RGForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcRGForceKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CalcRGForce";
+    }
+    CalcRGForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the RGForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const RGForce& force) = 0;
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+};
+
+/**
+ * This kernel is invoked by OrientationRestraintForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcOrientationRestraintForceKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CalcOrientationRestraintForce";
+    }
+    CalcOrientationRestraintForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the OrientationRestraintForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const OrientationRestraintForce& force) = 0;
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the OrientationRestraintForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const OrientationRestraintForce& force) = 0;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class IntegrateVerletStepKernel : public KernelImpl {
@@ -1433,6 +1499,72 @@ public:
      * @param integrator the DPDIntegrator this kernel is being used for
      */
     virtual double computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator) = 0;
+};
+
+/**
+ * This kernel is invoked by QTBIntegrator to take one time step.
+ */
+class IntegrateQTBStepKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "IntegrateQTBStep";
+    }
+    IntegrateQTBStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the QTBIntegrator this kernel will be used for
+     */
+    virtual void initialize(const System& system, const QTBIntegrator& integrator) = 0;
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the QTBIntegrator this kernel is being used for
+     */
+    virtual void execute(ContextImpl& context, const QTBIntegrator& integrator) = 0;
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the QTBIntegrator this kernel is being used for
+     */
+    virtual double computeKineticEnergy(ContextImpl& context, const QTBIntegrator& integrator) = 0;
+    /**
+     * Get the adapted friction coefficients for a particle.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param particle   the index of the particle for which to get the friction
+     * @param friction   the adapted friction coefficients used in generating the
+     *                   random force
+     */
+    virtual void getAdaptedFriction(ContextImpl& context, int particle, std::vector<double>& friction) const = 0;
+    /**
+     * Set the adapted friction coefficients for a particle.  This affects the
+     * specified particle, and all others that have the same type.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param particle   the index of the particle for which to get the friction
+     * @param friction   the adapted friction coefficients used in generating the
+     *                   random force
+     */
+    virtual void setAdaptedFriction(ContextImpl& context, int particle, const std::vector<double>& friction) = 0;
+    /**
+     * Write the adapted friction to a checkpoint.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param stream     the stream to write the checkpoint to
+     */
+    virtual void createCheckpoint(ContextImpl& context, std::ostream& stream) const = 0;
+    /**
+     * Load the adapted friction from a checkpoint.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param stream     the stream to read the checkpoint from
+     */
+    virtual void loadCheckpoint(ContextImpl& context, std::istream& stream) = 0;
 };
 
 /**

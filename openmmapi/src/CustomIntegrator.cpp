@@ -378,3 +378,19 @@ void CustomIntegrator::deserializeParameters(const SerializationNode& node) {
         setPerDofVariableByName(var.getName(), perDofValues);
     }
 }
+
+int CustomIntegrator::getNumGlobalVariables() const {
+    return globalNames.size();
+}
+
+int CustomIntegrator::getNumPerDofVariables() const {
+    return perDofNames.size();
+}
+
+int CustomIntegrator::getNumComputations() const {
+    return computations.size();
+}
+
+int CustomIntegrator::getNumTabulatedFunctions() const {
+    return functions.size();
+}

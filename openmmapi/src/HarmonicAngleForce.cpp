@@ -95,3 +95,7 @@ void HarmonicAngleForce::setUsesPeriodicBoundaryConditions(bool periodic) {
 bool HarmonicAngleForce::usesPeriodicBoundaryConditions() const {
     return usePeriodic;
 }
+
+int HarmonicAngleForce::getNumAngles() const {
+    return angles.size();
+}

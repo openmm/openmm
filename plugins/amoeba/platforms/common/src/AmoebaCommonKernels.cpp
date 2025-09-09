@@ -210,12 +210,7 @@ private:
 
 CommonCalcAmoebaMultipoleForceKernel::CommonCalcAmoebaMultipoleForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system) :
         CalcAmoebaMultipoleForceKernel(name, platform), cc(cc), system(system), hasInitializedScaleFactors(false), multipolesAreValid(false), hasCreatedEvent(false),
-        fft(NULL), gkKernel(NULL) {
-}
-
-CommonCalcAmoebaMultipoleForceKernel::~CommonCalcAmoebaMultipoleForceKernel() {
-    if (fft != NULL)
-        delete fft;
+        gkKernel(NULL) {
 }
 
 void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
@@ -233,11 +228,13 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
     vector<float> localDipolesVec;
     vector<float> localQuadrupolesVec;
     vector<mm_int4> multipoleParticlesVec;
+    totalCharge = 0.0;
     for (int i = 0; i < numMultipoles; i++) {
         double charge, thole, damping, polarity;
         int axisType, atomX, atomY, atomZ;
         vector<double> dipole, quadrupole;
         force.getMultipoleParameters(i, charge, dipole, quadrupole, axisType, atomZ, atomX, atomY, thole, damping, polarity);
+        totalCharge += charge;
         if (cc.getUseDoublePrecision())
             posqd[i] = mm_double4(0, 0, 0, charge);
         else
@@ -1105,12 +1102,8 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
         
         Vec3 a, b, c;
         cc.getPeriodicBoxVectors(a, b, c);
-        double determinant = a[0]*b[1]*c[2];
-        double scale = 1.0/determinant;
         mm_double4 recipBoxVectors[3];
-        recipBoxVectors[0] = mm_double4(b[1]*c[2]*scale, 0, 0, 0);
-        recipBoxVectors[1] = mm_double4(-b[0]*c[2]*scale, a[0]*c[2]*scale, 0, 0);
-        recipBoxVectors[2] = mm_double4((b[0]*c[1]-b[1]*c[0])*scale, -a[0]*c[1]*scale, a[0]*b[1]*scale, 0);
+        cc.computeReciprocalBoxVectors(recipBoxVectors);
         if (cc.getUseDoublePrecision()) {
             mm_double4 boxVectors[] = {mm_double4(a[0], a[1], a[2], 0), mm_double4(b[0], b[1], b[2], 0), mm_double4(c[0], c[1], c[2], 0)};
             pmeConvolutionKernel->setArg(4, mm_double4(a[0], b[1], c[2], 0));
@@ -1228,7 +1221,17 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
     
     cc.getPosq().copyTo(lastPositions);
     multipolesAreValid = true;
-    return 0.0;
+
+    // Correction for the neutralizing plasma.
+
+    if (usePME) {
+        Vec3 a, b, c;
+        cc.getPeriodicBoxVectors(a, b, c);
+        double volume = a[0] * b[1] * c[2];
+        return -totalCharge*totalCharge/(8*EPSILON0*volume*pmeAlpha*pmeAlpha);
+    }
+    else
+        return 0.0;
 }
 
 void CommonCalcAmoebaMultipoleForceKernel::computeInducedField() {
@@ -1664,11 +1667,13 @@ void CommonCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImpl& 
     vector<float> localDipolesVec;
     vector<float> localQuadrupolesVec;
     vector<mm_int4> multipoleParticlesVec;
+    totalCharge = 0.0;
     for (int i = 0; i < force.getNumMultipoles(); i++) {
         double charge, thole, damping, polarity;
         int axisType, atomX, atomY, atomZ;
         vector<double> dipole, quadrupole;
         force.getMultipoleParameters(i, charge, dipole, quadrupole, axisType, atomZ, atomX, atomY, thole, damping, polarity);
+        totalCharge += charge;
         if (cc.getUseDoublePrecision())
             posqd[i].w = charge;
         else
@@ -2402,14 +2407,7 @@ private:
 };
 
 CommonCalcHippoNonbondedForceKernel::CommonCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system) :
-        CalcHippoNonbondedForceKernel(name, platform), cc(cc), system(system), hasInitializedKernels(false), multipolesAreValid(false), fft(NULL), dfft(NULL) {
-}
-
-CommonCalcHippoNonbondedForceKernel::~CommonCalcHippoNonbondedForceKernel() {
-    if (fft != NULL)
-        delete fft;
-    if (dfft != NULL)
-        delete dfft;
+        CalcHippoNonbondedForceKernel(name, platform), cc(cc), system(system), hasInitializedKernels(false), multipolesAreValid(false) {
 }
 
 void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
@@ -2424,12 +2422,14 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
     vector<double> localDipolesVec, localQuadrupolesVec;
     vector<mm_int4> multipoleParticlesVec;
     vector<vector<int> > exclusions(numParticles);
+    totalCharge = 0.0;
     for (int i = 0; i < numParticles; i++) {
         double charge, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
         int axisType, atomX, atomY, atomZ;
         vector<double> dipole, quadrupole;
         force.getParticleParameters(i, charge, dipole, quadrupole, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha,
                                     polarizability, axisType, atomZ, atomX, atomY);
+        totalCharge += charge;
         coreChargeVec.push_back(coreCharge);
         valenceChargeVec.push_back(charge-coreCharge);
         alphaVec.push_back(alpha);
@@ -3243,12 +3243,8 @@ double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool i
         
         Vec3 a, b, c;
         cc.getPeriodicBoxVectors(a, b, c);
-        double determinant = a[0]*b[1]*c[2];
-        double scale = 1.0/determinant;
         mm_double4 recipBoxVectors[3];
-        recipBoxVectors[0] = mm_double4(b[1]*c[2]*scale, 0, 0, 0);
-        recipBoxVectors[1] = mm_double4(-b[0]*c[2]*scale, a[0]*c[2]*scale, 0, 0);
-        recipBoxVectors[2] = mm_double4((b[0]*c[1]-b[1]*c[0])*scale, -a[0]*c[1]*scale, a[0]*b[1]*scale, 0);
+        cc.computeReciprocalBoxVectors(recipBoxVectors);
         if (cc.getUseDoublePrecision()) {
             mm_double4 boxVectors[] = {mm_double4(a[0], a[1], a[2], 0), mm_double4(b[0], b[1], b[2], 0), mm_double4(c[0], c[1], c[2], 0)};
             pmeConvolutionKernel->setArg(4, mm_double4(a[0], b[1], c[2], 0));
@@ -3378,7 +3374,17 @@ double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool i
     
     cc.getPosq().copyTo(lastPositions);
     multipolesAreValid = true;
-    return 0.0;
+
+    // Correction for the neutralizing plasma.
+
+    if (usePME) {
+        Vec3 a, b, c;
+        cc.getPeriodicBoxVectors(a, b, c);
+        double volume = a[0] * b[1] * c[2];
+        return -totalCharge*totalCharge/(8*EPSILON0*volume*pmeAlpha*pmeAlpha);
+    }
+    else
+        return 0.0;
 }
 
 void CommonCalcHippoNonbondedForceKernel::computeInducedField(int optOrder) {
@@ -3513,12 +3519,14 @@ void CommonCalcHippoNonbondedForceKernel::copyParametersToContext(ContextImpl& c
     vector<double> coreChargeVec, valenceChargeVec, alphaVec, epsilonVec, dampingVec, c6Vec, pauliKVec, pauliQVec, pauliAlphaVec, polarizabilityVec;
     vector<double> localDipolesVec, localQuadrupolesVec;
     vector<mm_int4> multipoleParticlesVec;
+    totalCharge = 0.0;
     for (int i = 0; i < numParticles; i++) {
         double charge, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
         int axisType, atomX, atomY, atomZ;
         vector<double> dipole, quadrupole;
         force.getParticleParameters(i, charge, dipole, quadrupole, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha,
                                     polarizability, axisType, atomZ, atomX, atomY);
+        totalCharge += charge;
         coreChargeVec.push_back(coreCharge);
         valenceChargeVec.push_back(charge-coreCharge);
         alphaVec.push_back(alpha);

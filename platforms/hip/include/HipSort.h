@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -29,6 +29,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "HipArray.h"
+#include "openmm/common/ComputeSort.h"
 #include "openmm/common/windowsExportCommon.h"
 #include "HipContext.h"
 
@@ -42,7 +43,7 @@ namespace OpenMM {
  * sort and the key for sorting it.  Here is an example of a trait class for
  * sorting floats:
  *
- * class FloatTrait : public HipSort::SortTrait {
+ * class FloatTrait : public ComputeSortImpl::SortTrait {
  *     int getDataSize() const {return 4;}
  *     int getKeySize() const {return 4;}
  *     const char* getDataType() const {return "float";}
@@ -67,7 +68,7 @@ namespace OpenMM {
  * elements).
  */
 
-class OPENMM_EXPORT_COMMON HipSort {
+class OPENMM_EXPORT_COMMON HipSort : public ComputeSortImpl {
 public:
     class SortTrait;
     /**
@@ -81,15 +82,15 @@ public:
      * @param uniform    whether the input data is expected to follow a uniform or nonuniform
      *                   distribution.  This argument is used only as a hint.
      */
-    HipSort(HipContext& context, SortTrait* trait, unsigned int length, bool uniform=true);
+    HipSort(HipContext& context, ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform=true);
     ~HipSort();
     /**
      * Sort an array.
      */
-    void sort(HipArray& data);
+    void sort(ArrayInterface& data);
 private:
     HipContext& context;
-    SortTrait* trait;
+    ComputeSortImpl::SortTrait* trait;
     HipArray counters;
     HipArray dataRange;
     HipArray bucketOfElement;
@@ -100,48 +101,6 @@ private:
     unsigned int dataLength, rangeKernelBlocks, rangeKernelSize, positionsKernelSize, sortKernelSize;
     bool isShortList, uniform;
 };
-
-/**
- * A subclass of SortTrait defines the type of value to sort, and the key for sorting them.
- */
-class HipSort::SortTrait {
-public:
-    virtual ~SortTrait() {
-    }
-    /**
-     * Get the size of each data value in bytes.
-     */
-    virtual int getDataSize() const = 0;
-    /**
-     * Get the size of each key value in bytes.
-     */
-    virtual int getKeySize() const = 0;
-    /**
-     * Get the data type of the values to sort.
-     */
-    virtual const char* getDataType() const = 0;
-    /**
-     * Get the data type of the sorting key.
-     */
-    virtual const char* getKeyType() const = 0;
-    /**
-     * Get the minimum value a key can take.
-     */
-    virtual const char* getMinKey() const = 0;
-    /**
-     * Get the maximum value a key can take.
-     */
-    virtual const char* getMaxKey() const = 0;
-    /**
-     * Get a value whose key is guaranteed to equal getMaxKey().
-     */
-    virtual const char* getMaxValue() const = 0;
-    /**
-     * Get the HIP code to select the key from the data value.
-     */
-    virtual const char* getSortKey() const = 0;
-};
-
 
 } // namespace OpenMM
 

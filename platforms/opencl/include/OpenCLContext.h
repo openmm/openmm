@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -53,7 +53,6 @@
 #include "OpenCLArray.h"
 #include "OpenCLBondedUtilities.h"
 #include "OpenCLExpressionUtilities.h"
-#include "OpenCLFFT3D.h"
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLNonbondedUtilities.h"
 #include "OpenCLPlatform.h"
@@ -198,6 +197,12 @@ public:
      */
     std::vector<ComputeContext*> getAllContexts();
     /**
+     * Get the ContextImpl is ComputeContext is associated with.
+     */
+    ContextImpl* getContextImpl() {
+        return platformData.context;
+    }
+    /**
      * Get a workspace used for accumulating energy when a simulation is parallelized across
      * multiple devices.
      */
@@ -219,6 +224,19 @@ public:
      * Construct a ComputeEvent object of the appropriate class for this platform.
      */
     ComputeEvent createEvent();
+    /**
+     * Construct a ComputeSort object of the appropriate class for this platform.
+     * 
+     * @param trait      a SortTrait defining the type of data to sort.  It should have been allocated
+     *                   on the heap with the "new" operator.  This object takes over ownership of it,
+     *                   and deletes it when the ComputeSort is deleted.
+     * @param length     the length of the arrays this object will be used to sort
+     * @param uniform    whether the input data is expected to follow a uniform or nonuniform
+     *                   distribution.  This argument is used only as a hint.  It allows parts
+     *                   of the algorithm to be tuned for faster performance on the expected
+     *                   distribution.
+     */
+    ComputeSort createSort(ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform=true);
     /**
      * Compile source code to create a ComputeProgram.
      *
@@ -386,66 +404,6 @@ public:
      * Sum the buffer containing energy.
      */
     double reduceEnergy();
-    /**
-     * Get the current simulation time.
-     */
-    double getTime() {
-        return time;
-    }
-    /**
-     * Set the current simulation time.
-     */
-    void setTime(double t) {
-        time = t;
-    }
-    /**
-     * Get the number of integration steps that have been taken.
-     */
-    long long getStepCount() {
-        return stepCount;
-    }
-    /**
-     * Set the number of integration steps that have been taken.
-     */
-    void setStepCount(long long steps) {
-        stepCount = steps;
-    }
-    /**
-     * Get the number of times forces or energy has been computed.
-     */
-    int getComputeForceCount() {
-        return computeForceCount;
-    }
-    /**
-     * Set the number of times forces or energy has been computed.
-     */
-    void setComputeForceCount(int count) {
-        computeForceCount = count;
-    }
-    /**
-     * Get the number of time steps since the atoms were reordered.
-     */
-    int getStepsSinceReorder() const {
-        return stepsSinceReorder;
-    }
-    /**
-     * Set the number of time steps since the atoms were reordered.
-     */
-    void setStepsSinceReorder(int steps) {
-        stepsSinceReorder = steps;
-    }
-    /**
-     * Get the flag that marks whether the current force evaluation is valid.
-     */
-    bool getForcesValid() const {
-        return forcesValid;
-    }
-    /**
-     * Get the flag that marks whether the current force evaluation is valid.
-     */
-    void setForcesValid(bool valid) {
-        forcesValid = valid;
-    }
     /**
      * Get the number of blocks of TileSize atoms.
      */
@@ -638,7 +596,7 @@ public:
      * @param zsize   the third dimension of the data sets on which FFTs will be performed
      * @param realToComplex  if true, a real-to-complex transform will be done.  Otherwise, it is complex-to-complex.
      */
-    OpenCLFFT3D* createFFT(int xsize, int ysize, int zsize, bool realToComplex=false);
+    FFT3D createFFT(int xsize, int ysize, int zsize, bool realToComplex=false);
     /**
      * Get the smallest legal size for a dimension of the grid.
      */

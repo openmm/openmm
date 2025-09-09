@@ -32,7 +32,7 @@ Some features of this implementation:
     area for us is at the molecular scale. Using SI units internally
     can lead to exponent overflow in commonly used molecular force
     calculations. Internally, all unit systems are equally fundamental
-    in SimTK.
+    in OpenMM.
 
 Two possible enhancements that have not been implemented are
   1) Include uncertainties with propagation of errors

@@ -37,11 +37,13 @@
 #include "openmm/common/ComputeForceInfo.h"
 #include "openmm/common/ComputeProgram.h"
 #include "openmm/common/ComputeQueue.h"
+#include "openmm/common/ComputeSort.h"
 #include "openmm/common/ComputeVectorTypes.h"
 #include "openmm/common/FFT3D.h"
 #include "openmm/common/IntegrationUtilities.h"
 #include "openmm/common/NonbondedUtilities.h"
 #include "openmm/Vec3.h"
+#include "openmm/internal/ContextImpl.h"
 #include <condition_variable>
 #include <map>
 #include <mutex>
@@ -140,6 +142,10 @@ public:
      */
     virtual std::vector<ComputeContext*> getAllContexts() = 0;
     /**
+     * Get the ContextImpl is ComputeContext is associated with.
+     */
+    virtual ContextImpl* getContextImpl() = 0;
+    /**
      * Get a workspace used for accumulating energy when a simulation is parallelized across
      * multiple devices.
      */
@@ -169,6 +175,19 @@ public:
      * Construct a ComputeEvent object of the appropriate class for this platform.
      */
     virtual ComputeEvent createEvent() = 0;
+    /**
+     * Construct a ComputeSort object of the appropriate class for this platform.
+     * 
+     * @param trait      a SortTrait defining the type of data to sort.  It should have been allocated
+     *                   on the heap with the "new" operator.  This object takes over ownership of it,
+     *                   and deletes it when the ComputeSort is deleted.
+     * @param length     the length of the arrays this object will be used to sort
+     * @param uniform    whether the input data is expected to follow a uniform or nonuniform
+     *                   distribution.  This argument is used only as a hint.  It allows parts
+     *                   of the algorithm to be tuned for faster performance on the expected
+     *                   distribution.
+     */
+    virtual ComputeSort createSort(ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform=true) = 0;
     /**
      * Compile source code to create a ComputeProgram.
      *
@@ -470,6 +489,10 @@ public:
      */
     virtual void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) = 0; 
     /**
+     * Compute the reciprocal space box vectors.
+     */
+    void computeReciprocalBoxVectors(mm_double4 recipBoxVectors[3]);
+    /**
      * Get the IntegrationUtilities for this context.
      */
     virtual IntegrationUtilities& getIntegrationUtilities() = 0;
@@ -501,7 +524,7 @@ public:
      * @param zsize   the third dimension of the data sets on which FFTs will be performed
      * @param realToComplex  if true, a real-to-complex transform will be done.  Otherwise, it is complex-to-complex.
      */
-    virtual FFT3D* createFFT(int xsize, int ysize, int zsize, bool realToComplex=false) = 0;
+    virtual FFT3D createFFT(int xsize, int ysize, int zsize, bool realToComplex=false) = 0;
     /**
      * Get the smallest legal size for a dimension of the grid.
      */
@@ -511,6 +534,15 @@ public:
      * It ensures all contexts are fully initialized.
      */
     virtual void initializeContexts() = 0;
+    /**
+     * Set the particle charges.  These are packed into the fourth element of the posq array.
+     */
+    virtual void setCharges(const std::vector<double>& charges) = 0;
+    /**
+     * Request to use the fourth element of the posq array for storing charges.  Since only one force can
+     * do that, this returns true the first time it is called, and false on all subsequent calls.
+     */
+    virtual bool requestPosqCharges() = 0;
     /**
      * Get the thread used by this context for executing parallel computations.
      */
@@ -561,6 +593,26 @@ public:
      * expense of reduced simulation performance.
      */
     virtual void flushQueue() = 0;
+    /**
+     * Register a global parameter whose value should be stored in the array returned by
+     * getGlobalParamValues().  This may safely be called multiple times with the same
+     * parameter name, and it returns the same index each time.
+     * 
+     * @param name    the name of the parameter to register
+     * @return the index of the parameter in the array
+     */
+    int registerGlobalParam(const std::string& name);
+    /**
+     * Get the array which contains the values of global parameters.
+     */
+    ArrayInterface& getGlobalParamValues() {
+        return globalParamValues;
+    }
+    /**
+     * Make sure the values stored in the array returned by getGlobalParamValues() are
+     * up to date.
+     */
+    void updateGlobalParamValues();
 protected:
     struct Molecule;
     struct MoleculeGroup;
@@ -576,7 +628,7 @@ protected:
     double time;
     int numAtoms, paddedNumAtoms, computeForceCount, stepsSinceReorder;
     long long stepCount;
-    bool forceNextReorder, atomsWereReordered, forcesValid;
+    bool forceNextReorder, atomsWereReordered, forcesValid, hasInitializedGlobals;
     ComputeQueue defaultQueue, currentQueue;
     std::vector<ComputeForceInfo*> forces;
     std::vector<Molecule> molecules;
@@ -586,6 +638,9 @@ protected:
     std::vector<ReorderListener*> reorderListeners;
     std::vector<ForcePreComputation*> preComputations;
     std::vector<ForcePostComputation*> postComputations;
+    std::vector<std::string> globalParamNames;
+    std::vector<double> lastGlobalParamValues;
+    ComputeArray globalParamValues;
     WorkThread* workThread;
 };
 

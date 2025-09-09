@@ -56,20 +56,25 @@ namespace OpenMM {
  * As an example, the following code creates a CustomAngleForce that implements a harmonic potential:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomAngleForce* force = new CustomAngleForce("0.5*k*(theta-theta0)^2");
- *
+ * <c++>
+ * CustomAngleForce* force = new CustomAngleForce("0.5*k*(theta-theta0)^2");
+ * </c++>
+ * <python>
+ * force = CustomAngleForce("0.5*k*(theta-theta0)^2")
+ * </python>
  * \endverbatim
  *
  * This force depends on two parameters: the spring constant k and equilibrium angle theta0.  The following code defines these parameters:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    force->addPerAngleParameter("k");
- *    force->addPerAngleParameter("theta0");
- *
+ * <c++>
+ * force->addPerAngleParameter("k");
+ * force->addPerAngleParameter("theta0");
+ * </c++>
+ * <python>
+ * force.addPerAngleParameter("k")
+ * force.addPerAngleParameter("theta0")
+ * </python>
  * \endverbatim
  * 
  * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
@@ -94,28 +99,20 @@ public:
     /**
      * Get the number of angles for which force field parameters have been defined.
      */
-    int getNumAngles() const {
-        return angles.size();
-    }
+    int getNumAngles() const;
     /**
      * Get the number of per-angle parameters that the interaction depends on.
      */
-    int getNumPerAngleParameters() const {
-        return parameters.size();
-    }
+    int getNumPerAngleParameters() const;
     /**
      * Get the number of global parameters that the interaction depends on.
      */
-    int getNumGlobalParameters() const {
-        return globalParameters.size();
-    }
+    int getNumGlobalParameters() const;
     /**
      * Get the number of global parameters with respect to which the derivative of the energy
      * should be computed.
      */
-    int getNumEnergyParameterDerivatives() const {
-        return energyParameterDerivatives.size();
-    }
+    int getNumEnergyParameterDerivatives() const;
     /**
      * Get the algebraic expression that gives the interaction energy for each angle
      */

@@ -83,28 +83,48 @@ namespace OpenMM {
  * of the GB/SA solvation model, using the ACE approximation to estimate surface area:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomGBForce* custom = new CustomGBForce();
- *    custom->addPerParticleParameter("q");
- *    custom->addPerParticleParameter("radius");
- *    custom->addPerParticleParameter("scale");
- *    custom->addGlobalParameter("solventDielectric", obc->getSolventDielectric());
- *    custom->addGlobalParameter("soluteDielectric", obc->getSoluteDielectric());
- *    custom->addComputedValue("I", "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(1/U^2-1/L^2)*(r-sr2*sr2/r)+0.5*log(L/U)/r+C);"
- *                                  "U=r+sr2;"
- *                                  "C=2*(1/or1-1/L)*step(sr2-r-or1);"
- *                                  "L=max(or1, D);"
- *                                  "D=abs(r-sr2);"
- *                                  "sr2 = scale2*or2;"
- *                                  "or1 = radius1-0.009; or2 = radius2-0.009", CustomGBForce::ParticlePairNoExclusions);
- *    custom->addComputedValue("B", "1/(1/or-tanh(1*psi-0.8*psi^2+4.85*psi^3)/radius);"
- *                                  "psi=I*or; or=radius-0.009", CustomGBForce::SingleParticle);
- *    custom->addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6-0.5*138.935456*(1/soluteDielectric-1/solventDielectric)*q^2/B",
- *                          CustomGBForce::SingleParticle);
- *    custom->addEnergyTerm("-138.935456*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
- *                          "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce::ParticlePair);
- *
+ * <c++>
+ * CustomGBForce* custom = new CustomGBForce();
+ * custom->addPerParticleParameter("q");
+ * custom->addPerParticleParameter("radius");
+ * custom->addPerParticleParameter("scale");
+ * custom->addGlobalParameter("solventDielectric", obc->getSolventDielectric());
+ * custom->addGlobalParameter("soluteDielectric", obc->getSoluteDielectric());
+ * custom->addComputedValue("I", "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(1/U^2-1/L^2)*(r-sr2*sr2/r)+0.5*log(L/U)/r+C);"
+ *                               "U=r+sr2;"
+ *                               "C=2*(1/or1-1/L)*step(sr2-r-or1);"
+ *                               "L=max(or1, D);"
+ *                               "D=abs(r-sr2);"
+ *                               "sr2 = scale2*or2;"
+ *                               "or1 = radius1-0.009; or2 = radius2-0.009", CustomGBForce::ParticlePairNoExclusions);
+ * custom->addComputedValue("B", "1/(1/or-tanh(1*psi-0.8*psi^2+4.85*psi^3)/radius);"
+ *                               "psi=I*or; or=radius-0.009", CustomGBForce::SingleParticle);
+ * custom->addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6-0.5*138.935456*(1/soluteDielectric-1/solventDielectric)*q^2/B",
+ *                       CustomGBForce::SingleParticle);
+ * custom->addEnergyTerm("-138.935456*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+ *                       "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce::ParticlePair);
+ * </c++>
+ * <python>
+ * custom = CustomGBForce()
+ * custom.addPerParticleParameter("q")
+ * custom.addPerParticleParameter("radius")
+ * custom.addPerParticleParameter("scale")
+ * custom.addGlobalParameter("solventDielectric", obc.getSolventDielectric())
+ * custom.addGlobalParameter("soluteDielectric", obc.getSoluteDielectric())
+ * custom.addComputedValue("I", "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(1/U^2-1/L^2)*(r-sr2*sr2/r)+0.5*log(L/U)/r+C);"
+ *                              "U=r+sr2;"
+ *                              "C=2*(1/or1-1/L)*step(sr2-r-or1);"
+ *                              "L=max(or1, D);"
+ *                              "D=abs(r-sr2);"
+ *                              "sr2 = scale2*or2;"
+ *                              "or1 = radius1-0.009; or2 = radius2-0.009", CustomGBForce.ParticlePairNoExclusions)
+ * custom.addComputedValue("B", "1/(1/or-tanh(1*psi-0.8*psi^2+4.85*psi^3)/radius);"
+ *                              "psi=I*or; or=radius-0.009", CustomGBForce.SingleParticle)
+ * custom.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6-0.5*138.935456*(1/soluteDielectric-1/solventDielectric)*q^2/B",
+ *                      CustomGBForce.SingleParticle)
+ * custom.addEnergyTerm("-138.935456*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+ *                      "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce.ParticlePair)
+ * </python>
  * \endverbatim
  *
  * It begins by defining three per-particle parameters (charge, atomic radius, and scale factor) and two global parameters
@@ -193,60 +213,42 @@ public:
     /**
      * Get the number of particles for which force field parameters have been defined.
      */
-    int getNumParticles() const {
-        return particles.size();
-    }
+    int getNumParticles() const;
     /**
      * Get the number of particle pairs whose interactions should be excluded.
      */
-    int getNumExclusions() const {
-        return exclusions.size();
-    }
+    int getNumExclusions() const;
     /**
      * Get the number of per-particle parameters that the interaction depends on.
      */
-    int getNumPerParticleParameters() const {
-        return parameters.size();
-    }
+    int getNumPerParticleParameters() const;
     /**
      * Get the number of global parameters that the interaction depends on.
      */
-    int getNumGlobalParameters() const {
-        return globalParameters.size();
-    }
+    int getNumGlobalParameters() const;
     /**
      * Get the number of global parameters with respect to which the derivative of the energy
      * should be computed.
      */
-    int getNumEnergyParameterDerivatives() const {
-        return energyParameterDerivatives.size();
-    }
+    int getNumEnergyParameterDerivatives() const;
     /**
      * Get the number of tabulated functions that have been defined.
      */
-    int getNumTabulatedFunctions() const {
-        return functions.size();
-    }
+    int getNumTabulatedFunctions() const;
     /**
      * Get the number of tabulated functions that have been defined.
      *
      * @deprecated This method exists only for backward compatibility.  Use getNumTabulatedFunctions() instead.
      */
-    int getNumFunctions() const {
-        return functions.size();
-    }
+    int getNumFunctions() const;
     /**
      * Get the number of per-particle computed values the interaction depends on.
      */
-    int getNumComputedValues() const {
-        return computedValues.size();
-    }
+    int getNumComputedValues() const;
     /**
      * Get the number of terms in the energy computation.
      */
-    int getNumEnergyTerms() const {
-        return energyTerms.size();
-    }
+    int getNumEnergyTerms() const;
     /**
      * Get the method used for handling long range nonbonded interactions.
      */

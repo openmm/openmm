@@ -82,7 +82,7 @@ private:
     ForceInfo* info;
     ComputeParameterSet* params;
     ComputeParameterSet* computedValues;
-    ComputeArray globals, interactionGroupData, filteredGroupData, numGroupTiles;
+    ComputeArray interactionGroupData, filteredGroupData, numGroupTiles;
     ComputeKernel interactionGroupKernel, prepareNeighborListKernel, buildNeighborListKernel, computedValuesKernel;
     std::vector<void*> interactionGroupArgs;
     std::vector<std::string> globalParamNames;
@@ -93,7 +93,7 @@ private:
     std::vector<ComputeParameterInfo> paramBuffers, computedValueBuffers;
     double longRangeCoefficient;
     std::vector<double> longRangeCoefficientDerivs;
-    bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList;
+    bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList, needGlobalParams;
     int numGroupThreadBlocks;
     CustomNonbondedForce* forceCopy;
     CustomNonbondedForceImpl::LongRangeCorrectionData longRangeCorrectionData;

@@ -1,0 +1,322 @@
+<ForceField>
+ <Info>
+    <DateGenerated>2017-11-25</DateGenerated>
+    <Source Source="parm/frcmod.ionsjc_spce" md5hash="576c159afdaa5f4f6b05250ce4326bd3" sourcePackage="AmberTools" sourcePackageVersion="17">parm/frcmod.ionsjc_spce</Source>
+    <Source Source="parm/frcmod.ions234lm_126_spce" md5hash="11ef85dfcf07639646dd361590b76166" sourcePackage="AmberTools" sourcePackageVersion="17">parm/frcmod.ions234lm_126_spce</Source>
+    <Source Source="lib/atomic_ions.lib" md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="17">lib/atomic_ions.lib</Source>
+    <Source Source="spce.xml" md5hash="5c815beccd16958666face51044e4a7b" sourcePackage="OpenMM" sourcePackageVersion="7.2">spce.xml</Source>
+    <Reference>Joung, I.S., and Cheatham, Thomas E. (2008). Determination of Alkali and Halide Monovalent Ion Parameters for Use in Explicitly Solvated Biomolecular Simulations. J. Phys. Chem. B 112, 9020-9041.</Reference>
+    <Reference>Joung, I.S., and Cheatham, T.E. (2009). Molecular Dynamics Simulations of the Dynamic and Energetic Properties of Alkali and Halide Ions Using Water-Model-Specific Ion Parameters. J. Phys. Chem. B 113, 13279-13290.</Reference>
+    <Reference>Li, P., Roberts, B.P., Chakravorty, D.K., and Merz, K.M. (2013). Rational Design of Particle Mesh Ewald Compatible Lennard-Jones Parameters for +2 Metal Cations in Explicit Solvent. J. Chem. Theory Comput. 9, 2733-2748.</Reference>
+    <Reference>Berendsen, H.J.C., Grigera, J.R., and Straatsma, T.P. (1987). The missing term in effective pair potentials. J. Phys. Chem. 91, 6269-6271.</Reference>
+  </Info>
+  <AtomTypes>
+  <Type class="spce_standard-Li+" element="Li" mass="6.94" name="spce_standard-Li+"/>
+    <Type class="spce_standard-Na+" element="Na" mass="22.99" name="spce_standard-Na+"/>
+    <Type class="spce_standard-K+" element="K" mass="39.1" name="spce_standard-K+"/>
+    <Type class="spce_standard-Rb+" element="Rb" mass="85.47" name="spce_standard-Rb+"/>
+    <Type class="spce_standard-Cs+" element="Cs" mass="132.91" name="spce_standard-Cs+"/>
+    <Type class="spce_standard-F-" element="F" mass="19.0" name="spce_standard-F-"/>
+    <Type class="spce_standard-Cl-" element="Cl" mass="35.45" name="spce_standard-Cl-"/>
+    <Type class="spce_standard-Br-" element="Br" mass="79.9" name="spce_standard-Br-"/>
+    <Type class="spce_standard-I-" element="I" mass="126.9" name="spce_standard-I-"/>
+    <Type class="spce_standard-Be2+" element="Be" mass="9.01" name="spce_standard-Be2+"/>
+    <Type class="spce_standard-Cu2+" element="Cu" mass="63.55" name="spce_standard-Cu2+"/>
+    <Type class="spce_standard-Ni2+" element="Ni" mass="58.69" name="spce_standard-Ni2+"/>
+    <Type class="spce_standard-Pt2+" element="Pt" mass="195.08" name="spce_standard-Pt2+"/>
+    <Type class="spce_standard-Zn2+" element="Zn" mass="65.4" name="spce_standard-Zn2+"/>
+    <Type class="spce_standard-Co2+" element="Co" mass="58.93" name="spce_standard-Co2+"/>
+    <Type class="spce_standard-Pd2+" element="Pd" mass="106.42" name="spce_standard-Pd2+"/>
+    <Type class="spce_standard-Ag2+" element="Ag" mass="107.87" name="spce_standard-Ag2+"/>
+    <Type class="spce_standard-Cr2+" element="Cr" mass="52.0" name="spce_standard-Cr2+"/>
+    <Type class="spce_standard-Fe2+" element="Fe" mass="55.85" name="spce_standard-Fe2+"/>
+    <Type class="spce_standard-Mg2+" element="Mg" mass="24.305" name="spce_standard-Mg2+"/>
+    <Type class="spce_standard-V2+" element="V" mass="50.94" name="spce_standard-V2+"/>
+    <Type class="spce_standard-Mn2+" element="Mn" mass="54.94" name="spce_standard-Mn2+"/>
+    <Type class="spce_standard-Hg2+" element="Hg" mass="200.59" name="spce_standard-Hg2+"/>
+    <Type class="spce_standard-Cd2+" element="Cd" mass="112.41" name="spce_standard-Cd2+"/>
+    <Type class="spce_standard-Yb2+" element="Yb" mass="173.05" name="spce_standard-Yb2+"/>
+    <Type class="spce_standard-Ca2+" element="Ca" mass="40.08" name="spce_standard-Ca2+"/>
+    <Type class="spce_standard-Sn2+" element="Sn" mass="118.71" name="spce_standard-Sn2+"/>
+    <Type class="spce_standard-Pb2+" element="Pb" mass="207.2" name="spce_standard-Pb2+"/>
+    <Type class="spce_standard-Eu2+" element="Eu" mass="151.96" name="spce_standard-Eu2+"/>
+    <Type class="spce_standard-Sr2+" element="Sr" mass="87.62" name="spce_standard-Sr2+"/>
+    <Type class="spce_standard-Sm2+" element="Sm" mass="150.36" name="spce_standard-Sm2+"/>
+    <Type class="spce_standard-Ba2+" element="Ba" mass="137.33" name="spce_standard-Ba2+"/>
+    <Type class="spce_standard-Ra2+" element="Ra" mass="226.03" name="spce_standard-Ra2+"/>
+    <Type class="spce_standard-Al3+" element="Al" mass="26.98" name="spce_standard-Al3+"/>
+    <Type class="spce_standard-Fe3+" element="Fe" mass="55.85" name="spce_standard-Fe3+"/>
+    <Type class="spce_standard-Cr3+" element="Cr" mass="52.0" name="spce_standard-Cr3+"/>
+    <Type class="spce_standard-In3+" element="In" mass="114.82" name="spce_standard-In3+"/>
+    <Type class="spce_standard-Tl3+" element="Tl" mass="204.38" name="spce_standard-Tl3+"/>
+    <Type class="spce_standard-Y3+" element="Y" mass="88.91" name="spce_standard-Y3+"/>
+    <Type class="spce_standard-La3+" element="La" mass="138.91" name="spce_standard-La3+"/>
+    <Type class="spce_standard-Ce3+" element="Ce" mass="140.12" name="spce_standard-Ce3+"/>
+    <Type class="spce_standard-Pr3+" element="Pr" mass="140.91" name="spce_standard-Pr3+"/>
+    <Type class="spce_standard-Nd3+" element="Nd" mass="144.24" name="spce_standard-Nd3+"/>
+    <Type class="spce_standard-Sm3+" element="Sm" mass="150.36" name="spce_standard-Sm3+"/>
+    <Type class="spce_standard-Eu3+" element="Eu" mass="151.96" name="spce_standard-Eu3+"/>
+    <Type class="spce_standard-Gd3+" element="Gd" mass="157.25" name="spce_standard-Gd3+"/>
+    <Type class="spce_standard-Tb3+" element="Tb" mass="158.93" name="spce_standard-Tb3+"/>
+    <Type class="spce_standard-Dy3+" element="Dy" mass="162.5" name="spce_standard-Dy3+"/>
+    <Type class="spce_standard-Er3+" element="Er" mass="167.26" name="spce_standard-Er3+"/>
+    <Type class="spce_standard-Tm3+" element="Tm" mass="168.93" name="spce_standard-Tm3+"/>
+    <Type class="spce_standard-Lu3+" element="Lu" mass="174.97" name="spce_standard-Lu3+"/>
+    <Type class="spce_standard-Hf4+" element="Hf" mass="178.49" name="spce_standard-Hf4+"/>
+    <Type class="spce_standard-Zr4+" element="Zr" mass="91.22" name="spce_standard-Zr4+"/>
+    <Type class="spce_standard-Ce4+" element="Ce" mass="140.12" name="spce_standard-Ce4+"/>
+    <Type class="spce_standard-U4+" element="U" mass="238.03" name="spce_standard-U4+"/>
+    <Type class="spce_standard-Pu4+" element="Pu" mass="244.06" name="spce_standard-Pu4+"/>
+    <Type class="spce_standard-Th4+" element="Th" mass="232.04" name="spce_standard-Th4+"/>
+   <Type name="spce-O" class="spce-O" element="O" mass="15.99943"/>
+  <Type name="spce-H" class="spce-H" element="H" mass="1.007947"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="AL">
+      <Atom charge="3.0" name="AL" type="spce_standard-Al3+"/>
+    </Residue>
+    <Residue name="Ag">
+      <Atom charge="2.0" name="Ag" type="spce_standard-Ag2+"/>
+    </Residue>
+    <Residue name="BA">
+      <Atom charge="2.0" name="BA" type="spce_standard-Ba2+"/>
+    </Residue>
+    <Residue name="BR">
+      <Atom charge="-1.0" name="BR" type="spce_standard-Br-"/>
+    </Residue>
+    <Residue name="Be">
+      <Atom charge="2.0" name="Be" type="spce_standard-Be2+"/>
+    </Residue>
+    <Residue name="CA">
+      <Atom charge="2.0" name="CA" type="spce_standard-Ca2+"/>
+    </Residue>
+    <Residue name="CD">
+      <Atom charge="2.0" name="CD" type="spce_standard-Cd2+"/>
+    </Residue>
+    <Residue name="CE">
+      <Atom charge="3.0" name="CE" type="spce_standard-Ce3+"/>
+    </Residue>
+    <Residue name="CL">
+      <Atom charge="-1.0" name="CL" type="spce_standard-Cl-"/>
+    </Residue>
+    <Residue name="CO">
+      <Atom charge="2.0" name="CO" type="spce_standard-Co2+"/>
+    </Residue>
+    <Residue name="CR">
+      <Atom charge="3.0" name="CR" type="spce_standard-Cr3+"/>
+    </Residue>
+    <Residue name="CS">
+      <Atom charge="1.0" name="CS" type="spce_standard-Cs+"/>
+    </Residue>
+    <Residue name="CU">
+      <Atom charge="2.0" name="CU" type="spce_standard-Cu2+"/>
+    </Residue>
+    <Residue name="Ce">
+      <Atom charge="4.0" name="Ce" type="spce_standard-Ce4+"/>
+    </Residue>
+    <Residue name="Cr">
+      <Atom charge="2.0" name="Cr" type="spce_standard-Cr2+"/>
+    </Residue>
+    <Residue name="Dy">
+      <Atom charge="3.0" name="Dy" type="spce_standard-Dy3+"/>
+    </Residue>
+    <Residue name="EU">
+      <Atom charge="2.0" name="EU" type="spce_standard-Eu2+"/>
+    </Residue>
+    <Residue name="EU3">
+      <Atom charge="3.0" name="EU3" type="spce_standard-Eu3+"/>
+    </Residue>
+    <Residue name="Er">
+      <Atom charge="3.0" name="Er" type="spce_standard-Er3+"/>
+    </Residue>
+    <Residue name="F">
+      <Atom charge="-1.0" name="F" type="spce_standard-F-"/>
+    </Residue>
+    <Residue name="FE">
+      <Atom charge="3.0" name="FE" type="spce_standard-Fe3+"/>
+    </Residue>
+    <Residue name="FE2">
+      <Atom charge="2.0" name="FE2" type="spce_standard-Fe2+"/>
+    </Residue>
+    <Residue name="GD3">
+      <Atom charge="3.0" name="GD" type="spce_standard-Gd3+"/>
+    </Residue>
+    <Residue name="HG">
+      <Atom charge="2.0" name="HG" type="spce_standard-Hg2+"/>
+    </Residue>
+    <Residue name="Hf">
+      <Atom charge="4.0" name="Hf" type="spce_standard-Hf4+"/>
+    </Residue>
+    <Residue name="IN">
+      <Atom charge="3.0" name="IN" type="spce_standard-In3+"/>
+    </Residue>
+    <Residue name="IOD">
+      <Atom charge="-1.0" name="I" type="spce_standard-I-"/>
+    </Residue>
+    <Residue name="K">
+      <Atom charge="1.0" name="K" type="spce_standard-K+"/>
+    </Residue>
+    <Residue name="LA">
+      <Atom charge="3.0" name="LA" type="spce_standard-La3+"/>
+    </Residue>
+    <Residue name="LI">
+      <Atom charge="1.0" name="LI" type="spce_standard-Li+"/>
+    </Residue>
+    <Residue name="LU">
+      <Atom charge="3.0" name="LU" type="spce_standard-Lu3+"/>
+    </Residue>
+    <Residue name="MG">
+      <Atom charge="2.0" name="MG" type="spce_standard-Mg2+"/>
+    </Residue>
+    <Residue name="MN">
+      <Atom charge="2.0" name="MN" type="spce_standard-Mn2+"/>
+    </Residue>
+    <Residue name="NA">
+      <Atom charge="1.0" name="NA" type="spce_standard-Na+"/>
+    </Residue>
+    <Residue name="NI">
+      <Atom charge="2.0" name="NI" type="spce_standard-Ni2+"/>
+    </Residue>
+    <Residue name="Nd">
+      <Atom charge="3.0" name="Nd" type="spce_standard-Nd3+"/>
+    </Residue>
+    <Residue name="PB">
+      <Atom charge="2.0" name="PB" type="spce_standard-Pb2+"/>
+    </Residue>
+    <Residue name="PD">
+      <Atom charge="2.0" name="PD" type="spce_standard-Pd2+"/>
+    </Residue>
+    <Residue name="PR">
+      <Atom charge="3.0" name="PR" type="spce_standard-Pr3+"/>
+    </Residue>
+    <Residue name="PT">
+      <Atom charge="2.0" name="PT" type="spce_standard-Pt2+"/>
+    </Residue>
+    <Residue name="Pu">
+      <Atom charge="4.0" name="Pu" type="spce_standard-Pu4+"/>
+    </Residue>
+    <Residue name="RB">
+      <Atom charge="1.0" name="RB" type="spce_standard-Rb+"/>
+    </Residue>
+    <Residue name="Ra">
+      <Atom charge="2.0" name="Ra" type="spce_standard-Ra2+"/>
+    </Residue>
+    <Residue name="SM">
+      <Atom charge="3.0" name="SM" type="spce_standard-Sm3+"/>
+    </Residue>
+    <Residue name="SR">
+      <Atom charge="2.0" name="SR" type="spce_standard-Sr2+"/>
+    </Residue>
+    <Residue name="Sm">
+      <Atom charge="2.0" name="Sm" type="spce_standard-Sm2+"/>
+    </Residue>
+    <Residue name="Sn">
+      <Atom charge="2.0" name="Sn" type="spce_standard-Sn2+"/>
+    </Residue>
+    <Residue name="TB">
+      <Atom charge="3.0" name="TB" type="spce_standard-Tb3+"/>
+    </Residue>
+    <Residue name="Th">
+      <Atom charge="4.0" name="Th" type="spce_standard-Th4+"/>
+    </Residue>
+    <Residue name="Tl">
+      <Atom charge="3.0" name="Tl" type="spce_standard-Tl3+"/>
+    </Residue>
+    <Residue name="Tm">
+      <Atom charge="3.0" name="Tm" type="spce_standard-Tm3+"/>
+    </Residue>
+    <Residue name="U4+">
+      <Atom charge="4.0" name="U" type="spce_standard-U4+"/>
+    </Residue>
+    <Residue name="V2+">
+      <Atom charge="2.0" name="V2+" type="spce_standard-V2+"/>
+    </Residue>
+    <Residue name="Y">
+      <Atom charge="3.0" name="Y" type="spce_standard-Y3+"/>
+    </Residue>
+    <Residue name="YB2">
+      <Atom charge="2.0" name="YB2" type="spce_standard-Yb2+"/>
+    </Residue>
+    <Residue name="ZN">
+      <Atom charge="2.0" name="ZN" type="spce_standard-Zn2+"/>
+    </Residue>
+    <Residue name="Zr">
+      <Atom charge="4.0" name="Zr" type="spce_standard-Zr4+"/>
+    </Residue>
+   <Residue name="HOH">
+   <Atom name="O" type="spce-O" charge="-0.8476"/>
+   <Atom name="H1" type="spce-H" charge="0.4238"/>
+   <Atom name="H2" type="spce-H" charge="0.4238"/>
+   <Bond atomName1="O" atomName2="H1"/>
+   <Bond atomName1="O" atomName2="H2"/>
+  </Residue>
+ </Residues>
+ <HarmonicBondForce>
+  <Bond type1="spce-O" type2="spce-H" length="0.1" k="462750.4"/>
+ </HarmonicBondForce>
+ <HarmonicAngleForce>
+  <Angle type1="spce-H" type2="spce-O" type3="spce-H" angle="1.91061193216" k="836.8"/>
+ </HarmonicAngleForce>
+ <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="1.4088967296000001" sigma="0.14094017720980168" type="spce_standard-Li+"/>
+    <Atom epsilon="1.4754532912" sigma="0.21595384927721822" type="spce_standard-Na+"/>
+    <Atom epsilon="1.7978873936000002" sigma="0.2838403315995121" type="spce_standard-K+"/>
+    <Atom epsilon="1.8623134624" sigma="0.3094982146819539" type="spce_standard-Rb+"/>
+    <Atom epsilon="0.37595959600000006" sigma="0.36010126187232516" type="spce_standard-Cs+"/>
+    <Atom epsilon="0.030963692" sigma="0.4021516813685492" type="spce_standard-F-"/>
+    <Atom epsilon="0.05349244" sigma="0.48304528497569194" type="spce_standard-Cl-"/>
+    <Atom epsilon="0.1127947824" sigma="0.4901724747208147" type="spce_standard-Br-"/>
+    <Atom epsilon="0.179010348" sigma="0.5201066716503301" type="spce_standard-I-"/>
+    <Atom epsilon="1.92464e-05" sigma="0.1712307336265732" type="spce_standard-Be2+"/>
+    <Atom epsilon="0.0067303824" sigma="0.21791382645712698" type="spce_standard-Cu2+"/>
+    <Atom epsilon="0.01065702456" sigma="0.223259218765969" type="spce_standard-Ni2+"/>
+    <Atom epsilon="0.014015354" sigma="0.22664463389490233" type="spce_standard-Pt2+"/>
+    <Atom epsilon="0.014823368080000001" sigma="0.2273573528694146" type="spce_standard-Zn2+"/>
+    <Atom epsilon="0.0218984284" sigma="0.23252456543462854" type="spce_standard-Co2+"/>
+    <Atom epsilon="0.0218984284" sigma="0.23252456543462854" type="spce_standard-Pd2+"/>
+    <Atom epsilon="0.03264699888" sigma="0.23822631723072674" type="spce_standard-Ag2+"/>
+    <Atom epsilon="0.03718454688" sigma="0.2401862944106355" type="spce_standard-Cr2+"/>
+    <Atom epsilon="0.03986113536" sigma="0.2412553728724039" type="spce_standard-Fe2+"/>
+    <Atom epsilon="0.042686716080000006" sigma="0.2423244513341723" type="spce_standard-Mg2+"/>
+    <Atom epsilon="0.045158958000000006" sigma="0.24321535005231262" type="spce_standard-V2+"/>
+    <Atom epsilon="0.0698627584" sigma="0.2505207195410634" type="spce_standard-Mn2+"/>
+    <Atom epsilon="0.0698627584" sigma="0.2505207195410634" type="spce_standard-Hg2+"/>
+    <Atom epsilon="0.07419972544" sigma="0.2515897980028318" type="spce_standard-Cd2+"/>
+    <Atom epsilon="0.40718273784000003" sigma="0.2911457010882629" type="spce_standard-Yb2+"/>
+    <Atom epsilon="0.40953067312" sigma="0.2913238808318909" type="spce_standard-Ca2+"/>
+    <Atom epsilon="0.44813803104000005" sigma="0.29417475672994003" type="spce_standard-Sn2+"/>
+    <Atom epsilon="0.669006956" sigma="0.3084291362201855" type="spce_standard-Pb2+"/>
+    <Atom epsilon="0.8445052544000001" sigma="0.31822902211972925" type="spce_standard-Eu2+"/>
+    <Atom epsilon="0.8713768270400001" sigma="0.31965446006875375" type="spce_standard-Sr2+"/>
+    <Atom epsilon="0.89173069" sigma="0.32072353853052216" type="spce_standard-Sm2+"/>
+    <Atom epsilon="1.55336865968" sigma="0.35279589238357434" type="spce_standard-Ba2+"/>
+    <Atom epsilon="1.55336865968" sigma="0.35279589238357434" type="spce_standard-Ra2+"/>
+    <Atom epsilon="0.019458696160000004" sigma="0.23092094774197594" type="spce_standard-Al3+"/>
+    <Atom epsilon="0.05678093848" sigma="0.24695712466850203" type="spce_standard-Fe3+"/>
+    <Atom epsilon="0.035064095680000004" sigma="0.23929539569249514" type="spce_standard-Cr3+"/>
+    <Atom epsilon="0.11751709584" sigma="0.26032060544060714" type="spce_standard-In3+"/>
+    <Atom epsilon="0.18079185336" sigma="0.26958595210926667" type="spce_standard-Tl3+"/>
+    <Atom epsilon="0.33615222504000003" sigma="0.2854439492921647" type="spce_standard-Y3+"/>
+    <Atom epsilon="0.63014479248" sigma="0.3061127995530206" type="spce_standard-La3+"/>
+    <Atom epsilon="0.69962078192" sigma="0.3102109336564662" type="spce_standard-Ce3+"/>
+    <Atom epsilon="0.6781265697600001" sigma="0.3089636754510697" type="spce_standard-Pr3+"/>
+    <Atom epsilon="0.52569060488" sigma="0.2995201490387821" type="spce_standard-Nd3+"/>
+    <Atom epsilon="0.46816830344000004" sigma="0.2956001946789646" type="spce_standard-Sm3+"/>
+    <Atom epsilon="0.48608615792" sigma="0.29684745288436104" type="spce_standard-Eu3+"/>
+    <Atom epsilon="0.38186547936" sigma="0.2891857239083541" type="spce_standard-Gd3+"/>
+    <Atom epsilon="0.39786810784" sigma="0.29043298211375057" type="spce_standard-Tb3+"/>
+    <Atom epsilon="0.35100580160000006" sigma="0.28669120749756116" type="spce_standard-Dy3+"/>
+    <Atom epsilon="0.33615222504000003" sigma="0.2854439492921647" type="spce_standard-Er3+"/>
+    <Atom epsilon="0.33615222504000003" sigma="0.2854439492921647" type="spce_standard-Tm3+"/>
+    <Atom epsilon="0.30760316128000004" sigma="0.28294943288137175" type="spce_standard-Lu3+"/>
+    <Atom epsilon="0.16448090592" sigma="0.26744779518572986" type="spce_standard-Hf4+"/>
+    <Atom epsilon="0.19225856560000001" sigma="0.2710113900582912" type="spce_standard-Zr4+"/>
+    <Atom epsilon="0.5474740988000001" sigma="0.3009455869878066" type="spce_standard-Ce4+"/>
+    <Atom epsilon="0.5474740988000001" sigma="0.3009455869878066" type="spce_standard-U4+"/>
+    <Atom epsilon="0.48608615792" sigma="0.29684745288436104" type="spce_standard-Pu4+"/>
+    <Atom epsilon="0.61548811496" sigma="0.30522190083488027" type="spce_standard-Th4+"/>
+   <Atom type="spce-O" sigma="0.31657195050398818" epsilon="0.6497752"/>
+  <Atom type="spce-H" sigma="1" epsilon="0"/>
+ </NonbondedForce>
+</ForceField>

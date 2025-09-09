@@ -223,3 +223,27 @@ ForceImpl* CustomManyParticleForce::createImpl() const {
 void CustomManyParticleForce::updateParametersInContext(Context& context) {
     dynamic_cast<CustomManyParticleForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
+
+int CustomManyParticleForce::getNumParticlesPerSet() const {
+    return particlesPerSet;
+}
+
+int CustomManyParticleForce::getNumParticles() const {
+    return particles.size();
+}
+
+int CustomManyParticleForce::getNumExclusions() const {
+    return exclusions.size();
+}
+
+int CustomManyParticleForce::getNumPerParticleParameters() const {
+    return particleParameters.size();
+}
+
+int CustomManyParticleForce::getNumGlobalParameters() const {
+    return globalParameters.size();
+}
+
+int CustomManyParticleForce::getNumTabulatedFunctions() const {
+    return functions.size();
+}

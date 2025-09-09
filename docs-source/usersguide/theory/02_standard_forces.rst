@@ -790,3 +790,42 @@ This force is normally used with a CustomCVForce (see Section :numref:`customcvf
 One rarely wants a force whose energy exactly equals the RMSD, but there are many
 situations where it is useful to have a restraining or biasing force that depends
 on the RMSD in some way.
+
+OrientationRestraintForce
+*************************
+
+OrientationRestraintForce is used to keep a group of particles in a fixed
+orientation.  The calculation is closely related to the one in RMSD force.  Both
+forces begin by finding the translation and rotation that optimally superimpose
+the current particle positions on a set of reference positions.  Whereas
+RMSDForce computes the deviation after removing the translation and rotation,
+OrientationRestraintForce applies a force based on the rotation itself:
+
+.. math::
+   E = 2 k \mathrm{sin}^2(\theta/2)
+
+where :math:`k` is the force constant and :math:`\theta` is the rotation angle.
+
+For small rotations, :math:`E \approx \frac{k}{2}\theta^2`, giving a harmonic
+restraint.  For large rotations, the restraint is weaker than harmonic, and the
+force vanishes at :math:`\theta = \frac{\pi}{2}`.  This ensures that the force
+is continuous everywhere; a simple harmonic restraint would have a discontinuous
+force at :math:`\frac{\pi}{2}`.
+
+RGForce
+*********
+
+RGForce computes the radius of gyration (Rg) of a set of particle positions:
+
+.. math::
+   \text{Rg} = \sqrt{\frac{\sum_{i} \| \mathbf{x}_i - \mathbf{x}_c \|^2}{N}}
+
+where :math:`\mathbf{x}_c` is the center position,
+
+.. math::
+   \mathbf{x}_c = \frac{\sum_{i} \mathbf{x}_i}{N}
+
+This force is normally used with a CustomCVForce (see Section :numref:`customcvforce`).
+One rarely wants a force whose energy exactly equals Rg, but there are many
+situations where it is useful to have a restraining or biasing force that depends
+on Rg in some way.

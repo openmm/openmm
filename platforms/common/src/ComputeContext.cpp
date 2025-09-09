@@ -45,7 +45,7 @@ const int ComputeContext::ThreadBlockSize = 64;
 const int ComputeContext::TileSize = 32;
 
 ComputeContext::ComputeContext(const System& system) : system(system), time(0.0), stepCount(0), computeForceCount(0), stepsSinceReorder(99999),
-        forceNextReorder(false), atomsWereReordered(false), forcesValid(false) {
+        forceNextReorder(false), atomsWereReordered(false), forcesValid(false), hasInitializedGlobals(false) {
     workThread = new WorkThread();
 }
 
@@ -136,6 +136,17 @@ string ComputeContext::intToString(int value) const {
     return s.str();
 }
 
+void ComputeContext::computeReciprocalBoxVectors(mm_double4 recipBoxVectors[3]) {
+    Vec3 boxVectors[3];
+    getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    double determinant = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
+    assert(determinant > 0);
+    double scale = 1.0/determinant;
+    recipBoxVectors[0] = mm_double4(boxVectors[1][1]*boxVectors[2][2]*scale, 0, 0, 0);
+    recipBoxVectors[1] = mm_double4(-boxVectors[1][0]*boxVectors[2][2]*scale, boxVectors[0][0]*boxVectors[2][2]*scale, 0, 0);
+    recipBoxVectors[2] = mm_double4((boxVectors[1][0]*boxVectors[2][1]-boxVectors[1][1]*boxVectors[2][0])*scale, -boxVectors[0][0]*boxVectors[2][1]*scale, boxVectors[0][0]*boxVectors[1][1]*scale, 0);
+}
+
 /**
  * This class ensures that atom reordering doesn't break virtual sites.
  */
@@ -174,6 +185,20 @@ public:
                     weights.push_back(site.getWeight12());
                     weights.push_back(site.getWeight13());
                     weights.push_back(site.getWeightCross());
+                }
+                else if (dynamic_cast<const SymmetrySite*>(&vsite) != NULL) {
+                    // An out of plane site.
+
+                    const SymmetrySite& site = dynamic_cast<const SymmetrySite&>(vsite);
+                    Vec3 Rx, Ry, Rz, offset;
+                    site.getRotationMatrix(Rx, Ry, Rz);
+                    offset = site.getOffsetVector();
+                    for (int j = 0; j < 3; j++) {
+                        weights.push_back(Rx[j]);
+                        weights.push_back(Ry[j]);
+                        weights.push_back(Rz[j]);
+                        weights.push_back(offset[j]);
+                    }
                 }
                 siteWeights.push_back(weights);
             }
@@ -706,6 +731,35 @@ int ComputeContext::findLegalFFTDimension(int minimum) {
             return minimum;
         minimum++;
     }
+}
+
+int ComputeContext::registerGlobalParam(const string& name) {
+    for (int i = 0; i < globalParamNames.size(); i++)
+        if (globalParamNames[i] == name)
+            return i;
+    globalParamNames.push_back(name);
+    return globalParamNames.size()-1;
+}
+
+void ComputeContext::updateGlobalParamValues() {
+    bool changed = false;
+    if (!hasInitializedGlobals) {
+        hasInitializedGlobals = true;
+        int elementSize = (getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+        globalParamValues.initialize(*this, max(1, (int) globalParamNames.size()), elementSize, "globalParameters");
+        lastGlobalParamValues.resize(globalParamValues.getSize(), 0.0);
+        if (globalParamNames.size() > 0)
+            changed = true;
+    }
+    for (int i = 0; i < globalParamNames.size(); i++) {
+        double value = getContextImpl()->getParameter(globalParamNames[i]);
+        if (value != lastGlobalParamValues[i]) {
+            lastGlobalParamValues[i] = value;
+            changed = true;
+        }
+    }
+    if (changed)
+        getGlobalParamValues().upload(lastGlobalParamValues, true);
 }
 
 struct ComputeContext::WorkThread::ThreadData {

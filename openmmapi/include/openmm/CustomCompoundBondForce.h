@@ -78,22 +78,29 @@ namespace OpenMM {
  * p1 and p3.
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomCompoundBondForce* force = new CustomCompoundBondForce(3, "0.5*(kangle*(angle(p1,p2,p3)-theta0)^2+kbond*(distance(p1,p3)-r0)^2)");
- *
+ * <c++>
+ * CustomCompoundBondForce* force = new CustomCompoundBondForce(3, "0.5*(kangle*(angle(p1,p2,p3)-theta0)^2+kbond*(distance(p1,p3)-r0)^2)");
+ * </c++>
+ * <python>
+ * force = CustomCompoundBondForce(3, "0.5*(kangle*(angle(p1,p2,p3)-theta0)^2+kbond*(distance(p1,p3)-r0)^2)")
+ * </python>
  * \endverbatim
  *
  * This force depends on four parameters: kangle, kbond, theta0, and r0.  The following code defines these as per-bond parameters:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    force->addPerBondParameter("kangle");
- *    force->addPerBondParameter("kbond");
- *    force->addPerBondParameter("theta0");
- *    force->addPerBondParameter("r0");
- *
+ * <c++>
+ * force->addPerBondParameter("kangle");
+ * force->addPerBondParameter("kbond");
+ * force->addPerBondParameter("theta0");
+ * force->addPerBondParameter("r0");
+ * </c++>
+ * <python>
+ * force.addPerBondParameter("kangle")
+ * force.addPerBondParameter("kbond")
+ * force.addPerBondParameter("theta0")
+ * force.addPerBondParameter("r0")
+ * </python>
  * \endverbatim
  *
  * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
@@ -113,10 +120,12 @@ namespace OpenMM {
  * from particle p1 to the midpoint between particles p2 and p3.
  * 
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomCompoundBondForce* force = new CustomCompoundBondForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)");
- *
+ * <c++>
+ * CustomCompoundBondForce* force = new CustomCompoundBondForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)");
+ * </c++>
+ * <python>
+ * force = CustomCompoundBondForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)")
+ * </python>
  * \endverbatim
  *
  * In addition, you can call addTabulatedFunction() to define a new function based on tabulated values.  You specify the function by
@@ -138,48 +147,34 @@ public:
     /**
      * Get the number of particles used to define each bond.
      */
-    int getNumParticlesPerBond() const {
-        return particlesPerBond;
-    }
+    int getNumParticlesPerBond() const;
     /**
      * Get the number of bonds for which force field parameters have been defined.
      */
-    int getNumBonds() const {
-        return bonds.size();
-    }
+    int getNumBonds() const;
     /**
      * Get the number of per-bond parameters that the interaction depends on.
      */
-    int getNumPerBondParameters() const {
-        return bondParameters.size();
-    }
+    int getNumPerBondParameters() const;
     /**
      * Get the number of global parameters that the interaction depends on.
      */
-    int getNumGlobalParameters() const {
-        return globalParameters.size();
-    }
+    int getNumGlobalParameters() const;
     /**
      * Get the number of global parameters with respect to which the derivative of the energy
      * should be computed.
      */
-    int getNumEnergyParameterDerivatives() const {
-        return energyParameterDerivatives.size();
-    }
+    int getNumEnergyParameterDerivatives() const;
     /**
      * Get the number of tabulated functions that have been defined.
      */
-    int getNumTabulatedFunctions() const {
-        return functions.size();
-    }
+    int getNumTabulatedFunctions() const;
     /**
      * Get the number of tabulated functions that have been defined.
      *
      * @deprecated This method exists only for backward compatibility.  Use getNumTabulatedFunctions() instead.
      */
-    int getNumFunctions() const {
-        return functions.size();
-    }
+    int getNumFunctions() const;
     /**
      * Get the algebraic expression that gives the interaction energy of each bond
      */

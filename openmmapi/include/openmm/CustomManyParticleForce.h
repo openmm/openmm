@@ -86,23 +86,31 @@ namespace OpenMM {
  * is an interaction between three particles that depends on all three distances and angles formed by the particles.
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomManyParticleForce* force = new CustomManyParticleForce(3,
- *        "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
- *        "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
- *        "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)");
- *    force->setPermutationMode(CustomManyParticleForce::SinglePermutation);
- *
+ * <c++>
+ * CustomManyParticleForce* force = new CustomManyParticleForce(3,
+ *     "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
+ *     "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
+ *     "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)");
+ * force->setPermutationMode(CustomManyParticleForce::SinglePermutation);
+ * </c++>
+ * <python>
+ * force = CustomManyParticleForce(3,
+ *     "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
+ *     "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
+ *     "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)")
+ * force.setPermutationMode(CustomManyParticleForce.SinglePermutation)
+ * </python>
  * \endverbatim
  *
  * This force depends on one parameter, C.  The following code defines it as a global parameter:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    force->addGlobalParameter("C", 1.0);
- *
+ * <c++>
+ * force->addGlobalParameter("C", 1.0);
+ * </c++>
+ * <python>
+ * force.addGlobalParameter("C", 1.0)
+ * </python>
  * \endverbatim
  *
  * Notice that the expression is symmetric with respect to the particles.  It only depends on the products
@@ -118,13 +126,18 @@ namespace OpenMM {
  * potential:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomManyParticleForce* force = new CustomManyParticleForce(3,
- *        "L*eps*(cos(theta1)+1/3)^2*exp(sigma*gamma/(r12-a*sigma))*exp(sigma*gamma/(r13-a*sigma));"
- *        "r12 = distance(p1,p2); r13 = distance(p1,p3); theta1 = angle(p3,p1,p2)");
- *    force->setPermutationMode(CustomManyParticleForce::UniqueCentralParticle);
- *
+ * <c++>
+ * CustomManyParticleForce* force = new CustomManyParticleForce(3,
+ *     "L*eps*(cos(theta1)+1/3)^2*exp(sigma*gamma/(r12-a*sigma))*exp(sigma*gamma/(r13-a*sigma));"
+ *     "r12 = distance(p1,p2); r13 = distance(p1,p3); theta1 = angle(p3,p1,p2)");
+ * force->setPermutationMode(CustomManyParticleForce::UniqueCentralParticle);
+ * </c++>
+ * <python>
+ * force = CustomManyParticleForce(3,
+ *     "L*eps*(cos(theta1)+1/3)^2*exp(sigma*gamma/(r12-a*sigma))*exp(sigma*gamma/(r13-a*sigma));"
+ *     "r12 = distance(p1,p2); r13 = distance(p1,p3); theta1 = angle(p3,p1,p2)")
+ * force.setPermutationMode(CustomManyParticleForce.UniqueCentralParticle)
+ * </python>
  * \endverbatim
  *
  * When the permutation mode is set to UniqueCentralParticle, particle p1 is treated as the central particle.  For a set of
@@ -144,18 +157,24 @@ namespace OpenMM {
  *
  * A particle type is an integer that you specify when you call addParticle().  (If you omit the argument, it defaults
  * to 0.)  For the water model, you could specify 0 for all oxygen atoms and 1 for all hydrogen atoms.  You can then
- * call setTypeFilter() to specify the list of allowed types for each of the N particles involved in an interaction:
+ * call setTypeFilter() to specify the set of allowed types for each of the N particles involved in an interaction:
  *
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    set&lt;int&gt; oxygenTypes, hydrogenTypes;
- *    oxygenTypes.insert(0);
- *    hydrogenTypes.insert(1);
- *    force->setTypeFilter(0, oxygenTypes);
- *    force->setTypeFilter(1, hydrogenTypes);
- *    force->setTypeFilter(2, hydrogenTypes);
- *
+ * <c++>
+ * set<int> oxygenTypes, hydrogenTypes;
+ * oxygenTypes.insert(0);
+ * hydrogenTypes.insert(1);
+ * force.setTypeFilter(0, oxygenTypes);
+ * force.setTypeFilter(1, hydrogenTypes);
+ * force.setTypeFilter(2, hydrogenTypes);
+ * </c++>
+ * <python>
+ * oxygenTypes = {0}
+ * hydrogenTypes = {1}
+ * force.setTypeFilter(0, oxygenTypes)
+ * force.setTypeFilter(1, hydrogenTypes)
+ * force.setTypeFilter(2, hydrogenTypes)
+ * </python>
  * \endverbatim
  *
  * This specifies that of the three particles in an interaction, p1 must be oxygen while p2 and p3 must be hydrogen.
@@ -177,10 +196,12 @@ namespace OpenMM {
  * from particle p1 to the midpoint between particles p2 and p3.
  * 
  * \verbatim embed:rst:leading-asterisk
- * .. code-block:: cpp
- *
- *    CustomManyParticleForce* force = new CustomManyParticleForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)");
- *
+ * <c++>
+ * CustomManyParticleForce* force = new CustomManyParticleForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)");
+ * </c++>
+ * <python>
+ * force = CustomManyParticleForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)")
+ * </python>
  * \endverbatim
  *
  * In addition, you can call addTabulatedFunction() to define a new function based on tabulated values.  You specify the function by
@@ -240,39 +261,27 @@ public:
     /**
      * Get the number of particles in each set for which the energy is evaluated
      */
-    int getNumParticlesPerSet() const {
-        return particlesPerSet;
-    }
+    int getNumParticlesPerSet() const;
     /**
      * Get the number of particles for which force field parameters have been defined.
      */
-    int getNumParticles() const {
-        return particles.size();
-    }
+    int getNumParticles() const;
     /**
      * Get the number of particle pairs whose interactions should be excluded.
      */
-    int getNumExclusions() const {
-        return exclusions.size();
-    }
+    int getNumExclusions() const;
     /**
      * Get the number of per-particle parameters that the interaction depends on.
      */
-    int getNumPerParticleParameters() const {
-        return particleParameters.size();
-    }
+    int getNumPerParticleParameters() const;
     /**
      * Get the number of global parameters that the interaction depends on.
      */
-    int getNumGlobalParameters() const {
-        return globalParameters.size();
-    }
+    int getNumGlobalParameters() const;
     /**
      * Get the number of tabulated functions that have been defined.
      */
-    int getNumTabulatedFunctions() const {
-        return functions.size();
-    }
+    int getNumTabulatedFunctions() const;
     /**
      * Get the algebraic expression that gives the interaction energy of each bond
      */

@@ -32,6 +32,7 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/RMSDForce.h"
 #include "openmm/Context.h"
+#include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include "sfmt/SFMT.h"
@@ -155,12 +156,66 @@ void testRMSD() {
     ASSERT(rmsd1 > 0.9*estimate);
 }
 
+void testEnergyConservation() {
+    const int numParticles = 50;
+    System system;
+    vector<Vec3> referencePos(numParticles);
+    vector<Vec3> positions(numParticles);
+    vector<int> particles;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    NonbondedForce* nb = new NonbondedForce(); // Add a nonbonded force to activate reordering on the GPU
+    nb->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    system.addForce(nb);
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(2.0);
+        nb->addParticle(0.0, 0.1, 0.01);
+        positions[i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*5;
+        referencePos[i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*5;
+        if (genrand_real2(sfmt) < 0.5)
+            particles.push_back(i);
+    }
+    RMSDForce* force = new RMSDForce(referencePos, particles);
+    system.addForce(force);
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(300.0, 0);
+    integrator.step(5);
+    State initialState = context.getState(State::Energy);
+    double energy = initialState.getPotentialEnergy()+initialState.getKineticEnergy();
+    for (int i = 0; i < 100; i++) {
+        integrator.step(5);
+        State state = context.getState(State::Energy);
+        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy()+state.getKineticEnergy(), 1e-4);
+    }
+
+    // If we modify the reference positions, the energy should change.
+
+    for (int i = 0; i < numParticles; ++i)
+        referencePos[i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*5;
+    force->setReferencePositions(referencePos);
+    force->updateParametersInContext(context);
+    State state2 = context.getState(State::Energy);
+    double energy2 = state2.getPotentialEnergy()+state2.getKineticEnergy();
+    ASSERT(fabs(energy-energy2) > 1e-3);
+
+    // Make sure it's still conserved.
+
+    for (int i = 0; i < 100; i++) {
+        integrator.step(5);
+        State state = context.getState(State::Energy);
+        ASSERT_EQUAL_TOL(energy2, state.getPotentialEnergy()+state.getKineticEnergy(), 1e-4);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
         testRMSD();
+        testEnergyConservation();
         runPlatformTests();
     }
     catch(const exception& e) {

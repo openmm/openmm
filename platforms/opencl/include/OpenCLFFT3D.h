@@ -78,7 +78,7 @@ class OpenCLContext;
  */
 #endif
 
-class OPENMM_EXPORT_COMMON OpenCLFFT3D : public FFT3D {
+class OPENMM_EXPORT_COMMON OpenCLFFT3D : public FFT3DImpl {
 public:
     /**
      * Create an OpenCLFFT3D object for performing transforms of a particular size.

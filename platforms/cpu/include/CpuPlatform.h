@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -89,7 +89,7 @@ private:
 
 class CpuPlatform::PlatformData {
 public:
-    PlatformData(int numParticles, int numThreads, bool deterministicForces);
+    PlatformData(int numParticles, ThreadPool& threads, bool deterministicForces);
     ~PlatformData();
     /**
      * Request that a neighbor list be built and maintained.
@@ -107,7 +107,7 @@ public:
     int requestPosqIndex();
     AlignedArray<float> posq;
     std::vector<AlignedArray<float> > threadForce;
-    ThreadPool threads;
+    ThreadPool& threads;
     bool isPeriodic;
     CpuRandom random;
     std::map<std::string, std::string> propertyValues;
