@@ -413,9 +413,6 @@ class TinkerFiles:
         elif unitCellDimensions is not None:
             self.topology.setUnitCellDimensions(unitCellDimensions)
 
-        with open("a.pdb", "w") as f:
-            PDBFile.writeFile(self.topology, self.positions, f)
-
 
     def createSystem(
         self,
