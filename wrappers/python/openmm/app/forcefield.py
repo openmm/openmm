@@ -2164,7 +2164,7 @@ def _matchImproper(data, torsion, generator):
 # and returns the corresponding generator object; 2) a createForce() method that constructs the Force object and adds it
 # to the System.  The static method should be added to the parsers map.
 
-## @private
+
 class HarmonicBondGenerator(object):
     """A HarmonicBondGenerator constructs a HarmonicBondForce."""
 
@@ -2227,7 +2227,7 @@ class HarmonicBondGenerator(object):
 parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
 
 
-## @private
+
 class HarmonicAngleGenerator(object):
     """A HarmonicAngleGenerator constructs a HarmonicAngleForce."""
 
@@ -2313,7 +2313,7 @@ class HarmonicAngleGenerator(object):
 parsers["HarmonicAngleForce"] = HarmonicAngleGenerator.parseElement
 
 
-## @private
+
 class PeriodicTorsion(object):
     """A PeriodicTorsion records the information for a periodic torsion definition."""
 
@@ -2327,7 +2327,7 @@ class PeriodicTorsion(object):
         self.k = []
         self.ordering = 'default'
 
-## @private
+
 class PeriodicTorsionGenerator(object):
     """A PeriodicTorsionGenerator constructs a PeriodicTorsionForce."""
 
@@ -2443,7 +2443,7 @@ class PeriodicTorsionGenerator(object):
 parsers["PeriodicTorsionForce"] = PeriodicTorsionGenerator.parseElement
 
 
-## @private
+
 class RBTorsion(object):
     """An RBTorsion records the information for a Ryckaert-Bellemans torsion definition."""
 
@@ -2458,7 +2458,7 @@ class RBTorsion(object):
         else:
             raise ValueError('Illegal ordering type %s for RBTorsion (%s,%s,%s,%s)' % (ordering, types[0], types[1], types[2], types[3]))
 
-## @private
+
 class RBTorsionGenerator(object):
     """An RBTorsionGenerator constructs an RBTorsionForce."""
 
@@ -2523,7 +2523,7 @@ class RBTorsionGenerator(object):
 parsers["RBTorsionForce"] = RBTorsionGenerator.parseElement
 
 
-## @private
+
 class CMAPTorsion(object):
     """A CMAPTorsion records the information for a CMAP torsion definition."""
 
@@ -2535,7 +2535,7 @@ class CMAPTorsion(object):
         self.types5 = types[4]
         self.map = map
 
-## @private
+
 class CMAPTorsionGenerator(object):
     """A CMAPTorsionGenerator constructs a CMAPTorsionForce."""
 
@@ -2619,7 +2619,7 @@ class CMAPTorsionGenerator(object):
 parsers["CMAPTorsionForce"] = CMAPTorsionGenerator.parseElement
 
 
-## @private
+
 class NonbondedGenerator(object):
     """A NonbondedGenerator constructs a NonbondedForce."""
 
@@ -2710,7 +2710,7 @@ class NonbondedGenerator(object):
 parsers["NonbondedForce"] = NonbondedGenerator.parseElement
 
 
-## @private
+
 class LennardJonesGenerator(object):
     """A NBFix generator to construct the L-J force with NBFIX implemented as a lookup table"""
 
@@ -2910,7 +2910,7 @@ class LennardJonesGenerator(object):
 parsers["LennardJonesForce"] = LennardJonesGenerator.parseElement
 
 
-## @private
+
 class GBSAOBCGenerator(object):
     """A GBSAOBCGenerator constructs a GBSAOBCForce."""
 
@@ -2963,7 +2963,7 @@ class GBSAOBCGenerator(object):
 parsers["GBSAOBCForce"] = GBSAOBCGenerator.parseElement
 
 
-## @private
+
 class CustomBondGenerator(object):
     """A CustomBondGenerator constructs a CustomBondForce."""
 
@@ -3011,7 +3011,7 @@ class CustomBondGenerator(object):
 parsers["CustomBondForce"] = CustomBondGenerator.parseElement
 
 
-## @private
+
 class CustomAngleGenerator(object):
     """A CustomAngleGenerator constructs a CustomAngleForce."""
 
@@ -3063,7 +3063,7 @@ class CustomAngleGenerator(object):
 parsers["CustomAngleForce"] = CustomAngleGenerator.parseElement
 
 
-## @private
+
 class CustomTorsion(object):
     """A CustomTorsion records the information for a custom torsion definition."""
 
@@ -3078,7 +3078,7 @@ class CustomTorsion(object):
         else:
             raise ValueError('Illegal ordering type %s for CustomTorsion (%s,%s,%s,%s)' % (ordering, types[0], types[1], types[2], types[3]))
 
-## @private
+
 class CustomTorsionGenerator(object):
     """A CustomTorsionGenerator constructs a CustomTorsionForce."""
 
@@ -3146,7 +3146,7 @@ class CustomTorsionGenerator(object):
 parsers["CustomTorsionForce"] = CustomTorsionGenerator.parseElement
 
 
-## @private
+
 class CustomNonbondedGenerator(object):
     """A CustomNonbondedGenerator constructs a CustomNonbondedForce."""
 
@@ -3208,7 +3208,7 @@ class CustomNonbondedGenerator(object):
 parsers["CustomNonbondedForce"] = CustomNonbondedGenerator.parseElement
 
 
-## @private
+
 class CustomGBGenerator(object):
     """A CustomGBGenerator constructs a CustomGBForce."""
 
@@ -3268,7 +3268,7 @@ class CustomGBGenerator(object):
 parsers["CustomGBForce"] = CustomGBGenerator.parseElement
 
 
-## @private
+
 class CustomHbondGenerator(object):
     """A CustomHbondGenerator constructs a CustomHbondForce."""
 
@@ -3436,7 +3436,7 @@ class CustomHbondGenerator(object):
 parsers["CustomHbondForce"] = CustomHbondGenerator.parseElement
 
 
-## @private
+
 class CustomManyParticleGenerator(object):
     """A CustomManyParticleGenerator constructs a CustomManyParticleForce."""
 
@@ -3565,7 +3565,7 @@ def countConstraint(data):
 
     print("Constraints bond=%d angle=%d  total=%d" % (bondCount, angleCount, (bondCount+angleCount)))
 
-## @private
+
 class AmoebaBondGenerator(object):
 
     #=============================================================================================
@@ -3667,7 +3667,7 @@ def addAngleConstraint(angle, idealAngle, data, sys):
                 return
 
 #=============================================================================================
-## @private
+
 class AmoebaAngleGenerator(object):
 
     #=============================================================================================
@@ -3873,7 +3873,7 @@ parsers["AmoebaAngleForce"] = AmoebaAngleGenerator.parseElement
 # AmoebaInPlaneAngleForce
 #=============================================================================================
 
-## @private
+
 class AmoebaOutOfPlaneBendGenerator(object):
 
     #=============================================================================================
@@ -4101,7 +4101,7 @@ parsers["AmoebaOutOfPlaneBendForce"] = AmoebaOutOfPlaneBendGenerator.parseElemen
 
 #=============================================================================================
 
-## @private
+
 class AmoebaTorsionGenerator(object):
 
     #=============================================================================================
@@ -4209,7 +4209,6 @@ parsers["AmoebaTorsionForce"] = AmoebaTorsionGenerator.parseElement
 
 #=============================================================================================
 
-## @private
 class AmoebaPiTorsionGenerator(object):
 
     #=============================================================================================
@@ -4333,7 +4332,6 @@ parsers["AmoebaPiTorsionForce"] = AmoebaPiTorsionGenerator.parseElement
 
 #=============================================================================================
 
-## @private
 class AmoebaStretchTorsionGenerator(object):
     """An AmoebaStretchTorsionGenerator constructs a AmoebaStretchTorsionForce."""
 
@@ -4425,7 +4423,6 @@ parsers["AmoebaStretchTorsionForce"] = AmoebaStretchTorsionGenerator.parseElemen
 
 #=============================================================================================
 
-## @private
 class AmoebaAngleTorsionGenerator(object):
     """An AmoebaAngleTorsionGenerator constructs a AmoebaAngleTorsionForce."""
 
@@ -4519,7 +4516,6 @@ parsers["AmoebaAngleTorsionForce"] = AmoebaAngleTorsionGenerator.parseElement
 
 #=============================================================================================
 
-## @private
 class AmoebaTorsionTorsionGenerator(object):
 
     #=============================================================================================
@@ -4632,136 +4628,22 @@ class AmoebaTorsionTorsionGenerator(object):
 
     #=============================================================================================
 
-    def getChiralAtomIndex(self, data, sys, atomB, atomC, atomD):
-
-        chiralAtomIndex = -1
-
-        # if atomC has four bonds, find the
-        # two bonds that do not include atomB and atomD
-        # set chiralAtomIndex to one of these, if they are
-        # not the same atom(type/mass)
-
-        if (len(data.atomBonds[atomC]) == 4):
-            atomE = -1
-            atomF = -1
-            for bond in data.atomBonds[atomC]:
-                bondedAtom1 = data.bonds[bond].atom1
-                bondedAtom2 = data.bonds[bond].atom2
-                hit = -1
-                if (  bondedAtom1 == atomC and bondedAtom2 != atomB and bondedAtom2 != atomD):
-                    hit = bondedAtom2
-                elif (bondedAtom2 == atomC and bondedAtom1 != atomB and bondedAtom1 != atomD):
-                    hit = bondedAtom1
-
-                if (hit > -1):
-                    if (atomE == -1):
-                        atomE = hit
-                    else:
-                        atomF = hit
-
-            # raise error if atoms E or F not found
-
-            if (atomE == -1 or atomF == -1):
-                outputString = "getChiralAtomIndex: error getting bonded partners of atomC=%s %d %s" % (atomC.name, atomC.residue.index, atomC.residue.name,)
-                raise ValueError(outputString)
-
-            # check for different type/mass between atoms E & F
-
-            typeE = int(data.atomType[data.atoms[atomE]])
-            typeF = int(data.atomType[data.atoms[atomF]])
-            if (typeE > typeF):
-                chiralAtomIndex = atomE
-            if (typeF > typeE):
-                chiralAtomIndex = atomF
-
-            massE = sys.getParticleMass(atomE)/unit.dalton
-            massF = sys.getParticleMass(atomE)/unit.dalton
-            if (massE > massF):
-                chiralAtomIndex = massE
-            if (massF > massE):
-                chiralAtomIndex = massF
-
-        return chiralAtomIndex
-
-    #=============================================================================================
-
-    def createForce(self, sys, data, nonpiTorsionedMethod, nonpiTorsionedCutoff, args):
-
-        existing = [f for f in sys.getForces() if type(f) == mm.AmoebaTorsionTorsionForce]
-
-        if len(existing) == 0:
-            force = mm.AmoebaTorsionTorsionForce()
-        else:
-            force = existing[0]
-
-        for angle in data.angles:
-
-            # search for bitorsions; based on TINKER subroutine bitors()
-
-            ib = angle[0]
-            ic = angle[1]
-            id = angle[2]
-
-            for bondIndex in data.atomBonds[ib]:
-                bondedAtom1 = data.bonds[bondIndex].atom1
-                bondedAtom2 = data.bonds[bondIndex].atom2
-                if (bondedAtom1 != ib):
-                    ia = bondedAtom1
-                else:
-                    ia = bondedAtom2
-
-                if (ia != ic and ia != id):
-                    for bondIndex2 in data.atomBonds[id]:
-                        bondedAtom1 = data.bonds[bondIndex2].atom1
-                        bondedAtom2 = data.bonds[bondIndex2].atom2
-                        if (bondedAtom1 != id):
-                            ie = bondedAtom1
-                        else:
-                            ie = bondedAtom2
-
-                        if (ie != ic and ie != ib and ie != ia):
-
-                            # found candidate set of atoms
-                            # check if types match in order or reverse order
-
-                            type1 = data.atomType[data.atoms[ia]]
-                            type2 = data.atomType[data.atoms[ib]]
-                            type3 = data.atomType[data.atoms[ic]]
-                            type4 = data.atomType[data.atoms[id]]
-                            type5 = data.atomType[data.atoms[ie]]
-
-                            for i in range(len(self.types1)):
-
-                                types1 = self.types1[i]
-                                types2 = self.types2[i]
-                                types3 = self.types3[i]
-                                types4 = self.types4[i]
-                                types5 = self.types5[i]
-
-                                # match in order
-
-                                if (type1 in types1 and type2 in types2 and type3 in types3 and type4 in types4 and type5 in types5):
-                                    chiralAtomIndex = self.getChiralAtomIndex(data, sys, ib, ic, id)
-                                    force.addTorsionTorsion(ia, ib, ic, id, ie, chiralAtomIndex, self.gridIndex[i])
-
-                                # match in reverse order
-
-                                elif (type5 in types1 and type4 in types2 and type3 in types3 and type2 in types4 and type1 in types5):
-                                    chiralAtomIndex = self.getChiralAtomIndex(data, sys, ib, ic, id)
-                                    force.addTorsionTorsion(ie, id, ic, ib, ia, chiralAtomIndex, self.gridIndex[i])
-
-        # set grids
-
+    def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
+        builder = amoebaforces.AmoebaTorsionTorsionForce()
+        force = builder.getForce(sys)
+        
+        # Add torsion-torsion interactions
+        builder.addTorsionTorsionInteractions(force, data, self.types1, self.types2, self.types3, 
+                                              self.types4, self.types5, self.gridIndex, sys)
+        
+        # Set grids
         for (index, grid) in enumerate(self.grids):
-            force.setTorsionTorsionGrid(index, grid)
-        if len(existing) == 0 and force.getNumTorsionTorsions() > 0:
-            sys.addForce(force)
+            builder.setTorsionTorsionGrid(force, index, grid)
 
 parsers["AmoebaTorsionTorsionForce"] = AmoebaTorsionTorsionGenerator.parseElement
 
 #=============================================================================================
 
-## @private
 class AmoebaStretchBendGenerator(object):
 
     #=============================================================================================
@@ -4913,7 +4795,6 @@ parsers["AmoebaStretchBendForce"] = AmoebaStretchBendGenerator.parseElement
 
 #=============================================================================================
 
-## @private
 class AmoebaVdwGenerator(object):
 
     """A AmoebaVdwGenerator constructs a AmoebaVdwForce."""
@@ -4985,7 +4866,6 @@ parsers["AmoebaVdwForce"] = AmoebaVdwGenerator.parseElement
 
 #=============================================================================================
 
-## @private
 class AmoebaMultipoleGenerator(object):
 
     #=============================================================================================
@@ -5068,7 +4948,6 @@ parsers["AmoebaMultipoleForce"] = AmoebaMultipoleGenerator.parseElement
 
 #=============================================================================================
 
-## @private
 class AmoebaWcaDispersionGenerator(object):
 
     """A AmoebaWcaDispersionGenerator constructs a AmoebaWcaDispersionForce."""
@@ -5115,37 +4994,29 @@ class AmoebaWcaDispersionGenerator(object):
     #=========================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-
-        # get or create force depending on whether it has already been added to the system
-
-        existing = [f for f in sys.getForces() if type(f) == mm.AmoebaWcaDispersionForce]
-        if len(existing) == 0:
-            force = mm.AmoebaWcaDispersionForce()
-            sys.addForce(force)
-        else:
-            force = existing[0]
-
-        # add particles to force
-        # throw error if particle type not available
-
-        force.setEpso(   float(self.epso   ))
-        force.setEpsh(   float(self.epsh   ))
-        force.setRmino(  float(self.rmino  ))
-        force.setRminh(  float(self.rminh  ))
-        force.setDispoff(float(self.dispoff))
-        force.setSlevy(  float(self.slevy  ))
-        force.setAwater( float(self.awater ))
-        force.setShctd(  float(self.shctd  ))
-
-        for atom in data.atoms:
-            values = self.params.getAtomParameters(atom, data)
-            force.addParticle(values[0], values[1])
+        builder = amoebaforces.AmoebaWcaDispersionForceBuilder(float(self.epso), float(self.epsh), 
+                                                               float(self.rmino), float(self.rminh), 
+                                                               float(self.awater), float(self.slevy), 
+                                                               float(self.dispoff), float(self.shctd))
+        
+        # Register parameters for each atom type
+        for atomType in data.atomType:
+            if hasattr(self.params, '_findAtomTypeParameters'):
+                # Use the proper method to get parameters
+                try:
+                    values = self.params.getAtomParameters(data.atoms[0]._replace(type=atomType), data)
+                    builder.registerAtomParams(self.ff, atomType, values)
+                except:
+                    # If we can't get parameters, continue
+                    pass
+        
+        force = builder.getForce(sys)
+        builder.addParticles(force, data.atoms)
 
 parsers["AmoebaWcaDispersionForce"] = AmoebaWcaDispersionGenerator.parseElement
 
 #=============================================================================================
 
-## @private
 class AmoebaGeneralizedKirkwoodGenerator(object):
 
     """A AmoebaGeneralizedKirkwoodGenerator constructs a AmoebaGeneralizedKirkwoodForce."""
@@ -5161,165 +5032,51 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
         self.probeRadius = probeRadius
         self.surfaceAreaFactor = surfaceAreaFactor
 
-        self.radiusTypeMap = {}
-        self.radiusTypeMap['Bondi'] = {}
-        bondiMap = self.radiusTypeMap['Bondi']
-        rscale = 1.03
-
-        bondiMap[0] = 0.00
-        bondiMap[1] = 0.12*rscale
-        bondiMap[2] = 0.14*rscale
-        bondiMap[5] = 0.18*rscale
-
-        bondiMap[6] = 0.170*rscale
-        bondiMap[7] = 0.155*rscale
-        bondiMap[8] = 0.152*rscale
-        bondiMap[9] = 0.147*rscale
-
-        bondiMap[10] = 0.154*rscale
-        bondiMap[14] = 0.210*rscale
-        bondiMap[15] = 0.180*rscale
-        bondiMap[16] = 0.180*rscale
-
-        bondiMap[17] = 0.175 *rscale
-        bondiMap[18] = 0.188*rscale
-        bondiMap[34] = 0.190*rscale
-        bondiMap[35] = 0.185*rscale
-
-        bondiMap[36] = 0.202*rscale
-        bondiMap[53] = 0.198*rscale
-        bondiMap[54] = 0.216*rscale
-
     #=========================================================================================
 
     def getObcShct(self, data, atomIndex):
-
+        """Get the overlap scale factor based on atomic number - uses centralized implementation"""
         atom = data.atoms[atomIndex]
         atomicNumber = atom.element.atomic_number
-        shct = -1.0
+        shct = amoebaforces.AmoebaGeneralizedKirkwoodForceBuilder.get_overlap_scale_factor(atomicNumber)
 
-        # shct
-
-        if (atomicNumber == 1):                 # H(1)
-            shct = 0.85
-        elif (atomicNumber == 6):               # C(6)
-            shct = 0.72
-        elif (atomicNumber == 7):               # N(7)
-            shct = 0.79
-        elif (atomicNumber == 8):               # O(8)
-            shct = 0.85
-        elif (atomicNumber == 9):               # F(9)
-            shct = 0.88
-        elif (atomicNumber == 15):              # P(15)
-            shct = 0.86
-        elif (atomicNumber == 16):              # S(16)
-            shct = 0.96
-        elif (atomicNumber == 26):              # Fe(26)
-            shct = 0.88
-
-        if (shct < 0.0):
-            raise ValueError( "getObcShct: no GK overlap scale factor for atom %s of %s %d" % (atom.name, atom.residue.name, atom.residue.index) )
+        if shct == 0.8:  # Default value, means no specific mapping found
+            raise ValueError("getObcShct: no GK overlap scale factor for atom %s of %s %d" % (atom.name, atom.residue.name, atom.residue.index))
 
         return shct
 
     #=========================================================================================
 
     def getAmoebaTypeRadius(self, data, bondedAtomIndices, atomIndex):
-
+        """Get the atomic radius based on atomic number and bonded atoms - uses centralized implementation"""
         atom = data.atoms[atomIndex]
         atomicNumber = atom.element.atomic_number
-        radius = -1.0
-
-        if (atomicNumber == 1):                  # H(1)
-
-            radius = 0.132
-
-            if (len(bondedAtomIndices) < 1):
-                 raise ValueError( "AmoebaGeneralizedKirkwoodGenerator: error getting atom bonded to %s of %s %d " % (atom.name, atom.residue.name, atom.residue.index) )
-
-            for bondedAtomIndex in bondedAtomIndices:
-                bondedAtomAtomicNumber = data.atoms[bondedAtomIndex].element.atomic_number
-
-            if (bondedAtomAtomicNumber == 7):
-                radius = 0.11
-            if (bondedAtomAtomicNumber == 8):
-                radius = 0.105
-
-        elif (atomicNumber == 3):               # Li(3)
-            radius = 0.15
-        elif (atomicNumber == 6):               # C(6)
-
-            radius = 0.20
-            if (len(bondedAtomIndices) == 3):
-                radius = 0.205
-
-            elif (len(bondedAtomIndices) == 4):
-                for bondedAtomIndex in bondedAtomIndices:
-                   bondedAtomAtomicNumber = data.atoms[bondedAtomIndex].element.atomic_number
-                   if (bondedAtomAtomicNumber == 7 or bondedAtomAtomicNumber == 8):
-                       radius = 0.175
-
-        elif (atomicNumber == 7):               # N(7)
-            radius = 0.16
-        elif (atomicNumber == 8):               # O(8)
-            radius = 0.155
-            if (len(bondedAtomIndices) == 2):
-                radius = 0.145
-        elif (atomicNumber == 9):               # F(9)
-            radius = 0.154
-        elif (atomicNumber == 10):
-            radius = 0.146
-        elif (atomicNumber == 11):
-            radius = 0.209
-        elif (atomicNumber == 12):
-            radius = 0.179
-        elif (atomicNumber == 14):
-            radius = 0.189
-        elif (atomicNumber == 15):              # P(15)
-            radius = 0.196
-        elif (atomicNumber == 16):              # S(16)
-            radius = 0.186
-        elif (atomicNumber == 17):
-            radius = 0.182
-        elif (atomicNumber == 18):
-            radius = 0.179
-        elif (atomicNumber == 19):
-            radius = 0.223
-        elif (atomicNumber == 20):
-            radius = 0.191
-        elif (atomicNumber == 35):
-            radius = 2.00
-        elif (atomicNumber == 36):
-            radius = 0.190
-        elif (atomicNumber == 37):
-            radius = 0.226
-        elif (atomicNumber == 53):
-            radius = 0.237
-        elif (atomicNumber == 54):
-            radius = 0.207
-        elif (atomicNumber == 55):
-            radius = 0.263
-        elif (atomicNumber == 56):
-            radius = 0.230
-
-        if (radius < 0.0):
+        
+        # Convert bonded atom indices to atomic numbers
+        bondedAtomicNumbers = []
+        for bondedAtomIndex in bondedAtomIndices:
+            bondedAtomicNumbers.append(data.atoms[bondedAtomIndex].element.atomic_number)
+        
+        try:
+            radius = amoebaforces.AmoebaGeneralizedKirkwoodForceBuilder.get_atomic_radius(atomicNumber, bondedAtomicNumbers)
+        except ValueError:
             outputString = "No GK radius for atom %s of %s %d" % (atom.name, atom.residue.name, atom.residue.index)
-            raise ValueError( outputString )
+            raise ValueError(outputString)
 
         return radius
 
     #=========================================================================================
 
     def getBondiTypeRadius(self, data, bondedAtomIndices, atomIndex):
-
-        bondiMap = self.radiusTypeMap['Bondi']
+        """Get Bondi radius - uses centralized implementation"""
         atom = data.atoms[atomIndex]
         atomicNumber = atom.element.atomic_number
-        if (atomicNumber in bondiMap):
-            radius = bondiMap[atomicNumber]
-        else:
+        
+        try:
+            radius = amoebaforces.AmoebaGeneralizedKirkwoodForceBuilder.get_bondi_radius(atomicNumber, scale_factor=1.03)
+        except ValueError:
             outputString = "Warning no Bondi radius for atom %s of %s %d using default value" % (atom.name, atom.residue.name, atom.residue.index)
-            raise ValueError( outputString )
+            raise ValueError(outputString)
 
         return radius
 
@@ -5364,58 +5121,25 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
                 if (force.__class__.__name__ == 'AmoebaMultipoleGenerator'):
                     force.createForce(sys, data, nonbondedMethod, nonbondedCutoff, args)
 
-        # get or create force depending on whether it has already been added to the system
+        # Use the amoebaforces builder
+        solventDielectric = args.get('solventDielectric', self.solventDielectric)
+        soluteDielectric = args.get('soluteDielectric', self.soluteDielectric)
+        includeCavityTerm = args.get('includeCavityTerm', self.includeCavityTerm)
+        
+        builder = amoebaforces.AmoebaGeneralizedKirkwoodForceBuilder(float(solventDielectric), 
+                                                                     float(soluteDielectric), 
+                                                                     int(includeCavityTerm), 
+                                                                     float(self.probeRadius), 
+                                                                     float(self.surfaceAreaFactor))
+        force = builder.getForce(sys, implicitSolvent=True)
 
-        existing = [f for f in sys.getForces() if type(f) == mm.AmoebaGeneralizedKirkwoodForce]
-        if len(existing) == 0:
-
-            force = mm.AmoebaGeneralizedKirkwoodForce()
-            sys.addForce(force)
-
-            if ('solventDielectric' in args):
-                force.setSolventDielectric(float(args['solventDielectric']))
-            else:
-                force.setSolventDielectric(   float(self.solventDielectric))
-
-            if ('soluteDielectric' in args):
-                force.setSoluteDielectric(float(args['soluteDielectric']))
-            else:
-                force.setSoluteDielectric(    float(self.soluteDielectric))
-
-            if ('includeCavityTerm' in args):
-                force.setIncludeCavityTerm(int(args['includeCavityTerm']))
-            else:
-               force.setIncludeCavityTerm(   int(self.includeCavityTerm))
-
-        else:
-            force = existing[0]
-
-        # add particles to force
-        # throw error if particle type not available
-
-        force.setProbeRadius(         float(self.probeRadius))
-        force.setSurfaceAreaFactor(   float(self.surfaceAreaFactor))
-
-        # 1-2
-
-        bonded12ParticleSets = AmoebaVdwGenerator.getBondedParticleSets(sys, data)
-
-        radiusType = 'Bondi'
-        for atomIndex in range(0, amoebaMultipoleForce.getNumMultipoles()):
-            multipoleParameters = amoebaMultipoleForce.getMultipoleParameters(atomIndex)
-            if (radiusType == 'Amoeba'):
-                radius = self.getAmoebaTypeRadius(data, bonded12ParticleSets[atomIndex], atomIndex)
-            else:
-                radius = self.getBondiTypeRadius(data, bonded12ParticleSets[atomIndex], atomIndex)
-            #shct = self.getObcShct(data, atomIndex)
-            shct = 0.69
-            force.addParticle(multipoleParameters[0], radius, shct)
+        if force is not None:
+            builder.addParticles(force, data.atoms)
 
 parsers["AmoebaGeneralizedKirkwoodForce"] = AmoebaGeneralizedKirkwoodGenerator.parseElement
 
 #=============================================================================================
 
-## @private
 class AmoebaUreyBradleyGenerator(object):
 
     #=============================================================================================
@@ -5485,7 +5209,7 @@ parsers["AmoebaUreyBradleyForce"] = AmoebaUreyBradleyGenerator.parseElement
 #=============================================================================================
 
 
-## @private
+
 class HippoNonbondedGenerator(object):
     """A HippoNonbondedGenerator constructs a HippoNonbondedForce."""
 
@@ -5591,7 +5315,7 @@ class HippoNonbondedGenerator(object):
 parsers["HippoNonbondedForce"] = HippoNonbondedGenerator.parseElement
 
 
-## @private
+
 class DrudeGenerator(object):
     """A DrudeGenerator constructs a DrudeForce."""
 
