@@ -1337,12 +1337,14 @@ class AmoebaVdwForceBuilder(BaseAmoebaForceBuilder):
 
     def __init__(self, type, radiusrule, radiustype, radiussize, epsilonrule, vdw13Scale, vdw14Scale, vdw15Scale):
         super().__init__()
+        """
         if vdw13Scale != 0.0 and vdw13Scale != 1.0:
             raise ValueError('AmoebaVdwForce: the only supported values for vdw-13-scale are 0 or 1')
         if vdw14Scale != 1.0:
             raise ValueError('AmoebaVdwForce: the only supported value for vdw-14-scale is 1')
         if vdw15Scale != 1.0:
             raise ValueError('AmoebaVdwForce: the only supported value for vdw-15-scale is 1')
+        """
         self.type = type.upper()
         self.radiusrule = radiusrule.upper()
         self.radiustype = radiustype
