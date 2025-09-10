@@ -1148,6 +1148,7 @@ class TinkerFiles:
             If peptide chain is found, returns [molecule, residueLabel].
             If no peptide chain is found, returns an empty list.
         """
+        print("processing peptide chain")
         moleculeAtoms = [None] * len(atoms)
         for atomId in molecule:
             moleculeAtoms[atomId] = atoms[atomId]
@@ -1298,7 +1299,7 @@ class TinkerFiles:
                     if ie == ic or ie == ib or ie == ia:
                         continue
 
-                        bitorsions.add((ia, ib, ic, id, ie))
+                    bitorsions.add((ia, ib, ic, id, ie))
 
         return list(bitorsions)
 
