@@ -4639,7 +4639,7 @@ class AmoebaTorsionTorsionGenerator(object):
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        builder = amoebaforces.AmoebaTorsionTorsionForce()
+        builder = amoebaforces.AmoebaTorsionTorsionForceBuilder()
         force = builder.getForce(sys)
         
         # Add torsion-torsion interactions
@@ -4852,25 +4852,13 @@ class AmoebaVdwGenerator(object):
 
     #=============================================================================================
 
-    @staticmethod
-    def getBondedParticleSets(sys, data):
-
-        bondedParticleSets = [set() for i in range(len(data.atoms))]
-        bondIndices = _findBondsForExclusions(data, sys)
-        for atom1, atom2 in bondIndices:
-            bondedParticleSets[atom1].add(atom2)
-            bondedParticleSets[atom2].add(atom1)
-        return bondedParticleSets
-
-    #=============================================================================================
-
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         builder = amoebaforces.AmoebaVdwForceBuilder(self.type, self.radiusrule, self.radiustype, self.radiussize, self.epsilonrule, self.vdw13Scale, self.vdw14Scale, self.vdw15Scale)
         for atomClass, params in self.params.items():
             builder.registerClassParams(int(atomClass), *params)
         for params in self.pairs:
             builder.registerPairParams(int(params[0]), int(params[1]), params[2], params[3])
-        force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff, args.get('useDispersionCorrection', True))
+        force = builder.getForce(sys, nonbondedMethod, args.get('vdwCutoff', nonbondedCutoff), args.get('useDispersionCorrection', True))
         atomClasses = [self.classNameForType[data.atomType[atom]] for atom in data.atoms]
         builder.addParticles(force, atomClasses, data.atoms, _findBondsForExclusions(data, sys))
 
