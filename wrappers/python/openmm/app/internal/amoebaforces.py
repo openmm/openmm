@@ -722,28 +722,21 @@ class AmoebaWcaDispersionForceBuilder(BaseAmoebaForceBuilder):
         def createForce():
             force = mm.AmoebaWcaDispersionForce()
             force.setEpso(self.epso)    
-            force.setEpsh(self.epso)     
+            force.setEpsh(self.epsh)     
             force.setRmino(self.rmino)     
             force.setRminh(self.rminh)   
             force.setDispoff(self.dispoff)
             force.setSlevy(self.slevy)
-            force.setAwater( self.awater) 
+            force.setAwater(self.awater) 
             force.setShctd(self.shctd)
             return force
 
         return self._createOrGetForce(sys, mm.AmoebaWcaDispersionForce, createForce)
 
-    def addParticles(self, force, atomClasses, atoms, bonds):
+    def addParticles(self, force, atomClasses):
         """Add particles to the WCA dispersion force"""
-        # Create bonded particle sets
-        bondedParticleSets = [set() for _ in range(len(atoms))]
-        for atom1, atom2 in bonds:
-            bondedParticleSets[atom1].add(atom2)
-            bondedParticleSets[atom2].add(atom1)
-
-        # Add particles
-        for i in range(len(atoms)):
-            values = self.classParams[atomClasses[i]]
+        for atomCls in atomClasses:
+            values = self.classParams[atomCls]
             force.addParticle(*values)
 
 

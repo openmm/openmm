@@ -4960,23 +4960,28 @@ class AmoebaWcaDispersionGenerator(object):
         else:
             # Multiple <AmoebaWcaDispersionForce> tags were found, probably in different files.  Simply add more types to the existing one.
             generator = existing[0]
+
         for wca in element.findall('WcaDispersion'):
-            generator.params[wca.attrib['class']] = tuple(float(wca.attrib[name]) for name in ('radius', 'epsilon'))
+            generator.params[int(wca.attrib['class'])] = tuple(float(wca.attrib[name]) for name in ('radius', 'epsilon'))
         generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
+
 
     #=========================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        builder = amoebaforces.AmoebaWcaDispersionForceBuilder(float(self.epso), float(self.epsh), 
-                                                               float(self.rmino), float(self.rminh), 
-                                                               float(self.awater), float(self.slevy), 
-                                                               float(self.dispoff), float(self.shctd))
-        
+        builder = amoebaforces.AmoebaWcaDispersionForceBuilder(float(self.epso), 
+                                                               float(self.epsh), 
+                                                               float(self.rmino), 
+                                                               float(self.rminh), 
+                                                               float(self.awater), 
+                                                               float(self.slevy), 
+                                                               float(self.dispoff), 
+                                                               float(self.shctd))
         force = builder.getForce(sys)
         atomClasses = [self.classNameForType[data.atomType[atom]] for atom in data.atoms]
         for atomClass, params in self.params.items():
-            builder.registerClassParams(int(atomClass), *params)
-        builder.addParticles(force, atomClasses, data.atoms, _findBondsForExclusions(data, sys))
+            builder.registerClassParams(atomClass, *params)
+        builder.addParticles(force, atomClasses)
 
 parsers["AmoebaWcaDispersionForce"] = AmoebaWcaDispersionGenerator.parseElement
 
