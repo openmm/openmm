@@ -397,6 +397,7 @@ class TinkerFiles:
 
         # Create topology
         self.topology = TinkerFiles._createTopology(self.atoms)
+
         # Set the periodic box vectors as specified in the xyz file
         if self.boxVectors is not None:
             self.topology.setPeriodicBoxVectors(self.boxVectors)
@@ -1145,7 +1146,6 @@ class TinkerFiles:
             If peptide chain is found, returns [molecule, residueLabel].
             If no peptide chain is found, returns an empty list.
         """
-        print("processing peptide chain")
         moleculeAtoms = [None] * len(atoms)
         for atomId in molecule:
             moleculeAtoms[atomId] = atoms[atomId]
