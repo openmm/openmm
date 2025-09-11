@@ -1000,14 +1000,10 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
                 multipoleList = self.multipoleParams[t]
                 hit = False
                 savedMultipoleParams = None
-                
-
-                
                 for multipoleParams in multipoleList:
                     if hit:
                         break
                     kz, kx, ky = multipoleParams.kIndices[1:4]
-
                     bondedAtomIndices = self.bonded12ParticleSets[atomIndex]
                     zaxis = -1
                     xaxis = -1
@@ -1448,6 +1444,3 @@ class AmoebaVdwForceBuilder(BaseAmoebaForceBuilder):
 
             exclusionSet.add(i)
             force.setParticleExclusions(i, tuple(exclusionSet))
-
-
-

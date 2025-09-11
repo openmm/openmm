@@ -339,20 +339,20 @@ class TinkerFiles:
 
     def __init__(
         self,
-        xyz: str,
-        key: str,
+        xyzFile: str,
+        parameterFiles: str,
         periodicBoxVectors: Optional[Tuple[Vec3, Vec3, Vec3]] = None,
         unitCellDimensions: Optional[Vec3] = None,
     ):
         """
-        Initialize TinkerFiles.
+        Load a set of Tinker files, including one .xyz files and one or more .key or .prm files.
 
         Parameters
         ----------
-        xyz : str
+        xyzFile : str
             Path to the Tinker .xyz file.
-        key : str
-            Path to the Tinker .key file.
+        parameterFiles : str or list[str]
+            Paths to the Tinker .key and .prm files.
         periodicBoxVectors : Optional[Tuple[Vec3, Vec3, Vec3]]
             The periodic box vectors.
         unitCellDimensions : Optional[Vec3]
@@ -372,13 +372,13 @@ class TinkerFiles:
         self._scalars = dict()
 
         # Load the xyz file
-        self.atoms, self.boxVectors, self.positions = TinkerFiles._loadXyzFile(xyz)
+        self.atoms, self.boxVectors, self.positions = TinkerFiles._loadXyzFile(xyzFile)
         self.positions = self.positions * nanometers
 
         # Load the .key or .prm file(s)
-        key = key if isinstance(key, list) else [key]
-        for keyFile in key:
-            atomTypes, forces, scalars = self._loadKeyFile(keyFile)
+        parameterFiles = [parameterFiles] if isinstance(parameterFiles, str) else parameterFiles
+        for paramFile in parameterFiles:
+            atomTypes, forces, scalars = self._loadKeyFile(paramFile)
             self._atomTypes.update(atomTypes)
             self._scalars.update(scalars)
 
@@ -417,7 +417,8 @@ class TinkerFiles:
     def createSystem(
         self,
         nonbondedMethod=ff.NoCutoff,
-        nonbondedCutoff=1.0 * nanometers,
+        nonbondedCutoff=1.0*nanometers,
+        vdwCutoff=None,
         constraints=None,
         rigidWater: bool = False,
         removeCMMotion: bool = True,
@@ -439,6 +440,9 @@ class TinkerFiles:
             Allowed values are NoCutoff, and PME.
         nonbondedCutoff : distance=1.0*nanometers
             The cutoff distance to use for nonbonded interactions.
+        vdwCutoff : distance=None
+            An optional alternate cutoff to use for vdw interactions.  If this is omitted, nonbondedCutoff
+            is used for vdw interactions as well as for other nonbonded interactions.
         constraints : object=None
             Specifies which bonds and angles should be implemented with constraints.
             Allowed values are None, HBonds, AllBonds, or HAngles.
@@ -924,7 +928,7 @@ class TinkerFiles:
             if pairs is not None:
                 for params in pairs:
                     builder.registerPairParams(int(params[0]), int(params[1]), float(params[2]), float(params[3]))
-            force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff, True)
+            force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff if vdwCutoff is None else vdwCutoff, True)
             atomClasses = [int(atom.atomClass) for atom in self.atoms]
             bonds = [(a1.index, a2.index) for a1, a2 in self.topology.bonds()]
             builder.addParticles(force, atomClasses, list(self.topology.atoms()), bonds)
