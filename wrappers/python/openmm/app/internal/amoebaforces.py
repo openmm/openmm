@@ -701,9 +701,8 @@ class AmoebaTorsionTorsionForceBuilder(BaseAmoebaForceBuilder):
 class AmoebaWcaDispersionForceBuilder(BaseAmoebaForceBuilder):
     """Builder for WCA Dispersion force for AMOEBA force field"""
 
-    def __init__(self, epso=0.1100, epsh=0.0135, rmino=1.7025, rminh=1.3275,
-                 awater=0.033428, slevy=1.0, dispoff=0.26, shctd=0.81,
-                 radiustype="R-MIN", radiussize="RADIUS"):
+    def __init__(self, epso, epsh, rmino, rminh,
+                 awater, slevy, dispoff, shctd):
         super().__init__()
         self.epso = epso
         self.epsh = epsh
@@ -713,24 +712,22 @@ class AmoebaWcaDispersionForceBuilder(BaseAmoebaForceBuilder):
         self.slevy = slevy
         self.dispoff = dispoff
         self.shctd = shctd
-        self.radiustype = radiustype
-        self.radiussize = radiussize
-        self.atomParams = []
+        self.classParams = {}
 
-    def registerAtomParams(self, ff, atomClass, vdwParams):
+    def registerClassParams(self, atomClass, radius, epsilon):
         """Register atom parameters for WCA dispersion"""
-        self.atomParams.append((atomClass, vdwParams))
+        self.classParams[atomClass] = (radius, epsilon)
 
     def getForce(self, sys):
         def createForce():
             force = mm.AmoebaWcaDispersionForce()
-            force.setEpso(self.epso * 4.184)      # Convert kcal/mol to kJ/mol
-            force.setEpsh(self.epsh * 4.184)      # Convert kcal/mol to kJ/mol
-            force.setRmino(self.rmino * 0.1)      # Convert Angstrom to nm
-            force.setRminh(self.rminh * 0.1)      # Convert Angstrom to nm
-            force.setDispoff(self.dispoff * 0.1)  # Convert Angstrom to nm
+            force.setEpso(self.epso)    
+            force.setEpsh(self.epso)     
+            force.setRmino(self.rmino)     
+            force.setRminh(self.rminh)   
+            force.setDispoff(self.dispoff)
             force.setSlevy(self.slevy)
-            force.setAwater(1000.0 * self.awater) # Convert to correct units
+            force.setAwater( self.awater) 
             force.setShctd(self.shctd)
             return force
 
@@ -738,31 +735,16 @@ class AmoebaWcaDispersionForceBuilder(BaseAmoebaForceBuilder):
 
     def addParticles(self, force, atomClasses, atoms, bonds):
         """Add particles to the WCA dispersion force"""
-        for i, atom in enumerate(atoms):
-            # Find matching parameters
-            vdwParams = None
-            atomClass = atomClasses[i]
-            for registeredClass, params in self.atomParams:
-                if atomClass == registeredClass:
-                    vdwParams = params
-                    break
+        # Create bonded particle sets
+        bondedParticleSets = [set() for _ in range(len(atoms))]
+        for atom1, atom2 in bonds:
+            bondedParticleSets[atom1].add(atom2)
+            bondedParticleSets[atom2].add(atom1)
 
-            if vdwParams is not None:
-                sigma = float(vdwParams[1])
-                epsilon = float(vdwParams[2]) * 4.184  # Convert kcal/mol to kJ/mol
-
-                # Convert radius based on type and size
-                convert = 0.1  # Angstrom to nm
-                if self.radiustype == "SIGMA":
-                    convert *= 1.122462048309372
-                if self.radiussize == "DIAMETER":
-                    convert *= 0.5
-
-                sigma *= convert
-                force.addParticle(sigma, epsilon)
-            else:
-                # Add default parameters if not found
-                force.addParticle(0.0, 0.0)
+        # Add particles
+        for i in range(len(atoms)):
+            values = self.classParams[atomClasses[i]]
+            force.addParticle(*values)
 
 
 class AmoebaGeneralizedKirkwoodForceBuilder(BaseAmoebaForceBuilder):
@@ -814,7 +796,7 @@ class AmoebaGeneralizedKirkwoodForceBuilder(BaseAmoebaForceBuilder):
 
             if radiusType.lower() == "bondi":
                 radius = self.getBondiRadius(atomicNumber)
-            elif radiusType.lower() == "gk":
+            elif radiusType.lower() == "amoeba":
                 radius = self.getAtomicRadius(atomicNumber, bondedAtomicNumbers)
             else:
                 raise ValueError(f"Unknown radius type for GK: {radiusType}")
