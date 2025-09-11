@@ -5,11 +5,11 @@ from openmm.app import *
 from openmm.unit import *
 
 
-class AmoebaTestForceField(unittest.TestCase):
+class TestTinkerFiles(unittest.TestCase):
     """Test the TinkerFiles class for reading Tinker files and creating OpenMM systems."""
 
     def computeAmoebaEnergies(self, xyzFile, keyFiles):
-        tinker = TinkerFiles(xyz=xyzFile, key=keyFiles)
+        tinker = TinkerFiles(xyzFile, keyFiles)
         system = tinker.createSystem(
             polarization="mutual",
             mutualInducedTargetEpsilon=1e-5,
@@ -182,7 +182,7 @@ class AmoebaTestForceField(unittest.TestCase):
         xyzFile = 'systems/alanine-dipeptide-implicit.xyz'
         keyFiles = ['systems/amoebapro13.prm']
 
-        tinker = TinkerFiles(xyz=xyzFile, key=keyFiles)
+        tinker = TinkerFiles(xyzFile, keyFiles)
         system = tinker.createSystem(polarization='direct',
                                      constraints=None, 
                                      implicitSolvent=True,
