@@ -2164,7 +2164,6 @@ def _matchImproper(data, torsion, generator):
 # and returns the corresponding generator object; 2) a createForce() method that constructs the Force object and adds it
 # to the System.  The static method should be added to the parsers map.
 ## @private
-
 class HarmonicBondGenerator(object):
     """A HarmonicBondGenerator constructs a HarmonicBondForce."""
 
@@ -2227,7 +2226,6 @@ class HarmonicBondGenerator(object):
 parsers["HarmonicBondForce"] = HarmonicBondGenerator.parseElement
 
 ## @private
-
 class HarmonicAngleGenerator(object):
     """A HarmonicAngleGenerator constructs a HarmonicAngleForce."""
 
@@ -2313,7 +2311,6 @@ class HarmonicAngleGenerator(object):
 parsers["HarmonicAngleForce"] = HarmonicAngleGenerator.parseElement
 
 ## @private
-
 class PeriodicTorsion(object):
     """A PeriodicTorsion records the information for a periodic torsion definition."""
 
@@ -2328,7 +2325,6 @@ class PeriodicTorsion(object):
         self.ordering = 'default'
 
 ## @private
-
 class PeriodicTorsionGenerator(object):
     """A PeriodicTorsionGenerator constructs a PeriodicTorsionForce."""
 
@@ -2444,7 +2440,6 @@ class PeriodicTorsionGenerator(object):
 parsers["PeriodicTorsionForce"] = PeriodicTorsionGenerator.parseElement
 
 ## @private
-
 class RBTorsion(object):
     """An RBTorsion records the information for a Ryckaert-Bellemans torsion definition."""
 
@@ -2460,7 +2455,6 @@ class RBTorsion(object):
             raise ValueError('Illegal ordering type %s for RBTorsion (%s,%s,%s,%s)' % (ordering, types[0], types[1], types[2], types[3]))
 
 ## @private
-
 class RBTorsionGenerator(object):
     """An RBTorsionGenerator constructs an RBTorsionForce."""
 
@@ -2525,7 +2519,6 @@ class RBTorsionGenerator(object):
 parsers["RBTorsionForce"] = RBTorsionGenerator.parseElement
 
 ## @private
-
 class CMAPTorsion(object):
     """A CMAPTorsion records the information for a CMAP torsion definition."""
 
@@ -2538,7 +2531,6 @@ class CMAPTorsion(object):
         self.map = map
 
 ## @private
-
 class CMAPTorsionGenerator(object):
     """A CMAPTorsionGenerator constructs a CMAPTorsionForce."""
 
@@ -2622,7 +2614,6 @@ class CMAPTorsionGenerator(object):
 parsers["CMAPTorsionForce"] = CMAPTorsionGenerator.parseElement
 
 ## @private
-
 class NonbondedGenerator(object):
     """A NonbondedGenerator constructs a NonbondedForce."""
 
@@ -2713,7 +2704,6 @@ class NonbondedGenerator(object):
 parsers["NonbondedForce"] = NonbondedGenerator.parseElement
 
 ## @private
-
 class LennardJonesGenerator(object):
     """A NBFix generator to construct the L-J force with NBFIX implemented as a lookup table"""
 
@@ -2913,7 +2903,6 @@ class LennardJonesGenerator(object):
 parsers["LennardJonesForce"] = LennardJonesGenerator.parseElement
 
 ## @private
-
 class GBSAOBCGenerator(object):
     """A GBSAOBCGenerator constructs a GBSAOBCForce."""
 
@@ -2966,7 +2955,6 @@ class GBSAOBCGenerator(object):
 parsers["GBSAOBCForce"] = GBSAOBCGenerator.parseElement
 
 ## @private
-
 class CustomBondGenerator(object):
     """A CustomBondGenerator constructs a CustomBondForce."""
 
@@ -3014,7 +3002,6 @@ class CustomBondGenerator(object):
 parsers["CustomBondForce"] = CustomBondGenerator.parseElement
 
 ## @private
-
 class CustomAngleGenerator(object):
     """A CustomAngleGenerator constructs a CustomAngleForce."""
 
@@ -3066,7 +3053,6 @@ class CustomAngleGenerator(object):
 parsers["CustomAngleForce"] = CustomAngleGenerator.parseElement
 
 ## @private
-
 class CustomTorsion(object):
     """A CustomTorsion records the information for a custom torsion definition."""
 
@@ -3082,7 +3068,6 @@ class CustomTorsion(object):
             raise ValueError('Illegal ordering type %s for CustomTorsion (%s,%s,%s,%s)' % (ordering, types[0], types[1], types[2], types[3]))
 
 ## @private
-
 class CustomTorsionGenerator(object):
     """A CustomTorsionGenerator constructs a CustomTorsionForce."""
 
@@ -3150,7 +3135,6 @@ class CustomTorsionGenerator(object):
 parsers["CustomTorsionForce"] = CustomTorsionGenerator.parseElement
 
 ## @private
-
 class CustomNonbondedGenerator(object):
     """A CustomNonbondedGenerator constructs a CustomNonbondedForce."""
 
@@ -3212,7 +3196,6 @@ class CustomNonbondedGenerator(object):
 parsers["CustomNonbondedForce"] = CustomNonbondedGenerator.parseElement
 
 ## @private
-
 class CustomGBGenerator(object):
     """A CustomGBGenerator constructs a CustomGBForce."""
 
@@ -3272,7 +3255,6 @@ class CustomGBGenerator(object):
 parsers["CustomGBForce"] = CustomGBGenerator.parseElement
 
 ## @private
-
 class CustomHbondGenerator(object):
     """A CustomHbondGenerator constructs a CustomHbondForce."""
 
@@ -3440,7 +3422,6 @@ class CustomHbondGenerator(object):
 parsers["CustomHbondForce"] = CustomHbondGenerator.parseElement
 
 ## @private
-
 class CustomManyParticleGenerator(object):
     """A CustomManyParticleGenerator constructs a CustomManyParticleForce."""
 
@@ -3570,7 +3551,6 @@ def countConstraint(data):
     print("Constraints bond=%d angle=%d  total=%d" % (bondCount, angleCount, (bondCount+angleCount)))
 
 ## @private
-
 class AmoebaBondGenerator(object):
 
     #=============================================================================================
@@ -3673,7 +3653,6 @@ def addAngleConstraint(angle, idealAngle, data, sys):
 
 #=============================================================================================
 ## @private
-
 class AmoebaAngleGenerator(object):
 
     #=============================================================================================
@@ -3879,7 +3858,6 @@ parsers["AmoebaAngleForce"] = AmoebaAngleGenerator.parseElement
 # AmoebaInPlaneAngleForce
 #=============================================================================================
 ## @private
-
 class AmoebaOutOfPlaneBendGenerator(object):
 
     #=============================================================================================
@@ -4107,7 +4085,6 @@ parsers["AmoebaOutOfPlaneBendForce"] = AmoebaOutOfPlaneBendGenerator.parseElemen
 
 #=============================================================================================
 ## @private
-
 class AmoebaTorsionGenerator(object):
 
     #=============================================================================================
@@ -4215,7 +4192,6 @@ parsers["AmoebaTorsionForce"] = AmoebaTorsionGenerator.parseElement
 
 #=============================================================================================
 ## @private
-
 class AmoebaPiTorsionGenerator(object):
 
     #=============================================================================================
@@ -4339,7 +4315,6 @@ parsers["AmoebaPiTorsionForce"] = AmoebaPiTorsionGenerator.parseElement
 
 #=============================================================================================
 ## @private
-
 class AmoebaStretchTorsionGenerator(object):
     """An AmoebaStretchTorsionGenerator constructs a AmoebaStretchTorsionForce."""
 
@@ -4431,7 +4406,6 @@ parsers["AmoebaStretchTorsionForce"] = AmoebaStretchTorsionGenerator.parseElemen
 
 #=============================================================================================
 ## @private
-
 class AmoebaAngleTorsionGenerator(object):
     """An AmoebaAngleTorsionGenerator constructs a AmoebaAngleTorsionForce."""
 
@@ -4525,7 +4499,6 @@ parsers["AmoebaAngleTorsionForce"] = AmoebaAngleTorsionGenerator.parseElement
 
 #=============================================================================================
 ## @private
-
 class AmoebaTorsionTorsionGenerator(object):
 
     #=============================================================================================
@@ -4654,7 +4627,6 @@ parsers["AmoebaTorsionTorsionForce"] = AmoebaTorsionTorsionGenerator.parseElemen
 
 #=============================================================================================
 ## @private
-
 class AmoebaStretchBendGenerator(object):
 
     #=============================================================================================
@@ -4806,7 +4778,6 @@ parsers["AmoebaStretchBendForce"] = AmoebaStretchBendGenerator.parseElement
 
 #=============================================================================================
 ## @private
-
 class AmoebaVdwGenerator(object):
 
     """A AmoebaVdwGenerator constructs a AmoebaVdwForce."""
@@ -4866,7 +4837,6 @@ parsers["AmoebaVdwForce"] = AmoebaVdwGenerator.parseElement
 
 #=============================================================================================
 ## @private
-
 class AmoebaMultipoleGenerator(object):
 
     #=============================================================================================
@@ -4949,7 +4919,6 @@ parsers["AmoebaMultipoleForce"] = AmoebaMultipoleGenerator.parseElement
 
 #=============================================================================================
 ## @private
-
 class AmoebaWcaDispersionGenerator(object):
 
     """A AmoebaWcaDispersionGenerator constructs a AmoebaWcaDispersionForce."""
@@ -4992,6 +4961,7 @@ class AmoebaWcaDispersionGenerator(object):
             # Multiple <AmoebaWcaDispersionForce> tags were found, probably in different files.  Simply add more types to the existing one.
             generator = existing[0]
         generator.params.parseDefinitions(element)
+        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     #=========================================================================================
 
@@ -5001,26 +4971,16 @@ class AmoebaWcaDispersionGenerator(object):
                                                                float(self.awater), float(self.slevy), 
                                                                float(self.dispoff), float(self.shctd))
         
-        # Register parameters for each atom type
-        for atomType in data.atomType:
-            if hasattr(self.params, '_findAtomTypeParameters'):
-                # Use the proper method to get parameters
-                try:
-                    values = self.params.getAtomParameters(data.atoms[0]._replace(type=atomType), data)
-                    builder.registerAtomParams(self.ff, atomType, values)
-                except:
-                    # If we can't get parameters, continue
-                    pass
-        
         force = builder.getForce(sys)
-        builder.addParticles(force, data.atoms)
+        atomClasses = [self.classNameForType[data.atomType[atom]] for atom in data.atoms]
+        builder.addParticles(force, atomClasses, data.atoms, [(bond.atom1, bond.atom2) for bond in data.bonds])
 
 parsers["AmoebaWcaDispersionForce"] = AmoebaWcaDispersionGenerator.parseElement
 
 #=============================================================================================
 ## @private
-
 class AmoebaGeneralizedKirkwoodGenerator(object):
+    #=========================================================================================
 
     """A AmoebaGeneralizedKirkwoodGenerator constructs a AmoebaGeneralizedKirkwoodForce."""
 
@@ -5034,54 +4994,6 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
         self.includeCavityTerm = includeCavityTerm
         self.probeRadius = probeRadius
         self.surfaceAreaFactor = surfaceAreaFactor
-
-    #=========================================================================================
-
-    def getObcShct(self, data, atomIndex):
-        """Get the overlap scale factor based on atomic number - uses centralized implementation"""
-        atom = data.atoms[atomIndex]
-        atomicNumber = atom.element.atomic_number
-        shct = amoebaforces.AmoebaGeneralizedKirkwoodForceBuilder.get_overlap_scale_factor(atomicNumber)
-
-        if shct == 0.8:  # Default value, means no specific mapping found
-            raise ValueError("getObcShct: no GK overlap scale factor for atom %s of %s %d" % (atom.name, atom.residue.name, atom.residue.index))
-
-        return shct
-
-    #=========================================================================================
-
-    def getAmoebaTypeRadius(self, data, bondedAtomIndices, atomIndex):
-        """Get the atomic radius based on atomic number and bonded atoms - uses centralized implementation"""
-        atom = data.atoms[atomIndex]
-        atomicNumber = atom.element.atomic_number
-        
-        # Convert bonded atom indices to atomic numbers
-        bondedAtomicNumbers = []
-        for bondedAtomIndex in bondedAtomIndices:
-            bondedAtomicNumbers.append(data.atoms[bondedAtomIndex].element.atomic_number)
-        
-        try:
-            radius = amoebaforces.AmoebaGeneralizedKirkwoodForceBuilder.get_atomic_radius(atomicNumber, bondedAtomicNumbers)
-        except ValueError:
-            outputString = "No GK radius for atom %s of %s %d" % (atom.name, atom.residue.name, atom.residue.index)
-            raise ValueError(outputString)
-
-        return radius
-
-    #=========================================================================================
-
-    def getBondiTypeRadius(self, data, bondedAtomIndices, atomIndex):
-        """Get Bondi radius - uses centralized implementation"""
-        atom = data.atoms[atomIndex]
-        atomicNumber = atom.element.atomic_number
-        
-        try:
-            radius = amoebaforces.AmoebaGeneralizedKirkwoodForceBuilder.get_bondi_radius(atomicNumber, scale_factor=1.03)
-        except ValueError:
-            outputString = "Warning no Bondi radius for atom %s of %s %d using default value" % (atom.name, atom.residue.name, atom.residue.index)
-            raise ValueError(outputString)
-
-        return radius
 
     #=========================================================================================
 
@@ -5134,16 +5046,20 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
                                                                      int(includeCavityTerm), 
                                                                      float(self.probeRadius), 
                                                                      float(self.surfaceAreaFactor))
-        force = builder.getForce(sys, implicitSolvent=True)
+      
+        # Get the charges from the AmoebaMultipoleForce and register them with the builder
+        for atomIndex in range(0, amoebaMultipoleForce.getNumMultipoles()):
+            multipoleParameters = amoebaMultipoleForce.getMultipoleParameters(atomIndex)
+            builder.registerAtomParams(multipoleParameters[0])
 
+        force = builder.getForce(sys, implicitSolvent=True)
         if force is not None:
-            builder.addParticles(force, data.atoms)
+            builder.addParticles(force, data.atoms, _findBondsForExclusions(data, sys))
 
 parsers["AmoebaGeneralizedKirkwoodForce"] = AmoebaGeneralizedKirkwoodGenerator.parseElement
 
 #=============================================================================================
 ## @private
-
 class AmoebaUreyBradleyGenerator(object):
 
     #=============================================================================================
@@ -5212,7 +5128,6 @@ parsers["AmoebaUreyBradleyForce"] = AmoebaUreyBradleyGenerator.parseElement
 
 #=============================================================================================
 ## @private
-
 class HippoNonbondedGenerator(object):
     """A HippoNonbondedGenerator constructs a HippoNonbondedForce."""
 
@@ -5318,7 +5233,6 @@ class HippoNonbondedGenerator(object):
 parsers["HippoNonbondedForce"] = HippoNonbondedGenerator.parseElement
 
 ## @private
-
 class DrudeGenerator(object):
     """A DrudeGenerator constructs a DrudeForce."""
 
