@@ -701,8 +701,7 @@ class AmoebaTorsionTorsionForceBuilder(BaseAmoebaForceBuilder):
 class AmoebaWcaDispersionForceBuilder(BaseAmoebaForceBuilder):
     """Builder for WCA Dispersion force for AMOEBA force field"""
 
-    def __init__(self, epso, epsh, rmino, rminh,
-                 awater, slevy, dispoff, shctd):
+    def __init__(self, epso, epsh, rmino, rminh, awater, slevy, dispoff, shctd):
         super().__init__()
         self.epso = epso
         self.epsh = epsh
@@ -743,8 +742,12 @@ class AmoebaWcaDispersionForceBuilder(BaseAmoebaForceBuilder):
 class AmoebaGeneralizedKirkwoodForceBuilder(BaseAmoebaForceBuilder):
     """Builder for Generalized Kirkwood force for AMOEBA force field"""
 
-    def __init__(self, solventDielectric, soluteDielectric, includeCavityTerm,
-                 probeRadius, surfaceAreaFactor):
+    def __init__(self, 
+                 solventDielectric, 
+                 soluteDielectric, 
+                 includeCavityTerm,
+                 probeRadius, 
+                 surfaceAreaFactor):
         super().__init__()
         self.solventDielectric = solventDielectric
         self.soluteDielectric = soluteDielectric
@@ -753,9 +756,9 @@ class AmoebaGeneralizedKirkwoodForceBuilder(BaseAmoebaForceBuilder):
         self.surfaceAreaFactor = surfaceAreaFactor
         self.atomParams = []
 
-    def registerAtomParams(self, params):
+    def registerAtomParams(self, charge):
         """Register atom parameters for GK force"""
-        self.atomParams.append(params)
+        self.atomParams.append(charge)
 
     def getForce(self, sys, implicitSolvent=False):
         if not implicitSolvent:

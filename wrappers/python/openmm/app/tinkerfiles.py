@@ -332,10 +332,29 @@ class TinkerFiles:
             "mutual-14-scale": "1.0",
         }
 
-        return RECOGNIZED_FORCES, RECOGNIZED_SCALARS
+        WCA_PARAMS = {
+            "epso": 0.1100 * 4.184,
+            "epsh": 0.0135 * 4.184,
+            "rmino": 1.7025 * 0.1,
+            "rminh": 1.3275 * 0.1,
+            "awater": 0.033428 * 1000.0,
+            "slevy": 1.0,
+            "dispoff": 0.26 * 0.1,
+            "shctd": 0.81,
+        }
+        
+        GK_PARAMS = {
+            "solventDielectric": 78.3,
+            "soluteDielectric": 1.0,
+            "includeCavityTerm": 1,
+            "probeRadius": 0.14,
+            "surfaceAreaFactor": -6.0 * 3.1415926535 * 0.0216 * 1000.0 * 0.4184,
+        }
+
+        return RECOGNIZED_FORCES, RECOGNIZED_SCALARS, WCA_PARAMS, GK_PARAMS
 
     # Call the initialization method
-    RECOGNIZED_FORCES, RECOGNIZED_SCALARS = _initialize_class()
+    RECOGNIZED_FORCES, RECOGNIZED_SCALARS, WCA_PARAMS, GK_PARAMS = _initialize_class()
 
     def __init__(
         self,
@@ -709,7 +728,6 @@ class TinkerFiles:
 
         # Add AMOEBA stretch bend force
         if "strbnd" in self._forces:
-
             stretchBendParams = {(at1, at2, at3): {"k1": float(k1), "k2": float(k2)} for at1, at2, at3, k1, k2 in self._forces["strbnd"]}
             stretchBendForce = AmoebaStretchBendForceBuilder()
 
@@ -948,9 +966,8 @@ class TinkerFiles:
 
         # Add AmoebaGeneralizedKirkwood force
         if implicitSolvent and "multipole" in self._forces:
-            builder = AmoebaGeneralizedKirkwoodForceBuilder()
+            builder = AmoebaGeneralizedKirkwoodForceBuilder(**self.GK_PARAMS)
             force = builder.getForce(sys, implicitSolvent=implicitSolvent)
-            # Register the charge parameters with the builder
             multipoleForce = [f for f in sys.getForces() if isinstance(f, mm.AmoebaMultipoleForce)][0]
             for atomIndex in range(0, multipoleForce.getNumMultipoles()):
                 multipoleParameters = multipoleForce.getMultipoleParameters(atomIndex)
@@ -958,21 +975,23 @@ class TinkerFiles:
             builder.addParticles(force, list(self.topology.atoms()), bonds)
 
         # Add AmoebaWcaDispersion force
-        if implicitSolvent and "vdw" in self._forces:
-            wcaDispersionForce = AmoebaWcaDispersionForceBuilder(
-                radiustype=self._scalars.get('radiustype', 'R-MIN'),
-                radiussize=self._scalars.get('radiussize', 'DIAMETER')
-            )
-
+        if "vdw" in self._forces:
+            wcaDispersionForce = AmoebaWcaDispersionForceBuilder(**self.WCA_PARAMS)
+            convert = 0.1
+            if self._scalars["radiustype"] == "SIGMA":
+                convert *= 1.122462048309372
+            if self._scalars["radiussize"] == "DIAMETER":
+                convert *= 0.5
             # Register VdW parameters for each atom class
             for vdw in self._forces["vdw"]:
                 atomClass = int(vdw[0])
-                wcaDispersionForce.registerAtomParams(None, atomClass, vdw)
+                sigma = float(vdw[1])*convert
+                epsilon = float(vdw[2])*4.184
+                wcaDispersionForce.registerClassParams(atomClass, sigma, epsilon)
 
             force = wcaDispersionForce.getForce(sys)
             atomClasses = [int(atom.atomClass) for atom in self.atoms]
-            bonds = [(a1.index, a2.index) for a1, a2 in self.topology.bonds()]
-            wcaDispersionForce.addParticles(force, atomClasses, list(self.topology.atoms()), bonds)
+            wcaDispersionForce.addParticles(force, atomClasses)
 
         # Set periodic boundary conditions
         boxVectors = self.topology.getPeriodicBoxVectors()
@@ -2869,4 +2888,4 @@ class TinkerFiles:
         except IOError as e:
             raise IOError(f"Error reading file {keyFile}: {e}")
         except Exception as e:
-            raise ValueError(f"Error parsing {keyFile}: {e}")
+           raise ValueError(f"Error parsing {keyFile}: {e}")
