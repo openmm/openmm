@@ -507,68 +507,16 @@ class AmoebaTorsionTorsionForceBuilder(BaseAmoebaForceBuilder):
                                 # match in order
                                 if (type1 in types1_i and type2 in types2_i and type3 in types3_i and 
                                     type4 in types4_i and type5 in types5_i):
-                                    chiralAtomIndex = AmoebaTorsionTorsionForceBuilder._getChiralAtomIndex(data, sys, ib, ic, id)
+                                    chiralAtomIndex = AmoebaTorsionTorsionForceBuilder._getChiralAtomIndex(data.atoms, ib, ic, id)
                                     force.addTorsionTorsion(ia, ib, ic, id, ie, chiralAtomIndex, gridIndex[i])
 
                                 # match in reverse order
                                 elif (type5 in types1_i and type4 in types2_i and type3 in types3_i and 
                                       type2 in types4_i and type1 in types5_i):
-                                    chiralAtomIndex = AmoebaTorsionTorsionForceBuilder._getChiralAtomIndex(data, sys, ib, ic, id)
+                                    chiralAtomIndex = AmoebaTorsionTorsionForceBuilder._getChiralAtomIndex(data.atoms, ib, ic, id)
                                     force.addTorsionTorsion(ie, id, ic, ib, ia, chiralAtomIndex, gridIndex[i])
 
 
-
-    @staticmethod
-    def _getChiralAtomIndex(data, sys, atomB, atomC, atomD):
-        """Get the chiral atom index for torsion-torsion interactions"""
-        import openmm.unit as unit
-        
-        chiralAtomIndex = -1
-
-        # if atomC has four bonds, find the
-        # two bonds that do not include atomB and atomD
-        # set chiralAtomIndex to one of these, if they are
-        # not the same atom(type/mass)
-
-        if (len(data.atomBonds[atomC]) == 4):
-            atomE = -1
-            atomF = -1
-            for bond in data.atomBonds[atomC]:
-                bondedAtom1 = data.bonds[bond].atom1
-                bondedAtom2 = data.bonds[bond].atom2
-                hit = -1
-                if (bondedAtom1 == atomC and bondedAtom2 != atomB and bondedAtom2 != atomD):
-                    hit = bondedAtom2
-                elif (bondedAtom2 == atomC and bondedAtom1 != atomB and bondedAtom1 != atomD):
-                    hit = bondedAtom1
-
-                if (hit > -1):
-                    if (atomE == -1):
-                        atomE = hit
-                    else:
-                        atomF = hit
-
-            # raise error if atoms E or F not found
-            if (atomE == -1 or atomF == -1):
-                outputString = "getChiralAtomIndex: error getting bonded partners of atomC=%s %d %s" % (atomC.name, atomC.residue.index, atomC.residue.name,)
-                raise ValueError(outputString)
-
-            # check for different type/mass between atoms E & F
-            typeE = int(data.atomType[data.atoms[atomE]])
-            typeF = int(data.atomType[data.atoms[atomF]])
-            if (typeE > typeF):
-                chiralAtomIndex = atomE
-            if (typeF > typeE):
-                chiralAtomIndex = atomF
-
-            massE = sys.getParticleMass(atomE)/unit.dalton
-            massF = sys.getParticleMass(atomF)/unit.dalton
-            if (massE > massF):
-                chiralAtomIndex = atomE
-            if (massF > massE):
-                chiralAtomIndex = atomF
-
-        return chiralAtomIndex
 
     @staticmethod
     def createTorsionTorsionInteractions(force, angles, atoms, tortorParams):
