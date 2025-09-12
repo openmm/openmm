@@ -4877,7 +4877,7 @@ class AmoebaWcaDispersionGenerator(object):
         force = builder.getForce(sys)
         atomClasses = [self.classNameForType[data.atomType[atom]] for atom in data.atoms]
         for atomClass, params in self.params.items():
-            builder.registerClassParams(atomClass, *params)
+            builder.registerParams(atomClass, *params)
         builder.addParticles(force, atomClasses)
 
 parsers["AmoebaWcaDispersionForce"] = AmoebaWcaDispersionGenerator.parseElement
@@ -4955,7 +4955,7 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
         # Get the charges from the AmoebaMultipoleForce and register them with the builder
         for atomIndex in range(0, amoebaMultipoleForce.getNumMultipoles()):
             multipoleParameters = amoebaMultipoleForce.getMultipoleParameters(atomIndex)
-            builder.registerAtomParams(multipoleParameters[0])
+            builder.registerParams(multipoleParameters[0])
 
         force = builder.getForce(sys, implicitSolvent=True)
         if force is not None:
