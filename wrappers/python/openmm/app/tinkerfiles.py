@@ -31,21 +31,16 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Joao Morado"
 
-import datetime
-import io
 import math
-import os
 import re
 import shlex
-import xml.etree.ElementTree as etree
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
-from openmm.app import PDBFile
 from openmm.app.internal.unitcell import computePeriodicBoxVectors
-from openmm.unit import nanometers, dalton
+from openmm.unit import nanometers
 from openmm.vec3 import Vec3
 
 from . import element as elem
@@ -154,7 +149,8 @@ class TinkerAtomType:
 
 
 class TinkerFiles:
-    """TinkerFiles parses Tinker files (.xyz, .prm, .key), constructs a Topology, and (optionally) an OpenMM System from it."""
+    """TinkerFiles parses Tinker files (.xyz, .prm, .key), constructs a Topology, and (optionally) an OpenMM System from it.
+    This class only supports the AMOEBA force field.  It cannot create a System from Tinker files that use other force fields."""
 
     @staticmethod
     def _initialize_class():
@@ -182,13 +178,16 @@ class TinkerFiles:
             """
             if "multipole" not in forces:
                 forces["multipole"] = []
+            bohr = 0.52917720859
+            dipoleConversion = 0.1*bohr
+            quadrupoleConversion = 0.01*bohr*bohr/3.0
             fields = allLines[lineIndex]
             type = int(fields[1])
             axis = [int(x) for x in fields[2:-1]]
             charge = float(fields[-1])
             lineIndex += 1
             fields = allLines[lineIndex]
-            dipole = [float(x) for x in fields[:3]]
+            dipole = [float(x)*dipoleConversion for x in fields[:3]]
             lineIndex += 1
             fields = allLines[lineIndex]
             quadrupole = [fields[0]]
@@ -202,7 +201,7 @@ class TinkerFiles:
             quadrupole.append(fields[1])
             quadrupole.append(fields[2])
             lineIndex += 1
-            quadrupole = [float(x) for x in quadrupole]
+            quadrupole = [float(x)*quadrupoleConversion for x in quadrupole]
             forces["multipole"].append([type, axis, charge, dipole, quadrupole])
             return lineIndex
 
@@ -301,8 +300,8 @@ class TinkerFiles:
             "opbend-quartic": "0.000056",
             "opbend-pentic": "-0.0000007",
             "opbend-sextic": "0.000000022",
-            "torsionunit": "0.5",
-            "pi-torsionunit": "1.0",
+            "pitorsunit": "1.0",
+            "torsionunit": "1.0",
             "vdwtype": "BUFFERED-14-7",
             "radiusrule": "CUBIC-MEAN",
             "radiustype": "R-MIN",
@@ -439,8 +438,6 @@ class TinkerFiles:
         nonbondedMethod=ff.NoCutoff,
         nonbondedCutoff=1.0*nanometers,
         vdwCutoff=None,
-        constraints=None,
-        rigidWater: bool = False,
         removeCMMotion: bool = True,
         hydrogenMass=None,
         polarization: str = "mutual",
@@ -463,12 +460,6 @@ class TinkerFiles:
         vdwCutoff : distance=None
             An optional alternate cutoff to use for vdw interactions.  If this is omitted, nonbondedCutoff
             is used for vdw interactions as well as for other nonbonded interactions.
-        constraints : object=None
-            Specifies which bonds and angles should be implemented with constraints.
-            Allowed values are None, HBonds, AllBonds, or HAngles.
-        rigidWater : bool, optional, default=True
-            If true, water molecules will be fully rigid regardless of the value passed for the constraints argument.
-            Note that AMOEBA waters are flexible.
         removeCMMotion : bool, optional, default=True
             If True, center of mass motion will be removed.
         hydrogenMass : mass=None
@@ -516,20 +507,13 @@ class TinkerFiles:
         for atom in self.atoms:
             sys.addParticle(atom.mass)
 
-        # Check that no constraints are specified
-        # TODO: Add support for constraints if needed
-        if constraints is not None:
-            raise ValueError("Constraints are not supported for Tinker files. AMOEBA is a flexible force field.")
-        if rigidWater:
-            raise ValueError("AMOEBA water model is flexible, so rigidWater is not supported.")
-
         # Add AMOEBA bond force
         bondParams = {(at1, at2): {"k": float(k), "r0": float(r0)} for at1, at2, k, r0 in self._forces["bond"]}
-        bondForce = AmoebaBondForceBuilder(self._scalars["bond-cubic"], self._scalars["bond-quartic"])
+        bondForce = AmoebaBondForceBuilder(float(self._scalars["bond-cubic"])*10, float(self._scalars["bond-quartic"])*100)
 
         # Register bond parameters
         for (class1, class2), params in bondParams.items():
-            bondForce.registerBondParams(None, (class1, class2), (params["r0"], params["k"]))
+            bondForce.registerBondParams((class1, class2), (params["r0"]*0.1, params["k"]*100.0*4.184))
 
         force = bondForce.getForce(sys)
 
@@ -570,7 +554,6 @@ class TinkerFiles:
         # middle atom, but not in angle) match types1 and types2, then three out-of-plane bend angles are generated.
         # Three in-plane angle are also generated.
         # If the conditions are not satisfied, the angle is marked as 'generic' angle (not a in-plane angle).
-        # TODO: check if the angle is constrained
         genericAngles = []
         inPlaneAngles = []
         outOfPlaneAngles = []
@@ -627,7 +610,7 @@ class TinkerFiles:
 
             # Register out-of-plane bend parameters
             for (class1, class2, class3, class4), params in opbendParams.items():
-                outOfPlaneBendForce.registerOutOfPlaneBendParams(None, (class1, class2, class3, class4), (params["k"],))
+                outOfPlaneBendForce.registerOutOfPlaneBendParams((class1, class2, class3, class4), (params["k"]*4.184*(math.pi/180)**2,))
 
             force = outOfPlaneBendForce.getForce(sys)
 
@@ -675,7 +658,7 @@ class TinkerFiles:
                         # Register parameters if not already done
                         paramKey = (class1, class2, class3)
                         if paramKey not in processedParams:
-                            angleForce.registerAngleParams(None, paramKey, (theta0, params["k"]))
+                            angleForce.registerAngleParams(paramKey, (theta0, params["k"]*4.184*(math.pi/180)**2))
                             processedParams.add(paramKey)
 
                         processedAngles.append((angle[0], angle[1], angle[2]))
@@ -714,10 +697,8 @@ class TinkerFiles:
                         else:
                             paramKey = (class1, class2, class3, class1)  # Fallback
                         if paramKey not in processedParams:
-                            inPlaneAngleForce.registerInPlaneAngleParams(None, paramKey, (theta0, params["k"]))
+                            inPlaneAngleForce.registerInPlaneAngleParams(paramKey, (theta0, params["k"]*4.184*(math.pi/180)**2))
                             processedParams.add(paramKey)
-                else:
-                    print(f"No in-plane angle parameters found for atom classes {class1}-{class2}-{class3}")
 
             if processedParams:
                 force = inPlaneAngleForce.getForce(sys)
@@ -768,7 +749,7 @@ class TinkerFiles:
                         # Register parameters if not already done
                         paramKey = (class1, class2, class3)
                         if paramKey not in processedParams:
-                            stretchBendForce.registerStretchBendParams(None, paramKey, (bondAB, bondCB, idealAngle, k1, k2))
+                            stretchBendForce.registerStretchBendParams(paramKey, (bondAB*0.1, bondCB*0.1, idealAngle*math.pi/180, k1*41.84*math.pi/180, k2*41.84*math.pi/180))
                             processedParams.add(paramKey)
 
                         processedAngles.append((angle[0], angle[1], angle[2]))
@@ -787,12 +768,11 @@ class TinkerFiles:
 
             # Register Urey-Bradley parameters
             for (class1, class2, class3), params in ureyBradleyParams.items():
-                ureyBradleyForce.registerUreyBradleyParams(None, (class1, class2, class3), (params["k"], params["d"]))
+                ureyBradleyForce.registerUreyBradleyParams((class1, class2, class3), (params["k"]*4.184*100.0, params["d"]*0.1))
 
             # Process angles for Urey-Bradley terms
             processedAngles = []
             for idx1, idx2, idx3 in angles:
-                # TODO: Check if the angle is constrained
                 class1 = self.atoms[idx1].atomClass
                 class2 = self.atoms[idx2].atomClass
                 class3 = self.atoms[idx3].atomClass
@@ -825,13 +805,16 @@ class TinkerFiles:
         propers = sorted(list(uniquePropers))
 
         # Add AMOEBA periodic torsion force
-        torsionParams = {(at1, at2, at3, at4): {"t1": [float(t11), float(t12), int(t13)], "t2": [float(t21), float(t22), int(t23)], "t3": [float(t31), float(t32), int(t33)]}
+        torsionScale = float(self._scalars["torsionunit"])*4.184
+        torsionParams = {(at1, at2, at3, at4): {"t1": [float(t11)*torsionScale, float(t12)*math.pi/180, int(t13)],
+                                                "t2": [float(t21)*torsionScale, float(t22)*math.pi/180, int(t23)],
+                                                "t3": [float(t31)*torsionScale, float(t32)*math.pi/180, int(t33)]}
                          for at1, at2, at3, at4, t11, t12, t13, t21, t22, t23, t31, t32, t33 in self._forces["torsion"]}
-        torsionForce = AmoebaTorsionForceBuilder(self._scalars["torsionunit"])
+        torsionForce = AmoebaTorsionForceBuilder()
 
         # Register torsion parameters
         for (class1, class2, class3, class4), params in torsionParams.items():
-            torsionForce.registerTorsionParams(None, (class1, class2, class3, class4), (params["t1"], params["t2"], params["t3"]))
+            torsionForce.registerTorsionParams((class1, class2, class3, class4), (params["t1"], params["t2"], params["t3"]))
 
         # Process torsions
         processedTorsions = []
@@ -853,12 +836,13 @@ class TinkerFiles:
 
         if "pitors" in self._forces:
             # Add AmoebaPiTorsionForce
-            piTorsionParams = {(at1, at2): {"k": float(k)} for at1, at2, k in self._forces["pitors"]}
-            piTorsionForce = AmoebaPiTorsionForceBuilder(self._scalars["pi-torsionunit"])
+            piTorsionScale = float(self._scalars["pitorsunit"])*4.184
+            piTorsionParams = {(at1, at2): {"k": float(k)*piTorsionScale} for at1, at2, k in self._forces["pitors"]}
+            piTorsionForce = AmoebaPiTorsionForceBuilder()
 
             # Register pi-torsion parameters
             for (class1, class2), params in piTorsionParams.items():
-                piTorsionForce.registerPiTorsionParams(None, (class1, class2), (params["k"],))
+                piTorsionForce.registerPiTorsionParams((class1, class2), (params["k"],))
 
             # Create pi-torsion objects for the builder
             processedPiTorsions = []
@@ -890,7 +874,7 @@ class TinkerFiles:
                     atomClasses[atom_idx] = self.atoms[atom_idx].atomClass
                 piTorsionForce.addPiTorsions(force, atomClasses, processedPiTorsions)
 
-        # Add AmoebaTorsionTorsion force
+        # Add AmoebaTorsionTorsionForce
         if "tortors" in self._forces:
             torsionTorsionForce = AmoebaTorsionTorsionForceBuilder()
 
@@ -932,39 +916,40 @@ class TinkerFiles:
             force = torsionTorsionForce.getForce(sys)
             AmoebaTorsionTorsionForceBuilder.createTorsionTorsionInteractions(force, angles, self.atoms, self._forces["tortors"])
 
-        # Add AmoebaVdw force
+        # Add AmoebaVdwForce
         if "vdw" in self._forces:
             builder = AmoebaVdwForceBuilder(self._scalars['vdwtype'], self._scalars['radiusrule'], self._scalars['radiustype'],
                                             self._scalars['radiussize'], self._scalars['epsilonrule'], float(self._scalars['vdw-13-scale']),
                                             float(self._scalars['vdw-14-scale']), float(self._scalars['vdw-15-scale']))
             for params in self._forces['vdw']:
                 reduction = 0.0 if len(params) < 4 else float(params[3])
-                builder.registerClassParams(int(params[0]), float(params[1]), float(params[2]), reduction)
+                builder.registerClassParams(int(params[0]), float(params[1])*0.1, float(params[2])*4.184, reduction)
             pairs = self._forces.get('vdwpair', None)
             if pairs is None:
                 pairs = self._forces.get('vdwpr', None)
             if pairs is not None:
                 for params in pairs:
-                    builder.registerPairParams(int(params[0]), int(params[1]), float(params[2]), float(params[3]))
+                    builder.registerPairParams(int(params[0]), int(params[1]), float(params[2])*0.1, float(params[3])*4.184)
             force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff if vdwCutoff is None else vdwCutoff, True)
             atomClasses = [int(atom.atomClass) for atom in self.atoms]
             bonds = [(a1.index, a2.index) for a1, a2 in self.topology.bonds()]
             builder.addParticles(force, atomClasses, list(self.topology.atoms()), bonds)
 
 
-        # Add AmoebaMultipole force
+        # Add AmoebaMultipoleForce
         if "multipole" in self._forces:
             builder = AmoebaMultipoleForceBuilder()
             for atType, axis, charge, dipole, quadrupole in self._forces["multipole"]:
                 kIndices = [atType] + axis
-                builder.registerMultipoleParams(atType, MultipoleParams(kIndices, charge, dipole, quadrupole))
+                q = [quadrupole[i] for i in (0, 1, 3, 1, 2, 4, 3, 4, 5)]
+                builder.registerMultipoleParams(atType, MultipoleParams(kIndices, charge, dipole, q))
             for atType, polarizability, thole, group in self._forces["polarize"]:
-                builder.registerPolarizationParams(atType, PolarizationParams(polarizability, thole, group))
+                builder.registerPolarizationParams(atType, PolarizationParams(polarizability*0.001, thole, group))
             force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff, ewaldErrorTolerance, polarization, mutualInducedTargetEpsilon, 60)
             atomTypes = [int(atom.atomType) for atom in self.atoms]
             builder.addMultipoles(force, atomTypes, list(self.topology.atoms()), bonds)
 
-        # Add AmoebaGeneralizedKirkwood force
+        # Add AmoebaGeneralizedKirkwoodForce
         if implicitSolvent and "multipole" in self._forces:
             builder = AmoebaGeneralizedKirkwoodForceBuilder(**self.GK_PARAMS)
             force = builder.getForce(sys, implicitSolvent=implicitSolvent)
@@ -974,7 +959,7 @@ class TinkerFiles:
                 builder.registerAtomParams(multipoleParameters[0])
             builder.addParticles(force, list(self.topology.atoms()), bonds)
 
-        # Add AmoebaWcaDispersion force
+        # Add AmoebaWcaDispersionForce
         if "vdw" in self._forces:
             wcaDispersionForce = AmoebaWcaDispersionForceBuilder(**self.WCA_PARAMS)
             convert = 0.1
@@ -1005,8 +990,6 @@ class TinkerFiles:
             for atom1, atom2 in self.topology.bonds():
                 if atom1.element == elem.hydrogen:
                     (atom1, atom2) = (atom2, atom1)
-                if rigidWater and atom2.residue.name == 'HOH':
-                    continue
                 if atom2.element == elem.hydrogen and atom1.element not in (elem.hydrogen, None):
                     transferMass = hydrogenMass-sys.getParticleMass(atom2.index)
                     sys.setParticleMass(atom2.index, hydrogenMass)
@@ -2649,52 +2632,48 @@ class TinkerFiles:
                 f"Line {lineNum}: Each line in the TINKER .xyz file must have at least 6 fields"
             )
 
-        try:
-            index = int(fields[0]) - 1
-            if index < 0:
-                raise ValueError(
-                    f"Line {lineNum}: Invalid atom index {index}. Must be positive."
-                )
-
-            symbol = str(fields[1])
-            if not symbol:
-                raise ValueError(f"Line {lineNum}: Empty atom symbol")
-
-            try:
-                x = float(fields[2]) * 0.1
-                y = float(fields[3]) * 0.1
-                z = float(fields[4]) * 0.1
-                if any(math.isnan(coord) or math.isinf(coord) for coord in (x, y, z)):
-                    raise ValueError(
-                        "Atom coordinates contain invalid values (NaN or Inf)"
-                    )
-                position = Vec3(x, y, z)
-            except ValueError as e:
-                raise ValueError(f"Line {lineNum}: Error parsing atom coordinates: {e}")
-
-            atomType = str(fields[5])
-            if not atomType:
-                raise ValueError(f"Line {lineNum}: Empty atom type")
-
-            try:
-                bonds = [int(bond) - 1 for bond in fields[6:]]
-                if any(bond < 0 for bond in bonds):
-                    raise ValueError("Invalid bond index (must be >= 0)")
-            except ValueError as e:
-                raise ValueError(f"Line {lineNum}: Error parsing bond indices: {e}")
-
-            # Create TinkerAtom object
-            atom = TinkerAtom(
-                symbol=symbol,
-                positions=position,
-                bonds=bonds,
-                index=index,
-                atomType=atomType,
+        index = int(fields[0]) - 1
+        if index < 0:
+            raise ValueError(
+                f"Line {lineNum}: Invalid atom index {index}. Must be positive."
             )
-            atoms.append(atom)
 
+        symbol = str(fields[1])
+        if not symbol:
+            raise ValueError(f"Line {lineNum}: Empty atom symbol")
+
+        try:
+            x = float(fields[2]) * 0.1
+            y = float(fields[3]) * 0.1
+            z = float(fields[4]) * 0.1
+            if any(math.isnan(coord) or math.isinf(coord) for coord in (x, y, z)):
+                raise ValueError(
+                    "Atom coordinates contain invalid values (NaN or Inf)"
+                )
+            position = Vec3(x, y, z)
         except ValueError as e:
-            raise ValueError(f"Line {lineNum}: {str(e)}")
+            raise ValueError(f"Line {lineNum}: Error parsing atom coordinates: {e}")
+
+        atomType = str(fields[5])
+        if not atomType:
+            raise ValueError(f"Line {lineNum}: Empty atom type")
+
+        try:
+            bonds = [int(bond) - 1 for bond in fields[6:]]
+            if any(bond < 0 for bond in bonds):
+                raise ValueError("Invalid bond index (must be >= 0)")
+        except ValueError as e:
+            raise ValueError(f"Line {lineNum}: Error parsing bond indices: {e}")
+
+        # Create TinkerAtom object
+        atom = TinkerAtom(
+            symbol=symbol,
+            positions=position,
+            bonds=bonds,
+            index=index,
+            atomType=atomType,
+        )
+        atoms.append(atom)
 
     # ------------------------------------------------------------------------------------------ #
     #                                   KEY FILE PARSING                                         #

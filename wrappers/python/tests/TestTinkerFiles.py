@@ -5,11 +5,11 @@ from openmm.app import *
 from openmm.unit import *
 
 
-class AmoebaTestForceField(unittest.TestCase):
+class TestTinkerFiles(unittest.TestCase):
     """Test the TinkerFiles class for reading Tinker files and creating OpenMM systems."""
 
     def computeAmoebaEnergies(self, xyzFile, keyFiles):
-        tinker = TinkerFiles(xyz=xyzFile, key=keyFiles)
+        tinker = TinkerFiles(xyzFile, keyFiles)
         system = tinker.createSystem(
             polarization="mutual",
             mutualInducedTargetEpsilon=1e-5,
@@ -153,9 +153,7 @@ class AmoebaTestForceField(unittest.TestCase):
 
         # Compare to values computed with Tinker.
         self.assertAlmostEqual(749.6953, energies["AmoebaBond"], 4)
-        self.assertAlmostEqual(
-            579.9971, energies["AmoebaAngle"] + energies["AmoebaInPlaneAngle"], 4
-        )
+        self.assertAlmostEqual(579.9971, energies["AmoebaAngle"] + energies["AmoebaInPlaneAngle"], 4)
         self.assertAlmostEqual(10.6630, energies["AmoebaOutOfPlaneBend"], 4)
         self.assertAlmostEqual(5.2225, energies["AmoebaStretchBend"], 4)
         self.assertAlmostEqual(166.7233, energies["PeriodicTorsionForce"], 4)
@@ -182,7 +180,7 @@ class AmoebaTestForceField(unittest.TestCase):
         xyzFile = 'systems/alanine-dipeptide-implicit.xyz'
         keyFiles = ['systems/amoebapro13.prm']
 
-        tinker = TinkerFiles(xyz=xyzFile, key=keyFiles)
+        tinker = TinkerFiles(xyzFile, keyFiles)
         system = tinker.createSystem(polarization='direct',
                                      constraints=None, 
                                      implicitSolvent=True,

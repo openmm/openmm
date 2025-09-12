@@ -3594,18 +3594,8 @@ class AmoebaBondGenerator(object):
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-
-        energy = "k*(d^2 + %s*d^3 + %s*d^4); d=r-r0" % (self.cubic, self.quartic)
-        existing = [f for f in sys.getForces() if type(f) == mm.CustomBondForce and f.getEnergyFunction() == energy]
-        if len(existing) == 0:
-            force = mm.CustomBondForce(energy)
-            force.addPerBondParameter('r0')
-            force.addPerBondParameter('k')
-            force.setName('AmoebaBond')
-            sys.addForce(force)
-        else:
-            force = existing[0]
-
+        builder = amoebaforces.AmoebaBondForceBuilder(self.cubic, self.quartic)
+        force = builder.getForce(sys)
         for bond in data.bonds:
             type1 = data.atomType[data.atoms[bond.atom1]]
             type2 = data.atomType[data.atoms[bond.atom2]]
@@ -3735,23 +3725,9 @@ class AmoebaAngleGenerator(object):
     #=============================================================================================
 
     def createForcePostOpBendAngle(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
-
-        # get force
-
-        energy = "k*(d^2 + %s*d^3 + %s*d^4 + %s*d^5 + %s*d^6); d=%.15g*theta-theta0" % (self.cubic, self.quartic, self.pentic, self.sextic, 180/math.pi)
-        existing = [f for f in sys.getForces() if type(f) == mm.CustomAngleForce and f.getEnergyFunction() == energy]
-
-        if len(existing) == 0:
-            force = mm.CustomAngleForce(energy)
-            force.addPerAngleParameter('theta0')
-            force.addPerAngleParameter('k')
-            force.setName('AmoebaAngle')
-            sys.addForce(force)
-        else:
-            force = existing[0]
-
+        builder = amoebaforces.AmoebaAngleForceBuilder(self.cubic, self.quartic, self.pentic, self.sextic)
+        force = builder.getForce(sys)
         DEG_TO_RAD = math.pi / 180
-
         for angleDict in angleList:
             angle = angleDict['angle']
             isConstrained = angleDict['isConstrained']
@@ -3802,28 +3778,8 @@ class AmoebaAngleGenerator(object):
     #=============================================================================================
 
     def createForcePostOpBendInPlaneAngle(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
-
-        # get force
-
-        energy = """k*(d^2 + %s*d^3 + %s*d^4 + %s*d^5 + %s*d^6); d=theta-theta0;
-                    theta = %.15g*pointangle(x1, y1, z1, projx, projy, projz, x3, y3, z3);
-                    projx = x2-nx*dot; projy = y2-ny*dot; projz = z2-nz*dot;
-                    dot = nx*(x2-x3) + ny*(y2-y3) + nz*(z2-z3);
-                    nx = px/norm; ny = py/norm; nz = pz/norm;
-                    norm = sqrt(px*px + py*py + pz*pz);
-                    px = (d1y*d2z-d1z*d2y); py = (d1z*d2x-d1x*d2z); pz = (d1x*d2y-d1y*d2x);
-                    d1x = x1-x4; d1y = y1-y4; d1z = z1-z4;
-                    d2x = x3-x4; d2y = y3-y4; d2z = z3-z4""" % (self.cubic, self.quartic, self.pentic, self.sextic, 180/math.pi)
-        existing = [f for f in sys.getForces() if type(f) == mm.CustomCompoundBondForce and f.getEnergyFunction() == energy]
-        if len(existing) == 0:
-            force = mm.CustomCompoundBondForce(4, energy)
-            force.addPerBondParameter("theta0")
-            force.addPerBondParameter("k")
-            force.setName('AmoebaInPlaneAngle')
-            sys.addForce(force)
-        else:
-            force = existing[0]
-
+        builder = amoebaforces.AmoebaInPlaneAngleForceBuilder(self.cubic, self.quartic, self.pentic, self.sextic)
+        force = builder.getForce(sys)
         for angleDict in angleList:
 
             angle = angleDict['angle']
@@ -3953,22 +3909,8 @@ class AmoebaOutOfPlaneBendGenerator(object):
     def postprocessSystem(self, sys, data, args):
         # We need to wait until after all bonds have been added so their lengths will be set correctly.
 
-        energy = """k*(theta^2 + %s*theta^3 + %s*theta^4 + %s*theta^5 + %s*theta^6);
-                    theta = %.15g*pointangle(x2, y2, z2, x4, y4, z4, projx, projy, projz);
-                    projx = x2-nx*dot; projy = y2-ny*dot; projz = z2-nz*dot;
-                    dot = nx*(x2-x3) + ny*(y2-y3) + nz*(z2-z3);
-                    nx = px/norm; ny = py/norm; nz = pz/norm;
-                    norm = sqrt(px*px + py*py + pz*pz);
-                    px = (d1y*d2z-d1z*d2y); py = (d1z*d2x-d1x*d2z); pz = (d1x*d2y-d1y*d2x);
-                    d1x = x1-x4; d1y = y1-y4; d1z = z1-z4;
-                    d2x = x3-x4; d2y = y3-y4; d2z = z3-z4""" % (self.cubic, self.quartic, self.pentic, self.sextic, 180/math.pi)
-        existing = [f for f in sys.getForces() if type(f) == mm.CustomCompoundBondForce and f.getEnergyFunction() == energy]
-        if len(existing) == 0:
-            force = mm.CustomCompoundBondForce(4, energy)
-            force.addPerBondParameter("k")
-            force.setName('AmoebaOutOfPlaneBend')
-        else:
-            force = existing[0]
+        builder = amoebaforces.AmoebaOutOfPlaneBendForceBuilder(self.cubic, self.quartic, self.pentic, self.sextic)
+        force = builder.getForce(sys)
 
         # this hash is used to ensure the out-of-plane-bend bonds
         # are only added once
@@ -4067,9 +4009,6 @@ class AmoebaOutOfPlaneBendGenerator(object):
                 angleDict['inPlane'] = False
                 angles.append(angleDict)
 
-        if len(existing) == 0 and force.getNumBonds() > 0:
-            sys.addForce(force)
-
         # get AmoebaAngleGenerator and add AmoebaAngle and AmoebaInPlaneAngle forces
 
         for force in self.forceField._forces:
@@ -4155,13 +4094,8 @@ class AmoebaTorsionGenerator(object):
     #=============================================================================================
 
     def createForce(self, sys, data, nontorsionedMethod, nontorsionedCutoff, args):
-
-        existing = [f for f in sys.getForces() if type(f) == mm.PeriodicTorsionForce]
-        if len(existing) == 0:
-            force = mm.PeriodicTorsionForce()
-            sys.addForce(force)
-        else:
-            force = existing[0]
+        builder = amoebaforces.AmoebaTorsionForceBuilder()
+        force = builder.getForce(sys)
 
         for torsion in data.propers:
 
@@ -4200,8 +4134,7 @@ class AmoebaPiTorsionGenerator(object):
 
     #=============================================================================================
 
-    def __init__(self, piTorsionUnit):
-        self.piTorsionUnit = piTorsionUnit
+    def __init__(self):
         self.types1 = []
         self.types2 = []
         self.k = []
@@ -4210,11 +4143,7 @@ class AmoebaPiTorsionGenerator(object):
 
     @staticmethod
     def parseElement(element, forceField):
-
-        #  <AmoebaPiTorsionForce piTorsionUnit="1.0">
-        #   <PiTorsion class1="1" class2="3" k="28.6604" />
-
-        generator = AmoebaPiTorsionGenerator(float(element.attrib['piTorsionUnit']))
+        generator = AmoebaPiTorsionGenerator()
         forceField._forces.append(generator)
 
         for piTorsion in element.findall('PiTorsion'):
@@ -4232,23 +4161,8 @@ class AmoebaPiTorsionGenerator(object):
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-
-        energy = """2*k*sin(phi)^2;
-                    phi = pointdihedral(x3+c1x, y3+c1y, z3+c1z, x3, y3, z3, x4, y4, z4, x4+c2x, y4+c2y, z4+c2z);
-                    c1x = (d14y*d24z-d14z*d24y); c1y = (d14z*d24x-d14x*d24z); c1z = (d14x*d24y-d14y*d24x);
-                    c2x = (d53y*d63z-d53z*d63y); c2y = (d53z*d63x-d53x*d63z); c2z = (d53x*d63y-d53y*d63x);
-                    d14x = x1-x4; d14y = y1-y4; d14z = z1-z4;
-                    d24x = x2-x4; d24y = y2-y4; d24z = z2-z4;
-                    d53x = x5-x3; d53y = y5-y3; d53z = z5-z3;
-                    d63x = x6-x3; d63y = y6-y3; d63z = z6-z3"""
-        existing = [f for f in sys.getForces() if type(f) == mm.CustomCompoundBondForce and f.getEnergyFunction() == energy]
-
-        if len(existing) == 0:
-            force = mm.CustomCompoundBondForce(6, energy)
-            force.addPerBondParameter('k')
-            force.setName('AmoebaPiTorsion')
-        else:
-            force = existing[0]
+        builder = amoebaforces.AmoebaPiTorsionForceBuilder()
+        force = builder.getForce(sys)
 
         for bond1 in data.bonds:
 
@@ -4308,8 +4222,6 @@ class AmoebaPiTorsionGenerator(object):
                                    piTorsionAtom6 = b1
 
                        force.addBond([piTorsionAtom1, piTorsionAtom2, piTorsionAtom3, piTorsionAtom4, piTorsionAtom5, piTorsionAtom6], [self.k[i]])
-        if len(existing) == 0 and force.getNumBonds() > 0:
-            sys.addForce(force)
 
 parsers["AmoebaPiTorsionForce"] = AmoebaPiTorsionGenerator.parseElement
 
@@ -4694,20 +4606,8 @@ class AmoebaStretchBendGenerator(object):
     #=============================================================================================
 
     def createForcePostAmoebaBondForce(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
-
-        energy = "(k1*(distance(p1,p2)-r12) + k2*(distance(p2,p3)-r23))*(%.15g*(angle(p1,p2,p3)-theta0))" % (180/math.pi)
-        existing = [f for f in sys.getForces() if type(f) == mm.CustomCompoundBondForce and f.getEnergyFunction() == energy]
-        if len(existing) == 0:
-            force = mm.CustomCompoundBondForce(3, energy)
-            force.addPerBondParameter("r12")
-            force.addPerBondParameter("r23")
-            force.addPerBondParameter("theta0")
-            force.addPerBondParameter("k1")
-            force.addPerBondParameter("k2")
-            force.setName('AmoebaStretchBend')
-            sys.addForce(force)
-        else:
-            force = existing[0]
+        builder = amoebaforces.AmoebaStretchBendForceBuilder()
+        force = builder.getForce(sys)
 
         for angleDict in angleList:
 
@@ -5109,15 +5009,8 @@ class AmoebaUreyBradleyGenerator(object):
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-
-        existing = [f for f in sys.getForces() if type(f) == mm.HarmonicBondForce]
-
-        if len(existing) == 0:
-            force = mm.HarmonicBondForce()
-            sys.addForce(force)
-        else:
-            force = existing[0]
-
+        builder = amoebaforces.AmoebaUreyBradleyForceBuilder()
+        force = builder.getForce(sys)
         for (angle, isConstrained) in zip(data.angles, data.isAngleConstrained):
             if (isConstrained and not args.get('flexibleConstraints', False)):
                 continue

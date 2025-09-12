@@ -98,7 +98,7 @@ class AmoebaBondForceBuilder(BaseAmoebaForceBuilder):
         self.quartic = quartic
         self.bondParams = []
 
-    def registerBondParams(self, ff, bondType, params):
+    def registerBondParams(self, bondType, params):
         """Register bond parameters"""
         self.bondParams.append((bondType, params))
 
@@ -127,12 +127,11 @@ class AmoebaBondForceBuilder(BaseAmoebaForceBuilder):
 class AmoebaTorsionForceBuilder(BaseAmoebaForceBuilder):
     """Builder for PeriodicTorsionForce force for AMOEBA force field"""
 
-    def __init__(self, torsionUnit):
+    def __init__(self):
         super().__init__()
-        self.torsionUnit = torsionUnit
         self.torsionParams = []
 
-    def registerTorsionParams(self, ff, torsionType, params):
+    def registerTorsionParams(self, torsionType, params):
         """Register torsion parameters"""
         self.torsionParams.append((torsionType, params))
 
@@ -161,12 +160,11 @@ class AmoebaTorsionForceBuilder(BaseAmoebaForceBuilder):
 class AmoebaPiTorsionForceBuilder(BaseAmoebaForceBuilder):
     """Builder for PiTorsionForce force for AMOEBA force field"""
 
-    def __init__(self, piTorsionUnit):
+    def __init__(self):
         super().__init__()
-        self.piTorsionUnit = piTorsionUnit
         self.piTorsionParams = []
 
-    def registerPiTorsionParams(self, ff, piTorsionType, params):
+    def registerPiTorsionParams(self, piTorsionType, params):
         """Register pi-torsion parameters"""
         self.piTorsionParams.append((piTorsionType, params))
 
@@ -209,7 +207,7 @@ class AmoebaUreyBradleyForceBuilder(BaseAmoebaForceBuilder):
         super().__init__()
         self.ureyBradleyParams = []
 
-    def registerUreyBradleyParams(self, ff, ureyBradleyType, params):
+    def registerUreyBradleyParams(self, ureyBradleyType, params):
         """Register Urey-Bradley parameters"""
         self.ureyBradleyParams.append((ureyBradleyType, params))
 
@@ -240,7 +238,7 @@ class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
         self.sextic = sextic
         self.angleParams = []
 
-    def registerAngleParams(self, ff, angleType, params):
+    def registerAngleParams(self, angleType, params):
         """Register angle parameters"""
         self.angleParams.append((angleType, params))
 
@@ -286,7 +284,7 @@ class AmoebaInPlaneAngleForceBuilder(BaseAmoebaForceBuilder):
         self.sextic = sextic
         self.inPlaneAngleParams = []
 
-    def registerInPlaneAngleParams(self, ff, inPlaneAngleType, params):
+    def registerInPlaneAngleParams(self, inPlaneAngleType, params):
         """Register in-plane angle parameters"""
         self.inPlaneAngleParams.append((inPlaneAngleType, params))
 
@@ -342,7 +340,7 @@ class AmoebaOutOfPlaneBendForceBuilder(BaseAmoebaForceBuilder):
         self.sextic = sextic
         self.outOfPlaneBendParams = []
 
-    def registerOutOfPlaneBendParams(self, ff, outOfPlaneBendType, params):
+    def registerOutOfPlaneBendParams(self, outOfPlaneBendType, params):
         """Register out-of-plane bend parameters"""
         self.outOfPlaneBendParams.append((outOfPlaneBendType, params))
 
@@ -393,7 +391,7 @@ class AmoebaStretchBendForceBuilder(BaseAmoebaForceBuilder):
         super().__init__()
         self.stretchBendParams = []
 
-    def registerStretchBendParams(self, ff, stretchBendType, params):
+    def registerStretchBendParams(self, stretchBendType, params):
         """Register stretch-bend parameters"""
         self.stretchBendParams.append((stretchBendType, params))
 
@@ -436,7 +434,7 @@ class AmoebaTorsionTorsionForceBuilder(BaseAmoebaForceBuilder):
         self.torsionTorsionParams = []
         self.gridData = {}
 
-    def registerTorsionTorsionParams(self, ff, torsionTorsionType, params):
+    def registerTorsionTorsionParams(self, torsionTorsionType, params):
         """Register torsion-torsion parameters"""
         self.torsionTorsionParams.append((torsionTorsionType, params))
 
