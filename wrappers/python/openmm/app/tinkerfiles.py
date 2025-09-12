@@ -609,7 +609,7 @@ class TinkerFiles:
 
             # Register out-of-plane bend parameters
             for (class1, class2, class3, class4), params in opbendParams.items():
-                outOfPlaneBendForce.registerOutOfPlaneBendParams((class1, class2, class3, class4), (params["k"],))
+                outOfPlaneBendForce.registerOutOfPlaneBendParams((class1, class2, class3, class4), (params["k"]*4.184*(math.pi/180)**2,))
 
             force = outOfPlaneBendForce.getForce(sys)
 
@@ -769,7 +769,7 @@ class TinkerFiles:
 
             # Register Urey-Bradley parameters
             for (class1, class2, class3), params in ureyBradleyParams.items():
-                ureyBradleyForce.registerUreyBradleyParams((class1, class2, class3), (params["k"], params["d"]))
+                ureyBradleyForce.registerUreyBradleyParams((class1, class2, class3), (params["k"]*4.184*100.0, params["d"]*0.1))
 
             # Process angles for Urey-Bradley terms
             processedAngles = []
