@@ -37,35 +37,6 @@
 
 // This file defines classes and functions to simplify vectorizing code with AVX.
 
-bool isAvx2Supported() {
-
-    // Provide an alternative implementation of CPUID to support AVX2. On older
-    // non-Windows OSes the hardware.h support for CPUID doesn't set the CX register
-    // properly and gives the wrong answer when detecting AVX2 and beyond. On Windows
-    // the cpuid seems to work as expected so can be used.
-#if !(defined(_WIN32) || defined(WIN32))
-    auto cpuid = [](int output[4], int functionnumber) {
-        int a, b, c, d;
-        __asm("cpuid" : "=a"(a),"=b"(b),"=c"(c),"=d"(d) : "a"(functionnumber), "c"(0) : );
-        output[0] = a;
-        output[1] = b;
-        output[2] = c;
-        output[3] = d;
-    };
-#endif
-
-    int cpuInfo[4];
-    cpuid(cpuInfo, 0);
-
-    if (cpuInfo[0] >= 7) {
-        cpuInfo[2] = 0;
-        cpuid(cpuInfo, 7);
-        return ((cpuInfo[1] & ((int) 1 << 5)) != 0);
-    }
-
-    return false;
-}
-
 /** 
  * Derive from fvec8 so that default implementations of everything are provided,
  * but can be overriden with AVX2-specific variants where possible.

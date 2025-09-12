@@ -163,6 +163,14 @@ public:
     ivec8 operator|(ivec8 other) const {
         return _mm256_castps_si256(_mm256_or_ps(_mm256_castsi256_ps(val), _mm256_castsi256_ps(other.val)));
     }
+    ivec8 operator==(ivec8 other) const {
+        // _mm256_cmpeq_epi32() compiles to an AVX2-only instruction, so compare
+        // the lower and upper 128-bit 4-vectors of ints separately.
+        return _mm256_setr_m128i(lowerVec() == other.lowerVec(), upperVec() == other.upperVec());
+    }
+    ivec8 operator!=(ivec8 other) const {
+        return _mm256_castps_si256(_mm256_xor_ps(_mm256_castsi256_ps(*this == other), _mm256_castsi256_ps(_mm256_set1_epi32(0xFFFFFFFF))));
+    }
     operator fvec8() const;
 };
 

@@ -726,6 +726,7 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
         pmeDefines["PME_ORDER"] = cc.intToString(PmeOrder);
         pmeDefines["NUM_ATOMS"] = cc.intToString(numMultipoles);
         pmeDefines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
+        pmeDefines["NUM_INDICES"] = "0";
         pmeDefines["EPSILON_FACTOR"] = cc.doubleToString(ONE_4PI_EPS0);
         pmeDefines["GRID_SIZE_X"] = cc.intToString(gridSizeX);
         pmeDefines["GRID_SIZE_Y"] = cc.intToString(gridSizeY);
@@ -2687,6 +2688,7 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
         pmeDefines["PME_ORDER"] = cc.intToString(PmeOrder);
         pmeDefines["NUM_ATOMS"] = cc.intToString(numParticles);
         pmeDefines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
+        pmeDefines["NUM_INDICES"] = "0";
         pmeDefines["EPSILON_FACTOR"] = cc.doubleToString(ONE_4PI_EPS0);
         pmeDefines["GRID_SIZE_X"] = cc.intToString(gridSizeX);
         pmeDefines["GRID_SIZE_Y"] = cc.intToString(gridSizeY);

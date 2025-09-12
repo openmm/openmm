@@ -32,6 +32,7 @@
 #include "CpuKernels.h"
 #include "ReferenceAngleBondIxn.h"
 #include "ReferenceBondForce.h"
+#include "ReferenceConstantPotential14.h"
 #include "ReferenceConstraints.h"
 #include "ReferenceKernelFactory.h"
 #include "ReferenceKernels.h"
@@ -44,6 +45,7 @@
 #include "openmm/Vec3.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
+#include "openmm/internal/ConstantPotentialForceImpl.h"
 #include "openmm/internal/vectorize.h"
 #include "lepton/CompiledExpression.h"
 #include "lepton/CustomFunction.h"
@@ -482,6 +484,8 @@ public:
             force[4*i+2] += f[4*i+2];
         }
     }
+    void setChargeDerivatives(float* derivatives) {
+    }
 private:
     float* posq;
     float* force;
@@ -646,7 +650,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             useOptimizedPme = getPlatform().supportsKernels(kernelNames);
             if (useOptimizedPme) {
                 optimizedPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), context);
-                optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha, data.deterministicForces);
+                optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, {}, ewaldAlpha, data.deterministicForces);
             }
         }
         if (nonbondedMethod == LJPME) {
@@ -658,7 +662,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             useOptimizedPme = getPlatform().supportsKernels(kernelNames);
             if (useOptimizedPme) {
                 optimizedPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), context);
-                optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, ewaldAlpha, data.deterministicForces);
+                optimizedPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, {}, ewaldAlpha, data.deterministicForces);
                 optimizedDispersionPme = getPlatform().createKernel(CalcDispersionPmeReciprocalForceKernel::Name(), context);
                 optimizedDispersionPme.getAs<CalcDispersionPmeReciprocalForceKernel>().initialize(dispersionGridSize[0], dispersionGridSize[1],
                                                                                                   dispersionGridSize[2], numParticles, ewaldDispersionAlpha, data.deterministicForces);
@@ -702,7 +706,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         if (useOptimizedPme) {
             PmeIO io(&posq[0], &data.threadForce[0][0], numParticles);
             Vec3 periodicBoxVectors[3] = {boxVectors[0], boxVectors[1], boxVectors[2]};
-            optimizedPme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, periodicBoxVectors, includeEnergy);
+            optimizedPme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, periodicBoxVectors, includeEnergy, true, false);
             nonbondedEnergy += optimizedPme.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
             if (nonbondedMethod == LJPME) {
                 copyChargesToPosq(context, C6params, ljPosqIndex);
@@ -895,6 +899,294 @@ void CpuCalcNonbondedForceKernel::computeParameters(ContextImpl& context, bool o
             bonded14ParamArray[i][1] = 4.0*epsilon;
             bonded14ParamArray[i][2] = chargeProd;
         }
+    }
+}
+
+CpuConstantPotentialForce* createCpuConstantPotentialForceVec();
+
+CpuCalcConstantPotentialForceKernel::CpuCalcConstantPotentialForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcConstantPotentialForceKernel(name, platform),
+    data(data), hasInitializedPme(false), constantPotential(NULL), solver(NULL) {
+}
+
+CpuCalcConstantPotentialForceKernel::~CpuCalcConstantPotentialForceKernel() {
+    if (constantPotential != NULL) {
+        delete constantPotential;
+    }
+    if (solver != NULL) {
+        delete solver;
+    }
+}
+
+void CpuCalcConstantPotentialForceKernel::initialize(const System& system, const ConstantPotentialForce& force) {
+    chargePosqIndex = data.requestPosqIndex();
+
+    // Get particle parameters.
+    numParticles = force.getNumParticles();
+    setCharges.resize(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        force.getParticleParameters(i, setCharges[i]);
+    }
+
+    // Get "1-4" exceptions (those that don't zero the charge product).
+    exclusions.resize(numParticles);
+    vector<int> nb14s;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double chargeProd;
+        force.getExceptionParameters(i, particle1, particle2, chargeProd);
+        exclusions[particle1].insert(particle2);
+        exclusions[particle2].insert(particle1);
+        if (chargeProd != 0.0) {
+            nb14Index[i] = nb14s.size();
+            nb14s.push_back(i);
+        }
+    }
+
+    // Get exception parameters.
+    num14 = nb14s.size();
+    bonded14ParamArray.resize(num14, vector<double>(1));
+    bonded14IndexArray.resize(num14, vector<int>(2));
+    for (int i = 0; i < num14; ++i) {
+        int particle1, particle2;
+        force.getExceptionParameters(nb14s[i], particle1, particle2, bonded14ParamArray[i][0]);
+        bonded14IndexArray[i][0] = particle1;
+        bonded14IndexArray[i][1] = particle2;
+    }
+    bondForce.initialize(numParticles, num14, 2, bonded14IndexArray, data.threads);
+
+    // Get electrode parameters.  sysToElec will be a map from system particle
+    // indices to electrode particle indices (or -1 if the particle is not an
+    // electrode particle), while elecToSys will be a map from electrode
+    // particle indices to system particle indices.  sysElec will be a map from
+    // system particle indices to electrode indices (or -1 if the particle is
+    // not an electrode particle), while elecElec will be a map from electrode
+    // particle indices to electrode indices.
+    sysToElec.resize(numParticles, -1);
+    sysElec.resize(numParticles, -1);
+    electrodeParams.resize(force.getNumElectrodes());
+    for (int ie = 0; ie < force.getNumElectrodes(); ie++) {
+        std::set<int> electrodeParticles;
+        double potential;
+        double gaussianWidth;
+        double thomasFermiScale;
+        force.getElectrodeParameters(ie, electrodeParticles, potential, gaussianWidth, thomasFermiScale);
+        for (int i : electrodeParticles) {
+            sysToElec[i] = elecToSys.size();
+            sysElec[i] = ie;
+            elecToSys.push_back(i);
+            elecElec.push_back(ie);
+        }
+        electrodeParams[ie] = {potential, gaussianWidth, thomasFermiScale};
+    }
+
+    // Clear charges on electrode particles.
+    numElectrodeParticles = elecToSys.size();
+    for (int ii = 0; ii < numElectrodeParticles; ii++) {
+        setCharges[elecToSys[ii]] = 0.0;
+    }
+
+    // Initialize single-precision charge vector with initial guesses.
+    charges.resize(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        charges[i] = (float) setCharges[i];
+    }
+
+    // Set options from force.
+    nonbondedCutoff = force.getCutoffDistance();
+    data.requestNeighborList(nonbondedCutoff, 0.25 * nonbondedCutoff, true, exclusions);
+    ConstantPotentialForceImpl::calcPMEParameters(system, force, ewaldAlpha, gridSize[0], gridSize[1], gridSize[2]);
+    exceptionsArePeriodic = force.getExceptionsUsePeriodicBoundaryConditions();
+    cgErrorTol = force.getCGErrorTolerance();
+    useChargeConstraint = force.getUseChargeConstraint();
+    chargeTarget = force.getChargeConstraintTarget();
+    force.getExternalField(externalField);
+    data.isPeriodic = true;
+
+    // Set the charge target to be that on the electrode particles (so that the
+    // overall charge is constrained correctly if the non-electrolyte particles
+    // are non-neutral).
+    for (int i = 0; i < numParticles; i++) {
+        if (sysElec[i] == -1) {
+            chargeTarget -= setCharges[i];
+        }
+    }
+
+    // Set up constant potential.
+    ConstantPotentialForce::ConstantPotentialMethod method = force.getConstantPotentialMethod();
+    if (method == ConstantPotentialForce::Matrix) {
+        solver = new CpuConstantPotentialMatrixSolver(numParticles, numElectrodeParticles);
+    }
+    else if (method == ConstantPotentialForce::CG) {
+        solver = new CpuConstantPotentialCGSolver(numParticles, numElectrodeParticles, force.getUsePreconditioner());
+    }
+    else {
+        throw OpenMMException("internal error: invalid constant potential method");
+    }
+
+    constantPotential = createCpuConstantPotentialForceVec();
+    float externalFieldArray[3] = { (float) externalField[0], (float) externalField[1], (float) externalField[2] };
+    constantPotential->initialize(numParticles, numElectrodeParticles, chargePosqIndex, (float) nonbondedCutoff, (float) ewaldAlpha, (float) cgErrorTol,
+        gridSize, exceptionsArePeriodic, useChargeConstraint, *data.neighborList, solver, exclusions, sysToElec, elecToSys, sysElec, elecElec, electrodeParams, (float) chargeTarget, externalFieldArray);
+}
+
+double CpuCalcConstantPotentialForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    Vec3* boxVectors = extractBoxVectors(context);
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
+    double energy = 0.0;
+
+    checkBoxSize(boxVectors);
+    ensurePmeInitialized(context);
+    copyChargesToPosq(context, charges, chargePosqIndex);
+
+    constantPotential->execute(boxVectors, posData, charges, &data.posq[0], data.threadForce, includeEnergy ? &energy : NULL, data.threads, pmeKernel);
+
+    // Process non-zeroing exceptions.  Since exceptions and electrodes should
+    // involve disjoint sets of atoms, this isn't required for the energy
+    // minimization with respect to the electrode atom charges.
+    ReferenceConstantPotential14 conp14;
+    if (exceptionsArePeriodic) {
+        conp14.setPeriodic(boxVectors);
+    }
+    bondForce.calculateForce(posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, conp14);
+
+    return energy;
+}
+
+void CpuCalcConstantPotentialForceKernel::copyParametersToContext(ContextImpl& context, const ConstantPotentialForce& force, int firstParticle, int lastParticle, int firstException, int lastException, int firstElectrode, int lastElectrode) {
+    // Get particle parameters.
+    if (force.getNumParticles() != numParticles) {
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    }
+    for (int i = firstParticle; i <= lastParticle; i++) {
+        // Only update charges on non-electrode particles; keep current guesses
+        // for electrode particles.
+        if (sysElec[i] == -1) {
+            force.getParticleParameters(i, setCharges[i]);
+            charges[i] = (float) setCharges[i];
+        }
+    }
+    if (firstParticle <= lastParticle) {
+        // Signal that charges in posq need to be updated.
+        chargePosqIndex = data.requestPosqIndex();
+    }
+
+    // Get "1-4" (non-zeroing) exceptions.
+    vector<int> nb14s;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double chargeProd;
+        force.getExceptionParameters(i, particle1, particle2, chargeProd);
+        if (nb14Index.find(i) == nb14Index.end()) {
+            if (chargeProd != 0.0) {
+                throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
+            }
+        }
+        else {
+            nb14s.push_back(i);
+        }
+    }
+    if (nb14s.size() != num14) {
+        throw OpenMMException("updateParametersInContext: The number of non-excluded exceptions has changed");
+    }
+
+    // Get exception parameters.
+    for (int i = 0; i < num14; i++) {
+        int particle1, particle2;
+        force.getExceptionParameters(nb14s[i], particle1, particle2, bonded14ParamArray[i][0]);
+        bonded14IndexArray[i][0] = particle1;
+        bonded14IndexArray[i][1] = particle2;
+    }
+
+    // Get electrode parameters.
+    std::set<int> allElectrodeParticles;
+    for (int ie = 0; ie < force.getNumElectrodes(); ie++) {
+        std::set<int> electrodeParticles;
+        double potential;
+        double gaussianWidth;
+        double thomasFermiScale;
+        force.getElectrodeParameters(ie, electrodeParticles, potential, gaussianWidth, thomasFermiScale);
+        for (int i : electrodeParticles) {
+            if (sysElec[i] != ie) {
+                throw OpenMMException("updateParametersInContext: The electrode assignment of a particle has changed");
+            }
+            allElectrodeParticles.insert(i);
+        }
+        electrodeParams[ie][0] = potential;
+        electrodeParams[ie][1] = gaussianWidth;
+        electrodeParams[ie][2] = thomasFermiScale;
+    }
+    if (allElectrodeParticles.size() != numElectrodeParticles) {
+        throw OpenMMException("updateParametersInContext: The electrode state of a particle has changed");
+    }
+
+    // Update external field.
+    force.getExternalField(externalField);
+
+    // Update charge target.
+    chargeTarget = force.getChargeConstraintTarget();
+    for (int i = 0; i < numParticles; i++) {
+        if (sysElec[i] == -1) {
+            chargeTarget -= setCharges[i];
+        }
+    }
+
+    float externalFieldArray[3] = { (float) externalField[0], (float) externalField[1], (float) externalField[2] };
+    constantPotential->update((float) chargeTarget, externalFieldArray, firstElectrode, lastElectrode);
+}
+
+void CpuCalcConstantPotentialForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    if (hasInitializedPme) {
+        pmeKernel.getAs<const CalcPmeReciprocalForceKernel>().getPMEParameters(alpha, nx, ny, nz);
+    } else {
+        alpha = ewaldAlpha;
+        nx = gridSize[0];
+        ny = gridSize[1];
+        nz = gridSize[2];
+    }
+}
+
+void CpuCalcConstantPotentialForceKernel::getCharges(ContextImpl& context, std::vector<double>& chargesOut) {
+    // Make sure that positions in posq, and the current neighbor list, are up
+    // to date, but don't compute any energies or forces, and exclude all force
+    // groups so that no kernels will get executed.
+    context.calcForcesAndEnergy(false, false, 0);
+
+    Vec3* boxVectors = extractBoxVectors(context);
+    vector<Vec3>& posData = extractPositions(context);
+
+    checkBoxSize(boxVectors);
+    ensurePmeInitialized(context);
+    copyChargesToPosq(context, charges, chargePosqIndex);
+
+    constantPotential->getCharges(boxVectors, posData, charges, &data.posq[0], data.threadForce, data.threads, pmeKernel);
+
+    // Preserve fixed charges exactly (without single-precision rounding) and
+    // load solved values of fluctuating charges.
+    chargesOut = setCharges;
+    for (int ii = 0; ii < numElectrodeParticles; ii++) {
+        int i = elecToSys[ii];
+        chargesOut[i] = (double) charges[i];
+    }
+}
+
+void CpuCalcConstantPotentialForceKernel::checkBoxSize(const Vec3* boxVectors) {
+    double minAllowedSize = 1.999999*nonbondedCutoff;
+    if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize) {
+        throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
+    }
+}
+
+void CpuCalcConstantPotentialForceKernel::ensurePmeInitialized(ContextImpl& context) {
+    if (!hasInitializedPme) {
+        vector<string> kernelNames;
+        kernelNames.push_back("CalcPmeReciprocalForce");
+        if (!getPlatform().supportsKernels(kernelNames)) {
+            throw OpenMMException("ConstantPotentialForce unsupported on CPU platform without PME kernel");
+        }
+        pmeKernel = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), context);
+        pmeKernel.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSize[0], gridSize[1], gridSize[2], numParticles, elecToSys, ewaldAlpha, data.deterministicForces);
+        hasInitializedPme = true;
     }
 }
 
