@@ -349,12 +349,6 @@ class AmoebaPiTorsionForceBuilder(BaseAmoebaForceBuilder):
         super().__init__()
         self.piTorsionParams = []
 
-    def _matchParams(self, atomTypes, paramTypes):
-        """Match atom types with parameter types for pi-torsions."""
-        _, _, at3, at4, _, _ = atomTypes
-        p3, p4 = paramTypes[0], paramTypes[1]
-        return {p3, p4} == {at3, at4}
-
     def registerParams(self, piTorsionType, params):
         """Register pi-torsion parameters"""
         self.piTorsionParams.append((piTorsionType, params))
@@ -381,9 +375,8 @@ class AmoebaPiTorsionForceBuilder(BaseAmoebaForceBuilder):
         """Add pi-torsions to the force"""
         for atom1, atom2, atom3, atom4, atom5, atom6 in piTorsions:
             for piTorsionType, params in self.piTorsionParams:
-                types = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3],
-                        atomClasses[atom4], atomClasses[atom5], atomClasses[atom6])
-                if self._matchParams(types, piTorsionType):
+                types = (atomClasses[atom3], atomClasses[atom4])
+                if self._matchParams(types, piTorsionType, reverseMatch=True):
                     force.addBond([atom1, atom2, atom3, atom4, atom5, atom6], params)
                     break
 
