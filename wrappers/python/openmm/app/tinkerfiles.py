@@ -606,6 +606,7 @@ class TinkerFiles:
                 f"  in-plane: {len(inPlaneAngles)}\n"
                 f"  out-of-plane: {len(outOfPlaneAngles)}"
             )
+
             # Add AmoebaOutOfPlaneBendForce
             outOfPlaneBendForceBuilder = AmoebaOutOfPlaneBendForceBuilder(float(self._scalars["opbend-cubic"]), float(self._scalars["opbend-quartic"]), float(self._scalars["opbend-pentic"]), float(self._scalars["opbend-sextic"]))
             for (class1, class2, class3, class4), params in opbendParams.items():
@@ -673,7 +674,7 @@ class TinkerFiles:
                                 raise ValueError(f"Angle parameters out of range for atom classes {class1}-{class2}-{class3}")
                         else:
                             theta0 = params["theta0"][0]
-                        inPlaneAngleParams["idealAngle"] = theta0 # Store ideal angle for stretch-bend force
+                        params["idealAngle"] = theta0 # Store ideal angle for stretch-bend force
                         if paramKey not in processedParams:
                             inPlaneAngleForceBuilder.registerParams(paramKey, (theta0, params["k"]*4.184*(math.pi/180)**2))
                             processedParams.add(paramKey)
@@ -684,14 +685,15 @@ class TinkerFiles:
         # Add AmoebaStretchBendForce
         if "strbnd" in self._forces:
             stretchBendParams = {(at1, at2, at3): {"k1": float(k1), "k2": float(k2)} for at1, at2, at3, k1, k2 in self._forces["strbnd"]}
-            stretchBendForce = AmoebaStretchBendForceBuilder()
+            stretchBendForceBuilder = AmoebaStretchBendForceBuilder()
             processedParams = set()
             processedAngles = []
-            for angle in genericAngles:
+            for angle in angles:
                 class1 = atomClasses[angle[0]]
                 class2 = atomClasses[angle[1]]
                 class3 = atomClasses[angle[2]]
                 params = stretchBendParams.get((class1, class2, class3)) or stretchBendParams.get((class3, class2, class1))
+
                 if params:
                     angleParamsLocal = (
                         angleParams.get((class1, class2, class3)) 
@@ -700,7 +702,7 @@ class TinkerFiles:
                         or inPlaneAngleParams.get((class3, class2, class1))
                     )
                     idealAngle = angleParamsLocal.get('idealAngle') if angleParamsLocal and angleParamsLocal.get('idealAngle') is not None else None
-                    
+
                     if idealAngle is None:
                         continue
 
@@ -724,16 +726,13 @@ class TinkerFiles:
                     if bondAB and bondCB:
                         paramKey = (class1, class2, class3)
                         if paramKey not in processedParams:
-                            stretchBendForce.registerParams(paramKey, (bondAB*0.1, bondCB*0.1, idealAngle*math.pi/180, k1*41.84*math.pi/180, k2*41.84*math.pi/180))
+                            stretchBendForceBuilder.registerParams(paramKey, (bondAB*0.1, bondCB*0.1, idealAngle*math.pi/180, k1*41.84*math.pi/180, k2*41.84*math.pi/180))
                             processedParams.add(paramKey)
                         processedAngles.append((angle[0], angle[1], angle[2]))
-            print("Stretch-bend angles processed:", len(processedAngles))
+        
             if processedAngles:
-                force = stretchBendForce.getForce(sys)
-                atomClasses = {}
-                for atom_idx in range(len(self.atoms)):
-                    atomClasses[atom_idx] = self.atoms[atom_idx].atomClass
-                stretchBendForce.addStretchBends(force, atomClasses, processedAngles)
+                stretchBendForce = stretchBendForceBuilder.getForce(sys)
+                stretchBendForceBuilder.addStretchBends(stretchBendForce, atomClasses, processedAngles)
      
         # Add AMOEBA Urey-Bradley force
         if "ureybrad" in self._forces:
@@ -893,7 +892,6 @@ class TinkerFiles:
             force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff if vdwCutoff is None else vdwCutoff, True)
             atomClasses = [int(atom.atomClass) for atom in self.atoms]
             builder.addParticles(force, atomClasses, list(self.topology.atoms()), bonds)
-     
 
         # Add AmoebaMultipoleForce
         if "multipole" in self._forces:
@@ -907,7 +905,6 @@ class TinkerFiles:
             force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff, ewaldErrorTolerance, polarization, mutualInducedTargetEpsilon, 60)
             atomTypes = [int(atom.atomType) for atom in self.atoms]
             builder.addMultipoles(force, atomTypes, list(self.topology.atoms()), bonds)
-
 
         # Add AmoebaGeneralizedKirkwoodForce
         if implicitSolvent and "multipole" in self._forces:
