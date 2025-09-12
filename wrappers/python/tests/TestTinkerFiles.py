@@ -153,9 +153,7 @@ class TestTinkerFiles(unittest.TestCase):
 
         # Compare to values computed with Tinker.
         self.assertAlmostEqual(749.6953, energies["AmoebaBond"], 4)
-        self.assertAlmostEqual(
-            579.9971, energies["AmoebaAngle"] + energies["AmoebaInPlaneAngle"], 4
-        )
+        self.assertAlmostEqual(579.9971, energies["AmoebaAngle"] + energies["AmoebaInPlaneAngle"], 4)
         self.assertAlmostEqual(10.6630, energies["AmoebaOutOfPlaneBend"], 4)
         self.assertAlmostEqual(5.2225, energies["AmoebaStretchBend"], 4)
         self.assertAlmostEqual(166.7233, energies["PeriodicTorsionForce"], 4)

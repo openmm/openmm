@@ -31,21 +31,16 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 __author__ = "Joao Morado"
 
-import datetime
-import io
 import math
-import os
 import re
 import shlex
-import xml.etree.ElementTree as etree
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
-from openmm.app import PDBFile
 from openmm.app.internal.unitcell import computePeriodicBoxVectors
-from openmm.unit import nanometers, dalton
+from openmm.unit import nanometers
 from openmm.vec3 import Vec3
 
 from . import element as elem
@@ -182,13 +177,16 @@ class TinkerFiles:
             """
             if "multipole" not in forces:
                 forces["multipole"] = []
+            bohr = 0.52917720859
+            dipoleConversion = 0.1*bohr
+            quadrupoleConversion = 0.01*bohr*bohr/3.0
             fields = allLines[lineIndex]
             type = int(fields[1])
             axis = [int(x) for x in fields[2:-1]]
             charge = float(fields[-1])
             lineIndex += 1
             fields = allLines[lineIndex]
-            dipole = [float(x) for x in fields[:3]]
+            dipole = [float(x)*dipoleConversion for x in fields[:3]]
             lineIndex += 1
             fields = allLines[lineIndex]
             quadrupole = [fields[0]]
@@ -202,7 +200,7 @@ class TinkerFiles:
             quadrupole.append(fields[1])
             quadrupole.append(fields[2])
             lineIndex += 1
-            quadrupole = [float(x) for x in quadrupole]
+            quadrupole = [float(x)*quadrupoleConversion for x in quadrupole]
             forces["multipole"].append([type, axis, charge, dipole, quadrupole])
             return lineIndex
 
@@ -301,6 +299,7 @@ class TinkerFiles:
             "opbend-quartic": "0.000056",
             "opbend-pentic": "-0.0000007",
             "opbend-sextic": "0.000000022",
+            "pitorsunit": "1.0",
             "torsionunit": "1.0",
             "vdwtype": "BUFFERED-14-7",
             "radiusrule": "CUBIC-MEAN",
@@ -509,11 +508,11 @@ class TinkerFiles:
 
         # Add AMOEBA bond force
         bondParams = {(at1, at2): {"k": float(k), "r0": float(r0)} for at1, at2, k, r0 in self._forces["bond"]}
-        bondForce = AmoebaBondForceBuilder(self._scalars["bond-cubic"], self._scalars["bond-quartic"])
+        bondForce = AmoebaBondForceBuilder(float(self._scalars["bond-cubic"])*10, float(self._scalars["bond-quartic"])*100)
 
         # Register bond parameters
         for (class1, class2), params in bondParams.items():
-            bondForce.registerBondParams((class1, class2), (params["r0"], params["k"]))
+            bondForce.registerBondParams((class1, class2), (params["r0"]*0.1, params["k"]*100.0*4.184))
 
         force = bondForce.getForce(sys)
 
@@ -658,7 +657,7 @@ class TinkerFiles:
                         # Register parameters if not already done
                         paramKey = (class1, class2, class3)
                         if paramKey not in processedParams:
-                            angleForce.registerAngleParams(paramKey, (theta0, params["k"]))
+                            angleForce.registerAngleParams(paramKey, (theta0, params["k"]*4.184*(math.pi/180)**2))
                             processedParams.add(paramKey)
 
                         processedAngles.append((angle[0], angle[1], angle[2]))
@@ -697,7 +696,7 @@ class TinkerFiles:
                         else:
                             paramKey = (class1, class2, class3, class1)  # Fallback
                         if paramKey not in processedParams:
-                            inPlaneAngleForce.registerInPlaneAngleParams(paramKey, (theta0, params["k"]))
+                            inPlaneAngleForce.registerInPlaneAngleParams(paramKey, (theta0, params["k"]*4.184*(math.pi/180)**2))
                             processedParams.add(paramKey)
                 else:
                     print(f"No in-plane angle parameters found for atom classes {class1}-{class2}-{class3}")
@@ -751,7 +750,7 @@ class TinkerFiles:
                         # Register parameters if not already done
                         paramKey = (class1, class2, class3)
                         if paramKey not in processedParams:
-                            stretchBendForce.registerStretchBendParams(paramKey, (bondAB, bondCB, idealAngle, k1, k2))
+                            stretchBendForce.registerStretchBendParams(paramKey, (bondAB*0.1, bondCB*0.1, idealAngle*math.pi/180, k1*41.84*math.pi/180, k2*41.84*math.pi/180))
                             processedParams.add(paramKey)
 
                         processedAngles.append((angle[0], angle[1], angle[2]))
@@ -807,10 +806,11 @@ class TinkerFiles:
         propers = sorted(list(uniquePropers))
 
         # Add AMOEBA periodic torsion force
-        torsionParams = {(at1, at2, at3, at4): {"t1": [float(t11), float(t12), int(t13)], "t2": [float(t21), float(t22), int(t23)], "t3": [float(t31), float(t32), int(t33)]}
+        torsionScale = float(self._scalars["torsionunit"])*4.184
+        torsionParams = {(at1, at2, at3, at4): {"t1": [float(t11)*torsionScale, float(t12)*math.pi/180, int(t13)],
+                                                "t2": [float(t21)*torsionScale, float(t22)*math.pi/180, int(t23)],
+                                                "t3": [float(t31)*torsionScale, float(t32)*math.pi/180, int(t33)]}
                          for at1, at2, at3, at4, t11, t12, t13, t21, t22, t23, t31, t32, t33 in self._forces["torsion"]}
-        if float(self._scalars["torsionunit"]) != 0.5:
-            raise ValueError('AmoebaTorsionForce: the only supported value for torsionunit is 0.5')
         torsionForce = AmoebaTorsionForceBuilder()
 
         # Register torsion parameters
@@ -837,7 +837,8 @@ class TinkerFiles:
 
         if "pitors" in self._forces:
             # Add AmoebaPiTorsionForce
-            piTorsionParams = {(at1, at2): {"k": float(k)} for at1, at2, k in self._forces["pitors"]}
+            piTorsionScale = float(self._scalars["pitorsunit"])*4.184
+            piTorsionParams = {(at1, at2): {"k": float(k)*piTorsionScale} for at1, at2, k in self._forces["pitors"]}
             piTorsionForce = AmoebaPiTorsionForceBuilder()
 
             # Register pi-torsion parameters
@@ -923,13 +924,13 @@ class TinkerFiles:
                                             float(self._scalars['vdw-14-scale']), float(self._scalars['vdw-15-scale']))
             for params in self._forces['vdw']:
                 reduction = 0.0 if len(params) < 4 else float(params[3])
-                builder.registerClassParams(int(params[0]), float(params[1]), float(params[2]), reduction)
+                builder.registerClassParams(int(params[0]), float(params[1])*0.1, float(params[2])*4.184, reduction)
             pairs = self._forces.get('vdwpair', None)
             if pairs is None:
                 pairs = self._forces.get('vdwpr', None)
             if pairs is not None:
                 for params in pairs:
-                    builder.registerPairParams(int(params[0]), int(params[1]), float(params[2]), float(params[3]))
+                    builder.registerPairParams(int(params[0]), int(params[1]), float(params[2])*0.1, float(params[3])*4.184)
             force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff if vdwCutoff is None else vdwCutoff, True)
             atomClasses = [int(atom.atomClass) for atom in self.atoms]
             bonds = [(a1.index, a2.index) for a1, a2 in self.topology.bonds()]
@@ -941,9 +942,10 @@ class TinkerFiles:
             builder = AmoebaMultipoleForceBuilder()
             for atType, axis, charge, dipole, quadrupole in self._forces["multipole"]:
                 kIndices = [atType] + axis
-                builder.registerMultipoleParams(atType, MultipoleParams(kIndices, charge, dipole, quadrupole))
+                q = [quadrupole[i] for i in (0, 1, 3, 1, 2, 4, 3, 4, 5)]
+                builder.registerMultipoleParams(atType, MultipoleParams(kIndices, charge, dipole, q))
             for atType, polarizability, thole, group in self._forces["polarize"]:
-                builder.registerPolarizationParams(atType, PolarizationParams(polarizability, thole, group))
+                builder.registerPolarizationParams(atType, PolarizationParams(polarizability*0.001, thole, group))
             force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff, ewaldErrorTolerance, polarization, mutualInducedTargetEpsilon, 60)
             atomTypes = [int(atom.atomType) for atom in self.atoms]
             builder.addMultipoles(force, atomTypes, list(self.topology.atoms()), bonds)
