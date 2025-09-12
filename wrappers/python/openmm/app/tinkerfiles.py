@@ -149,7 +149,8 @@ class TinkerAtomType:
 
 
 class TinkerFiles:
-    """TinkerFiles parses Tinker files (.xyz, .prm, .key), constructs a Topology, and (optionally) an OpenMM System from it."""
+    """TinkerFiles parses Tinker files (.xyz, .prm, .key), constructs a Topology, and (optionally) an OpenMM System from it.
+    This class only supports the AMOEBA force field.  It cannot create a System from Tinker files that use other force fields."""
 
     @staticmethod
     def _initialize_class():
@@ -698,8 +699,6 @@ class TinkerFiles:
                         if paramKey not in processedParams:
                             inPlaneAngleForce.registerInPlaneAngleParams(paramKey, (theta0, params["k"]*4.184*(math.pi/180)**2))
                             processedParams.add(paramKey)
-                else:
-                    print(f"No in-plane angle parameters found for atom classes {class1}-{class2}-{class3}")
 
             if processedParams:
                 force = inPlaneAngleForce.getForce(sys)
@@ -2633,52 +2632,48 @@ class TinkerFiles:
                 f"Line {lineNum}: Each line in the TINKER .xyz file must have at least 6 fields"
             )
 
-        try:
-            index = int(fields[0]) - 1
-            if index < 0:
-                raise ValueError(
-                    f"Line {lineNum}: Invalid atom index {index}. Must be positive."
-                )
-
-            symbol = str(fields[1])
-            if not symbol:
-                raise ValueError(f"Line {lineNum}: Empty atom symbol")
-
-            try:
-                x = float(fields[2]) * 0.1
-                y = float(fields[3]) * 0.1
-                z = float(fields[4]) * 0.1
-                if any(math.isnan(coord) or math.isinf(coord) for coord in (x, y, z)):
-                    raise ValueError(
-                        "Atom coordinates contain invalid values (NaN or Inf)"
-                    )
-                position = Vec3(x, y, z)
-            except ValueError as e:
-                raise ValueError(f"Line {lineNum}: Error parsing atom coordinates: {e}")
-
-            atomType = str(fields[5])
-            if not atomType:
-                raise ValueError(f"Line {lineNum}: Empty atom type")
-
-            try:
-                bonds = [int(bond) - 1 for bond in fields[6:]]
-                if any(bond < 0 for bond in bonds):
-                    raise ValueError("Invalid bond index (must be >= 0)")
-            except ValueError as e:
-                raise ValueError(f"Line {lineNum}: Error parsing bond indices: {e}")
-
-            # Create TinkerAtom object
-            atom = TinkerAtom(
-                symbol=symbol,
-                positions=position,
-                bonds=bonds,
-                index=index,
-                atomType=atomType,
+        index = int(fields[0]) - 1
+        if index < 0:
+            raise ValueError(
+                f"Line {lineNum}: Invalid atom index {index}. Must be positive."
             )
-            atoms.append(atom)
 
+        symbol = str(fields[1])
+        if not symbol:
+            raise ValueError(f"Line {lineNum}: Empty atom symbol")
+
+        try:
+            x = float(fields[2]) * 0.1
+            y = float(fields[3]) * 0.1
+            z = float(fields[4]) * 0.1
+            if any(math.isnan(coord) or math.isinf(coord) for coord in (x, y, z)):
+                raise ValueError(
+                    "Atom coordinates contain invalid values (NaN or Inf)"
+                )
+            position = Vec3(x, y, z)
         except ValueError as e:
-            raise ValueError(f"Line {lineNum}: {str(e)}")
+            raise ValueError(f"Line {lineNum}: Error parsing atom coordinates: {e}")
+
+        atomType = str(fields[5])
+        if not atomType:
+            raise ValueError(f"Line {lineNum}: Empty atom type")
+
+        try:
+            bonds = [int(bond) - 1 for bond in fields[6:]]
+            if any(bond < 0 for bond in bonds):
+                raise ValueError("Invalid bond index (must be >= 0)")
+        except ValueError as e:
+            raise ValueError(f"Line {lineNum}: Error parsing bond indices: {e}")
+
+        # Create TinkerAtom object
+        atom = TinkerAtom(
+            symbol=symbol,
+            positions=position,
+            bonds=bonds,
+            index=index,
+            atomType=atomType,
+        )
+        atoms.append(atom)
 
     # ------------------------------------------------------------------------------------------ #
     #                                   KEY FILE PARSING                                         #
