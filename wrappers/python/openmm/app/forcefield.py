@@ -3887,14 +3887,11 @@ class AmoebaOutOfPlaneBendGenerator(object):
                 angle.attrib['class4'] = ''
             types = generator.findAtomTypes(forceField, angle, 4)
             if types is not None:
-
                 generator.types1.append(types[0])
                 generator.types2.append(types[1])
                 generator.types3.append(types[2])
                 generator.types4.append(types[3])
-
                 generator.ks.append(float(angle.attrib['k']))
-
             else:
                 outputString = "AmoebaOutOfPlaneBendGenerator error getting types: %s %s %s %s." % (
                                angle.attrib['class1'], angle.attrib['class2'], angle.attrib['class3'], angle.attrib['class4'])

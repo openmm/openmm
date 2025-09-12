@@ -98,9 +98,9 @@ class AmoebaBondForceBuilder(BaseAmoebaForceBuilder):
         self.quartic = quartic
         self.bondParams = []
 
-    def registerBondParams(self, bondType, params):
+    def registerParams(self, bondType, r0, k0):
         """Register bond parameters"""
-        self.bondParams.append((bondType, params))
+        self.bondParams.append((bondType, (r0, k0)))
 
     def getForce(self, sys):
         energy = f"k*(d^2 + {self.cubic}*d^3 + {self.quartic}*d^4); d=r-r0"
@@ -120,112 +120,7 @@ class AmoebaBondForceBuilder(BaseAmoebaForceBuilder):
             atomTypes = (atomClasses[atom1], atomClasses[atom2])
             params = self._findMatchingParams(self.bondParams, atomTypes)
             if params:
-                length, k = params
-                force.addBond(atom1, atom2, [length, k])
-
-
-class AmoebaTorsionForceBuilder(BaseAmoebaForceBuilder):
-    """Builder for PeriodicTorsionForce force for AMOEBA force field"""
-
-    def __init__(self):
-        super().__init__()
-        self.torsionParams = []
-
-    def registerTorsionParams(self, torsionType, params):
-        """Register torsion parameters"""
-        self.torsionParams.append((torsionType, params))
-
-    def getForce(self, sys):
-        return self._createOrGetForce(sys, mm.PeriodicTorsionForce, mm.PeriodicTorsionForce)
-
-    def addTorsions(self, force, atomClasses, torsions):
-        """Add torsions to the force"""
-        for atom1, atom2, atom3, atom4 in torsions:
-            # Find matching parameters
-            for torsionType, params in self.torsionParams:
-                # Match torsion type with atom classes
-                atomTypes = (atomClasses[atom1], atomClasses[atom2],
-                             atomClasses[atom3], atomClasses[atom4])
-                if self._matchParams(atomTypes, torsionType):
-                    t1, t2, t3 = params
-                    if t1[0] != 0:
-                        force.addTorsion(atom1, atom2, atom3, atom4, 1, t1[1], t1[0])
-                    if t2[0] != 0:
-                        force.addTorsion(atom1, atom2, atom3, atom4, 2, t2[1], t2[0])
-                    if t3[0] != 0:
-                        force.addTorsion(atom1, atom2, atom3, atom4, 3, t3[1], t3[0])
-                    break
-
-
-class AmoebaPiTorsionForceBuilder(BaseAmoebaForceBuilder):
-    """Builder for PiTorsionForce force for AMOEBA force field"""
-
-    def __init__(self):
-        super().__init__()
-        self.piTorsionParams = []
-
-    def registerPiTorsionParams(self, piTorsionType, params):
-        """Register pi-torsion parameters"""
-        self.piTorsionParams.append((piTorsionType, params))
-
-    def getForce(self, sys):
-        energy = """2*k*sin(phi)^2;
-                    phi = pointdihedral(x3+c1x, y3+c1y, z3+c1z, x3, y3, z3, x4, y4, z4, x4+c2x, y4+c2y, z4+c2z);
-                    c1x = (d14y*d24z-d14z*d24y); c1y = (d14z*d24x-d14x*d24z); c1z = (d14x*d24y-d14y*d24x);
-                    c2x = (d53y*d63z-d53z*d63y); c2y = (d53z*d63x-d53x*d63z); c2z = (d53x*d63y-d53y*d63x);
-                    d14x = x1-x4; d14y = y1-y4; d14z = z1-z4;
-                    d24x = x2-x4; d24y = y2-y4; d24z = z2-z4;
-                    d53x = x5-x3; d53y = y5-y3; d53z = z5-z3;
-                    d63x = x6-x3; d63y = y6-y3; d63z = z6-z3"""
-
-        def createForce():
-            force = mm.CustomCompoundBondForce(6, energy)
-            force.addPerBondParameter("k")
-            force.setName("AmoebaPiTorsion")
-            return force
-
-        return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
-
-    def addPiTorsions(self, force, atomClasses, piTorsions):
-        """Add pi-torsions to the force"""
-        for atom1, atom2, atom3, atom4, atom5, atom6 in piTorsions:
-            # Find matching parameters
-            for piTorsionType, params in self.piTorsionParams:
-                # Match pi-torsion type with atom classes
-                types = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3],
-                        atomClasses[atom4], atomClasses[atom5], atomClasses[atom6])
-                if types == piTorsionType:
-                    k = params[0]
-                    force.addBond([atom1, atom2, atom3, atom4, atom5, atom6], [k])
-                    break
-
-
-class AmoebaUreyBradleyForceBuilder(BaseAmoebaForceBuilder):
-    """Builder for UreyBradleyForce force for AMOEBA force field"""
-
-    def __init__(self):
-        super().__init__()
-        self.ureyBradleyParams = []
-
-    def registerUreyBradleyParams(self, ureyBradleyType, params):
-        """Register Urey-Bradley parameters"""
-        self.ureyBradleyParams.append((ureyBradleyType, params))
-
-    def getForce(self, sys):
-        return self._createOrGetForce(sys, mm.HarmonicBondForce, mm.HarmonicBondForce)
-
-    def addUreyBradleys(self, force, atomClasses, angles):
-        """Add Urey-Bradley terms to the force"""
-        for atom1, atom2, atom3 in angles:
-            # Find matching parameters
-            for ureyBradleyType, params in self.ureyBradleyParams:
-                # Match Urey-Bradley type with atom classes (1-3 interaction)
-                atomTypes = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3])
-                if self._matchParams(atomTypes, ureyBradleyType):
-                    k, d = params
-                    force.addBond(atom1, atom3, d, 2 * k)
-                    break
-
+                force.addBond(atom1, atom2, params)
 
 class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
     """Builder for AngleForce force for AMOEBA force field"""
@@ -238,7 +133,7 @@ class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
         self.sextic = sextic
         self.angleParams = []
 
-    def registerAngleParams(self, angleType, params):
+    def registerParams(self, angleType, params):
         """Register angle parameters"""
         self.angleParams.append((angleType, params))
 
@@ -263,13 +158,10 @@ class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
     def addAngles(self, force, atomClasses, angles):
         """Add angles to the force"""
         for atom1, atom2, atom3 in angles:
-            # Find matching parameters
             for angleType, params in self.angleParams:
-                # Match angle type with atom classes
-                atomTypes = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3])
-                if self._matchParams(atomTypes, angleType):
-                    theta0, k = params
-                    force.addAngle(atom1, atom2, atom3, [theta0, k])
+                angleClasses = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3])
+                if self._matchParams(angleClasses, angleType):
+                    force.addAngle(atom1, atom2, atom3, params)
                     break
 
 
@@ -284,7 +176,7 @@ class AmoebaInPlaneAngleForceBuilder(BaseAmoebaForceBuilder):
         self.sextic = sextic
         self.inPlaneAngleParams = []
 
-    def registerInPlaneAngleParams(self, inPlaneAngleType, params):
+    def registerParams(self, inPlaneAngleType, params):
         """Register in-plane angle parameters"""
         self.inPlaneAngleParams.append((inPlaneAngleType, params))
 
@@ -313,19 +205,15 @@ class AmoebaInPlaneAngleForceBuilder(BaseAmoebaForceBuilder):
             return force
 
         return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
-
+    
     def addInPlaneAngles(self, force, atomClasses, inPlaneAngles):
         """Add in-plane angles to the force"""
         for atom1, atom2, atom3, atom4 in inPlaneAngles:
-            # Find matching parameters
             for inPlaneAngleType, params in self.inPlaneAngleParams:
-                # Match in-plane angle type with atom classes
-                atomTypes = (atomClasses[atom1], atomClasses[atom2],
+                angleClasses = (atomClasses[atom1], atomClasses[atom2],
                              atomClasses[atom3], atomClasses[atom4])
-                # Note: In-plane angles typically don't reverse match
-                if self._matchParams(atomTypes, inPlaneAngleType, reverseMatch=False):
-                    theta0, k = params
-                    force.addBond([atom1, atom2, atom3, atom4], [theta0, k])
+                if self._matchParams(angleClasses, inPlaneAngleType, reverseMatch=False):
+                    force.addBond([atom1, atom2, atom3, atom4], params)
                     break
 
 
@@ -340,7 +228,13 @@ class AmoebaOutOfPlaneBendForceBuilder(BaseAmoebaForceBuilder):
         self.sextic = sextic
         self.outOfPlaneBendParams = []
 
-    def registerOutOfPlaneBendParams(self, outOfPlaneBendType, params):
+    def _matchParams(self, atomClasses, paramClasses):
+        """Match atom classes with parameter classes for out-of-plane bends."""
+        at1, at2, at3, at4 = atomClasses
+        p1, p2, p3, p4 = paramClasses
+        return at1 == p1 and at2 == p2 and {at3, at4} == {at3 if p3 == "0" else p3, at4 if p4 == "0" else p4}
+      
+    def registerParams(self, outOfPlaneBendType, params):
         """Register out-of-plane bend parameters"""
         self.outOfPlaneBendParams.append((outOfPlaneBendType, params))
 
@@ -358,7 +252,7 @@ class AmoebaOutOfPlaneBendForceBuilder(BaseAmoebaForceBuilder):
             self.quartic,
             self.pentic,
             self.sextic,
-            180 / math.pi,
+            180.0 / math.pi,
         )
 
         def createForce():
@@ -372,15 +266,10 @@ class AmoebaOutOfPlaneBendForceBuilder(BaseAmoebaForceBuilder):
     def addOutOfPlaneBends(self, force, atomClasses, outOfPlaneBends):
         """Add out-of-plane bends to the force"""
         for atom1, atom2, atom3, atom4 in outOfPlaneBends:
-            # Find matching parameters
             for outOfPlaneBendType, params in self.outOfPlaneBendParams:
-                # Match out-of-plane bend type with atom classes
-                atomTypes = (atomClasses[atom1], atomClasses[atom2],
-                             atomClasses[atom3], atomClasses[atom4])
-                # Note: Out-of-plane bends typically don't reverse match
-                if self._matchParams(atomTypes, outOfPlaneBendType, reverseMatch=False):
-                    k = params[0]
-                    force.addBond([atom1, atom2, atom3, atom4], [k])
+                angleClasses = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3], atomClasses[atom4])
+                if self._matchParams(angleClasses, outOfPlaneBendType):
+                    force.addBond([atom1, atom2, atom3, atom4], params)
                     break
 
 
@@ -391,7 +280,7 @@ class AmoebaStretchBendForceBuilder(BaseAmoebaForceBuilder):
         super().__init__()
         self.stretchBendParams = []
 
-    def registerStretchBendParams(self, stretchBendType, params):
+    def registerParams(self, stretchBendType, params):
         """Register stretch-bend parameters"""
         self.stretchBendParams.append((stretchBendType, params))
 
@@ -425,6 +314,105 @@ class AmoebaStretchBendForceBuilder(BaseAmoebaForceBuilder):
                     force.addBond((atom1, atom2, atom3), (r12, r23, theta0, k1, k2))
                     break
 
+class AmoebaTorsionForceBuilder(BaseAmoebaForceBuilder):
+    """Builder for PeriodicTorsionForce force for AMOEBA force field"""
+
+    def __init__(self):
+        super().__init__()
+        self.torsionParams = []
+
+    def registerParams(self, torsionType, params):
+        """Register torsion parameters"""
+        self.torsionParams.append((torsionType, params))
+
+    def getForce(self, sys):
+        return self._createOrGetForce(sys, mm.PeriodicTorsionForce, mm.PeriodicTorsionForce)
+
+    def addTorsions(self, force, atomClasses, torsions):
+        """Add torsions to the force"""
+        for atom1, atom2, atom3, atom4 in torsions:
+            # Find matching parameters
+            for torsionType, params in self.torsionParams:
+                # Match torsion type with atom classes
+                atomTypes = (atomClasses[atom1], atomClasses[atom2],
+                             atomClasses[atom3], atomClasses[atom4])
+                if self._matchParams(atomTypes, torsionType):
+                    t1, t2, t3 = params
+                    if t1[0] != 0:
+                        force.addTorsion(atom1, atom2, atom3, atom4, 1, t1[1], t1[0])
+                    if t2[0] != 0:
+                        force.addTorsion(atom1, atom2, atom3, atom4, 2, t2[1], t2[0])
+                    if t3[0] != 0:
+                        force.addTorsion(atom1, atom2, atom3, atom4, 3, t3[1], t3[0])
+                    break
+
+
+class AmoebaPiTorsionForceBuilder(BaseAmoebaForceBuilder):
+    """Builder for PiTorsionForce force for AMOEBA force field"""
+
+    def __init__(self):
+        super().__init__()
+        self.piTorsionParams = []
+
+    def registerParams(self, piTorsionType, params):
+        """Register pi-torsion parameters"""
+        self.piTorsionParams.append((piTorsionType, params))
+
+    def getForce(self, sys):
+        energy = """2*k*sin(phi)^2;
+                    phi = pointdihedral(x3+c1x, y3+c1y, z3+c1z, x3, y3, z3, x4, y4, z4, x4+c2x, y4+c2y, z4+c2z);
+                    c1x = (d14y*d24z-d14z*d24y); c1y = (d14z*d24x-d14x*d24z); c1z = (d14x*d24y-d14y*d24x);
+                    c2x = (d53y*d63z-d53z*d63y); c2y = (d53z*d63x-d53x*d63z); c2z = (d53x*d63y-d53y*d63x);
+                    d14x = x1-x4; d14y = y1-y4; d14z = z1-z4;
+                    d24x = x2-x4; d24y = y2-y4; d24z = z2-z4;
+                    d53x = x5-x3; d53y = y5-y3; d53z = z5-z3;
+                    d63x = x6-x3; d63y = y6-y3; d63z = z6-z3"""
+
+        def createForce():
+            force = mm.CustomCompoundBondForce(6, energy)
+            force.addPerBondParameter("k")
+            force.setName("AmoebaPiTorsion")
+            return force
+
+        return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
+
+    def addPiTorsions(self, force, atomClasses, piTorsions):
+        """Add pi-torsions to the force"""
+        for atom1, atom2, atom3, atom4, atom5, atom6 in piTorsions:
+            for piTorsionType, params in self.piTorsionParams:
+                types = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3],
+                        atomClasses[atom4], atomClasses[atom5], atomClasses[atom6])
+                if types == piTorsionType:
+                    force.addBond([atom1, atom2, atom3, atom4, atom5, atom6], params)
+                    break
+
+
+class AmoebaUreyBradleyForceBuilder(BaseAmoebaForceBuilder):
+    """Builder for UreyBradleyForce force for AMOEBA force field"""
+
+    def __init__(self):
+        super().__init__()
+        self.ureyBradleyParams = []
+
+    def registerParams(self, ureyBradleyType, params):
+        """Register Urey-Bradley parameters"""
+        self.ureyBradleyParams.append((ureyBradleyType, params))
+
+    def getForce(self, sys):
+        return self._createOrGetForce(sys, mm.HarmonicBondForce, mm.HarmonicBondForce)
+
+    def addUreyBradleys(self, force, atomClasses, angles):
+        """Add Urey-Bradley terms to the force"""
+        for atom1, atom2, atom3 in angles:
+            # Find matching parameters
+            for ureyBradleyType, params in self.ureyBradleyParams:
+                # Match Urey-Bradley type with atom classes (1-3 interaction)
+                atomTypes = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3])
+                if self._matchParams(atomTypes, ureyBradleyType):
+                    k, d = params
+                    force.addBond(atom1, atom3, d, 2 * k)
+                    break
+
 
 class AmoebaTorsionTorsionForceBuilder(BaseAmoebaForceBuilder):
     """Builder for TorsionTorsion force for AMOEBA force field"""
@@ -434,7 +422,7 @@ class AmoebaTorsionTorsionForceBuilder(BaseAmoebaForceBuilder):
         self.torsionTorsionParams = []
         self.gridData = {}
 
-    def registerTorsionTorsionParams(self, torsionTorsionType, params):
+    def registerParams(self, torsionTorsionType, params):
         """Register torsion-torsion parameters"""
         self.torsionTorsionParams.append((torsionTorsionType, params))
 
@@ -711,7 +699,7 @@ class AmoebaWcaDispersionForceBuilder(BaseAmoebaForceBuilder):
         self.shctd = shctd
         self.classParams = {}
 
-    def registerClassParams(self, atomClass, radius, epsilon):
+    def registerParams(self, atomClass, radius, epsilon):
         """Register atom parameters for WCA dispersion"""
         self.classParams[atomClass] = (radius, epsilon)
 
@@ -740,12 +728,7 @@ class AmoebaWcaDispersionForceBuilder(BaseAmoebaForceBuilder):
 class AmoebaGeneralizedKirkwoodForceBuilder(BaseAmoebaForceBuilder):
     """Builder for Generalized Kirkwood force for AMOEBA force field"""
 
-    def __init__(self, 
-                 solventDielectric, 
-                 soluteDielectric, 
-                 includeCavityTerm,
-                 probeRadius, 
-                 surfaceAreaFactor):
+    def __init__(self, solventDielectric, soluteDielectric, includeCavityTerm, probeRadius, surfaceAreaFactor):
         super().__init__()
         self.solventDielectric = solventDielectric
         self.soluteDielectric = soluteDielectric
@@ -754,7 +737,7 @@ class AmoebaGeneralizedKirkwoodForceBuilder(BaseAmoebaForceBuilder):
         self.surfaceAreaFactor = surfaceAreaFactor
         self.atomParams = []
 
-    def registerAtomParams(self, charge):
+    def registerParams(self, charge):
         """Register atom parameters for GK force"""
         self.atomParams.append(charge)
 
@@ -941,8 +924,8 @@ class MultipoleParams(namedtuple('MultipoleParams', ['kIndices', 'charge', 'dipo
         kIndices[1] = abs(kz)
         kIndices[2] = abs(kx)
         kIndices[3] = abs(ky)
-        return tuple.__new__(cls, (kIndices, charge, dipole, quadrupole, axisType))
 
+        return tuple.__new__(cls, (kIndices, charge, dipole, quadrupole, axisType))
 
 PolarizationParams = namedtuple('PolarizationParams', ['polarizability', 'thole', 'groupAtomTypes'])
 
