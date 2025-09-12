@@ -263,6 +263,10 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
             localDipolesVec.push_back(0);
         for (int j = 0; j < 5; j++)
             localQuadrupolesVec.push_back(0);
+        if (cc.getUseDoublePrecision())
+            posqd[i] = mm_double4(0, 0, 0, 0);
+        else
+            posqf[i] = mm_float4(0, 0, 0, 0);
     }
     dampingAndThole.initialize<mm_float2>(cc, paddedNumAtoms, "dampingAndThole");
     polarizability.initialize<float>(cc, paddedNumAtoms, "polarizability");
