@@ -305,13 +305,10 @@ class AmoebaStretchBendForceBuilder(BaseAmoebaForceBuilder):
     def addStretchBends(self, force, atomClasses, angles):
         """Add stretch-bend terms to the force"""
         for atom1, atom2, atom3 in angles:
-            # Find matching parameters
             for stretchBendType, params in self.stretchBendParams:
-                # Match stretch-bend type with atom classes
                 atomTypes = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3])
                 if self._matchParams(atomTypes, stretchBendType):
-                    r12, r23, theta0, k1, k2 = params
-                    force.addBond((atom1, atom2, atom3), (r12, r23, theta0, k1, k2))
+                    force.addBond((atom1, atom2, atom3), params)
                     break
 
 class AmoebaTorsionForceBuilder(BaseAmoebaForceBuilder):
@@ -331,9 +328,7 @@ class AmoebaTorsionForceBuilder(BaseAmoebaForceBuilder):
     def addTorsions(self, force, atomClasses, torsions):
         """Add torsions to the force"""
         for atom1, atom2, atom3, atom4 in torsions:
-            # Find matching parameters
             for torsionType, params in self.torsionParams:
-                # Match torsion type with atom classes
                 atomTypes = (atomClasses[atom1], atomClasses[atom2],
                              atomClasses[atom3], atomClasses[atom4])
                 if self._matchParams(atomTypes, torsionType):
@@ -404,9 +399,7 @@ class AmoebaUreyBradleyForceBuilder(BaseAmoebaForceBuilder):
     def addUreyBradleys(self, force, atomClasses, angles):
         """Add Urey-Bradley terms to the force"""
         for atom1, atom2, atom3 in angles:
-            # Find matching parameters
             for ureyBradleyType, params in self.ureyBradleyParams:
-                # Match Urey-Bradley type with atom classes (1-3 interaction)
                 atomTypes = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3])
                 if self._matchParams(atomTypes, ureyBradleyType):
                     k, d = params
@@ -437,7 +430,6 @@ class AmoebaTorsionTorsionForceBuilder(BaseAmoebaForceBuilder):
 
         force = self._createOrGetForce(sys, mm.AmoebaTorsionTorsionForce, createForce)
 
-        # Set up grids after force creation
         for gridIndex, grid in self.gridData.items():
             force.setTorsionTorsionGrid(gridIndex, grid)
 
