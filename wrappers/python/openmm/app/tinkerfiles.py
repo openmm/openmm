@@ -510,7 +510,7 @@ class TinkerFiles:
             atomClasses[atom_idx] = self.atoms[atom_idx].atomClass
 
         # List of bonds as (atom1_index, atom2_index) used by various force builders
-        bonds = [(atom1.index, atom2.index) for atom1, atom2 in self.topology.bonds()]
+        bonds = [(at1.index, at2.index) for at1, at2 in self.topology.bonds()]
 
         # Add AmoebaBondForce
         if "bond" in self._forces:
@@ -524,9 +524,9 @@ class TinkerFiles:
         if "angle" in self._forces or "opbend" in self._forces or "anglep" in self._forces:
             # Find all unique angles
             bondedToAtom = [[] for _ in range(self.topology.getNumAtoms())]
-            for (atom1, atom2) in bonds:
-                bondedToAtom[atom1].append(atom2)
-                bondedToAtom[atom2].append(atom1)
+            for (at1, at2) in bonds:
+                bondedToAtom[at1].append(at2)
+                bondedToAtom[at2].append(at1)
 
             uniqueAngles = set()
             for atom in range(len(bondedToAtom)):
@@ -536,7 +536,6 @@ class TinkerFiles:
                         angle = (min(n1, n2), atom, max(n1, n2))
                         uniqueAngles.add(angle)
             angles = sorted(list(uniqueAngles))
-
 
             # Need to initialize here as used to create out-of-plane angles
             if "opbend" in self._forces:
@@ -810,23 +809,20 @@ class TinkerFiles:
                 piTorsionForceBuilder.registerParams((class1, class2), (params["k"]*piTorsionScale,))
 
             processedPiTorsions = []
-            for bond in self.topology.bonds():
-                idx1, idx2 = bond[0].index, bond[1].index
-                valence1 = len(self.atoms[idx1].bonds)
-                valence2 = len(self.atoms[idx2].bonds)
-
+            for (at1, at2) in bonds:
+                valence1 = len(self.atoms[at1].bonds)
+                valence2 = len(self.atoms[at2].bonds)
                 if valence1 == 3 and valence2 == 3:
-                    class1 = self.atoms[idx1].atomClass
-                    class2 = self.atoms[idx2].atomClass
+                    class1 = self.atoms[at1].atomClass
+                    class2 = self.atoms[at2].atomClass
                     params = piTorsionParams.get((class1, class2)) or piTorsionParams.get((class2, class1))
-
                     if params:
-                        piTorsionAtom3 = idx1
-                        piTorsionAtom4 = idx2
+                        piTorsionAtom3 = at1
+                        piTorsionAtom4 = at2
                         # piTorsionAtom1, piTorsionAtom2 are the atoms bonded to atom1, excluding atom2
                         # piTorsionAtom5, piTorsionAtom6 are the atoms bonded to atom2, excluding atom1
-                        piTorsionAtom1, piTorsionAtom2 = [bond for bond in self.atoms[idx1].bonds if bond != piTorsionAtom4]
-                        piTorsionAtom5, piTorsionAtom6 = [bond for bond in self.atoms[idx2].bonds if bond != piTorsionAtom3]
+                        piTorsionAtom1, piTorsionAtom2 = [bond for bond in self.atoms[at1].bonds if bond != piTorsionAtom4]
+                        piTorsionAtom5, piTorsionAtom6 = [bond for bond in self.atoms[at2].bonds if bond != piTorsionAtom3]
                         processedPiTorsions.append((piTorsionAtom1, piTorsionAtom2, piTorsionAtom3, piTorsionAtom4, piTorsionAtom5, piTorsionAtom6))
             
             if processedPiTorsions:
@@ -944,13 +940,13 @@ class TinkerFiles:
 
         # Adjust masses of hydrogens
         if hydrogenMass is not None:
-            for atom1, atom2 in self.topology.bonds():
-                if atom1.element == elem.hydrogen:
-                    (atom1, atom2) = (atom2, atom1)
-                if atom2.element == elem.hydrogen and atom1.element not in (elem.hydrogen, None):
-                    transferMass = hydrogenMass-sys.getParticleMass(atom2.index)
-                    sys.setParticleMass(atom2.index, hydrogenMass)
-                    sys.setParticleMass(atom1.index, sys.getParticleMass(atom1.index)-transferMass)
+            for at1, at2 in self.topology.bonds():
+                if at1.element == elem.hydrogen:
+                    (at1, at2) = (at2, at1)
+                if at2.element == elem.hydrogen and at1.element not in (elem.hydrogen, None):
+                    transferMass = hydrogenMass-sys.getParticleMass(at2.index)
+                    sys.setParticleMass(at2.index, hydrogenMass)
+                    sys.setParticleMass(at1.index, sys.getParticleMass(at1.index)-transferMass)
 
         # Add CMMotionRemover
         if removeCMMotion:
