@@ -913,7 +913,7 @@ class TinkerFiles:
             builder.addParticles(force, list(self.topology.atoms()), bonds)
 
         # Add AmoebaWcaDispersionForce
-        if "vdw" in self._forces:
+        if implicitSolvent and "vdw" in self._forces:
             wcaDispersionForce = AmoebaWcaDispersionForceBuilder(**self.WCA_PARAMS)
             convert = 0.1
             if self._scalars["radiustype"] == "SIGMA":
