@@ -36,7 +36,7 @@ from collections import defaultdict, namedtuple
 import openmm as mm
 import openmm.app.forcefield as ff
 from openmm.app import element
-from openmm.unit import amu
+from openmm.unit import amu, radian
 
 
 class BaseAmoebaForceBuilder:
@@ -310,6 +310,159 @@ class AmoebaStretchBendForceBuilder(BaseAmoebaForceBuilder):
                 if self._matchParams(atomTypes, stretchBendType):
                     force.addBond((atom1, atom2, atom3), params)
                     break
+
+
+class AmoebaStretchTorsionForceBuilder(BaseAmoebaForceBuilder):
+    """Builder for StretchTorsionForce force for AMOEBA force field"""
+
+    def __init__(self):
+        super().__init__()
+        self.stretchTorsionParams = []
+
+    def registerParams(self, stretchTorsionType, params):
+        """Register stretch-torsion parameters"""
+        self.stretchTorsionParams.append((stretchTorsionType, params))
+
+    def getForce(self, sys):
+        energy = """v11*(distance(p1,p2)-length1)*phi1 +
+                    v12*(distance(p1,p2)-length1)*phi2 +
+                    v13*(distance(p1,p2)-length1)*phi3 +
+                    v21*(distance(p2,p3)-length2)*phi1 +
+                    v22*(distance(p2,p3)-length2)*phi2 +
+                    v23*(distance(p2,p3)-length2)*phi3 +
+                    v31*(distance(p3,p4)-length3)*phi1 +
+                    v32*(distance(p3,p4)-length3)*phi2 +
+                    v33*(distance(p3,p4)-length3)*phi3;
+                    phi1=1+cos(phi+phase1); phi2=1+cos(2*phi+phase2); phi3=1+cos(3*phi+phase3);
+                    phi=dihedral(p1,p2,p3,p4)"""
+
+        def createForce():
+            force = mm.CustomCompoundBondForce(4, energy)
+            for param in ('v11', 'v12', 'v13', 'v21', 'v22', 'v23', 'v31', 'v32', 'v33'):
+                force.addPerBondParameter(param)
+            for i in range(3):
+                force.addPerBondParameter(f'length{i+1}')
+            for i in range(3):
+                force.addPerBondParameter(f'phase{i+1}')
+            force.setName('AmoebaStretchTorsion')
+            return force
+
+        return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
+
+    def addStretchTorsions(self, sys, force, atomClasses, torsions):
+        """Add stretch-torsion terms to the force"""
+
+        # Record parameters for bonds and torsions so we can look them up quickly.
+
+        bondForce = [f for f in sys.getForces() if type(f) == mm.CustomBondForce and f.getName() == 'AmoebaBond'][0]
+        torsionForce = [f for f in sys.getForces() if type(f) == mm.PeriodicTorsionForce][0]
+        bondLength = {}
+        torsionPhase = defaultdict(lambda: [0.0, math.pi, 0.0])
+        for i in range(bondForce.getNumBonds()):
+            p1, p2, params = bondForce.getBondParameters(i)
+            bondLength[(p1, p2)] = params[0]
+            bondLength[(p2, p1)] = params[0]
+        for i in range(torsionForce.getNumTorsions()):
+            p1, p2, p3, p4, periodicity, phase, k = torsionForce.getTorsionParameters(i)
+            if periodicity < 4:
+                phase = phase.value_in_unit(radian)
+                torsionPhase[(p1, p2, p3, p4)][periodicity-1] = phase
+                torsionPhase[(p4, p3, p2, p1)][periodicity-1] = phase
+
+        # Add stretch-torsions.
+
+        for torsion in torsions:
+            atom1, atom2, atom3, atom4 = torsion
+            atomTypes = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3], atomClasses[atom4])
+            for torsionType, params in self.stretchTorsionParams:
+                if self._matchParams(atomTypes, torsionType):
+                    if atomTypes == tuple(reversed(torsionType)):
+                        atom1, atom2, atom3, atom4 = atom4, atom3, atom2, atom1
+                    params = list(params)
+                    params.append(bondLength[(atom1, atom2)])
+                    params.append(bondLength[(atom2, atom3)])
+                    params.append(bondLength[(atom3, atom4)])
+                    params += torsionPhase[torsion]
+                    force.addBond((atom1, atom2, atom3, atom4), params)
+                    break
+
+
+class AmoebaAngleTorsionForceBuilder(BaseAmoebaForceBuilder):
+    """Builder for AngleTorsionForce force for AMOEBA force field"""
+
+    def __init__(self):
+        super().__init__()
+        self.angleTorsionParams = []
+
+    def registerParams(self, angleTorsionType, params):
+        """Register angle-torsion parameters"""
+        self.angleTorsionParams.append((angleTorsionType, params))
+
+    def getForce(self, sys):
+        energy = """v11*(angle(p1,p2,p3)-angle1)*phi1 +
+                    v12*(angle(p1,p2,p3)-angle1)*phi2 +
+                    v13*(angle(p1,p2,p3)-angle1)*phi3 +
+                    v21*(angle(p2,p3,p4)-angle2)*phi1 +
+                    v22*(angle(p2,p3,p4)-angle2)*phi2 +
+                    v23*(angle(p2,p3,p4)-angle2)*phi3;
+                    phi1=1+cos(phi+phase1); phi2=1+cos(2*phi+phase2); phi3=1+cos(3*phi+phase3);
+                    phi=dihedral(p1,p2,p3,p4)"""
+
+        def createForce():
+            force = mm.CustomCompoundBondForce(4, energy)
+            for param in ('v11', 'v12', 'v13', 'v21', 'v22', 'v23'):
+                force.addPerBondParameter(param)
+            for i in range(2):
+                force.addPerBondParameter(f'angle{i+1}')
+            for i in range(3):
+                force.addPerBondParameter(f'phase{i+1}')
+            force.setName('AmoebaAngleTorsion')
+            return force
+
+        return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
+
+    def addAngleTorsions(self, sys, force, atomClasses, torsions):
+        """Add angle-torsion terms to the force"""
+
+        # Record parameters for angles and torsions so we can look them up quickly.
+
+        angleForce = [f for f in sys.getForces() if type(f) == mm.CustomAngleForce and f.getName() == 'AmoebaAngle'][0]
+        inPlaneAngleForce = [f for f in sys.getForces() if type(f) == mm.CustomCompoundBondForce and f.getName() == 'AmoebaInPlaneAngle'][0]
+        torsionForce = [f for f in sys.getForces() if type(f) == mm.PeriodicTorsionForce][0]
+        equilAngle = {}
+        torsionPhase = defaultdict(lambda: [0.0, math.pi, 0.0])
+        angleScale = math.pi/180
+        for i in range(angleForce.getNumAngles()):
+            p1, p2, p3, params = angleForce.getAngleParameters(i)
+            equilAngle[(p1, p2, p3)] = params[0]*angleScale
+            equilAngle[(p3, p2, p1)] = params[0]*angleScale
+        for i in range(inPlaneAngleForce.getNumBonds()):
+            particles, params = inPlaneAngleForce.getBondParameters(i)
+            equilAngle[tuple(particles[:3])] = params[0]*angleScale
+            equilAngle[tuple(reversed(particles[:3]))] = params[0]*angleScale
+        for i in range(torsionForce.getNumTorsions()):
+            p1, p2, p3, p4, periodicity, phase, k = torsionForce.getTorsionParameters(i)
+            if periodicity < 4:
+                phase = phase.value_in_unit(radian)
+                torsionPhase[(p1, p2, p3, p4)][periodicity-1] = phase
+                torsionPhase[(p4, p3, p2, p1)][periodicity-1] = phase
+
+        # Add angle-torsions.
+
+        for torsion in torsions:
+            atom1, atom2, atom3, atom4 = torsion
+            atomTypes = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3], atomClasses[atom4])
+            for torsionType, params in self.angleTorsionParams:
+                if self._matchParams(atomTypes, torsionType):
+                    if atomTypes == tuple(reversed(torsionType)):
+                        atom1, atom2, atom3, atom4 = atom4, atom3, atom2, atom1
+                    params = list(params)
+                    params.append(equilAngle[(atom1, atom2, atom3)])
+                    params.append(equilAngle[(atom2, atom3, atom4)])
+                    params += torsionPhase[torsion]
+                    force.addBond((atom1, atom2, atom3, atom4), params)
+                    break
+
 
 class AmoebaTorsionForceBuilder(BaseAmoebaForceBuilder):
     """Builder for PeriodicTorsionForce force for AMOEBA force field"""
