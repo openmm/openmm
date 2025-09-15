@@ -611,11 +611,12 @@ class TinkerFiles:
             )
 
             # Add AmoebaOutOfPlaneBendForce
-            outOfPlaneBendForceBuilder = AmoebaOutOfPlaneBendForceBuilder(float(self._scalars["opbend-cubic"]), float(self._scalars["opbend-quartic"]), float(self._scalars["opbend-pentic"]), float(self._scalars["opbend-sextic"]))
-            for (class1, class2, class3, class4), params in opbendParams.items():
-                outOfPlaneBendForceBuilder.registerParams((class1, class2, class3, class4), (params["k"]*4.184*(math.pi/180.0)**2,))
-            outOfPlaneBendForce = outOfPlaneBendForceBuilder.getForce(sys)
-            outOfPlaneBendForceBuilder.addOutOfPlaneBends(outOfPlaneBendForce, atomClasses, outOfPlaneAngles)
+            if outOfPlaneAngles:
+                outOfPlaneBendForceBuilder = AmoebaOutOfPlaneBendForceBuilder(float(self._scalars["opbend-cubic"]), float(self._scalars["opbend-quartic"]), float(self._scalars["opbend-pentic"]), float(self._scalars["opbend-sextic"]))
+                for (class1, class2, class3, class4), params in opbendParams.items():
+                    outOfPlaneBendForceBuilder.registerParams((class1, class2, class3, class4), (params["k"]*4.184*(math.pi/180.0)**2,))
+                outOfPlaneBendForce = outOfPlaneBendForceBuilder.getForce(sys)
+                outOfPlaneBendForceBuilder.addOutOfPlaneBends(outOfPlaneBendForce, atomClasses, outOfPlaneAngles)
 
             # Add AmoebaAngleForce
             angleParams = {(at1, at2, at3): {"k": float(k), "theta0": [float(theta) for theta in theta]} for at1, at2, at3, k, *theta in self._forces["angle"]}
@@ -910,55 +911,55 @@ class TinkerFiles:
                                 grid[x].append([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
                         else:
                             grid[x].append([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-
                 torsionTorsionForce.registerGridData(gridIndex, grid)
             force = torsionTorsionForce.getForce(sys)
             AmoebaTorsionTorsionForceBuilder.createTorsionTorsionInteractions(force, angles, self.atoms, self._forces["tortors"])
     
         # Add AmoebaVdwForce
         if "vdw" in self._forces:
-            builder = AmoebaVdwForceBuilder(self._scalars['vdwtype'], self._scalars['radiusrule'], self._scalars['radiustype'],
+            vdwForceBuilder = AmoebaVdwForceBuilder(self._scalars['vdwtype'], self._scalars['radiusrule'], self._scalars['radiustype'],
                                             self._scalars['radiussize'], self._scalars['epsilonrule'], float(self._scalars['vdw-13-scale']),
                                             float(self._scalars['vdw-14-scale']), float(self._scalars['vdw-15-scale']))
             for params in self._forces['vdw']:
                 reduction = 0.0 if len(params) < 4 else float(params[3])
-                builder.registerClassParams(int(params[0]), float(params[1])*0.1, float(params[2])*4.184, reduction)
+                vdwForceBuilder.registerClassParams(int(params[0]), float(params[1])*0.1, float(params[2])*4.184, reduction)
             pairs = self._forces.get('vdwpair', None)
             if pairs is None:
                 pairs = self._forces.get('vdwpr', None)
             if pairs is not None:
                 for params in pairs:
-                    builder.registerPairParams(int(params[0]), int(params[1]), float(params[2])*0.1, float(params[3])*4.184)
-            force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff if vdwCutoff is None else vdwCutoff, True)
+                    vdwForceBuilder.registerPairParams(int(params[0]), int(params[1]), float(params[2])*0.1, float(params[3])*4.184)
+            vdwForce = vdwForceBuilder.getForce(sys, nonbondedMethod, nonbondedCutoff if vdwCutoff is None else vdwCutoff, True)
             atomClasses = [int(atom.atomClass) for atom in self.atoms]
-            builder.addParticles(force, atomClasses, list(self.topology.atoms()), bonds)
+            vdwForceBuilder.addParticles(vdwForce, atomClasses, list(self.topology.atoms()), bonds)
 
         # Add AmoebaMultipoleForce
         if "multipole" in self._forces:
-            builder = AmoebaMultipoleForceBuilder()
+            multipoleForceBuilder = AmoebaMultipoleForceBuilder()
             for atType, axis, charge, dipole, quadrupole in self._forces["multipole"]:
                 kIndices = [atType] + axis
                 q = [quadrupole[i] for i in (0, 1, 3, 1, 2, 4, 3, 4, 5)]
-                builder.registerMultipoleParams(atType, MultipoleParams(kIndices, charge, dipole, q))
+                multipoleForceBuilder.registerMultipoleParams(atType, MultipoleParams(kIndices, charge, dipole, q))
             for atType, polarizability, thole, group in self._forces["polarize"]:
-                builder.registerPolarizationParams(atType, PolarizationParams(polarizability*0.001, thole, group))
-            force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff, ewaldErrorTolerance, polarization, mutualInducedTargetEpsilon, 60)
+                multipoleForceBuilder.registerPolarizationParams(atType, PolarizationParams(polarizability*0.001, thole, group))
+            multipoleForce = multipoleForceBuilder.getForce(sys, nonbondedMethod, nonbondedCutoff, ewaldErrorTolerance, polarization, mutualInducedTargetEpsilon, 60)
             atomTypes = [int(atom.atomType) for atom in self.atoms]
-            builder.addMultipoles(force, atomTypes, list(self.topology.atoms()), bonds)
+            multipoleForceBuilder.addMultipoles(multipoleForce, atomTypes, list(self.topology.atoms()), bonds)
 
         # Add AmoebaGeneralizedKirkwoodForce
         if implicitSolvent and "multipole" in self._forces:
-            builder = AmoebaGeneralizedKirkwoodForceBuilder(**self.GK_PARAMS)
-            force = builder.getForce(sys, implicitSolvent=implicitSolvent)
+            gkForceBuilder = AmoebaGeneralizedKirkwoodForceBuilder(**self.GK_PARAMS)
+            force = gkForceBuilder.getForce(sys, implicitSolvent=implicitSolvent)
             multipoleForce = [f for f in sys.getForces() if isinstance(f, mm.AmoebaMultipoleForce)][0]
             for atomIndex in range(0, multipoleForce.getNumMultipoles()):
                 multipoleParameters = multipoleForce.getMultipoleParameters(atomIndex)
-                builder.registerParams(multipoleParameters[0])
-            builder.addParticles(force, list(self.topology.atoms()), bonds)
+                gkForceBuilder.registerParams(multipoleParameters[0])
+            gkForce = gkForceBuilder.getForce(sys, implicitSolvent=implicitSolvent)
+            gkForceBuilder.addParticles(gkForce, list(self.topology.atoms()), bonds)
 
         # Add AmoebaWcaDispersionForce
         if implicitSolvent and "vdw" in self._forces:
-            wcaDispersionForce = AmoebaWcaDispersionForceBuilder(**self.WCA_PARAMS)
+            wcaDispersionForceBuilder = AmoebaWcaDispersionForceBuilder(**self.WCA_PARAMS)
             convert = 0.1
             if self._scalars["radiustype"] == "SIGMA":
                 convert *= 1.122462048309372
@@ -969,11 +970,11 @@ class TinkerFiles:
                 atomClass = int(vdw[0])
                 sigma = float(vdw[1])*convert
                 epsilon = float(vdw[2])*4.184
-                wcaDispersionForce.registerParams(atomClass, sigma, epsilon)
+                wcaDispersionForceBuilder.registerParams(atomClass, sigma, epsilon)
 
-            force = wcaDispersionForce.getForce(sys)
+            wcaDispersionForce = wcaDispersionForceBuilder.getForce(sys)
             atomClasses = [int(atom.atomClass) for atom in self.atoms]
-            wcaDispersionForce.addParticles(force, atomClasses)
+            wcaDispersionForceBuilder.addParticles(wcaDispersionForce, atomClasses)
 
         # Set periodic boundary conditions
         boxVectors = self.topology.getPeriodicBoxVectors()
@@ -1369,49 +1370,34 @@ class TinkerFiles:
         # Get all bitorsions in the molecule
         bitorsions = TinkerFiles._findBitorsions(atoms)
         for ia, ib, ic, id, ie in bitorsions:
-            if any(atom in seenAtoms for atom in [ib, ic, id]):
-                continue
-
             if atomIndex is not None and atomIndex not in [ib, ic, id]:
                 continue
 
             # Check for N/C-terminal cap groups (ACE, NME)
             capAtoms = TinkerFiles._checkCapGroup(ia, ib, ic, id, ie, atoms)
             if capAtoms is not None:
-                # Collect all atoms in the cap group including hydrogens
-                allAtoms = set(capAtoms)
-                for atom in capAtoms:
-                    allAtoms.update(atoms[atom].bonds)
-                allAtoms = sorted(list(allAtoms))
+                allAtoms = sorted(list(capAtoms))
                 seenAtoms.update(allAtoms)
-                # Determine if it's an acetyl (ACE) or N-methyl (NME) cap
-                residues.append(
-                    (allAtoms, "ACE" if atoms[ia].atomicNumber == 6 else "NME")
-                )
+                residues.append((allAtoms, "ACE" if atoms[ia].atomicNumber == 6 else "NME"))
+                continue
+      
+            if any(atom in seenAtoms for atom in [ib, ic, id]):
                 continue
 
             # Backbone pattern
             if TinkerFiles._checkBackbonePattern(ia, ib, ic, id, ie, atoms):
-                residueLabel, sideChain = TinkerFiles._identifyAminoAcid(
-                    ic, ib, id, atoms
-                )
+                residueLabel, sideChain = TinkerFiles._identifyAminoAcid(ic, ib, id, atoms)
                 if residueLabel:
-                    residueAtoms = TinkerFiles._collectResidueAtoms(
-                        ic, ib, id, sideChain, atoms
-                    )
+                    residueAtoms = TinkerFiles._collectResidueAtoms(ic, ib, id, sideChain, atoms)
                     seenAtoms.update(residueAtoms)
                     residues.append((residueAtoms, residueLabel))
                 continue
 
             # Terminal pattern
             if TinkerFiles._checkTerminalPattern(ia, ib, ic, id, ie, atoms):
-                residueLabel, sideChain = TinkerFiles._identifyAminoAcid(
-                    ic, ib, id, atoms
-                )
+                residueLabel, sideChain = TinkerFiles._identifyAminoAcid(ic, ib, id, atoms)
                 if residueLabel:
-                    residueAtoms = TinkerFiles._collectResidueAtoms(
-                        ic, ib, id, sideChain, atoms
-                    )
+                    residueAtoms = TinkerFiles._collectResidueAtoms(ic, ib, id, sideChain, atoms)
                     seenAtoms.update(residueAtoms)
                     residues.append((residueAtoms, residueLabel))
                 continue
@@ -1591,6 +1577,17 @@ class TinkerFiles:
             and atomC.atomicNumber == 7
             and atomD.atomicNumber == 6
             and atomE.atomicNumber == 6
+        ) or (
+            len(atomA.bonds) == 3
+            and len(atomB.bonds) == 4
+            and len(atomC.bonds) == 3
+            and len(atomD.bonds) == 3
+            and len(atomE.bonds) == 4
+            and atomA.atomicNumber == 6
+            and atomB.atomicNumber == 6
+            and atomC.atomicNumber == 7
+            and atomD.atomicNumber == 6
+            and atomE.atomicNumber == 6
         ):
             # Count hydrogens on first carbon
             nHyd = sum(1 for bond in atomA.bonds if atoms[bond].atomicNumber == 1)
@@ -1610,10 +1607,21 @@ class TinkerFiles:
             len(atomA.bonds) == 3
             and len(atomB.bonds) == 4
             and len(atomC.bonds) == 3
-            and len(atomD.bonds) == 4
-            and len(atomE.bonds) == 3
+            and len(atomD.bonds) == 3
+            and len(atomE.bonds) == 4
             and atomA.atomicNumber == 7
             and atomB.atomicNumber == 6
+            and atomC.atomicNumber == 6
+            and atomD.atomicNumber == 7
+            and atomE.atomicNumber == 6
+        ) or (
+            len(atomA.bonds) == 4
+            and len(atomB.bonds) == 3
+            and len(atomC.bonds) == 3
+            and len(atomD.bonds) == 4
+            and len(atomE.bonds) == 3
+            and atomA.atomicNumber == 6
+            and atomB.atomicNumber == 7
             and atomC.atomicNumber == 6
             and atomD.atomicNumber == 6
             and atomE.atomicNumber == 7
