@@ -2364,9 +2364,9 @@ class TinkerFiles:
 
             # Set final nucleotide label
             if nucleotideAtoms["io9"] != 0:
-                label = "  G" if not deoxy else " DG"
+                label = "G" if not deoxy else "DG"
             elif nucleotideAtoms["in9"] != 0:
-                label = "  A" if not deoxy else " DA"
+                label = "A" if not deoxy else "DA"
 
         # For pyrimidines: uracil (U), cytosine (C), or thymine (T)
         elif baseType == "PYR":
@@ -2395,7 +2395,7 @@ class TinkerFiles:
                         nucleotideAtoms["io4"] = bond
 
             # Default to uracil
-            label = "  U"
+            label = "U"
 
             # Check if cytosine (has N-H)
             if (
@@ -2403,7 +2403,7 @@ class TinkerFiles:
                 and len(atoms[nucleotideAtoms["in5"]].bonds) == 2
             ):
                 # Cytosine identified by N5 with 2 bonds
-                label = "  C" if not deoxy else " DC"
+                label = "C" if not deoxy else "DC"
 
             # Check if thymine (has methyl group)
             if nucleotideAtoms["ic3"] != 0:
@@ -2424,7 +2424,7 @@ class TinkerFiles:
                             methylHydrogens >= 2
                         ):  # Should be 3, but allow some flexibility
                             nucleotideAtoms["icm"] = bond
-                            label = "  T" if not deoxy else " DT"
+                            label = "T" if not deoxy else "DT"
         else:
             raise ValueError(
                 f"Could not identify base type for nucleotide with bitorsion {ia}, {ib}, {ic}, {id}, {ie}"
