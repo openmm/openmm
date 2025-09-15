@@ -170,11 +170,10 @@ class TestTinkerFiles(unittest.TestCase):
         # Define mapping between positions of the .xyz file created using
         # pdbxyz alanine-dipeptide-implicit.pdb
         # and the original .pdb file.
-        # fmt: off
         mapping = {1: 4, 2: 1, 3: 5, 4: 6, 5: 2, 6: 3, 7: 7, 8: 11, 
                    9: 8, 10: 12, 11: 13, 12: 14, 13: 15, 14: 16, 15: 9, 
                    16: 10, 17: 17, 18: 19, 19: 18, 20: 20, 21: 21, 22: 22 
-        } #fmt: on
+        }
 
         xyzFile = 'systems/alanine-dipeptide-implicit.xyz'
         keyFiles = ['systems/amoebapro13.prm']
@@ -185,6 +184,11 @@ class TestTinkerFiles(unittest.TestCase):
                                      implicitSolvent=True,
         )
 
+        # Assert residues are correct
+        residues = [residue.name for residue in tinker.topology.residues()]
+        assert residues == ['ACE', 'ALA', 'NME'], f'Unexpected residues: {residues}'
+
+        # Compute the forces with OpenMM
         integrator = VerletIntegrator(0.001)
         context = Context(system, integrator, Platform.getPlatform('Reference'))
         context.setPositions(tinker.getPositions())
