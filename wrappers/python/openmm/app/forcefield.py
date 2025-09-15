@@ -4240,6 +4240,7 @@ class AmoebaStretchTorsionGenerator(object):
             if None not in types:
                 v = [float(torsion.attrib[param]) for param in params]
                 generator.torsions.append((types, v))
+        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         pass
@@ -4248,29 +4249,8 @@ class AmoebaStretchTorsionGenerator(object):
         # We need to wait until after all bonds and torsions have been added before adding the stretch-torsions,
         # since it needs parameters from them.
 
-        energy = """v11*(distance(p1,p2)-length1)*phi1 +
-                    v12*(distance(p1,p2)-length1)*phi2 +
-                    v13*(distance(p1,p2)-length1)*phi3 +
-                    v21*(distance(p2,p3)-length2)*phi1 +
-                    v22*(distance(p2,p3)-length2)*phi2 +
-                    v23*(distance(p2,p3)-length2)*phi3 +
-                    v31*(distance(p3,p4)-length3)*phi1 +
-                    v32*(distance(p3,p4)-length3)*phi2 +
-                    v33*(distance(p3,p4)-length3)*phi3;
-                    phi1=1+cos(phi+phase1); phi2=1+cos(2*phi+phase2); phi3=1+cos(3*phi+phase3);
-                    phi=dihedral(p1,p2,p3,p4)"""
-        existing = [f for f in sys.getForces() if type(f) == mm.CustomCompoundBondForce and f.getEnergyFunction() == energy]
-        if len(existing) == 0:
-            force = mm.CustomCompoundBondForce(4, energy)
-            for param in ('v11', 'v12', 'v13', 'v21', 'v22', 'v23', 'v31', 'v32', 'v33'):
-                force.addPerBondParameter(param)
-            for i in range(3):
-                force.addPerBondParameter(f'length{i+1}')
-            for i in range(3):
-                force.addPerBondParameter(f'phase{i+1}')
-            force.setName('AmoebaStretchTorsion')
-        else:
-            force = existing[0]
+        builder = amoebaforces.AmoebaStretchTorsionForceBuilder()
+        force = builder.getForce(sys)
 
         # Record parameters for bonds and torsions so we can look them up quickly.
 
@@ -4308,8 +4288,6 @@ class AmoebaStretchTorsionGenerator(object):
                     params += torsionPhase[torsion]
                     force.addBond(torsion, params)
                     break
-        if len(existing) == 0 and force.getNumBonds() > 0:
-            sys.addForce(force)
 
 parsers["AmoebaStretchTorsionForce"] = AmoebaStretchTorsionGenerator.parseElement
 
@@ -4339,26 +4317,8 @@ class AmoebaAngleTorsionGenerator(object):
         # We need to wait until after all angles and torsions have been added before adding the angle-torsions,
         # since it needs parameters from them.
 
-        energy = """v11*(angle(p1,p2,p3)-angle1)*phi1 +
-                    v12*(angle(p1,p2,p3)-angle1)*phi2 +
-                    v13*(angle(p1,p2,p3)-angle1)*phi3 +
-                    v21*(angle(p2,p3,p4)-angle2)*phi1 +
-                    v22*(angle(p2,p3,p4)-angle2)*phi2 +
-                    v23*(angle(p2,p3,p4)-angle2)*phi3;
-                    phi1=1+cos(phi+phase1); phi2=1+cos(2*phi+phase2); phi3=1+cos(3*phi+phase3);
-                    phi=dihedral(p1,p2,p3,p4)"""
-        existing = [f for f in sys.getForces() if type(f) == mm.CustomCompoundBondForce and f.getEnergyFunction() == energy]
-        if len(existing) == 0:
-            force = mm.CustomCompoundBondForce(4, energy)
-            for param in ('v11', 'v12', 'v13', 'v21', 'v22', 'v23'):
-                force.addPerBondParameter(param)
-            for i in range(2):
-                force.addPerBondParameter(f'angle{i+1}')
-            for i in range(3):
-                force.addPerBondParameter(f'phase{i+1}')
-            force.setName('AmoebaAngleTorsion')
-        else:
-            force = existing[0]
+        builder = amoebaforces.AmoebaAngleTorsionForceBuilder()
+        force = builder.getForce(sys)
 
         # Record parameters for angles and torsions so we can look them up quickly.
 
@@ -4401,8 +4361,6 @@ class AmoebaAngleTorsionGenerator(object):
                     params += torsionPhase[torsion]
                     force.addBond(torsion, params)
                     break
-        if len(existing) == 0 and force.getNumBonds() > 0:
-            sys.addForce(force)
 
 parsers["AmoebaAngleTorsionForce"] = AmoebaAngleTorsionGenerator.parseElement
 

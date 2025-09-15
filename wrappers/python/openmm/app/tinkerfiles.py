@@ -278,8 +278,8 @@ class TinkerFiles:
             "opbend": 1,
             "torsion": 1,
             "pitors": 1,
-            "strtor": 1,
-            "angtor": 1,
+            "strtors": 1,
+            "angtors": 1,
             "vdw": 1,
             "vdwpair": 1,
             "vdwpr": 1,
@@ -302,6 +302,8 @@ class TinkerFiles:
             "opbend-pentic": "-0.0000007",
             "opbend-sextic": "0.000000022",
             "pitorsunit": "1.0",
+            "angtorunit": "1.0",
+            "strtorunit": "1.0",
             "torsionunit": "1.0",
             "vdwtype": "BUFFERED-14-7",
             "radiusrule": "CUBIC-MEAN",
@@ -490,6 +492,8 @@ class TinkerFiles:
             AmoebaStretchBendForceBuilder,
             AmoebaTorsionForceBuilder,
             AmoebaPiTorsionForceBuilder,
+            AmoebaStretchTorsionForceBuilder,
+            AmoebaAngleTorsionForceBuilder,
             AmoebaTorsionTorsionForceBuilder,
             AmoebaWcaDispersionForceBuilder,
             AmoebaGeneralizedKirkwoodForceBuilder,
@@ -828,7 +832,47 @@ class TinkerFiles:
             if processedPiTorsions:
                 piTorsionForce = piTorsionForceBuilder.getForce(sys)
                 piTorsionForceBuilder.addPiTorsions(piTorsionForce, atomClasses, processedPiTorsions)
-   
+
+        # Add AmoebaStretchTorsionForce
+        if "strtors" in self._forces:
+            stretchTorsionScale = float(self._scalars["strtorunit"])*10*4.184
+            stretchTorsionParams = {(p[0], p[1], p[2], p[3]): [float(x)*stretchTorsionScale for x in p[4:]] for p in self._forces["strtors"]}
+            stretchTorsionForceBuilder = AmoebaStretchTorsionForceBuilder()
+            for classes, params in stretchTorsionParams.items():
+                stretchTorsionForceBuilder.registerParams(classes, params)
+            processedStretchTorsions = []
+            for idx1, idx2, idx3, idx4 in propers:
+                class1 = self.atoms[idx1].atomClass
+                class2 = self.atoms[idx2].atomClass
+                class3 = self.atoms[idx3].atomClass
+                class4 = self.atoms[idx4].atomClass
+                params = stretchTorsionParams.get((class1, class2, class3, class4)) or stretchTorsionParams.get((class4, class3, class2, class1))
+                if params:
+                    processedStretchTorsions.append((idx1, idx2, idx3, idx4))
+            if processedStretchTorsions:
+                stretchTorsionForce = stretchTorsionForceBuilder.getForce(sys)
+                stretchTorsionForceBuilder.addStretchTorsions(sys, stretchTorsionForce, atomClasses, processedStretchTorsions)
+
+        # Add AmoebaAngleTorsionForce
+        if "angtors" in self._forces:
+            angleTorsionScale = float(self._scalars["angtorunit"])*4.184
+            angleTorsionParams = {(p[0], p[1], p[2], p[3]): [float(x)*angleTorsionScale for x in p[4:]] for p in self._forces["angtors"]}
+            angleTorsionForceBuilder = AmoebaAngleTorsionForceBuilder()
+            for classes, params in angleTorsionParams.items():
+                angleTorsionForceBuilder.registerParams(classes, params)
+            processedAngleTorsions = []
+            for idx1, idx2, idx3, idx4 in propers:
+                class1 = self.atoms[idx1].atomClass
+                class2 = self.atoms[idx2].atomClass
+                class3 = self.atoms[idx3].atomClass
+                class4 = self.atoms[idx4].atomClass
+                params = angleTorsionParams.get((class1, class2, class3, class4)) or angleTorsionParams.get((class4, class3, class2, class1))
+                if params:
+                    processedAngleTorsions.append((idx1, idx2, idx3, idx4))
+            if processedAngleTorsions:
+                angleTorsionForce = angleTorsionForceBuilder.getForce(sys)
+                angleTorsionForceBuilder.addAngleTorsions(sys, angleTorsionForce, atomClasses, processedAngleTorsions)
+
         # Add AmoebaTorsionTorsionForce
         if "tortors" in self._forces:
             torsionTorsionForce = AmoebaTorsionTorsionForceBuilder()
