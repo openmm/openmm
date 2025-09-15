@@ -631,7 +631,6 @@ class TinkerFiles:
                     class3 = atomClasses[angle[2]]
                     params = angleParams.get((class1, class2, class3)) or angleParams.get((class3, class2, class1))
                     if params:
-                        paramKey = (class1, class2, class3)
                         if len(params["theta0"]) > 1:
                             # Get k-index by counting number of non-angle hydrogens on the central atom
                             partners = [at for at in bondedToAtom[angle[1]] if at not in angle]
@@ -642,14 +641,13 @@ class TinkerFiles:
                                 raise ValueError(f"Angle parameters out of range for atom classes {class1}-{class2}-{class3}")
                         else:
                             theta0 = params["theta0"][0]
-                        idealAngles[tuple(angle)] = theta0 # Store ideal angle for stretch-bend
-                        if paramKey not in processedParams:
-                            angleForceBuilder.registerParams(paramKey, (theta0, params["k"]*4.184*(math.pi/180)**2))
-                            processedParams.add(paramKey)
-                        processedAngles.append((angle[0], angle[1], angle[2]))
+                        angleTuple = (angle[0], angle[1], angle[2])
+                        idealAngles[angleTuple] = theta0 # Store ideal angle for stretch-bend
+                        angleForceBuilder.registerParams(angleTuple, (theta0, params["k"]*4.184*(math.pi/180)**2))
+                        processedAngles.append(angleTuple)
                 if processedAngles:
                     angleForce = angleForceBuilder.getForce(sys)
-                    angleForceBuilder.addAngles(angleForce, atomClasses, processedAngles)
+                    angleForceBuilder.addAngles(angleForce, processedAngles)
 
             # Add AmoebaInPlaneAngleForce
             if "anglep" in self._forces:
@@ -730,7 +728,7 @@ class TinkerFiles:
         
             if processedAngles:
                 stretchBendForce = stretchBendForceBuilder.getForce(sys)
-                stretchBendForceBuilder.addStretchBends(stretchBendForce, atomClasses, processedAngles)
+                stretchBendForceBuilder.addStretchBends(stretchBendForce, processedAngles)
      
         # Add AMOEBA Urey-Bradley force
         if "ureybrad" in self._forces:

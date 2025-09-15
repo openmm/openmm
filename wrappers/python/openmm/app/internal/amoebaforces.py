@@ -155,13 +155,12 @@ class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
 
         return self._createOrGetForce(sys, mm.CustomAngleForce, createForce, energyFunction=energy)
 
-    def addAngles(self, force, atomClasses, angles):
+    def addAngles(self, force, angles):
         """Add angles to the force"""
         for atom1, atom2, atom3 in angles:
             for angleType, params in self.angleParams:
                 if params[1] != 0:
-                    angleClasses = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3])
-                    if self._matchParams(angleClasses, angleType):
+                    if self._matchParams((atom1, atom2, atom3), angleType):
                         force.addAngle(atom1, atom2, atom3, params)
                         break
 
@@ -306,7 +305,7 @@ class AmoebaStretchBendForceBuilder(BaseAmoebaForceBuilder):
 
         return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
 
-    def addStretchBends(self, force, atomClasses, angles):
+    def addStretchBends(self, force, angles):
         """Add stretch-bend terms to the force"""
         for atom1, atom2, atom3 in angles:
             for stretchBendType, params in self.stretchBendParams:
