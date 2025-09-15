@@ -235,8 +235,8 @@ class AmoebaOutOfPlaneBendForceBuilder(BaseAmoebaForceBuilder):
         """Match atom classes with parameter classes for out-of-plane bends."""
         at1, at2, at3, at4 = atomClasses
         p1, p2, p3, p4 = paramClasses
-        return at1 == p1 and at2 == p2 and {at3, at4} == {at3 if p3 == "0" else p3, at4 if p4 == "0" else p4}
-      
+        return  at2 == p2 and at4 == p1 and {at1, at3} == {at1 if p3 == "0" else p3, at3 if p4 == "0" else p4}
+    
     def registerParams(self, outOfPlaneBendType, params):
         """Register out-of-plane bend parameters"""
         self.outOfPlaneBendParams.append((outOfPlaneBendType, params))
