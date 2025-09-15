@@ -218,6 +218,11 @@ class TestTinkerFiles(unittest.TestCase):
         keyFiles = ["systems/amoebabio18.prm"]
         energies, tinker, _ = self.computeAmoebaEnergies(xyzFile, keyFiles)
 
+        # Assert residues are correct
+        residues = [residue.name for residue in tinker.topology.residues()]
+        assert residues == ['DA', 'DG', 'DC', 'DG', 'DT', 'DG', 'DG', 'DG', 'DA', 'DC', 'DC', 
+                            'G', 'C', 'G', 'U', 'U', 'A', 'A', 'G', 'U', 'C', 'G', 'C', 'A'], f'Unexpected residues: {residues}'
+
         # Compare to values computed with Tinker.
         self.assertEnergyEqual(749.6953, energies["AmoebaBond"])
         self.assertEnergyEqual(579.9971, energies["AmoebaAngle"] + energies["AmoebaInPlaneAngle"])
@@ -295,9 +300,12 @@ class TestTinkerFiles(unittest.TestCase):
 
         # Test bdna
         xyzFile = "systems/bdna.xyz"
-        keyFiles = ["systems/amoebabio18.prm"]
+
         tinker = TinkerFiles(xyzFile, keyFiles)
         topology = tinker.topology
         assert topology.getNumAtoms() == 758, f'Expected 758 atoms for bdna, found {topology.getNumAtoms()}'
         residues = [residue.name for residue in topology.residues()]
         assert residues == ["DC", "DG", "DC", "DG", "DA", "DA", "DT", "DT", "DC", "DG", "DC", "DG"] * 2, f'Unexpected residues: {residues}' 
+        assert topology.getNumChains() == 2, f'Expected 2 chains for bdna, found {topology.getNumChains()}'
+
+   
