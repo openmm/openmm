@@ -32,7 +32,7 @@ class TestTinkerFiles(unittest.TestCase):
                 kilocalories_per_mole
             )
 
-        return energies
+        return energies, tinker, system
 
     def assertEnergyEqual(self, expected, found, rtol=1e-5):
         """Assert the values match to a specified relative precision."""
@@ -88,7 +88,7 @@ class TestTinkerFiles(unittest.TestCase):
         """
         xyzFile = "systems/phenol_water.xyz"
         keyFiles = ["systems/phenol.prm", "systems/amoebabio18.prm"]
-        energies = self.computeAmoebaEnergies(xyzFile, keyFiles)
+        energies, tinker, _ = self.computeAmoebaEnergies(xyzFile, keyFiles)
 
         # Compare to values computed with Tinker.
         self.assertEnergyEqual(1104.0455, energies["AmoebaBond"])
@@ -101,13 +101,79 @@ class TestTinkerFiles(unittest.TestCase):
         self.assertEnergyEqual(-13227.0088 - 5439.9969, energies["AmoebaMultipoleForce"])
         self.assertEnergyEqual(-11084.9187, sum(list(energies.values())))
 
+    def test_Amoeba18Peptide(self):
+        """
+        Test that TinkerFiles generates a system that gives the same energies as Tinker for a peptide.
+
+
+        Notes
+        -----
+        $ analyze systems/peptide.xyz systems/amoebabio18.prm E
+
+        Total Potential Energy :                985.2453 Kcal/mole
+
+        Energy Component Breakdown :           Kcal/mole        Interactions
+
+        Bond Stretching                          19.6519              333
+        Angle Bending                            58.2509              596
+        Stretch-Bend                             -0.4384              533
+        Out-of-Plane Bend                         1.9697              225
+        Torsional Angle                          -2.3514              875
+        Pi-Orbital Torsion                        1.2115               48
+        Torsion-Torsion                          -3.2958                1
+        Van der Waals                          1509.1915            52699
+        Atomic Multipoles                      -488.0403            52699
+        Polarization                           -110.9042            52699
+
+        $ analyze systems/peptide.xyz systems/amoebabio18.prm D
+         Overall System Contents :
+
+        Number of Atoms                              328
+        Number of Molecules                            1
+        Total System Mass                      2396.7620
+
+        Force Field Name :               AMOEBA-BIO-2018
+
+        VDW Function                       BUFFERED-14-7
+        Size Descriptor                            R-MIN
+        Size Unit Type                          DIAMETER
+        Size Combining Rule                   CUBIC-MEAN
+        Well Depth Rule                              HHG
+
+        Electrostatics                  ATOMIC MULTIPOLE
+        Induction                         INDUCED DIPOLE
+        Polarization                              MUTUAL
+        Polarization                       THOLE DAMPING
+        """
+        xyzFile = "systems/peptide.xyz"
+        keyFiles = ["systems/amoebabio18.prm"]
+        energies, tinker, _ = self.computeAmoebaEnergies(xyzFile, keyFiles)
+
+        # Assert residues are correct
+        residues = [residue.name for residue in tinker.topology.residues()]
+        assert residues == ['ALA', 'GLY', 'VAL', 'LEU', 'ILE', 'PRO', 'SER', 'THR', 'CYS', 
+                            'PHE', 'TYR', 'HIS', 'TRP', 'ASP', 'ASN', 'GLU', 'GLN', 'MET', 
+                            'LYS', 'ARG'], f'Unexpected residues: {residues}'
+
+        # Compare to values computed with Tinker.
+        self.assertEnergyEqual(19.6519, energies["AmoebaBond"])
+        self.assertEnergyEqual(58.2509, energies["AmoebaAngle"] + energies["AmoebaInPlaneAngle"])
+        self.assertEnergyEqual(1.9697, energies["AmoebaOutOfPlaneBend"])
+        self.assertEnergyEqual(-0.4384, energies["AmoebaStretchBend"])
+        self.assertEnergyEqual(-2.3514, energies["PeriodicTorsionForce"])
+        self.assertEnergyEqual(1.2115, energies["AmoebaPiTorsion"])
+        self.assertEnergyEqual(-3.2958, energies["AmoebaTorsionTorsion"])
+        self.assertEnergyEqual(1509.1915, energies["AmoebaVdwForce"])
+        self.assertEnergyEqual(-488.0403 - 110.9042, energies["AmoebaMultipoleForce"])
+        self.assertEnergyEqual(985.2453, sum(list(energies.values())))
+
     def test_Amoeba18Nucleic(self):
         """
         Test that TinkerFiles generates a system that gives the same energies as Tinker for DNA and RNA.
 
         Notes
         -----
-        $ analyze systems/nucleic.xyz systems/amoebabio18.prm D
+        $ analyze systems/nucleic.xyz systems/amoebabio18.prm E
 
         Intermolecular Energy :                 896.3435 Kcal/mole
 
@@ -150,7 +216,7 @@ class TestTinkerFiles(unittest.TestCase):
         """
         xyzFile = "systems/nucleic.xyz"
         keyFiles = ["systems/amoebabio18.prm"]
-        energies = self.computeAmoebaEnergies(xyzFile, keyFiles)
+        energies, tinker, _ = self.computeAmoebaEnergies(xyzFile, keyFiles)
 
         # Compare to values computed with Tinker.
         self.assertEnergyEqual(749.6953, energies["AmoebaBond"])
@@ -205,3 +271,33 @@ class TestTinkerFiles(unittest.TestCase):
             f2 = state2Forces[i-1]
             diff = norm(f1-f2)
             self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-3, f1-f2)
+
+    def test_Topology(self):
+        """Test that the Topology created from Tinker files is correct."""
+        xyzFile = "systems/ubiquitin.xyz"
+        keyFiles = ["systems/amoebabio18.prm"]
+        tinker = TinkerFiles(xyzFile, keyFiles)
+        topology = tinker.topology
+
+        # Test ubiquitin 
+        assert topology.getNumAtoms() == 1406, f'Expected 1406 atoms for ubiquitin, found {topology.getNumAtoms()}'
+        residues = [residue.name for residue in topology.residues()]
+        assert residues == ["MET", "GLN", "ILE", "PHE", "VAL", "LYS", "THR", "LEU", "THR", "GLY", "LYS", "THR", "ILE", "THR", "LEU",
+                            "GLU", "VAL", "GLU", "PRO", "SER", "ASP", "THR", "ILE", "GLU", "ASN", "VAL", "LYS", "ALA", "LYS", "ILE",
+                            "GLN", "ASP", "LYS", "GLU", "GLY", "ILE", "PRO", "PRO", "ASP", "GLN", "GLN", "ARG", "LEU", "ILE", "PHE",
+                            "ALA", "GLY", "LYS", "GLN", "LEU", "GLU", "ASP", "GLY", "ARG", "THR", "LEU", "SER", "ASP", "TYR", "ASN",
+                            "ILE", "GLN", "LYS", "GLU", "SER", "THR", "LEU", "HIS", "LEU", "VAL", "LEU", "ARG", "LEU", "ARG", "GLY", "GLY"] + ["HOH"]*58, f'Unexpected residues: {residues}'
+            
+        xyzFile = "systems/ubiquitin.xyz"
+        keyFiles = ["systems/amoebabio18.prm"]
+        tinker = TinkerFiles(xyzFile, keyFiles)
+        topology = tinker.topology
+
+        # Test bdna
+        xyzFile = "systems/bdna.xyz"
+        keyFiles = ["systems/amoebabio18.prm"]
+        tinker = TinkerFiles(xyzFile, keyFiles)
+        topology = tinker.topology
+        assert topology.getNumAtoms() == 758, f'Expected 758 atoms for bdna, found {topology.getNumAtoms()}'
+        residues = [residue.name for residue in topology.residues()]
+        assert residues == ["DC", "DG", "DC", "DG", "DA", "DA", "DT", "DT", "DC", "DG", "DC", "DG"] * 2, f'Unexpected residues: {residues}' 

@@ -902,7 +902,6 @@ class AmoebaGeneralizedKirkwoodForceBuilder(BaseAmoebaForceBuilder):
             force.setProbeRadius(self.probeRadius)
             force.setSurfaceAreaFactor(self.surfaceAreaFactor)
             return force
-
         return self._createOrGetForce(sys, mm.AmoebaGeneralizedKirkwoodForce, createForce)
 
     def addParticles(self, force, atoms, bonds, radiusType="Bondi"):
@@ -929,7 +928,6 @@ class AmoebaGeneralizedKirkwoodForceBuilder(BaseAmoebaForceBuilder):
 
             charge = self.atomParams[i]
             shct = 0.69 # self.getOverlapScaleFactor(atomicNumber)
-
             force.addParticle(charge, radius, shct)
 
     @staticmethod
