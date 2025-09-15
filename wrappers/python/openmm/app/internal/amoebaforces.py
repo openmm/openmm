@@ -311,10 +311,9 @@ class AmoebaStretchBendForceBuilder(BaseAmoebaForceBuilder):
         for atom1, atom2, atom3 in angles:
             for stretchBendType, params in self.stretchBendParams:
                 atomTypes = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3])
-                if self._matchParams(atomTypes, stretchBendType):
+                if self._matchParams(atomTypes, stretchBendType, reverseMatch=False):
                     force.addBond((atom1, atom2, atom3), params)
                     break
-
 
 class AmoebaStretchTorsionForceBuilder(BaseAmoebaForceBuilder):
     """Builder for StretchTorsionForce force for AMOEBA force field"""

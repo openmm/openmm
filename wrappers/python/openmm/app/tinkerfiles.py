@@ -633,8 +633,8 @@ class TinkerFiles:
                         paramKey = (class1, class2, class3)
                         if len(params["theta0"]) > 1:
                             # Get k-index by counting number of non-angle hydrogens on the central atom
-                            # Based on kangle.f
-                            nHyd = sum(1 for i in angle if self.atoms[i].element == elem.hydrogen)
+                            partners = [at for at in bondedToAtom[angle[1]] if at not in angle]
+                            nHyd = sum(1 for i in partners if self.atoms[i].element == 'H')
                             if nHyd < len(params["theta0"]):
                                 theta0 = params["theta0"][nHyd]
                             else:
@@ -671,7 +671,8 @@ class TinkerFiles:
                         if len(params["theta0"]) > 1:
                             # Get k-index by counting number of non-angle hydrogens on the central atom
                             # Based on kangle.f
-                            nHyd = sum(1 for i in angle if self.atoms[i].element == elem.hydrogen)
+                            partners = [at for at in bondedToAtom[angle[0]] if at not in angle[:]]
+                            nHyd = sum(1 for i in partners if self.atoms[i].element == 'H')
                             if nHyd < len(params["theta0"]):
                                 theta0 = params["theta0"][nHyd]
                             else:
