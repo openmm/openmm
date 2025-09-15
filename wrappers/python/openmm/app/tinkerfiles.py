@@ -558,14 +558,14 @@ class TinkerFiles:
             skipAtoms = {}
             for angle in angles:
                 middleAtom = angle[1]
-                middleClass = self.atoms[middleAtom].atomClass
+                middleClass = atomClasses[middleAtom] 
                 middleValence = len(self.atoms[middleAtom].bonds)
                 if middleValence == 3 and middleAtom not in skipAtoms:
                     partners = []
                     for partner in self.atoms[middleAtom].bonds:
-                        partnerClass = self.atoms[partner].atomClass
-                        for types in opbendParams:
-                            if middleClass == types[1] and partnerClass == types[0]:
+                        partnerClass = atomClasses[partner]
+                        for opBendClass in opbendParams:
+                            if middleClass == opBendClass[1] and partnerClass == opBendClass[0]:
                                 partners.append(partner)
                                 break
                     if len(partners) == 3:
@@ -710,7 +710,7 @@ class TinkerFiles:
                     if idealAngle is None:
                         continue
 
-                    if class1 == self.atoms[angle[0]].atomClass:
+                    if class1 == atomClasses[angle[0]]:
                         # 1-2-3
                         bondAB = bondParams.get((class1, class2)) or bondParams.get((class2, class1))
                         bondCB = bondParams.get((class2, class3)) or bondParams.get((class3, class2))
@@ -788,20 +788,20 @@ class TinkerFiles:
                 torsionForceBuilder.registerParams((class1, class2, class3, class4), (params["t1"], params["t2"], params["t3"]))
 
             processedTorsions = []
-            for idx1, idx2, idx3, idx4 in propers:
-                class1 = self.atoms[idx1].atomClass
-                class2 = self.atoms[idx2].atomClass
-                class3 = self.atoms[idx3].atomClass
-                class4 = self.atoms[idx4].atomClass
+            for at1, at2, at3, at4 in propers:
+                class1 = atomClasses[at1]
+                class2 = atomClasses[at2]
+                class3 = atomClasses[at3]
+                class4 = atomClasses[at4]
                 params = torsionParams.get((class1, class2, class3, class4)) or torsionParams.get((class4, class3, class2, class1))
                 if params:
-                    processedTorsions.append((idx1, idx2, idx3, idx4))
+                    processedTorsions.append((at1, at2, at3, at4))
 
             if processedTorsions:
                 torsionForce = torsionForceBuilder.getForce(sys)
-                atomClasses = {}
+                atomClassesDict = {}
                 for atom_idx in range(len(self.atoms)):
-                    atomClasses[atom_idx] = self.atoms[atom_idx].atomClass
+                    atomClassesDict[atom_idx] = atomClasses[atom_idx]
                 torsionForceBuilder.addTorsions(torsionForce, atomClasses, processedTorsions)
     
         # Add AmoebaPiTorsionForce
@@ -818,8 +818,8 @@ class TinkerFiles:
                 valence1 = len(self.atoms[at1].bonds)
                 valence2 = len(self.atoms[at2].bonds)
                 if valence1 == 3 and valence2 == 3:
-                    class1 = self.atoms[at1].atomClass
-                    class2 = self.atoms[at2].atomClass
+                    class1 = atomClasses[at1]
+                    class2 = atomClasses[at2]
                     params = piTorsionParams.get((class1, class2)) or piTorsionParams.get((class2, class1))
                     if params:
                         piTorsionAtom3 = at1
@@ -832,7 +832,7 @@ class TinkerFiles:
             
             if processedPiTorsions:
                 piTorsionForce = piTorsionForceBuilder.getForce(sys)
-                piTorsionForceBuilder.addPiTorsions(piTorsionForce, atomClasses, processedPiTorsions)
+                piTorsionForceBuilder.addPiTorsions(piTorsionForce, atomClassesDict, processedPiTorsions)
 
         # Add AmoebaStretchTorsionForce
         if "strtors" in self._forces:
@@ -842,14 +842,14 @@ class TinkerFiles:
             for classes, params in stretchTorsionParams.items():
                 stretchTorsionForceBuilder.registerParams(classes, params)
             processedStretchTorsions = []
-            for idx1, idx2, idx3, idx4 in propers:
-                class1 = self.atoms[idx1].atomClass
-                class2 = self.atoms[idx2].atomClass
-                class3 = self.atoms[idx3].atomClass
-                class4 = self.atoms[idx4].atomClass
+            for at1, at2, at3, at4 in propers:
+                class1 = atomClasses[at1]
+                class2 = atomClasses[at2]
+                class3 = atomClasses[at3]
+                class4 = atomClasses[at4]
                 params = stretchTorsionParams.get((class1, class2, class3, class4)) or stretchTorsionParams.get((class4, class3, class2, class1))
                 if params:
-                    processedStretchTorsions.append((idx1, idx2, idx3, idx4))
+                    processedStretchTorsions.append((at1, at2, at3, at4))
             if processedStretchTorsions:
                 stretchTorsionForce = stretchTorsionForceBuilder.getForce(sys)
                 stretchTorsionForceBuilder.addStretchTorsions(sys, stretchTorsionForce, atomClasses, processedStretchTorsions)
@@ -862,14 +862,14 @@ class TinkerFiles:
             for classes, params in angleTorsionParams.items():
                 angleTorsionForceBuilder.registerParams(classes, params)
             processedAngleTorsions = []
-            for idx1, idx2, idx3, idx4 in propers:
-                class1 = self.atoms[idx1].atomClass
-                class2 = self.atoms[idx2].atomClass
-                class3 = self.atoms[idx3].atomClass
-                class4 = self.atoms[idx4].atomClass
+            for at1, at2, at3, at4 in propers:
+                class1 = atomClasses[at1]
+                class2 = atomClasses[at2]
+                class3 = atomClasses[at3]
+                class4 = atomClasses[at4]
                 params = angleTorsionParams.get((class1, class2, class3, class4)) or angleTorsionParams.get((class4, class3, class2, class1))
                 if params:
-                    processedAngleTorsions.append((idx1, idx2, idx3, idx4))
+                    processedAngleTorsions.append((at1, at2, at3, at4))
             if processedAngleTorsions:
                 angleTorsionForce = angleTorsionForceBuilder.getForce(sys)
                 angleTorsionForceBuilder.addAngleTorsions(sys, angleTorsionForce, atomClasses, processedAngleTorsions)
