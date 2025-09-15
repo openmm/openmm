@@ -619,6 +619,7 @@ class TinkerFiles:
                 outOfPlaneBendForceBuilder.addOutOfPlaneBends(outOfPlaneBendForce, atomClasses, outOfPlaneAngles)
 
             # Add AmoebaAngleForce
+            idealAngles = {}
             angleParams = {(at1, at2, at3): {"k": float(k), "theta0": [float(theta) for theta in theta]} for at1, at2, at3, k, *theta in self._forces["angle"]}
             if genericAngles:
                 angleForceBuilder = AmoebaAngleForceBuilder(self._scalars["angle-cubic"], self._scalars["angle-quartic"], self._scalars["angle-pentic"], self._scalars["angle-sextic"])
@@ -634,14 +635,14 @@ class TinkerFiles:
                         if len(params["theta0"]) > 1:
                             # Get k-index by counting number of non-angle hydrogens on the central atom
                             partners = [at for at in bondedToAtom[angle[1]] if at not in angle]
-                            nHyd = sum(1 for i in partners if self.atoms[i].element == 'H')
+                            nHyd = sum(1 for i in partners if self.atoms[i].atomicNumber == 1)
                             if nHyd < len(params["theta0"]):
                                 theta0 = params["theta0"][nHyd]
                             else:
                                 raise ValueError(f"Angle parameters out of range for atom classes {class1}-{class2}-{class3}")
                         else:
                             theta0 = params["theta0"][0]
-                        params["idealAngle"] = theta0 # Store ideal angle for stretch-bend force
+                        idealAngles[tuple(angle)] = theta0 # Store ideal angle for stretch-bend
                         if paramKey not in processedParams:
                             angleForceBuilder.registerParams(paramKey, (theta0, params["k"]*4.184*(math.pi/180)**2))
                             processedParams.add(paramKey)
@@ -671,15 +672,15 @@ class TinkerFiles:
                         if len(params["theta0"]) > 1:
                             # Get k-index by counting number of non-angle hydrogens on the central atom
                             # Based on kangle.f
-                            partners = [at for at in bondedToAtom[angle[0]] if at not in angle[:]]
-                            nHyd = sum(1 for i in partners if self.atoms[i].element == 'H')
+                            partners = [at for at in bondedToAtom[angle[1]] if at not in angle[:]]
+                            nHyd = sum(1 for i in partners if self.atoms[i].atomicNumber == 1)
                             if nHyd < len(params["theta0"]):
                                 theta0 = params["theta0"][nHyd]
                             else:
                                 raise ValueError(f"Angle parameters out of range for atom classes {class1}-{class2}-{class3}")
                         else:
                             theta0 = params["theta0"][0]
-                        params["idealAngle"] = theta0 # Store ideal angle for stretch-bend force
+                        idealAngles[tuple(angle)] = theta0 # Store ideal angle for stretch-bend
                         if paramKey not in processedParams:
                             inPlaneAngleForceBuilder.registerParams(paramKey, (theta0, params["k"]*4.184*(math.pi/180)**2))
                             processedParams.add(paramKey)
@@ -691,23 +692,15 @@ class TinkerFiles:
         if "strbnd" in self._forces:
             stretchBendParams = {(at1, at2, at3): {"k1": float(k1), "k2": float(k2)} for at1, at2, at3, k1, k2 in self._forces["strbnd"]}
             stretchBendForceBuilder = AmoebaStretchBendForceBuilder()
-            processedParams = set()
             processedAngles = []
-            for angle in angles:
+            for angle in genericAngles + inPlaneAngles:
                 class1 = atomClasses[angle[0]]
                 class2 = atomClasses[angle[1]]
                 class3 = atomClasses[angle[2]]
                 params = stretchBendParams.get((class1, class2, class3)) or stretchBendParams.get((class3, class2, class1))
 
                 if params:
-                    angleParamsLocal = (
-                        angleParams.get((class1, class2, class3)) 
-                        or angleParams.get((class3, class2, class1)) 
-                        or inPlaneAngleParams.get((class1, class2, class3)) 
-                        or inPlaneAngleParams.get((class3, class2, class1))
-                    )
-                    idealAngle = angleParamsLocal.get('idealAngle') if angleParamsLocal and angleParamsLocal.get('idealAngle') is not None else None
-
+                    idealAngle = idealAngles.get(tuple(angle), None) 
                     if idealAngle is None:
                         continue
 
@@ -729,10 +722,10 @@ class TinkerFiles:
                             k1, k2 = params["k2"], params["k1"]
 
                     if bondAB and bondCB:
-                        paramKey = (class1, class2, class3)
-                        if paramKey not in processedParams:
-                            stretchBendForceBuilder.registerParams(paramKey, (bondAB*0.1, bondCB*0.1, idealAngle*math.pi/180, k1*41.84*math.pi/180, k2*41.84*math.pi/180))
-                            processedParams.add(paramKey)
+                        # Because for the same class triplet, depending on the number of hydrogens on the central atom,
+                        # the ideal angle can be different, we need to register parameters for each angle.
+                        paramKey = (angle[0], angle[1], angle[2])
+                        stretchBendForceBuilder.registerParams(paramKey, (bondAB*0.1, bondCB*0.1, idealAngle*math.pi/180, k1*41.84*math.pi/180, k2*41.84*math.pi/180))
                         processedAngles.append((angle[0], angle[1], angle[2]))
         
             if processedAngles:
