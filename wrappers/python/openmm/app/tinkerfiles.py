@@ -1,5 +1,5 @@
 """
-tinkerfiles.py: A loader for TINKER files (.xyz, .prm, .key, .seq)
+tinkerfiles.py: A reader of Tinker files (.xyz, .prm, .key, .prm).
 
 This is part of the OpenMM molecular simulation toolkit originating from
 Simbios, the NIH National Center for Physics-Based Simulation of
@@ -98,13 +98,14 @@ class TinkerAtom:
     mass: Optional[float] = None
     valence: Optional[int] = None
 
-    def updateFromAtomType(self, atomTypeData: Dict[str, Any]) -> None:
-        """Update atom data from atom type information.
+    def updateFromAtomType(self, atomTypeData: 'TinkerAtomType') -> None:
+        """
+        Update atom data from atom type information.
 
         Parameters
         ----------
-        atomTypeData : Dict[str, Any]
-            Dictionary containing atom type data
+        atomTypeData : TinkerAtomType
+            TinkerAtomType object containing atom type data
         """
         self.atomClass = atomTypeData.atomClass
         self.nameShort = atomTypeData.nameShort
@@ -120,6 +121,8 @@ class TinkerAtomType:
     """
     A data class to represent Tinker atom types.
 
+    Attributes
+    ----------
     atomType : str
         The atom type
     atomClass : str
@@ -153,8 +156,15 @@ class TinkerFiles:
     This class only supports the AMOEBA force field.  It cannot create a System from Tinker files that use other force fields."""
 
     @staticmethod
-    def _initialize_class():
-        """Initialize class variables RECOGNIZED_FORCES and RECOGNIZED_SCALARS upon class creation."""
+    def _initialize_class() -> Tuple[Dict[str, Any], Dict[str, str], Dict[str, float], Dict[str, float]]:
+        """
+        Initialize class variables upon class creation.
+        
+        Returns
+        -------
+        Tuple[Dict[str, Any], Dict[str, str], Dict[str, float], Dict[str, float]]
+            A tuple containing RECOGNIZED_FORCES, RECOGNIZED_SCALARS, WCA_PARAMS, and GK_PARAMS
+        """
 
         def addMultipole(
             lineIndex: int, allLines: List[List[str]], forces: Dict[str, Any]
@@ -236,7 +246,6 @@ class TinkerFiles:
             forces["polarize"].append([type, polarizability, thole, group])
             return lineIndex
 
-        @staticmethod
         def addTorTor(
             lineIndex: int, allLines: List[List[str]], forces: Dict[str, Any]
         ) -> int:
@@ -399,7 +408,7 @@ class TinkerFiles:
         # Load the .key or .prm file(s)
         parameterFiles = [parameterFiles] if isinstance(parameterFiles, str) else parameterFiles
         for paramFile in parameterFiles:
-            atomTypes, forces, scalars = self._loadKeyFile(paramFile)
+            atomTypes, forces, scalars = TinkerFiles._loadKeyFile(paramFile)
             self._atomTypes.update(atomTypes)
             self._scalars.update(scalars)
 
@@ -1046,10 +1055,7 @@ class TinkerFiles:
         return topology
 
     @staticmethod
-    def _processGenericMolecule(
-        molecule: List[int],
-        atoms: List[TinkerAtom],
-    ) -> List[Union[List[int], str]]:
+    def _processGenericMolecule(molecule: List[int], atoms: List[TinkerAtom]) -> List[Tuple[List[int], str]]:
         """
         Process a generic molecule (unknown).
 
@@ -1062,16 +1068,13 @@ class TinkerFiles:
 
         Returns
         -------
-        List[Union[List[int], str]]
+        List[Tuple[List[int], str]]
             A list containing [atomIndices, residueName] for the molecule.
         """
-        return [[molecule, "UNK"]]
+        return [(molecule, "UNK")]
 
     @staticmethod
-    def _processWaterMolecule(
-        molecule: List[int],
-        atoms: List[TinkerAtom],
-    ) -> List[Union[List[int], str]]:
+    def _processWaterMolecule(molecule: List[int], atoms: List[TinkerAtom]) -> Union[List[Tuple[List[int], str]], bool]:
         """
         Process a water molecule.
 
@@ -1084,7 +1087,7 @@ class TinkerFiles:
 
         Returns
         -------
-        List[Union[List[int], str]] or bool
+        Union[List[Tuple[List[int], str]], bool]
             If a water molecule is identified, returns a list containing [atomIndices, "HOH"].
             Otherwise, returns False.
         """
@@ -1098,13 +1101,10 @@ class TinkerFiles:
         if atomCounts.get(1, 0) != 2 or atomCounts.get(8, 0) != 1:
             return False
 
-        return [[molecule, "HOH"]]
+        return [(molecule, "HOH")]
 
     @staticmethod
-    def _processPeptideChain(
-        molecule: List[int],
-        atoms: List[TinkerAtom],
-    ) -> List[Union[List[int], str]]:
+    def _processPeptideChain(molecule: List[int], atoms: List[TinkerAtom]) -> List[Tuple[List[int], str]]:
         """
         Process a peptide chain, identifying all residues and adding them to the topology.
 
@@ -1117,8 +1117,8 @@ class TinkerFiles:
 
         Returns
         -------
-        List[Union[List[int], str]]
-            If peptide chain is found, returns [molecule, residueLabel].
+        List[Tuple[List[int], str]] 
+            If peptide chain is found, returns list of (residueAtoms, residueLabel) tuples.
             If no peptide chain is found, returns an empty list.
         """
         moleculeAtoms = [None] * len(atoms)
@@ -1130,7 +1130,7 @@ class TinkerFiles:
     def _processNucleicAcidChain(
         molecule: List[int],
         atoms: List[TinkerAtom],
-    ) -> List[Union[List[int], str]]:
+    ) -> List[Tuple[List[int], str]]:
         """
         Process a nucleic acid chain, identifying all residues.
 
@@ -1143,7 +1143,7 @@ class TinkerFiles:
 
         Returns
         -------
-        List[Union[List[int], str]]
+        List[Tuple[List[int], str]]
             If nucleic acid chain is found, returns a list of [residueAtoms, residueLabel] pairs.
             If no nucleic acids are found, returns an empty list.
         """
@@ -1158,10 +1158,7 @@ class TinkerFiles:
         return residues
 
     @staticmethod
-    def _processIonMolecule(
-        molecule: List[int],
-        atoms: List[TinkerAtom],
-    ) -> List[Union[List[int], str]]:
+    def _processIonMolecule(molecule: List[int], atoms: List[TinkerAtom]) -> Union[List[Tuple[List[int], str]], bool]:
         """
         Process an ion molecule.
 
@@ -1174,7 +1171,7 @@ class TinkerFiles:
 
         Returns
         -------
-        List[Union[List[int], str]] or bool
+        Union[List[Tuple[List[int], str]], bool]
             If an ion is identified, returns a list containing [atomIndices, ionResidueName].
             Otherwise, returns False.
         """
@@ -1183,7 +1180,7 @@ class TinkerFiles:
 
         atom = atoms[molecule[0]]
         resName = TinkerFiles._getIonResidueName(atom.atomicNumber)
-        return [[molecule, resName]]
+        return [(molecule, resName)]
 
     @staticmethod
     def _getIonResidueName(atomicNumber: int) -> str:
@@ -1219,9 +1216,7 @@ class TinkerFiles:
         return ionMap.get(atomicNumber, "UNK")
 
     @staticmethod
-    def _findBitorsions(
-        atoms: List[TinkerAtom],
-    ) -> List[Tuple[int, int, int, int, int]]:
+    def _findBitorsions(atoms: List[TinkerAtom]) -> List[Tuple[int, int, int, int, int]]:
         """
         Find all bitorsions (pairs of adjacent torsional angles) in the molecule.
 
@@ -1276,13 +1271,7 @@ class TinkerFiles:
         return list(bitorsions)
 
     @staticmethod
-    def _addResidueToTopology(
-        topology: top.Topology,
-        resAtoms: List[int],
-        resName: str,
-        chain: top.Chain,
-        atoms: List[TinkerAtom],
-    ) -> None:
+    def _addResidueToTopology(topology: top.Topology, resAtoms: List[int], resName: str, chain: top.Chain, atoms: List[TinkerAtom]) -> None:
         """
         Add a residue to the topology.
 
@@ -1312,9 +1301,7 @@ class TinkerFiles:
     #                                     PEPTIDE PROCESSING                                     #
     # ------------------------------------------------------------------------------------------ #
     @staticmethod
-    def _getPeptideResidueAtoms(
-        atoms: List[TinkerAtom], atomIndex: Optional[int] = None
-    ) -> List[Tuple[List[int], str]]:
+    def _getPeptideResidueAtoms(atoms: List[TinkerAtom], atomIndex: Optional[int] = None) -> List[Tuple[List[int], str]]:
         """
         Get all amino acid residues in the molecule.
         If atomIndex is provided, only return residues that contain that atom.
@@ -1372,11 +1359,21 @@ class TinkerFiles:
         return sorted(residues, key=lambda x: x[0][0])
 
     @staticmethod
-    def _checkBackbonePattern(
-        ia: int, ib: int, ic: int, id: int, ie: int, atoms: List[TinkerAtom]
-    ) -> bool:
+    def _checkBackbonePattern(ia: int, ib: int, ic: int, id: int, ie: int, atoms: List[TinkerAtom]) -> bool:
         """
         Check if a 5-atom sequence matches a peptide backbone pattern.
+        
+        Parameters
+        ----------
+        ia, ib, ic, id, ie : int
+            Indices of the 5 atoms in the sequence
+        atoms : List[TinkerAtom]
+            List of atoms in the system
+            
+        Returns
+        -------
+        bool
+            True if the sequence matches a peptide backbone pattern, False otherwise
         """
         atomA = atoms[ia]
         atomB = atoms[ib]
@@ -1433,11 +1430,21 @@ class TinkerFiles:
         return False
 
     @staticmethod
-    def _checkTerminalPattern(
-        ia: int, ib: int, ic: int, id: int, ie: int, atoms: List[TinkerAtom]
-    ) -> bool:
+    def _checkTerminalPattern(ia: int, ib: int, ic: int, id: int, ie: int, atoms: List[TinkerAtom]) -> bool:
         """
         Check if a 5-atom sequence matches a terminal residue pattern.
+        
+        Parameters
+        ----------
+        ia, ib, ic, id, ie : int
+            Indices of the 5 atoms in the sequence
+        atoms : List[TinkerAtom]
+            List of atoms in the system
+            
+        Returns
+        -------
+        bool
+            True if the sequence matches a terminal residue pattern, False otherwise
         """
         atomA = atoms[ia]
         atomB = atoms[ib]
@@ -1508,9 +1515,7 @@ class TinkerFiles:
         return False
 
     @staticmethod
-    def _checkCapGroup(
-        ia: int, ib: int, ic: int, id: int, ie: int, atoms: List[TinkerAtom]
-    ) -> Optional[List[int]]:
+    def _checkCapGroup(ia: int, ib: int, ic: int, id: int, ie: int, atoms: List[TinkerAtom]) -> Optional[List[int]]:
         """
         Check if a 5-atom sequence matches a cap group pattern (ACE or NME).
 
@@ -1609,9 +1614,7 @@ class TinkerFiles:
         return None
 
     @staticmethod
-    def _identifyAminoAcid(
-        ic: int, ib: int, id: int, atoms: List[TinkerAtom]
-    ) -> Tuple[str, Dict[str, int]]:
+    def _identifyAminoAcid(ic: int, ib: int, id: int, atoms: List[TinkerAtom]) -> Tuple[str, Dict[str, int]]:
         """
         Identify amino acid type based on side chain atoms.
 
@@ -1973,9 +1976,7 @@ class TinkerFiles:
         return label, sideChain
 
     @staticmethod
-    def _collectResidueAtoms(
-        ic: int, ib: int, id: int, sideChain: Dict[str, int], atoms: List[TinkerAtom]
-    ) -> List[int]:
+    def _collectResidueAtoms(ic: int, ib: int, id: int, sideChain: Dict[str, int], atoms: List[TinkerAtom]) -> List[int]:
         """
         Collect all atoms in the residue.
 
@@ -2026,9 +2027,7 @@ class TinkerFiles:
     #                                   NUCLEIC ACID PROCESSING                                  #
     # ------------------------------------------------------------------------------------------ #
     @staticmethod
-    def _getNucleicAcidResidueAtoms(
-        atoms: List[TinkerAtom],
-    ) -> List[Tuple[List[int], str]]:
+    def _getNucleicAcidResidueAtoms(atoms: List[TinkerAtom]) -> List[Tuple[List[int], str]]:
         """
         Get all nucleic acid residues in the molecule.
 
@@ -2069,9 +2068,7 @@ class TinkerFiles:
         return sorted(residues, key=lambda x: x[0][0])
 
     @staticmethod
-    def _checkNucleotidePattern(
-        ia: int, ib: int, ic: int, id: int, ie: int, atoms: List[TinkerAtom]
-    ) -> bool:
+    def _checkNucleotidePattern(ia: int, ib: int, ic: int, id: int, ie: int, atoms: List[TinkerAtom]) -> bool:
         """
         Check if a 5-atom sequence matches a nucleotide pattern (O5' -> C5' -> C4' -> C3' -> O3').
 
@@ -2124,9 +2121,7 @@ class TinkerFiles:
         return (nPhos == 1 and nHyd == 1) or (nPhos == 2 and nHyd == 0)
 
     @staticmethod
-    def _identifyNucleotide(
-        ia: int, ib: int, ic: int, id: int, ie: int, atoms: List[TinkerAtom]
-    ) -> Tuple[str, Dict[str, int]]:
+    def _identifyNucleotide(ia: int, ib: int, ic: int, id: int, ie: int, atoms: List[TinkerAtom]) -> Tuple[str, Dict[str, int]]:
         """
         Identify a nucleotide and its atoms.
 
@@ -2715,9 +2710,7 @@ class TinkerFiles:
         atomTypeDict[atomType] = tinkerType
 
     @staticmethod
-    def _loadKeyFile(
-        keyFile: str,
-    ) -> Tuple[Dict[str, TinkerAtomType], Dict[str, Dict], Dict[str, str]]:
+    def _loadKeyFile(keyFile: str) -> Tuple[Dict[str, TinkerAtomType], Dict[str, Any], Dict[str, str]]:
         """
         Load a TINKER .key or .prm file.
 
@@ -2728,7 +2721,7 @@ class TinkerFiles:
 
         Returns
         -------
-        Tuple[Dict[str, TinkerAtomType], Dict[str, Dict], Dict[str, str]]
+        Tuple[Dict[str, TinkerAtomType], Dict[str, Any], Dict[str, str]]
             A tuple containing:
             - Atom types dictionary
             - Forces dictionary
