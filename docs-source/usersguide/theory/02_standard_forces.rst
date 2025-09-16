@@ -558,6 +558,15 @@ of electrode particles are allowed to fluctuate (in which case only the CG
 solver can be used), both solvers can be benchmarked on a given problem to find
 the one with the best performance.
 
+By default, the CG solver uses a preconditioner that automatically activates if
+any electrodes use Gaussian widths or Thomas-Fermi parameters different from
+each other.  This will usually allow the solver to converge to a given tolerance
+in fewer iterations.  However, if these electrode parameters differ but are very
+close to each other, benefit from the preconditioner may be offset by additional
+numerical error introduced due to floating-point roundoff.  This should not
+affect the results, but may cause the CG solver to require more iterations to
+converge.  Disabling the preconditioner may improve performance in such a case.
+
 Because ConstantPotentialForce needs to compute all of the electrostatic
 interactions in a system, it should not be used with AmoebaMultipoleForce, and
 is thus incompatible with induced dipole-based polarizable force fields.
