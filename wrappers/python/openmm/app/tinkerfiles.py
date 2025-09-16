@@ -1719,7 +1719,7 @@ class TinkerFiles:
                 return label, sideChain
             if sideChain["isg"] != 0:
                 if len(atoms[sideChain["isg"]].bonds) == 1:
-                    label = "CYD"
+                    label = "CYS" # Deprotonated cysteine, CYS
                 else:
                     for bond in atoms[sideChain["isg"]].bonds:
                         if atoms[bond].atomicNumber == 1:
@@ -1727,7 +1727,7 @@ class TinkerFiles:
 
                         elif atoms[bond].atomicNumber == 16:
                             sideChain["isg"] = 0
-                            label = "CYX"
+                            label = "CYS" # Disulfide bonded cysteine, CYX
                     return label, sideChain
             if sideChain["icg2"] != 0:
                 nhg = 0
@@ -1785,7 +1785,7 @@ class TinkerFiles:
                 ):
                     label = "ASP"
                 else:
-                    label = "ASH"
+                    label = "ASP" # Protonated aspartic acid, ASH
                 return label, sideChain
             if sideChain["icd2"] != 0:
                 nhd = 0
@@ -1835,7 +1835,7 @@ class TinkerFiles:
                 ):
                     label = "GLU"
                 else:
-                    label = "GLH"
+                    label = "GLU" # Protonated glutamic acid, GLH
                 return label, sideChain
 
         if sideChain["icd2"] != 0:
@@ -1862,10 +1862,10 @@ class TinkerFiles:
                 if bond == sideChain["ice1"]:
                     label = "HIS"
                     if len(atoms[sideChain["ind"]].bonds) == 2:
-                        label = "HIE"
+                        label = "HIS" # Protonated histidine, HIE
                         return label, sideChain
                     if len(atoms[sideChain["ine"]].bonds) == 2:
-                        label = "HID"
+                        label = "HIS" # Protonated histidine, HID
                         return label, sideChain
                     return label, sideChain
 
@@ -1926,7 +1926,7 @@ class TinkerFiles:
 
             if sideChain["inz"] != 0 and len(atoms[sideChain["ice1"]].bonds) == 4:
                 if len(atoms[sideChain["inz"]].bonds) == 3:
-                    label = "LYD"
+                    label = "LYS" # LYD
                     return label, sideChain
                 elif len(atoms[sideChain["inz"]].bonds) == 4:
                     label = "LYS"
@@ -1948,7 +1948,7 @@ class TinkerFiles:
                 if atoms[bond].atomicNumber == 8:
                     sideChain["ioh"] = bond
                     if len(atoms[bond].bonds) == 1:
-                        label = "TYD"
+                        label = "TYR" # "TYD"
                     elif len(atoms[bond].bonds) == 2:
                         label = "TYR"
                     return label, sideChain
