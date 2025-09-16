@@ -413,7 +413,7 @@ class TinkerFiles:
         # Update atoms with atom type information
         for atom in self.atoms:
             if atom.atomType not in self._atomTypes:
-                raise ValueError(f"Atom type {atom.atomType} not found in atomTypes")
+                raise ValueError(f"Atom type {atom.atomType} not found. Check that the parameter files are correct.")
             atom.updateFromAtomType(self._atomTypes[atom.atomType])
 
         # Create topology
@@ -521,7 +521,7 @@ class TinkerFiles:
             bondParams = {(at1, at2): {"k": float(k), "r0": float(r0)} for at1, at2, k, r0 in self._forces["bond"]}
             bondForceBuilder = AmoebaBondForceBuilder(float(self._scalars["bond-cubic"])*10, float(self._scalars["bond-quartic"])*100)
             for (class1, class2), params in bondParams.items():
-                bondForceBuilder.registerParams((class1, class2), params["r0"]*0.1, params["k"]*100.0 *4.184)
+                bondForceBuilder.registerParams((class1, class2), params["r0"]*0.1, params["k"]*100.0*4.184)
             bondForce = bondForceBuilder.getForce(sys)
             bondForceBuilder.addBonds(bondForce, atomClasses, bonds)
 
@@ -652,10 +652,11 @@ class TinkerFiles:
             # Add AmoebaInPlaneAngleForce
             if "anglep" in self._forces:
                 inPlaneAngleParams = {(at1, at2, at3): {"k": float(k), "theta0": [float(theta) for theta in theta]} for at1, at2, at3, k, *theta in self._forces["anglep"]}
-                inPlaneAngleParams.update(angleParams) # Poltype e.g. does not use the "anglep" keyword, but uses "angle" keyword for in-plane angles
             else:
                 inPlaneAngleParams = {}
     
+            inPlaneAngleParams.update(angleParams) # Poltype e.g. does not use the "anglep" keyword, but uses "angle" keyword for in-plane angles
+
             if inPlaneAngles:
                 inPlaneAngleForceBuilder = AmoebaInPlaneAngleForceBuilder(self._scalars["angle-cubic"], self._scalars["angle-quartic"], self._scalars["angle-pentic"], self._scalars["angle-sextic"])
                 processedParams = set()
@@ -665,11 +666,10 @@ class TinkerFiles:
                     class3 = atomClasses[angle[2]]
                     params = inPlaneAngleParams.get((class1, class2, class3)) or inPlaneAngleParams.get((class3, class2, class1))
                     if params:
-                        class4 = atomClasses[angle[3]] if len(angle) >= 4 else class1
+                        class4 = atomClasses[angle[3]]
                         paramKey = (class1, class2, class3, class4)
                         if len(params["theta0"]) > 1:
                             # Get k-index by counting number of non-angle hydrogens on the central atom
-                            # Based on kangle.f
                             partners = [at for at in bondedToAtom[angle[1]] if at not in angle[:]]
                             nHyd = sum(1 for i in partners if self.atoms[i].atomicNumber == 1)
                             if nHyd < len(params["theta0"]):
@@ -695,28 +695,32 @@ class TinkerFiles:
                 class1 = atomClasses[angle[0]]
                 class2 = atomClasses[angle[1]]
                 class3 = atomClasses[angle[2]]
-                params = stretchBendParams.get((class1, class2, class3)) or stretchBendParams.get((class3, class2, class1))
 
+                params = stretchBendParams.get((class1, class2, class3))
+                if params is not None:
+                    swap = False
+                else:
+                    params = stretchBendParams.get((class3, class2, class1))
+                    swap = params is not None
+           
                 if params:
                     idealAngle = idealAngles.get(tuple(angle), None) 
                     if idealAngle is None:
                         continue
 
-                    if class1 == atomClasses[angle[0]]:
+                    if not swap:
                         # 1-2-3
                         bondAB = bondParams.get((class1, class2)) or bondParams.get((class2, class1))
                         bondCB = bondParams.get((class2, class3)) or bondParams.get((class3, class2))
                         if bondAB and bondCB:
-                            bondAB = bondAB['r0']
-                            bondCB = bondCB['r0']
+                            bondAB, bondCB = bondAB['r0'], bondCB['r0']
                             k1, k2 = params["k1"], params["k2"]
                     else:
                         # 3-2-1
                         bondAB = bondParams.get((class3, class2)) or bondParams.get((class2, class3))
                         bondCB = bondParams.get((class2, class1)) or bondParams.get((class1, class2))
                         if bondAB and bondCB:
-                            bondAB = bondAB['r0']
-                            bondCB = bondCB['r0']
+                            bondAB, bondCB = bondCB['r0'], bondAB['r0']
                             k1, k2 = params["k2"], params["k1"]
 
                     if bondAB and bondCB:

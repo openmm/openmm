@@ -194,7 +194,7 @@ class AmoebaInPlaneAngleForceBuilder(BaseAmoebaForceBuilder):
             self.quartic,
             self.pentic,
             self.sextic,
-            180 / math.pi,
+            180.0 / math.pi,
         )
 
         def createForce():
@@ -211,10 +211,8 @@ class AmoebaInPlaneAngleForceBuilder(BaseAmoebaForceBuilder):
         for atom1, atom2, atom3, atom4 in inPlaneAngles:
             for inPlaneAngleType, params in self.inPlaneAngleParams:
                 if params[1] != 0:
-                    angleClasses = (atomClasses[atom1], atomClasses[atom2],
-                                 atomClasses[atom3], atomClasses[atom4])
-                    if ((angleClasses[0] == inPlaneAngleType[0] and angleClasses[1] == inPlaneAngleType[1] and angleClasses[2] == inPlaneAngleType[2]) or
-                            (angleClasses[0] == inPlaneAngleType[2] and angleClasses[1] == inPlaneAngleType[1] and angleClasses[2] == inPlaneAngleType[0])):
+                    angleClasses = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3])
+                    if self._matchParams(angleClasses, inPlaneAngleType[:3], reverseMatch=True):
                         force.addBond([atom1, atom2, atom3, atom4], params)
                         break
 
