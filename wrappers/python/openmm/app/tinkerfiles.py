@@ -873,44 +873,15 @@ class TinkerFiles:
         # Add AmoebaTorsionTorsionForce
         if "tortors" in self._forces:
             torsionTorsionForce = AmoebaTorsionTorsionForceBuilder()
-
-            # Register grid data
             for gridIndex, (tortorInfo, gridData) in enumerate(self._forces["tortors"]):
-                # tortorInfo[5] and tortorInfo[6] should contain grid dimensions
-                nx = int(tortorInfo[5])  # number of points in first dimension
-                ny = int(tortorInfo[6])  # number of points in second dimension
-
-                # Convert grid data to the 3D format expected by OpenMM
-                grid = []
-                for x in range(nx):
-                    grid.append([])
-                    for y in range(ny):
-                        gridEntryIndex = x * ny + y
-                        if gridEntryIndex < len(gridData):
-                            gridEntry = gridData[gridEntryIndex]
-                            if len(gridEntry) >= 6:
-                                # angle1, angle2, f, fx, fy, fxy
-                                angle1 = float(gridEntry[0])
-                                angle2 = float(gridEntry[1])
-                                f = float(gridEntry[2])
-                                fx = float(gridEntry[3])
-                                fy = float(gridEntry[4])
-                                fxy = float(gridEntry[5])
-                                grid[x].append([angle1, angle2, f, fx, fy, fxy])
-                            elif len(gridEntry) >= 3:
-                                # angle1, angle2, f (no derivatives)
-                                angle1 = float(gridEntry[0])
-                                angle2 = float(gridEntry[1])
-                                f = float(gridEntry[2])
-                                grid[x].append([angle1, angle2, f, 0.0, 0.0, 0.0])
-                            else:
-                                grid[x].append([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-                        else:
-                            grid[x].append([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+                nx = int(tortorInfo[5]) 
+                ny = int(tortorInfo[6])  
+                grid = np.array(gridData, dtype=np.float64).reshape((nx, ny, -1))
+                grid[:, :, 2] *= 4.184  
                 torsionTorsionForce.registerGridData(gridIndex, grid)
             force = torsionTorsionForce.getForce(sys)
             AmoebaTorsionTorsionForceBuilder.createTorsionTorsionInteractions(force, angles, self.atoms, self._forces["tortors"])
-    
+
         # Add AmoebaVdwForce
         if "vdw" in self._forces:
             vdwForceBuilder = AmoebaVdwForceBuilder(self._scalars['vdwtype'], self._scalars['radiusrule'], self._scalars['radiustype'],
