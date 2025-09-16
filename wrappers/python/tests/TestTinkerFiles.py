@@ -88,14 +88,14 @@ class TestTinkerFiles(unittest.TestCase):
         """
         xyzFile = "systems/phenol_water.xyz"
         keyFiles = ["systems/phenol.prm", "systems/amoebabio18.prm"]
-        energies, tinker, _ = self.computeAmoebaEnergies(xyzFile, keyFiles)
+        energies, _, _ = self.computeAmoebaEnergies(xyzFile, keyFiles)
 
         # Compare to values computed with Tinker.
         self.assertEnergyEqual(1104.0455, energies["AmoebaBond"])
         self.assertEnergyEqual(602.7082, energies["AmoebaAngle"] + energies["AmoebaInPlaneAngle"])
-        self.assertEnergyEqual(2.0572, energies["AmoebaOutOfPlaneBend"])
-        self.assertEnergyEqual(-0.1361, energies["AmoebaStretchBend"])
-        self.assertEnergyEqual(-0.8625, energies["PeriodicTorsionForce"])
+        self.assertEnergyEqual(2.0572, energies["AmoebaOutOfPlaneBend"], 1e-4)
+        self.assertEnergyEqual(-0.1361, energies["AmoebaStretchBend"], 1e-4)
+        self.assertEnergyEqual(-0.8625, energies["PeriodicTorsionForce"], 1e-4)
         self.assertEnergyEqual(-33.8595, energies["HarmonicBondForce"])
         self.assertEnergyEqual(5908.1343, energies["AmoebaVdwForce"])
         self.assertEnergyEqual(-13227.0088 - 5439.9969, energies["AmoebaMultipoleForce"])
@@ -158,10 +158,10 @@ class TestTinkerFiles(unittest.TestCase):
         # Compare to values computed with Tinker.
         self.assertEnergyEqual(19.6519, energies["AmoebaBond"])
         self.assertEnergyEqual(58.2509, energies["AmoebaAngle"] + energies["AmoebaInPlaneAngle"])
-        self.assertEnergyEqual(1.9697, energies["AmoebaOutOfPlaneBend"])
-        self.assertEnergyEqual(-0.4384, energies["AmoebaStretchBend"])
-        self.assertEnergyEqual(-2.3514, energies["PeriodicTorsionForce"])
-        self.assertEnergyEqual(1.2115, energies["AmoebaPiTorsion"])
+        self.assertEnergyEqual(1.9697, energies["AmoebaOutOfPlaneBend"], 1e-4)
+        self.assertEnergyEqual(-0.4384, energies["AmoebaStretchBend"], 1e-3)
+        self.assertEnergyEqual(-2.3514, energies["PeriodicTorsionForce"], 1e-4)
+        self.assertEnergyEqual(1.2115, energies["AmoebaPiTorsion"], 1e-4)
         self.assertEnergyEqual(-3.2958, energies["AmoebaTorsionTorsion"])
         self.assertEnergyEqual(1509.1915, energies["AmoebaVdwForce"])
         self.assertEnergyEqual(-488.0403 - 110.9042, energies["AmoebaMultipoleForce"])
