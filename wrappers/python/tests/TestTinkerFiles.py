@@ -162,7 +162,7 @@ class TestTinkerFiles(unittest.TestCase):
         self.assertEnergyEqual(-0.4384, energies["AmoebaStretchBend"], 1e-3)
         self.assertEnergyEqual(-2.3514, energies["PeriodicTorsionForce"], 1e-4)
         self.assertEnergyEqual(1.2115, energies["AmoebaPiTorsion"], 1e-4)
-        self.assertEnergyEqual(-3.2958, energies["AmoebaTorsionTorsion"])
+        self.assertEnergyEqual(-3.2958, energies["AmoebaTorsionTorsionForce"])
         self.assertEnergyEqual(1509.1915, energies["AmoebaVdwForce"])
         self.assertEnergyEqual(-488.0403 - 110.9042, energies["AmoebaMultipoleForce"])
         self.assertEnergyEqual(985.2453, sum(list(energies.values())))
