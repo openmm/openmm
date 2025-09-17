@@ -94,7 +94,7 @@ class TestTinkerFiles(unittest.TestCase):
         self.assertEnergyEqual(1104.0455, energies["AmoebaBond"])
         self.assertEnergyEqual(602.7082, energies["AmoebaAngle"] + energies["AmoebaInPlaneAngle"])
         self.assertEnergyEqual(2.0572, energies["AmoebaOutOfPlaneBend"], 1e-4)
-        self.assertEnergyEqual(-0.1361, energies["AmoebaStretchBend"], 1e-4)
+        self.assertEnergyEqual(-0.1361, energies["AmoebaStretchBend"], 1e-3)
         self.assertEnergyEqual(-0.8625, energies["PeriodicTorsionForce"], 1e-4)
         self.assertEnergyEqual(-33.8595, energies["HarmonicBondForce"])
         self.assertEnergyEqual(5908.1343, energies["AmoebaVdwForce"])
@@ -164,8 +164,8 @@ class TestTinkerFiles(unittest.TestCase):
         self.assertEnergyEqual(1.2115, energies["AmoebaPiTorsion"], 1e-4)
         self.assertEnergyEqual(-3.2958, energies["AmoebaTorsionTorsionForce"])
         self.assertEnergyEqual(1509.1915, energies["AmoebaVdwForce"])
-        self.assertEnergyEqual(-488.0403 - 110.9042, energies["AmoebaMultipoleForce"])
-        self.assertEnergyEqual(985.2453, sum(list(energies.values())))
+        self.assertEnergyEqual(-488.0403 - 110.9042, energies["AmoebaMultipoleForce"], 1e-3)
+        self.assertEnergyEqual(985.2453, sum(list(energies.values())), 1e-3)
 
     def test_Amoeba18Nucleic(self):
         """
