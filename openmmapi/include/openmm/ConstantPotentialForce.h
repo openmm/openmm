@@ -335,12 +335,14 @@ public:
     void setConstantPotentialMethod(ConstantPotentialMethod method);
     /**
      * Get whether or not to use a preconditioner when solving for electrode
-     * charges with the conjugate gradient method.
+     * charges with the conjugate gradient method.  This option has no effect
+     * when the matrix solver is in use.
      */
     bool getUsePreconditioner() const;
     /**
      * Set whether or not to use a preconditioner when solving for electrode
-     * charges with the conjugate gradient method.
+     * charges with the conjugate gradient method.  This option has no effect
+     * when the matrix solver is in use.
      */
     void setUsePreconditioner(bool use);
     /**

@@ -520,22 +520,22 @@ implementations).  In OpenMM's implementation, the parameter
 :math:`\ell_{TF,i}^2/v_{TF,i}` is specified as a single Thomas-Fermi parameter,
 with units of reciprocal length, for all particles in an electrode.
 
-Besides these additional terms, and the fluctuating nature of electrode
-particles, there are a few other important differences between the
-implementation of electrostatic interactions in ConstantPotentialForce and that
-in NonbondedForce using PME:
+Besides these additional terms, and the fluctuating nature of the electrode
+particle charges, there are a few other important differences between the
+implementation of nonbonded interactions in ConstantPotentialForce and that in
+NonbondedForce using PME:
 
 1. ConstantPotentialForce does not include any capability for computing
-   Lennard-Jones interactions.  If Lennard-Jones interactions as NonbondedForce
-   computes them are desired, a separate NonbondedForce should be added to the
+   Lennard-Jones interactions.  If Lennard-Jones interactions (as NonbondedForce
+   computes them) are desired, a separate NonbondedForce should be added to the
    system with the appropriate sigma and epsilon parameters set, and with all
    charges set to zero.
 
 2. For the solved charges on electrode particles to be valid, all particles in
    the system must use a single ConstantPotentialForce.  Setting charges in more
-   than one ConstantPotentialForce, or a NonbondedForce, will produce invalid
-   results, as the solution of electrode charges requires global minimization of
-   the total electrostatic energy of the system.
+   than one ConstantPotentialForce, or setting any non-zero charges in a
+   NonbondedForce, will produce invalid results, as solving for the electrode
+   charges requires a global minimization of the system's electrostatic energy.
 
 3. The Gaussian charge correction to pairwise interactions given by
    :math:`E_{gauss}` above is calculated using the minimum image convention and
@@ -557,6 +557,27 @@ place during a simulation by setting their masses to zero.  Unless the positions
 of electrode particles are allowed to fluctuate (in which case only the CG
 solver can be used), both solvers can be benchmarked on a given problem to find
 the one with the best performance.
+
+By default, the CG solver uses a preconditioner that automatically activates if
+any electrodes use Gaussian widths or Thomas-Fermi parameters different from
+each other.  This will usually allow the solver to converge to a given tolerance
+in fewer iterations.  However, if these electrode parameters differ but are very
+close to each other, benefit from the preconditioner may be offset by additional
+numerical error introduced due to floating-point roundoff.  This should not
+affect the results, but may cause the CG solver to require more iterations to
+converge.  Disabling the preconditioner may improve performance in such a case.
+
+Because ConstantPotentialForce needs to compute all of the electrostatic
+interactions in a system, it should not be used with AmoebaMultipoleForce, and
+is thus incompatible with induced dipole-based polarizable force fields.
+However, ConstantPotentialForce can be used with Drude polarizable force fields.
+None of the Drude sites or their parent particles should belong to an electrode.
+Also, DrudeSCFIntegrator should not be used with ConstantPotentialForce to
+integrate a system with Drude particles, because the current implementations
+do not permit simultaneously solving for the charges on electrode particles and
+the positions of the Drude particles.  Constant potential simulations with Drude
+polarizable force fields for the electrolyte should use DrudeLangevinIntegrator
+or DrudeNoseHooverIntegrator instead.
 
 GayBerneForce
 *************
