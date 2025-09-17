@@ -33,6 +33,7 @@
 #include "openmm/System.h"
 #include "openmm/common/CommonKernels.h"
 #include "openmm/common/CommonCalcNonbondedForce.h"
+#include "openmm/common/CommonCalcConstantPotentialForce.h"
 #include "openmm/common/ComputeArray.h"
 #include "openmm/common/ComputeSort.h"
 #include "openmm/common/FFT3D.h"
@@ -98,6 +99,25 @@ public:
      * @param force      the NonbondedForce this kernel will be used for
      */
     void initialize(const System& system, const NonbondedForce& force);
+private:
+   OpenCLContext& cl;
+};
+
+/**
+ * This kernel is invoked by ConstantPotentialForce to calculate the forces acting on the system.
+ */
+class OpenCLCalcConstantPotentialForceKernel : public CommonCalcConstantPotentialForceKernel {
+public:
+    OpenCLCalcConstantPotentialForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) :
+            CommonCalcConstantPotentialForceKernel(name, platform, cl, system), cl(cl) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the ConstantPotentialForce this kernel will be used for
+     */
+    void initialize(const System& system, const ConstantPotentialForce& force);
 private:
    OpenCLContext& cl;
 };

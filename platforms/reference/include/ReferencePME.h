@@ -71,12 +71,12 @@ pme_init(pme_t* ppme,
  *
  * Args:
  *
- * pme         Opaque pme_t object, must have been initialized with pme_init()
- * x           Pointer to coordinate data array (nm)
- * f           Pointer to force data array (will be written as kJ/mol/nm)
- * charge      Array of charges (units of e)
- * box         Simulation cell dimensions (nm)
- * energy      Total energy (will be written in units of kJ/mol)
+ * pme                 Opaque pme_t object, must have been initialized with pme_init()
+ * atomCoordinates     Pointer to coordinate data array (nm)
+ * forces              Pointer to force data array (will be written as kJ/mol/nm)
+ * charges             Array of charges (units of e)
+ * periodicBoxVectors  Simulation cell dimensions (nm)
+ * energy              Total energy (will be written in units of kJ/mol)
  */
 int OPENMM_EXPORT
 pme_exec(pme_t pme,
@@ -86,18 +86,37 @@ pme_exec(pme_t pme,
          const OpenMM::Vec3 periodicBoxVectors[3],
          double* energy);
 
+/*
+ * Evaluate reciprocal space PME energy and charge derivatives.
+ *
+ * Args:
+ *
+ * pme                 Opaque pme_t object, must have been initialized with pme_init()
+ * atomCoordinates     Pointer to coordinate data array (nm)
+ * chargeDerivatives   Pointer to charge derivative data array (will be written as kJ/mol/e)
+ * chargeIndices       Pointer to array of indices of particles to compute charge derivatives for
+ * charges             Array of charges (units of e)
+ * periodicBoxVectors  Simulation cell dimensions (nm)
+ */
+int OPENMM_EXPORT
+pme_exec_charge_derivatives(pme_t pme,
+                            const std::vector<OpenMM::Vec3>& atomCoordinates,
+                            std::vector<double>& chargeDerivatives,
+                            const std::vector<int>& chargeIndices,
+                            const std::vector<double>& charges,
+                            const OpenMM::Vec3 periodicBoxVectors[3]);
 
 /**
  * Evaluate reciprocal space PME dispersion energy and forces.
  *
  * Args:
  *
- * pme         Opaque pme_t object, must have been initialized with pme_init()
- * x           Pointer to coordinate data array (nm)
- * f           Pointer to force data array (will be written as kJ/mol/nm)
- * c6s         Array of c6 coefficients (units of sqrt(kJ/mol).nm^3 )
- * box         Simulation cell dimensions (nm)
- * energy      Total energy (will be written in units of kJ/mol)
+ * pme                 Opaque pme_t object, must have been initialized with pme_init()
+ * atomCoordinates     Pointer to coordinate data array (nm)
+ * forces              Pointer to force data array (will be written as kJ/mol/nm)
+ * c6s                 Array of c6 coefficients (units of sqrt(kJ/mol).nm^3 )
+ * periodicBoxVectors  Simulation cell dimensions (nm)
+ * energy              Total energy (will be written in units of kJ/mol)
  */
 int OPENMM_EXPORT
 pme_exec_dpme(pme_t pme,
@@ -106,9 +125,6 @@ pme_exec_dpme(pme_t pme,
               const std::vector<double>& c6s,
               const OpenMM::Vec3 periodicBoxVectors[3],
               double* energy);
-
-
-
 
 /* Release all memory in pme structure */
 int OPENMM_EXPORT

@@ -35,6 +35,7 @@
 #include "openmm/CMAPTorsionForce.h"
 #include "openmm/CMMotionRemover.h"
 #include "openmm/CompoundIntegrator.h"
+#include "openmm/ConstantPotentialForce.h"
 #include "openmm/CustomAngleForce.h"
 #include "openmm/CustomBondForce.h"
 #include "openmm/CustomCentroidBondForce.h"
@@ -80,6 +81,7 @@
 #include "openmm/serialization/CMAPTorsionForceProxy.h"
 #include "openmm/serialization/CMMotionRemoverProxy.h"
 #include "openmm/serialization/CompoundIntegratorProxy.h"
+#include "openmm/serialization/ConstantPotentialForceProxy.h"
 #include "openmm/serialization/CustomAngleForceProxy.h"
 #include "openmm/serialization/CustomBondForceProxy.h"
 #include "openmm/serialization/CustomCentroidBondForceProxy.h"
@@ -140,6 +142,7 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(CMAPTorsionForce), new CMAPTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(CMMotionRemover), new CMMotionRemoverProxy());
     SerializationProxy::registerProxy(typeid(CompoundIntegrator), new CompoundIntegratorProxy());
+    SerializationProxy::registerProxy(typeid(ConstantPotentialForce), new ConstantPotentialForceProxy());
     SerializationProxy::registerProxy(typeid(Continuous1DFunction), new Continuous1DFunctionProxy());
     SerializationProxy::registerProxy(typeid(Continuous2DFunction), new Continuous2DFunctionProxy());
     SerializationProxy::registerProxy(typeid(Continuous3DFunction), new Continuous3DFunctionProxy());

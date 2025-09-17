@@ -7,7 +7,7 @@
 set -euxo pipefail
 
 # This is the image for PowerPC + CUDA
-export DOCKER_IMAGE="quay.io/condaforge/linux-anvil-ppc64le-cuda:10.2"
+export DOCKER_IMAGE="quay.io/condaforge/linux-anvil-ppc64le-cuda:11.8"
 # # Use this other one for ARM debugging
 # export DOCKER_IMAGE="quay.io/condaforge/linux-anvil-aarch64"
 
@@ -17,7 +17,7 @@ export COMPILERS="compilers"
 # export COMPILERS="devtoolset-7"
 
 # Choose your Python version
-export PYTHON_VER="3.9"
+export PYTHON_VER="3.13"
 
 # Number of CPUs to use
 export CPU_COUNT=2
