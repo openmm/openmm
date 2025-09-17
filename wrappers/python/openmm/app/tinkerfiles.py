@@ -527,10 +527,10 @@ class TinkerFiles:
 
         # Add AmoebaBondForce
         if "bond" in self._forces:
-            bondParams = {(at1, at2): {"k": float(k), "r0": float(r0)} for at1, at2, k, r0 in self._forces["bond"]}
+            bondParams = {(at1, at2): {"k": float(k)*100.0*4.184, "r0": float(r0)*0.1} for at1, at2, k, r0 in self._forces["bond"]}
             bondForceBuilder = AmoebaBondForceBuilder(float(self._scalars["bond-cubic"])*10, float(self._scalars["bond-quartic"])*100)
             for (class1, class2), params in bondParams.items():
-                bondForceBuilder.registerParams((class1, class2), params["r0"]*0.1, params["k"]*100.0*4.184)
+                bondForceBuilder.registerParams((class1, class2), params["r0"], params["k"])
             bondForce = bondForceBuilder.getForce(sys)
             bondForceBuilder.addBonds(bondForce, atomClasses, bonds)
 
@@ -651,7 +651,7 @@ class TinkerFiles:
                         else:
                             theta0 = params["theta0"][0]
                         angleTuple = (angle[0], angle[1], angle[2])
-                        idealAngles[angleTuple] = theta0 # Store ideal angle for stretch-bend
+                        idealAngles[angleTuple] = theta0*math.pi/180# Store ideal angle for stretch-bend
                         angleForceBuilder.registerParams(angleTuple, (theta0, params["k"]*4.184*(math.pi/180)**2))
                         processedAngles.append(angleTuple)
                 if processedAngles:
@@ -687,7 +687,7 @@ class TinkerFiles:
                                 raise ValueError(f"Angle parameters out of range for atom classes {class1}-{class2}-{class3}")
                         else:
                             theta0 = params["theta0"][0]
-                        idealAngles[tuple(angle)] = theta0 # Store ideal angle for stretch-bend
+                        idealAngles[tuple(angle)] = theta0*math.pi/180 # Store ideal angle for stretch-bend
                         if paramKey not in processedParams:
                             inPlaneAngleForceBuilder.registerParams(paramKey, (theta0, params["k"]*4.184*(math.pi/180)**2))
                             processedParams.add(paramKey)
@@ -697,48 +697,9 @@ class TinkerFiles:
 
         # Add AmoebaStretchBendForce
         if "strbnd" in self._forces:
-            stretchBendParams = {(at1, at2, at3): {"k1": float(k1), "k2": float(k2)} for at1, at2, at3, k1, k2 in self._forces["strbnd"]}
+            stretchBendParams = {(at1, at2, at3): {"k1": float(k1)*41.84*math.pi/180, "k2": float(k2)*41.84*math.pi/180} for at1, at2, at3, k1, k2 in self._forces["strbnd"]}
             stretchBendForceBuilder = AmoebaStretchBendForceBuilder()
-            processedAngles = []
-            for angle in genericAngles + inPlaneAngles:
-                class1 = atomClasses[angle[0]]
-                class2 = atomClasses[angle[1]]
-                class3 = atomClasses[angle[2]]
-
-                params = stretchBendParams.get((class1, class2, class3))
-                if params is not None:
-                    swap = False
-                else:
-                    params = stretchBendParams.get((class3, class2, class1))
-                    swap = params is not None
-           
-                if params:
-                    idealAngle = idealAngles.get(tuple(angle), None) 
-                    if idealAngle is None:
-                        continue
-
-                    if not swap:
-                        # 1-2-3
-                        bondAB = bondParams.get((class1, class2)) or bondParams.get((class2, class1))
-                        bondCB = bondParams.get((class2, class3)) or bondParams.get((class3, class2))
-                        if bondAB and bondCB:
-                            bondAB, bondCB = bondAB['r0'], bondCB['r0']
-                            k1, k2 = params["k1"], params["k2"]
-                    else:
-                        # 3-2-1
-                        bondAB = bondParams.get((class3, class2)) or bondParams.get((class2, class3))
-                        bondCB = bondParams.get((class2, class1)) or bondParams.get((class1, class2))
-                        if bondAB and bondCB:
-                            bondAB, bondCB = bondCB['r0'], bondAB['r0']
-                            k1, k2 = params["k2"], params["k1"]
-
-                    if bondAB and bondCB:
-                        # Because for the same class triplet, depending on the number of hydrogens on the central atom,
-                        # the ideal angle can be different, we need to register parameters for each angle.
-                        paramKey = (angle[0], angle[1], angle[2])
-                        stretchBendForceBuilder.registerParams(paramKey, (bondAB*0.1, bondCB*0.1, idealAngle*math.pi/180, k1*41.84*math.pi/180, k2*41.84*math.pi/180))
-                        processedAngles.append((angle[0], angle[1], angle[2]))
-        
+            processedAngles = stretchBendForceBuilder.registerAllStretchBendParams(atomClasses, genericAngles + inPlaneAngles, stretchBendParams, bondParams, idealAngles)
             if processedAngles:
                 stretchBendForce = stretchBendForceBuilder.getForce(sys)
                 stretchBendForceBuilder.addStretchBends(stretchBendForce, processedAngles)

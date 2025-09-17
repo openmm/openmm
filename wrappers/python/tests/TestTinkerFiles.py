@@ -14,13 +14,26 @@ class TestTinkerFiles(unittest.TestCase):
             polarization="mutual",
             mutualInducedTargetEpsilon=1e-5,
             nonbondedMethod=NoCutoff,
-            constraints=None,
-            useDispersionCorrection=False,
         )
 
         # Compute the energy with OpenMM.
         for i, f in enumerate(system.getForces()):
             f.setForceGroup(i)
+        """
+        ff = ForceField("amoeba2018.xml")
+        system_tmp = ff.createSystem(tinker.topology, nonbondedMethod=NoCutoff)
+
+        # Compute the energy with OpenMM.
+        for i, f in enumerate(system_tmp.getForces()):
+            f.setForceGroup(i)
+        with open("system_tmp.xml", "w") as outfile:
+            outfile.write(XmlSerializer.serialize(system_tmp))
+
+        with open("system_phenol.xml", "w") as outfile:
+            outfile.write(XmlSerializer.serialize(system))
+
+        """
+        # system = system_tmp
 
         integrator = VerletIntegrator(0.001)
         context = Context(system, integrator, Platform.getPlatform("Reference"))
@@ -91,10 +104,10 @@ class TestTinkerFiles(unittest.TestCase):
         energies, _, _ = self.computeAmoebaEnergies(xyzFile, keyFiles)
 
         # Compare to values computed with Tinker.
-        self.assertEnergyEqual(1104.0455, energies["AmoebaBond"])
+        self.assertEnergyEqual(1104.0455, energies["AmoebaBondForce"])
         self.assertEnergyEqual(602.7082, energies["AmoebaAngle"] + energies["AmoebaInPlaneAngle"])
         self.assertEnergyEqual(2.0572, energies["AmoebaOutOfPlaneBend"], 1e-4)
-        self.assertEnergyEqual(-0.1361, energies["AmoebaStretchBend"], 1e-4)
+        self.assertEnergyEqual(-0.1361, energies["AmoebaStretchBendForce"], 1e-4)
         self.assertEnergyEqual(-0.8625, energies["PeriodicTorsionForce"], 1e-4)
         self.assertEnergyEqual(-33.8595, energies["HarmonicBondForce"])
         self.assertEnergyEqual(5908.1343, energies["AmoebaVdwForce"])
@@ -156,10 +169,10 @@ class TestTinkerFiles(unittest.TestCase):
                             'LYS', 'ARG'], f'Unexpected residues: {residues}'
 
         # Compare to values computed with Tinker.
-        self.assertEnergyEqual(19.6519, energies["AmoebaBond"])
+        self.assertEnergyEqual(19.6519, energies["AmoebaBondForce"])
         self.assertEnergyEqual(58.2509, energies["AmoebaAngle"] + energies["AmoebaInPlaneAngle"])
         self.assertEnergyEqual(1.9697, energies["AmoebaOutOfPlaneBend"], 1e-4)
-        self.assertEnergyEqual(-0.4384, energies["AmoebaStretchBend"], 1e-3)
+        self.assertEnergyEqual(-0.4384, energies["AmoebaStretchBendForce"], 1e-3)
         self.assertEnergyEqual(-2.3514, energies["PeriodicTorsionForce"], 1e-4)
         self.assertEnergyEqual(1.2115, energies["AmoebaPiTorsion"], 1e-4)
         self.assertEnergyEqual(-3.2958, energies["AmoebaTorsionTorsionForce"])
@@ -224,10 +237,10 @@ class TestTinkerFiles(unittest.TestCase):
                             'G', 'C', 'G', 'U', 'U', 'A', 'A', 'G', 'U', 'C', 'G', 'C', 'A'], f'Unexpected residues: {residues}'
 
         # Compare to values computed with Tinker.
-        self.assertEnergyEqual(749.6953, energies["AmoebaBond"])
+        self.assertEnergyEqual(749.6953, energies["AmoebaBondForce"])
         self.assertEnergyEqual(579.9971, energies["AmoebaAngle"] + energies["AmoebaInPlaneAngle"])
         self.assertEnergyEqual(10.6630, energies["AmoebaOutOfPlaneBend"])
-        self.assertEnergyEqual(5.2225, energies["AmoebaStretchBend"])
+        self.assertEnergyEqual(5.2225, energies["AmoebaStretchBendForce"])
         self.assertEnergyEqual(166.7233, energies["PeriodicTorsionForce"])
         self.assertEnergyEqual(57.2066, energies["AmoebaPiTorsion"])
         self.assertEnergyEqual(-4.2538, energies["AmoebaStretchTorsion"])

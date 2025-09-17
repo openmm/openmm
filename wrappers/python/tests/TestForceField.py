@@ -1955,10 +1955,10 @@ class AmoebaTestForceField(unittest.TestCase):
 
         # Compare to values computed with Tinker.
 
-        self.assertAlmostEqual(290.2445, energies['AmoebaBond'], 4)
+        self.assertAlmostEqual(290.2445, energies['AmoebaBondForce'], 4)
         self.assertAlmostEqual(496.4300, energies['AmoebaAngle']+energies['AmoebaInPlaneAngle'], 4)
         self.assertAlmostEqual(51.2913, energies['AmoebaOutOfPlaneBend'], 4)
-        self.assertAlmostEqual(5.7695, energies['AmoebaStretchBend'], 4)
+        self.assertAlmostEqual(5.7695, energies['AmoebaStretchBendForce'], 4)
         self.assertAlmostEqual(75.6890, energies['PeriodicTorsionForce'], 4)
         self.assertAlmostEqual(19.3364, energies['AmoebaPiTorsion'], 4)
         self.assertAlmostEqual(-32.6689, energies['AmoebaTorsionTorsionForce'], 4)
@@ -1972,10 +1972,10 @@ class AmoebaTestForceField(unittest.TestCase):
 
         # Compare to values computed with Tinker.
 
-        self.assertAlmostEqual(749.6953, energies['AmoebaBond'], 4)
+        self.assertAlmostEqual(749.6953, energies['AmoebaBondForce'], 4)
         self.assertAlmostEqual(579.9971, energies['AmoebaAngle']+energies['AmoebaInPlaneAngle'], 4)
         self.assertAlmostEqual(10.6630, energies['AmoebaOutOfPlaneBend'], 4)
-        self.assertAlmostEqual(5.2225, energies['AmoebaStretchBend'], 4)
+        self.assertAlmostEqual(5.2225, energies['AmoebaStretchBendForce'], 4)
         self.assertAlmostEqual(166.7233, energies['PeriodicTorsionForce'], 4)
         self.assertAlmostEqual(57.2066, energies['AmoebaPiTorsion'], 4)
         self.assertAlmostEqual(-4.2538, energies['AmoebaStretchTorsion'], 4)

@@ -38,6 +38,8 @@ import openmm.app.forcefield as ff
 from openmm.app import element
 from openmm.unit import amu, radian
 
+from typing import Optional
+
 
 class BaseAmoebaForceBuilder:
     """Base class for AMOEBA force builders"""
@@ -90,37 +92,98 @@ class BaseAmoebaForceBuilder:
 
 
 class AmoebaBondForceBuilder(BaseAmoebaForceBuilder):
-    """Builder for Bond force for AMOEBA force field"""
+    """
+    Builder for AmoebaBondForce for AMOEBA force field
+    
+    Attributes
+    ----------
+    cubic : float
+        Cubic term coefficient
+    quartic : float
+        Quartic term coefficient
+    bondParams : list
+        List of bond parameters as tuples of (bondType, (r0, k0)),
+        where bondType is a tuple of atom classes.
 
-    def __init__(self, cubic, quartic):
+    Parameters
+    ----------
+    cubic : float
+        Cubic term coefficient
+    quartic : float
+        Quartic term coefficient
+    """
+
+    def __init__(self, cubic: float, quartic: float) -> None:
         super().__init__()
         self.cubic = cubic
         self.quartic = quartic
         self.bondParams = []
 
-    def registerParams(self, bondType, r0, k0):
-        """Register bond parameters"""
+    def registerParams(self, bondType: tuple, r0: float, k0: float) -> None:
+        """
+        Register bond parameters.
+
+        Parameters
+        ----------
+        bondType : tuple
+            A tuple of atom classes defining the bond type.
+        r0 : float
+            The equilibrium bond length.
+        k0 : float
+            The force constant.
+        """
         self.bondParams.append((bondType, (r0, k0)))
 
-    def getForce(self, sys):
+    def getForce(self, sys: mm.System) -> mm.CustomBondForce:
+        """
+        Get or create the AmoebaBondForce in the system.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The system to get the force from or add it to.
+
+        Returns
+        -------
+        mm.CustomBondForce
+            The AmoebaBondForce instance.
+        """
         energy = f"k*(d^2 + {self.cubic}*d^3 + {self.quartic}*d^4); d=r-r0"
 
         def createForce():
             force = mm.CustomBondForce(energy)
             force.addPerBondParameter("r0")
             force.addPerBondParameter("k")
-            force.setName("AmoebaBond")
+            force.setName("AmoebaBondForce")
             return force
 
         return self._createOrGetForce(sys, mm.CustomBondForce, createForce, energyFunction=energy)
 
-    def addBonds(self, force, atomClasses, bonds):
-        """Add bonds to the force"""
-        for atom1, atom2 in bonds:
-            atomTypes = (atomClasses[atom1], atomClasses[atom2])
-            params = self._findMatchingParams(self.bondParams, atomTypes)
-            if params is not None and params[1] != 0:
-                force.addBond(atom1, atom2, params)
+    def addBonds(self, force: mm.CustomBondForce, atomClasses: list, bonds: list, bondsConstraints: Optional[list] = None, flexibleConstraints: bool = False) -> None:
+        """
+        Add bonds to the AmoebaBondForce.
+
+        Parameters
+        ----------
+        force : mm.CustomBondForce
+            The AmoebaBondForce instance to add bonds to.
+        atomClasses : list
+            List of atom classes indexed by atom index.
+        bonds : list
+            List of bonds indices as tuples of (atom1, atom2).
+        isConstrained : list
+            List of flags indicating if a given bond is constrainted.
+        flexibleConstraints : bool
+            If True, constrained bonds will still be added to the system.
+        """   
+        for i, (atom1, atom2) in enumerate(bonds):
+            isConstrained = False if bondsConstraints is None else bondsConstraints[i]
+            if not isConstrained or flexibleConstraints:
+                atomTypes = (atomClasses[atom1], atomClasses[atom2])
+                params = self._findMatchingParams(self.bondParams, atomTypes)
+                if params is not None:
+                    force.addBond(atom1, atom2, params)
+
 
 class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
     """Builder for AngleForce force for AMOEBA force field"""
@@ -281,11 +344,112 @@ class AmoebaStretchBendForceBuilder(BaseAmoebaForceBuilder):
         super().__init__()
         self.stretchBendParams = []
 
-    def registerParams(self, stretchBendType, params):
-        """Register stretch-bend parameters"""
+    def _registerParams(self, stretchBendType: tuple, params: tuple) -> None:
+        """
+        Register stretch-bend parameters.
+
+        Parameters
+        ----------
+        stretchBendType : tuple
+            A tuple identifying the type of stretch-bend interaction.
+        params : tuple
+            A tuple containing the parameters for the stretch-bend interaction.
+        """
         self.stretchBendParams.append((stretchBendType, params))
 
-    def getForce(self, sys):
+    def registerAllStretchBendParams(self,
+                                     atomClasses: list,
+                                     angles: list,
+                                     stretchBendParams: dict,
+                                     bondParams: dict,
+                                     idealAngles: dict
+                                     ):
+        """
+        Register all stretch-bend parameters for the given angles.
+
+        Notes
+        -----
+        For each angle defined by three atoms (1-2-3), this method checks if there are
+        corresponding stretch-bend parameters for the atom classes of these atoms. If such
+        parameters exist, it retrieves the ideal angle and bond parameters for the bonds
+        (1-2) and (2-3). It then registers the parameters for the stretch-bend interaction.
+        The method returns a list of angles for which stretch-bend parameters were successfully
+        registered.
+
+        Parameters
+        ----------
+        atomClasses : list
+            List of atom classes indexed by atom index.
+        angles : list
+            List of angles defined by tuples of (atom1, atom2, atom3).
+        stretchBendParams : dict
+            Dictionary mapping atom class triplets to stretch-bend parameters.
+        bondParams : dict
+            Dictionary mapping atom class pairs to bond parameters.
+        idealAngles : dict
+            Dictionary mapping angle tuples to ideal angles.
+
+        Returns
+        -------
+        list
+            List of angles for which stretch-bend parameters were registered.
+        """
+        processedAngles = []
+        for angle in angles:
+            class1 = atomClasses[angle[0]]
+            class2 = atomClasses[angle[1]]
+            class3 = atomClasses[angle[2]]
+
+            params = stretchBendParams.get((class1, class2, class3))
+            if params is not None:
+                swap = False
+            else:
+                params = stretchBendParams.get((class3, class2, class1))
+                swap = params is not None
+
+            if params:
+                idealAngle = idealAngles.get(tuple(angle), None) 
+                if idealAngle is None:
+                    continue
+
+                if not swap:
+                    # 1-2-3
+                    bondAB = bondParams.get((class1, class2)) or bondParams.get((class2, class1))
+                    bondCB = bondParams.get((class2, class3)) or bondParams.get((class3, class2))
+                    if bondAB and bondCB:
+                        bondAB, bondCB = bondAB['r0'], bondCB['r0']
+                        k1, k2 = params["k1"], params["k2"]
+                else:
+                    # 3-2-1
+                    bondAB = bondParams.get((class3, class2)) or bondParams.get((class2, class3))
+                    bondCB = bondParams.get((class2, class1)) or bondParams.get((class1, class2))
+                    if bondAB and bondCB:
+                        bondAB, bondCB = bondCB['r0'], bondAB['r0']
+                        k1, k2 = params["k2"], params["k1"]
+
+                if bondAB and bondCB:
+                    # Because for the same class triplet, depending on the number of hydrogens on the central atom,
+                    # the ideal angle can be different, we need to register parameters for each angle.
+                    paramKey = (angle[0], angle[1], angle[2])
+                    self._registerParams(paramKey, (bondAB, bondCB, idealAngle, k1, k2))
+                    processedAngles.append((angle[0], angle[1], angle[2]))
+
+        return processedAngles
+
+    def getForce(self, sys: mm.System) -> mm.CustomCompoundBondForce:
+        """
+        Get the force for the system.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The system to get the force for.
+
+        Returns
+        -------
+        mm.CustomCompoundBondForce
+            The force for the system.
+        """
         energy = (
             "(k1*(distance(p1,p2)-r12) + k2*(distance(p2,p3)-r23))*(%.15g*(angle(p1,p2,p3)-theta0))"
             % (180 / math.pi)
@@ -298,19 +462,27 @@ class AmoebaStretchBendForceBuilder(BaseAmoebaForceBuilder):
             force.addPerBondParameter("theta0")
             force.addPerBondParameter("k1")
             force.addPerBondParameter("k2")
-            force.setName("AmoebaStretchBend")
+            force.setName("AmoebaStretchBendForce")
             return force
 
         return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
 
-    def addStretchBends(self, force, angles):
-        """Add stretch-bend terms to the force"""
+    def addStretchBends(self, force: mm.CustomCompoundBondForce, angles: list) -> None:
+        """
+        Add stretch-bend terms to the force
+
+        Parameters
+        ----------
+        force : mm.CustomCompoundBondForce
+            The force to add the stretch-bend terms to.
+        angles : list of tuples
+            The angles to add the stretch-bend terms for.
+        """
         for atom1, atom2, atom3 in angles:
-            for stretchBendType, params in self.stretchBendParams:
-                angle = (atom1, atom2, atom3)
-                if self._matchParams(angle, stretchBendType, reverseMatch=True):
-                    force.addBond(angle, params)
-                    break
+            angle = (atom1, atom2, atom3)
+            params = self._findMatchingParams(self.stretchBendParams, (atom1, atom2, atom3), reverseMatch=True)
+            force.addBond(angle, params)
+     
 
 class AmoebaStretchTorsionForceBuilder(BaseAmoebaForceBuilder):
     """Builder for StretchTorsionForce force for AMOEBA force field"""
@@ -354,7 +526,7 @@ class AmoebaStretchTorsionForceBuilder(BaseAmoebaForceBuilder):
 
         # Record parameters for bonds and torsions so we can look them up quickly.
 
-        bondForce = [f for f in sys.getForces() if type(f) == mm.CustomBondForce and f.getName() == 'AmoebaBond'][0]
+        bondForce = [f for f in sys.getForces() if type(f) == mm.CustomBondForce and f.getName() == 'AmoebaBondForce'][0]
         torsionForce = [f for f in sys.getForces() if type(f) == mm.PeriodicTorsionForce][0]
         bondLength = {}
         torsionPhase = defaultdict(lambda: [0.0, math.pi, 0.0])
