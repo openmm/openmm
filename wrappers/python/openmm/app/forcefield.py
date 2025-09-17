@@ -4889,9 +4889,8 @@ class AmoebaUreyBradleyGenerator(object):
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = self.builder.getForce(sys)
-        anglesConstraints = [data.isAngleConstrained for angle in data.angles]
         atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
-        self.builder.addUreyBradleys(force, atomClasses, data.angles, anglesConstraints, args.get('flexibleConstraints', False))
+        self.builder.addUreyBradleys(force, atomClasses, data.angles, data.isAngleConstrained, args.get('flexibleConstraints', False))
 
 parsers["AmoebaUreyBradleyForce"] = AmoebaUreyBradleyGenerator.parseElement
 
