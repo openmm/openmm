@@ -4860,55 +4860,38 @@ class AmoebaUreyBradleyGenerator(object):
     #=============================================================================================
 
     def __init__(self):
-
-        self.anglesForAtom2Type = defaultdict(list)
-        self.types1 = []
-        self.types2 = []
-        self.types3 = []
-
-        self.length = []
-        self.k = []
-
-    #=============================================================================================
+        self.builder = amoebaforces.AmoebaUreyBradleyForceBuilder()
 
     @staticmethod
     def parseElement(element, forceField):
-
         #  <AmoebaUreyBradleyForce>
         #   <UreyBradley class1="74" class2="73" class3="74" k="16003.8" d="0.15537" />
 
         generator = AmoebaUreyBradleyGenerator()
         forceField._forces.append(generator)
         for bond in element.findall('UreyBradley'):
-            types = forceField._findAtomTypes(bond.attrib, 3)
-            if None not in types:
-                index = len(generator.types1)
-                generator.types1.append(types[0])
-                generator.types2.append(types[1])
-                generator.types3.append(types[2])
-                for t in types[1]:
-                    generator.anglesForAtom2Type[t].append(index)
-                generator.length.append(float(bond.attrib['d']))
-                generator.k.append(float(bond.attrib['k']))
+            try:
+                class1 = bond.attrib['class1']
+                class2 = bond.attrib['class2']
+                class3 = bond.attrib['class3']
+                length = float(bond.attrib['d'])
+                k = float(bond.attrib['k'])
+                generator.builder.registerParams((class1, class2, class3), (length, k))
+            except:
+                outputString = "AmoebaUreyBradleyGenerator : error getting types: %s %s %s" % (
+                                    bond.attrib['class1'],
+                                    bond.attrib['class2'],
+                                    bond.attrib['class3'])
+                raise ValueError(outputString)
+        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        builder = amoebaforces.AmoebaUreyBradleyForceBuilder()
-        force = builder.getForce(sys)
-        for (angle, isConstrained) in zip(data.angles, data.isAngleConstrained):
-            if (isConstrained and not args.get('flexibleConstraints', False)):
-                continue
-            type1 = data.atomType[data.atoms[angle[0]]]
-            type2 = data.atomType[data.atoms[angle[1]]]
-            type3 = data.atomType[data.atoms[angle[2]]]
-            for i in self.anglesForAtom2Type[type2]:
-                types1 = self.types1[i]
-                types2 = self.types2[i]
-                types3 = self.types3[i]
-                if ((type1 in types1 and type2 in types2 and type3 in types3) or (type3 in types1 and type2 in types2 and type1 in types3)):
-                    force.addBond(angle[0], angle[2], self.length[i], 2*self.k[i])
-                    break
+        force = self.builder.getForce(sys)
+        anglesConstraints = [data.isAngleConstrained for angle in data.angles]
+        atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
+        self.builder.addUreyBradleys(force, atomClasses, data.angles, anglesConstraints, args.get('flexibleConstraints', False))
 
 parsers["AmoebaUreyBradleyForce"] = AmoebaUreyBradleyGenerator.parseElement
 
