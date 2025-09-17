@@ -75,7 +75,6 @@ ReferenceQTBDynamics::~ReferenceQTBDynamics() {
 
 void ReferenceQTBDynamics::updatePart1(int numParticles, vector<Vec3>& velocities, vector<Vec3>& forces) {
     for (int i = 0; i < numParticles; i++) {
-        segmentVelocity[i*segmentLength+stepIndex] = velocities[i];
         if (inverseMasses[i] != 0.0)
             velocities[i] += (getDeltaT()*inverseMasses[i])*forces[i];
     }
@@ -86,11 +85,14 @@ void ReferenceQTBDynamics::updatePart2(int numParticles, vector<Vec3>& atomCoord
     const double dt = getDeltaT();
     const double halfdt = 0.5*dt;
     const double vscale = exp(-dt*friction);
+    const double halfvscale = exp(-halfdt*friction);
 
     for (int i = 0; i < numParticles; i++) {
         if (inverseMasses[i] != 0.0) {
+            Vec3 dv = inverseMasses[i]*dt*randomForce[segmentLength*i+stepIndex];
+            segmentVelocity[i*segmentLength+stepIndex] = halfvscale*velocities[i] + 0.5*dv;
             xPrime[i] = atomCoordinates[i] + velocities[i]*halfdt;
-            velocities[i] = vscale*velocities[i] + inverseMasses[i]*dt*randomForce[segmentLength*i+stepIndex];
+            velocities[i] = vscale*velocities[i] + dv;
             xPrime[i] = xPrime[i] + velocities[i]*halfdt;
             oldx[i] = xPrime[i];
         }

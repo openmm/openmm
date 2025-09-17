@@ -1,15 +1,12 @@
 /**
  * Perform the first part of integration: velocity step.
  */
-KERNEL void integrateQTBPart1(int numAtoms, int paddedNumAtoms, mixed dt, int stepIndex, GLOBAL mixed4* RESTRICT velm,
-        GLOBAL const mm_long* RESTRICT force, GLOBAL mixed* RESTRICT segmentVelocity, GLOBAL const int* RESTRICT atomOrder) {
+KERNEL void integrateQTBPart1(int numAtoms, int paddedNumAtoms, mixed dt, GLOBAL mixed4* RESTRICT velm,
+        GLOBAL const mm_long* RESTRICT force, GLOBAL const int* RESTRICT atomOrder) {
     mixed fscale = dt/(mixed) 0x100000000;
     for (int atom = GLOBAL_ID; atom < numAtoms; atom += GLOBAL_SIZE) {
         int atomIndex = atomOrder[atom];
         mixed4 velocity = velm[atom];
-        segmentVelocity[3*numAtoms*stepIndex + atomIndex] = velocity.x;
-        segmentVelocity[3*numAtoms*stepIndex + numAtoms + atomIndex] = velocity.y;
-        segmentVelocity[3*numAtoms*stepIndex + 2*numAtoms + atomIndex] = velocity.z;
         if (velocity.w != 0.0) {
             velocity.x += fscale*velocity.w*force[atom];
             velocity.y += fscale*velocity.w*force[atom+paddedNumAtoms];
@@ -25,18 +22,25 @@ KERNEL void integrateQTBPart1(int numAtoms, int paddedNumAtoms, mixed dt, int st
  */
 KERNEL void integrateQTBPart2(int numAtoms, mixed dt, mixed friction, int stepIndex, GLOBAL mixed4* RESTRICT velm,
         GLOBAL mixed4* RESTRICT posDelta, GLOBAL mixed4* RESTRICT oldDelta, GLOBAL const mixed* RESTRICT randomForce,
-        GLOBAL const int* RESTRICT atomOrder) {
+        GLOBAL mixed* RESTRICT segmentVelocity, GLOBAL const int* RESTRICT atomOrder) {
     mixed halfdt = 0.5f*dt;
     mixed vscale = EXP(-dt*friction);
+    mixed halfvscale = EXP(-halfdt*friction);
     for (int atom = GLOBAL_ID; atom < numAtoms; atom += GLOBAL_SIZE) {
         int atomIndex = atomOrder[atom];
         mixed4 velocity = velm[atom];
         if (velocity.w != 0.0) {
             mixed4 delta = make_mixed4(halfdt*velocity.x, halfdt*velocity.y, halfdt*velocity.z, 0);
             mixed fscale = dt*velocity.w;
-            velocity.x = vscale*velocity.x + fscale*randomForce[3*numAtoms*stepIndex + atomIndex];
-            velocity.y = vscale*velocity.y + fscale*randomForce[3*numAtoms*stepIndex + numAtoms + atomIndex];
-            velocity.z = vscale*velocity.z + fscale*randomForce[3*numAtoms*stepIndex + 2*numAtoms + atomIndex];
+            mixed3 f = make_mixed3(randomForce[3*numAtoms*stepIndex + atomIndex],
+                                   randomForce[3*numAtoms*stepIndex + numAtoms + atomIndex],
+                                   randomForce[3*numAtoms*stepIndex + 2*numAtoms + atomIndex]);
+            segmentVelocity[3*numAtoms*stepIndex + atomIndex] = halfvscale*velocity.x + 0.5f*fscale*f.x;
+            segmentVelocity[3*numAtoms*stepIndex + numAtoms + atomIndex] = halfvscale*velocity.y + 0.5f*fscale*f.y;
+            segmentVelocity[3*numAtoms*stepIndex + 2*numAtoms + atomIndex] = halfvscale*velocity.z + 0.5f*fscale*f.z;
+            velocity.x = vscale*velocity.x + fscale*f.x;
+            velocity.y = vscale*velocity.y + fscale*f.y;
+            velocity.z = vscale*velocity.z + fscale*f.z;
             velm[atom] = velocity;
             delta += make_mixed4(halfdt*velocity.x, halfdt*velocity.y, halfdt*velocity.z, 0);
             posDelta[atom] = delta;
