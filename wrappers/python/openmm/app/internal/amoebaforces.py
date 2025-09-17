@@ -38,17 +38,35 @@ import openmm.app.forcefield as ff
 from openmm.app import element
 from openmm.unit import amu, radian
 
-from typing import Optional
+from typing import Optional, List, Dict, Tuple, Union, Any, Callable
 
 
 class BaseAmoebaForceBuilder:
     """Base class for AMOEBA force builders"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.params = []
 
     @staticmethod
-    def _getAtomicNumber(atom):
+    def _getAtomicNumber(atom: Any) -> int:
+        """
+        Get the atomic number of an atom.
+
+        Parameters
+        ----------
+        atom : Any
+            Atom object that has either an element attribute or atomicNumber attribute.
+
+        Returns
+        -------
+        int
+            The atomic number of the atom.
+
+        Raises
+        ------
+        ValueError
+            If the atom does not have an associated element or atomic number.
+        """
         if hasattr(atom, 'element'):
             return atom.element.atomic_number
         elif hasattr(atom, 'atomicNumber'):
@@ -56,8 +74,26 @@ class BaseAmoebaForceBuilder:
         else:
             raise ValueError(f"Atom {atom} does not have an associated element or atomic number.")
 
-    def _findExistingForce(self, sys, forceType, energyFunction=None, name=None):
-        """Find existing force in system by type and optionally by energy function or name"""
+    def _findExistingForce(self, sys: mm.System, forceType: type, energyFunction: Optional[str] = None, name: Optional[str] = None) -> Optional[Any]:
+        """
+        Find existing force in system by type and optionally by energy function or name.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The OpenMM System to search in.
+        forceType : type
+            The type of force to search for.
+        energyFunction : Optional[str], default=None
+            The energy function to match (if applicable).
+        name : Optional[str], default=None
+            The name to match (if applicable).
+
+        Returns
+        -------
+        Optional[Any]
+            The matching force object if found, None otherwise.
+        """
         existing = [f for f in sys.getForces() if isinstance(f, forceType)]
         if energyFunction:
             existing = [f for f in existing if hasattr(f, 'getEnergyFunction') and f.getEnergyFunction() == energyFunction]
@@ -65,8 +101,28 @@ class BaseAmoebaForceBuilder:
             existing = [f for f in existing if hasattr(f, 'getName') and f.getName() == name]
         return existing[0] if existing else None
 
-    def _createOrGetForce(self, sys, forceType, creatorFunc, energyFunction=None, name=None):
-        """Create new force or get existing one"""
+    def _createOrGetForce(self, sys: mm.System, forceType: type, creatorFunc: Callable[[], Any], energyFunction: Optional[str] = None, name: Optional[str] = None) -> Any:
+        """
+        Create new force or get existing one.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The OpenMM System to add the force to.
+        forceType : type
+            The type of force to create or get.
+        creatorFunc : Callable[[], Any]
+            Function that creates a new force instance.
+        energyFunction : Optional[str], default=None
+            The energy function to match for existing forces.
+        name : Optional[str], default=None
+            The name to match for existing forces.
+
+        Returns
+        -------
+        Any
+            The force object (either existing or newly created).
+        """
         existing = self._findExistingForce(sys, forceType, energyFunction, name)
         if existing:
             return existing
@@ -75,16 +131,48 @@ class BaseAmoebaForceBuilder:
         sys.addForce(force)
         return force
 
-    def _matchParams(self, atomTypes, paramTypes, reverseMatch=True):
-        """Match atom types with parameter types, optionally allowing reverse matching"""
+    def _matchParams(self, atomTypes: Tuple[Any, ...], paramTypes: Tuple[Any, ...], reverseMatch: bool = True) -> bool:
+        """
+        Match atom types with parameter types, optionally allowing reverse matching.
+
+        Parameters
+        ----------
+        atomTypes : Tuple[Any, ...]
+            Tuple of atom types to match.
+        paramTypes : Tuple[Any, ...]
+            Tuple of parameter types to match against.
+        reverseMatch : bool, default=True
+            Whether to allow reverse matching.
+
+        Returns
+        -------
+        bool
+            True if the atom types match the parameter types.
+        """
         if tuple(atomTypes) == tuple(paramTypes):
             return True
         if reverseMatch and tuple(atomTypes) == tuple(paramTypes[::-1]):
             return True
         return False
 
-    def _findMatchingParams(self, param_list, atomTypes, reverseMatch=True):
-        """Find matching parameters from a parameter list"""
+    def _findMatchingParams(self, param_list: List[Tuple[Tuple[Any, ...], Any]], atomTypes: Tuple[Any, ...], reverseMatch: bool = True) -> Optional[Any]:
+        """
+        Find matching parameters from a parameter list.
+
+        Parameters
+        ----------
+        param_list : List[Tuple[Tuple[Any, ...], Any]]
+            List of (param_type, params) tuples to search through.
+        atomTypes : Tuple[Any, ...]
+            Tuple of atom types to match.
+        reverseMatch : bool, default=True
+            Whether to allow reverse matching.
+
+        Returns
+        -------
+        Optional[Any]
+            The matching parameters if found, None otherwise.
+        """
         for param_type, params in param_list:
             if self._matchParams(atomTypes, param_type, reverseMatch):
                 return params
@@ -186,9 +274,38 @@ class AmoebaBondForceBuilder(BaseAmoebaForceBuilder):
 
 
 class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
-    """Builder for AngleForce force for AMOEBA force field"""
+    """
+    Builder for AngleForce force for AMOEBA force field.
 
-    def __init__(self, cubic, quartic, pentic, sextic):
+    Attributes
+    ----------
+    cubic : float
+        Cubic term coefficient.
+    quartic : float
+        Quartic term coefficient.
+    pentic : float
+        Pentic (fifth-order) term coefficient.
+    sextic : float
+        Sextic (sixth-order) term coefficient.
+    angleParams : List[Tuple[Tuple[Any, ...], Any]]
+        List of angle parameters as tuples of (angleType, params).
+    """
+
+    def __init__(self, cubic: float, quartic: float, pentic: float, sextic: float) -> None:
+        """
+        Initialize the AmoebaAngleForceBuilder.
+
+        Parameters
+        ----------
+        cubic : float
+            Cubic term coefficient.
+        quartic : float
+            Quartic term coefficient.
+        pentic : float
+            Pentic (fifth-order) term coefficient.
+        sextic : float
+            Sextic (sixth-order) term coefficient.
+        """
         super().__init__()
         self.cubic = cubic
         self.quartic = quartic
@@ -196,11 +313,33 @@ class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
         self.sextic = sextic
         self.angleParams = []
 
-    def registerParams(self, angleType, params):
-        """Register angle parameters"""
+    def registerParams(self, angleType: Tuple[Any, ...], params: Tuple[float, ...]) -> None:
+        """
+        Register angle parameters.
+
+        Parameters
+        ----------
+        angleType : Tuple[Any, ...]
+            A tuple of atom classes defining the angle type.
+        params : Tuple[float, ...]
+            The angle parameters (equilibrium angle, force constant, etc.).
+        """
         self.angleParams.append((angleType, params))
 
-    def getForce(self, sys):
+    def getForce(self, sys: mm.System) -> mm.CustomAngleForce:
+        """
+        Get or create the AmoebaAngleForce in the system.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The system to get the force from or add it to.
+
+        Returns
+        -------
+        mm.CustomAngleForce
+            The AmoebaAngleForce instance.
+        """
         energy = "k*(d^2 + %s*d^3 + %s*d^4 + %s*d^5 + %s*d^6); d=%.15g*theta-theta0" % (
             self.cubic,
             self.quartic,
@@ -218,8 +357,17 @@ class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
 
         return self._createOrGetForce(sys, mm.CustomAngleForce, createForce, energyFunction=energy)
 
-    def addAngles(self, force, angles):
-        """Add angles to the force"""
+    def addAngles(self, force: mm.CustomAngleForce, angles: List[Tuple[int, int, int]]) -> None:
+        """
+        Add angles to the force.
+
+        Parameters
+        ----------
+        force : mm.CustomAngleForce
+            The AmoebaAngleForce instance to add angles to.
+        angles : List[Tuple[int, int, int]]
+            List of angle indices as tuples of (atom1, atom2, atom3).
+        """
         for atom1, atom2, atom3 in angles:
             for angleType, params in self.angleParams:
                 if params[1] != 0:
@@ -229,9 +377,39 @@ class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
 
 
 class AmoebaInPlaneAngleForceBuilder(BaseAmoebaForceBuilder):
-    """Builder for InPlaneAngleForce force for AMOEBA force field"""
+    """
+    Builder for InPlaneAngleForce force for AMOEBA force field.
 
-    def __init__(self, cubic, quartic, pentic, sextic):
+
+    Attributes
+    ----------
+    cubic : float
+        Cubic term coefficient.
+    quartic : float
+        Quartic term coefficient.
+    pentic : float
+        Pentic (fifth-order) term coefficient.
+    sextic : float
+        Sextic (sixth-order) term coefficient.
+    inPlaneAngleParams : List[Tuple[Tuple[Any, ...], Any]]
+        List of in-plane angle parameters.
+    """
+
+    def __init__(self, cubic: float, quartic: float, pentic: float, sextic: float) -> None:
+        """
+        Initialize the AmoebaInPlaneAngleForceBuilder.
+
+        Parameters
+        ----------
+        cubic : float
+            Cubic term coefficient.
+        quartic : float
+            Quartic term coefficient.
+        pentic : float
+            Pentic (fifth-order) term coefficient.
+        sextic : float
+            Sextic (sixth-order) term coefficient.
+        """
         super().__init__()
         self.cubic = cubic
         self.quartic = quartic
@@ -239,11 +417,33 @@ class AmoebaInPlaneAngleForceBuilder(BaseAmoebaForceBuilder):
         self.sextic = sextic
         self.inPlaneAngleParams = []
 
-    def registerParams(self, inPlaneAngleType, params):
-        """Register in-plane angle parameters"""
+    def registerParams(self, inPlaneAngleType: Tuple[Any, ...], params: Tuple[float, ...]) -> None:
+        """
+        Register in-plane angle parameters.
+
+        Parameters
+        ----------
+        inPlaneAngleType : Tuple[Any, ...]
+            A tuple of atom classes defining the in-plane angle type.
+        params : Tuple[float, ...]
+            The in-plane angle parameters (equilibrium angle, force constant, etc.).
+        """
         self.inPlaneAngleParams.append((inPlaneAngleType, params))
 
-    def getForce(self, sys):
+    def getForce(self, sys: mm.System) -> mm.CustomCompoundBondForce:
+        """
+        Get or create the AmoebaInPlaneAngleForce in the system.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The system to get the force from or add it to.
+
+        Returns
+        -------
+        mm.CustomCompoundBondForce
+            The AmoebaInPlaneAngleForce instance.
+        """
         energy = """k*(d^2 + %s*d^3 + %s*d^4 + %s*d^5 + %s*d^6); d=theta-theta0;
             theta = %.15g*pointangle(x1, y1, z1, projx, projy, projz, x3, y3, z3);
             projx = x2-nx*dot; projy = y2-ny*dot; projz = z2-nz*dot;
@@ -269,8 +469,19 @@ class AmoebaInPlaneAngleForceBuilder(BaseAmoebaForceBuilder):
 
         return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
     
-    def addInPlaneAngles(self, force, atomClasses, inPlaneAngles):
-        """Add in-plane angles to the force"""
+    def addInPlaneAngles(self, force: mm.CustomCompoundBondForce, atomClasses: List[Any], inPlaneAngles: List[Tuple[int, int, int, int]]) -> None:
+        """
+        Add in-plane angles to the force.
+
+        Parameters
+        ----------
+        force : mm.CustomCompoundBondForce
+            The AmoebaInPlaneAngleForce instance to add angles to.
+        atomClasses : List[Any]
+            List of atom classes indexed by atom index.
+        inPlaneAngles : List[Tuple[int, int, int, int]]
+            List of in-plane angle indices as tuples of (atom1, atom2, atom3, atom4).
+        """
         for atom1, atom2, atom3, atom4 in inPlaneAngles:
             for inPlaneAngleType, params in self.inPlaneAngleParams:
                 if params[1] != 0:
@@ -281,9 +492,38 @@ class AmoebaInPlaneAngleForceBuilder(BaseAmoebaForceBuilder):
 
 
 class AmoebaOutOfPlaneBendForceBuilder(BaseAmoebaForceBuilder):
-    """Builder for OutOfPlaneBendForce force for AMOEBA force field"""
+    """
+    Builder for OutOfPlaneBendForce force for AMOEBA force field.
 
-    def __init__(self, cubic, quartic, pentic, sextic):
+    Attributes
+    ----------
+    cubic : float
+        Cubic term coefficient.
+    quartic : float
+        Quartic term coefficient.
+    pentic : float
+        Pentic (fifth-order) term coefficient.
+    sextic : float
+        Sextic (sixth-order) term coefficient.
+    outOfPlaneBendParams : List[Tuple[Tuple[Any, ...], Any]]
+        List of out-of-plane bend parameters.
+    """
+
+    def __init__(self, cubic: float, quartic: float, pentic: float, sextic: float) -> None:
+        """
+        Initialize the AmoebaOutOfPlaneBendForceBuilder.
+
+        Parameters
+        ----------
+        cubic : float
+            Cubic term coefficient.
+        quartic : float
+            Quartic term coefficient.
+        pentic : float
+            Pentic (fifth-order) term coefficient.
+        sextic : float
+            Sextic (sixth-order) term coefficient.
+        """
         super().__init__()
         self.cubic = cubic
         self.quartic = quartic
@@ -291,17 +531,53 @@ class AmoebaOutOfPlaneBendForceBuilder(BaseAmoebaForceBuilder):
         self.sextic = sextic
         self.outOfPlaneBendParams = []
 
-    def _matchParams(self, atomClasses, paramClasses):
-        """Match atom classes with parameter classes for out-of-plane bends."""
+    def _matchParams(self, atomClasses: Tuple[Any, ...], paramClasses: Tuple[Any, ...]) -> bool:
+        """
+        Match atom classes with parameter classes for out-of-plane bends.
+
+        Parameters
+        ----------
+        atomClasses : Tuple[Any, ...]
+            Tuple of atom classes (at1, at2, at3, at4).
+        paramClasses : Tuple[Any, ...]
+            Tuple of parameter classes (p1, p2, p3, p4).
+
+        Returns
+        -------
+        bool
+            True if the atom classes match the parameter classes.
+        """
         at1, at2, at3, at4 = atomClasses
         p1, p2, p3, p4 = paramClasses
         return  at2 == p2 and at4 == p1 and {at1, at3} == {at1 if p3 == "0" else p3, at3 if p4 == "0" else p4}
     
-    def registerParams(self, outOfPlaneBendType, params):
-        """Register out-of-plane bend parameters"""
+    def registerParams(self, outOfPlaneBendType: Tuple[Any, ...], params: Tuple[float, ...]) -> None:
+        """
+        Register out-of-plane bend parameters.
+
+        Parameters
+        ----------
+        outOfPlaneBendType : Tuple[Any, ...]
+            A tuple of atom classes defining the out-of-plane bend type.
+        params : Tuple[float, ...]
+            The out-of-plane bend parameters (force constant, etc.).
+        """
         self.outOfPlaneBendParams.append((outOfPlaneBendType, params))
 
-    def getForce(self, sys):
+    def getForce(self, sys: mm.System) -> mm.CustomCompoundBondForce:
+        """
+        Get or create the AmoebaOutOfPlaneBendForce in the system.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The system to get the force from or add it to.
+
+        Returns
+        -------
+        mm.CustomCompoundBondForce
+            The AmoebaOutOfPlaneBendForce instance.
+        """
         energy = """k*(theta^2 + %s*theta^3 + %s*theta^4 + %s*theta^5 + %s*theta^6);
                     theta = %.15g*pointangle(x2, y2, z2, x4, y4, z4, projx, projy, projz);
                     projx = x2-nx*dot; projy = y2-ny*dot; projz = z2-nz*dot;
@@ -326,8 +602,19 @@ class AmoebaOutOfPlaneBendForceBuilder(BaseAmoebaForceBuilder):
 
         return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
 
-    def addOutOfPlaneBends(self, force, atomClasses, outOfPlaneBends):
-        """Add out-of-plane bends to the force"""
+    def addOutOfPlaneBends(self, force: mm.CustomCompoundBondForce, atomClasses: List[Any], outOfPlaneBends: List[Tuple[int, int, int, int]]) -> None:
+        """
+        Add out-of-plane bends to the force.
+
+        Parameters
+        ----------
+        force : mm.CustomCompoundBondForce
+            The AmoebaOutOfPlaneBendForce instance to add bends to.
+        atomClasses : List[Any]
+            List of atom classes indexed by atom index.
+        outOfPlaneBends : List[Tuple[int, int, int, int]]
+            List of out-of-plane bend indices as tuples of (atom1, atom2, atom3, atom4).
+        """
         for atom1, atom2, atom3, atom4 in outOfPlaneBends:
             for outOfPlaneBendType, params in self.outOfPlaneBendParams:
                 if params[0] != 0:
@@ -485,17 +772,47 @@ class AmoebaStretchBendForceBuilder(BaseAmoebaForceBuilder):
      
 
 class AmoebaStretchTorsionForceBuilder(BaseAmoebaForceBuilder):
-    """Builder for StretchTorsionForce force for AMOEBA force field"""
+    """
+    Builder for StretchTorsionForce force for AMOEBA force field.
 
-    def __init__(self):
+    Attributes
+    ----------
+    stretchTorsionParams : List[Tuple[Tuple[Any, ...], Any]]
+        List of stretch-torsion parameters.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the AmoebaStretchTorsionForceBuilder."""
         super().__init__()
         self.stretchTorsionParams = []
 
-    def registerParams(self, stretchTorsionType, params):
-        """Register stretch-torsion parameters"""
+    def registerParams(self, stretchTorsionType: Tuple[Any, ...], params: Tuple[float, ...]) -> None:
+        """
+        Register stretch-torsion parameters.
+
+        Parameters
+        ----------
+        stretchTorsionType : Tuple[Any, ...]
+            A tuple of atom classes defining the stretch-torsion type.
+        params : Tuple[float, ...]
+            The stretch-torsion parameters.
+        """
         self.stretchTorsionParams.append((stretchTorsionType, params))
 
-    def getForce(self, sys):
+    def getForce(self, sys: mm.System) -> mm.CustomCompoundBondForce:
+        """
+        Get or create the AmoebaStretchTorsionForce in the system.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The system to get the force from or add it to.
+
+        Returns
+        -------
+        mm.CustomCompoundBondForce
+            The AmoebaStretchTorsionForce instance.
+        """
         energy = """v11*(distance(p1,p2)-length1)*phi1 +
                     v12*(distance(p1,p2)-length1)*phi2 +
                     v13*(distance(p1,p2)-length1)*phi3 +
@@ -521,8 +838,21 @@ class AmoebaStretchTorsionForceBuilder(BaseAmoebaForceBuilder):
 
         return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
 
-    def addStretchTorsions(self, sys, force, atomClasses, torsions):
-        """Add stretch-torsion terms to the force"""
+    def addStretchTorsions(self, sys: mm.System, force: mm.CustomCompoundBondForce, atomClasses: List[Any], torsions: List[Tuple[int, int, int, int]]) -> None:
+        """
+        Add stretch-torsion terms to the force.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The OpenMM System containing bond and torsion forces.
+        force : mm.CustomCompoundBondForce
+            The AmoebaStretchTorsionForce instance to add terms to.
+        atomClasses : List[Any]
+            List of atom classes indexed by atom index.
+        torsions : List[Tuple[int, int, int, int]]
+            List of torsion indices as tuples of (atom1, atom2, atom3, atom4).
+        """
 
         # Record parameters for bonds and torsions so we can look them up quickly.
 
@@ -560,17 +890,47 @@ class AmoebaStretchTorsionForceBuilder(BaseAmoebaForceBuilder):
 
 
 class AmoebaAngleTorsionForceBuilder(BaseAmoebaForceBuilder):
-    """Builder for AngleTorsionForce force for AMOEBA force field"""
+    """
+    Builder for AngleTorsionForce force for AMOEBA force field.
 
-    def __init__(self):
+    Attributes
+    ----------
+    angleTorsionParams : List[Tuple[Tuple[Any, ...], Any]]
+        List of angle-torsion parameters.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the AmoebaAngleTorsionForceBuilder."""
         super().__init__()
         self.angleTorsionParams = []
 
-    def registerParams(self, angleTorsionType, params):
-        """Register angle-torsion parameters"""
+    def registerParams(self, angleTorsionType: Tuple[Any, ...], params: Tuple[float, ...]) -> None:
+        """
+        Register angle-torsion parameters.
+
+        Parameters
+        ----------
+        angleTorsionType : Tuple[Any, ...]
+            A tuple of atom classes defining the angle-torsion type.
+        params : Tuple[float, ...]
+            The angle-torsion parameters.
+        """
         self.angleTorsionParams.append((angleTorsionType, params))
 
-    def getForce(self, sys):
+    def getForce(self, sys: mm.System) -> mm.CustomCompoundBondForce:
+        """
+        Get or create the AmoebaAngleTorsionForce in the system.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The system to get the force from or add it to.
+
+        Returns
+        -------
+        mm.CustomCompoundBondForce
+            The AmoebaAngleTorsionForce instance.
+        """
         energy = """v11*(angle(p1,p2,p3)-angle1)*phi1 +
                     v12*(angle(p1,p2,p3)-angle1)*phi2 +
                     v13*(angle(p1,p2,p3)-angle1)*phi3 +
@@ -593,8 +953,21 @@ class AmoebaAngleTorsionForceBuilder(BaseAmoebaForceBuilder):
 
         return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
 
-    def addAngleTorsions(self, sys, force, atomClasses, torsions):
-        """Add angle-torsion terms to the force"""
+    def addAngleTorsions(self, sys: mm.System, force: mm.CustomCompoundBondForce, atomClasses: List[Any], torsions: List[Tuple[int, int, int, int]]) -> None:
+        """
+        Add angle-torsion terms to the force.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The OpenMM System containing angle and torsion forces.
+        force : mm.CustomCompoundBondForce
+            The AmoebaAngleTorsionForce instance to add terms to.
+        atomClasses : List[Any]
+            List of atom classes indexed by atom index.
+        torsions : List[Tuple[int, int, int, int]]
+            List of torsion indices as tuples of (atom1, atom2, atom3, atom4).
+        """
 
         # Record parameters for angles and torsions so we can look them up quickly.
 
@@ -637,21 +1010,62 @@ class AmoebaAngleTorsionForceBuilder(BaseAmoebaForceBuilder):
 
 
 class AmoebaTorsionForceBuilder(BaseAmoebaForceBuilder):
-    """Builder for PeriodicTorsionForce force for AMOEBA force field"""
+    """
+    Builder for PeriodicTorsionForce force for AMOEBA force field.
 
-    def __init__(self):
+    Attributes
+    ----------
+    torsionParams : List[Tuple[Tuple[Any, ...], Any]]
+        List of torsion parameters.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the AmoebaTorsionForceBuilder."""
         super().__init__()
         self.torsionParams = []
 
-    def registerParams(self, torsionType, params):
-        """Register torsion parameters"""
+    def registerParams(self, torsionType: Tuple[Any, ...], params: Tuple[Tuple[float, float], ...]) -> None:
+        """
+        Register torsion parameters.
+
+        Parameters
+        ----------
+        torsionType : Tuple[Any, ...]
+            A tuple of atom classes defining the torsion type.
+        params : Tuple[Tuple[float, float], ...]
+            The torsion parameters as tuples of (force_constant, phase_angle) for each periodicity.
+        """
         self.torsionParams.append((torsionType, params))
 
-    def getForce(self, sys):
+    def getForce(self, sys: mm.System) -> mm.PeriodicTorsionForce:
+        """
+        Get or create the PeriodicTorsionForce in the system.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The system to get the force from or add it to.
+
+        Returns
+        -------
+        mm.PeriodicTorsionForce
+            The PeriodicTorsionForce instance.
+        """
         return self._createOrGetForce(sys, mm.PeriodicTorsionForce, mm.PeriodicTorsionForce)
 
-    def addTorsions(self, force, atomClasses, torsions):
-        """Add torsions to the force"""
+    def addTorsions(self, force: mm.PeriodicTorsionForce, atomClasses: List[Any], torsions: List[Tuple[int, int, int, int]]) -> None:
+        """
+        Add torsions to the force.
+
+        Parameters
+        ----------
+        force : mm.PeriodicTorsionForce
+            The PeriodicTorsionForce instance to add torsions to.
+        atomClasses : List[Any]
+            List of atom classes indexed by atom index.
+        torsions : List[Tuple[int, int, int, int]]
+            List of torsion indices as tuples of (atom1, atom2, atom3, atom4).
+        """
         for atom1, atom2, atom3, atom4 in torsions:
             for torsionType, params in self.torsionParams:
                 atomTypes = (atomClasses[atom1], atomClasses[atom2],
@@ -668,17 +1082,47 @@ class AmoebaTorsionForceBuilder(BaseAmoebaForceBuilder):
 
 
 class AmoebaPiTorsionForceBuilder(BaseAmoebaForceBuilder):
-    """Builder for PiTorsionForce force for AMOEBA force field"""
+    """
+    Builder for PiTorsionForce force for AMOEBA force field.
 
-    def __init__(self):
+    Attributes
+    ----------
+    piTorsionParams : List[Tuple[Tuple[Any, ...], Any]]
+        List of pi-torsion parameters.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the AmoebaPiTorsionForceBuilder."""
         super().__init__()
         self.piTorsionParams = []
 
-    def registerParams(self, piTorsionType, params):
-        """Register pi-torsion parameters"""
+    def registerParams(self, piTorsionType: Tuple[Any, ...], params: Tuple[float, ...]) -> None:
+        """
+        Register pi-torsion parameters.
+
+        Parameters
+        ----------
+        piTorsionType : Tuple[Any, ...]
+            A tuple of atom classes defining the pi-torsion type.
+        params : Tuple[float, ...]
+            The pi-torsion parameters (force constant, etc.).
+        """
         self.piTorsionParams.append((piTorsionType, params))
 
-    def getForce(self, sys):
+    def getForce(self, sys: mm.System) -> mm.CustomCompoundBondForce:
+        """
+        Get or create the AmoebaPiTorsionForce in the system.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The system to get the force from or add it to.
+
+        Returns
+        -------
+        mm.CustomCompoundBondForce
+            The AmoebaPiTorsionForce instance.
+        """
         energy = """2*k*sin(phi)^2;
                     phi = pointdihedral(x3+c1x, y3+c1y, z3+c1z, x3, y3, z3, x4, y4, z4, x4+c2x, y4+c2y, z4+c2z);
                     c1x = (d14y*d24z-d14z*d24y); c1y = (d14z*d24x-d14x*d24z); c1z = (d14x*d24y-d14y*d24x);
@@ -696,8 +1140,19 @@ class AmoebaPiTorsionForceBuilder(BaseAmoebaForceBuilder):
 
         return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
 
-    def addPiTorsions(self, force, atomClasses, piTorsions):
-        """Add pi-torsions to the force"""
+    def addPiTorsions(self, force: mm.CustomCompoundBondForce, atomClasses: List[Any], piTorsions: List[Tuple[int, int, int, int, int, int]]) -> None:
+        """
+        Add pi-torsions to the force.
+
+        Parameters
+        ----------
+        force : mm.CustomCompoundBondForce
+            The AmoebaPiTorsionForce instance to add pi-torsions to.
+        atomClasses : List[Any]
+            List of atom classes indexed by atom index.
+        piTorsions : List[Tuple[int, int, int, int, int, int]]
+            List of pi-torsion indices as tuples of six atoms.
+        """
         for atom1, atom2, atom3, atom4, atom5, atom6 in piTorsions:
             for piTorsionType, params in self.piTorsionParams:
                 if params[0] != 0:
@@ -708,28 +1163,74 @@ class AmoebaPiTorsionForceBuilder(BaseAmoebaForceBuilder):
 
 
 class AmoebaUreyBradleyForceBuilder(BaseAmoebaForceBuilder):
-    """Builder for UreyBradleyForce force for AMOEBA force field"""
+    """
+    Builder for UreyBradleyForce force for AMOEBA force field.
 
-    def __init__(self):
+    Attributes
+    ----------
+    ureyBradleyParams : List[Tuple[Tuple[Any, ...], Any]]
+        List of Urey-Bradley parameters.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the AmoebaUreyBradleyForceBuilder."""
         super().__init__()
         self.ureyBradleyParams = []
 
-    def registerParams(self, ureyBradleyType, params):
-        """Register Urey-Bradley parameters"""
+    def registerParams(self, ureyBradleyType: Tuple[Any, ...], params: Tuple[float, float]) -> None:
+        """
+        Register Urey-Bradley parameters.
+
+        Parameters
+        ----------
+        ureyBradleyType : Tuple[Any, ...]
+            A tuple of atom classes defining the Urey-Bradley type.
+        params : Tuple[float, float]
+            The Urey-Bradley parameters (force constant, equilibrium distance).
+        """
         self.ureyBradleyParams.append((ureyBradleyType, params))
 
-    def getForce(self, sys):
+    def getForce(self, sys: mm.System) -> mm.HarmonicBondForce:
+        """
+        Get or create the HarmonicBondForce for Urey-Bradley terms in the system.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The system to get the force from or add it to.
+
+        Returns
+        -------
+        mm.HarmonicBondForce
+            The HarmonicBondForce instance for Urey-Bradley terms.
+        """
         return self._createOrGetForce(sys, mm.HarmonicBondForce, mm.HarmonicBondForce)
 
-    def addUreyBradleys(self, force, atomClasses, angles):
-        """Add Urey-Bradley terms to the force"""
-        for atom1, atom2, atom3 in angles:
-            for ureyBradleyType, params in self.ureyBradleyParams:
-                atomTypes = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3])
-                if self._matchParams(atomTypes, ureyBradleyType):
+    def addUreyBradleys(self, force: mm.HarmonicBondForce, atomClasses: List[Any], angles: List[Tuple[int, int, int]], anglesConstraints: Optional[List[bool]] = None, flexibleConstraints: bool = False) -> None:
+        """
+        Add Urey-Bradley terms to the force.
+
+        Parameters
+        ----------
+        force : mm.HarmonicBondForce
+            The HarmonicBondForce instance to add Urey-Bradley terms to.
+        atomClasses : List[Any]
+            List of atom classes indexed by atom index.
+        angles : List[Tuple[int, int, int]]
+            List of angle indices as tuples of (atom1, atom2, atom3).
+        anglesConstraints : Optional[List[bool]], default=None
+            List of flags indicating if a given angle is constrained.
+        flexibleConstraints : bool, default=False
+            If True, constrained angles will still be added to the system.
+        """
+        for i, (atom1, atom2, atom3) in enumerate(angles):
+            isConstrained = False if anglesConstraints is None else anglesConstraints[i]
+            if not isConstrained or flexibleConstraints:
+                ubType = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3])
+                params = self._findMatchingParams(self.ureyBradleyParams, ubType, reverseMatch=True)
+                if params is not None:
                     k, d = params
                     force.addBond(atom1, atom3, d, 2 * k)
-                    break
 
 
 class AmoebaTorsionTorsionForceBuilder(BaseAmoebaForceBuilder):
@@ -1002,9 +1503,54 @@ class AmoebaTorsionTorsionForceBuilder(BaseAmoebaForceBuilder):
 
 
 class AmoebaWcaDispersionForceBuilder(BaseAmoebaForceBuilder):
-    """Builder for WCA Dispersion force for AMOEBA force field"""
+    """
+    Builder for WCA Dispersion force for AMOEBA force field.
 
-    def __init__(self, epso, epsh, rmino, rminh, awater, slevy, dispoff, shctd):
+    Attributes
+    ----------
+    epso : float
+        Oxygen epsilon parameter.
+    epsh : float
+        Hydrogen epsilon parameter.
+    rmino : float
+        Oxygen minimum radius parameter.
+    rminh : float
+        Hydrogen minimum radius parameter.
+    awater : float
+        Water A parameter.
+    slevy : float
+        Slevy parameter.
+    dispoff : float
+        Dispersion offset parameter.
+    shctd : float
+        SHCTD parameter.
+    classParams : Dict[Any, Tuple[float, float]]
+        Dictionary mapping atom classes to (radius, epsilon) parameters.
+    """
+
+    def __init__(self, epso: float, epsh: float, rmino: float, rminh: float, awater: float, slevy: float, dispoff: float, shctd: float) -> None:
+        """
+        Initialize the AmoebaWcaDispersionForceBuilder.
+
+        Parameters
+        ----------
+        epso : float
+            Oxygen epsilon parameter.
+        epsh : float
+            Hydrogen epsilon parameter.
+        rmino : float
+            Oxygen minimum radius parameter.
+        rminh : float
+            Hydrogen minimum radius parameter.
+        awater : float
+            Water A parameter.
+        slevy : float
+            Slevy parameter.
+        dispoff : float
+            Dispersion offset parameter.
+        shctd : float
+            SHCTD parameter.
+        """
         super().__init__()
         self.epso = epso
         self.epsh = epsh
@@ -1016,11 +1562,35 @@ class AmoebaWcaDispersionForceBuilder(BaseAmoebaForceBuilder):
         self.shctd = shctd
         self.classParams = {}
 
-    def registerParams(self, atomClass, radius, epsilon):
-        """Register atom parameters for WCA dispersion"""
+    def registerParams(self, atomClass: Any, radius: float, epsilon: float) -> None:
+        """
+        Register atom parameters for WCA dispersion.
+
+        Parameters
+        ----------
+        atomClass : Any
+            The atom class identifier.
+        radius : float
+            The van der Waals radius.
+        epsilon : float
+            The well depth parameter.
+        """
         self.classParams[atomClass] = (radius, epsilon)
 
-    def getForce(self, sys):
+    def getForce(self, sys: mm.System) -> mm.AmoebaWcaDispersionForce:
+        """
+        Get or create the AmoebaWcaDispersionForce in the system.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The system to get the force from or add it to.
+
+        Returns
+        -------
+        mm.AmoebaWcaDispersionForce
+            The AmoebaWcaDispersionForce instance.
+        """
         def createForce():
             force = mm.AmoebaWcaDispersionForce()
             force.setEpso(self.epso)    
@@ -1035,17 +1605,59 @@ class AmoebaWcaDispersionForceBuilder(BaseAmoebaForceBuilder):
 
         return self._createOrGetForce(sys, mm.AmoebaWcaDispersionForce, createForce)
 
-    def addParticles(self, force, atomClasses):
-        """Add particles to the WCA dispersion force"""
+    def addParticles(self, force: mm.AmoebaWcaDispersionForce, atomClasses: List[Any]) -> None:
+        """
+        Add particles to the WCA dispersion force.
+
+        Parameters
+        ----------
+        force : mm.AmoebaWcaDispersionForce
+            The AmoebaWcaDispersionForce instance to add particles to.
+        atomClasses : List[Any]
+            List of atom classes indexed by atom index.
+        """
         for atomCls in atomClasses:
             values = self.classParams[atomCls]
             force.addParticle(*values)
 
 
 class AmoebaGeneralizedKirkwoodForceBuilder(BaseAmoebaForceBuilder):
-    """Builder for Generalized Kirkwood force for AMOEBA force field"""
+    """
+    Builder for Generalized Kirkwood force for AMOEBA force field.
 
-    def __init__(self, solventDielectric, soluteDielectric, includeCavityTerm, probeRadius, surfaceAreaFactor):
+    Attributes
+    ----------
+    solventDielectric : float
+        The dielectric constant of the solvent.
+    soluteDielectric : float
+        The dielectric constant of the solute.
+    includeCavityTerm : bool
+        Whether to include the cavity term in the calculation.
+    probeRadius : float
+        The probe radius for surface area calculations.
+    surfaceAreaFactor : float
+        The surface area factor for cavity term calculations.
+    atomParams : List[float]
+        List of atomic charges.
+    """
+
+    def __init__(self, solventDielectric: float, soluteDielectric: float, includeCavityTerm: bool, probeRadius: float, surfaceAreaFactor: float) -> None:
+        """
+        Initialize the AmoebaGeneralizedKirkwoodForceBuilder.
+
+        Parameters
+        ----------
+        solventDielectric : float
+            The dielectric constant of the solvent.
+        soluteDielectric : float
+            The dielectric constant of the solute.
+        includeCavityTerm : bool
+            Whether to include the cavity term in the calculation.
+        probeRadius : float
+            The probe radius for surface area calculations.
+        surfaceAreaFactor : float
+            The surface area factor for cavity term calculations.
+        """
         super().__init__()
         self.solventDielectric = solventDielectric
         self.soluteDielectric = soluteDielectric
@@ -1054,11 +1666,33 @@ class AmoebaGeneralizedKirkwoodForceBuilder(BaseAmoebaForceBuilder):
         self.surfaceAreaFactor = surfaceAreaFactor
         self.atomParams = []
 
-    def registerParams(self, charge):
-        """Register atom parameters for GK force"""
+    def registerParams(self, charge: float) -> None:
+        """
+        Register atom parameters for GK force.
+
+        Parameters
+        ----------
+        charge : float
+            The atomic charge.
+        """
         self.atomParams.append(charge)
 
-    def getForce(self, sys, implicitSolvent=False):
+    def getForce(self, sys: mm.System, implicitSolvent: bool = False) -> Optional[mm.AmoebaGeneralizedKirkwoodForce]:
+        """
+        Get or create the AmoebaGeneralizedKirkwoodForce in the system.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The system to get the force from or add it to.
+        implicitSolvent : bool, default=False
+            Whether implicit solvent is being used.
+
+        Returns
+        -------
+        Optional[mm.AmoebaGeneralizedKirkwoodForce]
+            The AmoebaGeneralizedKirkwoodForce instance, or None if not using implicit solvent.
+        """
         if not implicitSolvent:
             return None
 
@@ -1072,8 +1706,21 @@ class AmoebaGeneralizedKirkwoodForceBuilder(BaseAmoebaForceBuilder):
             return force
         return self._createOrGetForce(sys, mm.AmoebaGeneralizedKirkwoodForce, createForce)
 
-    def addParticles(self, force, atoms, bonds, radiusType="Bondi"):
-        """Add particles to the Generalized Kirkwood force"""
+    def addParticles(self, force: mm.AmoebaGeneralizedKirkwoodForce, atoms: List[Any], bonds: List[Tuple[int, int]], radiusType: str = "Bondi") -> None:
+        """
+        Add particles to the Generalized Kirkwood force.
+
+        Parameters
+        ----------
+        force : mm.AmoebaGeneralizedKirkwoodForce
+            The AmoebaGeneralizedKirkwoodForce instance to add particles to.
+        atoms : List[Any]
+            List of atom objects.
+        bonds : List[Tuple[int, int]]
+            List of bond indices as tuples of (atom1, atom2).
+        radiusType : str, default="Bondi"
+            The type of atomic radius to use ("Bondi" or "amoeba").
+        """
         # Create bonded particle sets
         bondedParticleSets = [set() for _ in range(len(atoms))]
         for atom1, atom2 in bonds:
@@ -1099,8 +1746,25 @@ class AmoebaGeneralizedKirkwoodForceBuilder(BaseAmoebaForceBuilder):
             force.addParticle(charge, radius, shct)
 
     @staticmethod
-    def getOverlapScaleFactor(atomicNumber):
-        """Get the overlap scale factor based on atomic number for Generalized Kirkwood"""
+    def getOverlapScaleFactor(atomicNumber: int) -> float:
+        """
+        Get the overlap scale factor based on atomic number for Generalized Kirkwood.
+
+        Parameters
+        ----------
+        atomicNumber : int
+            The atomic number.
+
+        Returns
+        -------
+        float
+            The overlap scale factor.
+
+        Raises
+        ------
+        ValueError
+            If no overlap scale factor is available for the given atomic number.
+        """
         shctMap = {
             1: 0.85,   # H
             6: 0.72,   # C
@@ -1117,8 +1781,27 @@ class AmoebaGeneralizedKirkwoodForceBuilder(BaseAmoebaForceBuilder):
             return shctMap[atomicNumber]
 
     @staticmethod
-    def getAtomicRadius(atomicNumber, bondedAtomicNumbers=None):
-        """Get the atomic radius based on atomic number and bonded atoms for Generalized Kirkwood"""
+    def getAtomicRadius(atomicNumber: int, bondedAtomicNumbers: Optional[List[int]] = None) -> float:
+        """
+        Get the atomic radius based on atomic number and bonded atoms for Generalized Kirkwood.
+
+        Parameters
+        ----------
+        atomicNumber : int
+            The atomic number.
+        bondedAtomicNumbers : Optional[List[int]], default=None
+            List of atomic numbers of bonded atoms.
+
+        Returns
+        -------
+        float
+            The atomic radius.
+
+        Raises
+        ------
+        ValueError
+            If no radius is available for the given atomic number.
+        """
         if bondedAtomicNumbers is None:
             bondedAtomicNumbers = []
 
@@ -1187,8 +1870,27 @@ class AmoebaGeneralizedKirkwoodForceBuilder(BaseAmoebaForceBuilder):
         return radius
 
     @staticmethod
-    def getBondiRadius(atomicNumber, scaleFactor=1.03):
-        """Get Bondi radius based on atomic number with optional scaling for Generalized Kirkwood"""
+    def getBondiRadius(atomicNumber: int, scaleFactor: float = 1.03) -> float:
+        """
+        Get Bondi radius based on atomic number with optional scaling for Generalized Kirkwood.
+
+        Parameters
+        ----------
+        atomicNumber : int
+            The atomic number.
+        scaleFactor : float, default=1.03
+            Scaling factor to apply to the Bondi radius.
+
+        Returns
+        -------
+        float
+            The scaled Bondi radius.
+
+        Raises
+        ------
+        ValueError
+            If no Bondi radius is available for the given atomic number.
+        """
         bondiMap = {
             0: 0.00,
             1: 0.12,    # H
@@ -1246,21 +1948,75 @@ PolarizationParams = namedtuple('PolarizationParams', ['polarizability', 'thole'
 
 
 class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
-    """Multipole force for AMOEBA force field"""
+    """
+    Multipole force for AMOEBA force field.
 
-    def __init__(self):
+    Attributes
+    ----------
+    multipoleParams : Dict[Any, List[MultipoleParams]]
+        Dictionary mapping atom types to lists of multipole parameters.
+    polarizationParams : Dict[Any, PolarizationParams]
+        Dictionary mapping atom types to polarization parameters.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the AmoebaMultipoleForceBuilder."""
         super().__init__()
         self.multipoleParams = defaultdict(list)
         self.polarizationParams = defaultdict(dict)
 
-    def registerMultipoleParams(self, type, params):
+    def registerMultipoleParams(self, type: Any, params: MultipoleParams) -> None:
+        """
+        Register multipole parameters for an atom type.
+
+        Parameters
+        ----------
+        type : Any
+            The atom type identifier.
+        params : MultipoleParams
+            The multipole parameters.
+        """
         self.multipoleParams[type].append(params)
 
-    def registerPolarizationParams(self, type, params):
+    def registerPolarizationParams(self, type: Any, params: PolarizationParams) -> None:
+        """
+        Register polarization parameters for an atom type.
+
+        Parameters
+        ----------
+        type : Any
+            The atom type identifier.
+        params : PolarizationParams
+            The polarization parameters.
+        """
         self.polarizationParams[type] = params
 
-    def getForce(self, sys, nonbondedMethod, nonbondedCutoff, ewaldErrorTolerance, polarization, mutualInducedTargetEpsilon, mutualInducedMaxIterations):
-        """Get the AmoebaMultipoleForce.  If there is not already one present in the System, create a new one and add it."""
+    def getForce(self, sys: mm.System, nonbondedMethod: Any, nonbondedCutoff: float, ewaldErrorTolerance: float, polarization: str, mutualInducedTargetEpsilon: float, mutualInducedMaxIterations: int) -> mm.AmoebaMultipoleForce:
+        """
+        Get the AmoebaMultipoleForce. If there is not already one present in the System, create a new one and add it.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The OpenMM System to add the force to.
+        nonbondedMethod : Any
+            The nonbonded method to use.
+        nonbondedCutoff : float
+            The cutoff distance for nonbonded interactions.
+        ewaldErrorTolerance : float
+            The error tolerance for Ewald summation.
+        polarization : str
+            The polarization type ('direct', 'extrapolated', or 'mutual').
+        mutualInducedTargetEpsilon : float
+            Target epsilon for mutual induced dipole iterations.
+        mutualInducedMaxIterations : int
+            Maximum iterations for mutual induced dipole calculations.
+
+        Returns
+        -------
+        mm.AmoebaMultipoleForce
+            The AmoebaMultipoleForce instance.
+        """
         def createForce():
             force = mm.AmoebaMultipoleForce()
             methodMap = {ff.NoCutoff: mm.AmoebaMultipoleForce.NoCutoff,
@@ -1284,8 +2040,21 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
 
         return self._createOrGetForce(sys, mm.AmoebaMultipoleForce, createForce)
 
-    def addMultipoles(self, force, atomTypes, atoms, bonds):
-        """Add multipoles to the AmoebaMultipoleForce."""
+    def addMultipoles(self, force: mm.AmoebaMultipoleForce, atomTypes: List[Any], atoms: List[Any], bonds: List[Tuple[int, int]]) -> None:
+        """
+        Add multipoles to the AmoebaMultipoleForce.
+
+        Parameters
+        ----------
+        force : mm.AmoebaMultipoleForce
+            The AmoebaMultipoleForce instance to add multipoles to.
+        atomTypes : List[Any]
+            List of atom types indexed by atom index.
+        atoms : List[Any]
+            List of atom objects.
+        bonds : List[Tuple[int, int]]
+            List of bond indices as tuples of (atom1, atom2).
+        """
         self.buildBondedParticleSets(len(atoms), bonds)
         for atomIndex, t in enumerate(atomTypes):
             if t in self.multipoleParams:
@@ -1621,9 +2390,57 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
 
 
 class AmoebaVdwForceBuilder(BaseAmoebaForceBuilder):
-    """AmoebaVdwForce for AMOEBA force field"""
+    """
+    AmoebaVdwForce for AMOEBA force field.
 
-    def __init__(self, type, radiusrule, radiustype, radiussize, epsilonrule, vdw13Scale, vdw14Scale, vdw15Scale):
+    Attributes
+    ----------
+    type : str
+        The VdW potential type.
+    radiusrule : str
+        The sigma combining rule.
+    radiustype : str
+        The radius type.
+    radiussize : str
+        The radius size definition.
+    epsilonrule : str
+        The epsilon combining rule.
+    vdw13Scale : float
+        The 1-3 scaling factor.
+    classParams : Dict[Any, Tuple[float, float, float]]
+        Dictionary mapping atom classes to (sigma, epsilon, reduction) parameters.
+    pairParams : List[Tuple[Any, Any, float, float]]
+        List of pair-specific parameters.
+    """
+
+    def __init__(self, type: str, radiusrule: str, radiustype: str, radiussize: str, epsilonrule: str, vdw13Scale: float, vdw14Scale: float, vdw15Scale: float) -> None:
+        """
+        Initialize the AmoebaVdwForceBuilder.
+
+        Parameters
+        ----------
+        type : str
+            The VdW potential type.
+        radiusrule : str
+            The sigma combining rule.
+        radiustype : str
+            The radius type.
+        radiussize : str
+            The radius size definition.
+        epsilonrule : str
+            The epsilon combining rule.
+        vdw13Scale : float
+            The 1-3 scaling factor.
+        vdw14Scale : float
+            The 1-4 scaling factor.
+        vdw15Scale : float
+            The 1-5 scaling factor.
+
+        Raises
+        ------
+        ValueError
+            If unsupported scaling factors are provided.
+        """
         super().__init__()
         if vdw13Scale != 0.0 and vdw13Scale != 1.0:
             raise ValueError('AmoebaVdwForce: the only supported values for vdw-13-scale are 0 or 1')
@@ -1640,14 +2457,60 @@ class AmoebaVdwForceBuilder(BaseAmoebaForceBuilder):
         self.classParams = {}
         self.pairParams = []
 
-    def registerClassParams(self, atomClass, sigma, epsilon, reduction):
+    def registerClassParams(self, atomClass: Any, sigma: float, epsilon: float, reduction: float) -> None:
+        """
+        Register class-based VdW parameters.
+
+        Parameters
+        ----------
+        atomClass : Any
+            The atom class identifier.
+        sigma : float
+            The sigma parameter.
+        epsilon : float
+            The epsilon parameter.
+        reduction : float
+            The reduction factor.
+        """
         self.classParams[atomClass] = (sigma, epsilon, reduction)
 
-    def registerPairParams(self, class1, class2, sigma, epsilon):
+    def registerPairParams(self, class1: Any, class2: Any, sigma: float, epsilon: float) -> None:
+        """
+        Register pair-specific VdW parameters.
+
+        Parameters
+        ----------
+        class1 : Any
+            The first atom class identifier.
+        class2 : Any
+            The second atom class identifier.
+        sigma : float
+            The sigma parameter for this pair.
+        epsilon : float
+            The epsilon parameter for this pair.
+        """
         self.pairParams.append((class1, class2, sigma, epsilon))
 
-    def getForce(self, sys, nonbondedMethod, nonbondedCutoff, useDispersionCorrection):
-        """Get the AmoebaVdwForce.  If there is not already one present in the System, create a new one and add it."""
+    def getForce(self, sys: mm.System, nonbondedMethod: Any, nonbondedCutoff: float, useDispersionCorrection: bool) -> mm.AmoebaVdwForce:
+        """
+        Get the AmoebaVdwForce. If there is not already one present in the System, create a new one and add it.
+
+        Parameters
+        ----------
+        sys : mm.System
+            The OpenMM System to add the force to.
+        nonbondedMethod : Any
+            The nonbonded method to use.
+        nonbondedCutoff : float
+            The cutoff distance for nonbonded interactions.
+        useDispersionCorrection : bool
+            Whether to use dispersion correction.
+
+        Returns
+        -------
+        mm.AmoebaVdwForce
+            The AmoebaVdwForce instance.
+        """
         def createForce():
             force = mm.AmoebaVdwForce()
             force.setCutoff(nonbondedCutoff)
@@ -1670,8 +2533,21 @@ class AmoebaVdwForceBuilder(BaseAmoebaForceBuilder):
 
         return self._createOrGetForce(sys, mm.AmoebaVdwForce, createForce)
 
-    def addParticles(self, force, atomClasses, atoms, bonds):
-        """Add particles to the AmoebaVdwForce."""
+    def addParticles(self, force: mm.AmoebaVdwForce, atomClasses: List[Any], atoms: List[Any], bonds: List[Tuple[int, int]]) -> None:
+        """
+        Add particles to the AmoebaVdwForce.
+
+        Parameters
+        ----------
+        force : mm.AmoebaVdwForce
+            The AmoebaVdwForce instance to add particles to.
+        atomClasses : List[Any]
+            List of atom classes indexed by atom index.
+        atoms : List[Any]
+            List of atom objects.
+        bonds : List[Tuple[int, int]]
+            List of bond indices as tuples of (atom1, atom2).
+        """
 
         # Define types
 
