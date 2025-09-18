@@ -121,10 +121,8 @@ void CommonIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegr
             kernel1->addArg(dt);
         else
             kernel1->addArg((float) dt);
-        kernel1->addArg();
         kernel1->addArg(cc.getVelm());
         kernel1->addArg(cc.getLongForceBuffer());
-        kernel1->addArg(segmentVelocity);
         kernel1->addArg(cc.getAtomIndexArray());
         kernel2->addArg(numAtoms);
         if (useDouble) {
@@ -140,6 +138,7 @@ void CommonIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegr
         kernel2->addArg(integration.getPosDelta());
         kernel2->addArg(oldDelta);
         kernel2->addArg(randomForce);
+        kernel2->addArg(segmentVelocity);
         kernel2->addArg(cc.getAtomIndexArray());
         kernel3->addArg(numAtoms);
         if (useDouble)
@@ -217,7 +216,6 @@ void CommonIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegr
 
     // Perform the integration.
 
-    kernel1->setArg(3, stepIndex);
     kernel2->setArg(3, stepIndex);
     kernel1->execute(numAtoms);
     integration.applyVelocityConstraints(integrator.getConstraintTolerance());

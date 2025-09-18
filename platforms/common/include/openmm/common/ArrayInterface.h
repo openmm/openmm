@@ -122,9 +122,37 @@ public:
     }
     /**
      * Copy the values in the array to a vector.
+     * 
+     * @param data      the vector to receive the values
+     * @param convert   if true, automatic conversions between single and double
+     *                  precision will be performed as necessary
      */
     template <class T>
-    void download(std::vector<T>& data) const {
+    void download(std::vector<T>& data, bool convert=false) const {
+        if (convert && sizeof(T) != getElementSize()) {
+            if (sizeof(T) == 2*getElementSize()) {
+                // Convert values from single to double precision.
+                std::vector<float> v(getElementSize()*getSize()/sizeof(float));
+                download(&v[0], true);
+                if (data.size() != getSize())
+                    data.resize(getSize());
+                double* d = reinterpret_cast<double*>(&data[0]);
+                for (int i = 0; i < v.size(); i++)
+                    d[i] = (double) v[i];
+                return;
+            }
+            if (2*sizeof(T) == getElementSize()) {
+                // Convert values from double to single precision.
+                std::vector<double> v(getElementSize()*getSize()/sizeof(double));
+                download(&v[0], true);
+                if (data.size() != getSize())
+                    data.resize(getSize());
+                float* d = reinterpret_cast<float*>(&data[0]);
+                for (int i = 0; i < v.size(); i++)
+                    d[i] = (float) v[i];
+                return;
+            }
+        }
         if (sizeof(T) != getElementSize())
             throw OpenMMException("Error downloading array "+getName()+": The specified vector has the wrong element size");
         if (data.size() != getSize())

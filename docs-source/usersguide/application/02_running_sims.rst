@@ -521,6 +521,7 @@ File                                 Parameters
 :file:`amber19/protein.ff19ipq.xml`  Protein (alternative)
 :file:`amber19/DNA.OL21.xml`         DNA\ :cite:`Zgarbova2021`
 :file:`amber14/RNA.OL3.xml`          RNA
+:file:`amber19/lipid21.xml`          Lipid
 :file:`amber14/GLYCAM_06j-1.xml`     Carbohydrates and glycosylated proteins\ :cite:`Kirschner2007`
 :file:`amber19/tip3p.xml`            TIP3P water model\ :cite:`Jorgensen1983` and ions
 :file:`amber19/tip3pfb.xml`          TIP3P-FB water model\ :cite:`Wang2014` and ions
@@ -532,8 +533,8 @@ File                                 Parameters
 ===================================  ===========================================
 
 As a convenience, the file :file:`amber19-all.xml` can be used as a shortcut to
-include :file:`amber19/protein.ff19SB.xml`, :file:`amber19/DNA.OL21.xml`, and
-:file:`amber14/RNA.OL3.xml`.  In most cases, you can simply include that file,
+include :file:`amber19/protein.ff19SB.xml`, :file:`amber19/DNA.OL21.xml`,
+:file:`amber14/RNA.OL3.xml`, and :file:`amber19/lipid21.xml`.  In most cases, you can simply include that file,
 plus one of the water models, such as :file:`amber19/tip3pfb.xml` for the
 TIP3P-FB water model and ions\ :cite:`Wang2014`:
 ::
@@ -563,15 +564,6 @@ to them.
          mistakenly specify :file:`tip3p.xml` instead of :file:`amber19/tip3p.xml`,
          you run the risk of having :class:`ForceField` throw an exception since
          :file:`tip3p.xml` will be missing parameters for ions in your system.
-
-.. warning::
-   The updated Lipid21 lipid force field is not yet supported in this port of
-   Amber19, as it makes use of Amber features not yet supported in
-   `ParmEd <https://github.com/parmed/parmed>`_.  Amber19 should be preferred
-   over Amber14 for simulations not requiring a lipid force field, but Amber14
-   should be used if the Lipid17 force field is desired.  Alternatively, to use
-   Amber19 with Lipid21, you can prepare your system with AmberTools_ before
-   loading it into OpenMM, as described in Section :numref:`using_amber_files`.
 
 The converted parameter sets come from the `AmberTools 24 release <http://ambermd.org/AmberTools.php>`_
 and were converted using the openmmforcefields_ package and `ParmEd <https://github.com/parmed/parmed>`_.

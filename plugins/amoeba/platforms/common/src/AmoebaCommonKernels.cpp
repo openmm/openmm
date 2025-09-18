@@ -263,6 +263,10 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
             localDipolesVec.push_back(0);
         for (int j = 0; j < 5; j++)
             localQuadrupolesVec.push_back(0);
+        if (cc.getUseDoublePrecision())
+            posqd[i] = mm_double4(0, 0, 0, 0);
+        else
+            posqf[i] = mm_float4(0, 0, 0, 0);
     }
     dampingAndThole.initialize<mm_float2>(cc, paddedNumAtoms, "dampingAndThole");
     polarizability.initialize<float>(cc, paddedNumAtoms, "polarizability");
@@ -726,6 +730,7 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
         pmeDefines["PME_ORDER"] = cc.intToString(PmeOrder);
         pmeDefines["NUM_ATOMS"] = cc.intToString(numMultipoles);
         pmeDefines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
+        pmeDefines["NUM_INDICES"] = "0";
         pmeDefines["EPSILON_FACTOR"] = cc.doubleToString(ONE_4PI_EPS0);
         pmeDefines["GRID_SIZE_X"] = cc.intToString(gridSizeX);
         pmeDefines["GRID_SIZE_Y"] = cc.intToString(gridSizeY);
@@ -2687,6 +2692,7 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
         pmeDefines["PME_ORDER"] = cc.intToString(PmeOrder);
         pmeDefines["NUM_ATOMS"] = cc.intToString(numParticles);
         pmeDefines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
+        pmeDefines["NUM_INDICES"] = "0";
         pmeDefines["EPSILON_FACTOR"] = cc.doubleToString(ONE_4PI_EPS0);
         pmeDefines["GRID_SIZE_X"] = cc.intToString(gridSizeX);
         pmeDefines["GRID_SIZE_Y"] = cc.intToString(gridSizeY);
