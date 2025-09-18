@@ -525,6 +525,12 @@ class TinkerFiles:
         # List of bonds as (atom1_index, atom2_index) used by various force builders
         bonds = [(at1.index, at2.index) for at1, at2 in self.topology.bonds()]
 
+        # List of atoms bonded to each atom used by various force builders
+        bondedToAtom = [[] for _ in range(self.topology.getNumAtoms())]
+        for (at1, at2) in bonds:
+            bondedToAtom[at1].append(at2)
+            bondedToAtom[at2].append(at1)
+
         # Add AmoebaBondForce
         if "bond" in self._forces:
             bondParams = {(at1, at2): {"k": float(k)*100.0*4.184, "r0": float(r0)*0.1} for at1, at2, k, r0 in self._forces["bond"]}
@@ -536,11 +542,6 @@ class TinkerFiles:
 
         if "angle" in self._forces or "opbend" in self._forces or "anglep" in self._forces:
             # Find all unique angles
-            bondedToAtom = [[] for _ in range(self.topology.getNumAtoms())]
-            for (at1, at2) in bonds:
-                bondedToAtom[at1].append(at2)
-                bondedToAtom[at2].append(at1)
-
             uniqueAngles = set()
             for atom in range(len(bondedToAtom)):
                 neighbors = bondedToAtom[atom]
@@ -772,30 +773,12 @@ class TinkerFiles:
     
         # Add AmoebaPiTorsionForce
         if "pitors" in self._forces:
-            piTorsionParams = {(at1, at2): {"k": float(k)} for at1, at2, k in self._forces["pitors"]}
-            piTorsionForceBuilder = AmoebaPiTorsionForceBuilder()
-
             piTorsionScale = float(self._scalars["pitorsunit"])*4.184
+            piTorsionParams = {(at1, at2): {"k": float(k)*piTorsionScale} for at1, at2, k in self._forces["pitors"]}
+            piTorsionForceBuilder = AmoebaPiTorsionForceBuilder()
             for (class1, class2), params in piTorsionParams.items():
-                piTorsionForceBuilder.registerParams((class1, class2), (params["k"]*piTorsionScale,))
-
-            processedPiTorsions = []
-            for (at1, at2) in bonds:
-                valence1 = len(self.atoms[at1].bonds)
-                valence2 = len(self.atoms[at2].bonds)
-                if valence1 == 3 and valence2 == 3:
-                    class1 = atomClasses[at1]
-                    class2 = atomClasses[at2]
-                    params = piTorsionParams.get((class1, class2)) or piTorsionParams.get((class2, class1))
-                    if params:
-                        piTorsionAtom3 = at1
-                        piTorsionAtom4 = at2
-                        # piTorsionAtom1, piTorsionAtom2 are the atoms bonded to atom1, excluding atom2
-                        # piTorsionAtom5, piTorsionAtom6 are the atoms bonded to atom2, excluding atom1
-                        piTorsionAtom1, piTorsionAtom2 = [bond for bond in self.atoms[at1].bonds if bond != piTorsionAtom4]
-                        piTorsionAtom5, piTorsionAtom6 = [bond for bond in self.atoms[at2].bonds if bond != piTorsionAtom3]
-                        processedPiTorsions.append((piTorsionAtom1, piTorsionAtom2, piTorsionAtom3, piTorsionAtom4, piTorsionAtom5, piTorsionAtom6))
-            
+                piTorsionForceBuilder.registerParams((class1, class2), (params["k"],))
+            processedPiTorsions = piTorsionForceBuilder.getAllPiTorsions(atomClasses, bondedToAtom, bonds)
             if processedPiTorsions:
                 piTorsionForce = piTorsionForceBuilder.getForce(sys)
                 piTorsionForceBuilder.addPiTorsions(piTorsionForce, atomClassesDict, processedPiTorsions)

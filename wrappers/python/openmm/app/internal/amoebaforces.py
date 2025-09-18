@@ -631,7 +631,7 @@ class AmoebaStretchBendForceBuilder(BaseAmoebaForceBuilder):
         super().__init__()
         self.stretchBendParams = []
 
-    def _registerParams(self, stretchBendType: tuple, params: tuple) -> None:
+    def registerParams(self, stretchBendType: tuple, params: tuple) -> None:
         """
         Register stretch-bend parameters.
 
@@ -718,7 +718,7 @@ class AmoebaStretchBendForceBuilder(BaseAmoebaForceBuilder):
                     # Because for the same class triplet, depending on the number of hydrogens on the central atom,
                     # the ideal angle can be different, we need to register parameters for each angle.
                     paramKey = (angle[0], angle[1], angle[2])
-                    self._registerParams(paramKey, (bondAB, bondCB, idealAngle, k1, k2))
+                    self.registerParams(paramKey, (bondAB, bondCB, idealAngle, k1, k2))
                     processedAngles.append((angle[0], angle[1], angle[2]))
 
         return processedAngles
@@ -1067,18 +1067,17 @@ class AmoebaTorsionForceBuilder(BaseAmoebaForceBuilder):
             List of torsion indices as tuples of (atom1, atom2, atom3, atom4).
         """
         for atom1, atom2, atom3, atom4 in torsions:
-            for torsionType, params in self.torsionParams:
-                atomTypes = (atomClasses[atom1], atomClasses[atom2],
-                             atomClasses[atom3], atomClasses[atom4])
-                if self._matchParams(atomTypes, torsionType):
-                    t1, t2, t3 = params
-                    if t1[0] != 0:
-                        force.addTorsion(atom1, atom2, atom3, atom4, 1, t1[1], t1[0])
-                    if t2[0] != 0:
-                        force.addTorsion(atom1, atom2, atom3, atom4, 2, t2[1], t2[0])
-                    if t3[0] != 0:
-                        force.addTorsion(atom1, atom2, atom3, atom4, 3, t3[1], t3[0])
-                    break
+            torsionType = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3], atomClasses[atom4])
+            params = self._findMatchingParams(self.torsionParams, torsionType)
+            if params is not None:
+                t1, t2, t3 = params
+                if t1[0] != 0:
+                    force.addTorsion(atom1, atom2, atom3, atom4, 1, t1[1], t1[0])
+                if t2[0] != 0:
+                    force.addTorsion(atom1, atom2, atom3, atom4, 2, t2[1], t2[0])
+                if t3[0] != 0:
+                    force.addTorsion(atom1, atom2, atom3, atom4, 3, t3[1], t3[0])
+                continue
 
 
 class AmoebaPiTorsionForceBuilder(BaseAmoebaForceBuilder):
@@ -1140,6 +1139,42 @@ class AmoebaPiTorsionForceBuilder(BaseAmoebaForceBuilder):
 
         return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
 
+    def getAllPiTorsions(self, atomClasses: List[str], bondedToAtom: List[Tuple[int, ...]], bonds: List[Tuple[int, int]]) -> List[Tuple[int, int, int, int, int, int]]:
+        """
+        Get all pi-torsion indices from the bonds.
+
+        Parameters
+        ----------
+        atomClasses : List[str]
+            List of atom classes indexed by atom index.
+        bondedToAtom : List[Any]
+            List of atoms bonded to each atom.
+        bonds : List[Tuple[int, int]]
+            List of bonds defined by tuples of (atom1, atom2).
+        
+        Returns
+        -------
+        List[Tuple[int, int, int, int, int, int]]
+            List of pi-torsion indices as tuples of six atoms.
+        """
+        processedPiTorsions = []
+        for (at1, at2) in bonds:
+            valence1 = len(bondedToAtom[at1])
+            valence2 = len(bondedToAtom[at2])
+            if valence1 == 3 and valence2 == 3:
+                class1 = atomClasses[at1]
+                class2 = atomClasses[at2]
+                params = self._findMatchingParams(self.piTorsionParams, (class1, class2))
+                if params:
+                    piTorsionAtom3 = at1
+                    piTorsionAtom4 = at2
+                    # piTorsionAtom1, piTorsionAtom2 are the atoms bonded to atom1, excluding atom2
+                    # piTorsionAtom5, piTorsionAtom6 are the atoms bonded to atom2, excluding atom1
+                    piTorsionAtom1, piTorsionAtom2 = [at for at in bondedToAtom[at1] if at != piTorsionAtom4]
+                    piTorsionAtom5, piTorsionAtom6 = [at for at in bondedToAtom[at2] if at != piTorsionAtom3]
+                    processedPiTorsions.append((piTorsionAtom1, piTorsionAtom2, piTorsionAtom3, piTorsionAtom4, piTorsionAtom5, piTorsionAtom6))
+        return processedPiTorsions
+
     def addPiTorsions(self, force: mm.CustomCompoundBondForce, atomClasses: List[Any], piTorsions: List[Tuple[int, int, int, int, int, int]]) -> None:
         """
         Add pi-torsions to the force.
@@ -1154,12 +1189,11 @@ class AmoebaPiTorsionForceBuilder(BaseAmoebaForceBuilder):
             List of pi-torsion indices as tuples of six atoms.
         """
         for atom1, atom2, atom3, atom4, atom5, atom6 in piTorsions:
-            for piTorsionType, params in self.piTorsionParams:
-                if params[0] != 0:
-                    types = (atomClasses[atom3], atomClasses[atom4])
-                    if self._matchParams(types, piTorsionType, reverseMatch=True):
-                        force.addBond([atom1, atom2, atom3, atom4, atom5, atom6], params)
-                        break
+            piTorsionType = (atomClasses[atom3], atomClasses[atom4])
+            params = self._findMatchingParams(self.piTorsionParams, piTorsionType)
+            if params is not None:
+                force.addBond([atom1, atom2, atom3, atom4, atom5, atom6], params)
+                continue
 
 
 class AmoebaUreyBradleyForceBuilder(BaseAmoebaForceBuilder):

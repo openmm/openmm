@@ -4108,19 +4108,10 @@ parsers["AmoebaTorsionForce"] = AmoebaTorsionGenerator.parseElement
 #=============================================================================================
 ## @private
 class AmoebaPiTorsionGenerator(object):
-
-    #=============================================================================================
-
     """An AmoebaPiTorsionGenerator constructs a AmoebaPiTorsionForce."""
 
-    #=============================================================================================
-
     def __init__(self):
-        self.types1 = []
-        self.types2 = []
-        self.k = []
-
-    #=============================================================================================
+        self.builder = amoebaforces.AmoebaPiTorsionForceBuilder()
 
     @staticmethod
     def parseElement(element, forceField):
@@ -4128,81 +4119,24 @@ class AmoebaPiTorsionGenerator(object):
         forceField._forces.append(generator)
 
         for piTorsion in element.findall('PiTorsion'):
-            types = forceField._findAtomTypes(piTorsion.attrib, 2)
-            if None not in types:
-                generator.types1.append(types[0])
-                generator.types2.append(types[1])
-                generator.k.append(float(piTorsion.attrib['k']))
-            else:
+            # TODO: make it read pitorsionunit
+            try:
+                generator.builder.registerParams((piTorsion.attrib['class1'], piTorsion.attrib['class2']), (float(piTorsion.attrib['k']),))
+            except:
                 outputString = "AmoebaPiTorsionGenerator: error getting types: %s %s " % (
                                     piTorsion.attrib['class1'],
                                     piTorsion.attrib['class2'])
                 raise ValueError(outputString)
-
-    #=============================================================================================
+        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        builder = amoebaforces.AmoebaPiTorsionForceBuilder()
-        force = builder.getForce(sys)
+        atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
+        bonds = [(bond.atom1, bond.atom2) for bond in data.bonds]
+        bondedToAtom = [bondedToAtom for bondedToAtom in data.bondedToAtom]
+        processedPiTorsions = self.builder.getAllPiTorsions(atomClasses, bondedToAtom, bonds)
+        force = self.builder.getForce(sys)
+        self.builder.addPiTorsions(force, atomClasses, processedPiTorsions)
 
-        for bond1 in data.bonds:
-
-            # search for bonds with both atoms in bond having covalency == 3
-
-            atom1 = bond1.atom1
-            atom2 = bond1.atom2
-
-            if (len(data.atomBonds[atom1]) == 3 and len(data.atomBonds[atom2]) == 3):
-
-                type1 = data.atomType[data.atoms[atom1]]
-                type2 = data.atomType[data.atoms[atom2]]
-
-                for i in range(len(self.types1)):
-
-                   types1 = self.types1[i]
-                   types2 = self.types2[i]
-
-                   if (type1 in types1 and type2 in types2) or (type1 in types2 and type2 in types1):
-
-                       # piTorsionAtom1, piTorsionAtom2 are the atoms bonded to atom1, excluding atom2
-                       # piTorsionAtom5, piTorsionAtom6 are the atoms bonded to atom2, excluding atom1
-
-                       piTorsionAtom1 = -1
-                       piTorsionAtom2 = -1
-                       piTorsionAtom3 = atom1
-
-                       piTorsionAtom4 = atom2
-                       piTorsionAtom5 = -1
-                       piTorsionAtom6 = -1
-
-                       for bond in data.atomBonds[atom1]:
-                           bondedAtom1 = data.bonds[bond].atom1
-                           bondedAtom2 = data.bonds[bond].atom2
-                           if (bondedAtom1 != atom1):
-                               b1 = bondedAtom1
-                           else:
-                               b1 = bondedAtom2
-                           if (b1 != atom2):
-                               if (piTorsionAtom1 == -1):
-                                   piTorsionAtom1 = b1
-                               else:
-                                   piTorsionAtom2 = b1
-
-                       for bond in data.atomBonds[atom2]:
-                           bondedAtom1 = data.bonds[bond].atom1
-                           bondedAtom2 = data.bonds[bond].atom2
-                           if (bondedAtom1 != atom2):
-                               b1 = bondedAtom1
-                           else:
-                               b1 = bondedAtom2
-
-                           if (b1 != atom1):
-                               if (piTorsionAtom5 == -1):
-                                   piTorsionAtom5 = b1
-                               else:
-                                   piTorsionAtom6 = b1
-
-                       force.addBond([piTorsionAtom1, piTorsionAtom2, piTorsionAtom3, piTorsionAtom4, piTorsionAtom5, piTorsionAtom6], [self.k[i]])
 
 parsers["AmoebaPiTorsionForce"] = AmoebaPiTorsionGenerator.parseElement
 
