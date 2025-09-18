@@ -3578,17 +3578,15 @@ class AmoebaBondGenerator(object):
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = self.builder.getForce(sys)
         bondsConstraints = []
-        bonds = []
         atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
         for bond in data.bonds:
             bondsConstraints.append(bond.isConstrained)
-            bonds.append((bond.atom1, bond.atom2))
             bondType = (atomClasses[bond.atom1], atomClasses[bond.atom2])
             params = self.builder._findMatchingParams(self.builder.bondParams, bondType)
             bond.length = params[0]
             if bond.isConstrained:
                 data.addConstraint(sys, bond.atom1, bond.atom2, params[0])
-        self.builder.addBonds(force, atomClasses, bonds, bondsConstraints, args.get('flexibleConstraints', False))
+        self.builder.addBonds(force, atomClasses, _findBondsForExclusions(data, sys), bondsConstraints, args.get('flexibleConstraints', False))
 
 parsers["AmoebaBondForce"] = AmoebaBondGenerator.parseElement
 
@@ -4101,9 +4099,8 @@ class AmoebaPiTorsionGenerator(object):
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
-        bonds = [(bond.atom1, bond.atom2) for bond in data.bonds]
         bondedToAtom = [bondedToAtom for bondedToAtom in data.bondedToAtom]
-        processedPiTorsions = self.builder.getAllPiTorsions(atomClasses, bondedToAtom, bonds)
+        processedPiTorsions = self.builder.getAllPiTorsions(atomClasses, bondedToAtom, _findBondsForExclusions(data, sys))
         force = self.builder.getForce(sys)
         self.builder.addPiTorsions(force, atomClasses, processedPiTorsions)
 
@@ -4395,26 +4392,28 @@ class AmoebaVdwGenerator(object):
     """A AmoebaVdwGenerator constructs a AmoebaVdwForce."""
 
     def __init__(self, type, radiusrule, radiustype, radiussize, epsilonrule, vdw13Scale, vdw14Scale, vdw15Scale):
-        self.type = type
-        self.radiusrule = radiusrule
-        self.radiustype = radiustype
-        self.radiussize = radiussize
-        self.epsilonrule = epsilonrule
-        self.vdw13Scale = vdw13Scale
-        self.vdw14Scale = vdw14Scale
-        self.vdw15Scale = vdw15Scale
-        self.params = {}
-        self.pairs = []
+        self.builder = amoebaforces.AmoebaVdwForceBuilder(str(type), 
+                                                          str(radiusrule), 
+                                                          str(radiustype), 
+                                                          str(radiussize), 
+                                                          str(epsilonrule), 
+                                                          float(vdw13Scale), 
+                                                          float(vdw14Scale), 
+                                                          float(vdw15Scale))
 
     @staticmethod
     def parseElement(element, forceField):
+        # <AmoebaVdwForce type="BUFFERED-14-7" radiusrule="CUBIC-MEAN" radiustype="R-MIN" radiussize="DIAMETER" epsilonrule="HHG" vdw-13-scale="0.0" vdw-14-scale="1.0" vdw-15-scale="1.0" >
+        #  <Vdw class="1" sigma="0.371" epsilon="0.46024000000000004" reduction="1.0"/>
+        #  <Vdw class="2" sigma="0.382" epsilon="0.42258400000000007" reduction="1.0"/>
+
         existing = [f for f in forceField._forces if isinstance(f, AmoebaVdwGenerator)]
         if len(existing) == 0:
             generator = AmoebaVdwGenerator(element.attrib['type'], element.attrib['radiusrule'], element.attrib['radiustype'], element.attrib['radiussize'], element.attrib['epsilonrule'],
-                                        float(element.attrib['vdw-13-scale']), float(element.attrib['vdw-14-scale']), float(element.attrib['vdw-15-scale']))
+                                           element.attrib['vdw-13-scale'], element.attrib['vdw-14-scale'], element.attrib['vdw-15-scale'])
             forceField.registerGenerator(generator)
         else:
-            # Multiple <AmoebaVdwForce> tags were found, probably in different files.  Simply add more types to the existing one.
+            # Multiple <AmoebaVdwForce> tags were found, probably in different files. Simply add more types to the existing one.
             generator = existing[0]
             if abs(generator.vdw13Scale - float(element.attrib['vdw-13-scale'])) > NonbondedGenerator.SCALETOL or \
                     abs(generator.vdw14Scale - float(element.attrib['vdw-14-scale'])) > NonbondedGenerator.SCALETOL or \
@@ -4424,23 +4423,17 @@ class AmoebaVdwGenerator(object):
                     generator.radiustype != element.attrib['radiustype'] or generator.radiussize != element.attrib['radiussize']:
                 raise ValueError('Found multiple AmoebaVdwForce tags with different combining rules')
         for vdw in element.findall('Vdw'):
-            generator.params[vdw.attrib['class']] = tuple(float(vdw.attrib[name]) for name in ('sigma', 'epsilon', 'reduction'))
+            generator.builder.registerClassParams(vdw.attrib['class'], float(vdw.attrib['sigma']), float(vdw.attrib['epsilon']), float(vdw.attrib['reduction']))
         for pair in element.findall('Pair'):
-            generator.pairs.append((pair.attrib['class1'], pair.attrib['class2'], float(pair.attrib['sigma']), float(pair.attrib['epsilon'])))
+            generator.builder.registerPairParams(pair.attrib['class1'], pair.attrib['class2'], float(pair.attrib['sigma']), float(pair.attrib['epsilon']))
         generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        builder = amoebaforces.AmoebaVdwForceBuilder(self.type, self.radiusrule, self.radiustype, self.radiussize, self.epsilonrule, self.vdw13Scale, self.vdw14Scale, self.vdw15Scale)
-        for atomClass, params in self.params.items():
-            builder.registerClassParams(int(atomClass), *params)
-        for params in self.pairs:
-            builder.registerPairParams(int(params[0]), int(params[1]), params[2], params[3])
-        force = builder.getForce(sys, nonbondedMethod, args.get('vdwCutoff', nonbondedCutoff), args.get('useDispersionCorrection', True))
-        atomClasses = [self.classNameForType[data.atomType[atom]] for atom in data.atoms]
-        builder.addParticles(force, atomClasses, data.atoms, _findBondsForExclusions(data, sys))
+        force = self.builder.getForce(sys, nonbondedMethod, args.get('vdwCutoff', nonbondedCutoff), args.get('useDispersionCorrection', True))
+        atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
+        self.builder.addParticles(force, atomClasses, data.atoms, _findBondsForExclusions(data, sys))
 
 parsers["AmoebaVdwForce"] = AmoebaVdwGenerator.parseElement
-
 
 ## @private
 class AmoebaMultipoleGenerator(object):
@@ -4522,26 +4515,20 @@ parsers["AmoebaMultipoleForce"] = AmoebaMultipoleGenerator.parseElement
 class AmoebaWcaDispersionGenerator(object):
     """A AmoebaWcaDispersionGenerator constructs a AmoebaWcaDispersionForce."""
 
-
     def __init__(self, epso, epsh, rmino, rminh, awater, slevy, dispoff, shctd):
-
-        self.epso = epso
-        self.epsh = epsh
-        self.rmino = rmino
-        self.rminh = rminh
-        self.awater = awater
-        self.slevy = slevy
-        self.dispoff = dispoff
-        self.shctd = shctd
-        self.params = {}
-
+        self.builder = amoebaforces.AmoebaWcaDispersionForceBuilder(float(epso), 
+                                                                    float(epsh), 
+                                                                    float(rmino), 
+                                                                    float(rminh), 
+                                                                    float(awater), 
+                                                                    float(slevy), 
+                                                                    float(dispoff), 
+                                                                    float(shctd))
     @staticmethod
     def parseElement(element, forceField):
-
         #  <AmoebaWcaDispersionForce epso="0.46024" epsh="0.056484" rmino="0.17025" rminh="0.13275" awater="33.428" slevy="1.0"  dispoff="0.026" shctd="0.81" >
         #   <WcaDispersion class="1" radius="0.1855" epsilon="0.46024" />
         #   <WcaDispersion class="2" radius="0.191" epsilon="0.422584" />
-
         existing = [f for f in forceField._forces if isinstance(f, AmoebaWcaDispersionGenerator)]
         if len(existing) == 0:
             generator = AmoebaWcaDispersionGenerator(element.attrib['epso'],
@@ -4554,28 +4541,18 @@ class AmoebaWcaDispersionGenerator(object):
                                                      element.attrib['shctd'])
             forceField.registerGenerator(generator)
         else:
-            # Multiple <AmoebaWcaDispersionForce> tags were found, probably in different files.  Simply add more types to the existing one.
+            # Multiple <AmoebaWcaDispersionForce> tags were found, probably in different files. Simply add more types to the existing one.
             generator = existing[0]
 
         for wca in element.findall('WcaDispersion'):
-            generator.params[int(wca.attrib['class'])] = tuple(float(wca.attrib[name]) for name in ('radius', 'epsilon'))
+            generator.builder.registerParams(int(wca.attrib['class']), float(wca.attrib['radius']), float(wca.attrib['epsilon']))
+    
         generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
-
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        builder = amoebaforces.AmoebaWcaDispersionForceBuilder(float(self.epso), 
-                                                               float(self.epsh), 
-                                                               float(self.rmino), 
-                                                               float(self.rminh), 
-                                                               float(self.awater), 
-                                                               float(self.slevy), 
-                                                               float(self.dispoff), 
-                                                               float(self.shctd))
-        force = builder.getForce(sys)
         atomClasses = [self.classNameForType[data.atomType[atom]] for atom in data.atoms]
-        for atomClass, params in self.params.items():
-            builder.registerParams(atomClass, *params)
-        builder.addParticles(force, atomClasses)
+        force = self.builder.getForce(sys)
+        self.builder.addParticles(force, atomClasses)
 
 parsers["AmoebaWcaDispersionForce"] = AmoebaWcaDispersionGenerator.parseElement
 
@@ -4584,21 +4561,19 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
     """A AmoebaGeneralizedKirkwoodGenerator constructs a AmoebaGeneralizedKirkwoodForce."""
 
     def __init__(self, forceField, solventDielectric, soluteDielectric, includeCavityTerm, probeRadius, surfaceAreaFactor):
-
+        self.builder = amoebaforces.AmoebaGeneralizedKirkwoodForceBuilder(float(solventDielectric), 
+                                                                          float(soluteDielectric),
+                                                                          bool(includeCavityTerm),
+                                                                          float(probeRadius),
+                                                                          float(surfaceAreaFactor))
         self.forceField = forceField
-        self.solventDielectric = solventDielectric
-        self.soluteDielectric = soluteDielectric
-        self.includeCavityTerm = includeCavityTerm
-        self.probeRadius = probeRadius
-        self.surfaceAreaFactor = surfaceAreaFactor
-
+        
+       
     @staticmethod
     def parseElement(element, forceField):
-
         #  <AmoebaGeneralizedKirkwoodForce solventDielectric="78.3" soluteDielectric="1.0" includeCavityTerm="1" probeRadius="0.14" surfaceAreaFactor="-170.351730663">
         #   <GeneralizedKirkwood type="1" charge="-0.22620" shct="0.79"  />
         #   <GeneralizedKirkwood type="2" charge="-0.15245" shct="0.72"  />
-
         existing = [f for f in forceField._forces if isinstance(f, AmoebaGeneralizedKirkwoodGenerator)]
         if len(existing) == 0:
             generator = AmoebaGeneralizedKirkwoodGenerator(forceField, element.attrib['solventDielectric'],
@@ -4612,7 +4587,6 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
             generator = existing[0]
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-
         if( nonbondedMethod != NoCutoff ):
             raise ValueError( "Only the nonbondedMethod=NoCutoff option is available for implicit solvent simulations." )
 
@@ -4624,30 +4598,19 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
             amoebaMultipoleForce = amoebaMultipoleForceList[0]
         else:
             # call AmoebaMultipoleForceGenerator.createForce() to ensure charges have been set
-
             for force in self.forceField._forces:
                 if (force.__class__.__name__ == 'AmoebaMultipoleGenerator'):
                     force.createForce(sys, data, nonbondedMethod, nonbondedCutoff, args)
-
-        # Use the amoebaforces builder
-        solventDielectric = args.get('solventDielectric', self.solventDielectric)
-        soluteDielectric = args.get('soluteDielectric', self.soluteDielectric)
-        includeCavityTerm = args.get('includeCavityTerm', self.includeCavityTerm)
-        
-        builder = amoebaforces.AmoebaGeneralizedKirkwoodForceBuilder(float(solventDielectric), 
-                                                                     float(soluteDielectric), 
-                                                                     int(includeCavityTerm), 
-                                                                     float(self.probeRadius), 
-                                                                     float(self.surfaceAreaFactor))
+                    break
       
         # Get the charges from the AmoebaMultipoleForce and register them with the builder
-        for atomIndex in range(0, amoebaMultipoleForce.getNumMultipoles()):
+        for atomIndex in range(amoebaMultipoleForce.getNumMultipoles()):
             multipoleParameters = amoebaMultipoleForce.getMultipoleParameters(atomIndex)
-            builder.registerParams(multipoleParameters[0])
+            self.builder.registerParams(multipoleParameters[0])
 
-        force = builder.getForce(sys, implicitSolvent=True)
+        force = self.builder.getForce(sys, implicitSolvent=True)
         if force is not None:
-            builder.addParticles(force, data.atoms, _findBondsForExclusions(data, sys))
+            self.builder.addParticles(force, data.atoms, _findBondsForExclusions(data, sys))
 
 parsers["AmoebaGeneralizedKirkwoodForce"] = AmoebaGeneralizedKirkwoodGenerator.parseElement
 

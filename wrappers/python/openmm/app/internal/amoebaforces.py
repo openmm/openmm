@@ -2576,9 +2576,7 @@ class AmoebaVdwForceBuilder(BaseAmoebaForceBuilder):
         bonds : List[Tuple[int, int]]
             List of bond indices as tuples of (atom1, atom2).
         """
-
         # Define types
-
         sigmaScale = 1
         if self.radiustype == 'SIGMA':
             sigmaScale = 1.122462048309372
@@ -2590,19 +2588,17 @@ class AmoebaVdwForceBuilder(BaseAmoebaForceBuilder):
             classToTypeMap[className] = force.addParticleType(sigma*sigmaScale, epsilon)
 
         # Record what other atoms each atom is bonded to.
-
         bondedParticleSets = [set() for _ in range(len(atoms))]
         for atom1, atom2 in bonds:
             bondedParticleSets[atom1].add(atom2)
             bondedParticleSets[atom2].add(atom1)
 
-        # add particles to force
-
+        # Add particles to force
         for i, atom in enumerate(atoms):
             className = atomClasses[i]
             if className not in self.classParams:
                 raise ValueError(f"AmoebaVdwForce: No VdW parameters found for atom class {className}. "
-                               f"Available classes: {list(self.classParams.keys())}")
+                                 f"Available classes: {list(self.classParams.keys())}")
             _, _, reduction = self.classParams[className]
             # ivIndex = index of bonded partner for hydrogens; otherwise ivIndex = particle index
             ivIndex = i
@@ -2613,28 +2609,22 @@ class AmoebaVdwForceBuilder(BaseAmoebaForceBuilder):
             force.addParticle(ivIndex, classToTypeMap[className], reduction)
 
         # Add pairs
-
         for c1, c2, sigma, epsilon in self.pairParams:
             force.addTypePair(classToTypeMap[c1], classToTypeMap[c2], sigma, epsilon)
 
         # set combining rules
-
         # set particle exclusions: self, 1-2 and 1-3 bonds
         # (1) collect in bondedParticleSets[i], 1-2 indices for all bonded partners of particle i
         # (2) add 1-2,1-3 and self to exclusion set
-
         for i in range(len(atoms)):
             # 1-2 partners
-
             exclusionSet = bondedParticleSets[i].copy()
 
             # 1-3 partners
-
             if self.vdw13Scale == 0.0:
                 for bondedParticle in bondedParticleSets[i]:
                     exclusionSet = exclusionSet.union(bondedParticleSets[bondedParticle])
 
             # self
-
             exclusionSet.add(i)
             force.setParticleExclusions(i, tuple(exclusionSet))

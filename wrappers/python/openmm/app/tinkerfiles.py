@@ -844,9 +844,7 @@ class TinkerFiles:
                 sigma = float(vdw[1])*convert
                 epsilon = float(vdw[2])*4.184
                 wcaDispersionForceBuilder.registerParams(atomClass, sigma, epsilon)
-
             wcaDispersionForce = wcaDispersionForceBuilder.getForce(sys)
-            atomClasses = [int(atom.atomClass) for atom in self.atoms]
             wcaDispersionForceBuilder.addParticles(wcaDispersionForce, atomClasses)
 
         # Set periodic boundary conditions
