@@ -3533,7 +3533,6 @@ def getAtomPrint(data, atomIndex):
 
     return returnString
 
-#=============================================================================================
 
 def countConstraint(data):
 
@@ -3574,7 +3573,6 @@ class AmoebaBondGenerator(object):
             except:
                 outputString = "AmoebaBondGenerator: error getting types: %s %s" % (bond.attrib['class1'], bond.attrib['class2'])
                 raise ValueError(outputString)
-        # Get AMOEBA atom type --> AMOEBA atom class mapping
         generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
@@ -3585,15 +3583,12 @@ class AmoebaBondGenerator(object):
         for bond in data.bonds:
             bondsConstraints.append(bond.isConstrained)
             bonds.append((bond.atom1, bond.atom2))
-
             bondType = (atomClasses[bond.atom1], atomClasses[bond.atom2])
             params = self.builder._findMatchingParams(self.builder.bondParams, bondType)
             bond.length = params[0]
             if bond.isConstrained:
                 data.addConstraint(sys, bond.atom1, bond.atom2, params[0])
-
         self.builder.addBonds(force, atomClasses, bonds, bondsConstraints, args.get('flexibleConstraints', False))
-
 
 parsers["AmoebaBondForce"] = AmoebaBondGenerator.parseElement
 
@@ -3625,13 +3620,9 @@ def addAngleConstraint(angle, idealAngle, data, sys):
                 data.addConstraint(sys, angle[0], angle[2], length)
                 return
 
-#=============================================================================================
 ## @private
 class AmoebaAngleGenerator(object):
-
-    #=============================================================================================
     """An AmoebaAngleGenerator constructs a AmoebaAngleForce."""
-    #=============================================================================================
 
     def __init__(self, forceField, cubic, quartic, pentic, sextic):
 
@@ -3648,8 +3639,6 @@ class AmoebaAngleGenerator(object):
         self.angle = []
         self.k = []
         self.inPlane = []
-
-    #=============================================================================================
 
     @staticmethod
     def parseElement(element, forceField):
@@ -3799,12 +3788,7 @@ parsers["AmoebaAngleForce"] = AmoebaAngleGenerator.parseElement
 #=============================================================================================
 ## @private
 class AmoebaOutOfPlaneBendGenerator(object):
-
-    #=============================================================================================
-
     """An AmoebaOutOfPlaneBendGenerator constructs a AmoebaOutOfPlaneBendForce."""
-
-    #=============================================================================================
 
     def __init__(self, forceField, type, cubic, quartic, pentic, sextic):
 
@@ -3844,8 +3828,6 @@ class AmoebaOutOfPlaneBendGenerator(object):
                     types.append(set())
         return types
 
-    #=============================================================================================
-
     @staticmethod
     def parseElement(element, forceField):
 
@@ -3880,8 +3862,6 @@ class AmoebaOutOfPlaneBendGenerator(object):
                 outputString = "AmoebaOutOfPlaneBendGenerator error getting types: %s %s %s %s." % (
                                angle.attrib['class1'], angle.attrib['class2'], angle.attrib['class3'], angle.attrib['class4'])
                 raise ValueError(outputString)
-
-    #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         self._nonbondedMethod = nonbondedMethod
@@ -4003,16 +3983,12 @@ class AmoebaOutOfPlaneBendGenerator(object):
 
 parsers["AmoebaOutOfPlaneBendForce"] = AmoebaOutOfPlaneBendGenerator.parseElement
 
-#=============================================================================================
+
 ## @private
 class AmoebaTorsionGenerator(object):
-
-    #=============================================================================================
     """An AmoebaTorsionGenerator constructs a AmoebaTorsionForce."""
-    #=============================================================================================
 
     def __init__(self, torsionUnit):
-
         self.torsionUnit = torsionUnit
 
         self.types1 = []
@@ -4023,8 +3999,6 @@ class AmoebaTorsionGenerator(object):
         self.t1 = []
         self.t2 = []
         self.t3 = []
-
-    #=============================================================================================
 
     @staticmethod
     def parseElement(element, forceField):
@@ -4071,8 +4045,6 @@ class AmoebaTorsionGenerator(object):
                                     torsion.attrib['class4'])
                 raise ValueError(outputString)
 
-    #=============================================================================================
-
     def createForce(self, sys, data, nontorsionedMethod, nontorsionedCutoff, args):
         builder = amoebaforces.AmoebaTorsionForceBuilder()
         force = builder.getForce(sys)
@@ -4104,7 +4076,6 @@ class AmoebaTorsionGenerator(object):
 
 parsers["AmoebaTorsionForce"] = AmoebaTorsionGenerator.parseElement
 
-#=============================================================================================
 ## @private
 class AmoebaPiTorsionGenerator(object):
     """An AmoebaPiTorsionGenerator constructs a AmoebaPiTorsionForce."""
@@ -4137,7 +4108,6 @@ class AmoebaPiTorsionGenerator(object):
         self.builder.addPiTorsions(force, atomClasses, processedPiTorsions)
 
 parsers["AmoebaPiTorsionForce"] = AmoebaPiTorsionGenerator.parseElement
-
 
 ## @private
 class AmoebaStretchTorsionGenerator(object):
@@ -4177,7 +4147,6 @@ class AmoebaStretchTorsionGenerator(object):
 
 parsers["AmoebaStretchTorsionForce"] = AmoebaStretchTorsionGenerator.parseElement
 
-
 ## @private
 class AmoebaAngleTorsionGenerator(object):
     """An AmoebaAngleTorsionGenerator constructs a AmoebaAngleTorsionForce."""
@@ -4216,13 +4185,9 @@ class AmoebaAngleTorsionGenerator(object):
 
 parsers["AmoebaAngleTorsionForce"] = AmoebaAngleTorsionGenerator.parseElement
 
-
 ## @private
 class AmoebaTorsionTorsionGenerator(object):
-
-    #=============================================================================================
     """An AmoebaTorsionTorsionGenerator constructs a AmoebaTorsionTorsionForce."""
-    #=============================================================================================
 
     def __init__(self):
 
@@ -4235,8 +4200,6 @@ class AmoebaTorsionTorsionGenerator(object):
         self.gridIndex = []
 
         self.grids = []
-
-    #=============================================================================================
 
     @staticmethod
     def parseElement(element, forceField):
@@ -4328,8 +4291,6 @@ class AmoebaTorsionTorsionGenerator(object):
                     generator.grids.append([])
                 generator.grids[gridIndex] = grid
 
-    #=============================================================================================
-
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         builder = amoebaforces.AmoebaTorsionTorsionForceBuilder()
         force = builder.getForce(sys)
@@ -4344,7 +4305,6 @@ class AmoebaTorsionTorsionGenerator(object):
 
 parsers["AmoebaTorsionTorsionForce"] = AmoebaTorsionTorsionGenerator.parseElement
 
-#=============================================================================================
 ## @private
 class AmoebaStretchBendGenerator(object):
     """An AmoebaStretchBendGenerator constructs a AmoebaStretchBendForce."""
@@ -4429,13 +4389,10 @@ class AmoebaStretchBendGenerator(object):
 
 parsers["AmoebaStretchBendForce"] = AmoebaStretchBendGenerator.parseElement
 
-#=============================================================================================
+
 ## @private
 class AmoebaVdwGenerator(object):
-
     """A AmoebaVdwGenerator constructs a AmoebaVdwForce."""
-
-    #=============================================================================================
 
     def __init__(self, type, radiusrule, radiustype, radiussize, epsilonrule, vdw13Scale, vdw14Scale, vdw15Scale):
         self.type = type
@@ -4448,8 +4405,6 @@ class AmoebaVdwGenerator(object):
         self.vdw15Scale = vdw15Scale
         self.params = {}
         self.pairs = []
-
-    #=============================================================================================
 
     @staticmethod
     def parseElement(element, forceField):
@@ -4474,8 +4429,6 @@ class AmoebaVdwGenerator(object):
             generator.pairs.append((pair.attrib['class1'], pair.attrib['class2'], float(pair.attrib['sigma']), float(pair.attrib['epsilon'])))
         generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
-    #=============================================================================================
-
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         builder = amoebaforces.AmoebaVdwForceBuilder(self.type, self.radiusrule, self.radiustype, self.radiussize, self.epsilonrule, self.vdw13Scale, self.vdw14Scale, self.vdw15Scale)
         for atomClass, params in self.params.items():
@@ -4488,15 +4441,10 @@ class AmoebaVdwGenerator(object):
 
 parsers["AmoebaVdwForce"] = AmoebaVdwGenerator.parseElement
 
-#=============================================================================================
+
 ## @private
 class AmoebaMultipoleGenerator(object):
-
-    #=============================================================================================
-
     """A AmoebaMultipoleGenerator constructs an AmoebaMultipoleForce."""
-
-    #=============================================================================================
 
     def __init__(self, forceField):
         self.multipoleType = defaultdict(list)
@@ -4570,13 +4518,10 @@ class AmoebaMultipoleGenerator(object):
 
 parsers["AmoebaMultipoleForce"] = AmoebaMultipoleGenerator.parseElement
 
-#=============================================================================================
 ## @private
 class AmoebaWcaDispersionGenerator(object):
-
     """A AmoebaWcaDispersionGenerator constructs a AmoebaWcaDispersionForce."""
 
-    #=========================================================================================
 
     def __init__(self, epso, epsh, rmino, rminh, awater, slevy, dispoff, shctd):
 
@@ -4589,8 +4534,6 @@ class AmoebaWcaDispersionGenerator(object):
         self.dispoff = dispoff
         self.shctd = shctd
         self.params = {}
-
-    #=========================================================================================
 
     @staticmethod
     def parseElement(element, forceField):
@@ -4619,8 +4562,6 @@ class AmoebaWcaDispersionGenerator(object):
         generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
 
-    #=========================================================================================
-
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         builder = amoebaforces.AmoebaWcaDispersionForceBuilder(float(self.epso), 
                                                                float(self.epsh), 
@@ -4638,14 +4579,9 @@ class AmoebaWcaDispersionGenerator(object):
 
 parsers["AmoebaWcaDispersionForce"] = AmoebaWcaDispersionGenerator.parseElement
 
-#=============================================================================================
 ## @private
 class AmoebaGeneralizedKirkwoodGenerator(object):
-    #=========================================================================================
-
     """A AmoebaGeneralizedKirkwoodGenerator constructs a AmoebaGeneralizedKirkwoodForce."""
-
-    #=========================================================================================
 
     def __init__(self, forceField, solventDielectric, soluteDielectric, includeCavityTerm, probeRadius, surfaceAreaFactor):
 
@@ -4655,8 +4591,6 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
         self.includeCavityTerm = includeCavityTerm
         self.probeRadius = probeRadius
         self.surfaceAreaFactor = surfaceAreaFactor
-
-    #=========================================================================================
 
     @staticmethod
     def parseElement(element, forceField):
@@ -4676,8 +4610,6 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
         else:
             # Multiple <AmoebaGeneralizedKirkwoodFprce> tags were found, probably in different files.  Simply add more types to the existing one.
             generator = existing[0]
-
-    #=========================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
@@ -4719,13 +4651,9 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
 
 parsers["AmoebaGeneralizedKirkwoodForce"] = AmoebaGeneralizedKirkwoodGenerator.parseElement
 
-#=============================================================================================
 ## @private
 class AmoebaUreyBradleyGenerator(object):
-
-    #=============================================================================================
     """An AmoebaUreyBradleyGenerator constructs a AmoebaUreyBradleyForce."""
-    #=============================================================================================
 
     def __init__(self):
         self.builder = amoebaforces.AmoebaUreyBradleyForceBuilder()
@@ -4739,12 +4667,8 @@ class AmoebaUreyBradleyGenerator(object):
         forceField._forces.append(generator)
         for bond in element.findall('UreyBradley'):
             try:
-                class1 = bond.attrib['class1']
-                class2 = bond.attrib['class2']
-                class3 = bond.attrib['class3']
-                length = float(bond.attrib['d'])
-                k = float(bond.attrib['k'])
-                generator.builder.registerParams((class1, class2, class3), (length, k))
+                generator.builder.registerParams((bond.attrib['class1'], bond.attrib['class2'], bond.attrib['class3']), 
+                                                 (float(bond.attrib['d']), float(bond.attrib['k'])))
             except:
                 outputString = "AmoebaUreyBradleyGenerator : error getting types: %s %s %s" % (
                                     bond.attrib['class1'],
@@ -4753,8 +4677,6 @@ class AmoebaUreyBradleyGenerator(object):
                 raise ValueError(outputString)
         generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
-    #=============================================================================================
-
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = self.builder.getForce(sys)
         atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
@@ -4762,7 +4684,7 @@ class AmoebaUreyBradleyGenerator(object):
 
 parsers["AmoebaUreyBradleyForce"] = AmoebaUreyBradleyGenerator.parseElement
 
-#=============================================================================================
+
 ## @private
 class HippoNonbondedGenerator(object):
     """A HippoNonbondedGenerator constructs a HippoNonbondedForce."""
@@ -4961,5 +4883,3 @@ class DrudeGenerator(object):
             sys.setParticleMass(parent, sys.getParticleMass(parent)-transferMass)
 
 parsers["DrudeForce"] = DrudeGenerator.parseElement
-
-#=============================================================================================
