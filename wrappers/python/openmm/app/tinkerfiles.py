@@ -604,7 +604,7 @@ class TinkerFiles:
                     genericAngles.append(list(angle))
 
             # Sanity checks for angle classification
-            assert len(inPlaneAngles) + len(genericAngles)== len(angles), (
+            assert len(inPlaneAngles) + len(genericAngles) == len(angles), (
                 f"Angle classification mismatch:\n"
                 f"  in-plane: {len(inPlaneAngles)}\n"
                 f"  generic: {len(genericAngles)}\n"
@@ -639,7 +639,6 @@ class TinkerFiles:
                     idealAngles[angleTuple] = theta0*math.pi/180 # Store ideal angle for stretch-bend
                     angleForceBuilder.registerParams(angleTuple, (theta0, params["k"]*4.184*(math.pi/180)**2))
                     processedAngles.append(angleTuple)
-
                 angleForce = angleForceBuilder.getForce(sys)
                 angleForceBuilder.addAngles(angleForce, processedAngles)
 
@@ -701,7 +700,7 @@ class TinkerFiles:
             torsionParams = {(at1, at2, at3, at4): {"t1": [float(t11)*torsionScale, float(t12)*math.pi/180.0, int(t13)],
                                                     "t2": [float(t21)*torsionScale, float(t22)*math.pi/180.0, int(t23)],
                                                     "t3": [float(t31)*torsionScale, float(t32)*math.pi/180.0, int(t33)]}
-                            for at1, at2, at3, at4, t11, t12, t13, t21, t22, t23, t31, t32, t33 in self._forces["torsion"]}
+                                                    for at1, at2, at3, at4, t11, t12, t13, t21, t22, t23, t31, t32, t33 in self._forces["torsion"]}
             torsionForceBuilder = AmoebaTorsionForceBuilder()
             for (class1, class2, class3, class4), params in torsionParams.items():
                 torsionForceBuilder.registerParams((class1, class2, class3, class4), (params["t1"], params["t2"], params["t3"]))
@@ -754,8 +753,8 @@ class TinkerFiles:
         # Add AmoebaVdwForce
         if "vdw" in self._forces:
             vdwForceBuilder = AmoebaVdwForceBuilder(self._scalars['vdwtype'], self._scalars['radiusrule'], self._scalars['radiustype'],
-                                            self._scalars['radiussize'], self._scalars['epsilonrule'], float(self._scalars['vdw-13-scale']),
-                                            float(self._scalars['vdw-14-scale']), float(self._scalars['vdw-15-scale']))
+                                                    self._scalars['radiussize'], self._scalars['epsilonrule'], float(self._scalars['vdw-13-scale']),
+                                                    float(self._scalars['vdw-14-scale']), float(self._scalars['vdw-15-scale']))
             for params in self._forces['vdw']:
                 reduction = 0.0 if len(params) < 4 else float(params[3])
                 vdwForceBuilder.registerClassParams(int(params[0]), float(params[1])*0.1, float(params[2])*4.184, reduction)

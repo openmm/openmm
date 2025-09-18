@@ -67,12 +67,34 @@ class BaseAmoebaForceBuilder:
         ValueError
             If the atom does not have an associated element or atomic number.
         """
-        if hasattr(atom, 'element'):
-            return atom.element.atomic_number
-        elif hasattr(atom, 'atomicNumber'):
+        if hasattr(atom, 'atomicNumber'):
             return atom.atomicNumber
+        elif hasattr(atom, 'element'):
+            return atom.element.atomic_number
         else:
             raise ValueError(f"Atom {atom} does not have an associated element or atomic number.")
+
+    @staticmethod
+    def _getNeighbors(atom: Any) -> List[int]:
+        """
+        Get the indices of neighboring atoms bonded to the given atom.
+
+        Parameters
+        ----------
+        atom : Any
+            Atom object that has either a bonds attribute or a bondedAtoms attribute.
+
+        Returns
+        -------
+        List[int]
+            List of indices of neighboring atoms.
+        """
+        if hasattr(atom, 'bondedAtoms'):
+            return [a.index for a in atom.bondedAtoms]
+        elif hasattr(atom, 'bonds'):
+            return [a for a in atom.bonds]
+        else:
+            raise ValueError(f"Atom {atom} does not have bonded atoms information.")
 
     def _findExistingForce(self, sys: mm.System, forceType: type, energyFunction: Optional[str] = None, name: Optional[str] = None) -> Optional[Any]:
         """
@@ -356,8 +378,42 @@ class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
             return force
 
         return self._createOrGetForce(sys, mm.CustomAngleForce, createForce, energyFunction=energy)
+    
+    def getIdealAngle(self, angle: Tuple[int, int, int], thetaList: List[float], atoms: List[Any]) -> Optional[float]:
+        """
+        Get the ideal angle for a given angle.
 
-    def addAngles(self, force: mm.CustomAngleForce, angles: List[Tuple[int, int, int]]) -> None:
+        Notes
+        -----
+        Get k-index by counting number of non-angle hydrogens on the central atom
+
+
+        Parameters
+        ----------
+        angle : Tuple[int, int, int]
+            A tuple of atom indices defining the angle.
+        thetaList : List[float]
+            List of ideal angles for different k-indices.
+        atoms : List[Any]
+            List of atoms indexed by atom index.
+        Returns
+        -------
+        Optional[float]
+            The ideal angle if found, None otherwise.
+        """
+        nTheta = len(thetaList)
+        if nTheta > 1:
+            partners = [at for at in self._getNeighbors(atoms[angle[1]]) if at not in angle]
+            nHyd = sum(1 for i in partners if self._getAtomicNumber(atoms[i]) == 1)
+            if nHyd < nTheta:
+                theta = thetaList[nHyd]
+            else:
+                raise ValueError(f"Angle parameters out of range for angle with indices {angle}")
+        else:
+            theta = thetaList[0]
+        return theta
+
+    def addAngles(self, force: mm.CustomAngleForce, angles: List[Tuple[int, int, int]], anglesConstraints: Optional[list] = None, flexibleConstraints: bool = False) -> None:
         """
         Add angles to the force.
 
@@ -367,19 +423,23 @@ class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
             The AmoebaAngleForce instance to add angles to.
         angles : List[Tuple[int, int, int]]
             List of angle indices as tuples of (atom1, atom2, atom3).
+        anglesConstraints : Optional[list]
+            List of flags indicating if a given angle is constrainted.
+        flexibleConstraints : bool
+            If True, constrained angles will still be added to the system.
         """
-        for atom1, atom2, atom3 in angles:
-            for angleType, params in self.angleParams:
-                if params[1] != 0:
-                    if self._matchParams((atom1, atom2, atom3), angleType):
-                        force.addAngle(atom1, atom2, atom3, params)
-                        break
+        for i, (atom1, atom2, atom3) in enumerate(angles):
+            isConstrained = False if anglesConstraints is None else anglesConstraints[i]
+            if not isConstrained or flexibleConstraints:
+                angle = (atom1, atom2, atom3)
+                params = self._findMatchingParams(self.angleParams, angle)
+                if params is not None:
+                    force.addAngle(atom1, atom2, atom3, params)
 
 
 class AmoebaInPlaneAngleForceBuilder(BaseAmoebaForceBuilder):
     """
     Builder for InPlaneAngleForce force for AMOEBA force field.
-
 
     Attributes
     ----------
@@ -469,7 +529,7 @@ class AmoebaInPlaneAngleForceBuilder(BaseAmoebaForceBuilder):
 
         return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
     
-    def addInPlaneAngles(self, force: mm.CustomCompoundBondForce, atomClasses: List[Any], inPlaneAngles: List[Tuple[int, int, int, int]]) -> None:
+    def addInPlaneAngles(self, force: mm.CustomCompoundBondForce, atomClasses: List[Any], inPlaneAngles: List[Tuple[int, int, int, int]], anglesConstraints: Optional[list] = None, flexibleConstraints: bool = False) -> None:
         """
         Add in-plane angles to the force.
 
@@ -481,14 +541,19 @@ class AmoebaInPlaneAngleForceBuilder(BaseAmoebaForceBuilder):
             List of atom classes indexed by atom index.
         inPlaneAngles : List[Tuple[int, int, int, int]]
             List of in-plane angle indices as tuples of (atom1, atom2, atom3, atom4).
+        anglesConstraints : Optional[list]
+            List of flags indicating if a given angle is constrainted.
+        flexibleConstraints : bool
+            If True, constrained angles will still be added to the system.
         """
-        for atom1, atom2, atom3, atom4 in inPlaneAngles:
-            for inPlaneAngleType, params in self.inPlaneAngleParams:
-                if params[1] != 0:
-                    angleClasses = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3])
-                    if self._matchParams(angleClasses, inPlaneAngleType[:3], reverseMatch=True):
-                        force.addBond([atom1, atom2, atom3, atom4], params)
-                        break
+        for i, (atom1, atom2, atom3, atom4) in enumerate(inPlaneAngles):
+            isConstrained = False if anglesConstraints is None else anglesConstraints[i]    
+            if not isConstrained or flexibleConstraints:
+                angleClasses = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3])
+                params = self._findMatchingParams(self.inPlaneAngleParams, angleClasses, reverseMatch=True)
+                if params is not None:
+                    force.addBond([atom1, atom2, atom3, atom4], params)
+                    continue
 
 
 class AmoebaOutOfPlaneBendForceBuilder(BaseAmoebaForceBuilder):
@@ -2133,17 +2198,15 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
                                               savedMultipoleParams = multipoleParams
                                               hit = True
 
-                # assign multipole parameters via 1-2 and 1-3 connected atoms
-
+                # Assign multipole parameters via 1-2 and 1-3 connected atoms
                 for multipoleParams in multipoleList:
                     if hit:
                         break
                     kz, kx, ky = multipoleParams.kIndices[1:4]
 
-                    # assign multipole parameters
+                    # Assign multipole parameters
                     #    (1) get bonded partners
                     #    (2) match parameter types
-
                     bondedAtom12Indices = self.bonded12ParticleSets[atomIndex]
                     bondedAtom13Indices = self.bonded13ParticleSets[atomIndex]
                     zaxis = -1
@@ -2163,8 +2226,7 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
                                       zaxis = bondedAtomZIndex
                                       xaxis = bondedAtomXIndex
 
-                                      # select xaxis w/ smallest index
-
+                                      # Select xaxis w/ smallest index
                                       for bondedAtomXIndex2 in bondedAtom13Indices:
                                           bondedAtomX1Type = atomTypes[bondedAtomXIndex2]
                                           if bondedAtomX1Type == kx and bondedAtomXIndex2 != bondedAtomZIndex and bondedAtomZIndex in self.bonded12ParticleSets[bondedAtomXIndex2] and bondedAtomXIndex2 < xaxis:
@@ -2184,8 +2246,7 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
                                               savedMultipoleParams = multipoleParams
                                               hit = True
 
-                # assign multipole parameters via only a z-defining atom
-
+                # Assign multipole parameters via only a z-defining atom
                 for multipoleParams in multipoleList:
                     if hit:
                         break
@@ -2202,8 +2263,7 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
                             savedMultipoleParams = multipoleParams
                             hit = True
 
-                # assign multipole parameters via no connected atoms
-
+                # Assign multipole parameters via no connected atoms
                 for multipoleParams in multipoleList:
                     if hit:
                         break
@@ -2236,21 +2296,18 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
                 raise ValueError('No multipole type for atom %d (%s %s %d)' % (atomIndex, atom.name, atom.residue.name, atom.residue.index))
 
         # Set up the polarization groups.
-
         self.setPolarGroups(force, atomTypes)
 
     def buildBondedParticleSets(self, numAtoms, bonds):
         """Identify sets of particles that are separated by various numbers of bonds."""
 
         # 1-2
-
         bonded12ParticleSets = [set() for _ in range(numAtoms)]
         for atom1, atom2 in bonds:
             bonded12ParticleSets[atom1].add(atom2)
             bonded12ParticleSets[atom2].add(atom1)
 
         # 1-3
-
         bonded13ParticleSets = []
         for i in range(numAtoms):
             bonded13Set = set()
@@ -2259,7 +2316,6 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
                 bonded13Set = bonded13Set.union(bonded12ParticleSets[j])
 
             # remove 1-2 and self from set
-
             bonded13Set = bonded13Set - bonded12ParticleSet
             selfSet = set()
             selfSet.add(i)
@@ -2268,7 +2324,6 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
             bonded13ParticleSets.append(bonded13Set)
 
         # 1-4
-
         bonded14ParticleSets = []
         for i in range(numAtoms):
             bonded14Set = set()
@@ -2277,7 +2332,6 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
                 bonded14Set = bonded14Set.union(bonded12ParticleSets[j])
 
             # remove 1-3, 1-2 and self from set
-
             bonded14Set = bonded14Set - bonded12ParticleSets[i]
             bonded14Set = bonded14Set - bonded13ParticleSet
             selfSet = set()
@@ -2287,7 +2341,6 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
             bonded14ParticleSets.append(bonded14Set)
 
         # 1-5
-
         bonded15ParticleSets = []
         for i in range(numAtoms):
             bonded15Set = set()
@@ -2296,7 +2349,6 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
                 bonded15Set = bonded15Set.union(bonded12ParticleSets[j])
 
             # remove 1-4, 1-3, 1-2 and self from set
-
             bonded15Set = bonded15Set - bonded12ParticleSets[i]
             bonded15Set = bonded15Set - bonded13ParticleSets[i]
             bonded15Set = bonded15Set - bonded14ParticleSet
@@ -2318,7 +2370,6 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
         for atomIndex in range(len(atomTypes)):
 
             # assign multipole parameters via only 1-2 connected atoms
-
             groupTypes = self.polarizationParams[atomTypes[atomIndex]].groupAtomTypes
             bondedAtomIndices = self.bonded12ParticleSets[atomIndex]
             polarizationGroupForAtom[atomIndex].add(atomIndex)
@@ -2329,7 +2380,6 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
                     polarizationGroupForAtom[bondedAtomIndex].add(atomIndex)
 
         # pgrp11
-
         for atomIndex in range(len(atomTypes)):
             if len(groupSetsForAtom[atomIndex]) > 0:
                 continue
@@ -2357,7 +2407,6 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
             force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.PolarizationCovalent11, groupSetsForAtom[atomIndex][0])
 
         # pgrp12
-
         for atomIndex in range(len(atomTypes)):
             if len(groupSetsForAtom[atomIndex]) > 1:
                 continue
@@ -2375,7 +2424,6 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
             force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.PolarizationCovalent12, groupSetsForAtom[atomIndex][1])
 
         # pgrp13
-
         for atomIndex in range(len(atomTypes)):
             if len(groupSetsForAtom[atomIndex]) > 2:
                 continue
@@ -2395,7 +2443,6 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
             force.setCovalentMap(atomIndex, mm.AmoebaMultipoleForce.PolarizationCovalent13, groupSetsForAtom[atomIndex][2])
 
         # pgrp14
-
         for atomIndex in range(len(atomTypes)):
             if len(groupSetsForAtom[atomIndex]) > 3:
                 continue
