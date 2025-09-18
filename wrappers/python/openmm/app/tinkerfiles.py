@@ -709,21 +709,10 @@ class TinkerFiles:
         if "ureybrad" in self._forces:
             ureyBradleyParams = {(at1, at2, at3): {"k": float(k), "d": float(d)} for at1, at2, at3, k, d in self._forces["ureybrad"]}
             ureyBradleyForceBuilder = AmoebaUreyBradleyForceBuilder()
-
             for (class1, class2, class3), params in ureyBradleyParams.items():
                 ureyBradleyForceBuilder.registerParams((class1, class2, class3), (params["k"]*4.184*100.0, params["d"]*0.1))
-
-            processedAngles = []
-            for at1, at2, at3 in angles:
-                class1 = atomClasses[at1]
-                class2 = atomClasses[at2]
-                class3 = atomClasses[at3]
-                params = ureyBradleyParams.get((class1, class2, class3)) or ureyBradleyParams.get((class3, class2, class1))
-                if params:
-                    processedAngles.append((at1, at2, at3))
-            if processedAngles:
-                ureyBradleyForce = ureyBradleyForceBuilder.getForce(sys)
-                ureyBradleyForceBuilder.addUreyBradleys(ureyBradleyForce, atomClasses, processedAngles)
+            ureyBradleyForce = ureyBradleyForceBuilder.getForce(sys)
+            ureyBradleyForceBuilder.addUreyBradleys(ureyBradleyForce, atomClasses, angles)
 
         # Find all unique proper torsions in the system
         uniquePropers = set()
@@ -753,23 +742,8 @@ class TinkerFiles:
             torsionForceBuilder = AmoebaTorsionForceBuilder()
             for (class1, class2, class3, class4), params in torsionParams.items():
                 torsionForceBuilder.registerParams((class1, class2, class3, class4), (params["t1"], params["t2"], params["t3"]))
-
-            processedTorsions = []
-            for at1, at2, at3, at4 in propers:
-                class1 = atomClasses[at1]
-                class2 = atomClasses[at2]
-                class3 = atomClasses[at3]
-                class4 = atomClasses[at4]
-                params = torsionParams.get((class1, class2, class3, class4)) or torsionParams.get((class4, class3, class2, class1))
-                if params:
-                    processedTorsions.append((at1, at2, at3, at4))
-
-            if processedTorsions:
-                torsionForce = torsionForceBuilder.getForce(sys)
-                atomClassesDict = {}
-                for atom_idx in range(len(self.atoms)):
-                    atomClassesDict[atom_idx] = atomClasses[atom_idx]
-                torsionForceBuilder.addTorsions(torsionForce, atomClasses, processedTorsions)
+            torsionForce = torsionForceBuilder.getForce(sys)
+            torsionForceBuilder.addTorsions(torsionForce, atomClasses, propers)
     
         # Add AmoebaPiTorsionForce
         if "pitors" in self._forces:
@@ -779,9 +753,8 @@ class TinkerFiles:
             for (class1, class2), params in piTorsionParams.items():
                 piTorsionForceBuilder.registerParams((class1, class2), (params["k"],))
             processedPiTorsions = piTorsionForceBuilder.getAllPiTorsions(atomClasses, bondedToAtom, bonds)
-            if processedPiTorsions:
-                piTorsionForce = piTorsionForceBuilder.getForce(sys)
-                piTorsionForceBuilder.addPiTorsions(piTorsionForce, atomClassesDict, processedPiTorsions)
+            piTorsionForce = piTorsionForceBuilder.getForce(sys)
+            piTorsionForceBuilder.addPiTorsions(piTorsionForce, atomClasses, processedPiTorsions)
 
         # Add AmoebaStretchTorsionForce
         if "strtors" in self._forces:
@@ -790,18 +763,8 @@ class TinkerFiles:
             stretchTorsionForceBuilder = AmoebaStretchTorsionForceBuilder()
             for classes, params in stretchTorsionParams.items():
                 stretchTorsionForceBuilder.registerParams(classes, params)
-            processedStretchTorsions = []
-            for at1, at2, at3, at4 in propers:
-                class1 = atomClasses[at1]
-                class2 = atomClasses[at2]
-                class3 = atomClasses[at3]
-                class4 = atomClasses[at4]
-                params = stretchTorsionParams.get((class1, class2, class3, class4)) or stretchTorsionParams.get((class4, class3, class2, class1))
-                if params:
-                    processedStretchTorsions.append((at1, at2, at3, at4))
-            if processedStretchTorsions:
-                stretchTorsionForce = stretchTorsionForceBuilder.getForce(sys)
-                stretchTorsionForceBuilder.addStretchTorsions(sys, stretchTorsionForce, atomClasses, processedStretchTorsions)
+            stretchTorsionForce = stretchTorsionForceBuilder.getForce(sys)
+            stretchTorsionForceBuilder.addStretchTorsions(sys, stretchTorsionForce, atomClasses, propers)
 
         # Add AmoebaAngleTorsionForce
         if "angtors" in self._forces:
@@ -810,18 +773,8 @@ class TinkerFiles:
             angleTorsionForceBuilder = AmoebaAngleTorsionForceBuilder()
             for classes, params in angleTorsionParams.items():
                 angleTorsionForceBuilder.registerParams(classes, params)
-            processedAngleTorsions = []
-            for at1, at2, at3, at4 in propers:
-                class1 = atomClasses[at1]
-                class2 = atomClasses[at2]
-                class3 = atomClasses[at3]
-                class4 = atomClasses[at4]
-                params = angleTorsionParams.get((class1, class2, class3, class4)) or angleTorsionParams.get((class4, class3, class2, class1))
-                if params:
-                    processedAngleTorsions.append((at1, at2, at3, at4))
-            if processedAngleTorsions:
-                angleTorsionForce = angleTorsionForceBuilder.getForce(sys)
-                angleTorsionForceBuilder.addAngleTorsions(sys, angleTorsionForce, atomClasses, processedAngleTorsions)
+            angleTorsionForce = angleTorsionForceBuilder.getForce(sys)
+            angleTorsionForceBuilder.addAngleTorsions(sys, angleTorsionForce, atomClasses, propers)
 
         # Add AmoebaTorsionTorsionForce
         if "tortors" in self._forces:
