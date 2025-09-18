@@ -1480,7 +1480,7 @@ double AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn(const Multip
 
 void AmoebaReferenceMultipoleForce::mapTorqueToForceForParticle(const MultipoleParticleData& particleI,
                                                                 const MultipoleParticleData& particleU,
-                                                                const MultipoleParticleData& particleV,
+                                                                      MultipoleParticleData* particleV,
                                                                       MultipoleParticleData* particleW,
                                                                       int axisType, const Vec3& torque,
                                                                       vector<Vec3>& forces) const
@@ -1521,7 +1521,15 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForceForParticle(const MultipoleP
     Vec3 vectorU = particleU.position - particleI.position;
     norms[U] = normalizeVec3(vectorU);
 
-    Vec3 vectorV = particleV.position - particleI.position;
+    Vec3 vectorV;
+    if (axisType != AmoebaMultipoleForce::ZOnly)
+        vectorV = particleV->position - particleI.position;
+    else {
+        if (fabs(vectorU[0]/norms[U]) < 0.866)
+            vectorV = Vec3(1, 0, 0);
+        else
+            vectorV = Vec3(0, 1, 0);
+    }
     norms[V] = normalizeVec3(vectorV);
 
     Vec3 vectorW;
@@ -1585,7 +1593,7 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForceForParticle(const MultipoleP
             forces[particleU.particleIndex][ii]                 -=  forceU;
 
             double forceV                                        =  vectorUV[ii]*factor3 + factor4*vectorVW[ii];
-            forces[particleV.particleIndex][ii]                 -=  forceV;
+            forces[particleV->particleIndex][ii]                 -=  forceV;
 
             forces[particleI.particleIndex][ii]                 +=  (forceU + forceV);
         }
@@ -1645,7 +1653,7 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForceForParticle(const MultipoleP
         forces[particleU.particleIndex]        -= forceU;
 
         Vec3 forceV               = (vectorS*angles[VS][1] - t1*angles[VS][0])*factor3;
-        forces[particleV.particleIndex]        -= forceV;
+        forces[particleV->particleIndex]        -= forceV;
 
         Vec3 forceW               = (vectorS*angles[WS][1] - t2*angles[WS][0])*factor4;
         forces[particleW->particleIndex]       -= forceW;
@@ -1679,7 +1687,7 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForceForParticle(const MultipoleP
             dw /= 3.0;
 
             forces[particleU.particleIndex][ii] -= du;
-            forces[particleV.particleIndex][ii] -= dv;
+            forces[particleV->particleIndex][ii] -= dv;
             if (particleW)
                 forces[particleW->particleIndex][ii] -= dw;
             forces[particleI.particleIndex][ii] += (du + dv + dw);
@@ -1712,7 +1720,8 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForce(vector<MultipoleParticleDat
     for (unsigned int ii = 0; ii < particleData.size(); ii++) {
         if (axisTypes[ii] != AmoebaMultipoleForce::NoAxisType) {
              mapTorqueToForceForParticle(particleData[ii],
-                                         particleData[multipoleAtomZs[ii]], particleData[multipoleAtomXs[ii]],
+                                         particleData[multipoleAtomZs[ii]],
+                                         multipoleAtomXs[ii] > -1 ? &particleData[multipoleAtomXs[ii]] : NULL,
                                          multipoleAtomYs[ii] > -1 ? &particleData[multipoleAtomYs[ii]] : NULL,
                                          axisTypes[ii], torques[ii], forces);
         }
