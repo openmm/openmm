@@ -705,7 +705,7 @@ class TinkerFiles:
                 stretchBendForce = stretchBendForceBuilder.getForce(sys)
                 stretchBendForceBuilder.addStretchBends(stretchBendForce, processedAngles)
      
-        # Add AMOEBA Urey-Bradley force
+        # Add AmoebaUreyBradleyForce
         if "ureybrad" in self._forces:
             ureyBradleyParams = {(at1, at2, at3): {"k": float(k), "d": float(d)} for at1, at2, at3, k, d in self._forces["ureybrad"]}
             ureyBradleyForceBuilder = AmoebaUreyBradleyForceBuilder()

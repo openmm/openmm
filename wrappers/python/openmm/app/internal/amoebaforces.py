@@ -853,9 +853,7 @@ class AmoebaStretchTorsionForceBuilder(BaseAmoebaForceBuilder):
         torsions : List[Tuple[int, int, int, int]]
             List of torsion indices as tuples of (atom1, atom2, atom3, atom4).
         """
-
         # Record parameters for bonds and torsions so we can look them up quickly.
-
         bondForce = [f for f in sys.getForces() if type(f) == mm.CustomBondForce and f.getName() == 'AmoebaBondForce'][0]
         torsionForce = [f for f in sys.getForces() if type(f) == mm.PeriodicTorsionForce][0]
         bondLength = {}
@@ -872,7 +870,6 @@ class AmoebaStretchTorsionForceBuilder(BaseAmoebaForceBuilder):
                 torsionPhase[(p4, p3, p2, p1)][periodicity-1] = phase
 
         # Add stretch-torsions.
-
         for torsion in torsions:
             atom1, atom2, atom3, atom4 = torsion
             atomTypes = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3], atomClasses[atom4])
@@ -968,9 +965,7 @@ class AmoebaAngleTorsionForceBuilder(BaseAmoebaForceBuilder):
         torsions : List[Tuple[int, int, int, int]]
             List of torsion indices as tuples of (atom1, atom2, atom3, atom4).
         """
-
         # Record parameters for angles and torsions so we can look them up quickly.
-
         angleForce = [f for f in sys.getForces() if type(f) == mm.CustomAngleForce and f.getName() == 'AmoebaAngle'][0]
         inPlaneAngleForce = [f for f in sys.getForces() if type(f) == mm.CustomCompoundBondForce and f.getName() == 'AmoebaInPlaneAngle'][0]
         torsionForce = [f for f in sys.getForces() if type(f) == mm.PeriodicTorsionForce][0]
@@ -993,7 +988,6 @@ class AmoebaAngleTorsionForceBuilder(BaseAmoebaForceBuilder):
                 torsionPhase[(p4, p3, p2, p1)][periodicity-1] = phase
 
         # Add angle-torsions.
-
         for torsion in torsions:
             atom1, atom2, atom3, atom4 = torsion
             atomTypes = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3], atomClasses[atom4])
