@@ -352,7 +352,7 @@ class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
             force = mm.CustomAngleForce(energy)
             force.addPerAngleParameter("theta0")
             force.addPerAngleParameter("k")
-            force.setName("AmoebaAngle")
+            force.setName("AmoebaAngleForce")
             return force
 
         return self._createOrGetForce(sys, mm.CustomAngleForce, createForce, energyFunction=energy)
@@ -464,7 +464,7 @@ class AmoebaInPlaneAngleForceBuilder(BaseAmoebaForceBuilder):
             force = mm.CustomCompoundBondForce(4, energy)
             force.addPerBondParameter("theta0")
             force.addPerBondParameter("k")
-            force.setName("AmoebaInPlaneAngle")
+            force.setName("AmoebaInPlaneAngleForce")
             return force
 
         return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
@@ -597,7 +597,7 @@ class AmoebaOutOfPlaneBendForceBuilder(BaseAmoebaForceBuilder):
         def createForce():
             force = mm.CustomCompoundBondForce(4, energy)
             force.addPerBondParameter("k")
-            force.setName("AmoebaOutOfPlaneBend")
+            force.setName("AmoebaOutOfPlaneBendForce")
             return force
 
         return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
@@ -833,7 +833,7 @@ class AmoebaStretchTorsionForceBuilder(BaseAmoebaForceBuilder):
                 force.addPerBondParameter(f'length{i+1}')
             for i in range(3):
                 force.addPerBondParameter(f'phase{i+1}')
-            force.setName('AmoebaStretchTorsion')
+            force.setName('AmoebaStretchTorsionForce')
             return force
 
         return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
@@ -945,7 +945,7 @@ class AmoebaAngleTorsionForceBuilder(BaseAmoebaForceBuilder):
                 force.addPerBondParameter(f'angle{i+1}')
             for i in range(3):
                 force.addPerBondParameter(f'phase{i+1}')
-            force.setName('AmoebaAngleTorsion')
+            force.setName('AmoebaAngleTorsionForce')
             return force
 
         return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)
@@ -966,8 +966,8 @@ class AmoebaAngleTorsionForceBuilder(BaseAmoebaForceBuilder):
             List of torsion indices as tuples of (atom1, atom2, atom3, atom4).
         """
         # Record parameters for angles and torsions so we can look them up quickly.
-        angleForce = [f for f in sys.getForces() if type(f) == mm.CustomAngleForce and f.getName() == 'AmoebaAngle'][0]
-        inPlaneAngleForce = [f for f in sys.getForces() if type(f) == mm.CustomCompoundBondForce and f.getName() == 'AmoebaInPlaneAngle'][0]
+        angleForce = [f for f in sys.getForces() if type(f) == mm.CustomAngleForce and f.getName() == 'AmoebaAngleForce'][0]
+        inPlaneAngleForce = [f for f in sys.getForces() if type(f) == mm.CustomCompoundBondForce and f.getName() == 'AmoebaInPlaneAngleForce'][0]
         torsionForce = [f for f in sys.getForces() if type(f) == mm.PeriodicTorsionForce][0]
         equilAngle = {}
         torsionPhase = defaultdict(lambda: [0.0, math.pi, 0.0])
@@ -1128,7 +1128,7 @@ class AmoebaPiTorsionForceBuilder(BaseAmoebaForceBuilder):
         def createForce():
             force = mm.CustomCompoundBondForce(6, energy)
             force.addPerBondParameter("k")
-            force.setName("AmoebaPiTorsion")
+            force.setName("AmoebaPiTorsionForce")
             return force
 
         return self._createOrGetForce(sys, mm.CustomCompoundBondForce, createForce, energyFunction=energy)

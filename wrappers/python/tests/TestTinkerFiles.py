@@ -105,8 +105,8 @@ class TestTinkerFiles(unittest.TestCase):
 
         # Compare to values computed with Tinker.
         self.assertEnergyEqual(1104.0455, energies["AmoebaBondForce"])
-        self.assertEnergyEqual(602.7082, energies["AmoebaAngle"] + energies["AmoebaInPlaneAngle"])
-        self.assertEnergyEqual(2.0572, energies["AmoebaOutOfPlaneBend"], 1e-4)
+        self.assertEnergyEqual(602.7082, energies["AmoebaAngleForce"] + energies["AmoebaInPlaneAngleForce"])
+        self.assertEnergyEqual(2.0572, energies["AmoebaOutOfPlaneBendForce"], 1e-4)
         self.assertEnergyEqual(-0.1361, energies["AmoebaStretchBendForce"], 1e-4)
         self.assertEnergyEqual(-0.8625, energies["PeriodicTorsionForce"], 1e-4)
         self.assertEnergyEqual(-33.8595, energies["HarmonicBondForce"])
@@ -170,11 +170,11 @@ class TestTinkerFiles(unittest.TestCase):
 
         # Compare to values computed with Tinker.
         self.assertEnergyEqual(19.6519, energies["AmoebaBondForce"])
-        self.assertEnergyEqual(58.2509, energies["AmoebaAngle"] + energies["AmoebaInPlaneAngle"])
-        self.assertEnergyEqual(1.9697, energies["AmoebaOutOfPlaneBend"], 1e-4)
+        self.assertEnergyEqual(58.2509, energies["AmoebaAngleForce"] + energies["AmoebaInPlaneAngleForce"])
+        self.assertEnergyEqual(1.9697, energies["AmoebaOutOfPlaneBendForce"], 1e-4)
         self.assertEnergyEqual(-0.4384, energies["AmoebaStretchBendForce"], 1e-3)
         self.assertEnergyEqual(-2.3514, energies["PeriodicTorsionForce"], 1e-4)
-        self.assertEnergyEqual(1.2115, energies["AmoebaPiTorsion"], 1e-4)
+        self.assertEnergyEqual(1.2115, energies["AmoebaPiTorsionForce"], 1e-4)
         self.assertEnergyEqual(-3.2958, energies["AmoebaTorsionTorsionForce"])
         self.assertEnergyEqual(1509.1915, energies["AmoebaVdwForce"])
         self.assertEnergyEqual(-488.0403 - 110.9042, energies["AmoebaMultipoleForce"])
@@ -238,13 +238,13 @@ class TestTinkerFiles(unittest.TestCase):
 
         # Compare to values computed with Tinker.
         self.assertEnergyEqual(749.6953, energies["AmoebaBondForce"])
-        self.assertEnergyEqual(579.9971, energies["AmoebaAngle"] + energies["AmoebaInPlaneAngle"])
-        self.assertEnergyEqual(10.6630, energies["AmoebaOutOfPlaneBend"])
+        self.assertEnergyEqual(579.9971, energies["AmoebaAngleForce"] + energies["AmoebaInPlaneAngleForce"])
+        self.assertEnergyEqual(10.6630, energies["AmoebaOutOfPlaneBendForce"])
         self.assertEnergyEqual(5.2225, energies["AmoebaStretchBendForce"])
         self.assertEnergyEqual(166.7233, energies["PeriodicTorsionForce"])
-        self.assertEnergyEqual(57.2066, energies["AmoebaPiTorsion"])
-        self.assertEnergyEqual(-4.2538, energies["AmoebaStretchTorsion"])
-        self.assertEnergyEqual(-0.0880, energies["AmoebaAngleTorsion"], 1e-4)
+        self.assertEnergyEqual(57.2066, energies["AmoebaPiTorsionForce"])
+        self.assertEnergyEqual(-4.2538, energies["AmoebaStretchTorsionForce"])
+        self.assertEnergyEqual(-0.0880, energies["AmoebaAngleTorsionForce"], 1e-4)
         self.assertEnergyEqual(187.1103, energies["AmoebaVdwForce"])
         self.assertEnergyEqual(1635.1289 - 236.1484, energies["AmoebaMultipoleForce"])
         self.assertEnergyEqual(3151.2568, sum(list(energies.values())))
