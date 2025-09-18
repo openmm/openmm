@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CpuBondForce.h"
+#include "CpuConstantPotentialForce.h"
 #include "CpuCustomGBForce.h"
 #include "CpuCustomManyParticleForce.h"
 #include "CpuCustomNonbondedForce.h"
@@ -321,6 +322,83 @@ private:
     Kernel optimizedPme, optimizedDispersionPme;
     CpuBondForce bondForce;
 };
+
+/**
+ * This kernel is invoked by ConstantPotentialForce to calculate the forces acting on the system.
+ */
+class CpuCalcConstantPotentialForceKernel : public CalcConstantPotentialForceKernel {
+public:
+    CpuCalcConstantPotentialForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data);
+    ~CpuCalcConstantPotentialForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the ConstantPotentialForce this kernel will be used for
+     */
+    void initialize(const System& system, const ConstantPotentialForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context        the context to copy parameters to
+     * @param force          the ConstantPotentialForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
+     * @param firstException the index of the first exception whose parameters might have changed
+     * @param lastException  the index of the last exception whose parameters might have changed
+     * @param firstElectrode the index of the first electrode whose parameters might have changed
+     * @param lastElectrode  the index of the last electrode whose parameters might have changed
+     */
+    void copyParametersToContext(ContextImpl& context, const ConstantPotentialForce& force, int firstParticle, int lastParticle, int firstException, int lastException, int firstElectrode, int lastElectrode);
+    /**
+     * Get the parameters being used for PME.
+     *
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Get the charges on all particles.
+     *
+     * @param context       the context to copy parameters to
+     * @param[out] charges  a vector to populate with particle charges
+     */
+    void getCharges(ContextImpl& context, std::vector<double>& charges);
+private:
+    void checkBoxSize(const Vec3* boxVectors);
+    void ensurePmeInitialized(ContextImpl& context);
+private:
+    CpuPlatform::PlatformData& data;
+    int numParticles, num14, numElectrodeParticles, chargePosqIndex;
+    std::vector<double> setCharges;
+    std::vector<float> charges;
+    std::vector<std::vector<double> > bonded14ParamArray;
+    std::vector<std::vector<int> > bonded14IndexArray;
+    std::map<int, int> nb14Index;
+    std::vector<std::set<int> > exclusions;
+    std::vector<int> sysToElec, elecToSys, sysElec, elecElec;
+    std::vector<std::array<double, 3> > electrodeParams;
+    double nonbondedCutoff, ewaldAlpha, cgErrorTol, chargeTarget;
+    int gridSize[3];
+    bool exceptionsArePeriodic, hasInitializedPme, useChargeConstraint;
+    Vec3 externalField;
+    CpuConstantPotentialForce* constantPotential;
+    CpuConstantPotentialSolver* solver;
+    CpuBondForce bondForce;
+    Kernel pmeKernel;
+};
+
 
 /**
  * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
