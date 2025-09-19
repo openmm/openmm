@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2006-2022 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2025 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -1104,7 +1104,7 @@ protected:
      */
     void mapTorqueToForceForParticle(const MultipoleParticleData& particleI,
                                      const MultipoleParticleData& particleU,
-                                     const MultipoleParticleData& particleV,
+                                           MultipoleParticleData* particleV,
                                            MultipoleParticleData* particleW,
                                      int axisType, const Vec3& torque, std::vector<OpenMM::Vec3>& forces) const;
 
