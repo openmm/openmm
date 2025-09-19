@@ -438,16 +438,35 @@ def addTorTor( lineIndex, allLines, forces ):
     tortorInfo     = fields[1:]
 
     # read grid lines
+    # New format has multiple data points per line: angle1 angle2 f angle1 angle2 f ...
+    # Need to calculate number of lines based on total grid points
 
-    lastGridLine   = lineIndex + int(fields[6])*int(fields[7])
-    grid           = []
-    while( lineIndex < lastGridLine ):
-        lineIndex += 1
-        grid.append( allLines[lineIndex] )
+    nx = int(fields[6])
+    ny = int(fields[7])
+    totalGridPoints = nx * ny
+    
+    grid = []
+    currentLineIndex = lineIndex + 1
+    gridPointsProcessed = 0
+    
+    while gridPointsProcessed < totalGridPoints and currentLineIndex < len(allLines):
+        lineFields = allLines[currentLineIndex]
+        
+        # Process triplets of (angle1, angle2, f) from current line
+        i = 0
+        while i + 3 <= len(lineFields) and gridPointsProcessed < totalGridPoints:
+            angle1 = lineFields[i]
+            angle2 = lineFields[i + 1] 
+            f = lineFields[i + 2]
+            grid.append([angle1, angle2, f])
+            gridPointsProcessed += 1
+            i += 3
+            
+        currentLineIndex += 1
 
     forces['tortors'].append( [ tortorInfo, grid ] )
 
-    return (lineIndex)
+    return (currentLineIndex - 1)
 
 #=============================================================================================
 
