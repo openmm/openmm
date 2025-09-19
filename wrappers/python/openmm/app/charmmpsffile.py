@@ -2,11 +2,9 @@
 Provides a Python class for parsing a PSF file and setting up a system
 structure for it within the OpenMM framework.
 
-This file is part of the OpenMM molecular simulation toolkit originating from
-Simbios, the NIH National Center for Physics-Based Simulation of Biological
-Structures at Stanford, funded under the NIH Roadmap for Medical Research,
-grant U54 GM072970. See https://simtk.org.  This code was originally part of
-the ParmEd program and was ported for use with OpenMM.
+This is part of the OpenMM molecular simulation toolkit.  This code was
+originally part of the ParmEd program and was ported for use with OpenMM.
+See https://openmm.org/development.
 
 Copyright (c) 2014-2020 the Authors
 

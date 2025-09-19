@@ -3,11 +3,9 @@ Provides a class for reading CHARMM-style files. The key component to these
 files is that the ! character is a comment character and everything after ! is
 ignored.
 
-This file is part of the OpenMM molecular simulation toolkit originating from
-Simbios, the NIH National Center for Physics-Based Simulation of Biological
-Structures at Stanford, funded under the NIH Roadmap for Medical Research,
-grant U54 GM072970. See https://simtk.org.  This code was originally part of
-the ParmEd program and was ported for use with OpenMM.
+This is part of the OpenMM molecular simulation toolkit.  This code was
+originally part of the ParmEd program and was ported for use with OpenMM.
+See https://openmm.org/development.
 
 Copyright (c) 2014 the Authors
 
