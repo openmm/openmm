@@ -472,7 +472,7 @@ recognizedForces['pitors']               = 1
 recognizedForces['strtors']              = 1
 recognizedForces['angtors']              = 1
 recognizedForces['vdw']                  = 1
-recognizedForces['vdwpr']                = 1
+recognizedForces['vdwpair']              = 1
 recognizedForces['polarize']             = 1
 recognizedForces['tortors']              = addTorTor
 recognizedForces['multipole']            = addMultipole
@@ -749,7 +749,7 @@ tinkerXmlFile.write('  </Residue>\n')
 tinkerXmlFile.write('  <Residue name="NME">\n')
 tinkerXmlFile.write('   <Atom name="N" type="%s"/>\n' % bioTypes['N_N-MeAmide C-Terminus'][3])
 tinkerXmlFile.write('   <Atom name="H" type="%s"/>\n' % bioTypes['HN_N-MeAmide C-Terminus'][3])
-tinkerXmlFile.write('   <Atom name="CH3" type="%s"/>\n' % bioTypes['CH3_N-MeAmide C-Terminus'][3])
+tinkerXmlFile.write('   <Atom name="CH3" type="%s"/>\n' % bioTypes['C_N-MeAmide C-Terminus'][3])
 tinkerXmlFile.write('   <Atom name="HH31" type="%s"/>\n' % bioTypes['H_N-MeAmide C-Terminus'][3])
 tinkerXmlFile.write('   <Atom name="HH32" type="%s"/>\n' % bioTypes['H_N-MeAmide C-Terminus'][3])
 tinkerXmlFile.write('   <Atom name="HH33" type="%s"/>\n' % bioTypes['H_N-MeAmide C-Terminus'][3])
@@ -884,22 +884,22 @@ if( isAmoeba ):
 #=============================================================================================
 
     # Stretch torsion
-
-    tinkerXmlFile.write(' <AmoebaStretchTorsionForce>\n')
-    for torsion in forces['strtors']:
-        v = [float(x)*10*4.184 for x in torsion[4:]]
-        tinkerXmlFile.write(f'  <Torsion class1="{torsion[0]}" class2="{torsion[1]}" class3="{torsion[2]}" class4="{torsion[3]}" v11="{v[0]}" v12="{v[1]}" v13="{v[2]}" v21="{v[3]}" v22="{v[4]}" v23="{v[5]}" v31="{v[6]}" v32="{v[7]}" v33="{v[8]}"/>\n')
-    tinkerXmlFile.write(' </AmoebaStretchTorsionForce>\n')
+    if 'strtors' in forces:
+        tinkerXmlFile.write(' <AmoebaStretchTorsionForce>\n')
+        for torsion in forces['strtors']:
+            v = [float(x)*10*4.184 for x in torsion[4:]]
+            tinkerXmlFile.write(f'  <Torsion class1="{torsion[0]}" class2="{torsion[1]}" class3="{torsion[2]}" class4="{torsion[3]}" v11="{v[0]}" v12="{v[1]}" v13="{v[2]}" v21="{v[3]}" v22="{v[4]}" v23="{v[5]}" v31="{v[6]}" v32="{v[7]}" v33="{v[8]}"/>\n')
+        tinkerXmlFile.write(' </AmoebaStretchTorsionForce>\n')
 
 #=============================================================================================
 
     # Angle torsion
-
-    tinkerXmlFile.write(' <AmoebaAngleTorsionForce>\n')
-    for torsion in forces['angtors']:
-        v = [float(x)*4.184 for x in torsion[4:]]
-        tinkerXmlFile.write(f'  <Torsion class1="{torsion[0]}" class2="{torsion[1]}" class3="{torsion[2]}" class4="{torsion[3]}" v11="{v[0]}" v12="{v[1]}" v13="{v[2]}" v21="{v[3]}" v22="{v[4]}" v23="{v[5]}"/>\n')
-    tinkerXmlFile.write(' </AmoebaAngleTorsionForce>\n')
+    if 'angtors' in forces:
+        tinkerXmlFile.write(' <AmoebaAngleTorsionForce>\n')
+        for torsion in forces['angtors']:
+            v = [float(x)*4.184*math.pi/180.0 for x in torsion[4:]]
+            tinkerXmlFile.write(f'  <Torsion class1="{torsion[0]}" class2="{torsion[1]}" class3="{torsion[2]}" class4="{torsion[3]}" v11="{v[0]}" v12="{v[1]}" v13="{v[2]}" v21="{v[3]}" v22="{v[4]}" v23="{v[5]}"/>\n')
+        tinkerXmlFile.write(' </AmoebaAngleTorsionForce>\n')
 
 #=============================================================================================
 
@@ -971,7 +971,7 @@ if( isAmoeba ):
            reduction = 1.0
        outputString      = """  <Vdw class="%s" sigma="%s" epsilon="%s" reduction="%s"/>""" % (vdw[0], str(sigma), str(epsilon), str(reduction))
        tinkerXmlFile.write( "%s\n" % (outputString ) )
-    for pair in forces['vdwpr']:
+    for pair in forces['vdwpair']:
        sigma             = float(pair[2])*0.1
        epsilon           = float(pair[3])*4.184
        outputString      = """  <Pair class1="%s" class2="%s" sigma="%s" epsilon="%s"/>""" % (pair[0], pair[1], str(sigma), str(epsilon))
