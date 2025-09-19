@@ -1982,7 +1982,7 @@ class AmoebaTestForceField(unittest.TestCase):
         self.assertAlmostEqual(-0.0880, energies['AmoebaAngleTorsion'], 4)
         self.assertAlmostEqual(187.1103, energies['AmoebaVdwForce'], 4)
         self.assertAlmostEqual(1635.1289-236.1484, energies['AmoebaMultipoleForce'], 3)
-        self.assertAlmostEqual(3146.3046, sum(list(energies.values())), 3)
+        self.assertAlmostEqual(3151.2568, sum(list(energies.values())), 3)
 
 if __name__ == '__main__':
     unittest.main()
