@@ -1950,7 +1950,24 @@ class AmoebaTestForceField(unittest.TestCase):
         return energies
 
     def test_Amoeba18BPTI(self):
-        """Test that AMOEBA18 computes energies correctly for BPTI."""
+        """
+        Test that AMOEBA18 computes energies correctly for BPTI.
+        
+        Total Potential Energy :               -259.8636 Kcal/mole
+
+        Energy Component Breakdown :           Kcal/mole        Interactions
+
+        Bond Stretching                         290.2445              906
+        Angle Bending                           496.4300             1626
+        Stretch-Bend                              5.7695             1455
+        Out-of-Plane Bend                        51.2913              597
+        Torsional Angle                          75.6890             2391
+        Pi-Orbital Torsion                       19.3364              109
+        Torsion-Torsion                         -32.6689                6
+        Van der Waals                           383.8705           394854
+        Atomic Multipoles                     -1325.1825           394854
+        Polarization                           -224.6434           394854
+        """
         energies = self.computeAmoeba18Energies('systems/bpti.pdb')
 
         # Compare to values computed with Tinker.
@@ -1963,8 +1980,8 @@ class AmoebaTestForceField(unittest.TestCase):
         self.assertAlmostEqual(19.3364, energies['AmoebaPiTorsion'], 4)
         self.assertAlmostEqual(-32.6689, energies['AmoebaTorsionTorsionForce'], 4)
         self.assertAlmostEqual(383.8705, energies['AmoebaVdwForce'], 4)
-        self.assertAlmostEqual(-1323.5640-225.3660, energies['AmoebaMultipoleForce'], 2)
-        self.assertAlmostEqual(-258.9676, sum(list(energies.values())), 2)
+        self.assertAlmostEqual(-1325.1825-224.6434, energies['AmoebaMultipoleForce'], 2)
+        self.assertAlmostEqual(-259.8636, sum(list(energies.values())), 2)
 
     def test_Amoeba18Nucleic(self):
         """Test that AMOEBA18 computes energies correctly for DNA and RNA."""
