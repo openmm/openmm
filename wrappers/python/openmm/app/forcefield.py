@@ -3774,42 +3774,13 @@ class AmoebaOutOfPlaneBendGenerator(object):
     """An AmoebaOutOfPlaneBendGenerator constructs a AmoebaOutOfPlaneBendForce."""
 
     def __init__(self, forceField, type, cubic, quartic, pentic, sextic):
-
         self.forceField = forceField
         self.type = type
         self.cubic = cubic
         self.quartic = quartic
         self.pentic = pentic
         self.sextic = sextic
-
-        self.types1 = []
-        self.types2 = []
-        self.types3 = []
-        self.types4 = []
-
-        self.ks = []
-
-    #=============================================================================================
-    # Local version of findAtomTypes needed since class indices are 0 (i.e., not recognized)
-    # for types3 and 4
-    #=============================================================================================
-
-    def findAtomTypes(self, forceField, node, num):
-        """Parse the attributes on an XML tag to find the set of atom types for each atom it involves."""
-        types = []
-        attrib = node.attrib
-        for i in range(num):
-            if num == 1:
-                suffix = ''
-            else:
-                suffix = str(i+1)
-            classAttrib = 'class'+suffix
-            if classAttrib in attrib:
-                if attrib[classAttrib] in forceField._atomClasses:
-                    types.append(forceField._atomClasses[attrib[classAttrib]])
-                else:
-                    types.append(set())
-        return types
+        self.builder = amoebaforces.AmoebaOutOfPlaneBendForceBuilder(cubic, quartic, pentic, sextic)
 
     @staticmethod
     def parseElement(element, forceField):
@@ -3830,21 +3801,19 @@ class AmoebaOutOfPlaneBendGenerator(object):
                 raise ValueError('All <AmoebaOutOfPlaneBendForce> tags must use identical scale factors')
 
         for angle in element.findall('Angle'):
-            if 'class3' in angle.attrib and 'class4' in angle.attrib and angle.attrib['class3'] == '0' and angle.attrib['class4'] == '0':
-                # This is needed for backward compatibility with old AMOEBA force fields that specified wildcards in a nonstandard way.
-                angle.attrib['class3'] = ''
-                angle.attrib['class4'] = ''
-            types = generator.findAtomTypes(forceField, angle, 4)
-            if types is not None:
-                generator.types1.append(types[0])
-                generator.types2.append(types[1])
-                generator.types3.append(types[2])
-                generator.types4.append(types[3])
-                generator.ks.append(float(angle.attrib['k']))
-            else:
+            if 'class3' in angle.attrib and 'class4' in angle.attrib:
+                if angle.attrib['class3'] == '':
+                    angle.attrib['class3'] = '0'
+                if angle.attrib['class4'] == '':
+                    angle.attrib['class4'] = '0'
+            try:
+                generator.builder.registerParams((angle.attrib['class1'], angle.attrib['class2'], angle.attrib['class3'], angle.attrib['class4']), (float(angle.attrib['k']),))
+            except:
                 outputString = "AmoebaOutOfPlaneBendGenerator error getting types: %s %s %s %s." % (
                                angle.attrib['class1'], angle.attrib['class2'], angle.attrib['class3'], angle.attrib['class4'])
                 raise ValueError(outputString)
+        
+        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         self._nonbondedMethod = nonbondedMethod
@@ -3852,109 +3821,39 @@ class AmoebaOutOfPlaneBendGenerator(object):
 
     def postprocessSystem(self, sys, data, args):
         # We need to wait until after all bonds have been added so their lengths will be set correctly.
+        atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
 
-        builder = amoebaforces.AmoebaOutOfPlaneBendForceBuilder(self.cubic, self.quartic, self.pentic, self.sextic)
-        force = builder.getForce(sys)
+        # Classify angles into in-plane, out-of-plane, and generic angles
+        opbendTypes = [opbendType for opbendType, _ in self.builder.outOfPlaneBendParams]
+        inPlaneAngles, outOfPlaneAngles, genericAngles = self.builder.classifyAngles(
+            data.angles, 
+            atomClasses,
+            data.bondedToAtom,
+            opbendTypes
+        )
+        force = self.builder.getForce(sys)
+        self.builder.addOutOfPlaneBends(force, atomClasses, outOfPlaneAngles)
 
-        # this hash is used to ensure the out-of-plane-bend bonds
-        # are only added once
-
-        skipAtoms = dict()
         angles = []
+        # Add in-plane angles
+        for angle in inPlaneAngles:
+            angleDict = {
+                'angle': list(angle),
+                'isConstrained': 0,  # In-plane angles are typically not constrained
+                'inPlane': True
+            }
+            angles.append(angleDict)
+        
+        # Add generic angles with constraint information
+        for i, angle in enumerate(genericAngles):
+            angleDict = {
+                'angle': list(angle),
+                'isConstrained': data.isAngleConstrained[i] if i < len(data.isAngleConstrained) else False,
+                'inPlane': False
+            }
+            angles.append(angleDict)
 
-        def addBond(particles):
-            types = [data.atomType[data.atoms[p]] for p in particles]
-            for i in range(len(self.types1)):
-                if types[1] in self.types2[i] and types[3] in self.types1[i]:
-                    if (types[0] in self.types3[i] and types[2] in self.types4[i]) or (types[2] in self.types3[i] and types[0] in self.types4[i]):
-                        force.addBond(particles, [self.ks[i]])
-                        return
-
-        for (angle, isConstrained) in zip(data.angles, data.isAngleConstrained):
-
-            middleAtom = angle[1]
-            middleType = data.atomType[data.atoms[middleAtom]]
-            middleCovalency = len(data.atomBonds[middleAtom])
-
-            # if middle atom has covalency of 3 and
-            # the types of the middle atom and the partner atom (atom bonded to
-            # middle atom, but not in angle) match types1 and types2, then
-            # three out-of-plane bend angles are generated. Three in-plane angle
-            # are also generated. If the conditions are not satisfied, the angle is marked as 'generic' angle (not a in-plane angle)
-
-            if middleCovalency == 3 and middleAtom not in skipAtoms:
-
-                partners = []
-
-                for bond in data.atomBonds[middleAtom]:
-                    atom1 = data.bonds[bond].atom1
-                    atom2 = data.bonds[bond].atom2
-                    if atom1 != middleAtom:
-                        partner = atom1
-                    else:
-                        partner = atom2
-
-                    partnerType = data.atomType[data.atoms[partner]]
-                    for i in range(len(self.types1)):
-                        types1 = self.types1[i]
-                        types2 = self.types2[i]
-                        if middleType in types2 and partnerType in types1:
-                            partners.append(partner)
-                            break
-
-                if len(partners) == 3:
-
-                    addBond([partners[0], middleAtom, partners[1], partners[2]])
-                    addBond([partners[2], middleAtom, partners[0], partners[1]])
-                    addBond([partners[1], middleAtom, partners[2], partners[0]])
-
-                    # skipAtoms is used to ensure angles are only included once
-
-                    skipAtoms[middleAtom] = set(partners[:3])
-
-                    # in-plane angle
-
-                    angleDict = {}
-                    angleList = list(angle[:3])
-                    for atomIndex in partners:
-                        if atomIndex not in angleList:
-                            angleList.append(atomIndex)
-                    angleDict['angle'] = angleList
-                    angleDict['isConstrained'] = 0
-                    angleDict['inPlane'] = True
-                    angles.append(angleDict)
-
-                else:
-                    angleDict = {}
-                    angleList = list(angle[:3])
-                    for atomIndex in partners:
-                        if atomIndex not in angleList:
-                            angleList.append(atomIndex)
-                    angleDict['angle'] = angleList
-                    angleDict['isConstrained'] = isConstrained
-                    angleDict['inPlane'] = False
-                    angles.append(angleDict)
-            elif middleCovalency == 3 and middleAtom in skipAtoms:
-
-                angleDict = {}
-                angleList = list(angle[:3])
-                for atomIndex in skipAtoms[middleAtom]:
-                    if atomIndex not in angleList:
-                        angleList.append(atomIndex)
-                angleDict['angle'] = angleList
-                angleDict['isConstrained'] = isConstrained
-                angleDict['inPlane'] = True
-                angles.append(angleDict)
-
-            else:
-                angleDict = {}
-                angleDict['angle'] = angle
-                angleDict['isConstrained'] = isConstrained
-                angleDict['inPlane'] = False
-                angles.append(angleDict)
-
-        # get AmoebaAngleGenerator and add AmoebaAngle and AmoebaInPlaneAngle forces
-
+        # Get AmoebaAngleGenerator and add AmoebaAngle and AmoebaInPlaneAngle forces
         for force in self.forceField._forces:
             if (force.__class__.__name__ == 'AmoebaAngleGenerator'):
                 force.createForcePostOpBendAngle(sys, data, self._nonbondedMethod, self._nonbondedCutoff, angles, args)

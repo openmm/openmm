@@ -551,59 +551,17 @@ class TinkerFiles:
                         uniqueAngles.add(angle)
             angles = sorted(list(uniqueAngles))
 
-            # Need to initialize here as used to create out-of-plane angles
             if "opbend" in self._forces:
                 opbendParams = {(at1, at2, at3, at4): {"k": float(k)} for at1, at2, at3, at4, k in self._forces["opbend"]}
             else:
                 opbendParams = {}
+            
+            # Classify angles into in-plane, out-of-plane, and generic
+            opbendTypes = list(opbendParams.keys())
+            inPlaneAngles, outOfPlaneAngles, genericAngles = AmoebaOutOfPlaneBendForceBuilder.classifyAngles(
+                angles, atomClasses, bondedToAtom, opbendTypes
+            )
 
-            # Classify angles into in-plane, out-of-plane and generic.
-            # If middle atom has covalency of 3 and the types of the middle atom and the partner atom (atom bonded to
-            # middle atom, but not in angle) match types1 and types2, then three out-of-plane bend angles are generated.
-            # Three in-plane angle are also generated.
-            # If the conditions are not satisfied, the angle is marked as 'generic' angle (not a in-plane angle).
-            genericAngles = []
-            inPlaneAngles = []
-            outOfPlaneAngles = []
-            skipAtoms = {}
-            for angle in angles:
-                middleAtom = angle[1]
-                middleClass = atomClasses[middleAtom] 
-                middleValence = len(self.atoms[middleAtom].bonds)
-                if middleValence == 3 and middleAtom not in skipAtoms:
-                    partners = []
-                    for partner in self.atoms[middleAtom].bonds:
-                        partnerClass = atomClasses[partner]
-                        for opBendClass in opbendParams:
-                            if middleClass == opBendClass[1] and partnerClass == opBendClass[0]:
-                                partners.append(partner)
-                                break
-                    if len(partners) == 3:
-                        outOfPlaneAngles.append([partners[0], middleAtom, partners[1], partners[2]])
-                        outOfPlaneAngles.append([partners[2], middleAtom, partners[0], partners[1]])
-                        outOfPlaneAngles.append([partners[1], middleAtom, partners[2], partners[0]])
-                        skipAtoms[middleAtom] = set(partners[:3])
-                        angleList = list(angle[:3])
-                        for atomIndex in partners:
-                            if atomIndex not in angleList:
-                                angleList.append(atomIndex)
-                        inPlaneAngles.append(angleList)
-                    else:
-                        angleList = list(angle[:3])
-                        for atomIndex in partners:
-                            if atomIndex not in angleList:
-                                angleList.append(atomIndex)
-                        genericAngles.append(angleList)
-                elif middleValence == 3 and middleAtom in skipAtoms:
-                    angleList = list(angle[:3])
-                    for atomIndex in skipAtoms[middleAtom]:
-                        if atomIndex not in angleList:
-                            angleList.append(atomIndex)
-                    inPlaneAngles.append(angleList)
-                else:
-                    genericAngles.append(list(angle))
-
-            # Sanity checks for angle classification
             assert len(inPlaneAngles) + len(genericAngles) == len(angles), (
                 f"Angle classification mismatch:\n"
                 f"  in-plane: {len(inPlaneAngles)}\n"

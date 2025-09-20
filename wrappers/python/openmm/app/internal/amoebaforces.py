@@ -616,6 +616,90 @@ class AmoebaOutOfPlaneBendForceBuilder(BaseAmoebaForceBuilder):
         at1, at2, at3, at4 = atomClasses
         p1, p2, p3, p4 = paramClasses
         return  at2 == p2 and at4 == p1 and {at1, at3} == {at1 if p3 == "0" else p3, at3 if p4 == "0" else p4}
+
+    @staticmethod
+    def classifyAngles(angles: List[Tuple[int, int, int]], atomClasses: List[Any], 
+                       bondedToAtom: List[List[int]], opbendTypes: List[Tuple[Any, ...]]) -> Tuple[
+                           List[Tuple[int, ...]], 
+                           List[Tuple[int, int, int, int]], 
+                           List[Tuple[int, int, int]]]:
+        """
+        Classify angles into in-plane, out-of-plane, and generic categories.
+
+        Notes
+        -----
+        For atoms with covalency 3, if the central atom and all partners match 
+        out-of-plane bend parameters, the angles are classified as in-plane 
+        with corresponding out-of-plane bends.
+        
+        Parameters
+        ----------
+        angles : List[Tuple[int, int, int]]
+            List of angles as tuples of (atom1, central_atom, atom2).
+        atomClasses : List[Any]
+            List of atom classes indexed by atom index.
+        bondedToAtom : List[List[int]]
+            List of bonded atoms for each atom index.
+        opbendTypes : List[Tuple[Any, ...]]
+            List of out-of-plane bend parameter types as (type1, type2, type3, type4).
+            
+        Returns
+        -------
+        Tuple[List[Tuple[int, ...]], List[Tuple[int, int, int, int]], List[Tuple[int, int, int]]]
+            A tuple containing:
+            - inPlaneAngles: List of in-plane angles (atom1, central, atom2) or (atom1, central, atom2, atom3)
+            - outOfPlaneAngles: List of out-of-plane bends (atom1, central, atom3, atom4)
+            - genericAngles: List of generic angles (atom1, central, atom2)
+        """
+        inPlaneAngles = []
+        outOfPlaneAngles = []
+        genericAngles = []
+        skipAtoms = {}
+        
+        for angle in angles:
+            middleAtom = angle[1]
+            middleClass = atomClasses[middleAtom]
+            middleCovalency = len(bondedToAtom[middleAtom])
+            
+            if middleCovalency == 3 and middleAtom not in skipAtoms:
+                partners = []
+                
+                for partner in bondedToAtom[middleAtom]:
+                    partnerClass = atomClasses[partner]
+                    for opBendType in opbendTypes:
+                        if middleClass in opBendType[1:2] and partnerClass in opBendType[0:1]:
+                            partners.append(partner)
+                            break
+                
+                if len(partners) == 3:
+                    outOfPlaneAngles.append((partners[0], middleAtom, partners[1], partners[2]))
+                    outOfPlaneAngles.append((partners[2], middleAtom, partners[0], partners[1]))
+                    outOfPlaneAngles.append((partners[1], middleAtom, partners[2], partners[0]))
+                    
+                    skipAtoms[middleAtom] = set(partners[:3])
+                    
+                    angleList = list(angle[:3])
+                    for atomIndex in partners:
+                        if atomIndex not in angleList:
+                            angleList.append(atomIndex)
+                    inPlaneAngles.append(tuple(angleList))
+                else:
+                    angleList = list(angle[:3])
+                    for atomIndex in partners:
+                        if atomIndex not in angleList:
+                            angleList.append(atomIndex)
+                    genericAngles.append(tuple(angleList))
+                    
+            elif middleCovalency == 3 and middleAtom in skipAtoms:
+                angleList = list(angle[:3])
+                for atomIndex in skipAtoms[middleAtom]:
+                    if atomIndex not in angleList:
+                        angleList.append(atomIndex)
+                inPlaneAngles.append(tuple(angleList))
+            else:
+                genericAngles.append(angle)
+        
+        return inPlaneAngles, outOfPlaneAngles, genericAngles
     
     def registerParams(self, outOfPlaneBendType: Tuple[Any, ...], params: Tuple[float, ...]) -> None:
         """
@@ -681,13 +765,25 @@ class AmoebaOutOfPlaneBendForceBuilder(BaseAmoebaForceBuilder):
         outOfPlaneBends : List[Tuple[int, int, int, int]]
             List of out-of-plane bend indices as tuples of (atom1, atom2, atom3, atom4).
         """
+    def addOutOfPlaneBends(self, force: mm.CustomCompoundBondForce, atomClasses: List[Any], outOfPlaneBends: List[Tuple[int, int, int, int]]) -> None:
+        """
+        Add out-of-plane bends to the force.
+
+        Parameters
+        ----------
+        force : mm.CustomCompoundBondForce
+            The AmoebaOutOfPlaneBendForce instance to add bends to.
+        atomClasses : List[Any]
+            List of atom classes indexed by atom index.
+        outOfPlaneBends : List[Tuple[int, int, int, int]]
+            List of out-of-plane bend indices as tuples of (atom1, atom2, atom3, atom4).
+        """
         for atom1, atom2, atom3, atom4 in outOfPlaneBends:
             for outOfPlaneBendType, params in self.outOfPlaneBendParams:
-                if params[0] != 0:
-                    angleClasses = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3], atomClasses[atom4])
-                    if self._matchParams(angleClasses, outOfPlaneBendType):
-                        force.addBond([atom1, atom2, atom3, atom4], params)
-                        break
+                angleClasses = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3], atomClasses[atom4])
+                if self._matchParams(angleClasses, outOfPlaneBendType):
+                    force.addBond([atom1, atom2, atom3, atom4], params)
+                    break
 
 
 class AmoebaStretchBendForceBuilder(BaseAmoebaForceBuilder):
