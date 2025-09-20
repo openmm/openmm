@@ -3569,12 +3569,7 @@ def countConstraint(data):
 
 ## @private
 class AmoebaBondGenerator(object):
-
-    #=============================================================================================
-
     """An AmoebaBondGenerator constructs a AmoebaBondForce."""
-
-    #=============================================================================================
 
     def __init__(self, cubic, quartic):
         self.builder = amoebaforces.AmoebaBondForceBuilder(cubic, quartic)
