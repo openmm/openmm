@@ -3768,7 +3768,6 @@ class AmoebaAngleGenerator(object):
             force, data.atomClasses, inPlaneAngles, inPlaneAnglesConstraints, args.get('flexibleConstraints', False)
         )
 
-
 parsers["AmoebaAngleForce"] = AmoebaAngleGenerator.parseElement
 
 #=============================================================================================
@@ -3868,7 +3867,6 @@ class AmoebaOutOfPlaneBendGenerator(object):
                 force.createForcePostAmoebaBondForce(sys, data, self._nonbondedMethod, self._nonbondedCutoff, angles, args)
 
 parsers["AmoebaOutOfPlaneBendForce"] = AmoebaOutOfPlaneBendGenerator.parseElement
-
 
 ## @private
 class AmoebaTorsionGenerator(object):
@@ -4221,7 +4219,6 @@ class AmoebaStretchBendGenerator(object):
 
 parsers["AmoebaStretchBendForce"] = AmoebaStretchBendGenerator.parseElement
 
-
 ## @private
 class AmoebaVdwGenerator(object):
     """A AmoebaVdwGenerator constructs a AmoebaVdwForce."""
@@ -4373,7 +4370,7 @@ class AmoebaWcaDispersionGenerator(object):
             generator = existing[0]
 
         for wca in element.findall('WcaDispersion'):
-            generator.builder.registerParams(int(wca.attrib['class']), float(wca.attrib['radius']), float(wca.attrib['epsilon']))
+            generator.builder.registerParams(wca.attrib['class'], float(wca.attrib['radius']), float(wca.attrib['epsilon']))
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = self.builder.getForce(sys)
