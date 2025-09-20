@@ -639,6 +639,7 @@ class ForceField(object):
             self.isAngleConstrained = []
             self.constraints = {}
             self.bondedToAtom = [set() for _ in self.atoms]
+            self.atomClasses = []
 
             # Record which atoms are bonded to each other atom
 
@@ -670,6 +671,18 @@ class ForceField(object):
                 for site in template.virtualSites:
                     if match == site.index:
                         self.virtualSites[atom] = (site, [matchAtoms[i].index for i in site.atoms], matchAtoms[site.excludeWith].index)
+
+        def setAtomClasses(self, forcefield):
+            """
+            Set atom classes for all atoms in the system.
+            
+            Parameters
+            ----------
+            forcefield : ForceField
+                The ForceField object containing atom type definitions
+            """
+            classNameForType = dict((t.name, str(t.atomClass)) for t in forcefield._atomTypes.values())
+            self.atomClasses = [classNameForType[self.atomType[atom]] for atom in self.atoms]
 
     class _TemplateData(object):
         """Inner class used to encapsulate data about a residue template definition."""
@@ -1261,6 +1274,11 @@ class ForceField(object):
                     rigidResidue[res.index] = templateForResidue[res.index].rigidWater
                 elif rigidWater:
                     rigidResidue[res.index] = True
+
+        # Calculate atom classes once for reuse by all generators
+        # Important for Amoeba forces
+        
+        data.setAtomClasses(self)
 
         # Create the System and add atoms
 
@@ -3573,20 +3591,18 @@ class AmoebaBondGenerator(object):
             except:
                 outputString = "AmoebaBondGenerator: error getting types: %s %s" % (bond.attrib['class1'], bond.attrib['class2'])
                 raise ValueError(outputString)
-        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = self.builder.getForce(sys)
         bondsConstraints = []
-        atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
         for bond in data.bonds:
             bondsConstraints.append(bond.isConstrained)
-            bondType = (atomClasses[bond.atom1], atomClasses[bond.atom2])
+            bondType = (data.atomClasses[bond.atom1], data.atomClasses[bond.atom2])
             params = self.builder._findMatchingParams(self.builder.bondParams, bondType)
             bond.length = params[0]
             if bond.isConstrained:
                 data.addConstraint(sys, bond.atom1, bond.atom2, params[0])
-        self.builder.addBonds(force, atomClasses, _findBondsForExclusions(data, sys), bondsConstraints, args.get('flexibleConstraints', False))
+        self.builder.addBonds(force, data.atomClasses, _findBondsForExclusions(data, sys), bondsConstraints, args.get('flexibleConstraints', False))
 
 parsers["AmoebaBondForce"] = AmoebaBondGenerator.parseElement
 
@@ -3656,8 +3672,6 @@ class AmoebaAngleGenerator(object):
                                     angle.attrib['class2'],
                                     angle.attrib['class3'])
                 raise ValueError(outputString)
-            
-        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     #=============================================================================================
     # createForce is bypassed here since the AmoebaOutOfPlaneBendForce generator must first execute
@@ -3676,12 +3690,11 @@ class AmoebaAngleGenerator(object):
     def createForcePostOpBendAngle(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
         anglesConstraints = []
         angles = []
-        atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
 
         for angleDict in angleList:
             angle = angleDict['angle']
             isConstrained = angleDict['isConstrained']
-            angleClasses = (atomClasses[angle[0]], atomClasses[angle[1]], atomClasses[angle[2]])
+            angleClasses = (data.atomClasses[angle[0]], data.atomClasses[angle[1]], data.atomClasses[angle[2]])
             params = self.angleParams.get(angleClasses) or self.angleParams.get(angleClasses[::-1])
             if params is None:
                 raise ValueError(
@@ -3723,11 +3736,10 @@ class AmoebaAngleGenerator(object):
     def createForcePostOpBendInPlaneAngle(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
         inPlaneAnglesConstraints = []
         inPlaneAngles = []
-        atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
         for angleDict in angleList:
             angle = angleDict['angle']
             isConstrained = angleDict['isConstrained']
-            angleClasses = (atomClasses[angle[0]], atomClasses[angle[1]], atomClasses[angle[2]])
+            angleClasses = (data.atomClasses[angle[0]], data.atomClasses[angle[1]], data.atomClasses[angle[2]])
             params = self.angleParams.get(angleClasses) or self.angleParams.get(angleClasses[::-1])
             if params is None:
                 raise ValueError(
@@ -3758,7 +3770,7 @@ class AmoebaAngleGenerator(object):
 
         force = self.inPlaneAngleBuilder.getForce(sys)
         self.inPlaneAngleBuilder.addInPlaneAngles(
-            force, atomClasses, inPlaneAngles, inPlaneAnglesConstraints, args.get('flexibleConstraints', False)
+            force, data.atomClasses, inPlaneAngles, inPlaneAnglesConstraints, args.get('flexibleConstraints', False)
         )
 
 
@@ -3812,8 +3824,6 @@ class AmoebaOutOfPlaneBendGenerator(object):
                 outputString = "AmoebaOutOfPlaneBendGenerator error getting types: %s %s %s %s." % (
                                angle.attrib['class1'], angle.attrib['class2'], angle.attrib['class3'], angle.attrib['class4'])
                 raise ValueError(outputString)
-        
-        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         self._nonbondedMethod = nonbondedMethod
@@ -3821,18 +3831,17 @@ class AmoebaOutOfPlaneBendGenerator(object):
 
     def postprocessSystem(self, sys, data, args):
         # We need to wait until after all bonds have been added so their lengths will be set correctly.
-        atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
 
         # Classify angles into in-plane, out-of-plane, and generic angles
         opbendTypes = [opbendType for opbendType, _ in self.builder.outOfPlaneBendParams]
         inPlaneAngles, outOfPlaneAngles, genericAngles = self.builder.classifyAngles(
             data.angles, 
-            atomClasses,
+            data.atomClasses,
             data.bondedToAtom,
             opbendTypes
         )
         force = self.builder.getForce(sys)
-        self.builder.addOutOfPlaneBends(force, atomClasses, outOfPlaneAngles)
+        self.builder.addOutOfPlaneBends(force, data.atomClasses, outOfPlaneAngles)
 
         angles = []
         # Add in-plane angles
@@ -3979,14 +3988,12 @@ class AmoebaPiTorsionGenerator(object):
                                     piTorsion.attrib['class1'],
                                     piTorsion.attrib['class2'])
                 raise ValueError(outputString)
-        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
         bondedToAtom = [bondedToAtom for bondedToAtom in data.bondedToAtom]
-        processedPiTorsions = self.builder.getAllPiTorsions(atomClasses, bondedToAtom, _findBondsForExclusions(data, sys))
+        processedPiTorsions = self.builder.getAllPiTorsions(data.atomClasses, bondedToAtom, _findBondsForExclusions(data, sys))
         force = self.builder.getForce(sys)
-        self.builder.addPiTorsions(force, atomClasses, processedPiTorsions)
+        self.builder.addPiTorsions(force, data.atomClasses, processedPiTorsions)
 
 parsers["AmoebaPiTorsionForce"] = AmoebaPiTorsionGenerator.parseElement
 
@@ -4013,8 +4020,6 @@ class AmoebaStretchTorsionGenerator(object):
                                     torsion.attrib['class3'],
                                     torsion.attrib['class4'])
                 raise ValueError(outputString)
-     
-        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         pass
@@ -4022,9 +4027,8 @@ class AmoebaStretchTorsionGenerator(object):
     def postprocessSystem(self, sys, data, args):
         # We need to wait until after all bonds and torsions have been added before adding the stretch-torsions,
         # since it needs parameters from them.
-        atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
         force = self.builder.getForce(sys)
-        self.builder.addStretchTorsions(sys, force, atomClasses, data.propers)
+        self.builder.addStretchTorsions(sys, force, data.atomClasses, data.propers)
 
 parsers["AmoebaStretchTorsionForce"] = AmoebaStretchTorsionGenerator.parseElement
 
@@ -4052,7 +4056,6 @@ class AmoebaAngleTorsionGenerator(object):
                                     torsion.attrib['class3'],
                                     torsion.attrib['class4'])
                 raise ValueError(outputString)
-        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         pass
@@ -4060,9 +4063,8 @@ class AmoebaAngleTorsionGenerator(object):
     def postprocessSystem(self, sys, data, args):
         # We need to wait until after all angles and torsions have been added before adding the angle-torsions,
         # since it needs parameters from them.
-        atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
         force = self.builder.getForce(sys)
-        self.builder.addAngleTorsions(sys, force, atomClasses, data.propers)
+        self.builder.addAngleTorsions(sys, force, data.atomClasses, data.propers)
 
 parsers["AmoebaAngleTorsionForce"] = AmoebaAngleTorsionGenerator.parseElement
 
@@ -4135,12 +4137,10 @@ class AmoebaTorsionTorsionGenerator(object):
                     gridCol = []
                     gridColIndex = 0
             generator.builder.registerGridData(gridIndex, grid)
-        generator.classNameForType = dict((t.name, str(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        atomClasses = [self.classNameForType[data.atomType[atom]] for atom in data.atoms]
         force = self.builder.getForce(sys)
-        self.builder.addTorsionTorsionInteractions(force, atomClasses=atomClasses, torsions=data.propers, sys=sys)
+        self.builder.addTorsionTorsionInteractions(force, atomClasses=data.atomClasses, torsions=data.propers, sys=sys)
 
 parsers["AmoebaTorsionTorsionForce"] = AmoebaTorsionTorsionGenerator.parseElement
 
@@ -4175,7 +4175,6 @@ class AmoebaStretchBendGenerator(object):
                                     stretchBend.attrib['class2'],
                                     stretchBend.attrib['class3'])
                 raise ValueError(outputString)
-        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     #=============================================================================================
 
@@ -4199,7 +4198,6 @@ class AmoebaStretchBendGenerator(object):
     #=============================================================================================
 
     def createForcePostAmoebaBondForce(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
-        atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
         angles = []
         idealAngles = {}
         for angleDict in angleList:
@@ -4218,11 +4216,11 @@ class AmoebaStretchBendGenerator(object):
             idealAngles[angle] = idealAngle*math.pi/180.0
 
         bondParams = {
-            (atomClasses[bond.atom1], atomClasses[bond.atom2]): {"r0": bond.length}
+            (data.atomClasses[bond.atom1], data.atomClasses[bond.atom2]): {"r0": bond.length}
             for bond in data.bonds
         }
 
-        processedAngles = self.builder.registerAllStretchBendParams(atomClasses, angles, self.stretchBendParams, bondParams, idealAngles)
+        processedAngles = self.builder.registerAllStretchBendParams(data.atomClasses, angles, self.stretchBendParams, bondParams, idealAngles)
         force = self.builder.getForce(sys)
         self.builder.addStretchBends(force, processedAngles)
 
@@ -4268,12 +4266,10 @@ class AmoebaVdwGenerator(object):
             generator.builder.registerClassParams(vdw.attrib['class'], float(vdw.attrib['sigma']), float(vdw.attrib['epsilon']), float(vdw.attrib['reduction']))
         for pair in element.findall('Pair'):
             generator.builder.registerPairParams(pair.attrib['class1'], pair.attrib['class2'], float(pair.attrib['sigma']), float(pair.attrib['epsilon']))
-        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = self.builder.getForce(sys, nonbondedMethod, args.get('vdwCutoff', nonbondedCutoff), args.get('useDispersionCorrection', True))
-        atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
-        self.builder.addParticles(force, atomClasses, data.atoms, _findBondsForExclusions(data, sys))
+        self.builder.addParticles(force, data.atomClasses, data.atoms, _findBondsForExclusions(data, sys))
 
 parsers["AmoebaVdwForce"] = AmoebaVdwGenerator.parseElement
 
@@ -4336,8 +4332,6 @@ class AmoebaMultipoleGenerator(object):
             else:
                 outputString = "AmoebaMultipoleGenerator: error getting type for polarize: %s" % (atom.attrib.get('class', 'unknown'))
                 raise ValueError(outputString)
-                
-        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = self.builder.getForce(sys, nonbondedMethod, nonbondedCutoff, 
@@ -4385,13 +4379,10 @@ class AmoebaWcaDispersionGenerator(object):
 
         for wca in element.findall('WcaDispersion'):
             generator.builder.registerParams(int(wca.attrib['class']), float(wca.attrib['radius']), float(wca.attrib['epsilon']))
-    
-        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        atomClasses = [self.classNameForType[data.atomType[atom]] for atom in data.atoms]
         force = self.builder.getForce(sys)
-        self.builder.addParticles(force, atomClasses)
+        self.builder.addParticles(force, data.atomClasses)
 
 parsers["AmoebaWcaDispersionForce"] = AmoebaWcaDispersionGenerator.parseElement
 
@@ -4481,12 +4472,10 @@ class AmoebaUreyBradleyGenerator(object):
                                     bond.attrib['class2'],
                                     bond.attrib['class3'])
                 raise ValueError(outputString)
-        generator.classNameForType = dict((t.name, str(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = self.builder.getForce(sys)
-        atomClasses = [self.classNameForType[data.atomType[atom]] for atom in data.atoms]
-        self.builder.addUreyBradleys(force, atomClasses, data.angles, data.isAngleConstrained, args.get('flexibleConstraints', False))
+        self.builder.addUreyBradleys(force, data.atomClasses, data.angles, data.isAngleConstrained, args.get('flexibleConstraints', False))
 
 parsers["AmoebaUreyBradleyForce"] = AmoebaUreyBradleyGenerator.parseElement
 
