@@ -4283,8 +4283,6 @@ class AmoebaMultipoleGenerator(object):
 
     def __init__(self, forceField):
         self.builder = amoebaforces.AmoebaMultipoleForceBuilder()
-        self.multipoleType = defaultdict(list)
-        self.polarizationType = {}
 
     @staticmethod
     def parseElement(element, forceField):
@@ -4296,32 +4294,29 @@ class AmoebaMultipoleGenerator(object):
             # Multiple <AmoebaMultipoleForce> tags were found, probably in different files. Simply add more types to the existing one.
             generator = existing[0]
 
-        # set type map: [ kIndices, multipoles, AMOEBA/OpenMM axis type]
-
+        # Register multipole parameters using the builder
         for atom in element.findall('Multipole'):
             types = forceField._findAtomTypes(atom.attrib, 1)
             if None not in types:
                 # k-indices not provided default to 0
-
                 kIndices = [int(atom.attrib['type'])]
                 kStrings = [ 'kz', 'kx', 'ky' ]
                 for kString in kStrings:
                     kIndices.append(int(atom.attrib.get(kString,0)))
 
-                # set multipole
-
+                # Set multipole
                 charge = float(atom.attrib['c0'])
                 conversion = 1.0
                 dipole = [ conversion*float(atom.attrib['d1']), conversion*float(atom.attrib['d2']), conversion*float(atom.attrib['d3'])]
                 quadrupole = [conversion*float(atom.attrib[a]) for a in ['q11', 'q21', 'q31', 'q21', 'q22', 'q32', 'q31', 'q32', 'q33']]
                 for t in types[0]:
-                    generator.multipoleType[t].append({'kIndices':kIndices, 'charge':charge, 'dipole':dipole, 'quadrupole':quadrupole})
+                    generator.builder.registerMultipoleParams(int(t), 
+                        amoebaforces.MultipoleParams(kIndices, charge, dipole, quadrupole))
             else:
                 outputString = "AmoebaMultipoleGenerator: error getting type for multipole: %s" % (atom.attrib['class'])
                 raise ValueError(outputString)
 
-        # polarization parameters
-
+        # Register polarization parameters using the builder
         for atom in element.findall('Polarize'):
             types = forceField._findAtomTypes(atom.attrib, 1)
             if None not in types:
@@ -4332,25 +4327,26 @@ class AmoebaMultipoleGenerator(object):
                     pgrp = f'pgrp{index}'
                     if pgrp in atom.attrib:
                         groupTypes.append(int(atom.attrib[pgrp]))
+                        
                 for t in types[0]:
-                    if t in generator.polarizationType:
-                        raise ValueError(f'Multipole Polarize tags found for type {t}')
-                    generator.polarizationType[t] = {'polarizability': polarizability, 'thole':thole, 'groupTypes':groupTypes}
+                    if int(t) in generator.builder.polarizationParams:
+                        raise ValueError(f'Multiple Polarize tags found for type {t}')
+                    generator.builder.registerPolarizationParams(int(t), 
+                        amoebaforces.PolarizationParams(polarizability, thole, groupTypes))
             else:
-                outputString = "AmoebaMultipoleGenerator: error getting type for polarize: %s" % (atom.attrib['class'])
+                outputString = "AmoebaMultipoleGenerator: error getting type for polarize: %s" % (atom.attrib.get('class', 'unknown'))
                 raise ValueError(outputString)
+                
+        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        builder = amoebaforces.AmoebaMultipoleForceBuilder()
-        for type, params in self.multipoleType.items():
-            for p in params:
-                builder.registerMultipoleParams(int(type), amoebaforces.MultipoleParams(p['kIndices'], p['charge'], p['dipole'], p['quadrupole']))
-        for type, params in self.polarizationType.items():
-            builder.registerPolarizationParams(int(type), amoebaforces.PolarizationParams(params['polarizability'], params['thole'], params['groupTypes']))
-        force = builder.getForce(sys, nonbondedMethod, nonbondedCutoff, args.get('ewaldErrorTolerance', 1e-4), args.get('polarization', 'mutual'),
-                                 args.get('mutualInducedTargetEpsilon', 1e-5), args.get('mutualInducedMaxIterations', 60))
+        force = self.builder.getForce(sys, nonbondedMethod, nonbondedCutoff, 
+                                      args.get('ewaldErrorTolerance', 1e-4), 
+                                      args.get('polarization', 'mutual'),
+                                      args.get('mutualInducedTargetEpsilon', 1e-5), 
+                                      args.get('mutualInducedMaxIterations', 60))
         atomTypes = [int(data.atomType[atom]) for atom in data.atoms]
-        builder.addMultipoles(force, atomTypes, data.atoms, _findBondsForExclusions(data, sys))
+        self.builder.addMultipoles(force, atomTypes, data.atoms, _findBondsForExclusions(data, sys))
 
 parsers["AmoebaMultipoleForce"] = AmoebaMultipoleGenerator.parseElement
 
