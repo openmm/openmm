@@ -744,7 +744,6 @@ class TinkerFiles:
         # Add AmoebaGeneralizedKirkwoodForce
         if implicitSolvent and "multipole" in self._forces:
             gkForceBuilder = AmoebaGeneralizedKirkwoodForceBuilder(**self.GK_PARAMS)
-            force = gkForceBuilder.getForce(sys, implicitSolvent=implicitSolvent)
             multipoleForce = [f for f in sys.getForces() if isinstance(f, mm.AmoebaMultipoleForce)][0]
             for atomIndex in range(0, multipoleForce.getNumMultipoles()):
                 multipoleParameters = multipoleForce.getMultipoleParameters(atomIndex)
