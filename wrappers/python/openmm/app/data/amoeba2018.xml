@@ -364,8 +364,8 @@
   <Type name="356" class="97" element="BE" mass="9.012"/>
   <Type name="357" class="98" element="MG" mass="24.305"/>
   <Type name="358" class="99" element="CA" mass="40.078"/>
-  <Type name="359" class="100" element="S" mass="87.620"/>
-  <Type name="360" class="101" element="B" mass="137.330"/>
+  <Type name="359" class="100" element="SR" mass="87.620"/>
+  <Type name="360" class="101" element="BA" mass="137.330"/>
   <Type name="361" class="102" element="ZN" mass="65.380"/>
   <Type name="362" class="103" element="F" mass="18.998"/>
   <Type name="363" class="104" element="Cl" mass="35.453"/>
@@ -5671,6 +5671,12 @@
   </Residue>
   <Residue name="CA">
    <Atom name="CA" type="358"/>
+  </Residue>
+  <Residue name="SR">
+   <Atom name="SR" type="359"/>
+  </Residue>
+  <Residue name="BA">
+   <Atom name="BA" type="360"/>
   </Residue>
   <Residue name="ZN">
    <Atom name="ZN" type="361"/>
