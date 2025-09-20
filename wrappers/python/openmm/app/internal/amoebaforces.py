@@ -378,8 +378,8 @@ class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
             return force
 
         return self._createOrGetForce(sys, mm.CustomAngleForce, createForce, energyFunction=energy)
-    
-    def getIdealAngle(self, angle: Tuple[int, int, int], thetaList: List[float], atoms: List[Any]) -> Optional[float]:
+
+    def getIdealAngle(self, angle: Tuple[int, int, int], thetaList: List[float], atoms: List[Any], bondedToAtom: List[Any]) -> Optional[float]:
         """
         Get the ideal angle for a given angle.
 
@@ -396,6 +396,8 @@ class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
             List of ideal angles for different k-indices.
         atoms : List[Any]
             List of atoms indexed by atom index.
+        bondedToAtom : List[Any]
+            List of bonded atoms indexed by atom index.
         Returns
         -------
         Optional[float]
@@ -403,7 +405,7 @@ class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
         """
         nTheta = len(thetaList)
         if nTheta > 1:
-            partners = [at for at in self._getNeighbors(atoms[angle[1]]) if at not in angle]
+            partners = [at for at in bondedToAtom[angle[1]] if at not in angle]
             nHyd = sum(1 for i in partners if self._getAtomicNumber(atoms[i]) == 1)
             if nHyd < nTheta:
                 theta = thetaList[nHyd]
@@ -553,7 +555,6 @@ class AmoebaInPlaneAngleForceBuilder(BaseAmoebaForceBuilder):
                 params = self._findMatchingParams(self.inPlaneAngleParams, angleClasses, reverseMatch=True)
                 if params is not None:
                     force.addBond([atom1, atom2, atom3, atom4], params)
-                    continue
 
 
 class AmoebaOutOfPlaneBendForceBuilder(BaseAmoebaForceBuilder):

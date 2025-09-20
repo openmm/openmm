@@ -3627,7 +3627,6 @@ class AmoebaAngleGenerator(object):
         self.inPlaneAngleBuilder = amoebaforces.AmoebaInPlaneAngleForceBuilder(float(cubic), float(quartic), float(pentic), float(sextic))
         self.forceField = forceField
 
-
     @staticmethod
     def parseElement(element, forceField):
         # <AmoebaAngleForce angle-cubic="-0.014" angle-quartic="5.6e-05" angle-pentic="-7e-07" angle-sextic="2.2e-08">
@@ -3678,94 +3677,43 @@ class AmoebaAngleGenerator(object):
         anglesConstraints = []
         angles = []
         atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
-        genericAngleParams = {k: v for k, v in self.angleParams.items() if v.get('inPlane') != 'True'}
 
         for angleDict in angleList:
             angle = angleDict['angle']
-            if angleDict['inPlane']:
-                print("in-plane angle found in non-in-plane list", angle)
-                continue
-
             isConstrained = angleDict['isConstrained']
             angleClasses = (atomClasses[angle[0]], atomClasses[angle[1]], atomClasses[angle[2]])
-
-            params = genericAngleParams.get(angleClasses) or genericAngleParams.get(angleClasses[::-1])
+            params = self.angleParams.get(angleClasses) or self.angleParams.get(angleClasses[::-1])
             if params is None:
-                outputString = "AmoebaAngleGenerator: no parameters found for angle: %s-%s-%s (atom %s, %s, %s)" % (
-                    angleClasses[0],
-                    angleClasses[2],
-                    getAtomPrint(data, angle[0]),
-                    getAtomPrint(data, angle[1]),
-                    getAtomPrint(data, angle[2])
+                raise ValueError(
+                    f"AmoebaAngleGenerator: no parameters found for angle: "
+                    f"{angleClasses[0]}-{angleClasses[2]}-"
+                    f"{getAtomPrint(data, angle[0])}, "
+                    f"{getAtomPrint(data, angle[1])}, "
+                    f"{getAtomPrint(data, angle[2])}"
                 )
-                raise ValueError(outputString)
 
-            angleTuple = (angle[0], angle[1], angle[2])
-            idealAngle = None
+            params['inPlane'] = str(params['inPlane']).lower() == 'true'
+            if params['inPlane'] or angleDict['inPlane']:
+                continue
 
+            angleTuple = tuple(angle)
             if isConstrained and params["k"] != 0.0:
-                idealAngle = params["theta0"][0] * math.pi / 180.0
-                addAngleConstraint(angle, idealAngle, data, sys)
+                idealAngle = params["theta0"][0]
+                addAngleConstraint(angle, idealAngle * math.pi / 180.0, data, sys)
+            else:
+                idealAngle = self.angleBuilder.getIdealAngle(
+                    angleTuple, params["theta0"], data.atoms, data.bondedToAtom
+                )
 
-            if params["k"] != 0.0 and (not isConstrained or args.get('flexibleConstraints', False)):
-                idealAngle = self.angleBuilder.getIdealAngle(angleTuple, params["theta0"], data) * math.pi / 180
-                self.angleBuilder.registerParams(angleTuple, (idealAngle, params["k"]))
-
+            self.angleBuilder.registerParams(angleTuple, (idealAngle, params["k"]))
             anglesConstraints.append(isConstrained)
             angles.append(angle)
             angleDict['idealAngle'] = idealAngle
 
         force = self.angleBuilder.getForce(sys)
-        self.angleBuilder.addAngles(force, angles, anglesConstraints, args.get('flexibleConstraints', False))
-
-
-
-        """
-        type1 = data.atomType[data.atoms[angle[0]]]
-        type2 = data.atomType[data.atoms[angle[1]]]
-        type3 = data.atomType[data.atoms[angle[2]]]
-        for i in range(len(self.types1)):
-            # self.inPlane is used for modern force fields.  inPlane is used for legacy ones that don't specify it.
-            if self.inPlane[i] or (self.inPlane[i] is None and inPlane):
-                continue
-            types1 = self.types1[i]
-            types2 = self.types2[i]
-            types3 = self.types3[i]
-            if (type1 in types1 and type2 in types2 and type3 in types3) or (type1 in types3 and type2 in types2 and type3 in types1):
-                if isConstrained and self.k[i] != 0.0:
-                    angleDict['idealAngle'] = self.angle[i][0]
-                    addAngleConstraint(angle, self.angle[i][0]*DEG_TO_RAD, data, sys)
-
-
-                if self.k[i] != 0 and (not isConstrained or args.get('flexibleConstraints', False)):
-                    lenAngle = len(self.angle[i])
-                    if (lenAngle > 1):
-                        # get k-index by counting number of non-angle hydrogens on the central atom
-                        # based on kangle.f
-                        numberOfHydrogens = 0
-                        for bond in data.atomBonds[angle[1]]:
-                            atom1 = data.bonds[bond].atom1
-                            atom2 = data.bonds[bond].atom2
-                            if (atom1 == angle[1] and atom2 != angle[0] and atom2 != angle[2] and (sys.getParticleMass(atom2)/unit.dalton) < 1.90):
-                                numberOfHydrogens += 1
-                            if (atom2 == angle[1] and atom1 != angle[0] and atom1 != angle[2] and (sys.getParticleMass(atom1)/unit.dalton) < 1.90):
-                                numberOfHydrogens += 1
-                        if (numberOfHydrogens < lenAngle):
-            type1 = data.atomType[data.atoms[angle[0]]]
-            type2 = data.atomType[data.atoms[angle[1]]]
-            type3 = data.atomType[data.atoms[angle[2]]]
-
-                            angleValue =  self.angle[i][numberOfHydrogens]
-                        else:
-                            outputString = "AmoebaAngleGenerator angle index=%d is out of range: [0, %5d] " % (numberOfHydrogens, lenAngle)
-                            raise ValueError(outputString)
-                    else:
-                        angleValue =  self.angle[i][0]
-
-                    angleDict['idealAngle'] = angleValue
-                    force.addAngle(angle[0], angle[1], angle[2], [angleValue, self.k[i]])
-                break
-        """
+        self.angleBuilder.addAngles(
+            force, angles, anglesConstraints, args.get('flexibleConstraints', False)
+        )
 
     #=============================================================================================
     # createForcePostOpBendInPlaneAngle is called by AmoebaOutOfPlaneBendForce with the list of
@@ -3773,63 +3721,46 @@ class AmoebaAngleGenerator(object):
     #=============================================================================================
 
     def createForcePostOpBendInPlaneAngle(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
-        inPlaneAngleParams = {k: v for k, v in self.angleParams.items() if v.get('inPlane') == 'True'}
-        atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
         inPlaneAnglesConstraints = []
         inPlaneAngles = []
+        atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
         for angleDict in angleList:
             angle = angleDict['angle']
             isConstrained = angleDict['isConstrained']
-            inPlane = angleDict['inPlane']
+            angleClasses = (atomClasses[angle[0]], atomClasses[angle[1]], atomClasses[angle[2]])
+            params = self.angleParams.get(angleClasses) or self.angleParams.get(angleClasses[::-1])
+            if params is None:
+                raise ValueError(
+                    f"AmoebaAngleGenerator: no parameters found for angle: "
+                    f"{angleClasses[0]}-{angleClasses[2]}-"
+                    f"{getAtomPrint(data, angle[0])}, "
+                    f"{getAtomPrint(data, angle[1])}, "
+                    f"{getAtomPrint(data, angle[2])}"
+                )
 
-            if not inPlane:
+            params['inPlane'] = str(params['inPlane']).lower() == 'true'
+            if not (params['inPlane'] or angleDict['inPlane']):
                 continue
 
-            angleClasses = (atomClasses[angle[0]], atomClasses[angle[1]], atomClasses[angle[2]], atomClasses[angle[3]])
-            params = inPlaneAngleParams.get(angleClasses[:3], None) or inPlaneAngleParams.get(angleClasses[:3][::-1], None)
-
-            if params is None:
-                outputString = "AmoebaAngleGenerator: no parameters found for in-plane angle: %s-%s-%s (atom %s, %s, %s)" % (
-                                    angleClasses[0],
-                                    angleClasses[2],
-                                    getAtomPrint(data, angle[0]),
-                                    getAtomPrint(data, angle[1]),
-                                    getAtomPrint(data, angle[2]))
-                raise ValueError(outputString)
-
+            angleTuple = tuple(angle)
             if isConstrained and params["k"] != 0.0:
-                addAngleConstraint(angle, idealAngle, data, sys)
+                idealAngle = params["theta0"][0]
+                addAngleConstraint(angle, idealAngle * math.pi / 180.0, data, sys)
+            else:
+                idealAngle = self.angleBuilder.getIdealAngle(
+                    angleTuple, params["theta0"], data.atoms, data.bondedToAtom
+                )
 
-            idealAngle = params["theta0"][0]*math.pi/180.0
+            self.inPlaneAngleBuilder.registerParams(angleClasses, (idealAngle, params["k"]))
             inPlaneAnglesConstraints.append(isConstrained)
             inPlaneAngles.append(angle)
             angleDict['idealAngle'] = idealAngle
-            self.inPlaneAngleBuilder.registerParams(angleClasses, (idealAngle, params["k"]))
 
         force = self.inPlaneAngleBuilder.getForce(sys)
-        self.inPlaneAngleBuilder.addInPlaneAngles(force, atomClasses, inPlaneAngles, inPlaneAnglesConstraints, args.get('flexibleConstraints', False))
+        self.inPlaneAngleBuilder.addInPlaneAngles(
+            force, atomClasses, inPlaneAngles, inPlaneAnglesConstraints, args.get('flexibleConstraints', False)
+        )
 
-        """
-        type1 = data.atomType[data.atoms[angle[0]]]
-        type2 = data.atomType[data.atoms[angle[1]]]
-        type3 = data.atomType[data.atoms[angle[2]]]
-
-        for i in range(len(self.types1)):
-            # self.inPlane is used for modern force fields.  inPlane is used for legacy ones that don't specify it.
-            if self.inPlane[i] == False or (self.inPlane[i] is None and not inPlane):
-                continue
-            types1 = self.types1[i]
-            types2 = self.types2[i]
-            types3 = self.types3[i]
-
-            if (type1 in types1 and type2 in types2 and type3 in types3) or (type1 in types3 and type2 in types2 and type3 in types1):
-                angleDict['idealAngle'] = self.angle[i][0]
-                if (isConstrained and self.k[i] != 0.0):
-                    addAngleConstraint(angle, self.angle[i][0]*math.pi/180.0, data, sys)
-                if self.k[i] != 0.0 and (not isConstrained or args.get('flexibleConstraints', False)):
-                    force.addBond((angle[0], angle[1], angle[2], angle[3]), (self.angle[i][0], self.k[i]))
-                break
-        """
 
 parsers["AmoebaAngleForce"] = AmoebaAngleGenerator.parseElement
 

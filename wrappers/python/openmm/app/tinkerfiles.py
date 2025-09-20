@@ -635,7 +635,7 @@ class TinkerFiles:
                     angleKey = (atomClasses[angle[0]], atomClasses[angle[1]], atomClasses[angle[2]])
                     angleTuple = (angle[0], angle[1], angle[2])
                     params = angleParams.get(angleKey) or angleParams.get(angleKey[::-1])
-                    theta0 = angleForceBuilder.getIdealAngle(angleTuple, params["theta0"], self.atoms)
+                    theta0 = angleForceBuilder.getIdealAngle(angleTuple, params["theta0"], self.atoms, bondedToAtom)
                     idealAngles[angleTuple] = theta0*math.pi/180 # Store ideal angle for stretch-bend
                     angleForceBuilder.registerParams(angleTuple, (theta0, params["k"]*4.184*(math.pi/180)**2))
                     processedAngles.append(angleTuple)
@@ -654,9 +654,9 @@ class TinkerFiles:
                 for angle in inPlaneAngles:
                     angleKey = (atomClasses[angle[0]], atomClasses[angle[1]], atomClasses[angle[2]], atomClasses[angle[3]])
                     params = inPlaneAngleParams.get(angleKey[:3]) or inPlaneAngleParams.get(angleKey[:3][::-1])
-                    theta0 = angleForceBuilder.getIdealAngle(tuple(angle), params["theta0"], self.atoms)
+                    theta0 = angleForceBuilder.getIdealAngle(tuple(angle), params["theta0"], self.atoms, bondedToAtom)
                     idealAngles[tuple(angle)] = theta0*math.pi/180 # Store ideal angle for stretch-bend
-                    inPlaneAngleForceBuilder.registerParams(angleKey, (theta0, params["k"]*4.184*(math.pi/180)**2))
+                    inPlaneAngleForceBuilder.registerParams(angleKey[:3], (theta0, params["k"]*4.184*(math.pi/180)**2))
                 inPlaneAngleForce = inPlaneAngleForceBuilder.getForce(sys)
                 inPlaneAngleForceBuilder.addInPlaneAngles(inPlaneAngleForce, atomClasses, inPlaneAngles)
 
