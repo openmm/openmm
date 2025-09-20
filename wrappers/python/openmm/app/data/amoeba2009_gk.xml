@@ -4,7 +4,7 @@
   <DateGenerated>2025-09-20</DateGenerated>
   <Reference></Reference>
  </Info>
- <AmoebaGeneralizedKirkwoodForce solventDielectric="78.3" soluteDielectric="1" includeCavityTerm="1.0" probeRadius="0.14" surfaceAreaFactor="-170.351730663">
+ <AmoebaGeneralizedKirkwoodForce solventDielectric="78.3" soluteDielectric="1.0" includeCavityTerm="1" probeRadius="0.14" surfaceAreaFactor="-170.351730663">
   <GeneralizedKirkwood type="1" charge="-0.22620" shct="0.79"  /> 
   <GeneralizedKirkwood type="2" charge="-0.15245" shct="0.72"  /> 
   <GeneralizedKirkwood type="2" charge="-0.26188" shct="0.72"  /> 
