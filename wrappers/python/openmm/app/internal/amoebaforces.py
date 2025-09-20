@@ -1328,22 +1328,64 @@ class AmoebaUreyBradleyForceBuilder(BaseAmoebaForceBuilder):
 
 
 class AmoebaTorsionTorsionForceBuilder(BaseAmoebaForceBuilder):
-    """Builder for TorsionTorsion force for AMOEBA force field"""
+    """
+    Builder for TorsionTorsion force for AMOEBA force field.
+    
+    
+    Attributes
+    ----------
+    torsionTorsionParams : List[Tuple[Tuple[str, ...], int]]
+        List of registered torsion-torsion parameters as (atom_class_pattern, grid_index) tuples.
+    gridData : Dict[int, Any]
+        Dictionary mapping grid indices to grid data for torsion-torsion interactions.
+    """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize the AmoebaTorsionTorsionForceBuilder."""
         super().__init__()
-        self.torsionTorsionParams = []
-        self.gridData = {}
+        self.torsionTorsionParams: List[Tuple[Tuple[str, ...], int]] = []
+        self.gridData: Dict[int, Any] = {}
 
-    def registerParams(self, torsionTorsionType, params):
-        """Register torsion-torsion parameters"""
+    def registerParams(self, torsionTorsionType: Tuple[str, ...], params: int) -> None:
+        """
+        Register torsion-torsion parameters during XML parsing.
+        
+        Parameters
+        ----------
+        torsionTorsionType : Tuple[str, ...]
+            Tuple of atom class strings defining the torsion-torsion type pattern.
+        params : int
+            Grid index for the torsion-torsion interaction.
+        """
         self.torsionTorsionParams.append((torsionTorsionType, params))
 
-    def registerGridData(self, gridIndex, grid):
-        """Register grid data for torsion-torsion interactions"""
+    def registerGridData(self, gridIndex: int, grid: Any) -> None:
+        """
+        Register grid data for torsion-torsion interactions.
+        
+        Parameters
+        ----------
+        gridIndex : int
+            Index of the grid in the force.
+        grid : Any
+            Grid data object for the torsion-torsion interaction.
+        """
         self.gridData[gridIndex] = grid
 
-    def getForce(self, sys):
+    def getForce(self, sys: mm.System) -> mm.AmoebaTorsionTorsionForce:
+        """
+        Get or create the AmoebaTorsionTorsionForce in the system.
+        
+        Parameters
+        ----------
+        sys : mm.System
+            The OpenMM System to get the force from or add it to.
+            
+        Returns
+        -------
+        mm.AmoebaTorsionTorsionForce
+            The AmoebaTorsionTorsionForce instance with grid data registered.
+        """
         def createForce():
             force = mm.AmoebaTorsionTorsionForce()
             return force
@@ -1355,245 +1397,147 @@ class AmoebaTorsionTorsionForceBuilder(BaseAmoebaForceBuilder):
 
         return force
 
-    @staticmethod
-    def setTorsionTorsionGrid(force, gridIndex, grid):
-        """Set the torsion-torsion grid for the force."""
-        force.setTorsionTorsionGrid(gridIndex, grid)
-
-    @staticmethod
-    def addTorsionTorsion(force, atom1, atom2, atom3, atom4, atom5, chiralIndex, gridIndex):
-        """Add a torsion-torsion interaction to the force."""
-        force.addTorsionTorsion(atom1, atom2, atom3, atom4, atom5, chiralIndex, gridIndex)
-
-    @staticmethod
-    def addTorsionTorsionInteractions(force, data, types1, types2, types3, types4, types5, gridIndex, sys):
-        """Add torsion-torsion interactions based on TINKER subroutine bitors()"""
-        for angle in data.angles:
-            # search for bitorsions; based on TINKER subroutine bitors()
-            ib = angle[0]
-            ic = angle[1]
-            id = angle[2]
-
-            for bondIndex in data.atomBonds[ib]:
-                bondedAtom1 = data.bonds[bondIndex].atom1
-                bondedAtom2 = data.bonds[bondIndex].atom2
-                if (bondedAtom1 != ib):
-                    ia = bondedAtom1
-                else:
-                    ia = bondedAtom2
-
-                if (ia != ic and ia != id):
-                    for bondIndex2 in data.atomBonds[id]:
-                        bondedAtom1 = data.bonds[bondIndex2].atom1
-                        bondedAtom2 = data.bonds[bondIndex2].atom2
-                        if (bondedAtom1 != id):
-                            ie = bondedAtom1
-                        else:
-                            ie = bondedAtom2
-
-                        if (ie != ic and ie != ib and ie != ia):
-                            # found candidate set of atoms
-                            # check if types match in order or reverse order
-                            type1 = data.atomType[data.atoms[ia]]
-                            type2 = data.atomType[data.atoms[ib]]
-                            type3 = data.atomType[data.atoms[ic]]
-                            type4 = data.atomType[data.atoms[id]]
-                            type5 = data.atomType[data.atoms[ie]]
-
-                            for i in range(len(types1)):
-                                types1_i = types1[i]
-                                types2_i = types2[i]
-                                types3_i = types3[i]
-                                types4_i = types4[i]
-                                types5_i = types5[i]
-
-                                # match in order
-                                if (type1 in types1_i and type2 in types2_i and type3 in types3_i and
-                                    type4 in types4_i and type5 in types5_i):
-                                    chiralAtomIndex = AmoebaTorsionTorsionForceBuilder._getChiralAtomIndex(data, ib, ic, id)
-                                    force.addTorsionTorsion(ia, ib, ic, id, ie, chiralAtomIndex, gridIndex[i])
-
-                                # match in reverse order
-                                elif (type5 in types1_i and type4 in types2_i and type3 in types3_i and
-                                      type2 in types4_i and type1 in types5_i):
-                                    chiralAtomIndex = AmoebaTorsionTorsionForceBuilder._getChiralAtomIndex(data, ib, ic, id)
-                                    force.addTorsionTorsion(ie, id, ic, ib, ia, chiralAtomIndex, gridIndex[i])
-
-
-    @staticmethod
-    def createTorsionTorsionInteractions(force, angles, atoms, tortorParams):
+    def addTorsionTorsionInteractions(self, force: mm.AmoebaTorsionTorsionForce, 
+                                      angles: Optional[List[Tuple[int, int, int]]] = None,
+                                      atoms: Optional[List[Any]] = None,
+                                      atomClasses: Optional[List[str]] = None,
+                                      torsions: Optional[List[Tuple[int, ...]]] = None,
+                                      sys: Optional[mm.System] = None) -> None:
         """
-        Create torsion-torsion interactions based on the angles and tortor parameters.
-
+        Create torsion-torsion interactions for both ForceField and TinkerFiles usage.
+        
         Parameters
         ----------
         force : mm.AmoebaTorsionTorsionForce
-            The OpenMM AmoebaTorsionTorsionForce object
-        angles : list
-            List of angles in the system
-        atoms : list
-            List of TinkerAtom objects
-        tortorParams : list
-            List of torsion-torsion parameter sets
+            The OpenMM AmoebaTorsionTorsionForce to add interactions to.
+        angles : Optional[List[Tuple[int, int, int]]], default=None
+            List of angle tuples (ib, ic, id). If not provided, will be extracted from torsions.
+        atoms : Optional[List[Any]], default=None
+            List of TinkerAtom objects with bonds and atomClass attributes (TinkerFiles usage).
+        atomClasses : Optional[List[str]], default=None
+            List of atom class strings indexed by atom index (ForceField usage).
+        torsions : Optional[List[Tuple[int, ...]]], default=None
+            List of torsion tuples containing atom indices (ForceField usage).
+        sys : Optional[mm.System], default=None
+            OpenMM System containing particle masses (ForceField usage).
         """
+        if atoms is not None:
+            # TinkerFiles usage
+            if angles is None:
+                raise ValueError("angles must be provided for TinkerFiles usage")
+            data = atoms
+            bonds = lambda atom: data[atom].bonds
+            getAtomClass = lambda atom: str(data[atom].atomClass)
+        else:
+            # ForceField usage
+            if atomClasses is None or torsions is None:
+                raise ValueError("atomClasses and torsions must be provided for ForceField usage")
+            
+            atomBonds = [[] for _ in range(len(atomClasses))]
+            for torsion in torsions:
+                for i in range(len(torsion) - 1):
+                    atom1, atom2 = torsion[i], torsion[i+1]
+                    if atom2 not in atomBonds[atom1]:
+                        atomBonds[atom1].append(atom2)
+                    if atom1 not in atomBonds[atom2]:
+                        atomBonds[atom2].append(atom1)
+            
+            if angles is None:
+                angles_set = set()
+                for torsion in torsions:
+                    for i in range(len(torsion) - 2):
+                        angles_set.add((torsion[i], torsion[i+1], torsion[i+2]))
+                angles = list(angles_set)
+            
+            data = atomBonds
+            bonds = lambda atom: atomBonds[atom]
+            getAtomClass = lambda atom: atomClasses[atom]
+
+        # Create torsion-torsion interactions
+        addedInteractions = set()
         for angle in angles:
-            # angle = (atom1, atom2, atom3) where atom2 is the central atom
-            ib = angle[0]  # first atom of angle
-            ic = angle[1]  # central atom of angle
-            id = angle[2]  # last atom of angle
-
-            # Find atoms bonded to ib (excluding ic and id)
-            for ia in atoms[ib].bonds:
-                if ia != ic and ia != id:
-                    # Find atoms bonded to id (excluding ic and ib and ia)
-                    for ie in atoms[id].bonds:
+            ib, ic, id = angle
+            for ia in bonds(ib):
+                if ia != ic:
+                    for ie in bonds(id):
                         if ie != ic and ie != ib and ie != ia:
-                            # We have a potential torsion-torsion pattern: ia-ib-ic-id-ie
-                            # Check if atom types match any tortor parameters
-                            for gridIndex, (tortorInfo, gridData) in enumerate(tortorParams):
-                                class1_param = tortorInfo[0]
-                                class2_param = tortorInfo[1]
-                                class3_param = tortorInfo[2]
-                                class4_param = tortorInfo[3]
-                                class5_param = tortorInfo[4]
-
-                                type1 = atoms[ia].atomClass
-                                type2 = atoms[ib].atomClass
-                                type3 = atoms[ic].atomClass
-                                type4 = atoms[id].atomClass
-                                type5 = atoms[ie].atomClass
-
-                                # Check forward direction
-                                if (type1 == class1_param and type2 == class2_param and
-                                    type3 == class3_param and type4 == class4_param and type5 == class5_param):
-                                    # Find chiral atom index
-                                    chiralIndex = AmoebaTorsionTorsionForceBuilder._getChiralAtomIndex(atoms, ib, ic, id)
-                                    AmoebaTorsionTorsionForceBuilder.addTorsionTorsion(force, ia, ib, ic, id, ie, chiralIndex, gridIndex)
-
-                                # Check reverse direction
-                                elif (type5 == class1_param and type4 == class2_param and
-                                      type3 == class3_param and type2 == class4_param and type1 == class5_param):
-                                    # Find chiral atom index
-                                    chiralIndex = AmoebaTorsionTorsionForceBuilder._getChiralAtomIndex(atoms, ib, ic, id)
-                                    AmoebaTorsionTorsionForceBuilder.addTorsionTorsion(force, ie, id, ic, ib, ia, chiralIndex, gridIndex)
+                            interaction = tuple(sorted([(ia, ib, ic, id, ie), (ie, id, ic, ib, ia)]))
+                            if interaction in addedInteractions:
+                                continue
+                            atomTypes = (getAtomClass(ia), getAtomClass(ib), getAtomClass(ic), 
+                                        getAtomClass(id), getAtomClass(ie))
+                            for torsionTorsionType, gridIdx in self.torsionTorsionParams:
+                                if atomTypes == torsionTorsionType:
+                                    chiralIndex = AmoebaTorsionTorsionForceBuilder._getChiralIndex(data, ib, ic, id, atomClasses, sys)
+                                    force.addTorsionTorsion(ia, ib, ic, id, ie, chiralIndex, gridIdx)
+                                    addedInteractions.add(interaction)
+                                    break
+                                elif atomTypes == tuple(reversed(torsionTorsionType)):
+                                    chiralIndex = AmoebaTorsionTorsionForceBuilder._getChiralIndex(data, ib, ic, id, atomClasses, sys)
+                                    force.addTorsionTorsion(ie, id, ic, ib, ia, chiralIndex, gridIdx)
+                                    addedInteractions.add(interaction)
+                                    break
 
     @staticmethod
-    def _getChiralAtomIndex(data, atomB, atomC, atomD):
+    def _getChiralIndex(data: Union[List[List[int]], List[Any]], atomB: int, atomC: int, atomD: int, 
+                       atomClasses: Optional[List[str]] = None, sys: Optional[mm.System] = None) -> int:
         """
-        Get the chiral atom index based on the TINKER algorithm.
-
+        Get chiral atom index using consistent TINKER algorithm for both ForceField and TinkerFiles usage.
+        
         Parameters
         ----------
-        data : ForceFieldData or list
-            ForceFieldData object (for ForceField usage) or list of TinkerAtom objects (for TinkerFiles usage)
+        data : Union[List[List[int]], List[Any]]
+            Either a list of bond lists (ForceField usage) or list of TinkerAtom objects (TinkerFiles usage).
+            The method automatically detects the data type by checking for the 'bonds' attribute.
         atomB : int
-            Index of atom B
+            Index of first atom in the central angle.
         atomC : int
-            Index of atom C (central atom)
+            Index of central atom that should have 4 bonds for chiral determination.
         atomD : int
-            Index of atom D
-
+            Index of third atom in the central angle.
+        atomClasses : Optional[List[str]], default=None
+            List of atom class strings indexed by atom index. Required for ForceField usage,
+            ignored for TinkerFiles usage.
+        sys : Optional[mm.System], default=None
+            OpenMM System containing particle masses. Required for ForceField usage,
+            ignored for TinkerFiles usage.
+            
         Returns
         -------
         int
-            Index of the chiral atom, or -1 if not found
+            Index of the chiral atom (atomE or atomF) based on TINKER algorithm,
+            or -1 if atomC doesn't have exactly 4 bonds or other conditions aren't met.
         """
-        chiralAtomIndex = -1
-
-        # Check if we're dealing with ForceField data (has atomBonds attribute) or TinkerAtom list
-        if hasattr(data, 'atomBonds'):
-            # ForceField usage - data is ForceFieldData object
-            atoms = data.atoms
-            atomBonds = data.atomBonds
-            bonds = data.bonds
-            atomType = data.atomType
-
-            # Get atoms bonded to atomC
-            bondedAtoms = []
-            for bondIndex in atomBonds[atomC]:
-                bond = bonds[bondIndex]
-                if bond.atom1 == atomC:
-                    bondedAtoms.append(bond.atom2)
-                else:
-                    bondedAtoms.append(bond.atom1)
-
-            # If atomC has four bonds, find the two bonds that do not include atomB and atomD
-            if len(bondedAtoms) == 4:
-                atomE = -1
-                atomF = -1
-
-                for bondedAtom in bondedAtoms:
-                    if bondedAtom != atomB and bondedAtom != atomD:
-                        if atomE == -1:
-                            atomE = bondedAtom
-                        else:
-                            atomF = bondedAtom
-
-                # Raise error if atoms E or F not found
-                if atomE == -1 or atomF == -1:
-                    raise ValueError(f"getChiralAtomIndex: error getting bonded partners of atomC={atomC}")
-
-                # Check for different type between atoms E & F
-                typeE = atomType[atoms[atomE]]
-                typeF = atomType[atoms[atomF]]
-
-                if typeE and typeF:
-                    # Compare atom types as strings/identifiers
-                    if str(typeE) > str(typeF):
-                        chiralAtomIndex = atomE
-                    elif str(typeF) > str(typeE):
-                        chiralAtomIndex = atomF
-
-                # If types are same, check masses
-                if chiralAtomIndex == -1:
-                    massE = atoms[atomE].element.mass.value_in_unit(amu) if atoms[atomE].element else 0.0
-                    massF = atoms[atomF].element.mass.value_in_unit(amu) if atoms[atomF].element else 0.0
-                    if massE > massF:
-                        chiralAtomIndex = atomE
-                    elif massF > massE:
-                        chiralAtomIndex = atomF
-        else:
-            # TinkerFiles usage - data is list of TinkerAtom objects
+        if isinstance(data, list) and len(data) > 0 and hasattr(data[0], 'bonds'):
+            # TinkerFiles 
             atoms = data
+            bonds = lambda atom: atoms[atom].bonds
+            getAtomClass = lambda atom: int(atoms[atom].atomClass)
+            getMass = lambda atom: atoms[atom].mass if atoms[atom].mass else 0.0
+        else:
+            # ForceField
+            import openmm.unit as unit
+            atomBonds = data
+            bonds = lambda atom: atomBonds[atom]
+            getAtomClass = lambda atom: int(atomClasses[atom])
+            getMass = lambda atom: sys.getParticleMass(atom) / unit.dalton
 
-            # If atomC has four bonds, find the two bonds that do not include atomB and atomD
-            # Set chiralAtomIndex to one of these, if they are not the same atom (type/mass)
-            atomC_bonds = atoms[atomC].bonds
-            if len(atomC_bonds) == 4:
-                atomE = -1
-                atomF = -1
-
-                for bondedAtom in atomC_bonds:
-                    if bondedAtom != atomB and bondedAtom != atomD:
-                        if atomE == -1:
-                            atomE = bondedAtom
-                        else:
-                            atomF = bondedAtom
-
-                # Raise error if atoms E or F not found
-                if atomE == -1 or atomF == -1:
-                    raise ValueError(f"getChiralAtomIndex: error getting bonded partners of atomC={atomC}")
-
-                # Check for different type/mass between atoms E & F
-                typeE = atoms[atomE].atomClass
-                typeF = atoms[atomF].atomClass
-
-                if typeE and typeF:
-                    if int(typeE) > int(typeF):
-                        chiralAtomIndex = atomE
-                    elif int(typeF) > int(typeE):
-                        chiralAtomIndex = atomF
-
-                # If types are same, check masses
-                if chiralAtomIndex == -1:
-                    massE = atoms[atomE].mass if atoms[atomE].mass else 0.0
-                    massF = atoms[atomF].mass if atoms[atomF].mass else 0.0
-                    if massE > massF:
-                        chiralAtomIndex = atomE
-                    elif massF > massE:
-                        chiralAtomIndex = atomF
-
-        return chiralAtomIndex
+        if len(bonds(atomC)) == 4:
+            otherAtoms = [atom for atom in bonds(atomC) if atom != atomB and atom != atomD]
+            if len(otherAtoms) == 2:
+                atomE, atomF = otherAtoms
+                typeE, typeF = getAtomClass(atomE), getAtomClass(atomF)
+                if typeE > typeF:
+                    return atomE
+                elif typeF > typeE:
+                    return atomF
+                massE, massF = getMass(atomE), getMass(atomF)
+                if massE > massF:
+                    return atomE
+                elif massF > massE:
+                    return atomF
+        
+        return -1
 
 
 class AmoebaWcaDispersionForceBuilder(BaseAmoebaForceBuilder):

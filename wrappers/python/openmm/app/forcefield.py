@@ -4172,43 +4172,24 @@ class AmoebaTorsionTorsionGenerator(object):
     """An AmoebaTorsionTorsionGenerator constructs a AmoebaTorsionTorsionForce."""
 
     def __init__(self):
-
-        self.types1 = []
-        self.types2 = []
-        self.types3 = []
-        self.types4 = []
-        self.types5 = []
-
-        self.gridIndex = []
-
-        self.grids = []
+        self.builder = amoebaforces.AmoebaTorsionTorsionForceBuilder()
 
     @staticmethod
     def parseElement(element, forceField):
-
-        generator = AmoebaTorsionTorsionGenerator()
-        forceField._forces.append(generator)
-        maxGridIndex = -1
-
         # <AmoebaTorsionTorsionForce >
         # <TorsionTorsion class1="3" class2="1" class3="2" class4="3" class5="1" grid="0" nx="25" ny="25" />
-
+        generator = AmoebaTorsionTorsionGenerator()
+        forceField._forces.append(generator)
+        
+        # Register torsion-torsion parameters
         for torsionTorsion in element.findall('TorsionTorsion'):
-            types = forceField._findAtomTypes(torsionTorsion.attrib, 5)
-            if None not in types:
-
-                generator.types1.append(types[0])
-                generator.types2.append(types[1])
-                generator.types3.append(types[2])
-                generator.types4.append(types[3])
-                generator.types5.append(types[4])
-
+            try:
                 gridIndex = int(torsionTorsion.attrib['grid'])
-                if (gridIndex > maxGridIndex):
-                    maxGridIndex = gridIndex
-
-                generator.gridIndex.append(gridIndex)
-            else:
+                torsionTorsionType = (torsionTorsion.attrib['class1'], torsionTorsion.attrib['class2'], 
+                                        torsionTorsion.attrib['class3'], torsionTorsion.attrib['class4'], 
+                                        torsionTorsion.attrib['class5'])
+                generator.builder.registerParams(torsionTorsionType, gridIndex)
+            except:
                 outputString = "AmoebaTorsionTorsionGenerator: error getting types: %s %s %s %s %s" % (
                                     torsionTorsion.attrib['class1'],
                                     torsionTorsion.attrib['class2'],
@@ -4217,38 +4198,28 @@ class AmoebaTorsionTorsionGenerator(object):
                                     torsionTorsion.attrib['class5'] )
                 raise ValueError(outputString)
 
-        # load grid
-
-        # xml source
-
+        # Register grid data
         # <TorsionTorsionGrid grid="0" nx="25" ny="25" >
         # <Grid angle1="-180.00" angle2="-180.00" f="0.0" fx="2.31064374824e-05" fy="0.0" fxy="-0.0052801799672" />
         # <Grid angle1="-165.00" angle2="-180.00" f="-0.66600912" fx="-0.06983370052" fy="-0.075058725744" fxy="-0.0044462732032" />
 
-        # output grid:
+        # Grid format:
+        #     grid[x][y][0] = x value (angle1)
+        #     grid[x][y][1] = y value (angle2)
+        #     grid[x][y][2] = function value (f)
+        #     grid[x][y][3] = dfdx value (fx)
+        #     grid[x][y][4] = dfdy value (fy)
+        #     grid[x][y][5] = dfd(xy) value (fxy)
 
-        #     grid[x][y][0] = x value
-        #     grid[x][y][1] = y value
-        #     grid[x][y][2] = function value
-        #     grid[x][y][3] = dfdx value
-        #     grid[x][y][4] = dfdy value
-        #     grid[x][y][5] = dfd(xy) value
-
-        maxGridIndex    += 1
-        generator.grids = maxGridIndex*[]
         for torsionTorsionGrid in element.findall('TorsionTorsionGrid'):
-
-            gridIndex = int(torsionTorsionGrid.attrib[ "grid"])
-            nx = int(torsionTorsionGrid.attrib[ "nx"])
-            ny = int(torsionTorsionGrid.attrib[ "ny"])
-
+            gridIndex = int(torsionTorsionGrid.attrib["grid"])
+            nx = int(torsionTorsionGrid.attrib["nx"])
+            ny = int(torsionTorsionGrid.attrib["ny"])
             grid = []
             gridCol = []
 
             gridColIndex = 0
-
             for gridEntry in torsionTorsionGrid.findall('Grid'):
-
                 gridRow = []
                 gridRow.append(float(gridEntry.attrib['angle1']))
                 gridRow.append(float(gridEntry.attrib['angle2']))
@@ -4259,31 +4230,18 @@ class AmoebaTorsionTorsionGenerator(object):
                     gridRow.append(float(gridEntry.attrib['fxy']))
                 gridCol.append(gridRow)
 
-                gridColIndex  += 1
-                if (gridColIndex == nx):
+                gridColIndex += 1
+                if gridColIndex == nx:
                     grid.append(gridCol)
                     gridCol = []
                     gridColIndex = 0
-
-
-            if (gridIndex == len(generator.grids)):
-                generator.grids.append(grid)
-            else:
-                while(len(generator.grids) < gridIndex):
-                    generator.grids.append([])
-                generator.grids[gridIndex] = grid
+            generator.builder.registerGridData(gridIndex, grid)
+        generator.classNameForType = dict((t.name, str(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        builder = amoebaforces.AmoebaTorsionTorsionForceBuilder()
-        force = builder.getForce(sys)
-        
-        # Add torsion-torsion interactions
-        builder.addTorsionTorsionInteractions(force, data, self.types1, self.types2, self.types3, 
-                                              self.types4, self.types5, self.gridIndex, sys)
-        
-        # Set grids
-        for (index, grid) in enumerate(self.grids):
-            builder.setTorsionTorsionGrid(force, index, grid)
+        atomClasses = [self.classNameForType[data.atomType[atom]] for atom in data.atoms]
+        force = self.builder.getForce(sys)
+        self.builder.addTorsionTorsionInteractions(force, atomClasses=atomClasses, torsions=data.propers, sys=sys)
 
 parsers["AmoebaTorsionTorsionForce"] = AmoebaTorsionTorsionGenerator.parseElement
 
@@ -4616,23 +4574,26 @@ class AmoebaUreyBradleyGenerator(object):
         forceField._forces.append(generator)
         for bond in element.findall('UreyBradley'):
             try:
-                generator.builder.registerParams((bond.attrib['class1'], bond.attrib['class2'], bond.attrib['class3']), 
-                                                 (float(bond.attrib['d']), float(bond.attrib['k'])))
+                if 'class1' not in bond.attrib:
+                    key1, key2, key3 = ('type1', 'type2', 'type3')
+                else:
+                    key1, key2, key3 = ('class1', 'class2', 'class3')
+                generator.builder.registerParams((bond.attrib[key1], bond.attrib[key2], bond.attrib[key3]),
+                                                 (float(bond.attrib['k']), float(bond.attrib['d'])))
             except:
                 outputString = "AmoebaUreyBradleyGenerator : error getting types: %s %s %s" % (
                                     bond.attrib['class1'],
                                     bond.attrib['class2'],
                                     bond.attrib['class3'])
                 raise ValueError(outputString)
-        generator.classNameForType = dict((t.name, int(t.atomClass)) for t in forceField._atomTypes.values())
+        generator.classNameForType = dict((t.name, str(t.atomClass)) for t in forceField._atomTypes.values())
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = self.builder.getForce(sys)
-        atomClasses = [str(self.classNameForType[data.atomType[atom]]) for atom in data.atoms]
+        atomClasses = [self.classNameForType[data.atomType[atom]] for atom in data.atoms]
         self.builder.addUreyBradleys(force, atomClasses, data.angles, data.isAngleConstrained, args.get('flexibleConstraints', False))
 
 parsers["AmoebaUreyBradleyForce"] = AmoebaUreyBradleyGenerator.parseElement
-
 
 ## @private
 class HippoNonbondedGenerator(object):

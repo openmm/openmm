@@ -742,13 +742,15 @@ class TinkerFiles:
         if "tortors" in self._forces:
             torsionTorsionForceBuilder = AmoebaTorsionTorsionForceBuilder()
             for gridIndex, (tortorInfo, gridData) in enumerate(self._forces["tortors"]):
+                tortorType = (tortorInfo[0], tortorInfo[1], tortorInfo[2], tortorInfo[3], tortorInfo[4])
+                torsionTorsionForceBuilder.registerParams(tortorType, gridIndex)
                 nx = int(tortorInfo[5]) 
                 ny = int(tortorInfo[6])  
                 grid = np.array(gridData, dtype=np.float64).reshape((nx, ny, -1))
                 grid[:, :, 2] *= 4.184  
                 torsionTorsionForceBuilder.registerGridData(gridIndex, grid)
             torsionTorsionForce = torsionTorsionForceBuilder.getForce(sys)
-            torsionTorsionForceBuilder.createTorsionTorsionInteractions(torsionTorsionForce, angles, self.atoms, self._forces["tortors"])
+            torsionTorsionForceBuilder.addTorsionTorsionInteractions(torsionTorsionForce, angles=angles, atoms=self.atoms)
 
         # Add AmoebaVdwForce
         if "vdw" in self._forces:
