@@ -588,7 +588,6 @@ class TinkerFiles:
             angleParams = {(at1, at2, at3): {"k": float(k), "theta0": [float(theta) for theta in theta]} for at1, at2, at3, k, *theta in self._forces["angle"]}
             if genericAngles:
                 angleForceBuilder = AmoebaAngleForceBuilder(self._scalars["angle-cubic"], self._scalars["angle-quartic"], self._scalars["angle-pentic"], self._scalars["angle-sextic"])
-                processedAngles = []
                 for angle in genericAngles:
                     angleKey = (atomClasses[angle[0]], atomClasses[angle[1]], atomClasses[angle[2]])
                     angleTuple = (angle[0], angle[1], angle[2])
@@ -596,9 +595,8 @@ class TinkerFiles:
                     theta0 = angleForceBuilder.getIdealAngle(angleTuple, params["theta0"], self.atoms, bondedToAtom)
                     idealAngles[angleTuple] = theta0*math.pi/180 # Store ideal angle for stretch-bend
                     angleForceBuilder.registerParams(angleTuple, (theta0, params["k"]*4.184*(math.pi/180)**2))
-                    processedAngles.append(angleTuple)
                 angleForce = angleForceBuilder.getForce(sys)
-                angleForceBuilder.addAngles(angleForce, processedAngles)
+                angleForceBuilder.addAngles(angleForce, genericAngles)
 
             # Add AmoebaInPlaneAngleForce
             if "anglep" in self._forces:

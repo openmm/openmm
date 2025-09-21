@@ -3637,6 +3637,7 @@ class AmoebaAngleGenerator(object):
         self.angleBuilder = amoebaforces.AmoebaAngleForceBuilder(float(cubic), float(quartic), float(pentic), float(sextic))
         self.inPlaneAngleBuilder = amoebaforces.AmoebaInPlaneAngleForceBuilder(float(cubic), float(quartic), float(pentic), float(sextic))
         self.forceField = forceField
+        self.angleParams = {}
 
     @staticmethod
     def parseElement(element, forceField):
@@ -3650,7 +3651,6 @@ class AmoebaAngleGenerator(object):
             generator = existing[0]
             if tuple(element.attrib[x] for x in ('angle-cubic', 'angle-quartic', 'angle-pentic', 'angle-sextic')) != (generator.cubic, generator.quartic, generator.pentic, generator.sextic):
                 raise ValueError('All <AmoebaAngleForce> tags must use identical scale factors')
-        generator.angleParams = {}
         for angle in element.findall('Angle'):
             try:
                 theta0 = [float(angle.attrib['angle1'])]
@@ -3658,9 +3658,11 @@ class AmoebaAngleGenerator(object):
                     theta0.append(float(angle.attrib['angle2']))
                 if 'angle3' in angle.attrib:
                     theta0.append(float(angle.attrib['angle3']))
-                generator.angleParams[(angle.attrib['class1'], angle.attrib['class2'], angle.attrib['class3'])] = {"k": float(angle.attrib['k']), 
-                                                                                                                   "theta0": theta0, 
-                                                                                                                   "inPlane": angle.attrib.get('inPlane', None)}
+                generator.angleParams[(angle.attrib['class1'], 
+                                       angle.attrib['class2'], 
+                                       angle.attrib['class3'])] = {"k": float(angle.attrib['k']), 
+                                                                   "theta0": theta0, 
+                                                                   "inPlane": angle.attrib.get('inPlane', None)}
             except Exception as e:
                 outputString = "AmoebaAngleGenerator: error getting types: %s %s %s" % (
                                     angle.attrib['class1'],
@@ -3682,13 +3684,9 @@ class AmoebaAngleGenerator(object):
     # non-in-plane angles
     #=============================================================================================
 
-    def createForcePostOpBendAngle(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
-        anglesConstraints = []
-        angles = []
-
-        for angleDict in angleList:
-            angle = angleDict['angle']
-            isConstrained = angleDict['isConstrained']
+    def createForcePostOpBendAngle(self, sys, data, nonbondedMethod, nonbondedCutoff, angles, anglesConstraints, args):
+        idealAngles = {}        
+        for angle, isConstrained in zip(angles, anglesConstraints):
             angleClasses = (data.atomClasses[angle[0]], data.atomClasses[angle[1]], data.atomClasses[angle[2]])
             params = self.angleParams.get(angleClasses) or self.angleParams.get(angleClasses[::-1])
             if params is None:
@@ -3699,75 +3697,48 @@ class AmoebaAngleGenerator(object):
                     f"{getAtomPrint(data, angle[1])}, "
                     f"{getAtomPrint(data, angle[2])}"
                 )
-
-            params['inPlane'] = str(params['inPlane']).lower() == 'true'
-            if params['inPlane'] or angleDict['inPlane']:
-                continue
-
             angleTuple = tuple(angle)
             if isConstrained and params["k"] != 0.0:
                 idealAngle = params["theta0"][0]
-                addAngleConstraint(angle, idealAngle * math.pi / 180.0, data, sys)
+                addAngleConstraint(angle, idealAngle*math.pi/180.0, data, sys)
             else:
-                idealAngle = self.angleBuilder.getIdealAngle(
-                    angleTuple, params["theta0"], data.atoms, data.bondedToAtom
-                )
-
+                idealAngle = self.angleBuilder.getIdealAngle(angleTuple, params["theta0"], data.atoms, data.bondedToAtom)
             self.angleBuilder.registerParams(angleTuple, (idealAngle, params["k"]))
-            anglesConstraints.append(isConstrained)
-            angles.append(angle)
-            angleDict['idealAngle'] = idealAngle
-
+            idealAngles[angleTuple] = idealAngle*math.pi/180.0
         force = self.angleBuilder.getForce(sys)
-        self.angleBuilder.addAngles(
-            force, angles, anglesConstraints, args.get('flexibleConstraints', False)
-        )
+        self.angleBuilder.addAngles(force, angles, anglesConstraints, args.get('flexibleConstraints', False))
 
+        return idealAngles
     #=============================================================================================
     # createForcePostOpBendInPlaneAngle is called by AmoebaOutOfPlaneBendForce with the list of
     # in-plane angles
     #=============================================================================================
 
-    def createForcePostOpBendInPlaneAngle(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
-        inPlaneAnglesConstraints = []
-        inPlaneAngles = []
-        for angleDict in angleList:
-            angle = angleDict['angle']
-            isConstrained = angleDict['isConstrained']
-            angleClasses = (data.atomClasses[angle[0]], data.atomClasses[angle[1]], data.atomClasses[angle[2]])
+    def createForcePostOpBendInPlaneAngle(self, sys, data, nonbondedMethod, nonbondedCutoff, inPlaneAngles, inPlaneAnglesConstraints, args):
+        idealAngles = {}
+        for inPlaneAngle, isConstrained in zip(inPlaneAngles, inPlaneAnglesConstraints):
+            angleClasses = (data.atomClasses[inPlaneAngle[0]], data.atomClasses[inPlaneAngle[1]], data.atomClasses[inPlaneAngle[2]])
             params = self.angleParams.get(angleClasses) or self.angleParams.get(angleClasses[::-1])
             if params is None:
                 raise ValueError(
                     f"AmoebaAngleGenerator: no parameters found for angle: "
                     f"{angleClasses[0]}-{angleClasses[2]}-"
-                    f"{getAtomPrint(data, angle[0])}, "
-                    f"{getAtomPrint(data, angle[1])}, "
-                    f"{getAtomPrint(data, angle[2])}"
+                    f"{getAtomPrint(data, inPlaneAngle[0])}, "
+                    f"{getAtomPrint(data, inPlaneAngle[1])}, "
+                    f"{getAtomPrint(data, inPlaneAngle[2])}"
                 )
-
-            params['inPlane'] = str(params['inPlane']).lower() == 'true'
-            if not (params['inPlane'] or angleDict['inPlane']):
-                continue
-
-            angleTuple = tuple(angle)
+            angleTuple = tuple(inPlaneAngle)
             if isConstrained and params["k"] != 0.0:
                 idealAngle = params["theta0"][0]
-                addAngleConstraint(angle, idealAngle * math.pi / 180.0, data, sys)
+                addAngleConstraint(inPlaneAngle, idealAngle*math.pi/180.0, data, sys)
             else:
-                idealAngle = self.angleBuilder.getIdealAngle(
-                    angleTuple, params["theta0"], data.atoms, data.bondedToAtom
-                )
-
+                idealAngle = self.angleBuilder.getIdealAngle(angleTuple, params["theta0"], data.atoms, data.bondedToAtom)
             self.inPlaneAngleBuilder.registerParams(angleClasses, (idealAngle, params["k"]))
-            inPlaneAnglesConstraints.append(isConstrained)
-            inPlaneAngles.append(angle)
-            angleDict['idealAngle'] = idealAngle
-
+            idealAngles[angleTuple[:3]] = idealAngle*math.pi/180.0
         force = self.inPlaneAngleBuilder.getForce(sys)
-        self.inPlaneAngleBuilder.addInPlaneAngles(
-            force, data.atomClasses, inPlaneAngles, inPlaneAnglesConstraints, args.get('flexibleConstraints', False)
-        )
+        self.inPlaneAngleBuilder.addInPlaneAngles(force, data.atomClasses, inPlaneAngles, inPlaneAnglesConstraints, args.get('flexibleConstraints', False))
 
+        return idealAngles
 parsers["AmoebaAngleForce"] = AmoebaAngleGenerator.parseElement
 
 #=============================================================================================
@@ -3781,12 +3752,7 @@ class AmoebaOutOfPlaneBendGenerator(object):
 
     def __init__(self, forceField, type, cubic, quartic, pentic, sextic):
         self.forceField = forceField
-        self.type = type
-        self.cubic = cubic
-        self.quartic = quartic
-        self.pentic = pentic
-        self.sextic = sextic
-        self.builder = amoebaforces.AmoebaOutOfPlaneBendForceBuilder(cubic, quartic, pentic, sextic)
+        self.builder = amoebaforces.AmoebaOutOfPlaneBendForceBuilder(float(cubic), float(quartic), float(pentic), float(sextic))
 
     @staticmethod
     def parseElement(element, forceField):
@@ -3825,7 +3791,6 @@ class AmoebaOutOfPlaneBendGenerator(object):
 
     def postprocessSystem(self, sys, data, args):
         # We need to wait until after all bonds have been added so their lengths will be set correctly.
-
         # Classify angles into in-plane, out-of-plane, and generic angles
         opbendTypes = [opbendType for opbendType, _ in self.builder.outOfPlaneBendParams]
         inPlaneAngles, outOfPlaneAngles, genericAngles = self.builder.classifyAngles(
@@ -3834,42 +3799,38 @@ class AmoebaOutOfPlaneBendGenerator(object):
             data.bondedToAtom,
             opbendTypes
         )
+
+        # Add out-of-plane bend force
         force = self.builder.getForce(sys)
         self.builder.addOutOfPlaneBends(force, data.atomClasses, outOfPlaneAngles)
 
-        angles = []
-        # Add in-plane angles
-        for angle in inPlaneAngles:
-            angleDict = {
-                'angle': list(angle),
-                'isConstrained': 0,  # In-plane angles are typically not constrained
-                'inPlane': True
-            }
-            angles.append(angleDict)
-        
-        # Add generic angles with constraint information
-        for i, angle in enumerate(genericAngles):
-            angleDict = {
-                'angle': list(angle),
-                'isConstrained': data.isAngleConstrained[i] if i < len(data.isAngleConstrained) else False,
-                'inPlane': False
-            }
-            angles.append(angleDict)
+        # Constraints lists
+        inPlaneAnglesConstraints = []
+        genericAnglesConstraints = []
+        inPlaneAnglesCmp = [tuple(angle)[:3] for angle in inPlaneAngles]
+        for angle, isConstrained in zip(data.angles, data.isAngleConstrained):
+            if angle in genericAngles:
+                genericAnglesConstraints.append(isConstrained)
+            elif angle in inPlaneAnglesCmp:
+                inPlaneAnglesConstraints.append(isConstrained)
 
         # Get AmoebaAngleGenerator and add AmoebaAngle and AmoebaInPlaneAngle forces
+        idealAngles = {}
         for force in self.forceField._forces:
             if (force.__class__.__name__ == 'AmoebaAngleGenerator'):
-                force.createForcePostOpBendAngle(sys, data, self._nonbondedMethod, self._nonbondedCutoff, angles, args)
-                force.createForcePostOpBendInPlaneAngle(sys, data, self._nonbondedMethod, self._nonbondedCutoff, angles, args)
-
+                idealAnglesTmp = force.createForcePostOpBendAngle(sys, data, self._nonbondedMethod, self._nonbondedCutoff, genericAngles, genericAnglesConstraints, args)
+                idealAngles.update(idealAnglesTmp)
+                idealAnglesTmp = force.createForcePostOpBendInPlaneAngle(sys, data, self._nonbondedMethod, self._nonbondedCutoff, inPlaneAngles, inPlaneAnglesConstraints, args)
+                idealAngles.update(idealAnglesTmp)
         for force in self.forceField._forces:
             if (force.__class__.__name__ == 'AmoebaStretchBendGenerator'):
-                force.createForcePostAmoebaBondForce(sys, data, self._nonbondedMethod, self._nonbondedCutoff, angles, args)
+                force.createForcePostAmoebaBondForce(sys, data, self._nonbondedMethod, self._nonbondedCutoff, data.angles, idealAngles, args)
 
 parsers["AmoebaOutOfPlaneBendForce"] = AmoebaOutOfPlaneBendGenerator.parseElement
 
 ## @private
 class AmoebaTorsionGenerator(object):
+    # TODO: remove once amoeba2013.xml has been updated
     """An AmoebaTorsionGenerator constructs a AmoebaTorsionForce."""
 
     def __init__(self, torsionUnit):
@@ -3983,8 +3944,7 @@ class AmoebaPiTorsionGenerator(object):
                 raise ValueError(outputString)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        bondedToAtom = [bondedToAtom for bondedToAtom in data.bondedToAtom]
-        processedPiTorsions = self.builder.getAllPiTorsions(data.atomClasses, bondedToAtom, _findBondsForExclusions(data, sys))
+        processedPiTorsions = self.builder.getAllPiTorsions(data.atomClasses, data.bondedToAtom, _findBondsForExclusions(data, sys))
         force = self.builder.getForce(sys)
         self.builder.addPiTorsions(force, data.atomClasses, processedPiTorsions)
 
@@ -4190,29 +4150,12 @@ class AmoebaStretchBendGenerator(object):
 
     #=============================================================================================
 
-    def createForcePostAmoebaBondForce(self, sys, data, nonbondedMethod, nonbondedCutoff, angleList, args):
-        angles = []
-        idealAngles = {}
-        for angleDict in angleList:
-            angle = tuple(angleDict['angle'][:3])
-            angles.append(angle)
-            idealAngle = angleDict.get('idealAngle')
-            if idealAngle is None:
-                outputString = "AmoebaStretchBendGenerator: ideal angle is not set for following entry:\n"
-                outputString += "   types: %5s %5s %5s atoms: " % (data.atomType[data.atoms[angle[0]]],
-                                                                data.atomType[data.atoms[angle[1]]],
-                                                                data.atomType[data.atoms[angle[2]]])
-                outputString += getAtomPrint( data, angle[0] ) + ' '
-                outputString += getAtomPrint( data, angle[1] ) + ' '
-                outputString += getAtomPrint( data, angle[2] )
-                raise ValueError(outputString)
-            idealAngles[angle] = idealAngle*math.pi/180.0
-
+    def createForcePostAmoebaBondForce(self, sys, data, nonbondedMethod, nonbondedCutoff, angles, idealAngles, args):
+        # Get ideal bond lengths from AmoebaBondForce
         bondParams = {
             (data.atomClasses[bond.atom1], data.atomClasses[bond.atom2]): {"r0": bond.length}
             for bond in data.bonds
         }
-
         processedAngles = self.builder.registerAllStretchBendParams(data.atomClasses, angles, self.stretchBendParams, bondParams, idealAngles)
         force = self.builder.getForce(sys)
         self.builder.addStretchBends(force, processedAngles)
