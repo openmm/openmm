@@ -3739,6 +3739,7 @@ class AmoebaAngleGenerator(object):
         self.inPlaneAngleBuilder.addInPlaneAngles(force, data.atomClasses, inPlaneAngles, inPlaneAnglesConstraints, args.get('flexibleConstraints', False))
 
         return idealAngles
+
 parsers["AmoebaAngleForce"] = AmoebaAngleGenerator.parseElement
 
 #=============================================================================================
@@ -3756,7 +3757,6 @@ class AmoebaOutOfPlaneBendGenerator(object):
 
     @staticmethod
     def parseElement(element, forceField):
-
         #  <AmoebaOutOfPlaneBendForce type="ALLINGER" opbend-cubic="-0.014" opbend-quartic="5.6e-05" opbend-pentic="-7e-07" opbend-sextic="2.2e-08">
         #   <Angle class1="2" class2="1" class3="0" class4="0" k="0.0531474541591"/>
         #   <Angle class1="3" class2="1" class3="0" class4="0" k="0.0898536095496"/>
@@ -3930,13 +3930,16 @@ class AmoebaPiTorsionGenerator(object):
 
     @staticmethod
     def parseElement(element, forceField):
+        # <AmoebaPiTorsionForce piTorsionUnit="1.0">
+        #  <PiTorsion class1="1" class2="3" k="28.6604" />
+        #  <PiTorsion class1="3" class2="15" k="28.6604" />
         generator = AmoebaPiTorsionGenerator()
         forceField._forces.append(generator)
-
+        piTorsionUnit = float(element.attrib['piTorsionUnit']) if 'piTorsionUnit' in element.attrib else 1.0
         for piTorsion in element.findall('PiTorsion'):
-            # TODO: make it read pitorsionunit
             try:
-                generator.builder.registerParams((piTorsion.attrib['class1'], piTorsion.attrib['class2']), (float(piTorsion.attrib['k']),))
+                k=float(piTorsion.attrib['k'])*piTorsionUnit
+                generator.builder.registerParams((piTorsion.attrib['class1'], piTorsion.attrib['class2']), (k,))
             except:
                 outputString = "AmoebaPiTorsionGenerator: error getting types: %s %s " % (
                                     piTorsion.attrib['class1'],
@@ -4104,23 +4107,23 @@ class AmoebaStretchBendGenerator(object):
     def __init__(self, forcefield):
         self.forcefield = forcefield
         self.builder = amoebaforces.AmoebaStretchBendForceBuilder()
+        self.stretchBendParams = {}
 
     @staticmethod
     def parseElement(element, forceField):
-        generator = AmoebaStretchBendGenerator(forceField)
-        forceField._forces.append(generator)
-
         # <AmoebaStretchBendForce stretchBendUnit="1.0">
         # <StretchBend class1="2" class2="1" class3="3" k1="5.25776946506" k2="5.25776946506" />
         # <StretchBend class1="2" class2="1" class3="4" k1="3.14005676385" k2="3.14005676385" />
-        generator.stretchBendParams = {}
+        generator = AmoebaStretchBendGenerator(forceField)
+        forceField._forces.append(generator)
+        stretchBendUnit = float(element.attrib['stretchBendUnit']) if 'stretchBendUnit' in element.attrib else 1.0
         for stretchBend in element.findall('StretchBend'):
             try:
                 class1 = stretchBend.attrib['class1']
                 class2 = stretchBend.attrib['class2']
                 class3 = stretchBend.attrib['class3']
-                k1 = float(stretchBend.attrib['k1'])
-                k2 = float(stretchBend.attrib['k2'])
+                k1 = float(stretchBend.attrib['k1'])*stretchBendUnit
+                k2 = float(stretchBend.attrib['k2'])*stretchBendUnit
                 generator.stretchBendParams[(class1, class2, class3)] = {'k1': k1, 'k2': k2}
             except:
                 outputString = "AmoebaStretchBendGenerator : error getting types: %s %s %s" % (
@@ -4152,10 +4155,7 @@ class AmoebaStretchBendGenerator(object):
 
     def createForcePostAmoebaBondForce(self, sys, data, nonbondedMethod, nonbondedCutoff, angles, idealAngles, args):
         # Get ideal bond lengths from AmoebaBondForce
-        bondParams = {
-            (data.atomClasses[bond.atom1], data.atomClasses[bond.atom2]): {"r0": bond.length}
-            for bond in data.bonds
-        }
+        bondParams = {(data.atomClasses[bond.atom1], data.atomClasses[bond.atom2]): {"r0": bond.length} for bond in data.bonds}
         processedAngles = self.builder.registerAllStretchBendParams(data.atomClasses, angles, self.stretchBendParams, bondParams, idealAngles)
         force = self.builder.getForce(sys)
         self.builder.addStretchBends(force, processedAngles)
@@ -4164,7 +4164,7 @@ parsers["AmoebaStretchBendForce"] = AmoebaStretchBendGenerator.parseElement
 
 ## @private
 class AmoebaVdwGenerator(object):
-    """A AmoebaVdwGenerator constructs a AmoebaVdwForce."""
+    """An AmoebaVdwGenerator constructs a AmoebaVdwForce."""
 
     def __init__(self, type, radiusrule, radiustype, radiussize, epsilonrule, vdw13Scale, vdw14Scale, vdw15Scale):
         self.builder = amoebaforces.AmoebaVdwForceBuilder(str(type), 
@@ -4357,7 +4357,6 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
 
         # check if AmoebaMultipoleForce exists since charges needed
         # if it has not been created, raise an error
-
         amoebaMultipoleForceList = [f for f in sys.getForces() if type(f) == mm.AmoebaMultipoleForce]
         if (len(amoebaMultipoleForceList) > 0):
             amoebaMultipoleForce = amoebaMultipoleForceList[0]
