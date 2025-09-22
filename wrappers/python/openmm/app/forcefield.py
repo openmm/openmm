@@ -997,7 +997,7 @@ class ForceField(object):
                 raise ValueError('%s: No parameters defined for atom type %s' % (self.forceName, t))
 
 
-    def _getResidueTemplateMatches(self, res, bondedToAtom, templateSignatures=None, ignoreExternalBonds=False, ignoreExtraParticles=False):
+    def _getResidueTemplateMatches(self, res, bondedToAtom, templateSignatures=None, ignoreExternalBonds=False, ignoreExtraParticles=False, multiMatchIsUnmatched=False):
         """Return the templates that match a residue, or None if none are found.
 
         Parameters
@@ -1006,6 +1006,8 @@ class ForceField(object):
             The residue for which template matches are to be retrieved.
         bondedToAtom : list of set of int
             bondedToAtom[i] is the set of atoms bonded to atom index i
+        multiMatchIsUnmatched : bool=False
+            If true, consider residues that have multiple non-identical template matches as unmatched rather than raising an exception.
 
         Returns
         -------
@@ -1042,7 +1044,10 @@ class ForceField(object):
                 t1, m1 = allMatches[0]
                 for t2, m2 in allMatches[1:]:
                     if not t1.areParametersIdentical(t2, m1, m2):
-                        raise Exception('Multiple non-identical matching templates found for residue %d (%s): %s.' % (res.index+1, res.name, ', '.join(match[0].name for match in allMatches)))
+                        if multiMatchIsUnmatched:
+                            return [template, matches]
+                        else:
+                            raise Exception('Multiple non-identical matching templates found for residue %d (%s): %s.' % (res.index+1, res.name, ', '.join(match[0].name for match in allMatches)))
                 template = allMatches[0][0]
                 matches = allMatches[0][1]
         return [template, matches]
@@ -1068,7 +1073,7 @@ class ForceField(object):
         bondedToAtom = [sorted(b) for b in bondedToAtom]
         return bondedToAtom
 
-    def getUnmatchedResidues(self, topology, residueTemplates=dict()):
+    def getUnmatchedResidues(self, topology, residueTemplates=dict(), multiMatchIsUnmatched=False):
         """Return a list of Residue objects from specified topology for which no forcefield templates are available.
 
         .. CAUTION:: This method is experimental, and its API is subject to change.
@@ -1083,6 +1088,9 @@ class ForceField(object):
             use for them.  This is useful when a ForceField contains multiple templates that
             can match the same residue (e.g Fe2+ and Fe3+ templates in the ForceField for a
             monoatomic iron ion in the Topology).
+        multiMatchIsUnmatched : bool=False
+            If true, consider residues that have multiple non-identical template matches as unmatched rather than raising an exception.
+            Note that the residueTemplates dictionary should be used for disambiguation where suitable templates are present.
 
         Returns
         -------
@@ -1102,7 +1110,7 @@ class ForceField(object):
                 matches = compiled.matchResidueToTemplate(res, template, bondedToAtom, False, False)
             else:
                 # Attempt to match one of the existing templates.
-                [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+                [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, multiMatchIsUnmatched=multiMatchIsUnmatched)
             if matches is None:
                 # No existing templates match.
                 unmatched_residues.append(res)
@@ -1154,7 +1162,7 @@ class ForceField(object):
 
         return templates
 
-    def generateTemplatesForUnmatchedResidues(self, topology, residueTemplates=dict()):
+    def generateTemplatesForUnmatchedResidues(self, topology, residueTemplates=dict(), multiMatchIsUnmatched=False):
         """Generate forcefield residue templates for residues in specified topology for which no forcefield templates are available.
 
         .. CAUTION:: This method is experimental, and its API is subject to change.
@@ -1178,10 +1186,13 @@ class ForceField(object):
             use for them.  This is useful when a ForceField contains multiple templates that
             can match the same residue (e.g Fe2+ and Fe3+ templates in the ForceField for a
             monoatomic iron ion in the Topology).
+        multiMatchIsUnmatched : bool=False
+            If true, consider residues that have multiple non-identical template matches as unmatched rather than raising an exception.
+            Note that the residueTemplates dictionary should be used for disambiguation where suitable templates are present.
 
         """
         # Get a non-unique list of unmatched residues.
-        unmatched_residues = self.getUnmatchedResidues(topology, residueTemplates=residueTemplates)
+        unmatched_residues = self.getUnmatchedResidues(topology, residueTemplates=residueTemplates, multiMatchIsUnmatched=multiMatchIsUnmatched)
         # Generate a unique list of unmatched residues by comparing fingerprints.
         bondedToAtom = self._buildBondedToAtomList(topology)
         unique_unmatched_residues = list() # list of unique unmatched Residue objects from topology
