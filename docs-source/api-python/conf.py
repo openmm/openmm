@@ -42,7 +42,7 @@ html_theme_options = {
     "github_user": "openmm",
     "github_repo": "openmm",
     "logo_name": True,
-    "logo": "logo.png",
+    "logo": "logo.svg",
     "extra_nav_links": [
         {
             "title": "OpenMM.org",
@@ -76,6 +76,9 @@ html_theme_options = {
         },
     ],
     "show_relbar_bottom": True,
+    "font_family": "Roboto, sans-serif",
+    "head_font_family": "Roboto, sans-serif",
+    "caption_font_family": "Roboto, sans-serif",
 }
 html_sidebars = {
     "**": [
