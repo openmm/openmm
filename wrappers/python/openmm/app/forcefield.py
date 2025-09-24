@@ -744,11 +744,11 @@ class ForceField(object):
 
     class _TemplateAtomData(object):
         """Inner class used to encapsulate data about an atom in a residue template definition."""
-        def __init__(self, name, type, element, parameters={}):
+        def __init__(self, name, type, element, parameters=None):
             self.name = name
             self.type = type
             self.element = element
-            self.parameters = parameters
+            self.parameters = {} if parameters is None else parameters
             self.bondedTo = []
             self.externalBonds = 0
 
