@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+
 /* Reasonable defaults */
 html {
     overflow-x: hidden;
@@ -16,25 +18,9 @@ div.body {
     min-width: unset;
 }
 
-@media screen and (max-width: 870px) {
-    div.sphinxsidebar p.logo {
-        display: unset;
-    }
-}
-
-@media screen and (max-width: 875px) {
+@media screen and (max-width: 940px) {
     ul {
         margin-left: 30px;
-    }
-    div.sphinxsidebar {
-        width: 100vw;
-        padding: 0;
-    }
-}
-
-@media screen and (min-width: 871px) and (max-width: 940px) {
-    div.document {
-        width: 100vw
     }
 }
 
@@ -76,41 +62,6 @@ nav#rellinks li + li:before {
     content: "";
 }
 
-/* Put the title and logo side by side*/
-.sphinxsidebarwrapper {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    flex-direction: row-reverse;
-    justify-content: space-between;
-    align-content: flex-start;
-}
-
-.sphinxsidebar .logo-name {
-    flex-basis: 140px;
-    font-size: 20px;
-}
-
-.sphinxsidebar p.logo {
-    flex-basis: 60px;
-    text-align: right;
-    display: block;
-    margin-top: 0 !important;
-}
-
-/* Get control over the image */
-.sphinxsidebar p.logo a {
-    height: auto;
-    display: block;
-}
-
-/* Make sure the remaining items use the width of
- * the whole navbar and don't get squished together
- * by flex.
- */
-.sphinxsidebar .logo-name ~ * {
-    flex-basis: 100%
-}
 /* Emulate a placeholder rather than a heading for search */
 .sphinxsidebar #searchbox form.search input[type="text"] {
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' version='1.1' height='50px' width='120px'><text x='10' y='17' fill='gray' font-size='15'>Search...</text></svg>");
@@ -128,17 +79,6 @@ nav#rellinks li + li:before {
 .sphinxsidebarwrapper hr /* Horizontal rules */
 {
     display: none;
-}
-
-/* Hide logo on tiny screens */
-@media screen and (max-width: 280px) {
-    div.sphinxsidebar p.logo {
-        display: none;
-    }
-
-    .sphinxsidebar .logo-name {
-        flex-basis: 100%;
-    }
 }
 
 /* Style TOC in sidebar more clearly */
@@ -187,8 +127,43 @@ div.sphinxsidebarwrapper .extra-nav-links {
     font-size: 0.8em;
 }
 
-/* Fix navbar to top */
-@media screen and (min-width: 875px) {
+.sphinxsidebar .logo-name {
+    font-weight: 500;
+    font-size: 20px;
+}
+
+@media screen and not (max-width: 940px) {
+    /* Put the title and logo side by side */
+    .sphinxsidebarwrapper {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        flex-direction: row;
+        justify-content: space-between;
+        align-content: flex-start;
+    }
+
+    .sphinxsidebar .logo-name {
+        flex-basis: 120px;
+    }
+
+    .sphinxsidebar p.logo {
+        flex-basis: 60px;
+        text-align: right;
+        display: block;
+        margin-top: 0 !important;
+        margin-right: 20px !important;
+    }
+
+    /* Make sure the remaining items use the width of
+    * the whole navbar and don't get squished together
+    * by flex.
+    */
+    .sphinxsidebar .logo-name ~ * {
+        flex-basis: 100%;
+    }
+
+    /* Fix navbar to top */
     .sphinxsidebar {
         position: fixed;
         height: 100vh;
@@ -209,7 +184,7 @@ div.sphinxsidebarwrapper .extra-nav-links {
     }
     /* Hide scrollbar */
     .sphinxsidebarwrapper::-webkit-scrollbar {
-        display: none
+        display: none;
     }
 }
 
