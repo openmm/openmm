@@ -1,7 +1,7 @@
 <ForceField>
  <Info>
   <Source>amoebabio09.prm</Source>
-  <DateGenerated>2015-11-19</DateGenerated>
+  <DateGenerated>2025-09-20</DateGenerated>
   <Reference></Reference>
  </Info>
  <AmoebaGeneralizedKirkwoodForce solventDielectric="78.3" soluteDielectric="1.0" includeCavityTerm="1" probeRadius="0.14" surfaceAreaFactor="-170.351730663">
@@ -456,7 +456,6 @@
   <GeneralizedKirkwood type="380" charge="-0.53491" shct="0.85"  /> 
   <GeneralizedKirkwood type="381" charge="0.34636" shct="0.85"  /> 
   <GeneralizedKirkwood type="381" charge="0.34636" shct="0.85"  /> 
-  <GeneralizedKirkwood type="381" charge="0.34636" shct="0.85"  /> 
   <GeneralizedKirkwood type="382" charge="-0.58166" shct="0.85"  /> 
   <GeneralizedKirkwood type="382" charge="-0.58166" shct="0.85"  /> 
   <GeneralizedKirkwood type="383" charge="1.02369" shct="0.86"  /> 
@@ -498,9 +497,12 @@
   <GeneralizedKirkwood type="410" charge="2.00000" shct="0.8"  /> 
   <GeneralizedKirkwood type="411" charge="2.00000" shct="0.8"  /> 
   <GeneralizedKirkwood type="412" charge="2.00000" shct="0.8"  /> 
-  <GeneralizedKirkwood type="413" charge="-1.00000" shct="0.8"  /> 
+  <GeneralizedKirkwood type="413" charge="-1.00000" shct="0.88"  /> 
+  <GeneralizedKirkwood type="414" charge="-1.00000" shct="0.8"  /> 
+  <GeneralizedKirkwood type="415" charge="-1.00000" shct="0.8"  /> 
+  <GeneralizedKirkwood type="416" charge="-1.00000" shct="0.8"  /> 
  </AmoebaGeneralizedKirkwoodForce>
- <AmoebaWcaDispersionForce epso="0.46024" epsh="0.056484" rmino="0.17025" rminh="0.13275" awater="33.428" slevy="1.0"  dispoff="0.026" shctd="0.81" >
+ <AmoebaWcaDispersionForce epso="0.46024" epsh="0.056484" rmino="0.17025" rminh="0.13275" awater="33.428" slevy="1"  dispoff="0.026" shctd="0.81" >
   <WcaDispersion class="1" radius="0.1855" epsilon="0.46024" /> 
   <WcaDispersion class="2" radius="0.191" epsilon="0.422584" /> 
   <WcaDispersion class="3" radius="0.191" epsilon="0.443504" /> 
@@ -575,15 +577,18 @@
   <WcaDispersion class="72" radius="0.13275" epsilon="0.056484" /> 
   <WcaDispersion class="73" radius="0.17025" epsilon="0.46024" /> 
   <WcaDispersion class="74" radius="0.13275" epsilon="0.056484" /> 
-  <WcaDispersion class="75" radius="0.119" epsilon="0.33472" /> 
-  <WcaDispersion class="76" radius="0.151" epsilon="1.08784" /> 
-  <WcaDispersion class="77" radius="0.1855" epsilon="1.4644" /> 
-  <WcaDispersion class="78" radius="0.207" epsilon="1.84096" /> 
-  <WcaDispersion class="79" radius="0.2185" epsilon="2.21752" /> 
+  <WcaDispersion class="75" radius="0.11" epsilon="0.276144" /> 
+  <WcaDispersion class="76" radius="0.14775" epsilon="1.17152" /> 
+  <WcaDispersion class="77" radius="0.184" epsilon="1.4644" /> 
+  <WcaDispersion class="78" radius="0.195" epsilon="1.58992" /> 
+  <WcaDispersion class="79" radius="0.207" epsilon="1.75728" /> 
   <WcaDispersion class="80" radius="0.094" epsilon="0.380744" /> 
   <WcaDispersion class="81" radius="0.147" epsilon="1.2552" /> 
   <WcaDispersion class="82" radius="0.1815" epsilon="1.4644" /> 
   <WcaDispersion class="83" radius="0.134" epsilon="0.928848" /> 
-  <WcaDispersion class="84" radius="0.2065" epsilon="1.42256" /> 
+  <WcaDispersion class="84" radius="0.1715" epsilon="1.046" /> 
+  <WcaDispersion class="85" radius="0.206" epsilon="1.42256" /> 
+  <WcaDispersion class="86" radius="0.216" epsilon="1.79912" /> 
+  <WcaDispersion class="87" radius="0.2305" epsilon="2.17568" /> 
  </AmoebaWcaDispersionForce>
 </ForceField>
