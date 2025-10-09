@@ -552,7 +552,7 @@ class TinkerFiles:
             angles = sorted(list(uniqueAngles))
 
             if "opbend" in self._forces:
-                opbendParams = {(at1, at2, at3, at4): {"k": float(k)} for at1, at2, at3, at4, k in self._forces["opbend"]}
+                opbendParams = {(at1, at2, at3 if at3 != '0' else '', at4 if at4 != '0' else ''): {"k": float(k)} for at1, at2, at3, at4, k in self._forces["opbend"]}
             else:
                 opbendParams = {}
             

@@ -3584,7 +3584,7 @@ class AmoebaBondGenerator(object):
             try:
                 generator.builder.registerParams((bond.attrib['class1'], bond.attrib['class2']), float(bond.attrib['length']), float(bond.attrib['k']))
             except:
-                outputString = "AmoebaBondGenerator: error getting types: %s %s" % (bond.attrib['class1'], bond.attrib['class2'])
+                outputString = "AmoebaBondGenerator: error getting classes: %s %s" % (bond.attrib['class1'], bond.attrib['class2'])
                 raise ValueError(outputString)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
@@ -3664,7 +3664,7 @@ class AmoebaAngleGenerator(object):
                                                                    "theta0": theta0, 
                                                                    "inPlane": angle.attrib.get('inPlane', None)}
             except Exception as e:
-                outputString = "AmoebaAngleGenerator: error getting types: %s %s %s" % (
+                outputString = "AmoebaAngleGenerator: error getting classes: %s %s %s" % (
                                     angle.attrib['class1'],
                                     angle.attrib['class2'],
                                     angle.attrib['class3'])
@@ -3773,15 +3773,10 @@ class AmoebaOutOfPlaneBendGenerator(object):
                 raise ValueError('All <AmoebaOutOfPlaneBendForce> tags must use identical scale factors')
 
         for angle in element.findall('Angle'):
-            if 'class3' in angle.attrib and 'class4' in angle.attrib:
-                if angle.attrib['class3'] == '':
-                    angle.attrib['class3'] = '0'
-                if angle.attrib['class4'] == '':
-                    angle.attrib['class4'] = '0'
             try:
                 generator.builder.registerParams((angle.attrib['class1'], angle.attrib['class2'], angle.attrib['class3'], angle.attrib['class4']), (float(angle.attrib['k']),))
             except:
-                outputString = "AmoebaOutOfPlaneBendGenerator error getting types: %s %s %s %s." % (
+                outputString = "AmoebaOutOfPlaneBendGenerator error getting classes: %s %s %s %s." % (
                                angle.attrib['class1'], angle.attrib['class2'], angle.attrib['class3'], angle.attrib['class4'])
                 raise ValueError(outputString)
 
@@ -3883,7 +3878,7 @@ class AmoebaTorsionGenerator(object):
                         generator.t3.append(tInfo)
 
             else:
-                outputString = "AmoebaTorsionGenerator: error getting types: %s %s %s %s" % (
+                outputString = "AmoebaTorsionGenerator: error getting classes: %s %s %s %s" % (
                                     torsion.attrib['class1'],
                                     torsion.attrib['class2'],
                                     torsion.attrib['class3'],
@@ -3941,7 +3936,7 @@ class AmoebaPiTorsionGenerator(object):
                 k=float(piTorsion.attrib['k'])*piTorsionUnit
                 generator.builder.registerParams((piTorsion.attrib['class1'], piTorsion.attrib['class2']), (k,))
             except:
-                outputString = "AmoebaPiTorsionGenerator: error getting types: %s %s " % (
+                outputString = "AmoebaPiTorsionGenerator: error getting classes: %s %s " % (
                                     piTorsion.attrib['class1'],
                                     piTorsion.attrib['class2'])
                 raise ValueError(outputString)
@@ -3970,7 +3965,7 @@ class AmoebaStretchTorsionGenerator(object):
                 params = tuple(float(torsion.attrib[p]) for p in ('v11', 'v12', 'v13', 'v21', 'v22', 'v23', 'v31', 'v32', 'v33'))
                 generator.builder.registerParams((torsion.attrib['class1'], torsion.attrib['class2'], torsion.attrib['class3'], torsion.attrib['class4']), params)
             except Exception as e:
-                outputString = "AmoebaStretchTorsionGenerator: error getting types: %s %s %s %s" % (
+                outputString = "AmoebaStretchTorsionGenerator: error getting classes: %s %s %s %s" % (
                                     torsion.attrib['class1'],
                                     torsion.attrib['class2'],
                                     torsion.attrib['class3'],
@@ -4006,7 +4001,7 @@ class AmoebaAngleTorsionGenerator(object):
                 params = tuple(float(torsion.attrib[p]) for p in ('v11', 'v12', 'v13', 'v21', 'v22', 'v23'))
                 generator.builder.registerParams((torsion.attrib['class1'], torsion.attrib['class2'], torsion.attrib['class3'], torsion.attrib['class4']), params)                            
             except:
-                outputString = "AmoebaAngleTorsionGenerator: error getting types: %s %s %s %s" % (
+                outputString = "AmoebaAngleTorsionGenerator: error getting classes: %s %s %s %s" % (
                                     torsion.attrib['class1'],
                                     torsion.attrib['class2'],
                                     torsion.attrib['class3'],
@@ -4047,7 +4042,7 @@ class AmoebaTorsionTorsionGenerator(object):
                                         torsionTorsion.attrib['class5'])
                 generator.builder.registerParams(torsionTorsionType, gridIndex)
             except:
-                outputString = "AmoebaTorsionTorsionGenerator: error getting types: %s %s %s %s %s" % (
+                outputString = "AmoebaTorsionTorsionGenerator: error getting classes: %s %s %s %s %s" % (
                                     torsionTorsion.attrib['class1'],
                                     torsionTorsion.attrib['class2'],
                                     torsionTorsion.attrib['class3'],
@@ -4126,7 +4121,7 @@ class AmoebaStretchBendGenerator(object):
                 k2 = float(stretchBend.attrib['k2'])*stretchBendUnit
                 generator.stretchBendParams[(class1, class2, class3)] = {'k1': k1, 'k2': k2}
             except:
-                outputString = "AmoebaStretchBendGenerator : error getting types: %s %s %s" % (
+                outputString = "AmoebaStretchBendGenerator : error getting classes: %s %s %s" % (
                                     stretchBend.attrib['class1'],
                                     stretchBend.attrib['class2'],
                                     stretchBend.attrib['class3'])
@@ -4244,7 +4239,7 @@ class AmoebaMultipoleGenerator(object):
                     generator.builder.registerMultipoleParams(int(t), 
                         amoebaforces.MultipoleParams(kIndices, charge, dipole, quadrupole))
             else:
-                outputString = "AmoebaMultipoleGenerator: error getting type for multipole: %s" % (atom.attrib['class'])
+                outputString = "AmoebaMultipoleGenerator: error getting type for multipole: %s" % (atom.attrib['type'])
                 raise ValueError(outputString)
 
         # Register polarization parameters using the builder
@@ -4265,7 +4260,7 @@ class AmoebaMultipoleGenerator(object):
                     generator.builder.registerPolarizationParams(int(t), 
                         amoebaforces.PolarizationParams(polarizability, thole, groupTypes))
             else:
-                outputString = "AmoebaMultipoleGenerator: error getting type for polarize: %s" % (atom.attrib.get('class', 'unknown'))
+                outputString = "AmoebaMultipoleGenerator: error getting class for polarize: %s" % (atom.attrib.get('class', 'unknown'))
                 raise ValueError(outputString)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
@@ -4396,15 +4391,16 @@ class AmoebaUreyBradleyGenerator(object):
             try:
                 if 'class1' not in bond.attrib:
                     key1, key2, key3 = ('type1', 'type2', 'type3')
+                    key_type = 'types'
                 else:
                     key1, key2, key3 = ('class1', 'class2', 'class3')
+                    key_type = 'classes'
                 generator.builder.registerParams((bond.attrib[key1], bond.attrib[key2], bond.attrib[key3]),
                                                  (float(bond.attrib['k']), float(bond.attrib['d'])))
-            except:
-                outputString = "AmoebaUreyBradleyGenerator : error getting types: %s %s %s" % (
-                                    bond.attrib['class1'],
-                                    bond.attrib['class2'],
-                                    bond.attrib['class3'])
+            except Exception as e:
+                outputString = f"AmoebaUreyBradleyGenerator : error getting {key_type}: " \
+                               f"{bond.attrib[key1]} {bond.attrib[key2]} {bond.attrib[key3]} " \
+                               f"({e})"
                 raise ValueError(outputString)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
