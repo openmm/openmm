@@ -35,23 +35,72 @@ import os.path
 # biotype    2006    CA      "Calcium Ion"                     256
 # biotype    2007    CL      "Chloride Ion"                    258
 
-ions    = { 'Li+' :  ['LI', 351],
-            'Na+' :  ['NA', 352],
-            'K+'  :  ['K',  353],
-            'Rb+' :  ['RB', 354],  
-            'Cs+' :  ['CS', 355], 
-            'Be2' :  ['BE', 356],
-            'Mg2' :  ['MG', 357],
-            'Ca2' :  ['CA', 358],
-            'Zn2' :  ['ZN', 359],
-            'F-'  :  ['F',  360],
-            'Cl-' :  ['Cl', 361],
-            'Br-' :  ['Br', 362],
-            'I-'  :  ['I',  363]
-           }
+# Ions for amoeabio18.prm
+ions2018    = { 'Li+' :  ['LI', 351],
+                'Na+' :  ['NA', 352],
+                'K+'  :  ['K',  353],
+                'Rb+' :  ['RB', 354],  
+                'Cs+' :  ['CS', 355], 
+                'Be2' :  ['BE', 356],
+                'Mg2' :  ['MG', 357],
+                'Ca2' :  ['CA', 358],
+                'Sr2' :  ['SR', 359],
+                'Ba2' :  ['BA', 360],
+                'Zn2' :  ['ZN', 361],
+                'F-'  :  ['F',  362],
+                'Cl-' :  ['Cl', 363],
+                'Br-' :  ['Br', 364],
+                'I-'  :  ['I',  365]
+                }
+
+# Ions for amoebapro13.prm
+ions2013   = { 'Li+' :  ['LI', 249],
+               'Na+' :  ['NA', 250],
+               'K+'  :  ['K',  251],
+               'Rb+' :  ['RB', 252],
+               'Cs+' :  ['CS', 253],
+               'Be2' :  ['BE', 254],
+               'Mg2' :  ['MG', 255],
+               'Ca2' :  ['CA', 256],
+               'Sr2' :  ['SR', 257],
+               'Ba2' :  ['BA', 258],
+               'Zn2' :  ['ZN', 259],
+               'F-'  :  ['F',  260],
+               'Cl-' :  ['Cl', 261],
+               'Br-' :  ['Br', 262],
+               'I-'  :  ['I',  263]
+               }
+
+# Ions for amoebabio09.prm
+ions2009 = { 'Li+' :  ['LI', 404],
+             'Na+' :  ['NA', 405],
+             'K+'  :  ['K',  406],
+             'Rb+' :  ['RB', 407],
+             'Cs+' :  ['CS', 408],
+             'Be2' :  ['BE', 409],
+             'Mg2' :  ['MG', 410],
+             'Ca2' :  ['CA', 411],
+             'Zn2' :  ['ZN', 412],
+             'F-'  :  ['F',  413],
+             'Cl-' :  ['Cl', 414],
+             'Br-' :  ['Br', 415],
+             'I-'  :  ['I',  416]
+             }
 
 atomTypes                    = {}
 bioTypes                     = {}
+
+#=============================================================================================
+# Helper function for XML formatting
+#=============================================================================================
+
+def xml_float(x, min_decimals=1):
+    """Format a float for XML, cleaning tiny floating-point errors and keeping at least one decimal."""
+    f = float(x)
+    s = format(f, ".15g")
+    if "." not in s:
+        s += "." + "0" * min_decimals
+    return s
 
 #=============================================================================================
 # Default 'constructor' for atoms 
@@ -468,11 +517,7 @@ def addTorTor( lineIndex, allLines, forces ):
 
     return (currentLineIndex - 1)
 
-#=============================================================================================
 
-residueXmlFileName = 'residuesFinal.xml'
-residueDict        = buildResidueDict( residueXmlFileName )
-    
 #=============================================================================================
 
 # recognizedForces[] contain raw list entries from TINKER parameter file
@@ -546,8 +591,22 @@ recognizedScalars['mutual-14-scale']     = '1.0'
 #=============================================================================================
 # get all 'interesting' lines in file
 
+fileName = sys.argv[1]
+if fileName == 'amoebabio18.prm':
+    ions = ions2018
+    residueXmlFileName = 'residuesFinalAmoeba2018.xml'
+elif fileName == 'amoebapro13.prm':
+    ions = ions2013
+    residueXmlFileName = 'residuesFinalAmoeba2013.xml'
+elif fileName == 'amoebabio09.prm':
+    ions = ions2009
+    residueXmlFileName = 'residuesFinalAmoeba2009.xml'
+else:
+    print("Error: unrecognized force field file name %s" % (fileName))
+    sys.exit()
+
 allLines                                 = []
-for line in open(sys.argv[1]):
+for line in open(fileName):
     try:
         fields = shlex.split(line)
     except:
@@ -558,6 +617,10 @@ for line in open(sys.argv[1]):
         continue
     allLines.append( fields )
 
+#=============================================================================================
+
+residueDict        = buildResidueDict( residueXmlFileName )
+    
 #=============================================================================================
 
 # load lines in lists/scalar values
@@ -806,7 +869,7 @@ if( isAmoeba ):
     for bond in bonds:
        length       = float(bond[3])*0.1
        k            = float(bond[2])*100.0*4.184
-       outputString = """  <Bond class1="%s" class2="%s" length="%s" k="%s"/>""" % (bond[0], bond[1], str(length), str(k))
+       outputString = """  <Bond class1="%s" class2="%s" length="%s" k="%s"/>""" % (bond[0], bond[1], xml_float(length), xml_float(k) )
        tinkerXmlFile.write( "%s\n" % (outputString ) )
     tinkerXmlFile.write( " </AmoebaBondForce>\n" )
 
@@ -825,7 +888,7 @@ if( isAmoeba ):
     for set in ['angle', 'anglep']:
         for angle in forces[set]:
            k            = float(angle[3])*radian2
-           outputString = '  <Angle class1="%s" class2="%s" class3="%s" k="%s" angle1="%s"' % (angle[0], angle[1], angle[2], str(k), angle[4] ) 
+           outputString = '  <Angle class1="%s" class2="%s" class3="%s" k="%s" angle1="%s"' % (angle[0], angle[1], angle[2], xml_float(k), xml_float(angle[4]) )
            if( len(angle) > 5 ):
                outputString += ' angle2="%s"' % (angle[5])
     
@@ -855,7 +918,7 @@ if( isAmoeba ):
         for i in range(4):
             if opbend[i] == '0':
                 opbend[i] = ''
-        outputString = """  <Angle class1="%s" class2="%s" class3="%s" class4="%s" k="%s"/>""" % (opbend[0], opbend[1], opbend[2],  opbend[3], str(k))
+        outputString = """  <Angle class1="%s" class2="%s" class3="%s" class4="%s" k="%s"/>""" % (opbend[0], opbend[1], opbend[2],  opbend[3], xml_float(k))
         tinkerXmlFile.write( "%s\n" % (outputString ) )
     tinkerXmlFile.write( " </AmoebaOutOfPlaneBendForce>\n" )
 
@@ -879,7 +942,7 @@ if( isAmoeba ):
           amplitude                = float(torsion[startIndex])*conversion
           angle                    = float(torsion[startIndex+1])/radian
           periodicity              = int(torsion[startIndex+2])
-          outputString            += """  %s="%s" %s="%s" %s="%s" """ % (amplitudeAttributeName, str(amplitude), angleAttributeName, str(angle), periodicityAttributeName, str(periodicity))
+          outputString            += """  %s="%s" %s="%s" %s="%d" """ % (amplitudeAttributeName, xml_float(amplitude), angleAttributeName, xml_float(angle), periodicityAttributeName, periodicity)
           startIndex              += 3
        outputString += "/>"
        tinkerXmlFile.write( "%s\n" % (outputString ) )
@@ -896,7 +959,7 @@ if( isAmoeba ):
     conversion         = 4.184*piTorsionUnit
     for piTorsion in piTorsions:
        k             = float(piTorsion[2])*conversion
-       outputString  = """  <PiTorsion class1="%s" class2="%s" k="%s" />""" % (piTorsion[0], piTorsion[1], str(k) )
+       outputString  = """  <PiTorsion class1="%s" class2="%s" k="%s" />""" % (piTorsion[0], piTorsion[1], xml_float(k))
        tinkerXmlFile.write( "%s\n" % (outputString ) )
     tinkerXmlFile.write( " </AmoebaPiTorsionForce>\n" )
 
@@ -907,7 +970,7 @@ if( isAmoeba ):
         tinkerXmlFile.write(' <AmoebaStretchTorsionForce>\n')
         for torsion in forces['strtors']:
             v = [float(x)*10*4.184 for x in torsion[4:]]
-            tinkerXmlFile.write(f'  <Torsion class1="{torsion[0]}" class2="{torsion[1]}" class3="{torsion[2]}" class4="{torsion[3]}" v11="{v[0]}" v12="{v[1]}" v13="{v[2]}" v21="{v[3]}" v22="{v[4]}" v23="{v[5]}" v31="{v[6]}" v32="{v[7]}" v33="{v[8]}"/>\n')
+            tinkerXmlFile.write(f'  <Torsion class1="{torsion[0]}" class2="{torsion[1]}" class3="{torsion[2]}" class4="{torsion[3]}" v11="{xml_float(v[0])}" v12="{xml_float(v[1])}" v13="{xml_float(v[2])}" v21="{xml_float(v[3])}" v22="{xml_float(v[4])}" v23="{xml_float(v[5])}" v31="{xml_float(v[6])}" v32="{xml_float(v[7])}" v33="{xml_float(v[8])}"/>\n')
         tinkerXmlFile.write(' </AmoebaStretchTorsionForce>\n')
 
 #=============================================================================================
@@ -917,7 +980,7 @@ if( isAmoeba ):
         tinkerXmlFile.write(' <AmoebaAngleTorsionForce>\n')
         for torsion in forces['angtors']:
             v = [float(x)*4.184 for x in torsion[4:]]
-            tinkerXmlFile.write(f'  <Torsion class1="{torsion[0]}" class2="{torsion[1]}" class3="{torsion[2]}" class4="{torsion[3]}" v11="{v[0]}" v12="{v[1]}" v13="{v[2]}" v21="{v[3]}" v22="{v[4]}" v23="{v[5]}"/>\n')
+            tinkerXmlFile.write(f'  <Torsion class1="{torsion[0]}" class2="{torsion[1]}" class3="{torsion[2]}" class4="{torsion[3]}" v11="{xml_float(v[0])}" v12="{xml_float(v[1])}" v13="{xml_float(v[2])}" v21="{xml_float(v[3])}" v22="{xml_float(v[4])}" v23="{xml_float(v[5])}"/>\n')
         tinkerXmlFile.write(' </AmoebaAngleTorsionForce>\n')
 
 #=============================================================================================
@@ -932,7 +995,7 @@ if( isAmoeba ):
     for stretchBend in stretchBends:
        k1            = float(stretchBend[3])*conversion
        k2            = float(stretchBend[4])*conversion
-       outputString  = """  <StretchBend class1="%s" class2="%s" class3="%s" k1="%s" k2="%s" />""" % (stretchBend[0], stretchBend[1], stretchBend[2], str(k1), str(k2) )
+       outputString  = """  <StretchBend class1="%s" class2="%s" class3="%s" k1="%s" k2="%s" />""" % (stretchBend[0], stretchBend[1], stretchBend[2], xml_float(k1), xml_float(k2))
        tinkerXmlFile.write( "%s\n" % (outputString ) )
     tinkerXmlFile.write( "</AmoebaStretchBendForce>\n" )
 
@@ -963,11 +1026,11 @@ if( isAmoeba ):
                fx  = float( gridEntry[3] )*4.184
                fy  = float( gridEntry[4] )*4.184
                fxy = float( gridEntry[5] )*4.184
-               outputString  = """  <Grid angle1="%s" angle2="%s" f="%s" fx="%s" fy="%s" fxy="%s" />""" % ( gridEntry[0], gridEntry[1], str(f), str(fx), str(fy), str(fxy) )
+               outputString  = """  <Grid angle1="%s" angle2="%s" f="%s" fx="%s" fy="%s" fxy="%s" />""" % ( gridEntry[0], gridEntry[1], xml_float(f), xml_float(fx), xml_float(fy), xml_float(fxy) )
                tinkerXmlFile.write( "  %s\n" % (outputString ) )
            elif( len( gridEntry ) > 2 ):
                f   = float( gridEntry[2] )*4.184
-               outputString  = """  <Grid angle1="%s" angle2="%s" f="%s" />""" % ( gridEntry[0], gridEntry[1], str(f) )
+               outputString  = """  <Grid angle1="%s" angle2="%s" f="%s" />""" % ( gridEntry[0], gridEntry[1], xml_float(f) )
                tinkerXmlFile.write( "  %s\n" % (outputString ) )
        outputString  = '</TorsionTorsionGrid >'
        tinkerXmlFile.write( "%s\n" % (outputString ) )
@@ -988,12 +1051,12 @@ if( isAmoeba ):
            reduction = vdw[3]
        else:
            reduction = 1.0
-       outputString      = """  <Vdw class="%s" sigma="%s" epsilon="%s" reduction="%s"/>""" % (vdw[0], str(sigma), str(epsilon), str(reduction))
+       outputString      = """  <Vdw class="%s" sigma="%s" epsilon="%s" reduction="%s" />""" % (vdw[0], xml_float(sigma), xml_float(epsilon), xml_float(reduction))
        tinkerXmlFile.write( "%s\n" % (outputString ) )
     for pair in forces['vdwpair']:
        sigma             = float(pair[2])*0.1
        epsilon           = float(pair[3])*4.184
-       outputString      = """  <Pair class1="%s" class2="%s" sigma="%s" epsilon="%s"/>""" % (pair[0], pair[1], str(sigma), str(epsilon))
+       outputString      = """  <Pair class1="%s" class2="%s" sigma="%s" epsilon="%s"/>""" % (pair[0], pair[1], xml_float(sigma), xml_float(epsilon))
        tinkerXmlFile.write( "%s\n" % (outputString ) )
     tinkerXmlFile.write( " </AmoebaVdwForce>\n" )
 
@@ -1048,10 +1111,10 @@ if( isAmoeba ):
        if( axisInfoLen > 3 ):
            outputString += """ky="%s" """ % ( axisInfo[3] )
 
-       outputString += """c0="%s" d1="%s" d2="%s" d3="%s" q11="%s" q21="%s" q22="%s" q31="%s" q32="%s" q33="%s"  """ % ( multipoles[0],
-                                    str(     dipoleConversion*float(multipoles[1]) ), str(    dipoleConversion*float(multipoles[2])), str(    dipoleConversion*float(multipoles[3])),
-                                    str( quadrupoleConversion*float(multipoles[4]) ), str(quadrupoleConversion*float(multipoles[5])), str(quadrupoleConversion*float(multipoles[6])),
-                                    str( quadrupoleConversion*float(multipoles[7]) ), str(quadrupoleConversion*float(multipoles[8])), str(quadrupoleConversion*float(multipoles[9])) )
+       outputString += """c0="%s" d1="%s" d2="%s" d3="%s" q11="%s" q21="%s" q22="%s" q31="%s" q32="%s" q33="%s"  """ % ( xml_float(multipoles[0]),
+                                    xml_float(dipoleConversion*float(multipoles[1])), xml_float(dipoleConversion*float(multipoles[2])), xml_float(dipoleConversion*float(multipoles[3])),
+                                    xml_float(quadrupoleConversion*float(multipoles[4])), xml_float(quadrupoleConversion*float(multipoles[5])), xml_float(quadrupoleConversion*float(multipoles[6])),
+                                    xml_float(quadrupoleConversion*float(multipoles[7])), xml_float(quadrupoleConversion*float(multipoles[8])), xml_float(quadrupoleConversion*float(multipoles[9])) )
        outputString     += "/>"
        tinkerXmlFile.write( "%s\n" % (outputString ) )
 
@@ -1061,9 +1124,9 @@ if( isAmoeba ):
     m = {}
     for polarize in polarizeArray:
        m[polarize[0]] = []
-       outputString      = """  <Polarize type="%s" polarizability="%s" thole="%s" """ % (polarize[0], str(polarityConversion*float(polarize[1])), polarize[2] )
+       outputString      = """  <Polarize type="%s" polarizability="%s" thole="%s" """ % (polarize[0], xml_float(polarityConversion*float(polarize[1])), xml_float(float(polarize[2])) )
        for ii in range( 3, len(polarize) ):
-          outputString  += """pgrp%d="%s" """ % (ii-2,polarize[ii])
+          outputString  += """pgrp%d="%s" """ % (ii-2, xml_float(float(polarize[ii])))
           m[polarize[0]].append(polarize[ii])
           
        outputString     += "/>"
@@ -1086,7 +1149,7 @@ if( isAmoeba ):
     probeRadius       = 0.14
     surfaceAreaFactor = -6.0*3.1415926535*0.0216*1000.0*0.4184
     outputString      = """ <AmoebaGeneralizedKirkwoodForce solventDielectric="%s" soluteDielectric="%s" includeCavityTerm="%s" probeRadius="%s" surfaceAreaFactor="%s">""" % (
-                           str(solventDielectric), str(soluteDielectric), str(includeCavityTerm), str(probeRadius), str(surfaceAreaFactor) )
+                           solventDielectric, soluteDielectric, includeCavityTerm, probeRadius, surfaceAreaFactor )
     gkXmlFile.write( "%s\n" % (outputString ) )
 
     # radii are set in forcefield.py
@@ -1126,7 +1189,7 @@ if( isAmoeba ):
        else:
            print("Warning no overlap scale factor for type=%d " % (type))
 
-       outputString      = """  <GeneralizedKirkwood type="%s" charge="%s" shct="%s"  /> """ % ( axisInfo[0], multipoles[0],  str(shct) )
+       outputString      = """  <GeneralizedKirkwood type="%s" charge="%s" shct="%s"  /> """ % ( axisInfo[0], xml_float(multipoles[0]),  xml_float(shct) )
        gkXmlFile.write( "%s\n" % (outputString ) )
     gkXmlFile.write( " </AmoebaGeneralizedKirkwoodForce>\n" )
 
@@ -1144,7 +1207,7 @@ if( isAmoeba ):
     shctd        = 0.81
 
     outputString         = """ <AmoebaWcaDispersionForce epso="%s" epsh="%s" rmino="%s" rminh="%s" awater="%s" slevy="%s"  dispoff="%s" shctd="%s" >""" % (
-                           str(epso*4.184), str( epsh*4.184), str( rmino*0.1), str( rminh*0.1), str( 1000.0*awater), str( slevy), str( 0.1*dispoff), str( shctd ) )
+                           epso*4.184, epsh*4.184, rmino*0.1, rminh*0.1, 1000.0*awater, slevy, 0.1*dispoff, shctd )
     gkXmlFile.write( "%s\n" % (outputString ) )
     vdws                 = forces['vdw']
     convert              = 0.1
@@ -1158,7 +1221,7 @@ if( isAmoeba ):
        sigma             = float(vdw[1])
        sigma            *= convert
        epsilon           = float(vdw[2])*4.184
-       outputString      = """  <WcaDispersion class="%s" radius="%s" epsilon="%s" /> """ % ( vdw[0], str(sigma), str(epsilon) )
+       outputString      = """  <WcaDispersion class="%s" radius="%s" epsilon="%s" /> """ % ( vdw[0], xml_float(sigma), xml_float(epsilon) )
        gkXmlFile.write( "%s\n" % (outputString ) )
     gkXmlFile.write( " </AmoebaWcaDispersionForce>\n" )
 
@@ -1169,13 +1232,13 @@ if( isAmoeba ):
     cubic        = 0.0
     quartic      = 0.0
 
-    outputString         = """ <AmoebaUreyBradleyForce cubic="%s" quartic="%s"  >""" % ( str(cubic), str(quartic) )
+    outputString         = """ <AmoebaUreyBradleyForce cubic="%s" quartic="%s"  >""" % ( cubic, quartic )
     tinkerXmlFile.write( "%s\n" % (outputString ) )
     ubs                  = forces['ureybrad']
     for ub in ubs:
        k                 = float(ub[3])*4.184*100.0
        d                 = float(ub[4])*0.1
-       outputString      = """  <UreyBradley class1="%s" class2="%s" class3="%s" k="%s" d="%s" /> """ % ( ub[0],  ub[1],  ub[2], str(k), str(d) )
+       outputString      = """  <UreyBradley class1="%s" class2="%s" class3="%s" k="%s" d="%s" /> """ % ( ub[0],  ub[1],  ub[2], xml_float(k), xml_float(d) )
        tinkerXmlFile.write( "%s\n" % (outputString ) )
     tinkerXmlFile.write( " </AmoebaUreyBradleyForce>\n" )
 
