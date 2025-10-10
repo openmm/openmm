@@ -895,7 +895,6 @@ class TinkerFiles:
         if "tortors" in self._forces:
             torsionTorsionForce = AmoebaTorsionTorsionForceBuilder()
             for gridIndex, (tortorInfo, gridData) in enumerate(self._forces["tortors"]):
-                print(gridData)
                 nx = int(tortorInfo[5]) 
                 ny = int(tortorInfo[6])  
                 grid = np.array(gridData, dtype=np.float64).reshape((nx, ny, -1))
