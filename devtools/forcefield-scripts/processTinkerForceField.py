@@ -98,7 +98,8 @@ def xml_float(x, min_decimals=1):
     """Format a float for XML, cleaning tiny floating-point errors and keeping at least one decimal."""
     f = float(x)
     s = format(f, ".15g")
-    if "." not in s:
+    # Only add decimal if it is not already scientific and has no decimal
+    if "e" not in s and "." not in s:
         s += "." + "0" * min_decimals
     return s
 
@@ -1126,7 +1127,7 @@ if( isAmoeba ):
        m[polarize[0]] = []
        outputString      = """  <Polarize type="%s" polarizability="%s" thole="%s" """ % (polarize[0], xml_float(polarityConversion*float(polarize[1])), xml_float(float(polarize[2])) )
        for ii in range( 3, len(polarize) ):
-          outputString  += """pgrp%d="%s" """ % (ii-2, xml_float(float(polarize[ii])))
+          outputString  += """pgrp%d="%s" """ % (ii-2, polarize[ii])
           m[polarize[0]].append(polarize[ii])
           
        outputString     += "/>"
