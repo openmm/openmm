@@ -4091,7 +4091,8 @@ class AmoebaTorsionTorsionGenerator(object):
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = self.builder.getForce(sys)
-        self.builder.addTorsionTorsionInteractions(force, atomClasses=data.atomClasses, torsions=data.propers, sys=sys)
+        masses = [sys.getParticleMass(i).value_in_unit(unit.amu) for i in range(sys.getNumParticles())]
+        self.builder.addTorsionTorsionInteractions(force, data.propers, data.atomClasses, masses)                                  
 
 parsers["AmoebaTorsionTorsionForce"] = AmoebaTorsionTorsionGenerator.parseElement
 
@@ -4384,28 +4385,32 @@ class AmoebaUreyBradleyGenerator(object):
     def parseElement(element, forceField):
         #  <AmoebaUreyBradleyForce>
         #   <UreyBradley class1="74" class2="73" class3="74" k="16003.8" d="0.15537" />
-
         generator = AmoebaUreyBradleyGenerator()
         forceField._forces.append(generator)
         for bond in element.findall('UreyBradley'):
             try:
-                if 'class1' not in bond.attrib:
-                    key1, key2, key3 = ('type1', 'type2', 'type3')
-                    key_type = 'types'
-                else:
-                    key1, key2, key3 = ('class1', 'class2', 'class3')
-                    key_type = 'classes'
-                generator.builder.registerParams((bond.attrib[key1], bond.attrib[key2], bond.attrib[key3]),
-                                                 (float(bond.attrib['k']), float(bond.attrib['d'])))
+                isClass = 'class1' in bond.attrib
+                prefix = 'class' if isClass else 'type'
+                keys = (prefix + "1", prefix + "2", prefix + "3")
+                k = float(bond.attrib['k'])
+                d = float(bond.attrib['d'])
+                generator.builder.registerParams((bond.attrib[keys[0]],bond.attrib[keys[1]],bond.attrib[keys[2]]), 
+                                                 (k, d), 
+                                                 isClass)
             except Exception as e:
-                outputString = f"AmoebaUreyBradleyGenerator : error getting {key_type}: " \
-                               f"{bond.attrib[key1]} {bond.attrib[key2]} {bond.attrib[key3]} " \
+                outputString = f"AmoebaUreyBradleyGenerator : error getting {'classes' if isClass else 'types'}: " \
+                               f"{bond.attrib[keys[0]]} {bond.attrib[keys[1]]} {bond.attrib[keys[2]]} " \
                                f"({e})"
                 raise ValueError(outputString)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         force = self.builder.getForce(sys)
-        self.builder.addUreyBradleys(force, data.atomClasses, data.angles, data.isAngleConstrained, args.get('flexibleConstraints', False))
+        # Match against parameters registered by class 
+        self.builder.addUreyBradleys(force, data.atomClasses, data.angles, True, data.isAngleConstrained, args.get('flexibleConstraints', False))
+        # Match against parameters registered by type
+        atomTypes = [data.atomType[atom] for atom in data.atoms]
+        self.builder.addUreyBradleys(force, atomTypes, data.angles, False, data.isAngleConstrained, args.get('flexibleConstraints', False))
+
 
 parsers["AmoebaUreyBradleyForce"] = AmoebaUreyBradleyGenerator.parseElement
 

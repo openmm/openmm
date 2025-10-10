@@ -629,9 +629,9 @@ class TinkerFiles:
             ureyBradleyParams = {(at1, at2, at3): {"k": float(k), "d": float(d)} for at1, at2, at3, k, d in self._forces["ureybrad"]}
             ureyBradleyForceBuilder = AmoebaUreyBradleyForceBuilder()
             for (class1, class2, class3), params in ureyBradleyParams.items():
-                ureyBradleyForceBuilder.registerParams((class1, class2, class3), (params["k"]*4.184*100.0, params["d"]*0.1))
+                ureyBradleyForceBuilder.registerParams((class1, class2, class3), (params["k"]*4.184*100.0, params["d"]*0.1), isClass=True)
             ureyBradleyForce = ureyBradleyForceBuilder.getForce(sys)
-            ureyBradleyForceBuilder.addUreyBradleys(ureyBradleyForce, atomClasses, angles)
+            ureyBradleyForceBuilder.addUreyBradleys(ureyBradleyForce, atomClasses, angles, isClass=True)
 
         # Find all unique proper torsions
         uniquePropers = set()
@@ -706,7 +706,7 @@ class TinkerFiles:
                 grid[:, :, 2] *= 4.184  
                 torsionTorsionForceBuilder.registerGridData(gridIndex, grid)
             torsionTorsionForce = torsionTorsionForceBuilder.getForce(sys)
-            torsionTorsionForceBuilder.addTorsionTorsionInteractions(torsionTorsionForce, angles=angles, atoms=self.atoms)
+            torsionTorsionForceBuilder.addTorsionTorsionInteractions(torsionTorsionForce, propers, atomClasses, [atom.mass for atom in self.atoms])
 
         # Add AmoebaVdwForce
         if "vdw" in self._forces:

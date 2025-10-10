@@ -1360,9 +1360,9 @@ class AmoebaUreyBradleyForceBuilder(BaseAmoebaForceBuilder):
     def __init__(self) -> None:
         """Initialize the AmoebaUreyBradleyForceBuilder."""
         super().__init__()
-        self.ureyBradleyParams = []
+        self.ureyBradleyParams = {True: [], False: []}  # True = class-based, False = type-based
 
-    def registerParams(self, ureyBradleyType: Tuple[Any, ...], params: Tuple[float, float]) -> None:
+    def registerParams(self, ureyBradleyType: Tuple[Any, ...], params: Tuple[float, float], isClass: bool) -> None:
         """
         Register Urey-Bradley parameters.
 
@@ -1372,8 +1372,10 @@ class AmoebaUreyBradleyForceBuilder(BaseAmoebaForceBuilder):
             A tuple of atom classes defining the Urey-Bradley type.
         params : Tuple[float, float]
             The Urey-Bradley parameters (force constant, equilibrium distance).
+        isClass : bool
+            Indicates if these parameters are defined for atom classes (True) or atom types (False).
         """
-        self.ureyBradleyParams.append((ureyBradleyType, params))
+        self.ureyBradleyParams[isClass].append((ureyBradleyType, params))
 
     def getForce(self, sys: mm.System) -> mm.HarmonicBondForce:
         """
@@ -1391,7 +1393,7 @@ class AmoebaUreyBradleyForceBuilder(BaseAmoebaForceBuilder):
         """
         return self._createOrGetForce(sys, mm.HarmonicBondForce, mm.HarmonicBondForce)
 
-    def addUreyBradleys(self, force: mm.HarmonicBondForce, atomClasses: List[Any], angles: List[Tuple[int, int, int]], anglesConstraints: Optional[List[bool]] = None, flexibleConstraints: bool = False) -> None:
+    def addUreyBradleys(self, force: mm.HarmonicBondForce, atomClassesOrTypes: List[Any], angles: List[Tuple[int, int, int]], isClass: bool, anglesConstraints: Optional[List[bool]] = None, flexibleConstraints: bool = False) -> None:
         """
         Add Urey-Bradley terms to the force.
 
@@ -1399,20 +1401,23 @@ class AmoebaUreyBradleyForceBuilder(BaseAmoebaForceBuilder):
         ----------
         force : mm.HarmonicBondForce
             The HarmonicBondForce instance to add Urey-Bradley terms to.
-        atomClasses : List[Any]
-            List of atom classes indexed by atom index.
+        atomClassesOrTypes : List[Any]
+            List of atom classes or types indexed by atom index.
         angles : List[Tuple[int, int, int]]
             List of angle indices as tuples of (atom1, atom2, atom3).
+        isClass : bool
+            Indicates if the parameters are defined for atom classes (True) or atom types (False).
         anglesConstraints : Optional[List[bool]], default=None
             List of flags indicating if a given angle is constrained.
         flexibleConstraints : bool, default=False
             If True, constrained angles will still be added to the system.
         """
+        paramSet = self.ureyBradleyParams[isClass]
         for i, (atom1, atom2, atom3) in enumerate(angles):
             isConstrained = False if anglesConstraints is None else anglesConstraints[i]
             if not isConstrained or flexibleConstraints:
-                ubType = (atomClasses[atom1], atomClasses[atom2], atomClasses[atom3])
-                params = self._findMatchingParams(self.ureyBradleyParams, ubType, reverseMatch=True)
+                ubIdentifier = (atomClassesOrTypes[atom1], atomClassesOrTypes[atom2], atomClassesOrTypes[atom3])
+                params = self._findMatchingParams(paramSet, ubIdentifier, reverseMatch=True)
                 if params is not None:
                     k, d = params
                     if k != 0.0:
@@ -1489,12 +1494,7 @@ class AmoebaTorsionTorsionForceBuilder(BaseAmoebaForceBuilder):
 
         return force
 
-    def addTorsionTorsionInteractions(self, force: mm.AmoebaTorsionTorsionForce, 
-                                      angles: Optional[List[Tuple[int, int, int]]] = None,
-                                      atoms: Optional[List[Any]] = None,
-                                      atomClasses: Optional[List[str]] = None,
-                                      torsions: Optional[List[Tuple[int, ...]]] = None,
-                                      sys: Optional[mm.System] = None) -> None:
+    def addTorsionTorsionInteractions(self, force: mm.AmoebaTorsionTorsionForce, torsions: List[Tuple[int, ...]], atomClasses: List[str], masses: List[float]) -> None:
         """
         Create torsion-torsion interactions for both ForceField and TinkerFiles usage.
         
@@ -1502,97 +1502,75 @@ class AmoebaTorsionTorsionForceBuilder(BaseAmoebaForceBuilder):
         ----------
         force : mm.AmoebaTorsionTorsionForce
             The OpenMM AmoebaTorsionTorsionForce to add interactions to.
-        angles : Optional[List[Tuple[int, int, int]]], default=None
-            List of angle tuples (ib, ic, id). If not provided, will be extracted from torsions.
-        atoms : Optional[List[Any]], default=None
-            List of TinkerAtom objects with bonds and atomClass attributes (TinkerFiles usage).
-        atomClasses : Optional[List[str]], default=None
-            List of atom class strings indexed by atom index (ForceField usage).
-        torsions : Optional[List[Tuple[int, ...]]], default=None
-            List of torsion tuples containing atom indices (ForceField usage).
-        sys : Optional[mm.System], default=None
-            OpenMM System containing particle masses (ForceField usage).
+        torsions : List[Tuple[int, ...]]
+            List of torsion tuples containing atom indices.
+        atomClasses : List[str]
+            List of atom class strings indexed by atom index.
+        masses : List[float]
+            List of atom masses indexed by atom index.
         """
-        if atoms is not None:
-            # TinkerFiles usage
-            if angles is None:
-                raise ValueError("angles must be provided for TinkerFiles usage")
-            data = atoms
-            bonds = lambda atom: data[atom].bonds
-            getAtomClass = lambda atom: str(data[atom].atomClass)
-        else:
-            # ForceField usage
-            if atomClasses is None or torsions is None:
-                raise ValueError("atomClasses and torsions must be provided for ForceField usage")
-            
-            atomBonds = [[] for _ in range(len(atomClasses))]
-            for torsion in torsions:
-                for i in range(len(torsion) - 1):
-                    atom1, atom2 = torsion[i], torsion[i+1]
-                    if atom2 not in atomBonds[atom1]:
-                        atomBonds[atom1].append(atom2)
-                    if atom1 not in atomBonds[atom2]:
-                        atomBonds[atom2].append(atom1)
-            
-            if angles is None:
-                angles_set = set()
-                for torsion in torsions:
-                    for i in range(len(torsion) - 2):
-                        angles_set.add((torsion[i], torsion[i+1], torsion[i+2]))
-                angles = list(angles_set)
-            
-            data = atomBonds
-            bonds = lambda atom: atomBonds[atom]
-            getAtomClass = lambda atom: atomClasses[atom]
+        # Determine bonded atoms from the torsions
+        atomBonds = [[] for _ in range(len(atomClasses))]
+        for torsion in torsions:
+            for i in range(len(torsion) - 1):
+                atom1, atom2 = torsion[i], torsion[i+1]
+                if atom2 not in atomBonds[atom1]:
+                    atomBonds[atom1].append(atom2)
+                if atom1 not in atomBonds[atom2]:
+                    atomBonds[atom2].append(atom1)
+
+        bonds = [(atom1, atom2) for atom1, bonded in enumerate(atomBonds) for atom2 in bonded if atom1 < atom2]
+
+        # Get angles from torsions
+        angles_set = set()
+        for torsion in torsions:
+            for i in range(len(torsion) - 2):
+                angles_set.add((torsion[i], torsion[i+1], torsion[i+2]))
+        angles = list(angles_set)
 
         # Create torsion-torsion interactions
         addedInteractions = set()
         for angle in angles:
             ib, ic, id = angle
-            for ia in bonds(ib):
+            for ia in atomBonds[ib]:
                 if ia != ic:
-                    for ie in bonds(id):
+                    for ie in atomBonds[id]:
                         if ie != ic and ie != ib and ie != ia:
                             interaction = tuple(sorted([(ia, ib, ic, id, ie), (ie, id, ic, ib, ia)]))
                             if interaction in addedInteractions:
                                 continue
-                            atomTypes = (getAtomClass(ia), getAtomClass(ib), getAtomClass(ic), 
-                                        getAtomClass(id), getAtomClass(ie))
+                            atomTypes = (atomClasses[ia], atomClasses[ib], atomClasses[ic], atomClasses[id], atomClasses[ie])
                             for torsionTorsionType, gridIdx in self.torsionTorsionParams:
                                 if atomTypes == torsionTorsionType:
-                                    chiralIndex = AmoebaTorsionTorsionForceBuilder._getChiralIndex(data, ib, ic, id, atomClasses, sys)
+                                    chiralIndex = AmoebaTorsionTorsionForceBuilder._getChiralIndex(ib, ic, id, atomClasses, bonds, masses)
                                     force.addTorsionTorsion(ia, ib, ic, id, ie, chiralIndex, gridIdx)
                                     addedInteractions.add(interaction)
                                     break
                                 elif atomTypes == tuple(reversed(torsionTorsionType)):
-                                    chiralIndex = AmoebaTorsionTorsionForceBuilder._getChiralIndex(data, ib, ic, id, atomClasses, sys)
+                                    chiralIndex = AmoebaTorsionTorsionForceBuilder._getChiralIndex(ib, ic, id, atomClasses, bonds, masses)
                                     force.addTorsionTorsion(ie, id, ic, ib, ia, chiralIndex, gridIdx)
                                     addedInteractions.add(interaction)
                                     break
 
     @staticmethod
-    def _getChiralIndex(data: Union[List[List[int]], List[Any]], atomB: int, atomC: int, atomD: int, 
-                       atomClasses: Optional[List[str]] = None, sys: Optional[mm.System] = None) -> int:
+    def _getChiralIndex(atomB: int, atomC: int, atomD: int, atomClasses: List[str], bonds: List[Tuple[int, int]], masses: List[float]) -> int:
         """
-        Get chiral atom index using consistent TINKER algorithm for both ForceField and TinkerFiles usage.
+        Get chiral atom index.
         
         Parameters
         ----------
-        data : Union[List[List[int]], List[Any]]
-            Either a list of bond lists (ForceField usage) or list of TinkerAtom objects (TinkerFiles usage).
-            The method automatically detects the data type by checking for the 'bonds' attribute.
         atomB : int
             Index of first atom in the central angle.
         atomC : int
             Index of central atom that should have 4 bonds for chiral determination.
         atomD : int
             Index of third atom in the central angle.
-        atomClasses : Optional[List[str]], default=None
-            List of atom class strings indexed by atom index. Required for ForceField usage,
-            ignored for TinkerFiles usage.
-        sys : Optional[mm.System], default=None
-            OpenMM System containing particle masses. Required for ForceField usage,
-            ignored for TinkerFiles usage.
+        atomClasses : List[str]
+            List of atom class strings indexed by atom index. 
+        bonds : List[Tuple[int, int]]
+            List of bonds defined by tuples of (atom1, atom2).
+        masses : List[float]
+            List of particle masses indexed by atom index. 
             
         Returns
         -------
@@ -1600,30 +1578,16 @@ class AmoebaTorsionTorsionForceBuilder(BaseAmoebaForceBuilder):
             Index of the chiral atom (atomE or atomF) based on TINKER algorithm,
             or -1 if atomC doesn't have exactly 4 bonds or other conditions aren't met.
         """
-        if isinstance(data, list) and len(data) > 0 and hasattr(data[0], 'bonds'):
-            # TinkerFiles 
-            atoms = data
-            bonds = lambda atom: atoms[atom].bonds
-            getAtomClass = lambda atom: int(atoms[atom].atomClass)
-            getMass = lambda atom: atoms[atom].mass if atoms[atom].mass else 0.0
-        else:
-            # ForceField
-            import openmm.unit as unit
-            atomBonds = data
-            bonds = lambda atom: atomBonds[atom]
-            getAtomClass = lambda atom: int(atomClasses[atom])
-            getMass = lambda atom: sys.getParticleMass(atom) / unit.dalton
-
-        if len(bonds(atomC)) == 4:
+        if len(bonds[atomC]) == 4:
             otherAtoms = [atom for atom in bonds(atomC) if atom != atomB and atom != atomD]
             if len(otherAtoms) == 2:
                 atomE, atomF = otherAtoms
-                typeE, typeF = getAtomClass(atomE), getAtomClass(atomF)
+                typeE, typeF = atomClasses[atomE], atomClasses[atomF]
                 if typeE > typeF:
                     return atomE
                 elif typeF > typeE:
                     return atomF
-                massE, massF = getMass(atomE), getMass(atomF)
+                massE, massF = masses[atomE], masses[atomF]
                 if massE > massF:
                     return atomE
                 elif massF > massE:
