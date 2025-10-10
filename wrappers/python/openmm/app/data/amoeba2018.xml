@@ -1,7 +1,7 @@
 <ForceField>
  <Info>
   <Source>amoebabio18.prm</Source>
-  <DateGenerated>2025-09-20</DateGenerated>
+  <DateGenerated>2025-10-10</DateGenerated>
   <Reference>Yue Shi, Zhen Xia, Jiajing Zhang, Robert Best, Chuanjie Wu, Jay W. Ponder, and Pengyu Ren. Polarizable Atomic Multipole-Based AMOEBA Force Field for Proteins. Journal of Chemical Theory and Computation, 9(9):4046–4063, 2013.</Reference>
   <Reference>Changsheng Zhang, Chao Lu, Zhifeng Jing, Chuanjie Wu, Jean-Philip Piquemal, Jay W Ponder, and Pengyu Ren. AMOEBA Polarizable Atomic Multipole Force Field for Nucleic Acids. Journal of Chemical Theory and Computation, 14(4):2084-2108, 2018.</Reference>
  </Info>
@@ -6229,55 +6229,55 @@
   <Angle class1="56" class2="63" class3="76" k="0.06117692565078006" angle1="119.00" inPlane="True"/>
  </AmoebaAngleForce>
  <AmoebaOutOfPlaneBendForce type="ALLINGER" opbend-cubic="-0.014" opbend-quartic="5.6e-05" opbend-pentic="-7e-07" opbend-sextic="2.2e-08">
-  <Angle class1="2" class2="1" class3="0" class4="0" k="0.053147454159115176"/>
-  <Angle class1="3" class2="1" class3="0" class4="0" k="0.08985360954958321"/>
-  <Angle class1="4" class2="1" class3="0" class4="0" k="0.016441298768647142"/>
-  <Angle class1="7" class2="1" class3="0" class4="0" k="0.053147454159115176"/>
-  <Angle class1="8" class2="1" class3="0" class4="0" k="0.0008921634990738758"/>
-  <Angle class1="39" class2="1" class3="0" class4="0" k="0.004588269423808505"/>
-  <Angle class1="40" class2="1" class3="0" class4="0" k="0.053147454159115176"/>
-  <Angle class1="1" class2="3" class3="0" class4="0" k="0.137520630785816"/>
-  <Angle class1="2" class2="3" class3="0" class4="0" k="0.06321615650580606"/>
-  <Angle class1="5" class2="3" class3="0" class4="0" k="0.06882404135712757"/>
-  <Angle class1="7" class2="3" class3="0" class4="0" k="0.06321615650580606"/>
-  <Angle class1="8" class2="3" class3="0" class4="0" k="0.026637453043777147"/>
-  <Angle class1="15" class2="3" class3="0" class4="0" k="0.06321615650580606"/>
-  <Angle class1="40" class2="3" class3="0" class4="0" k="0.06321615650580606"/>
-  <Angle class1="3" class2="15" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="7" class2="15" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="16" class2="15" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="40" class2="15" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="8" class2="17" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="17" class2="17" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="18" class2="17" class3="0" class4="0" k="0.019245241194307892"/>
-  <Angle class1="19" class2="17" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="21" class2="17" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="8" class2="22" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="22" class2="22" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="23" class2="22" class3="0" class4="0" k="0.019245241194307892"/>
-  <Angle class1="24" class2="22" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="22" class2="24" class3="0" class4="0" k="0.04397091531149817"/>
-  <Angle class1="25" class2="24" class3="0" class4="0" k="0.016441298768647142"/>
-  <Angle class1="26" class2="24" class3="0" class4="0" k="0.019245241194307892"/>
-  <Angle class1="28" class2="24" class3="0" class4="0" k="0.019245241194307892"/>
-  <Angle class1="8" class2="26" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="24" class2="26" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="26" class2="26" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="27" class2="26" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="29" class2="26" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="24" class2="28" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="27" class2="28" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="29" class2="28" class3="0" class4="0" k="0.01835307769523402"/>
-  <Angle class1="2" class2="30" class3="0" class4="0" k="0.15498154498197614"/>
-  <Angle class1="7" class2="30" class3="0" class4="0" k="0.15498154498197614"/>
-  <Angle class1="8" class2="30" class3="0" class4="0" k="0.15498154498197614"/>
-  <Angle class1="31" class2="30" class3="0" class4="0" k="0.1512854390572415"/>
-  <Angle class1="2" class2="32" class3="0" class4="0" k="0.15498154498197614"/>
-  <Angle class1="7" class2="32" class3="0" class4="0" k="0.15498154498197614"/>
-  <Angle class1="8" class2="32" class3="0" class4="0" k="0.15498154498197614"/>
-  <Angle class1="33" class2="32" class3="0" class4="0" k="0.1512854390572415"/>
-  <Angle class1="34" class2="32" class3="0" class4="0" k="0.16963851675247554"/>
-  <Angle class1="1" class2="39" class3="0" class4="0" k="0.01835307769523402"/>
+  <Angle class1="2" class2="1" class3="" class4="" k="0.053147454159115176"/>
+  <Angle class1="3" class2="1" class3="" class4="" k="0.08985360954958321"/>
+  <Angle class1="4" class2="1" class3="" class4="" k="0.016441298768647142"/>
+  <Angle class1="7" class2="1" class3="" class4="" k="0.053147454159115176"/>
+  <Angle class1="8" class2="1" class3="" class4="" k="0.0008921634990738758"/>
+  <Angle class1="39" class2="1" class3="" class4="" k="0.004588269423808505"/>
+  <Angle class1="40" class2="1" class3="" class4="" k="0.053147454159115176"/>
+  <Angle class1="1" class2="3" class3="" class4="" k="0.137520630785816"/>
+  <Angle class1="2" class2="3" class3="" class4="" k="0.06321615650580606"/>
+  <Angle class1="5" class2="3" class3="" class4="" k="0.06882404135712757"/>
+  <Angle class1="7" class2="3" class3="" class4="" k="0.06321615650580606"/>
+  <Angle class1="8" class2="3" class3="" class4="" k="0.026637453043777147"/>
+  <Angle class1="15" class2="3" class3="" class4="" k="0.06321615650580606"/>
+  <Angle class1="40" class2="3" class3="" class4="" k="0.06321615650580606"/>
+  <Angle class1="3" class2="15" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="7" class2="15" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="16" class2="15" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="40" class2="15" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="8" class2="17" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="17" class2="17" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="18" class2="17" class3="" class4="" k="0.019245241194307892"/>
+  <Angle class1="19" class2="17" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="21" class2="17" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="8" class2="22" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="22" class2="22" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="23" class2="22" class3="" class4="" k="0.019245241194307892"/>
+  <Angle class1="24" class2="22" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="22" class2="24" class3="" class4="" k="0.04397091531149817"/>
+  <Angle class1="25" class2="24" class3="" class4="" k="0.016441298768647142"/>
+  <Angle class1="26" class2="24" class3="" class4="" k="0.019245241194307892"/>
+  <Angle class1="28" class2="24" class3="" class4="" k="0.019245241194307892"/>
+  <Angle class1="8" class2="26" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="24" class2="26" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="26" class2="26" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="27" class2="26" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="29" class2="26" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="24" class2="28" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="27" class2="28" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="29" class2="28" class3="" class4="" k="0.01835307769523402"/>
+  <Angle class1="2" class2="30" class3="" class4="" k="0.15498154498197614"/>
+  <Angle class1="7" class2="30" class3="" class4="" k="0.15498154498197614"/>
+  <Angle class1="8" class2="30" class3="" class4="" k="0.15498154498197614"/>
+  <Angle class1="31" class2="30" class3="" class4="" k="0.1512854390572415"/>
+  <Angle class1="2" class2="32" class3="" class4="" k="0.15498154498197614"/>
+  <Angle class1="7" class2="32" class3="" class4="" k="0.15498154498197614"/>
+  <Angle class1="8" class2="32" class3="" class4="" k="0.15498154498197614"/>
+  <Angle class1="33" class2="32" class3="" class4="" k="0.1512854390572415"/>
+  <Angle class1="34" class2="32" class3="" class4="" k="0.16963851675247554"/>
+  <Angle class1="1" class2="39" class3="" class4="" k="0.01835307769523402"/>
   <Angle class1="43" class2="43" class3="45" class4="49" k="0.010119683118066535"/>
   <Angle class1="43" class2="43" class3="46" class4="50" k="0.007481428199376645"/>
   <Angle class1="43" class2="43" class3="49" class4="56" k="0.008819673447987458"/>
