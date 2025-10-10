@@ -10296,8 +10296,8 @@
   <Polarize type="353" polarizability="0.00078" thole="0.39" />
   <Polarize type="354" polarizability="0.00135" thole="0.39" />
   <Polarize type="355" polarizability="0.00226" thole="0.39" />
-  <Polarize type="356" polarizability="1e-05.0" thole="0.065" />
-  <Polarize type="357" polarizability="8e-05.0" thole="0.115" />
+  <Polarize type="356" polarizability="1e-05" thole="0.065" />
+  <Polarize type="357" polarizability="8e-05" thole="0.115" />
   <Polarize type="358" polarizability="0.00055" thole="0.18" />
   <Polarize type="359" polarizability="0.00082" thole="0.165" />
   <Polarize type="360" polarizability="0.00151" thole="0.3" />

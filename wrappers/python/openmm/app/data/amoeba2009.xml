@@ -13628,8 +13628,8 @@
   <Polarize type="406" polarizability="0.00078" thole="0.39" />
   <Polarize type="407" polarizability="0.00135" thole="0.39" />
   <Polarize type="408" polarizability="0.00226" thole="0.39" />
-  <Polarize type="409" polarizability="1e-05.0" thole="0.065" />
-  <Polarize type="410" polarizability="8e-05.0" thole="0.0952" />
+  <Polarize type="409" polarizability="1e-05" thole="0.065" />
+  <Polarize type="410" polarizability="8e-05" thole="0.0952" />
   <Polarize type="411" polarizability="0.00055" thole="0.1585" />
   <Polarize type="412" polarizability="0.00026" thole="0.2096" />
   <Polarize type="413" polarizability="0.00135" thole="0.39" />
