@@ -1039,7 +1039,7 @@ class AmoebaStretchTorsionForceBuilder(BaseAmoebaForceBuilder):
                     params += torsionPhase[torsion]
                     if any(p != 0.0 for p in params[:9]):
                         force.addBond((atom1, atom2, atom3, atom4), params)
-                        break
+                    break
 
 
 class AmoebaAngleTorsionForceBuilder(BaseAmoebaForceBuilder):
@@ -1157,7 +1157,7 @@ class AmoebaAngleTorsionForceBuilder(BaseAmoebaForceBuilder):
                     params += torsionPhase[torsion]
                     if any(p != 0.0 for p in params[:6]):
                         force.addBond((atom1, atom2, atom3, atom4), params)
-                        break
+                    break
 
 
 class AmoebaTorsionForceBuilder(BaseAmoebaForceBuilder):
