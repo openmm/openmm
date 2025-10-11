@@ -4389,14 +4389,22 @@ class AmoebaUreyBradleyGenerator(object):
         forceField._forces.append(generator)
         for bond in element.findall('UreyBradley'):
             try:
-                isClass = 'class1' in bond.attrib
+                isClass = any(k.startswith('class') for k in bond.attrib)
+                isType = any(k.startswith('type') for k in bond.attrib)
+                if isClass and isType:
+                    raise ValueError(
+                        "AmoebaUreyBradleyGenerator: Cannot mix classes and types in the same Urey-Bradley term definition. "
+                        "Please contact the developers if you require this functionality."
+                    )
                 prefix = 'class' if isClass else 'type'
                 keys = (prefix + "1", prefix + "2", prefix + "3")
                 k = float(bond.attrib['k'])
                 d = float(bond.attrib['d'])
-                generator.builder.registerParams((bond.attrib[keys[0]],bond.attrib[keys[1]],bond.attrib[keys[2]]), 
-                                                 (k, d), 
-                                                 isClass)
+                generator.builder.registerParams(
+                    (bond.attrib[keys[0]], bond.attrib[keys[1]], bond.attrib[keys[2]]),
+                    (k, d),
+                    isClass
+                )
             except Exception as e:
                 outputString = f"AmoebaUreyBradleyGenerator : error getting {'classes' if isClass else 'types'}: " \
                                f"{bond.attrib[keys[0]]} {bond.attrib[keys[1]]} {bond.attrib[keys[2]]} " \
