@@ -92,9 +92,9 @@ GPU), type
 
     pip install openmm[cuda12]
 
-This will install a copy of the CUDA platform compiled with CUDA 12.  Alternatively,
-if you have an AMD GPU, use this command to include the HIP platform (compiled
-with HIP version 6)
+This will install a copy of the CUDA platform compiled with CUDA 12.  :code:`cuda13`
+is also available.  Alternatively, if you have an AMD GPU, use this command to
+include the HIP platform (compiled with HIP version 6)
 ::
 
     pip install openmm[hip6]

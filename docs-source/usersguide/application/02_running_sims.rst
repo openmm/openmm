@@ -41,16 +41,16 @@ steps.
 
         :autonumber:`Example,PDB example`
 
-You can find this script in the :file:`examples` folder of your OpenMM installation.
+You can find this script in the :file:`python-examples` folder of your OpenMM installation.
 It is called :file:`simulatePdb.py`.  To execute it from a command line, go to your
 terminal/console/command prompt window (see Section :numref:`installing-openmm`
-on setting up the window to use OpenMM).  Navigate to the :file:`examples` folder by typing
+on setting up the window to use OpenMM).  Navigate to the :file:`python-examples` folder by typing
 ::
 
     cd <examples_directory>
 
-where the typical directory is :file:`/usr/local/openmm/examples` on Linux
-and Mac machines and  :file:`C:\\Program Files\\OpenMM\\examples` on Windows
+where the typical directory is :file:`/usr/local/openmm/examples/python-examples` on Linux
+and Mac machines and  :file:`C:\\Program Files\\OpenMM\\examples\\python-examples` on Windows
 machines.
 
 Then type
@@ -74,7 +74,7 @@ start of your scripts.
 
     pdb = PDBFile('input.pdb')
 
-This line loads the PDB file from disk.  (The :file:`input.pdb` file in the :file:`examples`
+This line loads the PDB file from disk.  (The :file:`input.pdb` file in the :file:`python-examples`
 directory contains the villin headpiece in explicit solvent.)  More precisely,
 it creates a :class:`PDBFile` object, passes the file name :file:`input.pdb` to it as an
 argument, and assigns the object to a variable called :code:`pdb`\ .  The
@@ -192,7 +192,7 @@ above, is to start with a PDB file and then select a force field with which to
 model it.  Alternatively, you can use AmberTools_ to model your system.  In that
 case, you provide a :file:`prmtop` file and an :file:`inpcrd` file.  OpenMM loads the files and
 creates a :class:`System` from them.  This is illustrated in the following script.  It can be
-found in OpenMM’s :file:`examples` folder with the name :file:`simulateAmber.py`.
+found in OpenMM’s :file:`python-examples` folder with the name :file:`simulateAmber.py`.
 
 .. samepage::
     ::
@@ -280,7 +280,7 @@ Using Gromacs Files
 A third option for creating your system is to use the Gromacs setup tools.  They
 produce a :file:`gro` file containing the coordinates and a :file:`top` file containing the
 topology.  OpenMM can load these exactly as it did the AMBER files.  This is
-shown in the following script.  It can be found in OpenMM’s :file:`examples` folder
+shown in the following script.  It can be found in OpenMM’s :file:`python-examples` folder
 with the name :file:`simulateGromacs.py`.
 
 .. samepage::
@@ -379,7 +379,7 @@ field is supported.  Tinker uses an :file:`xyz` file to store the coordinates an
 topology, and one or more files ending in :file:`key` or :file:`prm` to store
 the force field and simulation parameters.  To load them use a :class:`TinkerFiles`
 object.  This is illustrated in the following script.  It can be found in
-OpenMM’s :file:`examples` folder with the name :file:`simulateTinker.py`.
+OpenMM’s :file:`python-examples` folder with the name :file:`simulateTinker.py`.
 
 .. samepage::
     ::
