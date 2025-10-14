@@ -523,22 +523,23 @@ class TinkerFiles:
         # List of bonds as (atom1_index, atom2_index) used by various force builders
         bonds = [(at1.index, at2.index) for at1, at2 in self.topology.bonds()]
 
+        # List of atoms bonded to each atom used by various force builders
+        bondedToAtom = [[] for _ in range(self.topology.getNumAtoms())]
+        for (at1, at2) in bonds:
+            bondedToAtom[at1].append(at2)
+            bondedToAtom[at2].append(at1)
+
         # Add AmoebaBondForce
         if "bond" in self._forces:
-            bondParams = {(at1, at2): {"k": float(k), "r0": float(r0)} for at1, at2, k, r0 in self._forces["bond"]}
+            bondParams = {(at1, at2): {"k": float(k)*100.0*4.184, "r0": float(r0)*0.1} for at1, at2, k, r0 in self._forces["bond"]}
             bondForceBuilder = AmoebaBondForceBuilder(float(self._scalars["bond-cubic"])*10, float(self._scalars["bond-quartic"])*100)
             for (class1, class2), params in bondParams.items():
-                bondForceBuilder.registerParams((class1, class2), params["r0"]*0.1, params["k"]*100.0*4.184)
+                bondForceBuilder.registerParams((class1, class2), params["r0"], params["k"])
             bondForce = bondForceBuilder.getForce(sys)
             bondForceBuilder.addBonds(bondForce, atomClasses, bonds)
 
         if "angle" in self._forces or "opbend" in self._forces or "anglep" in self._forces:
             # Find all unique angles
-            bondedToAtom = [[] for _ in range(self.topology.getNumAtoms())]
-            for (at1, at2) in bonds:
-                bondedToAtom[at1].append(at2)
-                bondedToAtom[at2].append(at1)
-
             uniqueAngles = set()
             for atom in range(len(bondedToAtom)):
                 neighbors = bondedToAtom[atom]
@@ -548,63 +549,18 @@ class TinkerFiles:
                         uniqueAngles.add(angle)
             angles = sorted(list(uniqueAngles))
 
-            # Need to initialize here as used to create out-of-plane angles
             if "opbend" in self._forces:
-                opbendParams = {(at1, at2, at3, at4): {"k": float(k)} for at1, at2, at3, at4, k in self._forces["opbend"]}
+                opbendParams = {(at1, at2, at3 if at3 != '0' else '', at4 if at4 != '0' else ''): {"k": float(k)} for at1, at2, at3, at4, k in self._forces["opbend"]}
             else:
                 opbendParams = {}
+            
+            # Classify angles into in-plane, out-of-plane, and generic
+            opbendTypes = list(opbendParams.keys())
+            inPlaneAngles, outOfPlaneAngles, genericAngles = AmoebaOutOfPlaneBendForceBuilder.classifyAngles(
+                angles, atomClasses, bondedToAtom, opbendTypes
+            )
 
-            # Classify angles into in-plane, out-of-plane and generic.
-            # If middle atom has covalency of 3 and the types of the middle atom and the partner atom (atom bonded to
-            # middle atom, but not in angle) match types1 and types2, then three out-of-plane bend angles are generated.
-            # Three in-plane angle are also generated.
-            # If the conditions are not satisfied, the angle is marked as 'generic' angle (not a in-plane angle).
-            genericAngles = []
-            inPlaneAngles = []
-            outOfPlaneAngles = []
-            skipAtoms = {}
-            for angle in angles:
-                middleAtom = angle[1]
-                middleClass = atomClasses[middleAtom] 
-                middleValence = len(self.atoms[middleAtom].bonds)
-                if middleValence == 3 and middleAtom not in skipAtoms:
-                    partners = []
-                    for partner in self.atoms[middleAtom].bonds:
-                        partnerClass = atomClasses[partner]
-                        for opBendClass in opbendParams:
-                            if middleClass == opBendClass[1] and partnerClass == opBendClass[0]:
-                                partners.append(partner)
-                                break
-                    if len(partners) == 3:
-                        outOfPlaneAngles.append([partners[0], middleAtom, partners[1], partners[2]])
-                        outOfPlaneAngles.append([partners[2], middleAtom, partners[0], partners[1]])
-                        outOfPlaneAngles.append([partners[1], middleAtom, partners[2], partners[0]])
-
-                        skipAtoms[middleAtom] = set(partners[:3])
-
-                        angleList = list(angle[:3])
-                        for atomIndex in partners:
-                            if atomIndex not in angleList:
-                                angleList.append(atomIndex)
-
-                        inPlaneAngles.append(angleList)
-                    else:
-                        angleList = list(angle[:3])
-                        for atomIndex in partners:
-                            if atomIndex not in angleList:
-                                angleList.append(atomIndex)
-                        genericAngles.append(angleList)
-                elif middleValence == 3 and middleAtom in skipAtoms:
-                    angleList = list(angle[:3])
-                    for atomIndex in skipAtoms[middleAtom]:
-                        if atomIndex not in angleList:
-                            angleList.append(atomIndex)
-                    inPlaneAngles.append(angleList)
-                else:
-                    genericAngles.append(list(angle))
-
-            # Sanity checks for angle classification
-            assert len(inPlaneAngles) + len(genericAngles)== len(angles), (
+            assert len(inPlaneAngles) + len(genericAngles) == len(angles), (
                 f"Angle classification mismatch:\n"
                 f"  in-plane: {len(inPlaneAngles)}\n"
                 f"  generic: {len(genericAngles)}\n"
@@ -630,138 +586,52 @@ class TinkerFiles:
             angleParams = {(at1, at2, at3): {"k": float(k), "theta0": [float(theta) for theta in theta]} for at1, at2, at3, k, *theta in self._forces["angle"]}
             if genericAngles:
                 angleForceBuilder = AmoebaAngleForceBuilder(self._scalars["angle-cubic"], self._scalars["angle-quartic"], self._scalars["angle-pentic"], self._scalars["angle-sextic"])
-                processedParams = set()
-                processedAngles = []
                 for angle in genericAngles:
-                    class1 = atomClasses[angle[0]]
-                    class2 = atomClasses[angle[1]]
-                    class3 = atomClasses[angle[2]]
-                    params = angleParams.get((class1, class2, class3)) or angleParams.get((class3, class2, class1))
-                    if params:
-                        if len(params["theta0"]) > 1:
-                            # Get k-index by counting number of non-angle hydrogens on the central atom
-                            partners = [at for at in bondedToAtom[angle[1]] if at not in angle]
-                            nHyd = sum(1 for i in partners if self.atoms[i].atomicNumber == 1)
-                            if nHyd < len(params["theta0"]):
-                                theta0 = params["theta0"][nHyd]
-                            else:
-                                raise ValueError(f"Angle parameters out of range for atom classes {class1}-{class2}-{class3}")
-                        else:
-                            theta0 = params["theta0"][0]
-                        angleTuple = (angle[0], angle[1], angle[2])
-                        idealAngles[angleTuple] = theta0 # Store ideal angle for stretch-bend
-                        angleForceBuilder.registerParams(angleTuple, (theta0, params["k"]*4.184*(math.pi/180)**2))
-                        processedAngles.append(angleTuple)
-                if processedAngles:
-                    angleForce = angleForceBuilder.getForce(sys)
-                    angleForceBuilder.addAngles(angleForce, processedAngles)
+                    angleKey = (atomClasses[angle[0]], atomClasses[angle[1]], atomClasses[angle[2]])
+                    angleTuple = (angle[0], angle[1], angle[2])
+                    params = angleParams.get(angleKey) or angleParams.get(angleKey[::-1])
+                    theta0 = angleForceBuilder.getIdealAngle(angleTuple, params["theta0"], self.atoms, bondedToAtom)
+                    idealAngles[angleTuple] = theta0*math.pi/180 # Store ideal angle for stretch-bend
+                    angleForceBuilder.registerParams(angleTuple, (theta0, params["k"]*4.184*(math.pi/180)**2))
+                angleForce = angleForceBuilder.getForce(sys)
+                angleForceBuilder.addAngles(angleForce, genericAngles)
 
             # Add AmoebaInPlaneAngleForce
             if "anglep" in self._forces:
                 inPlaneAngleParams = {(at1, at2, at3): {"k": float(k), "theta0": [float(theta) for theta in theta]} for at1, at2, at3, k, *theta in self._forces["anglep"]}
             else:
                 inPlaneAngleParams = {}
-    
             inPlaneAngleParams.update(angleParams) # Poltype e.g. does not use the "anglep" keyword, but uses "angle" keyword for in-plane angles
 
             if inPlaneAngles:
                 inPlaneAngleForceBuilder = AmoebaInPlaneAngleForceBuilder(self._scalars["angle-cubic"], self._scalars["angle-quartic"], self._scalars["angle-pentic"], self._scalars["angle-sextic"])
-                processedParams = set()
                 for angle in inPlaneAngles:
-                    class1 = atomClasses[angle[0]]
-                    class2 = atomClasses[angle[1]]
-                    class3 = atomClasses[angle[2]]
-                    params = inPlaneAngleParams.get((class1, class2, class3)) or inPlaneAngleParams.get((class3, class2, class1))
-                    if params:
-                        class4 = atomClasses[angle[3]]
-                        paramKey = (class1, class2, class3, class4)
-                        if len(params["theta0"]) > 1:
-                            # Get k-index by counting number of non-angle hydrogens on the central atom
-                            partners = [at for at in bondedToAtom[angle[1]] if at not in angle[:]]
-                            nHyd = sum(1 for i in partners if self.atoms[i].atomicNumber == 1)
-                            if nHyd < len(params["theta0"]):
-                                theta0 = params["theta0"][nHyd]
-                            else:
-                                raise ValueError(f"Angle parameters out of range for atom classes {class1}-{class2}-{class3}")
-                        else:
-                            theta0 = params["theta0"][0]
-                        idealAngles[tuple(angle)] = theta0 # Store ideal angle for stretch-bend
-                        if paramKey not in processedParams:
-                            inPlaneAngleForceBuilder.registerParams(paramKey, (theta0, params["k"]*4.184*(math.pi/180)**2))
-                            processedParams.add(paramKey)
-                if processedParams:
-                    inPlaneAngleForce = inPlaneAngleForceBuilder.getForce(sys)
-                    inPlaneAngleForceBuilder.addInPlaneAngles(inPlaneAngleForce, atomClasses, inPlaneAngles)
+                    angleKey = (atomClasses[angle[0]], atomClasses[angle[1]], atomClasses[angle[2]], atomClasses[angle[3]])
+                    params = inPlaneAngleParams.get(angleKey[:3]) or inPlaneAngleParams.get(angleKey[:3][::-1])
+                    theta0 = angleForceBuilder.getIdealAngle(tuple(angle), params["theta0"], self.atoms, bondedToAtom)
+                    idealAngles[tuple(angle)] = theta0*math.pi/180 # Store ideal angle for stretch-bend
+                    inPlaneAngleForceBuilder.registerParams(angleKey[:3], (theta0, params["k"]*4.184*(math.pi/180)**2))
+                inPlaneAngleForce = inPlaneAngleForceBuilder.getForce(sys)
+                inPlaneAngleForceBuilder.addInPlaneAngles(inPlaneAngleForce, atomClasses, inPlaneAngles)
 
         # Add AmoebaStretchBendForce
         if "strbnd" in self._forces:
-            stretchBendParams = {(at1, at2, at3): {"k1": float(k1), "k2": float(k2)} for at1, at2, at3, k1, k2 in self._forces["strbnd"]}
+            stretchBendParams = {(at1, at2, at3): {"k1": float(k1)*41.84*math.pi/180, "k2": float(k2)*41.84*math.pi/180} for at1, at2, at3, k1, k2 in self._forces["strbnd"]}
             stretchBendForceBuilder = AmoebaStretchBendForceBuilder()
-            processedAngles = []
-            for angle in genericAngles + inPlaneAngles:
-                class1 = atomClasses[angle[0]]
-                class2 = atomClasses[angle[1]]
-                class3 = atomClasses[angle[2]]
-
-                params = stretchBendParams.get((class1, class2, class3))
-                if params is not None:
-                    swap = False
-                else:
-                    params = stretchBendParams.get((class3, class2, class1))
-                    swap = params is not None
-           
-                if params:
-                    idealAngle = idealAngles.get(tuple(angle), None) 
-                    if idealAngle is None:
-                        continue
-
-                    if not swap:
-                        # 1-2-3
-                        bondAB = bondParams.get((class1, class2)) or bondParams.get((class2, class1))
-                        bondCB = bondParams.get((class2, class3)) or bondParams.get((class3, class2))
-                        if bondAB and bondCB:
-                            bondAB, bondCB = bondAB['r0'], bondCB['r0']
-                            k1, k2 = params["k1"], params["k2"]
-                    else:
-                        # 3-2-1
-                        bondAB = bondParams.get((class3, class2)) or bondParams.get((class2, class3))
-                        bondCB = bondParams.get((class2, class1)) or bondParams.get((class1, class2))
-                        if bondAB and bondCB:
-                            bondAB, bondCB = bondCB['r0'], bondAB['r0']
-                            k1, k2 = params["k2"], params["k1"]
-
-                    if bondAB and bondCB:
-                        # Because for the same class triplet, depending on the number of hydrogens on the central atom,
-                        # the ideal angle can be different, we need to register parameters for each angle.
-                        paramKey = (angle[0], angle[1], angle[2])
-                        stretchBendForceBuilder.registerParams(paramKey, (bondAB*0.1, bondCB*0.1, idealAngle*math.pi/180, k1*41.84*math.pi/180, k2*41.84*math.pi/180))
-                        processedAngles.append((angle[0], angle[1], angle[2]))
-        
-            if processedAngles:
-                stretchBendForce = stretchBendForceBuilder.getForce(sys)
-                stretchBendForceBuilder.addStretchBends(stretchBendForce, processedAngles)
+            processedAngles = stretchBendForceBuilder.registerAllStretchBendParams(atomClasses, genericAngles + inPlaneAngles, stretchBendParams, bondParams, idealAngles)
+            stretchBendForce = stretchBendForceBuilder.getForce(sys)
+            stretchBendForceBuilder.addStretchBends(stretchBendForce, processedAngles)
      
-        # Add AMOEBA Urey-Bradley force
+        # Add AmoebaUreyBradleyForce
         if "ureybrad" in self._forces:
             ureyBradleyParams = {(at1, at2, at3): {"k": float(k), "d": float(d)} for at1, at2, at3, k, d in self._forces["ureybrad"]}
             ureyBradleyForceBuilder = AmoebaUreyBradleyForceBuilder()
-
             for (class1, class2, class3), params in ureyBradleyParams.items():
-                ureyBradleyForceBuilder.registerParams((class1, class2, class3), (params["k"]*4.184*100.0, params["d"]*0.1))
+                ureyBradleyForceBuilder.registerParams((class1, class2, class3), (params["k"]*4.184*100.0, params["d"]*0.1), isClass=True)
+            ureyBradleyForce = ureyBradleyForceBuilder.getForce(sys)
+            ureyBradleyForceBuilder.addUreyBradleys(ureyBradleyForce, atomClasses, angles, isClass=True)
 
-            processedAngles = []
-            for at1, at2, at3 in angles:
-                class1 = atomClasses[at1]
-                class2 = atomClasses[at2]
-                class3 = atomClasses[at3]
-                params = ureyBradleyParams.get((class1, class2, class3)) or ureyBradleyParams.get((class3, class2, class1))
-                if params:
-                    processedAngles.append((at1, at2, at3))
-            if processedAngles:
-                ureyBradleyForce = ureyBradleyForceBuilder.getForce(sys)
-                ureyBradleyForceBuilder.addUreyBradleys(ureyBradleyForce, atomClasses, processedAngles)
-
-        # Find all unique proper torsions in the system
+        # Find all unique proper torsions
         uniquePropers = set()
         for angle in angles:
             for atom in self.atoms[angle[0]].bonds:
@@ -784,58 +654,23 @@ class TinkerFiles:
             torsionParams = {(at1, at2, at3, at4): {"t1": [float(t11)*torsionScale, float(t12)*math.pi/180.0, int(t13)],
                                                     "t2": [float(t21)*torsionScale, float(t22)*math.pi/180.0, int(t23)],
                                                     "t3": [float(t31)*torsionScale, float(t32)*math.pi/180.0, int(t33)]}
-                            for at1, at2, at3, at4, t11, t12, t13, t21, t22, t23, t31, t32, t33 in self._forces["torsion"]}
-
+                                                    for at1, at2, at3, at4, t11, t12, t13, t21, t22, t23, t31, t32, t33 in self._forces["torsion"]}
             torsionForceBuilder = AmoebaTorsionForceBuilder()
             for (class1, class2, class3, class4), params in torsionParams.items():
                 torsionForceBuilder.registerParams((class1, class2, class3, class4), (params["t1"], params["t2"], params["t3"]))
-
-            processedTorsions = []
-            for at1, at2, at3, at4 in propers:
-                class1 = atomClasses[at1]
-                class2 = atomClasses[at2]
-                class3 = atomClasses[at3]
-                class4 = atomClasses[at4]
-                params = torsionParams.get((class1, class2, class3, class4)) or torsionParams.get((class4, class3, class2, class1))
-                if params:
-                    processedTorsions.append((at1, at2, at3, at4))
-
-            if processedTorsions:
-                torsionForce = torsionForceBuilder.getForce(sys)
-                atomClassesDict = {}
-                for atom_idx in range(len(self.atoms)):
-                    atomClassesDict[atom_idx] = atomClasses[atom_idx]
-                torsionForceBuilder.addTorsions(torsionForce, atomClasses, processedTorsions)
+            torsionForce = torsionForceBuilder.getForce(sys)
+            torsionForceBuilder.addTorsions(torsionForce, atomClasses, propers)
     
         # Add AmoebaPiTorsionForce
         if "pitors" in self._forces:
-            piTorsionParams = {(at1, at2): {"k": float(k)} for at1, at2, k in self._forces["pitors"]}
-            piTorsionForceBuilder = AmoebaPiTorsionForceBuilder()
-
             piTorsionScale = float(self._scalars["pitorsunit"])*4.184
+            piTorsionParams = {(at1, at2): {"k": float(k)*piTorsionScale} for at1, at2, k in self._forces["pitors"]}
+            piTorsionForceBuilder = AmoebaPiTorsionForceBuilder()
             for (class1, class2), params in piTorsionParams.items():
-                piTorsionForceBuilder.registerParams((class1, class2), (params["k"]*piTorsionScale,))
-
-            processedPiTorsions = []
-            for (at1, at2) in bonds:
-                valence1 = len(self.atoms[at1].bonds)
-                valence2 = len(self.atoms[at2].bonds)
-                if valence1 == 3 and valence2 == 3:
-                    class1 = atomClasses[at1]
-                    class2 = atomClasses[at2]
-                    params = piTorsionParams.get((class1, class2)) or piTorsionParams.get((class2, class1))
-                    if params:
-                        piTorsionAtom3 = at1
-                        piTorsionAtom4 = at2
-                        # piTorsionAtom1, piTorsionAtom2 are the atoms bonded to atom1, excluding atom2
-                        # piTorsionAtom5, piTorsionAtom6 are the atoms bonded to atom2, excluding atom1
-                        piTorsionAtom1, piTorsionAtom2 = [bond for bond in self.atoms[at1].bonds if bond != piTorsionAtom4]
-                        piTorsionAtom5, piTorsionAtom6 = [bond for bond in self.atoms[at2].bonds if bond != piTorsionAtom3]
-                        processedPiTorsions.append((piTorsionAtom1, piTorsionAtom2, piTorsionAtom3, piTorsionAtom4, piTorsionAtom5, piTorsionAtom6))
-            
-            if processedPiTorsions:
-                piTorsionForce = piTorsionForceBuilder.getForce(sys)
-                piTorsionForceBuilder.addPiTorsions(piTorsionForce, atomClassesDict, processedPiTorsions)
+                piTorsionForceBuilder.registerParams((class1, class2), (params["k"],))
+            processedPiTorsions = piTorsionForceBuilder.getAllPiTorsions(atomClasses, bondedToAtom, bonds)
+            piTorsionForce = piTorsionForceBuilder.getForce(sys)
+            piTorsionForceBuilder.addPiTorsions(piTorsionForce, atomClasses, processedPiTorsions)
 
         # Add AmoebaStretchTorsionForce
         if "strtors" in self._forces:
@@ -844,18 +679,8 @@ class TinkerFiles:
             stretchTorsionForceBuilder = AmoebaStretchTorsionForceBuilder()
             for classes, params in stretchTorsionParams.items():
                 stretchTorsionForceBuilder.registerParams(classes, params)
-            processedStretchTorsions = []
-            for at1, at2, at3, at4 in propers:
-                class1 = atomClasses[at1]
-                class2 = atomClasses[at2]
-                class3 = atomClasses[at3]
-                class4 = atomClasses[at4]
-                params = stretchTorsionParams.get((class1, class2, class3, class4)) or stretchTorsionParams.get((class4, class3, class2, class1))
-                if params:
-                    processedStretchTorsions.append((at1, at2, at3, at4))
-            if processedStretchTorsions:
-                stretchTorsionForce = stretchTorsionForceBuilder.getForce(sys)
-                stretchTorsionForceBuilder.addStretchTorsions(sys, stretchTorsionForce, atomClasses, processedStretchTorsions)
+            stretchTorsionForce = stretchTorsionForceBuilder.getForce(sys)
+            stretchTorsionForceBuilder.addStretchTorsions(sys, stretchTorsionForce, atomClasses, propers)
 
         # Add AmoebaAngleTorsionForce
         if "angtors" in self._forces:
@@ -864,36 +689,28 @@ class TinkerFiles:
             angleTorsionForceBuilder = AmoebaAngleTorsionForceBuilder()
             for classes, params in angleTorsionParams.items():
                 angleTorsionForceBuilder.registerParams(classes, params)
-            processedAngleTorsions = []
-            for at1, at2, at3, at4 in propers:
-                class1 = atomClasses[at1]
-                class2 = atomClasses[at2]
-                class3 = atomClasses[at3]
-                class4 = atomClasses[at4]
-                params = angleTorsionParams.get((class1, class2, class3, class4)) or angleTorsionParams.get((class4, class3, class2, class1))
-                if params:
-                    processedAngleTorsions.append((at1, at2, at3, at4))
-            if processedAngleTorsions:
-                angleTorsionForce = angleTorsionForceBuilder.getForce(sys)
-                angleTorsionForceBuilder.addAngleTorsions(sys, angleTorsionForce, atomClasses, processedAngleTorsions)
+            angleTorsionForce = angleTorsionForceBuilder.getForce(sys)
+            angleTorsionForceBuilder.addAngleTorsions(sys, angleTorsionForce, atomClasses, propers)
 
         # Add AmoebaTorsionTorsionForce
         if "tortors" in self._forces:
-            torsionTorsionForce = AmoebaTorsionTorsionForceBuilder()
+            torsionTorsionForceBuilder = AmoebaTorsionTorsionForceBuilder()
             for gridIndex, (tortorInfo, gridData) in enumerate(self._forces["tortors"]):
+                tortorType = (tortorInfo[0], tortorInfo[1], tortorInfo[2], tortorInfo[3], tortorInfo[4])
+                torsionTorsionForceBuilder.registerParams(tortorType, gridIndex)
                 nx = int(tortorInfo[5]) 
                 ny = int(tortorInfo[6])  
                 grid = np.array(gridData, dtype=np.float64).reshape((nx, ny, -1))
                 grid[:, :, 2] *= 4.184  
-                torsionTorsionForce.registerGridData(gridIndex, grid)
-            force = torsionTorsionForce.getForce(sys)
-            AmoebaTorsionTorsionForceBuilder.createTorsionTorsionInteractions(force, angles, self.atoms, self._forces["tortors"])
+                torsionTorsionForceBuilder.registerGridData(gridIndex, grid)
+            torsionTorsionForce = torsionTorsionForceBuilder.getForce(sys)
+            torsionTorsionForceBuilder.addTorsionTorsionInteractions(torsionTorsionForce, propers, atomClasses, [atom.mass for atom in self.atoms])
 
         # Add AmoebaVdwForce
         if "vdw" in self._forces:
             vdwForceBuilder = AmoebaVdwForceBuilder(self._scalars['vdwtype'], self._scalars['radiusrule'], self._scalars['radiustype'],
-                                            self._scalars['radiussize'], self._scalars['epsilonrule'], float(self._scalars['vdw-13-scale']),
-                                            float(self._scalars['vdw-14-scale']), float(self._scalars['vdw-15-scale']))
+                                                    self._scalars['radiussize'], self._scalars['epsilonrule'], float(self._scalars['vdw-13-scale']),
+                                                    float(self._scalars['vdw-14-scale']), float(self._scalars['vdw-15-scale']))
             for params in self._forces['vdw']:
                 reduction = 0.0 if len(params) < 4 else float(params[3])
                 vdwForceBuilder.registerClassParams(int(params[0]), float(params[1])*0.1, float(params[2])*4.184, reduction)
@@ -923,7 +740,6 @@ class TinkerFiles:
         # Add AmoebaGeneralizedKirkwoodForce
         if implicitSolvent and "multipole" in self._forces:
             gkForceBuilder = AmoebaGeneralizedKirkwoodForceBuilder(**self.GK_PARAMS)
-            force = gkForceBuilder.getForce(sys, implicitSolvent=implicitSolvent)
             multipoleForce = [f for f in sys.getForces() if isinstance(f, mm.AmoebaMultipoleForce)][0]
             for atomIndex in range(0, multipoleForce.getNumMultipoles()):
                 multipoleParameters = multipoleForce.getMultipoleParameters(atomIndex)
@@ -939,15 +755,12 @@ class TinkerFiles:
                 convert *= 1.122462048309372
             if self._scalars["radiussize"] == "DIAMETER":
                 convert *= 0.5
-            # Register VdW parameters for each atom class
             for vdw in self._forces["vdw"]:
                 atomClass = int(vdw[0])
                 sigma = float(vdw[1])*convert
                 epsilon = float(vdw[2])*4.184
                 wcaDispersionForceBuilder.registerParams(atomClass, sigma, epsilon)
-
             wcaDispersionForce = wcaDispersionForceBuilder.getForce(sys)
-            atomClasses = [int(atom.atomClass) for atom in self.atoms]
             wcaDispersionForceBuilder.addParticles(wcaDispersionForce, atomClasses)
 
         # Set periodic boundary conditions
@@ -972,7 +785,6 @@ class TinkerFiles:
             sys.addForce(mm.CMMotionRemover())
 
         return sys
-
 
     # ------------------------------------------------------------------------------------------ #
     #                                      TOPOLOGY FUNCTIONS                                    #
