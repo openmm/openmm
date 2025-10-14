@@ -84,7 +84,7 @@ them is with conda.  The following command will install everything needed to
 build OpenMM.
 ::
 
-    conda install -c conda-forge cmake make cython swig doxygen numpy
+    conda install -c conda-forge cmake make cython swig doxygen numpy setuptools
 
 Step 1: Configure with CMake
 ============================
