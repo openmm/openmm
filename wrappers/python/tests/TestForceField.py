@@ -804,6 +804,9 @@ class TestForceField(unittest.TestCase):
         forcefield = ForceField('amber99sb.xml', 'tip3p.xml', StringIO(simple_ffxml_contents))
         # Get list of unique unmatched residues.
         [templates, residues] = forcefield.generateTemplatesForUnmatchedResidues(pdb.topology)
+        # Make sure template atom parameter dictionaries are distinct objects.
+        parameters = [atom.parameters for template in templates for atom in template.atoms]
+        self.assertEqual(len(set(map(id, parameters))), len(parameters))
         # Add residue templates to forcefield.
         for template in templates:
             # Replace atom types.
@@ -1972,12 +1975,12 @@ class AmoebaTestForceField(unittest.TestCase):
 
         # Compare to values computed with Tinker.
 
-        self.assertAlmostEqual(290.2445, energies['AmoebaBond'], 4)
-        self.assertAlmostEqual(496.4300, energies['AmoebaAngle']+energies['AmoebaInPlaneAngle'], 4)
-        self.assertAlmostEqual(51.2913, energies['AmoebaOutOfPlaneBend'], 4)
-        self.assertAlmostEqual(5.7695, energies['AmoebaStretchBend'], 4)
+        self.assertAlmostEqual(290.2445, energies['AmoebaBondForce'], 4)
+        self.assertAlmostEqual(496.4300, energies['AmoebaAngleForce']+energies['AmoebaInPlaneAngleForce'], 4)
+        self.assertAlmostEqual(51.2913, energies['AmoebaOutOfPlaneBendForce'], 4)
+        self.assertAlmostEqual(5.7695, energies['AmoebaStretchBendForce'], 4)
         self.assertAlmostEqual(75.6890, energies['PeriodicTorsionForce'], 4)
-        self.assertAlmostEqual(19.3364, energies['AmoebaPiTorsion'], 4)
+        self.assertAlmostEqual(19.3364, energies['AmoebaPiTorsionForce'], 4)
         self.assertAlmostEqual(-32.6689, energies['AmoebaTorsionTorsionForce'], 4)
         self.assertAlmostEqual(383.8705, energies['AmoebaVdwForce'], 4)
         self.assertAlmostEqual(-1325.1825-224.6434, energies['AmoebaMultipoleForce'], 2)
@@ -1989,14 +1992,14 @@ class AmoebaTestForceField(unittest.TestCase):
 
         # Compare to values computed with Tinker.
 
-        self.assertAlmostEqual(749.6953, energies['AmoebaBond'], 4)
-        self.assertAlmostEqual(579.9971, energies['AmoebaAngle']+energies['AmoebaInPlaneAngle'], 4)
-        self.assertAlmostEqual(10.6630, energies['AmoebaOutOfPlaneBend'], 4)
-        self.assertAlmostEqual(5.2225, energies['AmoebaStretchBend'], 4)
+        self.assertAlmostEqual(749.6953, energies['AmoebaBondForce'], 4)
+        self.assertAlmostEqual(579.9971, energies['AmoebaAngleForce']+energies['AmoebaInPlaneAngleForce'], 4)
+        self.assertAlmostEqual(10.6630, energies['AmoebaOutOfPlaneBendForce'], 4)
+        self.assertAlmostEqual(5.2225, energies['AmoebaStretchBendForce'], 4)
         self.assertAlmostEqual(166.7233, energies['PeriodicTorsionForce'], 4)
-        self.assertAlmostEqual(57.2066, energies['AmoebaPiTorsion'], 4)
-        self.assertAlmostEqual(-4.2538, energies['AmoebaStretchTorsion'], 4)
-        self.assertAlmostEqual(-5.0402, energies['AmoebaAngleTorsion'], 4)
+        self.assertAlmostEqual(57.2066, energies['AmoebaPiTorsionForce'], 4)
+        self.assertAlmostEqual(-4.2538, energies['AmoebaStretchTorsionForce'], 4)
+        self.assertAlmostEqual(-5.0402, energies['AmoebaAngleTorsionForce'], 4)
         self.assertAlmostEqual(187.1103, energies['AmoebaVdwForce'], 4)
         self.assertAlmostEqual(1635.1289-236.1484, energies['AmoebaMultipoleForce'], 3)
         self.assertAlmostEqual(3146.3045, sum(list(energies.values())), 3)
