@@ -268,13 +268,25 @@ class TinkerFiles:
                 forces["tortors"] = []
             fields = allLines[lineIndex]
             tortorInfo = fields[1:]
-            lastGridLine = lineIndex + int(fields[6]) * int(fields[7])
+            nx = int(fields[6])
+            ny = int(fields[7])
+            totalGridPoints = nx * ny
             grid = []
-            while lineIndex < lastGridLine:
-                lineIndex += 1
-                grid.append(allLines[lineIndex])
-            forces["tortors"].append([tortorInfo, grid])
-            return lineIndex
+            currentLineIndex = lineIndex + 1
+            gridPointsProcessed = 0
+            while gridPointsProcessed < totalGridPoints and currentLineIndex < len(allLines):
+                lineFields = allLines[currentLineIndex]
+                i = 0
+                while i + 3 <= len(lineFields) and gridPointsProcessed < totalGridPoints:
+                    angle1 = lineFields[i]
+                    angle2 = lineFields[i + 1] 
+                    f = lineFields[i + 2]
+                    grid.append([angle1, angle2, f])
+                    gridPointsProcessed += 1
+                    i += 3
+                currentLineIndex += 1
+            forces['tortors'].append( [ tortorInfo, grid ] )
+            return (currentLineIndex - 1)
 
         RECOGNIZED_FORCES = {
             "bond": 1,

@@ -1,10 +1,10 @@
 <ForceField>
  <Info>
   <Source>amoebapro13.prm</Source>
-  <DateGenerated>2015-02-19</DateGenerated>
+  <DateGenerated>2025-10-10</DateGenerated>
   <Reference>Yue Shi, Zhen Xia, Jiajing Zhang, Robert Best, Chuanjie Wu, Jay W. Ponder, and Pengyu Ren. Polarizable Atomic Multipole-Based AMOEBA Force Field for Proteins. Journal of Chemical Theory and Computation, 9(9):4046–4063, 2013.</Reference>
  </Info>
- <AmoebaGeneralizedKirkwoodForce solventDielectric="78.3" soluteDielectric="1.0" includeCavityTerm="1" probeRadius="0.14" surfaceAreaFactor="-170.351730663">
+ <AmoebaGeneralizedKirkwoodForce solventDielectric="78.3" soluteDielectric="1.0" includeCavityTerm="1" probeRadius="0.14" surfaceAreaFactor="-170.35173066268223">
   <GeneralizedKirkwood type="1" charge="-0.22483" shct="0.79"  /> 
   <GeneralizedKirkwood type="2" charge="-0.09722" shct="0.72"  /> 
   <GeneralizedKirkwood type="2" charge="-0.31113" shct="0.72"  /> 
@@ -19,8 +19,8 @@
   <GeneralizedKirkwood type="8" charge="-0.17302" shct="0.72"  /> 
   <GeneralizedKirkwood type="8" charge="-0.36199" shct="0.72"  /> 
   <GeneralizedKirkwood type="8" charge="-0.11441" shct="0.72"  /> 
-  <GeneralizedKirkwood type="8" charge="0.04440" shct="0.72"  /> 
-  <GeneralizedKirkwood type="9" charge="0.81010" shct="0.72"  /> 
+  <GeneralizedKirkwood type="8" charge="0.0444" shct="0.72"  /> 
+  <GeneralizedKirkwood type="9" charge="0.8101" shct="0.72"  /> 
   <GeneralizedKirkwood type="9" charge="0.85003" shct="0.72"  /> 
   <GeneralizedKirkwood type="10" charge="0.12044" shct="0.85"  /> 
   <GeneralizedKirkwood type="10" charge="0.12637" shct="0.85"  /> 
@@ -52,7 +52,7 @@
   <GeneralizedKirkwood type="12" charge="0.08514" shct="0.85"  /> 
   <GeneralizedKirkwood type="12" charge="0.07834" shct="0.85"  /> 
   <GeneralizedKirkwood type="13" charge="-0.15959" shct="0.72"  /> 
-  <GeneralizedKirkwood type="14" charge="0.07420" shct="0.85"  /> 
+  <GeneralizedKirkwood type="14" charge="0.0742" shct="0.85"  /> 
   <GeneralizedKirkwood type="15" charge="-0.06548" shct="0.72"  /> 
   <GeneralizedKirkwood type="16" charge="0.07117" shct="0.85"  /> 
   <GeneralizedKirkwood type="17" charge="-0.16832" shct="0.72"  /> 
@@ -64,7 +64,7 @@
   <GeneralizedKirkwood type="23" charge="-0.17741" shct="0.72"  /> 
   <GeneralizedKirkwood type="24" charge="0.05874" shct="0.85"  /> 
   <GeneralizedKirkwood type="25" charge="-0.08555" shct="0.72"  /> 
-  <GeneralizedKirkwood type="26" charge="0.08230" shct="0.85"  /> 
+  <GeneralizedKirkwood type="26" charge="0.0823" shct="0.85"  /> 
   <GeneralizedKirkwood type="27" charge="-0.11939" shct="0.72"  /> 
   <GeneralizedKirkwood type="28" charge="0.07096" shct="0.85"  /> 
   <GeneralizedKirkwood type="29" charge="-0.17217" shct="0.72"  /> 
@@ -72,7 +72,7 @@
   <GeneralizedKirkwood type="31" charge="-0.16882" shct="0.72"  /> 
   <GeneralizedKirkwood type="32" charge="0.06001" shct="0.85"  /> 
   <GeneralizedKirkwood type="33" charge="0.16229" shct="0.72"  /> 
-  <GeneralizedKirkwood type="34" charge="0.05600" shct="0.85"  /> 
+  <GeneralizedKirkwood type="34" charge="0.056" shct="0.85"  /> 
   <GeneralizedKirkwood type="35" charge="-0.44145" shct="0.85"  /> 
   <GeneralizedKirkwood type="36" charge="0.23017" shct="0.85"  /> 
   <GeneralizedKirkwood type="37" charge="0.10834" shct="0.72"  /> 
@@ -90,18 +90,20 @@
   <GeneralizedKirkwood type="46" charge="0.10947" shct="0.85"  /> 
   <GeneralizedKirkwood type="47" charge="0.07683" shct="0.96"  /> 
   <GeneralizedKirkwood type="48" charge="-0.23113" shct="0.72"  /> 
+  <GeneralizedKirkwood type="48" charge="0.60118" shct="0.72"  /> 
   <GeneralizedKirkwood type="49" charge="-0.85155" shct="0.96"  /> 
   <GeneralizedKirkwood type="50" charge="-0.13558" shct="0.79"  /> 
-  <GeneralizedKirkwood type="51" charge="-0.26070" shct="0.72"  /> 
-  <GeneralizedKirkwood type="52" charge="0.90470" shct="0.72"  /> 
+  <GeneralizedKirkwood type="51" charge="-0.2607" shct="0.72"  /> 
+  <GeneralizedKirkwood type="51" charge="-0.37342" shct="0.72"  /> 
+  <GeneralizedKirkwood type="52" charge="0.9047" shct="0.72"  /> 
   <GeneralizedKirkwood type="53" charge="-0.76984" shct="0.85"  /> 
-  <GeneralizedKirkwood type="54" charge="0.09550" shct="0.85"  /> 
+  <GeneralizedKirkwood type="54" charge="0.0955" shct="0.85"  /> 
   <GeneralizedKirkwood type="55" charge="-0.13205" shct="0.72"  /> 
-  <GeneralizedKirkwood type="55" charge="-0.12680" shct="0.72"  /> 
+  <GeneralizedKirkwood type="55" charge="-0.1268" shct="0.72"  /> 
   <GeneralizedKirkwood type="56" charge="0.09686" shct="0.85"  /> 
-  <GeneralizedKirkwood type="56" charge="0.11510" shct="0.85"  /> 
+  <GeneralizedKirkwood type="56" charge="0.1151" shct="0.85"  /> 
   <GeneralizedKirkwood type="57" charge="-0.16591" shct="0.72"  /> 
-  <GeneralizedKirkwood type="57" charge="-0.14420" shct="0.72"  /> 
+  <GeneralizedKirkwood type="57" charge="-0.1442" shct="0.72"  /> 
   <GeneralizedKirkwood type="58" charge="0.08886" shct="0.85"  /> 
   <GeneralizedKirkwood type="58" charge="0.12121" shct="0.85"  /> 
   <GeneralizedKirkwood type="59" charge="-0.03932" shct="0.72"  /> 
@@ -121,19 +123,19 @@
   <GeneralizedKirkwood type="73" charge="0.07134" shct="0.72"  /> 
   <GeneralizedKirkwood type="74" charge="0.00345" shct="0.85"  /> 
   <GeneralizedKirkwood type="75" charge="-0.12512" shct="0.72"  /> 
-  <GeneralizedKirkwood type="76" charge="0.01090" shct="0.85"  /> 
+  <GeneralizedKirkwood type="76" charge="0.0109" shct="0.85"  /> 
   <GeneralizedKirkwood type="77" charge="0.35744" shct="0.72"  /> 
   <GeneralizedKirkwood type="78" charge="-0.46438" shct="0.85"  /> 
   <GeneralizedKirkwood type="79" charge="0.22899" shct="0.85"  /> 
   <GeneralizedKirkwood type="80" charge="-0.14909" shct="0.72"  /> 
   <GeneralizedKirkwood type="81" charge="0.07954" shct="0.85"  /> 
-  <GeneralizedKirkwood type="82" charge="-0.21590" shct="0.72"  /> 
+  <GeneralizedKirkwood type="82" charge="-0.2159" shct="0.72"  /> 
   <GeneralizedKirkwood type="83" charge="-0.04549" shct="0.72"  /> 
   <GeneralizedKirkwood type="84" charge="0.01759" shct="0.85"  /> 
   <GeneralizedKirkwood type="85" charge="-0.15892" shct="0.72"  /> 
   <GeneralizedKirkwood type="86" charge="-0.03324" shct="0.85"  /> 
   <GeneralizedKirkwood type="87" charge="0.62054" shct="0.72"  /> 
-  <GeneralizedKirkwood type="88" charge="-0.91150" shct="0.85"  /> 
+  <GeneralizedKirkwood type="88" charge="-0.9115" shct="0.85"  /> 
   <GeneralizedKirkwood type="89" charge="-0.16339" shct="0.72"  /> 
   <GeneralizedKirkwood type="90" charge="0.08819" shct="0.85"  /> 
   <GeneralizedKirkwood type="91" charge="-0.14846" shct="0.72"  /> 
@@ -154,7 +156,7 @@
   <GeneralizedKirkwood type="106" charge="-0.10044" shct="0.72"  /> 
   <GeneralizedKirkwood type="107" charge="0.11241" shct="0.85"  /> 
   <GeneralizedKirkwood type="108" charge="0.16205" shct="0.72"  /> 
-  <GeneralizedKirkwood type="109" charge="-0.10600" shct="0.79"  /> 
+  <GeneralizedKirkwood type="109" charge="-0.106" shct="0.79"  /> 
   <GeneralizedKirkwood type="110" charge="0.20247" shct="0.85"  /> 
   <GeneralizedKirkwood type="111" charge="0.04476" shct="0.72"  /> 
   <GeneralizedKirkwood type="112" charge="0.08897" shct="0.85"  /> 
@@ -164,21 +166,21 @@
   <GeneralizedKirkwood type="116" charge="0.14211" shct="0.85"  /> 
   <GeneralizedKirkwood type="117" charge="-0.10846" shct="0.72"  /> 
   <GeneralizedKirkwood type="118" charge="0.08849" shct="0.85"  /> 
-  <GeneralizedKirkwood type="119" charge="0.04660" shct="0.72"  /> 
+  <GeneralizedKirkwood type="119" charge="0.0466" shct="0.72"  /> 
   <GeneralizedKirkwood type="120" charge="-0.16996" shct="0.79"  /> 
-  <GeneralizedKirkwood type="121" charge="0.13110" shct="0.85"  /> 
+  <GeneralizedKirkwood type="121" charge="0.1311" shct="0.85"  /> 
   <GeneralizedKirkwood type="122" charge="0.08866" shct="0.72"  /> 
   <GeneralizedKirkwood type="123" charge="0.02049" shct="0.85"  /> 
   <GeneralizedKirkwood type="124" charge="0.34991" shct="0.72"  /> 
   <GeneralizedKirkwood type="125" charge="0.03404" shct="0.85"  /> 
   <GeneralizedKirkwood type="126" charge="-0.50635" shct="0.79"  /> 
   <GeneralizedKirkwood type="127" charge="-0.11338" shct="0.72"  /> 
-  <GeneralizedKirkwood type="128" charge="0.08990" shct="0.85"  /> 
+  <GeneralizedKirkwood type="128" charge="0.0899" shct="0.85"  /> 
   <GeneralizedKirkwood type="129" charge="0.20611" shct="0.72"  /> 
   <GeneralizedKirkwood type="130" charge="-0.56975" shct="0.79"  /> 
   <GeneralizedKirkwood type="131" charge="-0.02289" shct="0.72"  /> 
   <GeneralizedKirkwood type="132" charge="0.03876" shct="0.85"  /> 
-  <GeneralizedKirkwood type="133" charge="0.33110" shct="0.72"  /> 
+  <GeneralizedKirkwood type="133" charge="0.3311" shct="0.72"  /> 
   <GeneralizedKirkwood type="134" charge="0.03651" shct="0.85"  /> 
   <GeneralizedKirkwood type="135" charge="-0.13121" shct="0.79"  /> 
   <GeneralizedKirkwood type="136" charge="0.10796" shct="0.85"  /> 
@@ -201,16 +203,16 @@
   <GeneralizedKirkwood type="153" charge="-0.10324" shct="0.72"  /> 
   <GeneralizedKirkwood type="154" charge="0.06492" shct="0.85"  /> 
   <GeneralizedKirkwood type="155" charge="-0.35416" shct="0.72"  /> 
-  <GeneralizedKirkwood type="156" charge="0.06420" shct="0.85"  /> 
+  <GeneralizedKirkwood type="156" charge="0.0642" shct="0.85"  /> 
   <GeneralizedKirkwood type="157" charge="1.05691" shct="0.72"  /> 
   <GeneralizedKirkwood type="158" charge="-0.89737" shct="0.85"  /> 
   <GeneralizedKirkwood type="159" charge="-0.10668" shct="0.72"  /> 
   <GeneralizedKirkwood type="160" charge="0.09513" shct="0.85"  /> 
   <GeneralizedKirkwood type="161" charge="-0.23637" shct="0.72"  /> 
-  <GeneralizedKirkwood type="162" charge="0.10600" shct="0.85"  /> 
+  <GeneralizedKirkwood type="162" charge="0.106" shct="0.85"  /> 
   <GeneralizedKirkwood type="163" charge="0.90086" shct="0.72"  /> 
   <GeneralizedKirkwood type="164" charge="-0.60677" shct="0.85"  /> 
-  <GeneralizedKirkwood type="165" charge="-0.53100" shct="0.85"  /> 
+  <GeneralizedKirkwood type="165" charge="-0.531" shct="0.85"  /> 
   <GeneralizedKirkwood type="166" charge="0.24071" shct="0.85"  /> 
   <GeneralizedKirkwood type="167" charge="-0.07575" shct="0.72"  /> 
   <GeneralizedKirkwood type="168" charge="0.09458" shct="0.85"  /> 
@@ -224,7 +226,7 @@
   <GeneralizedKirkwood type="176" charge="0.08383" shct="0.85"  /> 
   <GeneralizedKirkwood type="177" charge="-0.22038" shct="0.72"  /> 
   <GeneralizedKirkwood type="178" charge="0.07884" shct="0.85"  /> 
-  <GeneralizedKirkwood type="179" charge="0.14780" shct="0.96"  /> 
+  <GeneralizedKirkwood type="179" charge="0.1478" shct="0.96"  /> 
   <GeneralizedKirkwood type="180" charge="-0.21776" shct="0.72"  /> 
   <GeneralizedKirkwood type="181" charge="0.05672" shct="0.85"  /> 
   <GeneralizedKirkwood type="182" charge="-0.08975" shct="0.72"  /> 
@@ -235,20 +237,20 @@
   <GeneralizedKirkwood type="187" charge="0.07982" shct="0.85"  /> 
   <GeneralizedKirkwood type="188" charge="-0.01637" shct="0.72"  /> 
   <GeneralizedKirkwood type="189" charge="0.09822" shct="0.85"  /> 
-  <GeneralizedKirkwood type="190" charge="0.10000" shct="0.79"  /> 
+  <GeneralizedKirkwood type="190" charge="0.1" shct="0.79"  /> 
   <GeneralizedKirkwood type="191" charge="0.20727" shct="0.85"  /> 
-  <GeneralizedKirkwood type="192" charge="-0.14610" shct="0.72"  /> 
-  <GeneralizedKirkwood type="193" charge="0.06260" shct="0.85"  /> 
+  <GeneralizedKirkwood type="192" charge="-0.1461" shct="0.72"  /> 
+  <GeneralizedKirkwood type="193" charge="0.0626" shct="0.85"  /> 
   <GeneralizedKirkwood type="194" charge="-0.13934" shct="0.72"  /> 
   <GeneralizedKirkwood type="195" charge="0.07212" shct="0.85"  /> 
   <GeneralizedKirkwood type="196" charge="-0.12642" shct="0.72"  /> 
   <GeneralizedKirkwood type="197" charge="0.06261" shct="0.85"  /> 
   <GeneralizedKirkwood type="198" charge="0.04761" shct="0.72"  /> 
   <GeneralizedKirkwood type="199" charge="0.02822" shct="0.85"  /> 
-  <GeneralizedKirkwood type="200" charge="-0.20360" shct="0.79"  /> 
+  <GeneralizedKirkwood type="200" charge="-0.2036" shct="0.79"  /> 
   <GeneralizedKirkwood type="201" charge="0.08988" shct="0.85"  /> 
   <GeneralizedKirkwood type="202" charge="-0.09097" shct="0.72"  /> 
-  <GeneralizedKirkwood type="203" charge="0.07770" shct="0.85"  /> 
+  <GeneralizedKirkwood type="203" charge="0.0777" shct="0.85"  /> 
   <GeneralizedKirkwood type="204" charge="-0.21722" shct="0.72"  /> 
   <GeneralizedKirkwood type="205" charge="0.08258" shct="0.85"  /> 
   <GeneralizedKirkwood type="206" charge="-0.01121" shct="0.72"  /> 
@@ -264,25 +266,25 @@
   <GeneralizedKirkwood type="216" charge="0.08368" shct="0.85"  /> 
   <GeneralizedKirkwood type="217" charge="-0.01249" shct="0.72"  /> 
   <GeneralizedKirkwood type="218" charge="0.10208" shct="0.85"  /> 
-  <GeneralizedKirkwood type="219" charge="0.10000" shct="0.79"  /> 
+  <GeneralizedKirkwood type="219" charge="0.1" shct="0.79"  /> 
   <GeneralizedKirkwood type="220" charge="0.20727" shct="0.85"  /> 
   <GeneralizedKirkwood type="221" charge="-0.19058" shct="0.72"  /> 
   <GeneralizedKirkwood type="222" charge="0.07778" shct="0.85"  /> 
   <GeneralizedKirkwood type="223" charge="0.68484" shct="0.72"  /> 
-  <GeneralizedKirkwood type="224" charge="-0.72760" shct="0.85"  /> 
+  <GeneralizedKirkwood type="224" charge="-0.7276" shct="0.85"  /> 
   <GeneralizedKirkwood type="225" charge="-0.30948" shct="0.79"  /> 
   <GeneralizedKirkwood type="226" charge="0.15474" shct="0.85"  /> 
   <GeneralizedKirkwood type="227" charge="-0.26804" shct="0.79"  /> 
   <GeneralizedKirkwood type="228" charge="0.11919" shct="0.85"  /> 
-  <GeneralizedKirkwood type="229" charge="-0.00970" shct="0.72"  /> 
+  <GeneralizedKirkwood type="229" charge="-0.0097" shct="0.72"  /> 
   <GeneralizedKirkwood type="230" charge="0.05285" shct="0.85"  /> 
   <GeneralizedKirkwood type="231" charge="0.07891" shct="0.79"  /> 
   <GeneralizedKirkwood type="231" charge="0.11164" shct="0.79"  /> 
   <GeneralizedKirkwood type="231" charge="0.11164" shct="0.79"  /> 
-  <GeneralizedKirkwood type="232" charge="0.26670" shct="0.85"  /> 
-  <GeneralizedKirkwood type="232" charge="0.21240" shct="0.85"  /> 
-  <GeneralizedKirkwood type="232" charge="0.21240" shct="0.85"  /> 
-  <GeneralizedKirkwood type="233" charge="1.02670" shct="0.72"  /> 
+  <GeneralizedKirkwood type="232" charge="0.2667" shct="0.85"  /> 
+  <GeneralizedKirkwood type="232" charge="0.2124" shct="0.85"  /> 
+  <GeneralizedKirkwood type="232" charge="0.2124" shct="0.85"  /> 
+  <GeneralizedKirkwood type="233" charge="1.0267" shct="0.72"  /> 
   <GeneralizedKirkwood type="234" charge="-0.88956" shct="0.85"  /> 
   <GeneralizedKirkwood type="235" charge="0.92336" shct="0.72"  /> 
   <GeneralizedKirkwood type="235" charge="0.83309" shct="0.72"  /> 
@@ -302,18 +304,23 @@
   <GeneralizedKirkwood type="246" charge="0.10559" shct="0.85"  /> 
   <GeneralizedKirkwood type="247" charge="-0.51966" shct="0.85"  /> 
   <GeneralizedKirkwood type="248" charge="0.25983" shct="0.85"  /> 
-  <GeneralizedKirkwood type="249" charge="1.00000" shct="0.8"  /> 
-  <GeneralizedKirkwood type="250" charge="1.00000" shct="0.8"  /> 
-  <GeneralizedKirkwood type="251" charge="1.00000" shct="0.8"  /> 
-  <GeneralizedKirkwood type="252" charge="1.00000" shct="0.8"  /> 
-  <GeneralizedKirkwood type="253" charge="1.00000" shct="0.8"  /> 
-  <GeneralizedKirkwood type="254" charge="2.00000" shct="0.8"  /> 
-  <GeneralizedKirkwood type="255" charge="2.00000" shct="0.8"  /> 
-  <GeneralizedKirkwood type="256" charge="2.00000" shct="0.8"  /> 
-  <GeneralizedKirkwood type="257" charge="2.00000" shct="0.8"  /> 
-  <GeneralizedKirkwood type="258" charge="-1.00000" shct="0.8"  /> 
+  <GeneralizedKirkwood type="249" charge="1.0" shct="0.8"  /> 
+  <GeneralizedKirkwood type="250" charge="1.0" shct="0.8"  /> 
+  <GeneralizedKirkwood type="251" charge="1.0" shct="0.8"  /> 
+  <GeneralizedKirkwood type="252" charge="1.0" shct="0.8"  /> 
+  <GeneralizedKirkwood type="253" charge="1.0" shct="0.8"  /> 
+  <GeneralizedKirkwood type="254" charge="2.0" shct="0.8"  /> 
+  <GeneralizedKirkwood type="255" charge="2.0" shct="0.8"  /> 
+  <GeneralizedKirkwood type="256" charge="2.0" shct="0.8"  /> 
+  <GeneralizedKirkwood type="257" charge="2.0" shct="0.8"  /> 
+  <GeneralizedKirkwood type="258" charge="2.0" shct="0.8"  /> 
+  <GeneralizedKirkwood type="259" charge="2.0" shct="0.8"  /> 
+  <GeneralizedKirkwood type="260" charge="-1.0" shct="0.88"  /> 
+  <GeneralizedKirkwood type="261" charge="-1.0" shct="0.8"  /> 
+  <GeneralizedKirkwood type="262" charge="-1.0" shct="0.8"  /> 
+  <GeneralizedKirkwood type="263" charge="-1.0" shct="0.8"  /> 
  </AmoebaGeneralizedKirkwoodForce>
- <AmoebaWcaDispersionForce epso="0.46024" epsh="0.056484" rmino="0.17025" rminh="0.13275" awater="33.428" slevy="1.0"  dispoff="0.026" shctd="0.81" >
+ <AmoebaWcaDispersionForce epso="0.46024000000000004" epsh="0.056484" rmino="0.17025" rminh="0.13275" awater="33.428" slevy="1.0"  dispoff="0.026000000000000002" shctd="0.81" >
   <WcaDispersion class="1" radius="0.1855" epsilon="0.46024" /> 
   <WcaDispersion class="2" radius="0.191" epsilon="0.422584" /> 
   <WcaDispersion class="3" radius="0.191" epsilon="0.443504" /> 
@@ -334,6 +341,7 @@
   <WcaDispersion class="18" radius="0.149" epsilon="0.108784" /> 
   <WcaDispersion class="19" radius="0.17025" epsilon="0.46024" /> 
   <WcaDispersion class="20" radius="0.13275" epsilon="0.056484" /> 
+  <WcaDispersion class="21" radius="0.166" epsilon="0.468608" /> 
   <WcaDispersion class="22" radius="0.19" epsilon="0.422584" /> 
   <WcaDispersion class="23" radius="0.149" epsilon="0.108784" /> 
   <WcaDispersion class="24" radius="0.1855" epsilon="0.46024" /> 
@@ -343,7 +351,7 @@
   <WcaDispersion class="28" radius="0.19" epsilon="0.422584" /> 
   <WcaDispersion class="29" radius="0.1855" epsilon="0.46024" /> 
   <WcaDispersion class="30" radius="0.191" epsilon="0.443504" /> 
-  <WcaDispersion class="31" radius="0.185" epsilon="0.539736" /> 
+  <WcaDispersion class="31" radius="0.1775" epsilon="0.39748" /> 
   <WcaDispersion class="32" radius="0.191" epsilon="0.443504" /> 
   <WcaDispersion class="33" radius="0.165" epsilon="0.468608" /> 
   <WcaDispersion class="34" radius="0.17025" epsilon="0.46024" /> 
@@ -357,15 +365,20 @@
   <WcaDispersion class="42" radius="0.135" epsilon="0.08368" /> 
   <WcaDispersion class="43" radius="0.17025" epsilon="0.46024" /> 
   <WcaDispersion class="44" radius="0.13275" epsilon="0.056484" /> 
-  <WcaDispersion class="45" radius="0.119" epsilon="0.33472" /> 
-  <WcaDispersion class="46" radius="0.151" epsilon="1.08784" /> 
-  <WcaDispersion class="47" radius="0.1855" epsilon="1.4644" /> 
-  <WcaDispersion class="48" radius="0.207" epsilon="1.84096" /> 
-  <WcaDispersion class="49" radius="0.2185" epsilon="2.21752" /> 
+  <WcaDispersion class="45" radius="0.11" epsilon="0.276144" /> 
+  <WcaDispersion class="46" radius="0.14775" epsilon="1.17152" /> 
+  <WcaDispersion class="47" radius="0.184" epsilon="1.4644" /> 
+  <WcaDispersion class="48" radius="0.195" epsilon="1.58992" /> 
+  <WcaDispersion class="49" radius="0.207" epsilon="1.75728" /> 
   <WcaDispersion class="50" radius="0.094" epsilon="0.380744" /> 
-  <WcaDispersion class="51" radius="0.147" epsilon="1.2552" /> 
-  <WcaDispersion class="52" radius="0.1815" epsilon="1.4644" /> 
-  <WcaDispersion class="53" radius="0.134" epsilon="0.928848" /> 
-  <WcaDispersion class="54" radius="0.2065" epsilon="1.42256" /> 
+  <WcaDispersion class="51" radius="0.145" epsilon="1.17152" /> 
+  <WcaDispersion class="52" radius="0.1795" epsilon="1.4644" /> 
+  <WcaDispersion class="53" radius="0.1935" epsilon="1.61084" /> 
+  <WcaDispersion class="54" radius="0.21" epsilon="1.75728" /> 
+  <WcaDispersion class="55" radius="0.134" epsilon="0.928848" /> 
+  <WcaDispersion class="56" radius="0.1715" epsilon="1.046" /> 
+  <WcaDispersion class="57" radius="0.206" epsilon="1.42256" /> 
+  <WcaDispersion class="58" radius="0.216" epsilon="1.79912" /> 
+  <WcaDispersion class="59" radius="0.2305" epsilon="2.17568" /> 
  </AmoebaWcaDispersionForce>
 </ForceField>

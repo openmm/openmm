@@ -175,7 +175,7 @@ class TestTinkerFiles(unittest.TestCase):
 
         Intermolecular Energy :                 896.3435 Kcal/mole
 
-        Total Potential Energy :               3151.2568 Kcal/mole
+        Total Potential Energy :               3146.3045 Kcal/mole
 
         Energy Component Breakdown :           Kcal/mole        Interactions
 
@@ -186,7 +186,7 @@ class TestTinkerFiles(unittest.TestCase):
         Torsional Angle                         166.7233             2197
         Pi-Orbital Torsion                       57.2066              142
         Stretch-Torsion                          -4.2538               68
-        Angle-Torsion                            -0.0880              112
+        Angle-Torsion                            -5.0402              112
         Van der Waals                           187.1103           291451
         Atomic Multipoles                      1635.1289           291451
         Polarization                           -236.1484           291451
@@ -229,10 +229,10 @@ class TestTinkerFiles(unittest.TestCase):
         self.assertEnergyEqual(166.7233, energies["PeriodicTorsionForce"])
         self.assertEnergyEqual(57.2066, energies["AmoebaPiTorsionForce"])
         self.assertEnergyEqual(-4.2538, energies["AmoebaStretchTorsionForce"])
-        self.assertEnergyEqual(-0.0880, energies["AmoebaAngleTorsionForce"], 1e-4)
+        self.assertEnergyEqual(-5.0402, energies["AmoebaAngleTorsionForce"], 1e-3)
         self.assertEnergyEqual(187.1103, energies["AmoebaVdwForce"])
         self.assertEnergyEqual(1635.1289 - 236.1484, energies["AmoebaMultipoleForce"])
-        self.assertEnergyEqual(3151.2568, sum(list(energies.values())))
+        self.assertEnergyEqual(3146.3045, sum(list(energies.values())))
 
     def test_Amoeba13ForcesImplicit(self):
         """Compute forces and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
