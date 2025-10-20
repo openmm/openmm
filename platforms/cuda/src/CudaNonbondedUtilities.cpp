@@ -421,16 +421,16 @@ void CudaNonbondedUtilities::initParamArgs() {
 }
 
 void CudaNonbondedUtilities::computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) {
-    if ((forceGroups&groupFlags) == 0)
-        return;
-    KernelSet& kernels = groupKernels[forceGroups];
-    if (kernels.hasForces) {
-        CUfunction& kernel = (includeForces ? (includeEnergy ? kernels.forceEnergyKernel : kernels.forceKernel) : kernels.energyKernel);
-        if (kernel == NULL)
-            kernel = createInteractionKernel(kernels.source, parameters, arguments, true, true, forceGroups, includeForces, includeEnergy);
-        if (!hasInitializedParams)
-            initParamArgs();
-        context.executeKernel(kernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+    if ((forceGroups&groupFlags) != 0) {
+        KernelSet& kernels = groupKernels[forceGroups];
+        if (kernels.hasForces) {
+            CUfunction& kernel = (includeForces ? (includeEnergy ? kernels.forceEnergyKernel : kernels.forceKernel) : kernels.energyKernel);
+            if (kernel == NULL)
+                kernel = createInteractionKernel(kernels.source, parameters, arguments, true, true, forceGroups, includeForces, includeEnergy);
+            if (!hasInitializedParams)
+                initParamArgs();
+            context.executeKernel(kernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+        }
     }
     if (useNeighborList && numTiles > 0) {
         cuEventSynchronize(downloadCountEvent);
