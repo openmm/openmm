@@ -1020,7 +1020,9 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
 
     // Create a post computation object to avoid caching solutions if forces
     // are invalid (e.g., due to the neighbor list needing to be resized).
-    cc.addPostComputation(new InvalidatePostComputation(cc, solver));
+    if (hasElectrodes) {
+        cc.addPostComputation(new InvalidatePostComputation(cc, solver));
+    }
 }
 
 void CommonCalcConstantPotentialForceKernel::copyParametersToContext(ContextImpl& context, const ConstantPotentialForce& force, int firstParticle, int lastParticle, int firstException, int lastException, int firstElectrode, int lastElectrode) {
@@ -1719,7 +1721,9 @@ void CommonCalcConstantPotentialForceKernel::ensureValidNeighborList() {
         cc.getNonbondedUtilities().computeInteractions(0, false, false);
     } while(!cc.getForcesValid());
 
-    evaluateDirectDerivativesKernel->setArg(17, (unsigned int) cc.getNonbondedUtilities().getInteractingTiles().getSize());
+    if (hasElectrodes) {
+        evaluateDirectDerivativesKernel->setArg(17, (unsigned int) cc.getNonbondedUtilities().getInteractingTiles().getSize());
+    }
 
     // Restore the old value of the flag.
     cc.setForcesValid(oldForcesValid);
