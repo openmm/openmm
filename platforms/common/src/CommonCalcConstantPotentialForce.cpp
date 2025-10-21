@@ -1718,7 +1718,7 @@ void CommonCalcConstantPotentialForceKernel::ensureValidNeighborList() {
         // getForcesValid() will return false after computeInteractions() completes.
         cc.setForcesValid(true);
         cc.getNonbondedUtilities().prepareInteractions(1 << forceGroup);
-        cc.getNonbondedUtilities().computeInteractions(0, false, false);
+        cc.getNonbondedUtilities().computeInteractions(1 << forceGroup, false, false);
     } while(!cc.getForcesValid());
 
     if (hasElectrodes) {

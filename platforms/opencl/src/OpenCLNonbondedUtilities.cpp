@@ -372,26 +372,25 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
 }
 
 void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) {
-    if ((forceGroups&groupFlags) != 0) {
-        KernelSet& kernels = groupKernels[forceGroups];
-        if (kernels.hasForces) {
-            if (isAMD)
-                context.getQueue().flush();
-            cl::Kernel& kernel = (includeForces ? (includeEnergy ? kernels.forceEnergyKernel : kernels.forceKernel) : kernels.energyKernel);
-            if (*reinterpret_cast<cl_kernel*>(&kernel) == NULL)
-                kernel = createInteractionKernel(kernels.source, parameters, arguments, true, true, forceGroups, includeForces, includeEnergy);
-            if (useCutoff)
-                setPeriodicBoxArgs(context, kernel, 9);
-            context.executeKernel(kernel, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
-            #if __APPLE__ && defined(__aarch64__)
-            if (useNeighborList && numTiles > 0) {
-                // Ensure cached up work executes while you're waiting.
-                context.getQueue().flush();
-            }
-            #endif
-        }
+    if ((forceGroups&groupFlags) == 0)
+        return;
+    KernelSet& kernels = groupKernels[forceGroups];
+    if (kernels.hasForces && (includeForces || includeEnergy)) {
+        if (isAMD)
+            context.getQueue().flush();
+        cl::Kernel& kernel = (includeForces ? (includeEnergy ? kernels.forceEnergyKernel : kernels.forceKernel) : kernels.energyKernel);
+        if (*reinterpret_cast<cl_kernel*>(&kernel) == NULL)
+            kernel = createInteractionKernel(kernels.source, parameters, arguments, true, true, forceGroups, includeForces, includeEnergy);
+        if (useCutoff)
+            setPeriodicBoxArgs(context, kernel, 9);
+        context.executeKernel(kernel, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     if (useNeighborList && numTiles > 0) {
+        #if __APPLE__ && defined(__aarch64__)
+        // Ensure cached up work executes while you're waiting.
+        if (kernels.hasForces)
+            context.getQueue().flush();
+        #endif
         downloadCountEvent.wait();
         updateNeighborListSize();
     }
