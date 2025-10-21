@@ -1257,6 +1257,7 @@ void testLargeNeighborList(ConstantPotentialForce::ConstantPotentialMethod metho
     force->setUsePreconditioner(usePreconditioner);
     force->setUseChargeConstraint(true);
     force->setCutoffDistance(1.4);
+    force->setCGErrorTolerance(5e-4);
     system.addForce(force);
 
     vector<Vec3> positions;
