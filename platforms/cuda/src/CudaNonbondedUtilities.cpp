@@ -424,7 +424,7 @@ void CudaNonbondedUtilities::computeInteractions(int forceGroups, bool includeFo
     if ((forceGroups&groupFlags) == 0)
         return;
     KernelSet& kernels = groupKernels[forceGroups];
-    if (kernels.hasForces) {
+    if (kernels.hasForces && (includeForces || includeEnergy)) {
         CUfunction& kernel = (includeForces ? (includeEnergy ? kernels.forceEnergyKernel : kernels.forceKernel) : kernels.energyKernel);
         if (kernel == NULL)
             kernel = createInteractionKernel(kernels.source, parameters, arguments, true, true, forceGroups, includeForces, includeEnergy);

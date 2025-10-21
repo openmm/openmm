@@ -290,6 +290,7 @@ private:
     void initPmeExecute();
     void pmeExecute(bool includeEnergy, bool includeForces, bool includeChargeDerivatives, bool init = true);
     void setKernelInputs(bool includeEnergy, bool includeForces);
+    void ensureValidNeighborList();
     class SortTrait : public ComputeSortImpl::SortTrait {
         int getDataSize() const {return 8;}
         int getKeySize() const {return 4;}
@@ -302,6 +303,7 @@ private:
     };
     class ForceInfo;
     class ReorderListener;
+    class InvalidatePostComputation;
     ComputeContext& cc;
     ForceInfo* info;
     CommonConstantPotentialSolver* solver;

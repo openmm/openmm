@@ -1242,6 +1242,61 @@ void testCompareToReferencePlatform(ConstantPotentialForce::ConstantPotentialMet
     compareToReferencePlatform(system, force, positions);
 }
 
+void testLargeNeighborList(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner) {
+    // Runs a test where the initial neighbor list should overflow on GPU platforms.
+
+    const int n = 9;
+    const double l = 3.0;
+    const double scale = l / n;
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(l, 0, 0), Vec3(0, l, 0), Vec3(0, 0, l));
+
+    ConstantPotentialForce* force = new ConstantPotentialForce();
+    force->setConstantPotentialMethod(method);
+    force->setUsePreconditioner(usePreconditioner);
+    force->setUseChargeConstraint(true);
+    force->setCutoffDistance(1.4);
+    force->setCGErrorTolerance(5e-4);
+    system.addForce(force);
+
+    vector<Vec3> positions;
+    set<int> electrodeParticles;
+    for (int ix = 0; ix < n; ix++) {
+        for (int iy = 0; iy < n; iy++) {
+            for (int iz = 0; iz < n; iz++) {
+                positions.push_back(scale * Vec3(ix, iy, iz));
+                positions.push_back(scale * Vec3(ix + 0.5, iy + 0.5, iz + 0.5));
+                electrodeParticles.insert(system.addParticle(0.0));
+                system.addParticle(0.0);
+                force->addParticle(0.0);
+                force->addParticle(1.0);
+            }
+        }
+    }
+    force->addElectrode(electrodeParticles, 0.0, 0.01, 0.0);
+
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+
+    // Get charges: if the neighbor list is incomplete, they will not be uniformly equal to -1.
+    vector<double> charges;
+    force->getCharges(context, charges);
+    for (int i : electrodeParticles) {
+        ASSERT_EQUAL_TOL(-1.0, charges[i], 2e-3);
+    }
+
+    // Run again, this time doing an energy/force calculation before getting charges.
+    context.reinitialize();
+    context.setPositions(positions);
+    context.getState(State::Energy | State::Forces);
+    force->getCharges(context, charges);
+    for (int i : electrodeParticles) {
+        ASSERT_EQUAL_TOL(-1.0, charges[i], 2e-3);
+    }
+}
+
 void platformInitialize();
 void runPlatformTests(ConstantPotentialForce::ConstantPotentialMethod method, bool usePreconditioner);
 

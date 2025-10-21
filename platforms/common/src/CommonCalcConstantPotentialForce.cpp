@@ -129,6 +129,21 @@ private:
     vector<ComputeArray*> chargeArrays;
 };
 
+class CommonCalcConstantPotentialForceKernel::InvalidatePostComputation : public ComputeContext::ForcePostComputation {
+public:
+    InvalidatePostComputation(ComputeContext& cc, CommonConstantPotentialSolver* solver) : cc(cc), solver(solver) {
+    }
+    double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        if(!cc.getForcesValid()) {
+            solver->discardSavedSolution();
+        }
+        return 0.0;
+    }
+private:
+    ComputeContext& cc;
+    CommonConstantPotentialSolver* solver;
+};
+
 CommonConstantPotentialSolver::CommonConstantPotentialSolver(ComputeContext& cc, int numParticles, int numElectrodeParticles, int paddedProblemSize) :
     numParticles(numParticles),
     numElectrodeParticles(numElectrodeParticles),
@@ -290,6 +305,9 @@ void CommonConstantPotentialMatrixSolver::ensureValid(CommonCalcConstantPotentia
     if (valid) {
         return;
     }
+
+    // We must have a valid neighbor list before populating the matrix.
+    kernel.ensureValidNeighborList();
 
     // Store the current box vectors and electrode positions before updating the
     // capacitance matrix.
@@ -999,6 +1017,12 @@ void CommonCalcConstantPotentialForceKernel::commonInitialize(const System& syst
         }
     }
     cc.addReorderListener(listener);
+
+    // Create a post computation object to avoid caching solutions if forces
+    // are invalid (e.g., due to the neighbor list needing to be resized).
+    if (hasElectrodes) {
+        cc.addPostComputation(new InvalidatePostComputation(cc, solver));
+    }
 }
 
 void CommonCalcConstantPotentialForceKernel::copyParametersToContext(ContextImpl& context, const ConstantPotentialForce& force, int firstParticle, int lastParticle, int firstException, int lastException, int firstElectrode, int lastElectrode) {
@@ -1146,9 +1170,7 @@ void CommonCalcConstantPotentialForceKernel::getCharges(ContextImpl& context, ve
     ContextSelector selector(cc);
 
     ensureInitialized(context);
-
-    // We need to have a neighbor list to evaluate direct space derivatives.
-    cc.getNonbondedUtilities().prepareInteractions(1 << forceGroup);
+    ensureValidNeighborList();
 
     cc.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     setKernelInputs(false, false);
@@ -1685,4 +1707,24 @@ void CommonCalcConstantPotentialForceKernel::setKernelInputs(bool includeEnergy,
         hostPosCellOffsets.assign(newPosCellOffsets.begin(), newPosCellOffsets.end());
         posCellOffsets.upload(hostPosCellOffsets);
     }
+}
+
+void CommonCalcConstantPotentialForceKernel::ensureValidNeighborList() {
+    // Save the forcesValid flag since we use it to monitor the neighbor list build.
+    bool oldForcesValid = cc.getForcesValid();
+
+    do {
+        // If we need to try to build the neighbor list again (i.e., it needs to be made bigger),
+        // getForcesValid() will return false after computeInteractions() completes.
+        cc.setForcesValid(true);
+        cc.getNonbondedUtilities().prepareInteractions(1 << forceGroup);
+        cc.getNonbondedUtilities().computeInteractions(1 << forceGroup, false, false);
+    } while(!cc.getForcesValid());
+
+    if (hasElectrodes) {
+        evaluateDirectDerivativesKernel->setArg(17, (unsigned int) cc.getNonbondedUtilities().getInteractingTiles().getSize());
+    }
+
+    // Restore the old value of the flag.
+    cc.setForcesValid(oldForcesValid);
 }
