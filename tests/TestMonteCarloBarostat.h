@@ -164,9 +164,18 @@ void testMolecularGas() {
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     for (int i = 0; i < numMolecules; ++i) {
-        system.addParticle(1.0);
-        system.addParticle(2.0);
-        system.addParticle(3.0);
+        if (i == 0) {
+            // Make one molecule massless to make sure that doesn't cause any problems.
+
+            system.addParticle(0.0);
+            system.addParticle(0.0);
+            system.addParticle(0.0);
+        }
+        else {
+            system.addParticle(1.0);
+            system.addParticle(2.0);
+            system.addParticle(3.0);
+        }
         Vec3 pos(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
         bonds->addBond(positions.size(), positions.size()+1, 0.1, 10.0);
         system.addConstraint(positions.size(), positions.size()+2, 0.1);

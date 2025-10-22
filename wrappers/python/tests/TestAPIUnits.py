@@ -1242,8 +1242,31 @@ class TestAPIUnits(unittest.TestCase):
         self.assertEqual(force.getDefaultTemperature(), 298.15*kelvin)
         self.assertAlmostEqualUnit(force.getDefaultCollisionFrequency(), 1/picosecond)
 
-    def testMonteCarloMembraneBarostat(self):
-        """ Tests the MonteCarloMembraneBarostat API features """
+    def testMonteCarloBarostat(self):
+        """ Tests the various Monte Carlo barostats API features """
+        def checkPressureUnits(force):
+            system = System()
+            system.addParticle(0.0)
+            system.addForce(force)
+            bonds = HarmonicBondForce()
+            bonds.setUsesPeriodicBoundaryConditions(True)
+            system.addForce(bonds)
+            context = Context(system, VerletIntegrator(0.001))
+            context.setPositions([Vec3(0, 0, 0)])
+            pressure = force.computeCurrentPressure(context)
+            self.assertTrue(is_quantity(pressure))
+            self.assertTrue(pressure.unit == bar)
+
+        force = MonteCarloBarostat(1.1*bar, 350*kelvin)
+        self.assertEqual(force.getDefaultPressure(), 1.1*bar)
+        self.assertEqual(force.getDefaultTemperature(), 350*kelvin)
+        checkPressureUnits(force)
+
+        force = MonteCarloFlexibleBarostat(1.1*bar, 350*kelvin)
+        self.assertEqual(force.getDefaultPressure(), 1.1*bar)
+        self.assertEqual(force.getDefaultTemperature(), 350*kelvin)
+        checkPressureUnits(force)
+
         force = MonteCarloMembraneBarostat(1.0, 1.5, 300, MonteCarloMembraneBarostat.XYAnisotropic, MonteCarloMembraneBarostat.ZFixed, 25)
         self.assertEqual(force.getDefaultPressure(), 1.0*bar)
         self.assertEqual(force.getDefaultSurfaceTension(), 1.5*bar*nanometer)
@@ -1251,6 +1274,7 @@ class TestAPIUnits(unittest.TestCase):
         self.assertEqual(force.getXYMode(), MonteCarloMembraneBarostat.XYAnisotropic)
         self.assertEqual(force.getZMode(), MonteCarloMembraneBarostat.ZFixed)
         self.assertEqual(force.getFrequency(), 25)
+        checkPressureUnits(force)
 
         force = MonteCarloMembraneBarostat(1.1*bar, 2.0*bar*nanometer, 350*kelvin, MonteCarloMembraneBarostat.XYAnisotropic, MonteCarloMembraneBarostat.ZFixed, 25)
         self.assertEqual(force.getDefaultPressure(), 1.1*bar)
@@ -1263,6 +1287,11 @@ class TestAPIUnits(unittest.TestCase):
         self.assertEqual(force.getDefaultPressure(), 1.2*bar)
         self.assertEqual(force.getDefaultSurfaceTension(), 2.5*bar*nanometer)
         self.assertEqual(force.getDefaultTemperature(), 298.15*kelvin)
+
+        force = MonteCarloAnisotropicBarostat(Vec3(1.1, 2.2, 3.3)*bar, 350*kelvin)
+        self.assertEqual(force.getDefaultPressure(), Vec3(1.1, 2.2, 3.3)*bar)
+        self.assertEqual(force.getDefaultTemperature(), 350*kelvin)
+        checkPressureUnits(force)
 
     def testDrudeSCFIntegrator(self):
         """ Tests the DrudeSCFIntegrator API features """

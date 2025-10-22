@@ -493,6 +493,7 @@ UNITS = {
 ("MonteCarloMembraneBarostat", "MonteCarloMembraneBarostat") : (None, ("unit.bar", "unit.bar*unit.nanometer", "unit.kelvin", None, None, None)),
 ("MonteCarloMembraneBarostat", "getXYMode") : (None, ()),
 ("MonteCarloMembraneBarostat", "getZMode") : (None, ()),
+("*", "computeCurrentPressure") : ("unit.bar", ()),
 ("CustomIntegrator", "CustomIntegrator") : (None, ("unit.picosecond",)),
 ("BrownianIntegrator", "BrownianIntegrator") : (None, ("unit.kelvin", "unit.picosecond**-1", "unit.picosecond")),
 ("LangevinIntegrator", "LangevinIntegrator") : (None, ("unit.kelvin", "unit.picosecond**-1", "unit.picosecond")),
