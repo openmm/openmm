@@ -54,6 +54,7 @@ from openmm.app import element as elem
 from openmm.app.internal.unitcell import computePeriodicBoxVectors
 from openmm.vec3 import Vec3
 from . import customgbforces as customgb
+from . import lcpo
 
 #=============================================================================================
 # AMBER parmtop loader (from 'zander', by Randall J. Radmer)
@@ -698,7 +699,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
       verbose (boolean) - if True, print out information on progress (default: False)
       flexibleConstraints (boolean) - if True, flexible bonds will be added in addition ot constrained bonds
       rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the shake argument
-      gbsaModel (str='ACE') The string representing the SA model to use for GB calculations. Must be 'ACE' or None
+      gbsaModel (str='ACE') The string representing the SA model to use for GB calculations. Must be 'ACE', 'LCPO', or None
 
     NOTES
 
@@ -744,8 +745,8 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         warnings.warn("1-4 scaling parameters in topology file are being ignored. "
             "This is not recommended unless you know what you are doing.")
 
-    if gbmodel is not None and gbsaModel not in ('ACE', None):
-        raise ValueError('gbsaModel must be ACE or None')
+    if gbmodel is not None and gbsaModel not in ('ACE', 'LCPO', None):
+        raise ValueError('gbsaModel must be ACE, LCPO, or None')
 
     has_1264 = 'LENNARD_JONES_CCOEF' in prmtop._raw_data.keys()
     if has_1264:
@@ -1139,7 +1140,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
                 gb = mm.GBSAOBCForce()
                 gb.setSoluteDielectric(soluteDielectric)
                 gb.setSolventDielectric(solventDielectric)
-                if gbsaModel is None:
+                if gbsaModel != 'ACE':
                     gb.setSurfaceAreaEnergy(0)
         elif gbmodel == 'GBn':
             gb = customgb.GBSAGBnForce(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
@@ -1198,6 +1199,9 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         # This applies the reaction field dielectric to the NonbondedForce
         # created above. Do not bind force to another name before this!
         force.setReactionFieldDielectric(1.0)
+
+        if gbsaModel == 'LCPO':
+            lcpo.addLCPOForces(system, lcpo.getLCPOParamsAmber(prmtop, elements))
 
     return system
 

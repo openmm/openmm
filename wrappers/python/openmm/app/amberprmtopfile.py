@@ -232,7 +232,7 @@ class AmberPrmtopFile(object):
             If True, parameters for constrained degrees of freedom will be added to the System
         gbsaModel : str='ACE'
             The SA model used to model the nonpolar solvation component of GB
-            implicit solvent models. If GB is active, this must be 'ACE' or None
+            implicit solvent models. If GB is active, this must be 'ACE', 'LCPO', or None
             (the latter indicates no SA model will be used). Other values will
             result in a ValueError
 
