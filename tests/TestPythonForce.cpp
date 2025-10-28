@@ -1,13 +1,10 @@
-#ifndef OPENMM_H_
-#define OPENMM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,62 +27,68 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CMAPTorsionForce.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/CompoundIntegrator.h"
-#include "openmm/ConstantPotentialForce.h"
-#include "openmm/CustomBondForce.h"
-#include "openmm/CustomCentroidBondForce.h"
-#include "openmm/CustomCompoundBondForce.h"
-#include "openmm/CustomAngleForce.h"
-#include "openmm/CustomTorsionForce.h"
-#include "openmm/CustomExternalForce.h"
-#include "openmm/CustomCVForce.h"
-#include "openmm/CustomGBForce.h"
-#include "openmm/CustomHbondForce.h"
-#include "openmm/CustomIntegrator.h"
-#include "openmm/CustomManyParticleForce.h"
-#include "openmm/CustomNonbondedForce.h"
-#include "openmm/CustomVolumeForce.h"
-#include "openmm/DPDIntegrator.h"
-#include "openmm/Force.h"
-#include "openmm/GayBerneForce.h"
-#include "openmm/GBSAOBCForce.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/Integrator.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/LangevinMiddleIntegrator.h"
-#include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/MonteCarloAnisotropicBarostat.h"
-#include "openmm/MonteCarloBarostat.h"
-#include "openmm/MonteCarloFlexibleBarostat.h"
-#include "openmm/MonteCarloMembraneBarostat.h"
-#include "openmm/NonbondedForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
-#include "openmm/OpenMMException.h"
-#include "openmm/OrientationRestraintForce.h"
-#include "openmm/PeriodicTorsionForce.h"
 #include "openmm/PythonForce.h"
-#include "openmm/QTBIntegrator.h"
-#include "openmm/RBTorsionForce.h"
-#include "openmm/RGForce.h"
-#include "openmm/RMSDForce.h"
-#include "openmm/State.h"
-#include "openmm/System.h"
-#include "openmm/TabulatedFunction.h"
-#include "openmm/Units.h"
-#include "openmm/VariableLangevinIntegrator.h"
-#include "openmm/VariableVerletIntegrator.h"
-#include "openmm/Vec3.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/NoseHooverIntegrator.h"
-#include "openmm/NoseHooverChain.h"
-#include "openmm/VirtualSite.h"
 #include "openmm/Platform.h"
-#include "openmm/serialization/XmlSerializer.h"
-#include "openmm/ATMForce.h"
+#include "openmm/VerletIntegrator.h"
+#include "sfmt/SFMT.h"
+#include <iostream>
 
-#endif /*OPENMM_H_*/
+using namespace OpenMM;
+using namespace std;
+
+void testForce() {
+    class Computation : public PythonForceComputation {
+        void compute(const State& state, double& energy, vector<Vec3>& forces) const {
+            ASSERT_EQUAL(5.0, state.getParameters().at("a"));
+            ASSERT_EQUAL(10.0, state.getParameters().at("b"));
+            Vec3 a, b, c;
+            state.getPeriodicBoxVectors(a, b, c);
+            ASSERT_EQUAL(Vec3(2, 0, 0), a);
+            ASSERT_EQUAL(Vec3(0.1, 2, 0), b);
+            ASSERT_EQUAL(Vec3(0.1, 0.1, 2), c);
+            energy = 25.0;
+            for (int i = 0; i < forces.size(); i++) {
+                forces[i] = state.getPositions()[i]*2;
+            }
+        }
+    };
+    int numParticles = 5;
+    System system;
+    Vec3 a(2, 0, 0);
+    Vec3 b(0.1, 2, 0);
+    Vec3 c(0.1, 0.1, 2);
+    system.setDefaultPeriodicBoxVectors(a, b, c);
+    vector<Vec3> positions;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        positions.push_back(Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt)));
+    }
+    map<string, double> params;
+    params["a"] = 5.0;
+    params["b"] = 10.0;
+    PythonForce* force = new PythonForce(new Computation(), params);
+    system.addForce(force);
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, Platform::getPlatform("Reference"));
+    context.setPositions(positions);
+    State state = context.getState(State::Energy | State::Forces);
+    ASSERT_EQUAL_TOL(25.0, state.getPotentialEnergy(), 1e-6);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(2*positions[i], state.getForces()[i], 1e-6)
+}
+
+int main(int argc, char* argv[]) {
+    try {
+        testForce();
+    }
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
+    }
+    cout << "Done" << endl;
+    return 0;
+}
