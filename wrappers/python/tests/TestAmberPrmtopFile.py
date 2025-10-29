@@ -326,6 +326,21 @@ class TestAmberPrmtopFile(unittest.TestCase):
                 diff = norm(f1-f2)
                 self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-4)
 
+    def test_LCPO(self):
+        """Compute LCPO energy and compare it to a reference value from Amber."""
+
+        prmtopLCPO = AmberPrmtopFile('systems/dhfr-lcpo.prmtop')
+        pdb = PDBFile('systems/dhfr-lcpo.pdb')
+        systemNone = prmtopLCPO.createSystem(implicitSolvent=GBn2, gbsaModel=None)
+        systemLCPO = prmtopLCPO.createSystem(implicitSolvent=GBn2, gbsaModel='LCPO')
+        contextNone = Context(systemNone, VerletIntegrator(0.001))
+        contextLCPO = Context(systemLCPO, VerletIntegrator(0.001))
+        contextNone.setPositions(pdb.positions)
+        contextLCPO.setPositions(pdb.positions)
+        energyRef = 46.9854 * kilocalorie_per_mole
+        energyLCPO = contextLCPO.getState(energy=True).getPotentialEnergy() - contextNone.getState(energy=True).getPotentialEnergy()
+        self.assertTrue(abs((energyLCPO - energyRef).value_in_unit(kilocalorie_per_mole)) < 0.01)
+
     def testSwitchFunction(self):
         """ Tests the switching function option in AmberPrmtopFile """
         system = prmtop1.createSystem(nonbondedMethod=PME,
