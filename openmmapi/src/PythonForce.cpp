@@ -34,7 +34,7 @@ using namespace OpenMM;
 using namespace std;
 
 PythonForce::PythonForce(PythonForceComputation* computation, const map<string, double>& globalParameters) :
-        computation(computation), globalParameters(globalParameters) {
+        computation(computation), globalParameters(globalParameters), usePeriodic(false) {
 }
 
 PythonForce::~PythonForce() {
@@ -47,6 +47,23 @@ const PythonForceComputation& PythonForce::getComputation() const {
 
 const map<string, double>& PythonForce::getGlobalParameters() const {
     return globalParameters;
+}
+
+bool PythonForce::usesPeriodicBoundaryConditions() const {
+    return usePeriodic;
+}
+
+bool PythonForce::setUsesPeriodicBoundaryConditions(bool periodic) {
+    usePeriodic = periodic;
+}
+
+const vector<char>& PythonForce::getPickledFunction() const {
+    return pickled;
+}
+
+void PythonForce::setPickledFunction(char* function, int length) {
+    for (int i = 0; i < length; i++)
+        pickled.push_back(function[i]);
 }
 
 ForceImpl* PythonForce::createImpl() const {

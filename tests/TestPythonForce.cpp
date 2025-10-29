@@ -71,6 +71,9 @@ void testForce() {
     params["a"] = 5.0;
     params["b"] = 10.0;
     PythonForce* force = new PythonForce(new Computation(), params);
+    ASSERT(!force->usesPeriodicBoundaryConditions());
+    force->setUsesPeriodicBoundaryConditions(true);
+    ASSERT(force->usesPeriodicBoundaryConditions());
     system.addForce(force);
     VerletIntegrator integrator(0.01);
     Context context(system, integrator, Platform::getPlatform("Reference"));

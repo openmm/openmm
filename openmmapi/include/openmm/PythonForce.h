@@ -64,20 +64,28 @@ public:
     ~PythonForce();
     const PythonForceComputation& getComputation() const;
     const std::map<std::string, double>& getGlobalParameters() const;
+    const std::vector<char>& getPickledFunction() const;
+    void setPickledFunction(char* function, int length);
     /**
      * Returns whether or not this force makes use of periodic boundary
      * conditions.
      *
      * @returns true if force uses PBC and false otherwise
      */
-    bool usesPeriodicBoundaryConditions() const {
-        return false;
-    }
+    bool usesPeriodicBoundaryConditions() const;
+    /**
+     * Set whether or not this force makes use of periodic boundary conditions.
+     * If this is set to true, periodic box vectors can be retrieved from the
+     * State passed to the computation function.
+     */
+    bool setUsesPeriodicBoundaryConditions(bool periodic);
 protected:
     ForceImpl* createImpl() const;
 private:
     PythonForceComputation* computation;
     std::map<std::string, double> globalParameters;
+    bool usePeriodic;
+    std::vector<char> pickled;
 };
 
 } // namespace OpenMM

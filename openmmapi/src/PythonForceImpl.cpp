@@ -38,7 +38,7 @@ using namespace OpenMM;
 using namespace std;
 
 PythonForceImpl::PythonForceImpl(const PythonForce& owner) : CustomCPPForceImpl(owner), owner(owner), computation(owner.getComputation()),
-        defaultParameters(owner.getGlobalParameters()) {
+        defaultParameters(owner.getGlobalParameters()), usePeriodic(owner.usesPeriodicBoundaryConditions()) {
     forceGroup = owner.getForceGroup();
 }
 
@@ -49,9 +49,11 @@ double PythonForceImpl::computeForce(ContextImpl& context, const vector<Vec3>& p
     State::StateBuilder builder(context.getTime(), context.getStepCount());
     builder.setPositions(positions);
     builder.setParameters(context.getParameters());
-    Vec3 a, b, c;
-    context.getPeriodicBoxVectors(a, b, c);
-    builder.setPeriodicBoxVectors(a, b, c);
+    if (usePeriodic) {
+        Vec3 a, b, c;
+        context.getPeriodicBoxVectors(a, b, c);
+        builder.setPeriodicBoxVectors(a, b, c);
+    }
     double energy;
     State state = builder.getState();
     computation.compute(state, energy, forces);

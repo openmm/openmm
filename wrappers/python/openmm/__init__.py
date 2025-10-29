@@ -39,3 +39,5 @@ __version__ = Platform.getOpenMMVersion()
 class OpenMMException(Exception):
     """This is the class used for all exceptions thrown by the C++ library."""
     pass
+
+registerPythonForceProxy()

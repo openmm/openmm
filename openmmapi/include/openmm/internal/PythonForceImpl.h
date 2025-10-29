@@ -56,7 +56,7 @@ private:
     const PythonForce& owner;
     const PythonForceComputation& computation;
     std::map<std::string, double> defaultParameters;
-    Kernel kernel;
+    bool usePeriodic;
 };
 
 } // namespace OpenMM

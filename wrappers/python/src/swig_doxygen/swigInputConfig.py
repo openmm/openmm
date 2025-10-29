@@ -574,4 +574,5 @@ UNITS = {
 ("FixedDisplacement", "getFixedDisplacement0") : ("unit.nanometer", ()),
 ("PythonForce", "getComputation") : (None, ()),
 ("PythonForce", "getGlobalParameters") : (None, ()),
+("PythonForce", "getPickledFunction") : (None, ()),
 }
