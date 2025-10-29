@@ -22,6 +22,17 @@ namespace OpenMM {
             swig_type_info* info = SWIGTYPE_p_OpenMM__State;
             PyObject* wrappedState = SWIG_NewPointerObj((void*) &state, info, 0);
             PyObject* result = PyObject_CallFunctionObjArgs(computation, wrappedState, NULL);
+            if (result == NULL) {
+                // The function raised an exception.  Convert it to an OpenMMException.
+
+                PyObject *exception = PyErr_GetRaisedException();
+                PyObject *message = PyObject_Str(exception);
+                std::string *ptr;
+                SWIG_AsPtr_std_string(message, &ptr);
+                Py_XDECREF(message);
+                PyGILState_Release(gstate);
+                throw OpenMMException(*ptr);
+            }
 
             // Extract the return values.
 
@@ -61,17 +72,18 @@ namespace OpenMM {
 
     PythonForce* _createPythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters={}) {
         PythonForce* force = new PythonForce(new ComputationWrapper(computation), globalParameters);
-        try {
-            PyObject* pickle = PyImport_ImportModule("pickle");
-            PyObject* dumps = PyUnicode_FromString("dumps");
-            PyObject* result = PyObject_CallMethodOneArg(pickle, dumps, computation);
+        PyObject* pickle = PyImport_ImportModule("pickle");
+        PyObject* dumps = PyUnicode_FromString("dumps");
+        PyObject* result = PyObject_CallMethodOneArg(pickle, dumps, computation);
+        if (result == NULL) {
+            // It couldn't be pickled.  It will still work, but can't be serialized.  Clear the error flag.
+            PyErr_Clear();
+        }
+        else {
             char* buffer;
             Py_ssize_t len;
             if (PyBytes_AsStringAndSize(result, &buffer, &len) == 0)
                 force->setPickledFunction(buffer, len);
-        }
-        catch (...) {
-            // It couldn't be pickled.  It will still work, but can't be serialized.
         }
         return force;
     }
