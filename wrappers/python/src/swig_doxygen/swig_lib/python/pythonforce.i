@@ -64,6 +64,11 @@ namespace OpenMM {
             for (int i = 0; i < dims[0]; i++)
                 for (int j = 0; j < 3; j++)
                     forces[i][j] = forceData[i][j];
+            PyArray_Free(pyforces, (void *) forceData);
+            Py_XDECREF(wrappedState);
+            Py_XDECREF(result);
+            Py_XDECREF(pyenergy);
+            Py_XDECREF(pyforces);
             PyGILState_Release(gstate);
         }
     private:

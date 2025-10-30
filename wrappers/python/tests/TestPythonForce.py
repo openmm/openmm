@@ -99,5 +99,26 @@ class TestPythonForce(unittest.TestCase):
         state = context.getState(energy=True, positions=True)
         self.assertAlmostEqual(0.0, state.getPotentialEnergy().value_in_unit(kilojoules_per_mole))
 
+    def testMemory(self):
+        """Test for memory leaks in the Python/C++ interface."""
+        system = System()
+        for i in range(1000):
+            system.addParticle(1.0)
+        force = PythonForce(compute, {'k':2.5})
+        system.addForce(force)
+        positions = np.random.rand(1000, 3)
+        integrator = VerletIntegrator(0.001)
+        context = Context(system, integrator, Platform.getPlatform('Reference'))
+        context.setPositions(positions)
+        try:
+            import resource
+        except:
+            return
+        integrator.step(5000)
+        memory1 = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        integrator.step(5000)
+        memory2 = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        self.assertTrue(memory2 < 1.05*memory1)
+
 if __name__ == '__main__':
     unittest.main()
