@@ -101,6 +101,11 @@ class TestPythonForce(unittest.TestCase):
 
     def testMemory(self):
         """Test for memory leaks in the Python/C++ interface."""
+        try:
+            import resource
+        except:
+            # The resource module is not available on Windows.
+            return
         system = System()
         for i in range(1000):
             system.addParticle(1.0)
@@ -110,10 +115,6 @@ class TestPythonForce(unittest.TestCase):
         integrator = VerletIntegrator(0.001)
         context = Context(system, integrator, Platform.getPlatform('Reference'))
         context.setPositions(positions)
-        try:
-            import resource
-        except:
-            return
         integrator.step(5000)
         memory1 = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         integrator.step(5000)

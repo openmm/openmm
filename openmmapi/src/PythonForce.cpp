@@ -62,6 +62,7 @@ const vector<char>& PythonForce::getPickledFunction() const {
 }
 
 void PythonForce::setPickledFunction(char* function, int length) {
+    pickled.clear();
     for (int i = 0; i < length; i++)
         pickled.push_back(function[i]);
 }

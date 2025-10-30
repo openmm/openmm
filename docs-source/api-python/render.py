@@ -59,7 +59,9 @@ def library_template_variables():
     # these classes are useless and not worth documenting.
     exclude.extend([
         'openmm.openmm.SwigPyIterator',
-        'openmm.openmm.OpenMMException'])
+        'openmm.openmm.OpenMMException',
+        'openmm.openmm.ComputationWrapper',
+        'openmm.openmm.PythonForceProxy'])
 
     for _, klass in mm_klasses:
         full = fullname(klass)

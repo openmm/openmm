@@ -100,7 +100,7 @@ namespace OpenMM {
  *
  * \endverbatim
  * 
- * where the "base" values are the ones specified by addParticle() and "oaram" is the current value
+ * where the "base" values are the ones specified by addParticle() and "param" is the current value
  * of the Context parameter.  A single Context parameter can apply offsets to multiple particles,
  * and multiple parameters can be used to apply offsets to the same particle.  Parameters can also be used
  * to modify exceptions in exactly the same way by calling addExceptionParameterOffset().

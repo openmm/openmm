@@ -75,6 +75,9 @@ namespace OpenMM {
         PyObject* computation;
     };
 
+    /**
+     * Construct a new PythonForce.
+     */
     PythonForce* _createPythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters={}) {
         PythonForce* force = new PythonForce(new ComputationWrapper(computation), globalParameters);
         PyObject* pickle = PyImport_ImportModule("pickle");
@@ -93,6 +96,9 @@ namespace OpenMM {
         return force;
     }
 
+    /**
+     * This is the serialization proxy used to serialize PythonForce objects.
+     */
     class PythonForceProxy : public SerializationProxy {
     public:
         PythonForceProxy() : SerializationProxy("PythonForce") {
@@ -154,6 +160,9 @@ namespace OpenMM {
         }
     };
 
+    /**
+     * Register the serialization proxy.  This function is invoked automatically when the openmm module is imported.
+     */
     void registerPythonForceProxy() {
         SerializationProxy::registerProxy(typeid(PythonForce), new PythonForceProxy());
     }
@@ -162,6 +171,17 @@ namespace OpenMM {
 %}
 
 %extend OpenMM::PythonForce {
+    %feature("docstring") PythonForce "Create a PythonForce.
+
+Parameters
+----------
+computation : function
+    A function that performs the computation.  It should take a State as its argument
+    and return two values: the potential energy (a scalar) and the forces (a NumPy array).
+globalParameters : dict
+    Any global parameters the function depends on.  Keys are the parameter names, and the
+    corresponding values are their default values.
+"
     PythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters={}) {
         return _createPythonForce(computation, globalParameters);
     }
