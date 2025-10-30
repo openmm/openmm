@@ -54,6 +54,7 @@
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/KernelImpl.h"
+#include "openmm/LCPOForce.h"
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/OrientationRestraintForce.h"
 #include "openmm/PeriodicTorsionForce.h"
@@ -1049,6 +1050,43 @@ public:
      * @param force      the GayBerneForce to copy the parameters from
      */
     virtual void copyParametersToContext(ContextImpl& context, const GayBerneForce& force) = 0;
+};
+
+/**
+ * This kernel is invoked by LCPOForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcLCPOForceKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CalcLCPOForce";
+    }
+    CalcLCPOForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the LCPOForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const LCPOForce& force) = 0;
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context        the context to copy parameters to
+     * @param force          the LCPOForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const LCPOForce& force, int firstParticle, int lastParticle) = 0;
 };
 
 /**

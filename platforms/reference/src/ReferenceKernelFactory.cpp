@@ -94,6 +94,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcCustomManyParticleForceKernel(name, platform);
     if (name == CalcGayBerneForceKernel::Name())
         return new ReferenceCalcGayBerneForceKernel(name, platform);
+    if (name == CalcLCPOForceKernel::Name())
+        return new ReferenceCalcLCPOForceKernel(name, platform);
     if (name == IntegrateVerletStepKernel::Name())
         return new ReferenceIntegrateVerletStepKernel(name, platform, data);
     if (name == IntegrateNoseHooverStepKernel::Name())

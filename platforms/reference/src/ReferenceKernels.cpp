@@ -2465,6 +2465,55 @@ void ReferenceCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& cont
     ixn = new ReferenceGayBerneForce(force);
 }
 
+ReferenceCalcLCPOForceKernel::~ReferenceCalcLCPOForceKernel() {
+    if (neighborList != NULL) {
+        delete neighborList;
+    }
+}
+
+void ReferenceCalcLCPOForceKernel::initialize(const System& system, const LCPOForce& force) {
+    numParticles = force.getNumParticles();
+    energyOffset = 0.0;
+    cutoff = 0.0;
+    for (int i = 0; i < numParticles; i++) {
+        double radius, p1, p2, p3, p4;
+        force.getParticleParameters(i, radius, p1, p2, p3, p4);
+        energyOffset += 4.0 * PI_M * p1 * radius * radius;
+        if (radius != 0.0 && (p2 != 0.0 || p3 != 0.0 || p4 == 0.0)) {
+            particles.push_back(i);
+            parameters.push_back({radius, p2, p3, p4});
+            if (radius > cutoff) {
+                cutoff = radius;
+            }
+        }
+    }
+    cutoff *= 2.0;
+
+    usePeriodic = force.usesPeriodicBoundaryConditions();
+    neighborList = new NeighborList();
+    exclusions.assign(numParticles, set<int>());
+}
+
+double ReferenceCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
+    Vec3* boxVectors = extractBoxVectors(context);
+
+    computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, boxVectors, usePeriodic, cutoff, 0.0, true);
+
+    // TODO
+    return energyOffset;
+}
+
+void ReferenceCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const LCPOForce& force, int firstParticle, int lastParticle) {
+    particles.clear();
+    parameters.clear();
+    if (neighborList != NULL) {
+        delete neighborList;
+    }
+    initialize(context.getSystem(), force);
+}
+
 ReferenceCalcCustomCVForceKernel::~ReferenceCalcCustomCVForceKernel() {
     if (ixn != NULL)
         delete ixn;

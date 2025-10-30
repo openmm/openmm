@@ -54,6 +54,7 @@
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/LangevinMiddleIntegrator.h"
+#include "openmm/LCPOForce.h"
 #include "openmm/MonteCarloAnisotropicBarostat.h"
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/MonteCarloFlexibleBarostat.h"
@@ -100,6 +101,7 @@
 #include "openmm/serialization/HarmonicBondForceProxy.h"
 #include "openmm/serialization/LangevinIntegratorProxy.h"
 #include "openmm/serialization/LangevinMiddleIntegratorProxy.h"
+#include "openmm/serialization/LCPOForceProxy.h"
 #include "openmm/serialization/MonteCarloAnisotropicBarostatProxy.h"
 #include "openmm/serialization/MonteCarloBarostatProxy.h"
 #include "openmm/serialization/MonteCarloFlexibleBarostatProxy.h"
@@ -167,6 +169,7 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(HarmonicBondForce), new HarmonicBondForceProxy());
     SerializationProxy::registerProxy(typeid(LangevinIntegrator), new LangevinIntegratorProxy());
     SerializationProxy::registerProxy(typeid(LangevinMiddleIntegrator), new LangevinMiddleIntegratorProxy());
+    SerializationProxy::registerProxy(typeid(LCPOForce), new LCPOForceProxy());
     SerializationProxy::registerProxy(typeid(MonteCarloAnisotropicBarostat), new MonteCarloAnisotropicBarostatProxy());
     SerializationProxy::registerProxy(typeid(MonteCarloBarostat), new MonteCarloBarostatProxy());
     SerializationProxy::registerProxy(typeid(MonteCarloFlexibleBarostat), new MonteCarloFlexibleBarostatProxy());

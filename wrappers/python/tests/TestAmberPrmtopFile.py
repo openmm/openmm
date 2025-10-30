@@ -339,7 +339,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         contextLCPO.setPositions(pdb.positions)
         energyRef = 46.9854 * kilocalorie_per_mole
         energyLCPO = contextLCPO.getState(energy=True).getPotentialEnergy() - contextNone.getState(energy=True).getPotentialEnergy()
-        self.assertTrue(abs((energyLCPO - energyRef).value_in_unit(kilocalorie_per_mole)) < 0.01)
+        self.assertAlmostEqual(energyLCPO.value_in_unit(kilocalorie_per_mole), energyRef.value_in_unit(kilocalorie_per_mole), 2)
 
     def testSwitchFunction(self):
         """ Tests the switching function option in AmberPrmtopFile """

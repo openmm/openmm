@@ -58,6 +58,7 @@
 #include "openmm/Integrator.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/LangevinMiddleIntegrator.h"
+#include "openmm/LCPOForce.h"
 #include "openmm/LocalEnergyMinimizer.h"
 #include "openmm/MonteCarloAnisotropicBarostat.h"
 #include "openmm/MonteCarloBarostat.h"

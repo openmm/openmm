@@ -1140,6 +1140,50 @@ private:
 };
 
 /**
+ * This kernel is invoked by LCPOForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcLCPOForceKernel : public CalcLCPOForceKernel {
+public:
+    ReferenceCalcLCPOForceKernel(std::string name, const Platform& platform) : CalcLCPOForceKernel(name, platform), neighborList(NULL) {
+    }
+    ~ReferenceCalcLCPOForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the LCPOForce this kernel will be used for
+     */
+    void initialize(const System& system, const LCPOForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context        the context to copy parameters to
+     * @param force          the LCPOForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
+     */
+    void copyParametersToContext(ContextImpl& context, const LCPOForce& force, int firstParticle, int lastParticle);
+private:
+    int numParticles;
+    double energyOffset;
+    double cutoff;
+    std::vector<int> particles;
+    std::vector<std::array<double, 4> > parameters;
+    bool usePeriodic;
+    NeighborList* neighborList;
+    std::vector<std::set<int> > exclusions;
+};
+
+/**
  * This kernel is invoked by CustomCVForce to calculate the forces acting on the system and the energy of the system.
  */
 class ReferenceCalcCustomCVForceKernel : public CalcCustomCVForceKernel {
