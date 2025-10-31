@@ -65,7 +65,8 @@ class WrapperGenerator:
     """This is the parent class of generators for various API wrapper files.  It defines functions common to all of them."""
     
     def __init__(self, inputDirname, output):
-        self.skipClasses = ['OpenMM::Vec3', 'OpenMM::XmlSerializer', 'OpenMM::Kernel', 'OpenMM::KernelImpl', 'OpenMM::KernelFactory', 'OpenMM::ContextImpl', 'OpenMM::SerializationNode', 'OpenMM::SerializationProxy']
+        self.skipClasses = ['OpenMM::Vec3', 'OpenMM::XmlSerializer', 'OpenMM::Kernel', 'OpenMM::KernelImpl', 'OpenMM::KernelFactory',
+                            'OpenMM::ContextImpl', 'OpenMM::SerializationNode', 'OpenMM::SerializationProxy', 'OpenMM::PythonForce']
         self.skipMethods = ['State OpenMM::Context::getState',
                             'void OpenMM::Context::createCheckpoint',
                             'void OpenMM::Context::loadCheckpoint',

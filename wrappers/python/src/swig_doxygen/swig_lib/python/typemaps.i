@@ -18,7 +18,7 @@ PyObject* Vec3_to_PyVec3(const OpenMM::Vec3& v) {
 }
 }
 
-%fragment("Py_StripOpenMMUnits", "header") {
+%header {
 
 /**
  * Strip any OpenMM units of an input PyObject.
@@ -112,7 +112,7 @@ PyObject* Py_StripOpenMMUnits(PyObject *input) {
 }
 
 
-%fragment("Py_SequenceToVec3", "header", fragment="Py_StripOpenMMUnits") {
+%fragment("Py_SequenceToVec3", "header") {
 OpenMM::Vec3 Py_SequenceToVec3(PyObject* obj, int& status) {
     PyObject* s, *o, *o1;
     double x[3];
@@ -154,7 +154,7 @@ OpenMM::Vec3 Py_SequenceToVec3(PyObject* obj, int& status) {
   }
 }
 
-%fragment("Py_SequenceToVecDouble", "header", fragment="Py_StripOpenMMUnits") {
+%fragment("Py_SequenceToVecDouble", "header") {
 int Py_SequenceToVecDouble(PyObject* obj, std::vector<double>& out) {
     PyObject* stripped = Py_StripOpenMMUnits(obj);
     PyObject* item = NULL;
@@ -396,14 +396,14 @@ int Py_SequenceToVecVecVecDouble(PyObject* obj, std::vector<std::vector<std::vec
 
 
 // ------ typemap for double ----
-%typemap(typecheck, precedence=SWIG_TYPECHECK_DOUBLE, fragment="Py_StripOpenMMUnits") double {
+%typemap(typecheck, precedence=SWIG_TYPECHECK_DOUBLE) double {
     double argp = 0;
     PyObject* s = NULL;
     s = Py_StripOpenMMUnits($input);
     $1 = (s != NULL) ? SWIG_IsOK(SWIG_AsVal_double(s, &argp)) : 0;
     Py_DECREF(s);
 }
-%typemap(in, noblock=1, fragment="Py_StripOpenMMUnits") double (double argp = 0, int res = 0,
+%typemap(in, noblock=1) double (double argp = 0, int res = 0,
     PyObject* stripped = NULL) {
 
     stripped = Py_StripOpenMMUnits($input);

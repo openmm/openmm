@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -65,11 +65,15 @@ double State::getPotentialEnergy() const {
     return pe;
 }
 void State::getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
+    if (!hasBoxVectors)
+        throw OpenMMException("Invoked getPeriodicBoxVectors() on a State which does not contain box vectors.");
     a = periodicBoxVectors[0];
     b = periodicBoxVectors[1];
     c = periodicBoxVectors[2];
 }
 double State::getPeriodicBoxVolume() const {
+    if (!hasBoxVectors)
+        throw OpenMMException("Invoked getPeriodicBoxVolume() on a State which does not contain box vectors.");
     return periodicBoxVectors[0].dot(periodicBoxVectors[1].cross(periodicBoxVectors[2]));
 }
 const map<string, double>& State::getParameters() const {
@@ -84,7 +88,7 @@ const map<string, double>& State::getEnergyParameterDerivatives() const {
 }
 const SerializationNode& State::getIntegratorParameters() const {
     if ((types&IntegratorParameters) == 0)
-        throw OpenMMException("Invoked getPIntegratorarameters() on a State which does not contain integrator parameters.");
+        throw OpenMMException("Invoked getIntegratorParameters() on a State which does not contain integrator parameters.");
     return integratorParameters;
 }
 SerializationNode& State::updateIntegratorParameters() {
@@ -95,9 +99,9 @@ SerializationNode& State::updateIntegratorParameters() {
 int State::getDataTypes() const {
     return types;
 }
-State::State(double time, long long stepCount) : types(0), time(time), stepCount(stepCount), ke(0), pe(0) {
+State::State(double time, long long stepCount) : types(0), time(time), stepCount(stepCount), ke(0), pe(0), hasBoxVectors(false) {
 }
-State::State() : types(0), time(0.0), ke(0), pe(0) {
+State::State() : types(0), time(0.0), ke(0), pe(0), hasBoxVectors(false) {
 }
 void State::setPositions(const std::vector<Vec3>& pos) {
     positions = pos;
@@ -131,6 +135,7 @@ void State::setEnergy(double kinetic, double potential) {
 }
 
 void State::setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) {
+    hasBoxVectors = true;
     periodicBoxVectors[0] = a;
     periodicBoxVectors[1] = b;
     periodicBoxVectors[2] = c;

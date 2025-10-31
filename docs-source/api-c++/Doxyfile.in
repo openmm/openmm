@@ -623,7 +623,8 @@ EXCLUDE_PATTERNS       = @CMAKE_SOURCE_DIR@/*/tests/* \
                          *RpmdKernels.h \
                          *RPMDUpdater.h \
                          *OpenMMFortranModule.f90 \
-                         *OpenMMCWrapper.h
+                         *OpenMMCWrapper.h \
+                         *PythonForce.h
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the

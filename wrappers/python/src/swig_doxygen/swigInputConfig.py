@@ -99,6 +99,7 @@ SKIP_METHODS = [('State', 'getPositions'),
                 ('XmlSerializer',  'deserialize'),
                 ("NoseHooverIntegrator", "getAllThermostatedIndividualParticles"),
                 ("NoseHooverIntegrator", "getAllThermostatedPairs"),
+                ("PythonForce", "PythonForce"),
 ]
 
 
@@ -175,6 +176,7 @@ UNITS = {
 ("*", "setDefaultPressureZ") : (None, ("unit.bar",)),
 ("*", "getDefaultSurfaceTension") : ("unit.bar*unit.nanometer", ()),
 ("*", "setDefaultSurfaceTension") : (None, ("unit.bar*unit.nanometer",)),
+("*", "computeCurrentPressure") : ("unit.bar", ()),
 ("*", "getDefaultTemperature") : ("unit.kelvin", ()),
 ("*", "setDefaultTemperature") : (None, ("unit.kelvin",)),
 ("*", "getRelativeTemperature") : ("unit.kelvin", ()),
@@ -493,7 +495,6 @@ UNITS = {
 ("MonteCarloMembraneBarostat", "MonteCarloMembraneBarostat") : (None, ("unit.bar", "unit.bar*unit.nanometer", "unit.kelvin", None, None, None)),
 ("MonteCarloMembraneBarostat", "getXYMode") : (None, ()),
 ("MonteCarloMembraneBarostat", "getZMode") : (None, ()),
-("*", "computeCurrentPressure") : ("unit.bar", ()),
 ("CustomIntegrator", "CustomIntegrator") : (None, ("unit.picosecond",)),
 ("BrownianIntegrator", "BrownianIntegrator") : (None, ("unit.kelvin", "unit.picosecond**-1", "unit.picosecond")),
 ("LangevinIntegrator", "LangevinIntegrator") : (None, ("unit.kelvin", "unit.picosecond**-1", "unit.picosecond")),
@@ -571,4 +572,7 @@ UNITS = {
 ("ATMForce", "getParticleTransformation") : (None, ()),
 ("FixedDisplacement", "getFixedDisplacement1") : ("unit.nanometer", ()),
 ("FixedDisplacement", "getFixedDisplacement0") : ("unit.nanometer", ()),
+("PythonForce", "getComputation") : (None, ()),
+("PythonForce", "getGlobalParameters") : (None, ()),
+("PythonForce", "getPickledFunction") : (None, ()),
 }

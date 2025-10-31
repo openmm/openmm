@@ -9,5 +9,6 @@
 %include pythonprepend.i
 %include pythonappend.i
 %include typemaps.i
+%include pythonforce.i
 
 %feature("director") OpenMM::MinimizationReporter;
