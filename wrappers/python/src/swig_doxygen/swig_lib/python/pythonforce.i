@@ -25,7 +25,14 @@ namespace OpenMM {
             if (result == NULL) {
                 // The function raised an exception.  Convert it to an OpenMMException.
 
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 12
+                PyObject *type;
+                PyObject *exception;
+                PyObject *traceback;
+                PyErr_Fetch(&type, &exception, &traceback);
+#else
                 PyObject *exception = PyErr_GetRaisedException();
+#endif
                 PyObject *message = PyObject_Str(exception);
                 std::string *ptr;
                 SWIG_AsPtr_std_string(message, &ptr);
