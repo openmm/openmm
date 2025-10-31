@@ -57,25 +57,24 @@ namespace OpenMM {
                 PyGILState_Release(gstate);
                 throw OpenMMException("PythonForce: The forces must be returned in a 2-dimensional NumPy array");
             }
-            double** forceData;
-            npy_intp dims[2];
-            PyArray_Descr* descr = PyArray_DescrFromType(NPY_DOUBLE);
-            if (PyArray_AsCArray(&pyforces, (void **) &forceData, dims, 2, descr) < 0) {
-                PyGILState_Release(gstate);
-                throw OpenMMException("PythonForce: Error accessing force array data");
-            }
+            npy_intp* dims = PyArray_DIMS((PyArrayObject*) pyforces);
             if (dims[0] != forces.size() || dims[1] != 3) {
                 PyGILState_Release(gstate);
                 throw OpenMMException("PythonForce: The forces must be returned in a NumPy array of shape (# particles, 3)");
             }
-            for (int i = 0; i < dims[0]; i++)
-                for (int j = 0; j < 3; j++)
-                    forces[i][j] = forceData[i][j];
-            PyArray_Free(pyforces, (void *) forceData);
+            PyObject* array;
+            if (PyArray_CHKFLAGS((PyArrayObject*) pyforces, NPY_ARRAY_CARRAY_RO) && PyArray_DESCR((PyArrayObject*) pyforces)->type_num == NPY_DOUBLE)
+                array = pyforces;
+            else
+                array = PyArray_FromAny(pyforces, PyArray_DescrFromType(NPY_DOUBLE), 2, 2, NPY_ARRAY_C_CONTIGUOUS, NULL);
+            double* data = (double*) PyArray_DATA((PyArrayObject*) array);
+            memcpy(forces.data(), data, 3*sizeof(double)*forces.size());
             Py_XDECREF(wrappedState);
             Py_XDECREF(result);
             Py_XDECREF(pyenergy);
             Py_XDECREF(pyforces);
+            if (array != pyforces)
+                Py_XDECREF(array);
             PyGILState_Release(gstate);
         }
     private:

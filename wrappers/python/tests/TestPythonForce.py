@@ -121,5 +121,24 @@ class TestPythonForce(unittest.TestCase):
         memory2 = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         self.assertTrue(memory2 < 1.05*memory1)
 
+    def testDtypes(self):
+        """Test returning forces with different types."""
+        for dtype in [np.float32, np.float64, int]:
+            def compute2(state):
+                return 0, np.array([[1,2,3],[4,5,6]], dtype=dtype)
+
+            system = System()
+            system.addParticle(1.0)
+            system.addParticle(1.0)
+            force = PythonForce(compute2)
+            system.addForce(force)
+            positions = np.random.rand(2, 3)
+            integrator = VerletIntegrator(0.001)
+            context = Context(system, integrator)
+            context.setPositions(positions)
+            forces = context.getState(forces=True).getForces().value_in_unit(kilojoules_per_mole/nanometer)
+            self.assertEqual(Vec3(1,2,3), forces[0])
+            self.assertEqual(Vec3(4,5,6), forces[1])
+
 if __name__ == '__main__':
     unittest.main()
