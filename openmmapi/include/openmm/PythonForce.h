@@ -158,7 +158,7 @@ public:
      * If this is set to true, periodic box vectors can be retrieved from the
      * State passed to the computation function.
      */
-    bool setUsesPeriodicBoundaryConditions(bool periodic);
+    void setUsesPeriodicBoundaryConditions(bool periodic);
 protected:
     ForceImpl* createImpl() const;
 private:

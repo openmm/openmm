@@ -53,7 +53,7 @@ bool PythonForce::usesPeriodicBoundaryConditions() const {
     return usePeriodic;
 }
 
-bool PythonForce::setUsesPeriodicBoundaryConditions(bool periodic) {
+void PythonForce::setUsesPeriodicBoundaryConditions(bool periodic) {
     usePeriodic = periodic;
 }
 
