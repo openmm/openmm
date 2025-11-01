@@ -333,8 +333,8 @@ class TestAmberPrmtopFile(unittest.TestCase):
         pdb = PDBFile('systems/dhfr-lcpo.pdb')
         systemNone = prmtopLCPO.createSystem(implicitSolvent=GBn2, gbsaModel=None)
         systemLCPO = prmtopLCPO.createSystem(implicitSolvent=GBn2, gbsaModel='LCPO')
-        contextNone = Context(systemNone, VerletIntegrator(0.001))
-        contextLCPO = Context(systemLCPO, VerletIntegrator(0.001))
+        contextNone = Context(systemNone, VerletIntegrator(0.001), Platform.getPlatformByName("Reference"))
+        contextLCPO = Context(systemLCPO, VerletIntegrator(0.001), Platform.getPlatformByName("Reference"))
         contextNone.setPositions(pdb.positions)
         contextLCPO.setPositions(pdb.positions)
         energyRef = 46.9854 * kilocalorie_per_mole

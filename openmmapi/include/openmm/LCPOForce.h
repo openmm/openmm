@@ -124,7 +124,7 @@ protected:
     ForceImpl* createImpl() const;
 private:
     class ParticleInfo;
-    bool usesPeriodic;
+    bool usePeriodic;
     std::vector<ParticleInfo> particles;
     mutable int numContexts, firstChangedParticle, lastChangedParticle;
 };

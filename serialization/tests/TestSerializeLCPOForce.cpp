@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Evan Pretti                                        *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,71 +27,62 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/Force.h"
-#include "openmm/LCPOForce.h"
 #include "openmm/internal/AssertionUtilities.h"
-#include "openmm/internal/LCPOForceImpl.h"
+#include "openmm/LCPOForce.h"
+#include "openmm/serialization/XmlSerializer.h"
+#include <iostream>
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
-LCPOForce::LCPOForce() : usePeriodic(false), numContexts(0) {
-}
+void testSerialization() {
+    // Create a Force.
 
-void LCPOForce::setUsesPeriodicBoundaryConditions(bool periodic) {
-    usePeriodic = periodic;
-}
+    LCPOForce force;
+    force.setForceGroup(3);
+    force.setName("custom name");
+    force.setUsesPeriodicBoundaryConditions(true);
+    force.addParticle(1.0, 2.0, 3.0, 4.0, 5.0);
+    force.addParticle(0.0, 0.0, 0.0, 0.0, 0.0);
+    force.addParticle(6.0, 7.0, 8.0, 9.0, 10.0);
+    force.addParticle(1.0, 2.0, 3.0, 4.0, 5.0);
+    force.addParticle(0.0, 0.0, 0.0, 0.0, 0.0);
+    force.addParticle(6.0, 7.0, 8.0, 9.0, 10.0);
 
-int LCPOForce::getNumParticles() const {
-    return particles.size();
-}
+    // Serialize and then deserialize it.
 
-int LCPOForce::addParticle(double radius, double p1, double p2, double p3, double p4) {
-    particles.push_back(ParticleInfo(radius, p1, p2, p3, p4));
-    return particles.size() - 1;
-}
+    stringstream buffer;
+    XmlSerializer::serialize<LCPOForce>(&force, "Force", buffer);
+    LCPOForce* copy = XmlSerializer::deserialize<LCPOForce>(buffer);
 
-void LCPOForce::getParticleParameters(int index, double& radius, double& p1, double& p2, double& p3, double& p4) const {
-    ASSERT_VALID_INDEX(index, particles);
-    const ParticleInfo& info = particles[index];
-    radius = info.radius;
-    p1 = info.p1;
-    p2 = info.p2;
-    p3 = info.p3;
-    p4 = info.p4;
-}
+    // Compare the two forces to see if they are identical.
 
-void LCPOForce::setParticleParameters(int index, double radius, double p1, double p2, double p3, double p4) {
-    ASSERT_VALID_INDEX(index, particles);
-    ParticleInfo& info = particles[index];
-    info.radius = radius;
-    info.p1 = p1;
-    info.p2 = p2;
-    info.p3 = p3;
-    info.p4 = p4;
-    if (numContexts > 0) {
-        firstChangedParticle = min(index, firstChangedParticle);
-        lastChangedParticle = max(index, lastChangedParticle);
+    LCPOForce& force2 = *copy;
+    ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
+    ASSERT_EQUAL(force.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
+    ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double radius1, radius2, p11, p12, p21, p22, p31, p32, p41, p42;
+        force.getParticleParameters(i, radius1, p11, p21, p31, p41);
+        force2.getParticleParameters(i, radius2, p12, p22, p32, p42);
+        ASSERT_EQUAL(radius1, radius2);
+        ASSERT_EQUAL(p11, p12);
+        ASSERT_EQUAL(p21, p22);
+        ASSERT_EQUAL(p31, p32);
+        ASSERT_EQUAL(p41, p42);
     }
 }
 
-void LCPOForce::updateParametersInContext(Context& context) {
-    dynamic_cast<LCPOForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context), firstChangedParticle, lastChangedParticle);
-    if (numContexts == 1) {
-        firstChangedParticle = particles.size();
-        lastChangedParticle = -1;
+int main() {
+    try {
+        testSerialization();
     }
-}
-
-bool LCPOForce::usesPeriodicBoundaryConditions() const {
-    return usePeriodic;
-}
-
-ForceImpl* LCPOForce::createImpl() const {
-    if (numContexts == 0) {
-        firstChangedParticle = particles.size();
-        lastChangedParticle = -1;
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
     }
-    numContexts++;
-    return new LCPOForceImpl(*this);
+    cout << "Done" << endl;
+    return 0;
 }

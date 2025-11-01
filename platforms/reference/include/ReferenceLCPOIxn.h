@@ -1,5 +1,5 @@
-#ifndef OPENMM_LCPOFORCEIMPL_H_
-#define OPENMM_LCPOFORCEIMPL_H_
+#ifndef OPENMM_REFERENCELCPOIXN_H_
+#define OPENMM_REFERENCELCPOIXN_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -7,8 +7,8 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
- * Authors: Peter Eastman, Evan Pretti                                        *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
+ * Authors: Evan Pretti                                                       *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -30,32 +30,35 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ForceImpl.h"
-#include "openmm/Kernel.h"
-#include "openmm/LCPOForce.h"
+#include <array>
+#include <vector>
+#include "openmm/Vec3.h"
 
 namespace OpenMM {
 
-class OPENMM_EXPORT LCPOForceImpl : public ForceImpl {
+/**
+ * Performs energy and force calculations for the reference LCPOForce kernel.
+ */
+class ReferenceLCPOIxn {
 public:
-    LCPOForceImpl(const LCPOForce& owner);
-    void initialize(ContextImpl& context);
-    const LCPOForce& getOwner() const {
-        return owner;
-    }
-    void updateContextState(ContextImpl& context, bool& forcesInvalid) {
-    }
-    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
-    std::map<std::string, double> getDefaultParameters() {
-        return std::map<std::string, double>();
-    }
-    std::vector<std::string> getKernelNames();
-    void updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle);
+    ReferenceLCPOIxn(const std::vector<int>& indices, const std::vector<int>& particles, const std::vector<std::array<double, 4> >& parameters, double cutoff, bool usePeriodic);
+    double execute(const Vec3* boxVectors, const std::vector<Vec3>& posData, std::vector<Vec3>& forceData, bool includeForces, bool includeEnergy);
+
 private:
-    const LCPOForce& owner;
-    Kernel kernel;
+    static const int RadiusIndex = 0;
+    static const int P2Index = 1;
+    static const int P3Index = 2;
+    static const int P4Index = 3;
+
+    int numParticles;
+    int numActiveParticles;
+    const std::vector<int>& indices;
+    const std::vector<int>& particles;
+    const std::vector<std::array<double, 4> >& parameters;
+    double cutoff;
+    bool usePeriodic;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_LCPOFORCEIMPL_H_*/
+#endif // OPENMM_REFERENCELCPOIXN_H_

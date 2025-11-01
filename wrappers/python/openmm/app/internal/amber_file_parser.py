@@ -1201,7 +1201,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         force.setReactionFieldDielectric(1.0)
 
         if gbsaModel == 'LCPO':
-            lcpo.addLCPOForces(system, lcpo.getLCPOParamsAmber(prmtop, elements))
+            lcpo.addLCPOForces(system, lcpo.getLCPOParamsAmber(prmtop, elements), nonbondedMethod != 'NoCutoff')
 
     return system
 

@@ -1144,9 +1144,8 @@ private:
  */
 class ReferenceCalcLCPOForceKernel : public CalcLCPOForceKernel {
 public:
-    ReferenceCalcLCPOForceKernel(std::string name, const Platform& platform) : CalcLCPOForceKernel(name, platform), neighborList(NULL) {
+    ReferenceCalcLCPOForceKernel(std::string name, const Platform& platform) : CalcLCPOForceKernel(name, platform) {
     }
-    ~ReferenceCalcLCPOForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -1173,14 +1172,13 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const LCPOForce& force, int firstParticle, int lastParticle);
 private:
+    double oneBodyEnergy;
     int numParticles;
-    double energyOffset;
-    double cutoff;
+    std::vector<int> indices;
     std::vector<int> particles;
     std::vector<std::array<double, 4> > parameters;
+    double cutoff;
     bool usePeriodic;
-    NeighborList* neighborList;
-    std::vector<std::set<int> > exclusions;
 };
 
 /**

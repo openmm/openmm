@@ -53,6 +53,7 @@
 #include "ReferenceGayBerneForce.h"
 #include "ReferenceHarmonicBondIxn.h"
 #include "ReferenceLangevinMiddleDynamics.h"
+#include "ReferenceLCPOIxn.h"
 #include "ReferenceLJCoulomb14.h"
 #include "ReferenceLJCoulombIxn.h"
 #include "ReferenceMonteCarloBarostat.h"
@@ -2465,52 +2466,46 @@ void ReferenceCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& cont
     ixn = new ReferenceGayBerneForce(force);
 }
 
-ReferenceCalcLCPOForceKernel::~ReferenceCalcLCPOForceKernel() {
-    if (neighborList != NULL) {
-        delete neighborList;
-    }
-}
-
 void ReferenceCalcLCPOForceKernel::initialize(const System& system, const LCPOForce& force) {
+    oneBodyEnergy = 0.0;
+
     numParticles = force.getNumParticles();
-    energyOffset = 0.0;
-    cutoff = 0.0;
+    double maxRadius = 0.0;
     for (int i = 0; i < numParticles; i++) {
         double radius, p1, p2, p3, p4;
         force.getParticleParameters(i, radius, p1, p2, p3, p4);
-        energyOffset += 4.0 * PI_M * p1 * radius * radius;
-        if (radius != 0.0 && (p2 != 0.0 || p3 != 0.0 || p4 == 0.0)) {
+        oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
+
+        if (radius != 0.0 && (p2 != 0.0 || p3 != 0.0 || p4 != 0.0)) {
+            indices.push_back(particles.size());
             particles.push_back(i);
             parameters.push_back({radius, p2, p3, p4});
-            if (radius > cutoff) {
-                cutoff = radius;
-            }
+            maxRadius = max(maxRadius, radius);
+        }
+        else {
+            indices.push_back(-1);
         }
     }
-    cutoff *= 2.0;
+    cutoff = 2.0 * maxRadius;
 
     usePeriodic = force.usesPeriodicBoundaryConditions();
-    neighborList = new NeighborList();
-    exclusions.assign(numParticles, set<int>());
 }
 
 double ReferenceCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    Vec3* boxVectors = extractBoxVectors(context);
     vector<Vec3>& posData = extractPositions(context);
     vector<Vec3>& forceData = extractForces(context);
-    Vec3* boxVectors = extractBoxVectors(context);
 
-    computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, boxVectors, usePeriodic, cutoff, 0.0, true);
-
-    // TODO
-    return energyOffset;
+    ReferenceLCPOIxn lcpo(indices, particles, parameters, cutoff, usePeriodic);
+    return oneBodyEnergy + lcpo.execute(boxVectors, posData, forceData, includeForces, includeEnergy);
 }
 
 void ReferenceCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const LCPOForce& force, int firstParticle, int lastParticle) {
+    // For the reference implementation, just reinitialize everything.
+
+    indices.clear();
     particles.clear();
     parameters.clear();
-    if (neighborList != NULL) {
-        delete neighborList;
-    }
     initialize(context.getSystem(), force);
 }
 

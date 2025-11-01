@@ -64,7 +64,7 @@ LCPO_PARAMETERS = {
     'Mg': (1.18, 0.49392, -0.16038, -0.00015512, 0.00016453),
 }
 
-def addLCPOForces(system, paramsList, surfaceEnergy=0.005*u.kilocalorie_per_mole/u.angstrom**2, probeRadius=1.4*u.angstrom, excludeRadius=2.5*u.angstrom):
+def addLCPOForces(system, paramsList, usePeriodic, surfaceEnergy=0.005*u.kilocalorie_per_mole/u.angstrom**2, probeRadius=1.4*u.angstrom):
     """
     Adds forces to an OpenMM System implementing the LCPO method for estimating
     solvent-accessible surface area of a molecule.
@@ -81,74 +81,13 @@ def addLCPOForces(system, paramsList, surfaceEnergy=0.005*u.kilocalorie_per_mole
         The energy to scale the surface area from the LCPO method by.
     probeRadius : distance
         The radius of the solvent probe to use.
-    excludeRadius : distance
-        The radius (including the solvent probe) at and below which atoms are excluded.
     """
 
     force = mm.LCPOForce()
     for atomRadius, p1, p2, p3, p4 in paramsList:
-        radius = atomRadius + probeRadius
-        if radius > excludeRadius:
-            force.addParticle(radius, p1 * surfaceEnergy, p2 * surfaceEnergy, p3 * surfaceEnergy, p4 * surfaceEnergy)
-        else:
-            # TODO: to match Amber exactly, should be (radius, 0, ...) or (0, 0, 0...)?
-            force.addParticle(radius, 0, 0, 0, 0)
+        force.addParticle(atomRadius + probeRadius, p1 * surfaceEnergy, p2 * surfaceEnergy, p3 * surfaceEnergy, p4 * surfaceEnergy)
+    force.setUsesPeriodicBoundaryConditions(usePeriodic)
     system.addForce(force)
-
-    # rList, p1List, p2List, p3List, p4List = zip(*paramsList)
-    # rList = [r + probeRadius for r in rList]
-    # rMax = max(rList)
-
-    # # Add the one-body contributions scaled by P1.
-    # term1 = mm.CustomExternalForce("p1s")
-    # term1.addPerParticleParameter("p1s")
-    # for index, (r, p1) in enumerate(zip(rList, p1List)):
-    #     term1.addParticle(index, (4 * math.pi * p1 * surfaceEnergy * r ** 2,))
-    # system.addForce(term1)
-
-    # # Add the two-body contributions scaled by P2.
-    # term2 = mm.CustomManyParticleForce(
-    #     2,
-    #     "(p2s1 * aij + p2s2 * aji) * step(rs1 + rs2 - dij);"
-    #     "aij = rs1 * (rs1 - (dij + (rs1 * rs1 - rs2 * rs2) / dij) / 2);"
-    #     "aji = rs2 * (rs2 - (dij + (rs2 * rs2 - rs1 * rs1) / dij) / 2);"
-    #     "dij = distance(p1, p2);"
-    # )
-    # term2.addPerParticleParameter("rs")
-    # term2.addPerParticleParameter("p2s")
-    # for r, p2 in zip(rList, p2List):
-    #     term2.addParticle((r, 2 * math.pi * p2 * surfaceEnergy), int(r > excludeRadius))
-    # term2.setTypeFilter(0, {1})
-    # term2.setTypeFilter(1, {1})
-    # term2.setPermutationMode(mm.CustomManyParticleForce.SinglePermutation)
-    # term2.setNonbondedMethod(mm.CustomManyParticleForce.CutoffNonPeriodic)
-    # term2.setCutoffDistance(2 * rMax)
-    # system.addForce(term2)
-
-    # # Add the three-body contributions scaled by P3 and P4.
-    # term3 = mm.CustomManyParticleForce(
-    #     3,
-    #     "((p3s1 + p4s1 * aij) * ajk + (p3s1 + p4s1 * aik) * akj) * step(rs1 + rs2 - dij) * step(rs1 + rs3 - dik) * step(rs2 + rs3 - djk);"
-    #     "aij = rs1 * (rs1 - (dij + (rs1 * rs1 - rs2 * rs2) / dij) / 2);"
-    #     "aik = rs1 * (rs1 - (dik + (rs1 * rs1 - rs3 * rs3) / dik) / 2);"
-    #     "ajk = rs2 * (rs2 - (djk + (rs2 * rs2 - rs3 * rs3) / djk) / 2);"
-    #     "akj = rs3 * (rs3 - (djk + (rs3 * rs3 - rs2 * rs2) / djk) / 2);"
-    #     "dij = distance(p1, p2);"
-    #     "dik = distance(p1, p3);"
-    #     "djk = distance(p2, p3);"
-    # )
-    # term3.addPerParticleParameter("rs")
-    # term3.addPerParticleParameter("p3s")
-    # term3.addPerParticleParameter("p4s")
-    # for r, p3, p4 in zip(rList, p3List, p4List):
-    #     term3.addParticle((r, 2 * math.pi * p3 * surfaceEnergy, 4 * math.pi ** 2 * p4 * surfaceEnergy), int(r > excludeRadius))
-    # term3.setTypeFilter(0, {1})
-    # term3.setTypeFilter(1, {1})
-    # term3.setTypeFilter(2, {1})
-    # term3.setPermutationMode(mm.CustomManyParticleForce.UniqueCentralParticle)
-    # term3.setNonbondedMethod(mm.CustomManyParticleForce.CutoffNonPeriodic)
-    # term3.setCutoffDistance(2 * rMax)
-    # system.addForce(term3)
 
 def getLCPOParamsAmber(prmtop, elements):
     """
