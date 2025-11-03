@@ -148,6 +148,16 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
+          - name: Linux ARM Python 3.14
+            python-version: "3.14"
+            os: ubuntu-24.04-arm
+            env: ubuntu-arm
+            OPENCL: false
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+
           - name: MacOS Intel Python 3.13
             python-version: "3.13"
             os: macos-15-intel
@@ -441,7 +451,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: PowerPC CPU/CUDA 10.2 Python 3.13 with condaforge compilers
+          - name: PowerPC CPU/CUDA 11.8 Python 3.13 with condaforge compilers
             docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda:11.8
             python-version: "3.13"
             compilers: compilers
@@ -451,10 +461,10 @@ jobs:
           #  python-version: "3.13"
           #  compilers: devtoolset-7
 
-          - name: ARM CPU Python 3.13 with condaforge compilers
-            docker-image: quay.io/condaforge/linux-anvil-aarch64
-            python-version: "3.13"
-            compilers: compilers
+#          - name: ARM CPU Python 3.13 with condaforge compilers
+#            docker-image: quay.io/condaforge/linux-anvil-aarch64
+#            python-version: "3.13"
+#            compilers: compilers
 
 
     steps:
