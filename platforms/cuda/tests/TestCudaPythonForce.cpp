@@ -1,6 +1,3 @@
-#ifndef OPENMM_PYTHONFORCEIMPL_H_
-#define OPENMM_PYTHONFORCEIMPL_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -30,44 +27,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CustomCPPForceImpl.h"
-#include "openmm/PythonForce.h"
-#include "openmm/Kernel.h"
-#include <utility>
-#include <map>
-#include <string>
+#include "CudaTests.h"
+#include "TestPythonForce.h"
 
-namespace OpenMM {
-
-/**
- * This is the internal implementation of PythonForce.
- */
-
-class PythonForceImpl : public ForceImpl {
-public:
-    PythonForceImpl(const PythonForce& owner);
-    ~PythonForceImpl();
-    void initialize(ContextImpl& context);
-    const PythonForce& getOwner() const {
-        return owner;
-    }
-    void updateContextState(ContextImpl& context, bool& forcesInvalid) {
-        // This force field doesn't update the state directly.
-    }
-    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
-    std::map<std::string, double> getDefaultParameters();
-    std::vector<std::string> getKernelNames();
-    std::vector<std::pair<int, int> > getBondedParticles() const {
-        return {};
-    }
-private:
-    const PythonForce& owner;
-    const PythonForceComputation& computation;
-    std::map<std::string, double> defaultParameters;
-    bool usePeriodic;
-    Kernel kernel;
-};
-
-} // namespace OpenMM
-
-#endif /*OPENMM_PYTHONFORCEIMPL_H_*/
+void runPlatformTests() {
+}

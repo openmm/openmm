@@ -94,6 +94,7 @@ HipPlatform::HipPlatform() {
     registerKernelFactory(CalcCustomCPPForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCVForceKernel::Name(), factory);
     registerKernelFactory(CalcOrientationRestraintForceKernel::Name(), factory);
+    registerKernelFactory(CalcPythonForceKernel::Name(), factory);
     registerKernelFactory(CalcRGForceKernel::Name(), factory);
     registerKernelFactory(CalcRMSDForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomManyParticleForceKernel::Name(), factory);

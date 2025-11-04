@@ -57,6 +57,7 @@
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/OrientationRestraintForce.h"
 #include "openmm/PeriodicTorsionForce.h"
+#include "openmm/PythonForce.h"
 #include "openmm/QTBIntegrator.h"
 #include "openmm/RBTorsionForce.h"
 #include "openmm/RGForce.h"
@@ -1930,6 +1931,34 @@ public:
      * @param force      the CustomCPPForceImpl this kernel will be used for
      */
     virtual void initialize(const System& system, CustomCPPForceImpl& force) = 0;
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+};
+
+/**
+ * This kernel is invoked by PythonForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcPythonForceKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CalcPythonForce";
+    }
+    CalcPythonForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the PythonForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const PythonForce& force) = 0;
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *

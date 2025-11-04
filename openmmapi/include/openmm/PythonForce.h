@@ -53,9 +53,11 @@ public:
     /**
      * Compute forces and energy.  The State contains particle positions, parameters, and
      * optionally periodic box vectors.  Implementations should store the potential energy
-     * and particle forces into the energy and forces arguments.
+     * and particle forces into the energy and forces arguments.  The forces argument points
+     * to an array of length 3*particles.  Its type is either float or double, depending on
+     * the value of forcesAreDouble.
      */
-    virtual void compute(const State& state, double& energy, std::vector<Vec3>& forces) const = 0;
+    virtual void compute(const State& state, double& energy, void* forces, bool forcesAreDouble) const = 0;
 };
 
 /**

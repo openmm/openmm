@@ -13,7 +13,7 @@ namespace OpenMM {
     public:
         ComputationWrapper(PyObject* computation) : computation(computation) {
         }
-        void compute(const State& state, double& energy, std::vector<Vec3>& forces) const {
+        void compute(const State& state, double& energy, void* forces, bool forcesAreDouble) const {
             PyGILState_STATE gstate;
             gstate = PyGILState_Ensure();
 
@@ -58,17 +58,20 @@ namespace OpenMM {
                 throw OpenMMException("PythonForce: The forces must be returned in a 2-dimensional NumPy array");
             }
             npy_intp* dims = PyArray_DIMS((PyArrayObject*) pyforces);
-            if (dims[0] != forces.size() || dims[1] != 3) {
+            int numParticles = state.getPositions().size();
+            if (dims[0] != numParticles || dims[1] != 3) {
                 PyGILState_Release(gstate);
                 throw OpenMMException("PythonForce: The forces must be returned in a NumPy array of shape (# particles, 3)");
             }
             PyObject* array;
-            if (PyArray_CHKFLAGS((PyArrayObject*) pyforces, NPY_ARRAY_CARRAY_RO) && PyArray_DESCR((PyArrayObject*) pyforces)->type_num == NPY_DOUBLE)
+            int targetType = (forcesAreDouble ? NPY_DOUBLE : NPY_FLOAT);
+            if (PyArray_CHKFLAGS((PyArrayObject*) pyforces, NPY_ARRAY_CARRAY_RO) && PyArray_DESCR((PyArrayObject*) pyforces)->type_num == targetType)
                 array = pyforces;
             else
-                array = PyArray_FromAny(pyforces, PyArray_DescrFromType(NPY_DOUBLE), 2, 2, NPY_ARRAY_C_CONTIGUOUS, NULL);
-            double* data = (double*) PyArray_DATA((PyArrayObject*) array);
-            memcpy(forces.data(), data, 3*sizeof(double)*forces.size());
+                array = PyArray_FromAny(pyforces, PyArray_DescrFromType(targetType), 2, 2, NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_FORCECAST, NULL);
+            int elementSize = (forcesAreDouble ? sizeof(double) : sizeof(float));
+            void* data = PyArray_DATA((PyArrayObject*) array);
+            memcpy(forces, data, 3*elementSize*numParticles);
             Py_XDECREF(wrappedState);
             Py_XDECREF(result);
             Py_XDECREF(pyenergy);

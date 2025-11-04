@@ -37,7 +37,7 @@
 using namespace OpenMM;
 using namespace std;
 
-PythonForceImpl::PythonForceImpl(const PythonForce& owner) : CustomCPPForceImpl(owner), owner(owner), computation(owner.getComputation()),
+PythonForceImpl::PythonForceImpl(const PythonForce& owner) : owner(owner), computation(owner.getComputation()),
         defaultParameters(owner.getGlobalParameters()), usePeriodic(owner.usesPeriodicBoundaryConditions()) {
     forceGroup = owner.getForceGroup();
 }
@@ -45,19 +45,19 @@ PythonForceImpl::PythonForceImpl(const PythonForce& owner) : CustomCPPForceImpl(
 PythonForceImpl::~PythonForceImpl() {
 }
 
-double PythonForceImpl::computeForce(ContextImpl& context, const vector<Vec3>& positions, vector<Vec3>& forces) {
-    State::StateBuilder builder(context.getTime(), context.getStepCount());
-    builder.setPositions(positions);
-    builder.setParameters(context.getParameters());
-    if (usePeriodic) {
-        Vec3 a, b, c;
-        context.getPeriodicBoxVectors(a, b, c);
-        builder.setPeriodicBoxVectors(a, b, c);
-    }
-    double energy;
-    State state = builder.getState();
-    computation.compute(state, energy, forces);
-    return energy;
+void PythonForceImpl::initialize(ContextImpl& context) {
+    kernel = context.getPlatform().createKernel(CalcPythonForceKernel::Name(), context);
+    kernel.getAs<CalcPythonForceKernel>().initialize(context.getSystem(), owner);
+}
+
+double PythonForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&(1<<forceGroup)) != 0)
+        return kernel.getAs<CalcPythonForceKernel>().execute(context, includeForces, includeEnergy);
+    return 0.0;
+}
+
+vector<string> PythonForceImpl::getKernelNames() {
+    return {CalcCustomCPPForceKernel::Name()};
 }
 
 map<string, double> PythonForceImpl::getDefaultParameters() {

@@ -4468,3 +4468,125 @@ double CommonCalcCustomCPPForceKernel::addForces(bool includeForces, bool includ
     
     return energy;
 }
+
+class CommonCalcPythonForceKernel::StartCalculationPreComputation : public ComputeContext::ForcePreComputation {
+public:
+    StartCalculationPreComputation(CommonCalcPythonForceKernel& owner) : owner(owner) {
+    }
+    void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        owner.beginComputation(includeForces, includeEnergy, groups);
+    }
+    CommonCalcPythonForceKernel& owner;
+};
+
+class CommonCalcPythonForceKernel::ExecuteTask : public ComputeContext::WorkTask {
+public:
+    ExecuteTask(CommonCalcPythonForceKernel& owner, bool includeForces) : owner(owner), includeForces(includeForces) {
+    }
+    void execute() {
+        owner.executeOnWorkerThread(includeForces);
+    }
+    CommonCalcPythonForceKernel& owner;
+    bool includeForces;
+};
+
+class CommonCalcPythonForceKernel::AddForcesPostComputation : public ComputeContext::ForcePostComputation {
+public:
+    AddForcesPostComputation(CommonCalcPythonForceKernel& owner) : owner(owner) {
+    }
+    double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        return owner.addForces(includeForces, includeEnergy, groups);
+    }
+    CommonCalcPythonForceKernel& owner;
+};
+
+void CommonCalcPythonForceKernel::initialize(const System& system, const PythonForce& force) {
+    ContextSelector selector(cc);
+    computation = &force.getComputation();
+    usePeriodic = force.usesPeriodicBoundaryConditions();
+    int numParticles = system.getNumParticles();
+    positionsVec.resize(numParticles);
+    forcesVec.resize(3*numParticles);
+    int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    forcesArray.initialize(cc, 3*numParticles, elementSize, "forces");
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = cc.intToString(numParticles);
+    defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::customCppForce, defines);
+    addForcesKernel = program->createKernel("addForces");
+    addForcesKernel->addArg(forcesArray);
+    addForcesKernel->addArg(cc.getLongForceBuffer());
+    addForcesKernel->addArg(cc.getAtomIndexArray());
+    forceGroupFlag = (1<<force.getForceGroup());
+    if (cc.getNumContexts() == 1) {
+        cc.addPreComputation(new StartCalculationPreComputation(*this));
+        cc.addPostComputation(new AddForcesPostComputation(*this));
+    }
+}
+
+double CommonCalcPythonForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if (cc.getNumContexts() == 1) {
+        // This method does nothing.  The actual calculation is started by the pre-computation, continued on
+        // the worker thread, and finished by the post-computation.
+
+        return 0;
+    }
+
+    // When using multiple GPUs, this method is itself called from the worker thread.
+    // Submitting additional tasks and waiting for them to complete would lead to
+    // a deadlock.
+
+    if (cc.getContextIndex() != 0)
+        return 0.0;
+    contextImpl.getPositions(positionsVec);
+    executeOnWorkerThread(includeForces);
+    return addForces(includeForces, includeEnergy, -1);
+}
+
+void CommonCalcPythonForceKernel::beginComputation(bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&forceGroupFlag) == 0)
+        return;
+    
+    // The actual force computation will be done on a different thread.
+    
+    cc.getWorkThread().addTask(new ExecuteTask(*this, includeForces));
+}
+
+void CommonCalcPythonForceKernel::executeOnWorkerThread(bool includeForces) {
+    contextImpl.getPositions(positionsVec);
+    State::StateBuilder builder(contextImpl.getTime(), contextImpl.getStepCount());
+    builder.setPositions(positionsVec);
+    builder.setParameters(contextImpl.getParameters());
+    if (usePeriodic) {
+        Vec3 a, b, c;
+        contextImpl.getPeriodicBoxVectors(a, b, c);
+        builder.setPeriodicBoxVectors(a, b, c);
+    }
+    State state = builder.getState();
+    computation->compute(state, energy, forcesVec.data(), cc.getUseDoublePrecision());
+    if (includeForces) {
+        ContextSelector selector(cc);
+        forcesArray.upload(forcesVec.data());
+    }
+}
+
+double CommonCalcPythonForceKernel::addForces(bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&forceGroupFlag) == 0)
+        return 0;
+
+    // Wait until executeOnWorkerThread() is finished.
+    
+    if (cc.getNumContexts() == 1)
+        cc.getWorkThread().flush();
+
+    // Add in the forces.
+    
+    if (includeForces) {
+        ContextSelector selector(cc);
+        addForcesKernel->execute(cc.getNumAtoms());
+    }
+    
+    // Return the energy.
+    
+    return energy;
+}

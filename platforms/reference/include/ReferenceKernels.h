@@ -1944,6 +1944,35 @@ private:
     std::vector<Vec3> forces;
 };
 
+/**
+ * This kernel is invoked by PythonForceImpl to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcPythonForceKernel : public CalcPythonForceKernel {
+public:
+    ReferenceCalcPythonForceKernel(std::string name, const Platform& platform) : CalcPythonForceKernel(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the PythonForce this kernel will be used for
+     */
+    void initialize(const System& system, const PythonForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    const PythonForceComputation* computation;
+    std::vector<Vec3> forces;
+    bool usePeriodic;
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_REFERENCEKERNELS_H_*/

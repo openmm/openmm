@@ -40,7 +40,7 @@ using namespace std;
 
 void testForce() {
     class Computation : public PythonForceComputation {
-        void compute(const State& state, double& energy, vector<Vec3>& forces) const {
+        void compute(const State& state, double& energy, void* forces, bool forcesAreDouble) const {
             ASSERT_EQUAL(5.0, state.getParameters().at("a"));
             ASSERT_EQUAL(10.0, state.getParameters().at("b"));
             Vec3 a, b, c;
@@ -49,8 +49,16 @@ void testForce() {
             ASSERT_EQUAL(Vec3(0.1, 2, 0), b);
             ASSERT_EQUAL(Vec3(0.1, 0.1, 2), c);
             energy = 25.0;
-            for (int i = 0; i < forces.size(); i++) {
-                forces[i] = state.getPositions()[i]*2;
+            int numParticles = state.getPositions().size();
+            for (int i = 0; i < numParticles; i++) {
+                Vec3 f = state.getPositions()[i]*2;
+                if (forcesAreDouble)
+                    ((Vec3*) forces)[i] = f;
+                else {
+                    ((float*) forces)[3*i] = (float) f[0];
+                    ((float*) forces)[3*i+1] = (float) f[1];
+                    ((float*) forces)[3*i+2] = (float) f[2];
+                }
             }
         }
     };
@@ -76,17 +84,26 @@ void testForce() {
     ASSERT(force->usesPeriodicBoundaryConditions());
     system.addForce(force);
     VerletIntegrator integrator(0.01);
-    Context context(system, integrator, Platform::getPlatform("Reference"));
+    Context context(system, integrator, platform);
     context.setPositions(positions);
     State state = context.getState(State::Energy | State::Forces);
     ASSERT_EQUAL_TOL(25.0, state.getPotentialEnergy(), 1e-6);
     for (int i = 0; i < numParticles; i++)
         ASSERT_EQUAL_VEC(2*positions[i], state.getForces()[i], 1e-6)
+
+    // Check that force groups are handled correctly.
+
+    ASSERT_EQUAL_TOL(25.0, context.getState(State::Energy, false, 1).getPotentialEnergy(), 1e-6);
+    ASSERT_EQUAL_TOL(0.0, context.getState(State::Energy, false, 2).getPotentialEnergy(), 1e-6);
 }
+
+void runPlatformTests();
 
 int main(int argc, char* argv[]) {
     try {
+        initializeTests(argc, argv);
         testForce();
+        runPlatformTests();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
