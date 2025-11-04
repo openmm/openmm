@@ -305,82 +305,93 @@ void makeSmallTestCase(System& system, vector<Vec3>& positions, double& energy) 
     energy += 17.0 * (A[1][2] * (A[2][3] + A[2][4]) + A[1][3] * A[3][2] + A[1][4] * A[4][2]) + 21.0 * (A[2][1] * (A[1][3] + A[1][4]) + A[2][3] * A[3][1] + A[2][4] * A[4][1]) + 25.0 * (A[3][1] * A[1][2] + A[3][2] * A[2][1]) + 29.0 * (A[4][1] * A[1][2] + A[4][2] * A[2][1]);
 }
 
-void makeAlanineDipeptideTestCase(System& system, vector<Vec3>& positions, double& energy) {
+void makeAlanineDipeptideTestCase(int n, System& system, vector<Vec3>& positions, double& energy) {
     system = System();
-    system.addParticle(1.008);
-    system.addParticle(12.01);
-    system.addParticle(1.008);
-    system.addParticle(1.008);
-    system.addParticle(12.01);
-    system.addParticle(16.0);
-    system.addParticle(14.01);
-    system.addParticle(1.008);
-    system.addParticle(12.01);
-    system.addParticle(1.008);
-    system.addParticle(12.01);
-    system.addParticle(1.008);
-    system.addParticle(1.008);
-    system.addParticle(1.008);
-    system.addParticle(12.01);
-    system.addParticle(16.0);
-    system.addParticle(14.01);
-    system.addParticle(1.008);
-    system.addParticle(12.01);
-    system.addParticle(1.008);
-    system.addParticle(1.008);
-    system.addParticle(1.008);
+    for (int i = 0; i < n * n * n; i++) {
+        system.addParticle(1.008);
+        system.addParticle(12.01);
+        system.addParticle(1.008);
+        system.addParticle(1.008);
+        system.addParticle(12.01);
+        system.addParticle(16.0);
+        system.addParticle(14.01);
+        system.addParticle(1.008);
+        system.addParticle(12.01);
+        system.addParticle(1.008);
+        system.addParticle(12.01);
+        system.addParticle(1.008);
+        system.addParticle(1.008);
+        system.addParticle(1.008);
+        system.addParticle(12.01);
+        system.addParticle(16.0);
+        system.addParticle(14.01);
+        system.addParticle(1.008);
+        system.addParticle(12.01);
+        system.addParticle(1.008);
+        system.addParticle(1.008);
+        system.addParticle(1.008);
+    }
 
     LCPOForce * lcpo = new LCPOForce();
-    lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
-    lcpo->addParticle(0.31, 1.62939604, -0.58707796, -0.0027129056, 0.082274176);
-    lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
-    lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
-    lcpo->addParticle(0.31, 0.147159648, -0.03977938, -4.6042828e-05, 0.00353025);
-    lcpo->addParticle(0.3, 1.43433796, -0.3907856, -0.00283618716, 0.049670356);
-    lcpo->addParticle(0.305, 0.85985384, -0.25635368, -0.000157837216, 0.024693968);
-    lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
-    lcpo->addParticle(0.31, 0.48844016, -0.151935684, -0.00042005268, 0.016666964);
-    lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
-    lcpo->addParticle(0.31, 1.62939604, -0.58707796, -0.0027129056, 0.082274176);
-    lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
-    lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
-    lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
-    lcpo->addParticle(0.31, 0.147159648, -0.03977938, -4.6042828e-05, 0.00353025);
-    lcpo->addParticle(0.3, 1.43433796, -0.3907856, -0.00283618716, 0.049670356);
-    lcpo->addParticle(0.305, 0.85985384, -0.25635368, -0.000157837216, 0.024693968);
-    lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
-    lcpo->addParticle(0.31, 1.62939604, -0.58707796, -0.0027129056, 0.082274176);
-    lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
-    lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
-    lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+    for (int i = 0; i < n * n * n; i++) {
+        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.31, 1.62939604, -0.58707796, -0.0027129056, 0.082274176);
+        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.31, 0.147159648, -0.03977938, -4.6042828e-05, 0.00353025);
+        lcpo->addParticle(0.3, 1.43433796, -0.3907856, -0.00283618716, 0.049670356);
+        lcpo->addParticle(0.305, 0.85985384, -0.25635368, -0.000157837216, 0.024693968);
+        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.31, 0.48844016, -0.151935684, -0.00042005268, 0.016666964);
+        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.31, 1.62939604, -0.58707796, -0.0027129056, 0.082274176);
+        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.31, 0.147159648, -0.03977938, -4.6042828e-05, 0.00353025);
+        lcpo->addParticle(0.3, 1.43433796, -0.3907856, -0.00283618716, 0.049670356);
+        lcpo->addParticle(0.305, 0.85985384, -0.25635368, -0.000157837216, 0.024693968);
+        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.31, 1.62939604, -0.58707796, -0.0027129056, 0.082274176);
+        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+    }
     system.addForce(lcpo);
 
     positions.clear();
-    positions.push_back(Vec3(0.5734, 0.1803, -0.1291));
-    positions.push_back(Vec3(0.6163, 0.1897, -0.0278));
-    positions.push_back(Vec3(0.7195, 0.2294, -0.02));
-    positions.push_back(Vec3(0.6097, 0.0889, 0.0122));
-    positions.push_back(Vec3(0.5296, 0.2862, 0.0558));
-    positions.push_back(Vec3(0.4736, 0.2411, 0.1572));
-    positions.push_back(Vec3(0.5179, 0.4116, 0.0106));
-    positions.push_back(Vec3(0.5847, 0.4262, -0.0666));
-    positions.push_back(Vec3(0.4547, 0.5358, 0.0679));
-    positions.push_back(Vec3(0.4001, 0.5041, 0.1534));
-    positions.push_back(Vec3(0.5605, 0.6416, 0.1053));
-    positions.push_back(Vec3(0.5941, 0.6982, 0.0151));
-    positions.push_back(Vec3(0.5201, 0.7186, 0.1671));
-    positions.push_back(Vec3(0.6541, 0.6078, 0.1553));
-    positions.push_back(Vec3(0.3495, 0.6083, -0.026));
-    positions.push_back(Vec3(0.2817, 0.7019, 0.0017));
-    positions.push_back(Vec3(0.3411, 0.5571, -0.1505));
-    positions.push_back(Vec3(0.3787, 0.4676, -0.1632));
-    positions.push_back(Vec3(0.2684, 0.6092, -0.264));
-    positions.push_back(Vec3(0.3257, 0.5949, -0.3466));
-    positions.push_back(Vec3(0.1753, 0.5611, -0.2821));
-    positions.push_back(Vec3(0.256, 0.7156, -0.2582));
+    for (int x = 0; x < n; x++) {
+        for (int y = 0; y < n; y++) {
+            for (int z = 0; z < n; z++) {
+                Vec3 delta = 2.0 * Vec3(x, y, z);
+                positions.push_back(delta + Vec3(0.5734, 0.1803, -0.1291));
+                positions.push_back(delta + Vec3(0.6163, 0.1897, -0.0278));
+                positions.push_back(delta + Vec3(0.7195, 0.2294, -0.02));
+                positions.push_back(delta + Vec3(0.6097, 0.0889, 0.0122));
+                positions.push_back(delta + Vec3(0.5296, 0.2862, 0.0558));
+                positions.push_back(delta + Vec3(0.4736, 0.2411, 0.1572));
+                positions.push_back(delta + Vec3(0.5179, 0.4116, 0.0106));
+                positions.push_back(delta + Vec3(0.5847, 0.4262, -0.0666));
+                positions.push_back(delta + Vec3(0.4547, 0.5358, 0.0679));
+                positions.push_back(delta + Vec3(0.4001, 0.5041, 0.1534));
+                positions.push_back(delta + Vec3(0.5605, 0.6416, 0.1053));
+                positions.push_back(delta + Vec3(0.5941, 0.6982, 0.0151));
+                positions.push_back(delta + Vec3(0.5201, 0.7186, 0.1671));
+                positions.push_back(delta + Vec3(0.6541, 0.6078, 0.1553));
+                positions.push_back(delta + Vec3(0.3495, 0.6083, -0.026));
+                positions.push_back(delta + Vec3(0.2817, 0.7019, 0.0017));
+                positions.push_back(delta + Vec3(0.3411, 0.5571, -0.1505));
+                positions.push_back(delta + Vec3(0.3787, 0.4676, -0.1632));
+                positions.push_back(delta + Vec3(0.2684, 0.6092, -0.264));
+                positions.push_back(delta + Vec3(0.3257, 0.5949, -0.3466));
+                positions.push_back(delta + Vec3(0.1753, 0.5611, -0.2821));
+                positions.push_back(delta + Vec3(0.256, 0.7156, -0.2582));
+            }
+        }
+    }
 
     // Reference energy value from Amber.
-    energy = 1.5511 * 4.184;
+    energy = 1.5511 * 4.184 * n * n * n;
 }
 
 void makeGridTestCase(int n, System& system, vector<Vec3>& positions, double& energy) {
@@ -493,7 +504,7 @@ void makeGridTestCase(int n, System& system, vector<Vec3>& positions, double& en
     }
 }
 
-void runEnergyForcesTestCase(const System& system, vector<Vec3>& positions, double refEnergy, double energyTol, bool isReferencePlatform) {
+void runEnergyForcesTestCase(const System& system, vector<Vec3>& positions, double refEnergy, double energyTol, bool doFiniteDifference) {
     VerletIntegrator integrator(0.001);
     Context context(system, integrator, platform);
     context.setPositions(positions);
@@ -504,8 +515,8 @@ void runEnergyForcesTestCase(const System& system, vector<Vec3>& positions, doub
 
     ASSERT_EQUAL_TOL(refEnergy, testEnergy, energyTol);
 
-    if (isReferencePlatform) {
-        // For reference platform, check forces with finite differences.
+    if (doFiniteDifference) {
+        // Check forces with finite differences.
         double delta = 1e-4;
         for (int i = 0; i < forces.size(); i++) {
             for (int d = 0; d < 3; d++) {
@@ -526,7 +537,7 @@ void runEnergyForcesTestCase(const System& system, vector<Vec3>& positions, doub
         }
     }
     else {
-        // For other platforms, calculate forces with the reference platform and compare.
+        // Calculate forces with the reference platform and compare.
         VerletIntegrator refIntegrator(0.001);
         ReferencePlatform refPlatform;
         Context refContext(system, refIntegrator, refPlatform);
@@ -545,15 +556,29 @@ void testEnergyForces(bool isReferencePlatform) {
     vector<Vec3> positions;
     double energy;
 
+    // 5 particles:
     makeSmallTestCase(system, positions, energy);
-    runEnergyForcesTestCase(system, positions, energy, TOL, true);
-
-    // Reference energy from Amber rounded to 0.0001 kcal/mol.
-    makeAlanineDipeptideTestCase(system, positions, energy);
-    runEnergyForcesTestCase(system, positions, energy, 0.0001 * 4.184, true);
-
-    makeGridTestCase(isReferencePlatform ? 5 : 100, system, positions, energy);
     runEnergyForcesTestCase(system, positions, energy, TOL, isReferencePlatform);
+
+    // 22 particles:
+    makeAlanineDipeptideTestCase(1, system, positions, energy);
+    // Reference energy from Amber rounded to 0.0001 kcal/mol, so these tests
+    // need a slightly higher tolerance.
+    runEnergyForcesTestCase(system, positions, energy, 1e-5, isReferencePlatform);
+
+    // 594 particles:
+    makeAlanineDipeptideTestCase(3, system, positions, energy);
+    runEnergyForcesTestCase(system, positions, energy, 1e-5, isReferencePlatform);
+
+    if (!isReferencePlatform) {
+        // 22000 particles:
+        makeAlanineDipeptideTestCase(10, system, positions, energy);
+        runEnergyForcesTestCase(system, positions, energy, 1e-5, false);
+
+        // 125000 particles:
+        makeGridTestCase(50, system, positions, energy);
+        runEnergyForcesTestCase(system, positions, energy, TOL, false);
+    }
 }
 
 void runPlatformTests();
