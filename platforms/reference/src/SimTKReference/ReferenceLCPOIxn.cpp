@@ -35,6 +35,11 @@
 using namespace OpenMM;
 using namespace std;
 
+struct LCPONeighborInfo {
+    double Aij;
+    Vec3 dAij;
+};
+
 ReferenceLCPOIxn::ReferenceLCPOIxn(const vector<int>& indices, const vector<int>& particles, const vector<array<double, 4> >& parameters, double cutoff, bool usePeriodic) :
         indices(indices), particles(particles), parameters(parameters), cutoff(cutoff), usePeriodic(usePeriodic) {
     numParticles = indices.size();
@@ -48,12 +53,12 @@ double ReferenceLCPOIxn::execute(const Vec3* boxVectors, const std::vector<Vec3>
 
     NeighborList neighborList;
     computeNeighborListVoxelHash(neighborList, numParticles, posData, vector<set<int> >(numParticles), boxVectors, usePeriodic, cutoff, 0.0, false);
-    vector<map<int, double> > neighbors(numActiveParticles);
-    for (auto pair : neighborList) {
+    vector<map<int, LCPONeighborInfo> > neighbors(numActiveParticles);
+    for (auto atomPair : neighborList) {
         // Only include particles participating in the LCPO interaction.
 
-        int i = indices[pair.first];
-        int j = indices[pair.second];
+        int i = indices[atomPair.first];
+        int j = indices[atomPair.second];
         if (i == -1 || j == -1) {
             continue;
         }
@@ -65,20 +70,26 @@ double ReferenceLCPOIxn::execute(const Vec3* boxVectors, const std::vector<Vec3>
 
         double deltaR[ReferenceForce::LastDeltaRIndex];
         if (usePeriodic) {
-            ReferenceForce::getDeltaRPeriodic(posData[pair.first], posData[pair.second], boxVectors, deltaR);
+            ReferenceForce::getDeltaRPeriodic(posData[atomPair.first], posData[atomPair.second], boxVectors, deltaR);
         }
         else {
-            ReferenceForce::getDeltaR(posData[pair.first], posData[pair.second], deltaR);
+            ReferenceForce::getDeltaR(posData[atomPair.first], posData[atomPair.second], deltaR);
         }
         double r = deltaR[ReferenceForce::RIndex];
         if (r >= iRadius + jRadius) {
             continue;
         }
+        double rRecip = 1.0 / r;
 
-        // Precompute and store the buried areas.
+        // Precompute and store the buried areas and their derivatives.
 
-        neighbors[i][j] = 2.0 * PI_M * iRadius * (iRadius - r / 2.0 - (iRadius * iRadius - jRadius * jRadius) / (2.0 * r));
-        neighbors[j][i] = 2.0 * PI_M * jRadius * (jRadius - r / 2.0 - (jRadius * jRadius - iRadius * iRadius) / (2.0 * r));
+        double iRadiusPi = PI_M * iRadius;
+        double jRadiusPi = PI_M * jRadius;
+        double deltaRadiusR = (iRadius * iRadius - jRadius * jRadius) * rRecip;
+        double deltaRadiusRSq = deltaRadiusR * rRecip;
+        Vec3 direction = Vec3(deltaR[ReferenceForce::XIndex], deltaR[ReferenceForce::YIndex], deltaR[ReferenceForce::ZIndex]) * rRecip;
+        neighbors[i][j] = LCPONeighborInfo{iRadiusPi * (2.0 * iRadius - r - deltaRadiusR), iRadiusPi * (deltaRadiusRSq - 1.0) * direction};
+        neighbors[j][i] = LCPONeighborInfo{jRadiusPi * (2.0 * jRadius - r + deltaRadiusR), jRadiusPi * (deltaRadiusRSq + 1.0) * direction};
     }
 
     double energy = 0.0;
@@ -86,24 +97,36 @@ double ReferenceLCPOIxn::execute(const Vec3* boxVectors, const std::vector<Vec3>
     // Compute LCPO two- and three-body energy and forces.
 
     for (int i = 0; i < numActiveParticles; i++) {
+        double p2 = parameters[i][P2Index];
+        double p3 = parameters[i][P3Index];
+        double p4 = parameters[i][P4Index];
         double term2 = 0.0;
         double term3 = 0.0;
         double term4 = 0.0;
+        Vec3 iForce;
 
         for (auto jNeighbor : neighbors[i]) {
             int j = jNeighbor.first;
-            double Aij = jNeighbor.second;
+            double Aij = jNeighbor.second.Aij;
+            Vec3 dAij = jNeighbor.second.dAij;
+            Vec3 jForce;
 
             // Two-body term.
 
             term2 += Aij;
+            if (includeForces) {
+                Vec3 ijForce2Body = p2 * dAij;
+                forceData[particles[i]] += ijForce2Body;
+                forceData[particles[j]] -= ijForce2Body;
+            }
 
             // Three-body term: includes all pairs (j, k) of neighbors of i that
             // are also neighbors of each other.
 
             for (auto kNeighbor : neighbors[j]) {
                 int k = kNeighbor.first;
-                double Ajk = kNeighbor.second;
+                double Ajk = kNeighbor.second.Aij;
+                Vec3 dAjk = kNeighbor.second.dAij;
 
                 if (neighbors[i].find(k) == neighbors[i].end()) {
                     continue;
@@ -111,10 +134,24 @@ double ReferenceLCPOIxn::execute(const Vec3* boxVectors, const std::vector<Vec3>
 
                 term3 += Ajk;
                 term4 += Aij * Ajk;
+                if (includeForces) {
+                    Vec3 jkForce3Body = p3 * dAjk + p4 * dAjk * Aij;
+                    Vec3 ijForce3Body = p4 * dAij * Ajk;
+                    iForce += ijForce3Body;
+                    jForce += jkForce3Body - ijForce3Body;
+                    forceData[particles[k]] -= jkForce3Body;
+                }
+            }
+
+            if (includeForces) {
+                forceData[particles[j]] += jForce;
             }
         }
 
-        energy += parameters[i][P2Index] * term2 + parameters[i][P3Index] * term3 + parameters[i][P4Index] * term4;
+        energy += p2 * term2 + p3 * term3 + p4 * term4;
+        if (includeForces) {
+            forceData[particles[i]] += iForce;
+        }
     }
 
     return energy;

@@ -30,8 +30,6 @@
 #include "ReferenceTests.h"
 #include "TestLCPOForce.h"
 
-void platformInitialize() {
-}
-
 void runPlatformTests() {
+    testEnergyForces(true);
 }
