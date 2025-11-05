@@ -1173,7 +1173,6 @@ public:
     void copyParametersToContext(ContextImpl& context, const LCPOForce& force, int firstParticle, int lastParticle);
 private:
     double oneBodyEnergy;
-    int numParticles;
     std::vector<int> indices;
     std::vector<int> particles;
     std::vector<std::array<double, 4> > parameters;

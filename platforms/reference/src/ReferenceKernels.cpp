@@ -2468,10 +2468,9 @@ void ReferenceCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& cont
 
 void ReferenceCalcLCPOForceKernel::initialize(const System& system, const LCPOForce& force) {
     oneBodyEnergy = 0.0;
-
-    numParticles = force.getNumParticles();
     double maxRadius = 0.0;
-    for (int i = 0; i < numParticles; i++) {
+
+    for (int i = 0; i < force.getNumParticles(); i++) {
         double radius, p1, p2, p3, p4;
         force.getParticleParameters(i, radius, p1, p2, p3, p4);
         oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
@@ -2486,8 +2485,8 @@ void ReferenceCalcLCPOForceKernel::initialize(const System& system, const LCPOFo
             indices.push_back(-1);
         }
     }
-    cutoff = 2.0 * maxRadius;
 
+    cutoff = 2.0 * maxRadius;
     usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
