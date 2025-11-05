@@ -23,12 +23,13 @@ class TestPythonForce(unittest.TestCase):
         force = PythonForce(compute, {'k':2.5})
         system.addForce(force)
         positions = np.random.rand(5, 3)
-        integrator = VerletIntegrator(0.001)
-        context = Context(system, integrator, Platform.getPlatform('Reference'))
-        context.setPositions(positions)
-        state = context.getState(energy=True, forces=True)
-        self.assertAlmostEqual(2.5*np.sum(positions*positions), state.getPotentialEnergy().value_in_unit(kilojoules_per_mole), places=5)
-        self.assertTrue(np.allclose(-1.25*positions, state.getForces(asNumpy=True).value_in_unit(kilojoules_per_mole/nanometer)))
+        for i in range(Platform.getNumPlatforms()):
+            integrator = VerletIntegrator(0.001)
+            context = Context(system, integrator, Platform.getPlatform(i))
+            context.setPositions(positions)
+            state = context.getState(energy=True, forces=True)
+            self.assertAlmostEqual(2.5*np.sum(positions*positions), state.getPotentialEnergy().value_in_unit(kilojoules_per_mole), places=5)
+            self.assertTrue(np.allclose(-1.25*positions, state.getForces(asNumpy=True).value_in_unit(kilojoules_per_mole/nanometer)))
 
     def testExceptions(self):
         """Test that PythonForce handles exceptions correctly."""
@@ -40,12 +41,13 @@ class TestPythonForce(unittest.TestCase):
         force = PythonForce(compute2)
         system.addForce(force)
         positions = np.random.rand(1, 3)
-        integrator = VerletIntegrator(0.001)
-        context = Context(system, integrator)
-        context.setPositions(positions)
-        with self.assertRaises(OpenMMException) as cm:
-            context.getState(energy=True)
-        self.assertEqual('This should fail', str(cm.exception))
+        for i in range(Platform.getNumPlatforms()):
+            integrator = VerletIntegrator(0.001)
+            context = Context(system, integrator, Platform.getPlatform(i))
+            context.setPositions(positions)
+            with self.assertRaises(OpenMMException) as cm:
+                context.getState(energy=True)
+            self.assertEqual('This should fail', str(cm.exception))
 
     def testSerialize(self):
         """Test that PythonForce can be serialized."""
@@ -133,12 +135,13 @@ class TestPythonForce(unittest.TestCase):
             force = PythonForce(compute2)
             system.addForce(force)
             positions = np.random.rand(2, 3)
-            integrator = VerletIntegrator(0.001)
-            context = Context(system, integrator)
-            context.setPositions(positions)
-            forces = context.getState(forces=True).getForces().value_in_unit(kilojoules_per_mole/nanometer)
-            self.assertEqual(Vec3(1,2,3), forces[0])
-            self.assertEqual(Vec3(4,5,6), forces[1])
+            for i in range(Platform.getNumPlatforms()):
+                integrator = VerletIntegrator(0.001)
+                context = Context(system, integrator, Platform.getPlatform(i))
+                context.setPositions(positions)
+                forces = context.getState(forces=True).getForces().value_in_unit(kilojoules_per_mole/nanometer)
+                self.assertEqual(Vec3(1,2,3), forces[0])
+                self.assertEqual(Vec3(4,5,6), forces[1])
 
 if __name__ == '__main__':
     unittest.main()
