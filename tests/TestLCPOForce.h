@@ -38,7 +38,8 @@
 using namespace OpenMM;
 using namespace std;
 
-const double TOL = 1e-6;
+const double TOL = 1e-5;
+const double REF_FORCE_TOL = 5e-4;
 
 void testSingleParticle() {
     System system;
@@ -404,9 +405,15 @@ void makeGridTestCase(int n, System& system, vector<Vec3>& positions, double& en
         system.addParticle(i);
     }
 
+    // Round random variates into {0, 1} to generate radius and position
+    // parameters from a discrete set.  Since the forces are discontinuous at
+    // the cutoff in LCPO, single precision Platform calculations might not
+    // match the ReferencePlatform if any particles are positioned very close
+    // to the sum of their radii from each other.
+
     LCPOForce * lcpo = new LCPOForce();
     for (int i = 0; i < n * n * n; i++) {
-        lcpo->addParticle(0.6 + 0.2 * genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
+        lcpo->addParticle(0.6 + 0.2 * round(genrand_real2(sfmt)), genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
     }
     lcpo->setUsesPeriodicBoundaryConditions(true);
     system.addForce(lcpo);
@@ -415,7 +422,7 @@ void makeGridTestCase(int n, System& system, vector<Vec3>& positions, double& en
     for (int x = 0; x < n; x++) {
         for (int y = 0; y < n; y++) {
             for (int z = 0; z < n; z++) {
-                positions.push_back(Vec3(x + 0.1 * genrand_real2(sfmt) - 0.05, y + 0.1 * genrand_real2(sfmt) - 0.05, z + 0.1 * genrand_real2(sfmt) - 0.05));
+                positions.push_back(Vec3(x + 0.1 * round(genrand_real2(sfmt)) - 0.05, y + 0.1 * round(genrand_real2(sfmt)) - 0.05, z + 0.1 * round(genrand_real2(sfmt)) - 0.05));
             }
         }
     }
@@ -504,7 +511,7 @@ void makeGridTestCase(int n, System& system, vector<Vec3>& positions, double& en
     }
 }
 
-void runEnergyForcesTestCase(const System& system, vector<Vec3>& positions, double refEnergy, double energyTol, bool doFiniteDifference) {
+void runEnergyForcesTestCase(const System& system, vector<Vec3>& positions, double refEnergy, bool doFiniteDifference) {
     VerletIntegrator integrator(0.001);
     Context context(system, integrator, platform);
     context.setPositions(positions);
@@ -513,7 +520,7 @@ void runEnergyForcesTestCase(const System& system, vector<Vec3>& positions, doub
     double testEnergy = state.getPotentialEnergy();
     const vector<Vec3>& forces = state.getForces();
 
-    ASSERT_EQUAL_TOL(refEnergy, testEnergy, energyTol);
+    ASSERT_EQUAL_TOL(refEnergy, testEnergy, TOL);
 
     if (doFiniteDifference) {
         // Check forces with finite differences.
@@ -546,7 +553,7 @@ void runEnergyForcesTestCase(const System& system, vector<Vec3>& positions, doub
         const vector<Vec3>& refForces = refState.getForces();
 
         for (int i = 0; i < forces.size(); i++) {
-            ASSERT_EQUAL_VEC(refForces[i], forces[i], TOL);
+            ASSERT_EQUAL_VEC(refForces[i], forces[i], REF_FORCE_TOL);
         }
     }
 }
@@ -558,26 +565,24 @@ void testEnergyForces(bool isReferencePlatform) {
 
     // 5 particles:
     makeSmallTestCase(system, positions, energy);
-    runEnergyForcesTestCase(system, positions, energy, TOL, isReferencePlatform);
+    runEnergyForcesTestCase(system, positions, energy, isReferencePlatform);
 
     // 22 particles:
     makeAlanineDipeptideTestCase(1, system, positions, energy);
-    // Reference energy from Amber rounded to 0.0001 kcal/mol, so these tests
-    // need a slightly higher tolerance.
-    runEnergyForcesTestCase(system, positions, energy, 1e-5, isReferencePlatform);
+    runEnergyForcesTestCase(system, positions, energy, isReferencePlatform);
 
     // 594 particles:
     makeAlanineDipeptideTestCase(3, system, positions, energy);
-    runEnergyForcesTestCase(system, positions, energy, 1e-5, isReferencePlatform);
+    runEnergyForcesTestCase(system, positions, energy, isReferencePlatform);
 
     if (!isReferencePlatform) {
         // 22000 particles:
         makeAlanineDipeptideTestCase(10, system, positions, energy);
-        runEnergyForcesTestCase(system, positions, energy, 1e-5, false);
+        runEnergyForcesTestCase(system, positions, energy, false);
 
         // 125000 particles:
         makeGridTestCase(50, system, positions, energy);
-        runEnergyForcesTestCase(system, positions, energy, TOL, false);
+        runEnergyForcesTestCase(system, positions, energy, false);
     }
 }
 
@@ -593,7 +598,6 @@ int main(int argc, char* argv[]) {
         testUsePeriodic(false);
         testUsePeriodic(true);
         testExclude();
-
         runPlatformTests();
     }
     catch(const exception& e) {

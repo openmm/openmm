@@ -116,8 +116,8 @@ double ReferenceLCPOIxn::execute(const Vec3* boxVectors, const std::vector<Vec3>
             term2 += Aij;
             if (includeForces) {
                 Vec3 ijForce2Body = p2 * dAij;
-                forceData[particles[i]] += ijForce2Body;
-                forceData[particles[j]] -= ijForce2Body;
+                iForce += ijForce2Body;
+                jForce -= ijForce2Body;
             }
 
             // Three-body term: includes all pairs (j, k) of neighbors of i that
@@ -135,7 +135,7 @@ double ReferenceLCPOIxn::execute(const Vec3* boxVectors, const std::vector<Vec3>
                 term3 += Ajk;
                 term4 += Aij * Ajk;
                 if (includeForces) {
-                    Vec3 jkForce3Body = p3 * dAjk + p4 * dAjk * Aij;
+                    Vec3 jkForce3Body = (p3 + p4 * Aij) * dAjk;
                     Vec3 ijForce3Body = p4 * dAij * Ajk;
                     iForce += ijForce3Body;
                     jForce += jkForce3Body - ijForce3Body;
