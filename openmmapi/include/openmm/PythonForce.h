@@ -100,7 +100,8 @@ public:
  * conditions, so you must tell it.  To make the force periodic, call
  * setUsesPeriodicBoundaryConditions(True).  This will cause usesPeriodicBoundaryConditions()
  * to return True, and the State passed to the computation function will contain periodic
- * box vectors.
+ * box vectors.  The positions may also be wrapped into a different periodic box to keep them
+ * closer to the origin and improve accuracy.
  * 
  * When using XmlSerializer to save a PythonForce, it uses the Python pickle module to save
  * the computation function.  If it cannot be pickled, you will not be able to serialize the

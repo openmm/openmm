@@ -216,7 +216,7 @@ void ReferenceUpdateStateDataKernel::setStepCount(const ContextImpl& context, lo
     data.stepCount = count;
 }
 
-void ReferenceUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector<Vec3>& positions) {
+void ReferenceUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector<Vec3>& positions, bool allowPeriodic) {
     int numParticles = context.getSystem().getNumParticles();
     vector<Vec3>& posData = extractPositions(context);
     positions.resize(numParticles);

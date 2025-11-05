@@ -102,8 +102,10 @@ public:
      * Get the positions of all particles.
      *
      * @param positions  on exit, this contains the particle positions
+     * @param allowPeriodic  if true, the returned positions might be translated into a
+     *                       different periodic box to keep them closer to the origin
      */
-    void getPositions(std::vector<Vec3>& positions);
+    void getPositions(std::vector<Vec3>& positions, bool allowPeriodic=false);
     /**
      * Set the positions of all particles.
      *

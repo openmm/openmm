@@ -91,7 +91,7 @@ void CommonUpdateStateDataKernel::setStepCount(const ContextImpl& context, long 
         ctx->setStepCount(count);
 }
 
-void CommonUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
+void CommonUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions, bool allowPeriodic) {
     ContextSelector selector(cc);
     int numParticles = context.getSystem().getNumParticles();
     positions.resize(numParticles);
@@ -123,29 +123,55 @@ void CommonUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3
         int numThreads = threads.getNumThreads();
         int start = threadIndex*numParticles/numThreads;
         int end = (threadIndex+1)*numParticles/numThreads;
-        if (cc.getUseDoublePrecision()) {
-            mm_double4* posq = (mm_double4*) cc.getPinnedBuffer();
-            for (int i = start; i < end; ++i) {
-                mm_double4 pos = posq[i];
-                mm_int4 offset = cc.getPosCellOffsets()[i];
-                positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
+        if (allowPeriodic) {
+            if (cc.getUseDoublePrecision()) {
+                mm_double4* posq = (mm_double4*) cc.getPinnedBuffer();
+                for (int i = start; i < end; ++i) {
+                    mm_double4 pos = posq[i];
+                    positions[order[i]] = Vec3(pos.x, pos.y, pos.z);
+                }
             }
-        }
-        else if (cc.getUseMixedPrecision()) {
-            mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
-            for (int i = start; i < end; ++i) {
-                mm_float4 pos1 = posq[i];
-                mm_float4 pos2 = posCorrection[i];
-                mm_int4 offset = cc.getPosCellOffsets()[i];
-                positions[order[i]] = Vec3((double)pos1.x+(double)pos2.x, (double)pos1.y+(double)pos2.y, (double)pos1.z+(double)pos2.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
+            else if (cc.getUseMixedPrecision()) {
+                mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
+                for (int i = start; i < end; ++i) {
+                    mm_float4 pos1 = posq[i];
+                    mm_float4 pos2 = posCorrection[i];
+                    positions[order[i]] = Vec3((double)pos1.x+(double)pos2.x, (double)pos1.y+(double)pos2.y, (double)pos1.z+(double)pos2.z);
+                }
+            }
+            else {
+                mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
+                for (int i = start; i < end; ++i) {
+                    mm_float4 pos = posq[i];
+                    positions[order[i]] = Vec3(pos.x, pos.y, pos.z);
+                }
             }
         }
         else {
-            mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
-            for (int i = start; i < end; ++i) {
-                mm_float4 pos = posq[i];
-                mm_int4 offset = cc.getPosCellOffsets()[i];
-                positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
+            if (cc.getUseDoublePrecision()) {
+                mm_double4* posq = (mm_double4*) cc.getPinnedBuffer();
+                for (int i = start; i < end; ++i) {
+                    mm_double4 pos = posq[i];
+                    mm_int4 offset = cc.getPosCellOffsets()[i];
+                    positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
+                }
+            }
+            else if (cc.getUseMixedPrecision()) {
+                mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
+                for (int i = start; i < end; ++i) {
+                    mm_float4 pos1 = posq[i];
+                    mm_float4 pos2 = posCorrection[i];
+                    mm_int4 offset = cc.getPosCellOffsets()[i];
+                    positions[order[i]] = Vec3((double)pos1.x+(double)pos2.x, (double)pos1.y+(double)pos2.y, (double)pos1.z+(double)pos2.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
+                }
+            }
+            else {
+                mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
+                for (int i = start; i < end; ++i) {
+                    mm_float4 pos = posq[i];
+                    mm_int4 offset = cc.getPosCellOffsets()[i];
+                    positions[order[i]] = Vec3(pos.x, pos.y, pos.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
+                }
             }
         }
     });
@@ -4553,7 +4579,7 @@ void CommonCalcPythonForceKernel::beginComputation(bool includeForces, bool incl
 }
 
 void CommonCalcPythonForceKernel::executeOnWorkerThread(bool includeForces) {
-    contextImpl.getPositions(positionsVec);
+    contextImpl.getPositions(positionsVec, usePeriodic || !cc.getNonbondedUtilities().getUsePeriodic());
     State::StateBuilder builder(contextImpl.getTime(), contextImpl.getStepCount());
     builder.setPositions(positionsVec);
     builder.setParameters(contextImpl.getParameters());

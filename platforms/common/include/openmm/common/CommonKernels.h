@@ -80,9 +80,12 @@ public:
     /**
      * Get the positions of all particles.
      *
+     * @param context    the context in which to execute this kernel
      * @param positions  on exit, this contains the particle positions
+     * @param allowPeriodic  if true, the returned positions might be translated into a
+     *                       different periodic box to keep them closer to the origin
      */
-    void getPositions(ContextImpl& context, std::vector<Vec3>& positions);
+    void getPositions(ContextImpl& context, std::vector<Vec3>& positions, bool allowPeriodic=false);
     /**
      * Set the positions of all particles.
      *
