@@ -55,16 +55,12 @@ void AndersenThermostatImpl::updateContextState(ContextImpl& context, bool& forc
 }
 
 std::map<std::string, double> AndersenThermostatImpl::getDefaultParameters() {
-    std::map<std::string, double> parameters;
-    parameters[AndersenThermostat::Temperature()] = getOwner().getDefaultTemperature();
-    parameters[AndersenThermostat::CollisionFrequency()] = getOwner().getDefaultCollisionFrequency();
-    return parameters;
+    return {{AndersenThermostat::Temperature(), getOwner().getDefaultTemperature()},
+            {AndersenThermostat::CollisionFrequency(), getOwner().getDefaultCollisionFrequency()}};
 }
 
 std::vector<std::string> AndersenThermostatImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(ApplyAndersenThermostatKernel::Name());
-    return names;
+    return {ApplyAndersenThermostatKernel::Name()};
 }
 
 vector<vector<int> > AndersenThermostatImpl::calcParticleGroups(const System& system) {

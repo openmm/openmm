@@ -125,9 +125,7 @@ double CustomCentroidBondForceImpl::calcForcesAndEnergy(ContextImpl& context, bo
 }
 
 vector<string> CustomCentroidBondForceImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(CalcCustomCentroidBondForceKernel::Name());
-    return names;
+    return {CalcCustomCentroidBondForceKernel::Name()};
 }
 
 map<string, double> CustomCentroidBondForceImpl::getDefaultParameters() {

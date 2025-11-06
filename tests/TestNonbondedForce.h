@@ -102,11 +102,7 @@ void testExclusionsAnd14() {
         system.addParticle(1.0);
         nonbonded->addParticle(0, 1.5, 0);
     }
-    vector<pair<int, int> > bonds;
-    bonds.push_back(pair<int, int>(0, 1));
-    bonds.push_back(pair<int, int>(1, 2));
-    bonds.push_back(pair<int, int>(2, 3));
-    bonds.push_back(pair<int, int>(3, 4));
+    vector<pair<int, int> > bonds = {{0, 1}, {1, 2}, {2, 3}, {3, 4}};
     nonbonded->createExceptionsFromBonds(bonds, 0.0, 0.0);
     int first14, second14;
     for (int i = 0; i < nonbonded->getNumExceptions(); i++) {
@@ -233,11 +229,7 @@ void testCutoff14() {
     nonbonded->setCutoffDistance(cutoff);
     const double eps = 30.0;
     nonbonded->setReactionFieldDielectric(eps);
-    vector<pair<int, int> > bonds;
-    bonds.push_back(pair<int, int>(0, 1));
-    bonds.push_back(pair<int, int>(1, 2));
-    bonds.push_back(pair<int, int>(2, 3));
-    bonds.push_back(pair<int, int>(3, 4));
+    vector<pair<int, int> > bonds = {{0, 1}, {1, 2}, {2, 3}, {3, 4}};
     nonbonded->createExceptionsFromBonds(bonds, 0.0, 0.0);
     int first14, second14;
     for (int i = 0; i < nonbonded->getNumExceptions(); i++) {

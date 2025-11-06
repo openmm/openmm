@@ -73,9 +73,7 @@ void DrudeSCFIntegrator::cleanup() {
 }
 
 vector<string> DrudeSCFIntegrator::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(IntegrateDrudeSCFStepKernel::Name());
-    return names;
+    return {IntegrateDrudeSCFStepKernel::Name()};
 }
 
 double DrudeSCFIntegrator::computeKineticEnergy() {

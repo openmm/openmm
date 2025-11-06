@@ -930,9 +930,7 @@ void testTabulatedFunction() {
     integrator.addPerDofVariable("dof", 0.0);
     integrator.addComputeGlobal("global", "fn(global)");
     integrator.addComputePerDof("dof", "fn(x)");
-    vector<double> table;
-    table.push_back(10.0);
-    table.push_back(20.0);
+    vector<double> table = {10.0, 20.0};
     integrator.addTabulatedFunction("fn", new Continuous1DFunction(table, 1.0, 2.0));
     Context context(system, integrator, platform);
     vector<Vec3> positions(1);

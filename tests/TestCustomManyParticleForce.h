@@ -358,12 +358,7 @@ void testAllTerms() {
     CustomCompoundBondForce* force2 = new CustomCompoundBondForce(4,
         "distance(p1,p2)+angle(p1,p3,p4)+dihedral(p1,p4,p2,p3)+x1+y3+z4");
     system2.addForce(force2);
-    vector<int> particles;
-    particles.push_back(0);
-    particles.push_back(1);
-    particles.push_back(2);
-    particles.push_back(3);
-    force2->addBond(particles, params);
+    force2->addBond({0, 1, 2, 3}, params);
     for (int i = 0; i < numParticles; i++)
         system2.addParticle(1.0);
     
@@ -462,9 +457,7 @@ void testTabulatedFunctions() {
     
     // Create two tabulated functions.
     
-    vector<double> values;
-    values.push_back(0.0);
-    values.push_back(50.0);
+    vector<double> values = {0.0, 50.0};
     Continuous1DFunction* f1 = new Continuous1DFunction(values, 0, 100);
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);

@@ -70,9 +70,7 @@ void VariableVerletIntegrator::cleanup() {
 }
 
 vector<string> VariableVerletIntegrator::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(IntegrateVariableVerletStepKernel::Name());
-    return names;
+    return {IntegrateVariableVerletStepKernel::Name()};
 }
 
 double VariableVerletIntegrator::computeKineticEnergy() {

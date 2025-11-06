@@ -173,11 +173,8 @@ void ReferenceCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, 
     vector<Vec3>& forceData = extractForces(context);
     if (includeForces) {
         int numParticles = context.getSystem().getNumParticles();
-        for (int i = 0; i < numParticles; ++i) {
-            forceData[i][0] = 0.0;
-            forceData[i][1] = 0.0;
-            forceData[i][2] = 0.0;
-        }
+        for (int i = 0; i < numParticles; ++i)
+            forceData[i] = Vec3();
     }
     else
         savedForces = forceData;
@@ -217,39 +214,19 @@ void ReferenceUpdateStateDataKernel::setStepCount(const ContextImpl& context, lo
 }
 
 void ReferenceUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector<Vec3>& positions) {
-    int numParticles = context.getSystem().getNumParticles();
-    vector<Vec3>& posData = extractPositions(context);
-    positions.resize(numParticles);
-    for (int i = 0; i < numParticles; ++i)
-        positions[i] = Vec3(posData[i][0], posData[i][1], posData[i][2]);
+    positions = extractPositions(context);
 }
 
 void ReferenceUpdateStateDataKernel::setPositions(ContextImpl& context, const std::vector<Vec3>& positions) {
-    int numParticles = context.getSystem().getNumParticles();
-    vector<Vec3>& posData = extractPositions(context);
-    for (int i = 0; i < numParticles; ++i) {
-        posData[i][0] = positions[i][0];
-        posData[i][1] = positions[i][1];
-        posData[i][2] = positions[i][2];
-    }
+    extractPositions(context) = positions;
 }
 
 void ReferenceUpdateStateDataKernel::getVelocities(ContextImpl& context, std::vector<Vec3>& velocities) {
-    int numParticles = context.getSystem().getNumParticles();
-    vector<Vec3>& velData = extractVelocities(context);
-    velocities.resize(numParticles);
-    for (int i = 0; i < numParticles; ++i)
-        velocities[i] = Vec3(velData[i][0], velData[i][1], velData[i][2]);
+    velocities = extractVelocities(context);
 }
 
 void ReferenceUpdateStateDataKernel::setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities) {
-    int numParticles = context.getSystem().getNumParticles();
-    vector<Vec3>& velData = extractVelocities(context);
-    for (int i = 0; i < numParticles; ++i) {
-        velData[i][0] = velocities[i][0];
-        velData[i][1] = velocities[i][1];
-        velData[i][2] = velocities[i][2];
-    }
+    extractVelocities(context) = velocities;
 }
 
 void ReferenceUpdateStateDataKernel::computeShiftedVelocities(ContextImpl& context, double timeShift, std::vector<Vec3>& velocities) {
@@ -280,11 +257,7 @@ void ReferenceUpdateStateDataKernel::computeShiftedVelocities(ContextImpl& conte
 }
 
 void ReferenceUpdateStateDataKernel::getForces(ContextImpl& context, std::vector<Vec3>& forces) {
-    int numParticles = context.getSystem().getNumParticles();
-    vector<Vec3>& forceData = extractForces(context);
-    forces.resize(numParticles);
-    for (int i = 0; i < numParticles; ++i)
-        forces[i] = Vec3(forceData[i][0], forceData[i][1], forceData[i][2]);
+    forces = extractForces(context);
 }
 
 void ReferenceUpdateStateDataKernel::getEnergyParameterDerivatives(ContextImpl& context, map<string, double>& derivs) {

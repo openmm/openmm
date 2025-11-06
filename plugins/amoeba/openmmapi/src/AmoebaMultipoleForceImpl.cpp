@@ -150,9 +150,7 @@ double AmoebaMultipoleForceImpl::calcForcesAndEnergy(ContextImpl& context, bool 
 }
 
 std::vector<std::string> AmoebaMultipoleForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcAmoebaMultipoleForceKernel::Name());
-    return names;
+    return {CalcAmoebaMultipoleForceKernel::Name()};
 }
 
 const int* AmoebaMultipoleForceImpl::getCovalentDegrees() {

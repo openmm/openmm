@@ -152,8 +152,6 @@ void AmoebaTorsionTorsionForceImpl::reorderGrid(const TorsionTorsionGrid& grid, 
 }
 
 std::vector<std::string> AmoebaTorsionTorsionForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcAmoebaTorsionTorsionForceKernel::Name());
-    return names;
+    return {CalcAmoebaTorsionTorsionForceKernel::Name()};
 }
 

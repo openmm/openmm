@@ -138,16 +138,12 @@ void MonteCarloFlexibleBarostatImpl::updateContextState(ContextImpl& context, bo
 }
 
 map<string, double> MonteCarloFlexibleBarostatImpl::getDefaultParameters() {
-    map<string, double> parameters;
-    parameters[MonteCarloFlexibleBarostat::Pressure()] = getOwner().getDefaultPressure();
-    parameters[MonteCarloFlexibleBarostat::Temperature()] = getOwner().getDefaultTemperature();
-    return parameters;
+    return {{MonteCarloFlexibleBarostat::Pressure(), getOwner().getDefaultPressure()},
+            {MonteCarloFlexibleBarostat::Temperature(), getOwner().getDefaultTemperature()}};
 }
 
 vector<string> MonteCarloFlexibleBarostatImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(ApplyMonteCarloBarostatKernel::Name());
-    return names;
+    return {ApplyMonteCarloBarostatKernel::Name()};
 }
 
 void MonteCarloFlexibleBarostatImpl::computeCurrentPressure(ContextImpl& context, vector<double>& pressure) {
