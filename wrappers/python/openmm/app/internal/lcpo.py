@@ -85,7 +85,7 @@ def addLCPOForces(system, paramsList, usePeriodic, surfaceEnergy=0.005*u.kilocal
 
     force = mm.LCPOForce()
     for atomRadius, p1, p2, p3, p4 in paramsList:
-        force.addParticle(atomRadius + probeRadius, p1 * surfaceEnergy, p2 * surfaceEnergy, p3 * surfaceEnergy, p4 * surfaceEnergy)
+        force.addParticle(atomRadius + probeRadius if atomRadius else 0, p1 * surfaceEnergy, p2 * surfaceEnergy, p3 * surfaceEnergy, p4 * surfaceEnergy)
     force.setUsesPeriodicBoundaryConditions(usePeriodic)
     system.addForce(force)
 

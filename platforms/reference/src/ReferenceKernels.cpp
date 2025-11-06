@@ -2475,7 +2475,7 @@ void ReferenceCalcLCPOForceKernel::initialize(const System& system, const LCPOFo
         force.getParticleParameters(i, radius, p1, p2, p3, p4);
         oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
 
-        if (radius != 0.0 && (p2 != 0.0 || p3 != 0.0 || p4 != 0.0)) {
+        if (radius != 0.0) {
             indices.push_back(particles.size());
             particles.push_back(i);
             parameters.push_back({radius, p2, p3, p4});

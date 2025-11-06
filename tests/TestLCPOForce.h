@@ -213,10 +213,57 @@ void testUsePeriodic(bool usePeriodic) {
     }
 }
 
-void testExclude() {
+void testIncludeZeroScale() {
+    // Particles with non-zero radii and zero LCPO coefficients should still
+    // contribute to the LCPO energies of other particles.
+
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
+    system.addParticle(1.0);
+
+    LCPOForce* lcpo = new LCPOForce();
+    lcpo->addParticle(0.22, 10.0, 11.0, 12.0, 13.0);
+    lcpo->addParticle(0.24, 0.0, 0.0, 0.0, 0.0);
+    lcpo->addParticle(0.26, 0.0, 0.0, 0.0, 0.0);
+    system.addForce(lcpo);
+
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions{
+        Vec3(1.1, 1.2, 1.3),
+        Vec3(1.4, 1.4, 1.4),
+        Vec3(1.3, 1.0, 1.6)
+    };
+    context.setPositions(positions);
+    State state = context.getState(State::Energy | State::Forces);
+    const vector<Vec3>& forces = state.getForces();
+
+    Vec3 x12 = positions[1] - positions[0];
+    Vec3 x13 = positions[2] - positions[0];
+    Vec3 x23 = positions[2] - positions[1];
+    double r12 = sqrt(x12.dot(x12));
+    double r13 = sqrt(x13.dot(x13));
+    double r23 = sqrt(x23.dot(x23));
+    double A12 = 2.0 * PI_M * 0.22 * (0.22 - r12 / 2.0 - (0.22 * 0.22 - 0.24 * 0.24) / (2.0 * r12));
+    double A13 = 2.0 * PI_M * 0.22 * (0.22 - r13 / 2.0 - (0.22 * 0.22 - 0.26 * 0.26) / (2.0 * r13));
+    double A23 = 2.0 * PI_M * 0.24 * (0.24 - r23 / 2.0 - (0.24 * 0.24 - 0.26 * 0.26) / (2.0 * r23));
+    double A32 = 2.0 * PI_M * 0.26 * (0.26 - r23 / 2.0 - (0.26 * 0.26 - 0.24 * 0.24) / (2.0 * r23));
+    double dA12 = 2.0 * PI_M * 0.22 * (-0.5 + (0.22 * 0.22 - 0.24 * 0.24) / (2.0 * r12 * r12)) / r12;
+    double dA13 = 2.0 * PI_M * 0.22 * (-0.5 + (0.22 * 0.22 - 0.26 * 0.26) / (2.0 * r13 * r13)) / r13;
+    double dA23 = 2.0 * PI_M * 0.24 * (-0.5 + (0.24 * 0.24 - 0.26 * 0.26) / (2.0 * r23 * r23)) / r23;
+    double dA32 = 2.0 * PI_M * 0.26 * (-0.5 + (0.26 * 0.26 - 0.24 * 0.24) / (2.0 * r23 * r23)) / r23;
+
+    ASSERT_EQUAL_TOL(10.0 * 4.0 * PI_M * 0.22 * 0.22 + 11.0 * (A12 + A13) + 12.0 * (A23 + A32) + 13.0 * (A12 * A23 + A13 * A32), state.getPotentialEnergy(), TOL);
+    ASSERT_EQUAL_VEC(11.0 * (dA12 * -x12 + dA13 * -x13) + 13.0 * (dA12 * A23 * -x12 + dA13 * A32 * -x13), -forces[0], TOL);
+    ASSERT_EQUAL_VEC(11.0 * dA12 * x12 + 12.0 * (dA23 * -x23 + dA32 * -x23) + 13.0 * (dA12 * A23 * x12 + A12 * dA23 * -x23 + A13 * dA32 * -x23), -forces[1], TOL);
+    ASSERT_EQUAL_VEC(11.0 * dA13 * x13 + 12.0 * (dA23 * x23 + dA32 * x23) + 13.0 * (A12 * dA23 * x23 + dA13 * A32 * x13 + A13 * dA32 * x23), -forces[2], TOL);
+}
+
+void testExcludeZeroRadius() {
+    // Particles with zero radii should be excluded.
+
+    System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -227,8 +274,6 @@ void testExclude() {
     lcpo->addParticle(0.2, 14.0, 15.0, 16.0, 17.0);
     lcpo->addParticle(0.0, 20.0, 20.0, 20.0, 20.0);
     lcpo->addParticle(0.0, 30.0, 30.0, 30.0, 30.0);
-    lcpo->addParticle(0.2, 0.0, 0.0, 0.0, 0.0);
-    lcpo->addParticle(0.2, 0.0, 0.0, 0.0, 0.0);
     system.addForce(lcpo);
 
     Vec3 offset(0.48, 0.6, 0.64); // unit
@@ -238,7 +283,7 @@ void testExclude() {
 
     for (int trial = 0; trial < 3; trial++) {
         double r = 0.15 + 0.1 * trial;
-        context.setPositions(vector<Vec3>{Vec3(), r * offset, r * offset * 0.2, r * offset * 0.4, r * offset * 0.6, r * offset * 0.8});
+        context.setPositions(vector<Vec3>{Vec3(), r * offset, r * offset * 0.3, r * offset * 0.7});
         State state = context.getState(State::Energy | State::Forces);
         const vector<Vec3>& forces = state.getForces();
         ASSERT_EQUAL_TOL(
@@ -335,28 +380,28 @@ void makeAlanineDipeptideTestCase(int n, System& system, vector<Vec3>& positions
 
     LCPOForce * lcpo = new LCPOForce();
     for (int i = 0; i < n * n * n; i++) {
-        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.0, 0.0, 0.0, 0.0, 0.0);
         lcpo->addParticle(0.31, 1.62939604, -0.58707796, -0.0027129056, 0.082274176);
-        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
-        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.0, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.0, 0.0, 0.0, 0.0, 0.0);
         lcpo->addParticle(0.31, 0.147159648, -0.03977938, -4.6042828e-05, 0.00353025);
         lcpo->addParticle(0.3, 1.43433796, -0.3907856, -0.00283618716, 0.049670356);
         lcpo->addParticle(0.305, 0.85985384, -0.25635368, -0.000157837216, 0.024693968);
-        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.0, 0.0, 0.0, 0.0, 0.0);
         lcpo->addParticle(0.31, 0.48844016, -0.151935684, -0.00042005268, 0.016666964);
-        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.0, 0.0, 0.0, 0.0, 0.0);
         lcpo->addParticle(0.31, 1.62939604, -0.58707796, -0.0027129056, 0.082274176);
-        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
-        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
-        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.0, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.0, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.0, 0.0, 0.0, 0.0, 0.0);
         lcpo->addParticle(0.31, 0.147159648, -0.03977938, -4.6042828e-05, 0.00353025);
         lcpo->addParticle(0.3, 1.43433796, -0.3907856, -0.00283618716, 0.049670356);
         lcpo->addParticle(0.305, 0.85985384, -0.25635368, -0.000157837216, 0.024693968);
-        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.0, 0.0, 0.0, 0.0, 0.0);
         lcpo->addParticle(0.31, 1.62939604, -0.58707796, -0.0027129056, 0.082274176);
-        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
-        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
-        lcpo->addParticle(0.14, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.0, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.0, 0.0, 0.0, 0.0, 0.0);
+        lcpo->addParticle(0.0, 0.0, 0.0, 0.0, 0.0);
     }
     system.addForce(lcpo);
 
@@ -597,7 +642,8 @@ int main(int argc, char* argv[]) {
         testThreeParticles();
         testUsePeriodic(false);
         testUsePeriodic(true);
-        testExclude();
+        testIncludeZeroScale();
+        testExcludeZeroRadius();
         runPlatformTests();
     }
     catch(const exception& e) {

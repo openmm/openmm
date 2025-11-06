@@ -52,8 +52,7 @@ namespace OpenMM {
  * effect on Contexts that already exist unless you call
  * updateParametersInContext().
  *
- * To exclude a particle from the force entirely, you can either set its radius
- * to zero or set all of its LCPO parameters to zero (or both).
+ * To exclude a particle from the force entirely, set its radius to zero.
  */
 
 class OPENMM_EXPORT LCPOForce : public Force {

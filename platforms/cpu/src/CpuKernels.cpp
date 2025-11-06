@@ -1790,7 +1790,7 @@ void CpuCalcLCPOForceKernel::initialize(const System& system, const LCPOForce& f
         force.getParticleParameters(i, radius, p1, p2, p3, p4);
         oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
 
-        if (radius != 0.0 && (p2 != 0.0 || p3 != 0.0 || p4 != 0.0)) {
+        if (radius != 0.0) {
             indices.push_back(particles.size());
             particles.push_back(i);
             parameters.push_back(fvec4(radius, p2, p3, p4));
@@ -1819,7 +1819,7 @@ void CpuCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const
         oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
 
         if (i >= firstParticle && i <= lastParticle) {
-            bool isActive = radius != 0.0 && (p2 != 0.0 || p3 != 0.0 || p4 != 0.0);
+            bool isActive = radius != 0.0;
             bool wasActive = indices[i] != -1;
             if (isActive != wasActive) {
                 throw OpenMMException("updateParametersInContext: The set of non-excluded particles has changed");
