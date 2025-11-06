@@ -78,9 +78,7 @@ void RPMDIntegrator::stateChanged(State::DataType changed) {
 }
 
 vector<string> RPMDIntegrator::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(IntegrateRPMDStepKernel::Name());
-    return names;
+    return {IntegrateRPMDStepKernel::Name()};
 }
 
 void RPMDIntegrator::setPositions(int copy, const vector<Vec3>& positions) {

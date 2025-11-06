@@ -57,10 +57,10 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
     // work arrays
 
     if (_numberOfConstraints > 0) {
-        _r_ij.resize(numberOfConstraints);
-        _d_ij2 = SimTKOpenMMUtilities::allocateOneDRealOpenMMArray(numberOfConstraints, NULL, 1, 0.0, "dij_2");
-        _distanceTolerance = SimTKOpenMMUtilities::allocateOneDRealOpenMMArray(numberOfConstraints, NULL, 1, 0.0, "distanceTolerance");
-        _reducedMasses = SimTKOpenMMUtilities::allocateOneDRealOpenMMArray(numberOfConstraints, NULL, 1, 0.0, "reducedMasses");
+        r_ij.resize(numberOfConstraints);
+        d_ij2.resize(numberOfConstraints);
+        _distanceTolerance.resize(numberOfConstraints);
+        reducedMasses.resize(numberOfConstraints);
     }
     if (numberOfConstraints > 0)
     {
@@ -201,14 +201,6 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm(int numberOfAtoms,
     }
 }
 
-ReferenceCCMAAlgorithm::~ReferenceCCMAAlgorithm() {
-    if (_numberOfConstraints > 0) {
-        SimTKOpenMMUtilities::freeOneDRealOpenMMArray(_d_ij2, "d_ij2");
-        SimTKOpenMMUtilities::freeOneDRealOpenMMArray(_distanceTolerance, "distanceTolerance");
-        SimTKOpenMMUtilities::freeOneDRealOpenMMArray(_reducedMasses, "reducedMasses");
-    }
-}
-
 int ReferenceCCMAAlgorithm::getNumberOfConstraints() const {
     return _numberOfConstraints;
 }
@@ -235,12 +227,6 @@ void ReferenceCCMAAlgorithm::applyToVelocities(std::vector<OpenMM::Vec3>& atomCo
 void ReferenceCCMAAlgorithm::applyConstraints(vector<Vec3>& atomCoordinates,
                                          vector<Vec3>& atomCoordinatesP,
                                          vector<double>& inverseMasses, bool constrainingVelocities, double tolerance) {
-    // temp arrays
-
-    vector<Vec3>& r_ij = _r_ij;
-    double* d_ij2 = _d_ij2;
-    double* reducedMasses = _reducedMasses;
-
     // calculate reduced masses on 1st pass
 
     if (!_hasInitializedMasses) {

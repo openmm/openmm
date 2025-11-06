@@ -245,12 +245,6 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     // Compute the VdW tapering coefficients.  Mostly copied from amoebaCudaGpu.cpp.
     double cutoff = force.getCutoffDistance();
     double vdwTaper = 0.90; // vdwTaper is a scaling factor, it is not a distance.
-    double c0 = 0.0;
-    double c1 = 0.0;
-    double c2 = 0.0;
-    double c3 = 0.0;
-    double c4 = 0.0;
-    double c5 = 0.0;
 
     double vdwCut = cutoff;
     double vdwTaperCut = vdwTaper*cutoff;
@@ -275,12 +269,12 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     double denom2 = denom*denom;
     denom = denom * denom2*denom2;
 
-    c0 = vdwCut * vdwCut2 * (vdwCut2 - 5.0 * vdwCut * vdwTaperCut + 10.0 * vdwTaperCut2) * denom;
-    c1 = -30.0 * vdwCut2 * vdwTaperCut2*denom;
-    c2 = 30.0 * (vdwCut2 * vdwTaperCut + vdwCut * vdwTaperCut2) * denom;
-    c3 = -10.0 * (vdwCut2 + 4.0 * vdwCut * vdwTaperCut + vdwTaperCut2) * denom;
-    c4 = 15.0 * (vdwCut + vdwTaperCut) * denom;
-    c5 = -6.0 * denom;
+    double c0 = vdwCut * vdwCut2 * (vdwCut2 - 5.0 * vdwCut * vdwTaperCut + 10.0 * vdwTaperCut2) * denom;
+    double c1 = -30.0 * vdwCut2 * vdwTaperCut2*denom;
+    double c2 = 30.0 * (vdwCut2 * vdwTaperCut + vdwCut * vdwTaperCut2) * denom;
+    double c3 = -10.0 * (vdwCut2 + 4.0 * vdwCut * vdwTaperCut + vdwTaperCut2) * denom;
+    double c4 = 15.0 * (vdwCut + vdwTaperCut) * denom;
+    double c5 = -6.0 * denom;
 
     // Loop over all pairs of types to compute the coefficient.
     // Copied over from TINKER - numerical integration.
@@ -347,9 +341,7 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
 }
 
 std::vector<std::string> AmoebaVdwForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcAmoebaVdwForceKernel::Name());
-    return names;
+    return {CalcAmoebaVdwForceKernel::Name()};
 }
 
 void AmoebaVdwForceImpl::updateParametersInContext(ContextImpl& context) {

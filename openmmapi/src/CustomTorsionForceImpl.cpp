@@ -84,9 +84,7 @@ double CustomTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool in
 }
 
 vector<string> CustomTorsionForceImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(CalcCustomTorsionForceKernel::Name());
-    return names;
+    return {CalcCustomTorsionForceKernel::Name()};
 }
 
 map<string, double> CustomTorsionForceImpl::getDefaultParameters() {

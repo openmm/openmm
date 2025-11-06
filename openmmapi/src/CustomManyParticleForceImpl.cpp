@@ -141,9 +141,7 @@ double CustomManyParticleForceImpl::calcForcesAndEnergy(ContextImpl& context, bo
 }
 
 vector<string> CustomManyParticleForceImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(CalcCustomManyParticleForceKernel::Name());
-    return names;
+    return {CalcCustomManyParticleForceKernel::Name()};
 }
 
 map<string, double> CustomManyParticleForceImpl::getDefaultParameters() {

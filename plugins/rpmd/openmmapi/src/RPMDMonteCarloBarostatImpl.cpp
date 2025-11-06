@@ -155,13 +155,9 @@ void RPMDMonteCarloBarostatImpl::updateRPMDState(ContextImpl& context) {
 }
 
 std::map<std::string, double> RPMDMonteCarloBarostatImpl::getDefaultParameters() {
-    std::map<std::string, double> parameters;
-    parameters[RPMDMonteCarloBarostat::Pressure()] = getOwner().getDefaultPressure();
-    return parameters;
+    return {{RPMDMonteCarloBarostat::Pressure(), getOwner().getDefaultPressure()}};
 }
 
 std::vector<std::string> RPMDMonteCarloBarostatImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(ApplyMonteCarloBarostatKernel::Name());
-    return names;
+    return {ApplyMonteCarloBarostatKernel::Name()};
 }

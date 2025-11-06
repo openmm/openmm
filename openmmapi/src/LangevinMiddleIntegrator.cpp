@@ -72,9 +72,7 @@ void LangevinMiddleIntegrator::cleanup() {
 }
 
 vector<string> LangevinMiddleIntegrator::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(IntegrateLangevinMiddleStepKernel::Name());
-    return names;
+    return {IntegrateLangevinMiddleStepKernel::Name()};
 }
 
 double LangevinMiddleIntegrator::computeKineticEnergy() {

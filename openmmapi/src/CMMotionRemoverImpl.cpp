@@ -51,7 +51,5 @@ void CMMotionRemoverImpl::updateContextState(ContextImpl& context, bool& forcesI
 }
 
 std::vector<std::string> CMMotionRemoverImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(RemoveCMMotionKernel::Name());
-    return names;
+    return {RemoveCMMotionKernel::Name()};
 }

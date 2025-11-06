@@ -153,9 +153,7 @@ map<string, double> NonbondedForceImpl::getDefaultParameters() {
 }
 
 std::vector<std::string> NonbondedForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcNonbondedForceKernel::Name());
-    return names;
+    return {CalcNonbondedForceKernel::Name()};
 }
 
 class NonbondedForceImpl::ErrorFunction {

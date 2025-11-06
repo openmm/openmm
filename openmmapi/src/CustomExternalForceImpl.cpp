@@ -82,9 +82,7 @@ double CustomExternalForceImpl::calcForcesAndEnergy(ContextImpl& context, bool i
 }
 
 vector<string> CustomExternalForceImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(CalcCustomExternalForceKernel::Name());
-    return names;
+    return {CalcCustomExternalForceKernel::Name()};
 }
 
 map<string, double> CustomExternalForceImpl::getDefaultParameters() {

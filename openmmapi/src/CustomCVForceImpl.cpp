@@ -85,9 +85,7 @@ double CustomCVForceImpl::calcForcesAndEnergy(ContextImpl& context, bool include
 }
 
 vector<string> CustomCVForceImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(CalcCustomCVForceKernel::Name());
-    return names;
+    return {CalcCustomCVForceKernel::Name()};
 }
 
 vector<pair<int, int> > CustomCVForceImpl::getBondedParticles() const {

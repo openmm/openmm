@@ -111,9 +111,7 @@ double CustomCompoundBondForceImpl::calcForcesAndEnergy(ContextImpl& context, bo
 }
 
 vector<string> CustomCompoundBondForceImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(CalcCustomCompoundBondForceKernel::Name());
-    return names;
+    return {CalcCustomCompoundBondForceKernel::Name()};
 }
 
 map<string, double> CustomCompoundBondForceImpl::getDefaultParameters() {

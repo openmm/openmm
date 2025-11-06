@@ -143,17 +143,13 @@ void MonteCarloMembraneBarostatImpl::updateContextState(ContextImpl& context, bo
 }
 
 map<string, double> MonteCarloMembraneBarostatImpl::getDefaultParameters() {
-    map<string, double> parameters;
-    parameters[MonteCarloMembraneBarostat::Pressure()] = getOwner().getDefaultPressure();
-    parameters[MonteCarloMembraneBarostat::SurfaceTension()] = getOwner().getDefaultSurfaceTension();
-    parameters[MonteCarloMembraneBarostat::Temperature()] = getOwner().getDefaultTemperature();
-    return parameters;
+    return {{MonteCarloMembraneBarostat::Pressure(), getOwner().getDefaultPressure()},
+            {MonteCarloMembraneBarostat::SurfaceTension(), getOwner().getDefaultSurfaceTension()},
+            {MonteCarloMembraneBarostat::Temperature(), getOwner().getDefaultTemperature()}};
 }
 
 vector<string> MonteCarloMembraneBarostatImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(ApplyMonteCarloBarostatKernel::Name());
-    return names;
+    return {ApplyMonteCarloBarostatKernel::Name()};
 }
 
 Vec3 MonteCarloMembraneBarostatImpl::computeCurrentPressure(ContextImpl& context) {

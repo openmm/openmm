@@ -50,7 +50,5 @@ double CustomCPPForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includ
 }
 
 vector<string> CustomCPPForceImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(CalcCustomCPPForceKernel::Name());
-    return names;
+    return {CalcCustomCPPForceKernel::Name()};
 }

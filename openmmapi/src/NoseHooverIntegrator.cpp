@@ -348,9 +348,7 @@ void NoseHooverIntegrator::cleanup() {
 }
 
 vector<string> NoseHooverIntegrator::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(IntegrateNoseHooverStepKernel::Name());
-    return names;
+    return {IntegrateNoseHooverStepKernel::Name()};
 }
 
 void NoseHooverIntegrator::step(int steps) {
