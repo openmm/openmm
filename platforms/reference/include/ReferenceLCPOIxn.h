@@ -40,6 +40,12 @@ namespace OpenMM {
  * Performs energy and force calculations for the reference LCPOForce kernel.
  */
 class ReferenceLCPOIxn {
+private:
+    struct NeighborInfo {
+        double Aij;
+        Vec3 dAij;
+    };
+
 public:
     ReferenceLCPOIxn(const std::vector<int>& indices, const std::vector<int>& particles, const std::vector<std::array<double, 4> >& parameters, double cutoff, bool usePeriodic);
     double execute(const Vec3* boxVectors, const std::vector<Vec3>& posData, std::vector<Vec3>& forceData, bool includeForces, bool includeEnergy);

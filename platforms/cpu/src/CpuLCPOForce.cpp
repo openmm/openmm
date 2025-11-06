@@ -30,8 +30,6 @@
 #include "CpuLCPOForce.h"
 #include "SimTKOpenMMRealType.h"
 
-#include <chrono>
-
 using namespace std;
 using namespace OpenMM;
 
@@ -75,7 +73,7 @@ bool CpuLCPOForce::Neighbors::isNeighbor(int i, int j) const {
 void CpuLCPOForce::Neighbors::insert(int i, int j, fvec4 ijData) {
     // Get an index for the neighbor (we might have to resize the container).
     int k = numNeighbors[i]++;
-    if(k >= maxNumNeighbors) {
+    if (k >= maxNumNeighbors) {
         resize(maxNumNeighbors + 1);
     }
     k += i * maxNumNeighbors;
@@ -124,8 +122,6 @@ void CpuLCPOForce::updateRadii() {
 }
 
 void CpuLCPOForce::execute(Vec3* boxVectors, AlignedArray<float>& posq, vector<AlignedArray<float> >& threadForce, bool includeForces, bool includeEnergy, double& energy) {
-    auto t1 = std::chrono::high_resolution_clock::now();
-
     if (!numActiveParticles) {
         return;
     }
@@ -134,10 +130,9 @@ void CpuLCPOForce::execute(Vec3* boxVectors, AlignedArray<float>& posq, vector<A
     this->posq = &posq[0];
     threadEnergy.resize(numThreads);
     this->threadForce = &threadForce;
+    threadNeighbors.resize(numThreads);
 
     neighborList->computeNeighborList(numActiveParticles, posq, exclusions, boxVectors, usePeriodic, cutoff, threads, &particles);
-
-    auto t2 = std::chrono::high_resolution_clock::now();
 
     if (usePeriodic) {
         this->boxVectors = boxVectors;
@@ -146,22 +141,25 @@ void CpuLCPOForce::execute(Vec3* boxVectors, AlignedArray<float>& posq, vector<A
         recipBoxSize[2] = (float)(1.0 / boxVectors[2][2]);
     }
 
-    neighbors.clear();
-
-    if (usePeriodic) {
-        for (int blockIndex = 0; blockIndex < neighborList->getNumBlocks(); blockIndex++) {
-            processNeighborListBlock<true>(blockIndex);
-        }
-    } else {
-        for (int blockIndex = 0; blockIndex < neighborList->getNumBlocks(); blockIndex++) {
-            processNeighborListBlock<false>(blockIndex);
-        }
-    }
-
-    auto t3 = std::chrono::high_resolution_clock::now();
+    // Process neighbors from the neighbor list.
 
     atomicCounter = 0;
     threads.execute([&] (ThreadPool& threads, int threadIndex) { threadExecute(threads, threadIndex); });
+    threads.waitForThreads();
+
+    // Compile all of the neighbor information from the threads into a single collection.
+
+    neighbors.clear();
+    for (auto threadNeighborInfo : threadNeighbors) {
+        for (NeighborInfo neighborInfo : threadNeighborInfo) {
+            neighbors.insert(neighborInfo.i, neighborInfo.j, neighborInfo.ijData, neighborInfo.jiData);
+        }
+    }
+
+    // Accumulate energies and forces.
+
+    atomicCounter = 0;
+    threads.resumeThreads();
     threads.waitForThreads();
 
     if (includeEnergy) {
@@ -169,17 +167,102 @@ void CpuLCPOForce::execute(Vec3* boxVectors, AlignedArray<float>& posq, vector<A
             energy += threadEnergy[i];
         }
     }
+}
 
-    auto t4 = std::chrono::high_resolution_clock::now();
+void CpuLCPOForce::threadExecute(ThreadPool& threads, int threadIndex) {
+    int numThreads = threads.getNumThreads();
 
-    long t12 = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    long t23 = std::chrono::duration_cast<std::chrono::nanoseconds>(t3 - t2).count();
-    long t34 = std::chrono::duration_cast<std::chrono::nanoseconds>(t4 - t3).count();
-    printf("LCPO: neighbor list = %10.6f ms, areas = %10.6f ms, energies and forces = %10.6f ms\n", t12 * 1e-6, t23 * 1e-6, t34 * 1e-6);
+    // Process neighbors from the neighbor list.
+
+    std::vector<NeighborInfo>& threadNeighborInfo = threadNeighbors[threadIndex];
+    threadNeighborInfo.clear();
+    while (true) {
+        int blockIndex = atomicCounter++;
+        if (blockIndex >= neighborList->getNumBlocks()) {
+            break;
+        }
+        if (usePeriodic) {
+            processNeighborListBlock<true>(blockIndex, threadNeighborInfo);
+        }
+        else {
+            processNeighborListBlock<false>(blockIndex, threadNeighborInfo);
+        }
+    }
+
+    threads.syncThreads();
+
+    // Accumulate energies and forces.
+
+    int groupSize = max(1, numActiveParticles / (10 * numThreads));
+    threadEnergy[threadIndex] = 0.0;
+    float* forces = &(*threadForce)[threadIndex][0];
+    while (true) {
+        int start = atomicCounter.fetch_add(groupSize);
+        if (start >= numActiveParticles) {
+            break;
+        }
+        int end = min(start + groupSize, numActiveParticles);
+
+        for (int i = start; i < end; i++) {
+            float p2 = parameters[i][P2Index];
+            float p3 = parameters[i][P3Index];
+            float p4 = parameters[i][P4Index];
+            float energy = 0.0f;
+            fvec4 iForce(0.0f);
+
+            int iNumNeighbors;
+            const int* iIndices;
+            const fvec4* iData;
+            neighbors.getNeighbors(i, iNumNeighbors, iIndices, iData);
+            for (int jNeighbor = 0; jNeighbor < iNumNeighbors; jNeighbor++) {
+                int j = iIndices[jNeighbor];
+                fvec4 Aij = iData[jNeighbor];
+                fvec4 jForce(0.0f);
+
+                // Two-body term.
+
+                fvec4 ijForce2Body = p2 * Aij;
+                iForce += ijForce2Body;
+                jForce -= ijForce2Body;
+
+                // Three-body term: includes all pairs (j, k) of neighbors of i
+                // that are also neighbors of each other.
+
+                int jNumNeighbors;
+                const int* jIndices;
+                const fvec4* jData;
+                neighbors.getNeighbors(j, jNumNeighbors, jIndices, jData);
+                for (int kNeighbor = 0; kNeighbor < jNumNeighbors; kNeighbor++) {
+                    int k = jIndices[kNeighbor];
+                    if (!neighbors.isNeighbor(i, k)) {
+                        continue;
+                    }
+                    fvec4 Ajk = jData[kNeighbor];
+
+                    fvec4 jkForce3Body = (p3 + p4 * Aij[3]) * Ajk;
+                    fvec4 ijForce3Body = p4 * Aij * Ajk[3];
+                    iForce += ijForce3Body;
+                    jForce += jkForce3Body - ijForce3Body;
+
+                    energy += jkForce3Body[3];
+                    float * kForcePointer = &forces[4 * particles[k]];
+                    (fvec4(kForcePointer) - jkForce3Body).store(kForcePointer);
+                }
+
+                energy += ijForce2Body[3];
+                float * jForcePointer = &forces[4 * particles[j]];
+                (fvec4(jForcePointer) + jForce).store(jForcePointer);
+            }
+
+            threadEnergy[threadIndex] += energy;
+            float * iForcePointer = &forces[4 * particles[i]];
+            (fvec4(iForcePointer) + iForce).store(iForcePointer);
+        }
+    }
 }
 
 template<bool USE_PERIODIC>
-void CpuLCPOForce::processNeighborListBlock(int blockIndex) {
+void CpuLCPOForce::processNeighborListBlock(int blockIndex, std::vector<NeighborInfo>& threadNeighborInfo) {
     const int* iBlock = &neighborList->getSortedAtoms()[4 * blockIndex];
     fvec4 iBlockPosq[4] {
         fvec4(posq + 4 * particles[iBlock[0]]),
@@ -248,81 +331,9 @@ void CpuLCPOForce::processNeighborListBlock(int blockIndex) {
         transpose(ijData0, ijData1, ijData2, ijData3);
         transpose(jiData0, jiData1, jiData2, jiData3);
 
-        if (include[0]) neighbors.insert(iBlock[0], j, ijData0, jiData0);
-        if (include[1]) neighbors.insert(iBlock[1], j, ijData1, jiData1);
-        if (include[2]) neighbors.insert(iBlock[2], j, ijData2, jiData2);
-        if (include[3]) neighbors.insert(iBlock[3], j, ijData3, jiData3);
+        if (include[0]) threadNeighborInfo.push_back({iBlock[0], j, ijData0, jiData0});
+        if (include[1]) threadNeighborInfo.push_back({iBlock[1], j, ijData1, jiData1});
+        if (include[2]) threadNeighborInfo.push_back({iBlock[2], j, ijData2, jiData2});
+        if (include[3]) threadNeighborInfo.push_back({iBlock[3], j, ijData3, jiData3});
     }
-}
-
-void CpuLCPOForce::threadExecute(ThreadPool& threads, int threadIndex) {
-    int numThreads = threads.getNumThreads();
-    int groupSize = max(1, numActiveParticles / (10 * numThreads));
-    threadEnergy[threadIndex] = 0.0;
-    float* forces = &(*threadForce)[threadIndex][0];
-
-    while (true) {
-        int start = atomicCounter.fetch_add(groupSize);
-        if (start >= numActiveParticles) {
-            break;
-        }
-        int end = min(start + groupSize, numActiveParticles);
-
-        for (int i = start; i < end; i++) {
-            float p2 = parameters[i][P2Index];
-            float p3 = parameters[i][P3Index];
-            float p4 = parameters[i][P4Index];
-            float energy = 0.0f;
-            fvec4 iForce(0.0f);
-
-            int iNumNeighbors;
-            const int* iIndices;
-            const fvec4* iData;
-            neighbors.getNeighbors(i, iNumNeighbors, iIndices, iData);
-            for (int jNeighbor = 0; jNeighbor < iNumNeighbors; jNeighbor++) {
-                int j = iIndices[jNeighbor];
-                fvec4 Aij = iData[jNeighbor];
-                fvec4 jForce(0.0f);
-
-                // Two-body term.
-
-                fvec4 ijForce2Body = p2 * Aij;
-                iForce += ijForce2Body;
-                jForce -= ijForce2Body;
-
-                // Three-body term: includes all pairs (j, k) of neighbors of i that
-                // are also neighbors of each other.
-
-                int jNumNeighbors;
-                const int* jIndices;
-                const fvec4* jData;
-                neighbors.getNeighbors(j, jNumNeighbors, jIndices, jData);
-                for (int kNeighbor = 0; kNeighbor < jNumNeighbors; kNeighbor++) {
-                    int k = jIndices[kNeighbor];
-                    if(!neighbors.isNeighbor(i, k)) {
-                        continue;
-                    }
-                    fvec4 Ajk = jData[kNeighbor];
-
-                    fvec4 jkForce3Body = (p3 + p4 * Aij[3]) * Ajk;
-                    fvec4 ijForce3Body = p4 * Aij * Ajk[3];
-                    iForce += ijForce3Body;
-                    jForce += jkForce3Body - ijForce3Body;
-
-                    energy += jkForce3Body[3];
-                    float * kForcePointer = &forces[4 * particles[k]];
-                    (fvec4(kForcePointer) - jkForce3Body).store(kForcePointer);
-                }
-
-                energy += ijForce2Body[3];
-                float * jForcePointer = &forces[4 * particles[j]];
-                (fvec4(jForcePointer) + jForce).store(jForcePointer);
-            }
-
-            threadEnergy[threadIndex] += energy;
-            float * iForcePointer = &forces[4 * particles[i]];
-            (fvec4(iForcePointer) + iForce).store(iForcePointer);
-        }
-    }
-
 }

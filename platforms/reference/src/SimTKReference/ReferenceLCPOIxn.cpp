@@ -35,11 +35,6 @@
 using namespace OpenMM;
 using namespace std;
 
-struct LCPONeighborInfo {
-    double Aij;
-    Vec3 dAij;
-};
-
 ReferenceLCPOIxn::ReferenceLCPOIxn(const vector<int>& indices, const vector<int>& particles, const vector<array<double, 4> >& parameters, double cutoff, bool usePeriodic) :
         indices(indices), particles(particles), parameters(parameters), cutoff(cutoff), usePeriodic(usePeriodic) {
     numParticles = indices.size();
@@ -53,7 +48,7 @@ double ReferenceLCPOIxn::execute(const Vec3* boxVectors, const std::vector<Vec3>
 
     NeighborList neighborList;
     computeNeighborListVoxelHash(neighborList, numParticles, posData, vector<set<int> >(numParticles), boxVectors, usePeriodic, cutoff, 0.0, false);
-    vector<map<int, LCPONeighborInfo> > neighbors(numActiveParticles);
+    vector<map<int, NeighborInfo> > neighbors(numActiveParticles);
     for (auto atomPair : neighborList) {
         // Only include particles participating in the LCPO interaction.
 
@@ -88,8 +83,8 @@ double ReferenceLCPOIxn::execute(const Vec3* boxVectors, const std::vector<Vec3>
         double deltaRadiusR = (iRadius * iRadius - jRadius * jRadius) * rRecip;
         double deltaRadiusRSq = deltaRadiusR * rRecip;
         Vec3 direction = Vec3(deltaR[ReferenceForce::XIndex], deltaR[ReferenceForce::YIndex], deltaR[ReferenceForce::ZIndex]) * rRecip;
-        neighbors[i][j] = LCPONeighborInfo{iRadiusPi * (2.0 * iRadius - r - deltaRadiusR), iRadiusPi * (deltaRadiusRSq - 1.0) * direction};
-        neighbors[j][i] = LCPONeighborInfo{jRadiusPi * (2.0 * jRadius - r + deltaRadiusR), jRadiusPi * (deltaRadiusRSq + 1.0) * direction};
+        neighbors[i][j] = {iRadiusPi * (2.0 * iRadius - r - deltaRadiusR), iRadiusPi * (deltaRadiusRSq - 1.0) * direction};
+        neighbors[j][i] = {jRadiusPi * (2.0 * jRadius - r + deltaRadiusR), jRadiusPi * (deltaRadiusRSq + 1.0) * direction};
     }
 
     double energy = 0.0;

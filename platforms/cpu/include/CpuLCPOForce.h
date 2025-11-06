@@ -45,6 +45,14 @@ namespace OpenMM {
 class CpuLCPOForce {
 private:
     /**
+     * Holds data from a thread's request to record a neighbor.
+     */
+    struct NeighborInfo {
+        int i, j;
+        fvec4 ijData, jiData;
+    };
+
+    /**
      * Keeps track of neighbors for CpuLCPOForce.
      */
     class Neighbors {
@@ -54,11 +62,11 @@ private:
         std::vector<int> numNeighbors;
         std::vector<int> indices;
         std::vector<fvec4> data;
-    
+
     public:
         /**
          * Creates an empty CpuLCPOForce::Neighbors.
-         * 
+         *
          * @param numParticles         the number of particles to track (this will be numActiveParticles of the parent CpuLCPOForce)
          * @param maxNumNeighborsInit  an initial guess for the maximum number of neighbors per particle
          */
@@ -71,7 +79,7 @@ private:
 
         /**
          * Records that two particles are neighbors of each other.
-         * 
+         *
          * @param i       the index of the first particle
          * @param j       the index of the second particle
          * @param ijData  the data to record for particle j as a neighbor of particle i
@@ -81,7 +89,7 @@ private:
 
         /**
          * Retrieves the neighbors of a particle.
-         * 
+         *
          * @param i              the index of the particle
          * @param iNumNeighbors  the number of neighbors of the particle
          * @param iIndices       pointer to the start of the indices of the neighbors
@@ -91,13 +99,13 @@ private:
 
         /**
          * Tests whether a particle is a neighbor of another.
-         * 
+         *
          * @param i  the index of the first particle
          * @param j  the index of the second particle
          * @return   whether or not the particles are neighbors
          */
         bool isNeighbor(int i, int j) const;
-    
+
     private:
         void insert(int i, int j, fvec4 ijData);
         void resize(int newMaxNumNeighbors);
@@ -137,15 +145,15 @@ public:
 
 private:
     /**
-     * Helper for processing a block of the neighbor list.
-     */
-    template<bool USE_PERIODIC>
-    void processNeighborListBlock(int blockIndex);
-
-    /**
      * Thread worker for computing energies and forces.
      */
     void threadExecute(ThreadPool& threads, int threadIndex);
+
+    /**
+     * Helper for processing a block of the neighbor list.
+     */
+    template<bool USE_PERIODIC>
+    void processNeighborListBlock(int blockIndex, std::vector<NeighborInfo>& threadNeighborInfo);
 
 private:
     static const int RadiusIndex = 0;
@@ -172,6 +180,7 @@ private:
     float* posq;
     std::vector<double> threadEnergy;
     std::vector<AlignedArray<float> >* threadForce;
+    std::vector<std::vector<NeighborInfo> > threadNeighbors;
     std::atomic<int> atomicCounter;
 };
 
