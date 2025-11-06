@@ -43,6 +43,66 @@ namespace OpenMM {
  * for LCPOForce.
  */
 class CpuLCPOForce {
+private:
+    /**
+     * Keeps track of neighbors for CpuLCPOForce.
+     */
+    class Neighbors {
+    private:
+        int numParticles;
+        int maxNumNeighbors;
+        std::vector<int> numNeighbors;
+        std::vector<int> indices;
+        std::vector<fvec4> data;
+    
+    public:
+        /**
+         * Creates an empty CpuLCPOForce::Neighbors.
+         * 
+         * @param numParticles         the number of particles to track (this will be numActiveParticles of the parent CpuLCPOForce)
+         * @param maxNumNeighborsInit  an initial guess for the maximum number of neighbors per particle
+         */
+        Neighbors(int numParticles, int maxNumNeighborsInit = 0);
+
+        /**
+         * Clears all neighbor data.
+         */
+        void clear();
+
+        /**
+         * Records that two particles are neighbors of each other.
+         * 
+         * @param i       the index of the first particle
+         * @param j       the index of the second particle
+         * @param ijData  the data to record for particle j as a neighbor of particle i
+         * @param jiData  the data to record for particle i as a neighbor of particle j
+         */
+        void insert(int i, int j, fvec4 ijData, fvec4 jiData);
+
+        /**
+         * Retrieves the neighbors of a particle.
+         * 
+         * @param i              the index of the particle
+         * @param iNumNeighbors  the number of neighbors of the particle
+         * @param iIndices       pointer to the start of the indices of the neighbors
+         * @param iData          pointer to the start of the data associated with the neighbors
+         */
+        void getNeighbors(int i, int& iNumNeighbors, const int*& iIndices, const fvec4*& iData) const;
+
+        /**
+         * Tests whether a particle is a neighbor of another.
+         * 
+         * @param i  the index of the first particle
+         * @param j  the index of the second particle
+         * @return   whether or not the particles are neighbors
+         */
+        bool isNeighbor(int i, int j) const;
+    
+    private:
+        void insert(int i, int j, fvec4 ijData);
+        void resize(int newMaxNumNeighbors);
+    };
+
 public:
     /**
      * Creates a CpuLCPOForce.
@@ -77,6 +137,12 @@ public:
 
 private:
     /**
+     * Helper for processing a block of the neighbor list.
+     */
+    template<bool USE_PERIODIC>
+    void processNeighborListBlock(int blockIndex);
+
+    /**
      * Thread worker for computing energies and forces.
      */
     void threadExecute(ThreadPool& threads, int threadIndex);
@@ -98,10 +164,12 @@ private:
 
     CpuNeighborList* neighborList;
     std::vector<std::set<int> > exclusions;
-    std::vector<std::map<int, fvec4> > neighbors;
+    Neighbors neighbors;
     float cutoff;
+    Vec3* boxVectors;
     float recipBoxSize[3];
 
+    float* posq;
     std::vector<double> threadEnergy;
     std::vector<AlignedArray<float> >* threadForce;
     std::atomic<int> atomicCounter;

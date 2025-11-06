@@ -59,7 +59,7 @@ public:
      * @param indices             numAtoms indices into the atomLocations array for indirect lookup
      */
     void computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
-            const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads, const std::vector<int>* indices = 0);
+            const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads, const std::vector<int>* indices = NULL);
     /**
      * Build a dense neighbor list, in which every atom interacts with every other (except exclusions), regardless of distance.
      * 

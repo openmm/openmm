@@ -65,9 +65,7 @@ double LCPOForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForc
 }
 
 std::vector<std::string> LCPOForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcLCPOForceKernel::Name());
-    return names;
+    return {CalcLCPOForceKernel::Name()};
 }
 
 void LCPOForceImpl::updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle) {
