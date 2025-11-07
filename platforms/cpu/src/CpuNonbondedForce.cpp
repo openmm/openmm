@@ -255,28 +255,26 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
     float recipCoeff               = (float)(ONE_4PI_EPS0*4*PI_M/(periodicBoxVectors[0][0] * periodicBoxVectors[1][1] * periodicBoxVectors[2][2]) /epsilon);
 
     if (pme) {
-        pme_t pmedata;
-        pme_init(&pmedata, alphaEwald, numberOfAtoms, meshDim, 5, 1);
+        ReferencePME pme(alphaEwald, numberOfAtoms, meshDim, 5, 1);
         vector<double> charges(numberOfAtoms);
         for (int i = 0; i < numberOfAtoms; i++)
             charges[i] = posq[4*i+3];
         double recipEnergy = 0.0;
-        pme_exec(pmedata, atomCoordinates, forces, charges, periodicBoxVectors, &recipEnergy);
+        pme.exec(atomCoordinates, forces, charges, periodicBoxVectors, recipEnergy);
         if (totalEnergy)
             *totalEnergy += recipEnergy;
-        pme_destroy(pmedata);
 
         if (ljpme) {
             // Dispersion reciprocal space terms
-            pme_init(&pmedata,alphaDispersionEwald,numberOfAtoms,dispersionMeshDim,5,1);
+            ReferencePME ljpme(alphaDispersionEwald,numberOfAtoms,dispersionMeshDim,5,1);
 
-            std::vector<Vec3> dpmeforces;
+            vector<Vec3> dpmeforces;
             for (int i = 0; i < numberOfAtoms; i++){
                 charges[i] = C6params[i];
                 dpmeforces.push_back(Vec3());
             }
             double recipDispersionEnergy = 0.0;
-            pme_exec_dpme(pmedata,atomCoordinates,dpmeforces,charges,periodicBoxVectors,&recipDispersionEnergy);
+            ljpme.exec_dpme(atomCoordinates, dpmeforces, charges, periodicBoxVectors, recipDispersionEnergy);
             for (int i = 0; i < numberOfAtoms; i++){
                 forces[i][0] += dpmeforces[i][0];
                 forces[i][1] += dpmeforces[i][1];
@@ -284,8 +282,6 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
             }
             if (totalEnergy)
                 *totalEnergy += recipDispersionEnergy;
-
-            pme_destroy(pmedata);
         }
 
     }
