@@ -78,9 +78,7 @@ double OrientationRestraintForceImpl::calcForcesAndEnergy(ContextImpl& context, 
 }
 
 vector<string> OrientationRestraintForceImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(CalcOrientationRestraintForceKernel::Name());
-    return names;
+    return {CalcOrientationRestraintForceKernel::Name()};
 }
 
 void OrientationRestraintForceImpl::updateParametersInContext(ContextImpl& context) {

@@ -72,9 +72,7 @@ void BrownianIntegrator::cleanup() {
 }
 
 vector<string> BrownianIntegrator::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(IntegrateBrownianStepKernel::Name());
-    return names;
+    return {IntegrateBrownianStepKernel::Name()};
 }
 
 double BrownianIntegrator::computeKineticEnergy() {

@@ -127,9 +127,7 @@ double GayBerneForceImpl::calcForcesAndEnergy(ContextImpl& context, bool include
 }
 
 std::vector<std::string> GayBerneForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcGayBerneForceKernel::Name());
-    return names;
+    return {CalcGayBerneForceKernel::Name()};
 }
 
 void GayBerneForceImpl::updateParametersInContext(ContextImpl& context) {

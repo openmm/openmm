@@ -112,16 +112,12 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context, bool& forc
 }
 
 map<string, double> MonteCarloBarostatImpl::getDefaultParameters() {
-    map<string, double> parameters;
-    parameters[MonteCarloBarostat::Pressure()] = getOwner().getDefaultPressure();
-    parameters[MonteCarloBarostat::Temperature()] = getOwner().getDefaultTemperature();
-    return parameters;
+    return {{MonteCarloBarostat::Pressure(), getOwner().getDefaultPressure()},
+            {MonteCarloBarostat::Temperature(), getOwner().getDefaultTemperature()}};
 }
 
 vector<string> MonteCarloBarostatImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(ApplyMonteCarloBarostatKernel::Name());
-    return names;
+    return {ApplyMonteCarloBarostatKernel::Name()};
 }
 
 double MonteCarloBarostatImpl::computeCurrentPressure(ContextImpl& context) {

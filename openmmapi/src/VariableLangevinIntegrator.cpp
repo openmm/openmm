@@ -88,9 +88,7 @@ void VariableLangevinIntegrator::cleanup() {
 }
 
 vector<string> VariableLangevinIntegrator::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(IntegrateVariableLangevinStepKernel::Name());
-    return names;
+    return {IntegrateVariableLangevinStepKernel::Name()};
 }
 
 double VariableLangevinIntegrator::computeKineticEnergy() {

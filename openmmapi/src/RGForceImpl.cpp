@@ -76,7 +76,5 @@ double RGForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces
 }
 
 vector<string> RGForceImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(CalcRGForceKernel::Name());
-    return names;
+    return {CalcRGForceKernel::Name()};
 }

@@ -168,9 +168,7 @@ double ConstantPotentialForceImpl::calcForcesAndEnergy(ContextImpl& context, boo
 }
 
 std::vector<std::string> ConstantPotentialForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcConstantPotentialForceKernel::Name());
-    return names;
+    return {CalcConstantPotentialForceKernel::Name()};
 }
 
 void ConstantPotentialForceImpl::updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle, int firstException, int lastException, int firstElectrode, int lastElectrode) {

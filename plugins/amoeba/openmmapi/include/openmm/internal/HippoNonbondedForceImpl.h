@@ -55,7 +55,7 @@ public:
     }
     double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
     std::map<std::string, double> getDefaultParameters() {
-        return std::map<std::string, double>(); // This force doesn't define any parameters.
+        return {}; // This force doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
     void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);

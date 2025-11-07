@@ -140,9 +140,7 @@ double HippoNonbondedForceImpl::calcForcesAndEnergy(ContextImpl& context, bool i
 }
 
 std::vector<std::string> HippoNonbondedForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcHippoNonbondedForceKernel::Name());
-    return names;
+    return {CalcHippoNonbondedForceKernel::Name()};
 }
 
 void HippoNonbondedForceImpl::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& dipoles) {

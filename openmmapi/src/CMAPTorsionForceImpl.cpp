@@ -78,9 +78,7 @@ double CMAPTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool incl
 }
 
 vector<string> CMAPTorsionForceImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(CalcCMAPTorsionForceKernel::Name());
-    return names;
+    return {CalcCMAPTorsionForceKernel::Name()};
 }
 
 void CMAPTorsionForceImpl::calcMapDerivatives(int size, const vector<double>& energy, vector<vector<double> >& c) {

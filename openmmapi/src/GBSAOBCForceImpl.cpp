@@ -70,9 +70,7 @@ double GBSAOBCForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeF
 }
 
 std::vector<std::string> GBSAOBCForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcGBSAOBCForceKernel::Name());
-    return names;
+    return {CalcGBSAOBCForceKernel::Name()};
 }
 
 void GBSAOBCForceImpl::updateParametersInContext(ContextImpl& context) {

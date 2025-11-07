@@ -78,9 +78,7 @@ double RMSDForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForc
 }
 
 vector<string> RMSDForceImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(CalcRMSDForceKernel::Name());
-    return names;
+    return {CalcRMSDForceKernel::Name()};
 }
 
 void RMSDForceImpl::updateParametersInContext(ContextImpl& context) {

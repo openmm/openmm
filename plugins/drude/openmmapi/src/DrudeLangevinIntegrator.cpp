@@ -87,9 +87,7 @@ void DrudeLangevinIntegrator::cleanup() {
 }
 
 vector<string> DrudeLangevinIntegrator::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(IntegrateDrudeLangevinStepKernel::Name());
-    return names;
+    return {IntegrateDrudeLangevinStepKernel::Name()};
 }
 
 double DrudeLangevinIntegrator::computeKineticEnergy() {

@@ -114,9 +114,7 @@ void DPDIntegrator::cleanup() {
 }
 
 vector<string> DPDIntegrator::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(IntegrateDPDStepKernel::Name());
-    return names;
+    return {IntegrateDPDStepKernel::Name()};
 }
 
 double DPDIntegrator::computeKineticEnergy() {

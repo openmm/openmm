@@ -71,9 +71,7 @@ double PeriodicTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool 
 }
 
 std::vector<std::string> PeriodicTorsionForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcPeriodicTorsionForceKernel::Name());
-    return names;
+    return {CalcPeriodicTorsionForceKernel::Name()};
 }
 
 void PeriodicTorsionForceImpl::updateParametersInContext(ContextImpl& context, int firstTorsion, int lastTorsion) {

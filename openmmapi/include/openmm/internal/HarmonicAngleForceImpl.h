@@ -56,7 +56,7 @@ public:
     }
     double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
     std::map<std::string, double> getDefaultParameters() {
-        return std::map<std::string, double>(); // This force field doesn't define any parameters.
+        return {}; // This force field doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context, int firstAngle, int lastAngle);

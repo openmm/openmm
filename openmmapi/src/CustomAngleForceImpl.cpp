@@ -83,9 +83,7 @@ double CustomAngleForceImpl::calcForcesAndEnergy(ContextImpl& context, bool incl
 }
 
 vector<string> CustomAngleForceImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(CalcCustomAngleForceKernel::Name());
-    return names;
+    return {CalcCustomAngleForceKernel::Name()};
 }
 
 map<string, double> CustomAngleForceImpl::getDefaultParameters() {

@@ -120,9 +120,7 @@ double DrudeForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeFor
 }
 
 vector<string> DrudeForceImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(CalcDrudeForceKernel::Name());
-    return names;
+    return {CalcDrudeForceKernel::Name()};
 }
 
 void DrudeForceImpl::updateParametersInContext(ContextImpl& context) {

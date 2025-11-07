@@ -43,10 +43,8 @@ protected:
     std::vector<std::pair<int, int> > _atomIndices;
     std::vector<double> _distance;
 
-    std::vector<OpenMM::Vec3> _r_ij;
-    double* _d_ij2;
-    double* _distanceTolerance;
-    double* _reducedMasses;
+    std::vector<OpenMM::Vec3> r_ij;
+    std::vector<double> d_ij2, _distanceTolerance, reducedMasses;
     bool _hasInitializedMasses;
     std::vector<std::vector<std::pair<int, double> > > _matrix;
 
@@ -70,8 +68,6 @@ public:
      * @param elementCutoff            the cutoff for which elements of the inverse matrix to keep
      */
     ReferenceCCMAAlgorithm(int numberOfAtoms, int numberOfConstraints, const std::vector<std::pair<int, int> >& atomIndices, const std::vector<double>& distance, std::vector<double>& masses, std::vector<AngleInfo>& angles, double elementCutoff);
-
-    ~ReferenceCCMAAlgorithm();
 
     /**
      * Get the number of constraints.

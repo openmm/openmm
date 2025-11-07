@@ -122,9 +122,7 @@ void QTBIntegrator::cleanup() {
 }
 
 vector<string> QTBIntegrator::getKernelNames() {
-    vector<std::string> names;
-    names.push_back(IntegrateQTBStepKernel::Name());
-    return names;
+    return {IntegrateQTBStepKernel::Name()};
 }
 
 double QTBIntegrator::computeKineticEnergy() {

@@ -142,18 +142,14 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context,
 }
 
 map<string, double> MonteCarloAnisotropicBarostatImpl::getDefaultParameters() {
-    map<string, double> parameters;
-    parameters[MonteCarloAnisotropicBarostat::PressureX()] = getOwner().getDefaultPressure()[0];
-    parameters[MonteCarloAnisotropicBarostat::PressureY()] = getOwner().getDefaultPressure()[1];
-    parameters[MonteCarloAnisotropicBarostat::PressureZ()] = getOwner().getDefaultPressure()[2];
-    parameters[MonteCarloAnisotropicBarostat::Temperature()] = getOwner().getDefaultTemperature();
-    return parameters;
+    return {{MonteCarloAnisotropicBarostat::PressureX(), getOwner().getDefaultPressure()[0]},
+            {MonteCarloAnisotropicBarostat::PressureY(), getOwner().getDefaultPressure()[1]},
+            {MonteCarloAnisotropicBarostat::PressureZ(), getOwner().getDefaultPressure()[2]},
+            {MonteCarloAnisotropicBarostat::Temperature(), getOwner().getDefaultTemperature()}};
 }
 
 vector<string> MonteCarloAnisotropicBarostatImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(ApplyMonteCarloBarostatKernel::Name());
-    return names;
+    return {ApplyMonteCarloBarostatKernel::Name()};
 }
 
 Vec3 MonteCarloAnisotropicBarostatImpl::computeCurrentPressure(ContextImpl& context) {

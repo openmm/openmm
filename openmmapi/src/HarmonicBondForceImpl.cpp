@@ -71,9 +71,7 @@ double HarmonicBondForceImpl::calcForcesAndEnergy(ContextImpl& context, bool inc
 }
 
 std::vector<std::string> HarmonicBondForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcHarmonicBondForceKernel::Name());
-    return names;
+    return {CalcHarmonicBondForceKernel::Name()};
 }
 
 vector<pair<int, int> > HarmonicBondForceImpl::getBondedParticles() const {
