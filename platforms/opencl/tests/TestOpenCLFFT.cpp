@@ -122,6 +122,9 @@ int main(int argc, char* argv[]) {
             testTransform<mm_double2>(true, 25, 28, 25);
             testTransform<mm_double2>(true, 25, 25, 28);
             testTransform<mm_double2>(true, 21, 25, 27);
+            testTransform<mm_double2>(true, 32, 33, 33);
+            testTransform<mm_double2>(true, 32, 33, 39);
+            testTransform<mm_double2>(true, 32, 39, 39);
         }
         else {
             testTransform<mm_float2>(false, 28, 25, 30);
@@ -129,6 +132,9 @@ int main(int argc, char* argv[]) {
             testTransform<mm_float2>(true, 25, 28, 25);
             testTransform<mm_float2>(true, 25, 25, 28);
             testTransform<mm_float2>(true, 21, 25, 27);
+            testTransform<mm_float2>(true, 32, 33, 33);
+            testTransform<mm_float2>(true, 32, 33, 39);
+            testTransform<mm_float2>(true, 32, 39, 39);
         }
     }
     catch(const exception& e) {
