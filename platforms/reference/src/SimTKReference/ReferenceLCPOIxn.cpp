@@ -35,10 +35,10 @@
 using namespace OpenMM;
 using namespace std;
 
-ReferenceLCPOIxn::ReferenceLCPOIxn(const vector<int>& indices, const vector<int>& particles, const vector<array<double, 4> >& parameters, double cutoff, bool usePeriodic) :
-        indices(indices), particles(particles), parameters(parameters), cutoff(cutoff), usePeriodic(usePeriodic) {
-    numParticles = indices.size();
-    numActiveParticles = particles.size();
+ReferenceLCPOIxn::ReferenceLCPOIxn(const vector<int>& activeParticles, const vector<int>& activeParticlesInv, const vector<array<double, 4> >& parameters, double cutoff, bool usePeriodic) :
+        activeParticles(activeParticles), activeParticlesInv(activeParticlesInv), parameters(parameters), cutoff(cutoff), usePeriodic(usePeriodic) {
+    numParticles = activeParticlesInv.size();
+    numActiveParticles = activeParticles.size();
 }
 
 double ReferenceLCPOIxn::execute(const Vec3* boxVectors, const std::vector<Vec3>& posData, std::vector<Vec3>& forceData, bool includeForces, bool includeEnergy) {
@@ -52,8 +52,8 @@ double ReferenceLCPOIxn::execute(const Vec3* boxVectors, const std::vector<Vec3>
     for (auto atomPair : neighborList) {
         // Only include particles participating in the LCPO interaction.
 
-        int i = indices[atomPair.first];
-        int j = indices[atomPair.second];
+        int i = activeParticlesInv[atomPair.first];
+        int j = activeParticlesInv[atomPair.second];
         if (i == -1 || j == -1) {
             continue;
         }
@@ -134,18 +134,18 @@ double ReferenceLCPOIxn::execute(const Vec3* boxVectors, const std::vector<Vec3>
                     Vec3 ijForce3Body = p4 * dAij * Ajk;
                     iForce += ijForce3Body;
                     jForce += jkForce3Body - ijForce3Body;
-                    forceData[particles[k]] -= jkForce3Body;
+                    forceData[activeParticles[k]] -= jkForce3Body;
                 }
             }
 
             if (includeForces) {
-                forceData[particles[j]] += jForce;
+                forceData[activeParticles[j]] += jForce;
             }
         }
 
         energy += p2 * term2 + p3 * term3 + p4 * term4;
         if (includeForces) {
-            forceData[particles[i]] += iForce;
+            forceData[activeParticles[i]] += iForce;
         }
     }
 

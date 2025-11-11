@@ -1783,7 +1783,6 @@ CpuCalcLCPOForceKernel::~CpuCalcLCPOForceKernel() {
 
 void CpuCalcLCPOForceKernel::initialize(const System& system, const LCPOForce& force) {
     oneBodyEnergy = 0.0;
-    double maxRadius = 0.0;
 
     for (int i = 0; i < force.getNumParticles(); i++) {
         double radius, p1, p2, p3, p4;
@@ -1791,17 +1790,16 @@ void CpuCalcLCPOForceKernel::initialize(const System& system, const LCPOForce& f
         oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
 
         if (radius != 0.0) {
-            indices.push_back(particles.size());
-            particles.push_back(i);
+            activeParticlesInv.push_back(activeParticles.size());
+            activeParticles.push_back(i);
             parameters.push_back(fvec4(radius, p2, p3, p4));
-            maxRadius = max(maxRadius, radius);
         }
         else {
-            indices.push_back(-1);
+            activeParticlesInv.push_back(-1);
         }
     }
 
-    ixn = new CpuLCPOForce(data.threads, indices, particles, parameters, force.usesPeriodicBoundaryConditions());
+    ixn = new CpuLCPOForce(data.threads, activeParticles, activeParticlesInv, parameters, force.usesPeriodicBoundaryConditions());
 }
 
 double CpuCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1813,18 +1811,20 @@ double CpuCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForces,
 void CpuCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const LCPOForce& force, int firstParticle, int lastParticle) {
     oneBodyEnergy = 0.0;
 
-    for (int i = 0; i <= force.getNumParticles(); i++) {
+    for (int i = 0; i < force.getNumParticles(); i++) {
         double radius, p1, p2, p3, p4;
         force.getParticleParameters(i, radius, p1, p2, p3, p4);
         oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
 
         if (i >= firstParticle && i <= lastParticle) {
             bool isActive = radius != 0.0;
-            bool wasActive = indices[i] != -1;
+            bool wasActive = activeParticlesInv[i] != -1;
             if (isActive != wasActive) {
                 throw OpenMMException("updateParametersInContext: The set of non-excluded particles has changed");
             }
-            parameters[indices[i]] = fvec4(radius, p2, p3, p4);
+            if (isActive) {
+                parameters[activeParticlesInv[i]] = fvec4(radius, p2, p3, p4);
+            }
         }
     }
 

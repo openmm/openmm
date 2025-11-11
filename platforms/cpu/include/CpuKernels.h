@@ -656,8 +656,8 @@ private:
     CpuPlatform::PlatformData& data;
     CpuLCPOForce* ixn;
     double oneBodyEnergy;
-    std::vector<int> indices;
-    std::vector<int> particles;
+    std::vector<int> activeParticles;
+    std::vector<int> activeParticlesInv;
     std::vector<fvec4> parameters;
 };
 

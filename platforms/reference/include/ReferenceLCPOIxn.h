@@ -47,7 +47,7 @@ private:
     };
 
 public:
-    ReferenceLCPOIxn(const std::vector<int>& indices, const std::vector<int>& particles, const std::vector<std::array<double, 4> >& parameters, double cutoff, bool usePeriodic);
+    ReferenceLCPOIxn(const std::vector<int>& activeParticles, const std::vector<int>& activeParticlesInv, const std::vector<std::array<double, 4> >& parameters, double cutoff, bool usePeriodic);
     double execute(const Vec3* boxVectors, const std::vector<Vec3>& posData, std::vector<Vec3>& forceData, bool includeForces, bool includeEnergy);
 
 private:
@@ -58,8 +58,8 @@ private:
 
     int numParticles;
     int numActiveParticles;
-    const std::vector<int>& indices;
-    const std::vector<int>& particles;
+    const std::vector<int>& activeParticles;
+    const std::vector<int>& activeParticlesInv;
     const std::vector<std::array<double, 4> >& parameters;
     double cutoff;
     bool usePeriodic;

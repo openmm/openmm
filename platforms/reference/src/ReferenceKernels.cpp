@@ -2449,13 +2449,13 @@ void ReferenceCalcLCPOForceKernel::initialize(const System& system, const LCPOFo
         oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
 
         if (radius != 0.0) {
-            indices.push_back(particles.size());
-            particles.push_back(i);
+            activeParticlesInv.push_back(activeParticles.size());
+            activeParticles.push_back(i);
             parameters.push_back({radius, p2, p3, p4});
             maxRadius = max(maxRadius, radius);
         }
         else {
-            indices.push_back(-1);
+            activeParticlesInv.push_back(-1);
         }
     }
 
@@ -2475,15 +2475,15 @@ double ReferenceCalcLCPOForceKernel::execute(ContextImpl& context, bool includeF
         }
     }
 
-    ReferenceLCPOIxn lcpo(indices, particles, parameters, cutoff, usePeriodic);
+    ReferenceLCPOIxn lcpo(activeParticles, activeParticlesInv, parameters, cutoff, usePeriodic);
     return oneBodyEnergy + lcpo.execute(boxVectors, posData, forceData, includeForces, includeEnergy);
 }
 
 void ReferenceCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const LCPOForce& force, int firstParticle, int lastParticle) {
     // For the reference implementation, just reinitialize everything.
 
-    indices.clear();
-    particles.clear();
+    activeParticles.clear();
+    activeParticlesInv.clear();
     parameters.clear();
     initialize(context.getSystem(), force);
 }

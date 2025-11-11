@@ -1173,8 +1173,8 @@ public:
     void copyParametersToContext(ContextImpl& context, const LCPOForce& force, int firstParticle, int lastParticle);
 private:
     double oneBodyEnergy;
-    std::vector<int> indices;
-    std::vector<int> particles;
+    std::vector<int> activeParticles;
+    std::vector<int> activeParticlesInv;
     std::vector<std::array<double, 4> > parameters;
     double cutoff;
     bool usePeriodic;

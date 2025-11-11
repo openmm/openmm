@@ -165,8 +165,8 @@ private:
     int numActiveParticles;
 
     ThreadPool& threads;
-    const std::vector<int>& indices;
-    const std::vector<int>& particles;
+    const std::vector<int>& activeParticles;
+    const std::vector<int>& activeParticlesInv;
     const std::vector<fvec4>& parameters;
     bool usePeriodic;
 

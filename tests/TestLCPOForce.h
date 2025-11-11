@@ -631,6 +631,58 @@ void testEnergyForces(bool isReferencePlatform) {
     }
 }
 
+void testUpdateInContext() {
+    System system;
+    vector<Vec3> positions;
+    double energy;
+
+    makeAlanineDipeptideTestCase(1, system, positions, energy);
+
+    // Get an initial energy and forces.
+
+    VerletIntegrator updateIntegrator(0.001);
+    Context updateContext(system, updateIntegrator, platform);
+    updateContext.setPositions(positions);
+    State initialState = updateContext.getState(State::Energy | State::Forces);
+
+    // Change some parameters on atoms whose radii are set to zero.
+
+    LCPOForce* lcpo = dynamic_cast<LCPOForce*>(&system.getForce(0));
+    lcpo->setParticleParameters(3, 0.0, 0.1, 0.2, 0.3, 0.4);
+    lcpo->setParticleParameters(9, 0.0, 0.5, 0.6, 0.7, 0.8);
+    lcpo->setParticleParameters(11, 0.0, 0.9, 1.0, 1.1, 1.2);
+    lcpo->setParticleParameters(12, 0.0, 1.3, 1.4, 1.5, 1.6);
+    lcpo->updateParametersInContext(updateContext);
+
+    State updateState1 = updateContext.getState(State::Energy | State::Forces);
+
+    // Change some parameters on atoms involved in the force.
+
+    lcpo->setParticleParameters(4, 0.4, 1.7, 1.8, 1.9, 2.0);
+    lcpo->setParticleParameters(6, 0.5, 2.1, 2.2, 2.3, 2.4);
+    lcpo->setParticleParameters(10, 0.6, 2.5, 2.6, 2.7, 2.8);
+    lcpo->updateParametersInContext(updateContext);
+
+    State updateState2 = updateContext.getState(State::Energy | State::Forces);
+
+    // Get an energy and forces from a freshly created context.
+
+    VerletIntegrator referenceIntegrator(0.001);
+    Context referenceContext(system, referenceIntegrator, platform);
+    referenceContext.setPositions(positions);
+    State referenceState = referenceContext.getState(State::Energy | State::Forces);
+
+    // Check energies and forces.
+
+    ASSERT_EQUAL_TOL(initialState.getPotentialEnergy(), updateState1.getPotentialEnergy(), TOL);
+    ASSERT_EQUAL_TOL(referenceState.getPotentialEnergy(), updateState2.getPotentialEnergy(), TOL);
+
+    for (int i = 0; i < system.getNumParticles(); i++) {
+        ASSERT_EQUAL_VEC(initialState.getForces()[i], updateState1.getForces()[i], TOL);
+        ASSERT_EQUAL_VEC(referenceState.getForces()[i], updateState2.getForces()[i], TOL);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -644,6 +696,7 @@ int main(int argc, char* argv[]) {
         testUsePeriodic(true);
         testIncludeZeroScale();
         testExcludeZeroRadius();
+        testUpdateInContext();
         runPlatformTests();
     }
     catch(const exception& e) {
