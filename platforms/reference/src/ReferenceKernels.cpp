@@ -2479,7 +2479,7 @@ double ReferenceCalcLCPOForceKernel::execute(ContextImpl& context, bool includeF
     return oneBodyEnergy + lcpo.execute(boxVectors, posData, forceData, includeForces, includeEnergy);
 }
 
-void ReferenceCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const LCPOForce& force, int firstParticle, int lastParticle) {
+void ReferenceCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const LCPOForce& force) {
     // For the reference implementation, just reinitialize everything.
 
     activeParticles.clear();

@@ -1808,7 +1808,7 @@ double CpuCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForces,
     return energy;
 }
 
-void CpuCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const LCPOForce& force, int firstParticle, int lastParticle) {
+void CpuCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const LCPOForce& force) {
     oneBodyEnergy = 0.0;
 
     for (int i = 0; i < force.getNumParticles(); i++) {
@@ -1816,15 +1816,13 @@ void CpuCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const
         force.getParticleParameters(i, radius, p1, p2, p3, p4);
         oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
 
-        if (i >= firstParticle && i <= lastParticle) {
-            bool isActive = radius != 0.0;
-            bool wasActive = activeParticlesInv[i] != -1;
-            if (isActive != wasActive) {
-                throw OpenMMException("updateParametersInContext: The set of non-excluded particles has changed");
-            }
-            if (isActive) {
-                parameters[activeParticlesInv[i]] = fvec4(radius, p2, p3, p4);
-            }
+        bool isActive = radius != 0.0;
+        bool wasActive = activeParticlesInv[i] != -1;
+        if (isActive != wasActive) {
+            throw OpenMMException("updateParametersInContext: The set of non-excluded particles has changed");
+        }
+        if (isActive) {
+            parameters[activeParticlesInv[i]] = fvec4(radius, p2, p3, p4);
         }
     }
 

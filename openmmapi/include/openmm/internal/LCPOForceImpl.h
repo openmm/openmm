@@ -50,7 +50,7 @@ public:
         return {}; // This force field doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
-    void updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle);
+    void updateParametersInContext(ContextImpl& context);
 private:
     const LCPOForce& owner;
     Kernel kernel;

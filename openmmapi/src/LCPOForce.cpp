@@ -35,7 +35,7 @@
 using namespace OpenMM;
 using namespace std;
 
-LCPOForce::LCPOForce() : usePeriodic(false), numContexts(0) {
+LCPOForce::LCPOForce() : usePeriodic(false) {
 }
 
 void LCPOForce::setUsesPeriodicBoundaryConditions(bool periodic) {
@@ -69,18 +69,10 @@ void LCPOForce::setParticleParameters(int index, double radius, double p1, doubl
     info.p2 = p2;
     info.p3 = p3;
     info.p4 = p4;
-    if (numContexts > 0) {
-        firstChangedParticle = min(index, firstChangedParticle);
-        lastChangedParticle = max(index, lastChangedParticle);
-    }
 }
 
 void LCPOForce::updateParametersInContext(Context& context) {
-    dynamic_cast<LCPOForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context), firstChangedParticle, lastChangedParticle);
-    if (numContexts == 1) {
-        firstChangedParticle = particles.size();
-        lastChangedParticle = -1;
-    }
+    dynamic_cast<LCPOForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
 
 bool LCPOForce::usesPeriodicBoundaryConditions() const {
@@ -88,10 +80,5 @@ bool LCPOForce::usesPeriodicBoundaryConditions() const {
 }
 
 ForceImpl* LCPOForce::createImpl() const {
-    if (numContexts == 0) {
-        firstChangedParticle = particles.size();
-        lastChangedParticle = -1;
-    }
-    numContexts++;
     return new LCPOForceImpl(*this);
 }

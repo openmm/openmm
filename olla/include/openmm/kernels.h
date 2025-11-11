@@ -1083,10 +1083,8 @@ public:
      *
      * @param context        the context to copy parameters to
      * @param force          the LCPOForce to copy the parameters from
-     * @param firstParticle  the index of the first particle whose parameters might have changed
-     * @param lastParticle   the index of the last particle whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const LCPOForce& force, int firstParticle, int lastParticle) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const LCPOForce& force) = 0;
 };
 
 /**

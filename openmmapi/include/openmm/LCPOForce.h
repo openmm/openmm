@@ -125,7 +125,6 @@ private:
     class ParticleInfo;
     bool usePeriodic;
     std::vector<ParticleInfo> particles;
-    mutable int numContexts, firstChangedParticle, lastChangedParticle;
 };
 
 /**

@@ -68,7 +68,7 @@ std::vector<std::string> LCPOForceImpl::getKernelNames() {
     return {CalcLCPOForceKernel::Name()};
 }
 
-void LCPOForceImpl::updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle) {
-    kernel.getAs<CalcLCPOForceKernel>().copyParametersToContext(context, owner, firstParticle, lastParticle);
+void LCPOForceImpl::updateParametersInContext(ContextImpl& context) {
+    kernel.getAs<CalcLCPOForceKernel>().copyParametersToContext(context, owner);
     context.systemChanged();
 }
