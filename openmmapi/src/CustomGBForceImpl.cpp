@@ -112,9 +112,7 @@ double CustomGBForceImpl::calcForcesAndEnergy(ContextImpl& context, bool include
 }
 
 vector<string> CustomGBForceImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(CalcCustomGBForceKernel::Name());
-    return names;
+    return {CalcCustomGBForceKernel::Name()};
 }
 
 map<string, double> CustomGBForceImpl::getDefaultParameters() {

@@ -69,9 +69,7 @@ double RBTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includ
 }
 
 std::vector<std::string> RBTorsionForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcRBTorsionForceKernel::Name());
-    return names;
+    return {CalcRBTorsionForceKernel::Name()};
 }
 
 void RBTorsionForceImpl::updateParametersInContext(ContextImpl& context) {

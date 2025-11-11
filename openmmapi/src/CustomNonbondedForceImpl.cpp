@@ -145,9 +145,7 @@ double CustomNonbondedForceImpl::calcForcesAndEnergy(ContextImpl& context, bool 
 }
 
 vector<string> CustomNonbondedForceImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(CalcCustomNonbondedForceKernel::Name());
-    return names;
+    return {CalcCustomNonbondedForceKernel::Name()};
 }
 
 map<string, double> CustomNonbondedForceImpl::getDefaultParameters() {

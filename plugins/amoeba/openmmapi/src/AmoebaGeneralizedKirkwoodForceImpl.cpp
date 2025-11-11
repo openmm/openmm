@@ -60,9 +60,7 @@ double AmoebaGeneralizedKirkwoodForceImpl::calcForcesAndEnergy(ContextImpl& cont
 }
 
 std::vector<std::string> AmoebaGeneralizedKirkwoodForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcAmoebaGeneralizedKirkwoodForceKernel::Name());
-    return names;
+    return {CalcAmoebaGeneralizedKirkwoodForceKernel::Name()};
 }
 
 void AmoebaGeneralizedKirkwoodForceImpl::updateParametersInContext(ContextImpl& context) {

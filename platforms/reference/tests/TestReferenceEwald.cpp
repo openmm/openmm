@@ -59,14 +59,13 @@ void testReferencePmeDerivatives() {
     double ewaldAlpha = 1.752;
     int gridSize[3] = {54, 49, 43};
 
-    pme_t pme;
-    pme_init(&pme, ewaldAlpha, numParticles, gridSize, 5, 1);
+    ReferencePME pme(ewaldAlpha, numParticles, gridSize, 5, 1);
 
     double dummyEnergy=0;
     vector<Vec3> dummyForces(numParticles);
 
     vector<Vec3> testForces(numParticles);
-    pme_exec(pme, positions, testForces, charges, boxVectors, &dummyEnergy);
+    pme.exec(positions, testForces, charges, boxVectors, dummyEnergy);
 
     for (int i = 0; i < numParticles; i++) {
         for (int j = 0; j < 3; j++) {
@@ -74,11 +73,11 @@ void testReferencePmeDerivatives() {
 
             double energyLess = 0.0;
             positions[i][j] = referencePosition - DELTA;
-            pme_exec(pme, positions, dummyForces, charges, boxVectors, &energyLess);
+            pme.exec(positions, dummyForces, charges, boxVectors, energyLess);
 
             double energyMore = 0.0;
             positions[i][j] = referencePosition + DELTA;
-            pme_exec(pme, positions, dummyForces, charges, boxVectors, &energyMore);
+            pme.exec(positions, dummyForces, charges, boxVectors, energyMore);
 
             positions[i][j] = referencePosition;
 
@@ -87,25 +86,23 @@ void testReferencePmeDerivatives() {
     }
 
     vector<double> testDerivatives(numParticles);
-    pme_exec_charge_derivatives(pme, positions, testDerivatives, indices, charges, boxVectors);
+    pme.exec_charge_derivatives(positions, testDerivatives, indices, charges, boxVectors);
 
     for (int i = 0; i < numParticles; i++) {
         double referenceCharge = charges[i];
 
         double energyLess = 0.0;
         charges[i] = referenceCharge - DELTA;
-        pme_exec(pme, positions, dummyForces, charges, boxVectors, &energyLess);
+        pme.exec(positions, dummyForces, charges, boxVectors, energyLess);
 
         double energyMore = 0.0;
         charges[i] = referenceCharge + DELTA;
-        pme_exec(pme, positions, dummyForces, charges, boxVectors, &energyMore);
+        pme.exec(positions, dummyForces, charges, boxVectors, energyMore);
 
         charges[i] = referenceCharge;
 
         ASSERT_EQUAL_TOL((energyMore - energyLess) / (2 * DELTA), testDerivatives[i], EPSILON);
     }
-
-    pme_destroy(pme);
 }
 
 void runPlatformTests() {

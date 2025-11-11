@@ -178,9 +178,7 @@ std::map<std::string, double> ATMForceImpl::getDefaultParameters() {
 }
 
 std::vector<std::string> ATMForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcATMForceKernel::Name());
-    return names;
+    return {CalcATMForceKernel::Name()};
 }
 
 vector<pair<int, int> > ATMForceImpl::getBondedParticles() const {

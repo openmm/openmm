@@ -243,33 +243,28 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<Vec3>& a
     // PME
 
     if (pme && includeReciprocal) {
-        pme_t          pmedata; /* abstract handle for PME data */
-
-        pme_init(&pmedata,alphaEwald,numberOfAtoms,meshDim,5,1);
+        ReferencePME pme(alphaEwald,numberOfAtoms,meshDim,5,1);
 
         vector<double> charges(numberOfAtoms);
         for (int i = 0; i < numberOfAtoms; i++)
             charges[i] = atomParameters[i][QIndex];
-        pme_exec(pmedata,atomCoordinates,forces,charges,periodicBoxVectors,&recipEnergy);
+        pme.exec(atomCoordinates, forces, charges, periodicBoxVectors, recipEnergy);
 
         if (totalEnergy)
             *totalEnergy += recipEnergy;
 
-        pme_destroy(pmedata);
-
         if (ljpme) {
             // Dispersion reciprocal space terms
-            pme_init(&pmedata,alphaDispersionEwald,numberOfAtoms,dispersionMeshDim,5,1);
+            ReferencePME ljpme(alphaDispersionEwald,numberOfAtoms,dispersionMeshDim,5,1);
 
             std::vector<Vec3> dpmeforces(numberOfAtoms);
             for (int i = 0; i < numberOfAtoms; i++)
                 charges[i] = 8.0*pow(atomParameters[i][SigIndex], 3.0) * atomParameters[i][EpsIndex];
-            pme_exec_dpme(pmedata,atomCoordinates,dpmeforces,charges,periodicBoxVectors,&recipDispersionEnergy);
+            ljpme.exec_dpme(atomCoordinates, dpmeforces, charges, periodicBoxVectors, recipDispersionEnergy);
             for (int i = 0; i < numberOfAtoms; i++)
                 forces[i] += dpmeforces[i];
             if (totalEnergy)
                 *totalEnergy += recipDispersionEnergy;
-            pme_destroy(pmedata);
         }
     }
     // Ewald method

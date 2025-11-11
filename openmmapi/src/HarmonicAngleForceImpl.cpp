@@ -75,9 +75,7 @@ double HarmonicAngleForceImpl::calcForcesAndEnergy(ContextImpl& context, bool in
 }
 
 std::vector<std::string> HarmonicAngleForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcHarmonicAngleForceKernel::Name());
-    return names;
+    return {CalcHarmonicAngleForceKernel::Name()};
 }
 
 void HarmonicAngleForceImpl::updateParametersInContext(ContextImpl& context, int firstAngle, int lastAngle) {

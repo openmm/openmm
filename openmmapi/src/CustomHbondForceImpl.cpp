@@ -185,9 +185,7 @@ double CustomHbondForceImpl::calcForcesAndEnergy(ContextImpl& context, bool incl
 }
 
 vector<string> CustomHbondForceImpl::getKernelNames() {
-    vector<string> names;
-    names.push_back(CalcCustomHbondForceKernel::Name());
-    return names;
+    return {CalcCustomHbondForceKernel::Name()};
 }
 
 map<string, double> CustomHbondForceImpl::getDefaultParameters() {

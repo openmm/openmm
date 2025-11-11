@@ -29,7 +29,6 @@
 
 #include "ReferenceConstantPotential.h"
 #include "ReferenceForce.h"
-#include "ReferencePME.h"
 #include "SimTKOpenMMUtilities.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/MSVC_erfc.h"
@@ -97,22 +96,21 @@ void ReferenceConstantPotentialMatrixSolver::update(
     std::vector<double> dUdQ0(numElectrodeParticles);
     std::vector<double> dUdQ(numElectrodeParticles);
     
-    pme_t pmeData;
-    pme_init(&pmeData, conp.ewaldAlpha, numParticles, conp.gridSize, 5, 1);
+    ReferencePME pme(conp.ewaldAlpha, numParticles, conp.gridSize, 5, 1);
 
     // Get derivatives when all electrode charges are zeroed.
     std::vector<double> q(charges);
     for (int ii = 0; ii < numElectrodeParticles; ii++) {
         q[elecToSys[ii]] = 0.0;
     }
-    conp.getDerivatives(numParticles, numElectrodeParticles, posData, q, exclusions, sysToElec, elecToSys, electrodeParamArray, dUdQ0, pmeData);
+    conp.getDerivatives(numParticles, numElectrodeParticles, posData, q, exclusions, sysToElec, elecToSys, electrodeParamArray, dUdQ0, pme);
 
     for (int ii = 0; ii < numElectrodeParticles; ii++) {
         int i = elecToSys[ii];
 
         // Get derivatives when one electrode charge is set.
         q[i] = 1.0;
-        conp.getDerivatives(numParticles, numElectrodeParticles, posData, q, exclusions, sysToElec, elecToSys, electrodeParamArray, dUdQ, pmeData);
+        conp.getDerivatives(numParticles, numElectrodeParticles, posData, q, exclusions, sysToElec, elecToSys, electrodeParamArray, dUdQ, pme);
         q[i] = 0.0;
 
         // Set matrix elements, subtracting zero charge derivatives so that the
@@ -122,8 +120,6 @@ void ReferenceConstantPotentialMatrixSolver::update(
         }
         A[ii][ii] = dUdQ[ii] - dUdQ0[ii];
     }
-
-    pme_destroy(pmeData);
 
     // Compute Cholesky decomposition representation of the inverse.
     capacitance = JAMA::Cholesky<double>(A);
@@ -162,7 +158,7 @@ void ReferenceConstantPotentialMatrixSolver::solve(
     const std::vector<int>& elecToSys,
     const std::vector<std::array<double, 3> >& electrodeParamArray,
     ReferenceConstantPotential& conp,
-    pme_t pmeData
+    ReferencePME& pme
 ) {
     // Solves for charges using the matrix method.
 
@@ -171,7 +167,7 @@ void ReferenceConstantPotentialMatrixSolver::solve(
         charges[elecToSys[ii]] = 0.0;
     }
     std::vector<double> b(numElectrodeParticles);
-    conp.getDerivatives(numParticles, numElectrodeParticles, posData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, b, pmeData);
+    conp.getDerivatives(numParticles, numElectrodeParticles, posData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, b, pme);
     for (int ii = 0; ii < numElectrodeParticles; ii++) {
         b[ii] = -b[ii];
     }
@@ -236,14 +232,12 @@ void ReferenceConstantPotentialCGSolver::update(
         // calculation.  This will actually vary slightly with position but only due
         // to finite accuracy of the PME splines, so it is fine to assume it will be
         // constant for the preconditioner.
-        pme_t pmeData;
-        pme_init(&pmeData, conp.ewaldAlpha, 1, conp.gridSize, 5, 1);
+        ReferencePME pme(conp.ewaldAlpha, 1, conp.gridSize, 5, 1);
         std::vector<Vec3> pmePosData(1);
         std::vector<double> pmeChargeDerivatives(1);
         std::vector<int> pmeElectrodeIndices(1);
         std::vector<double> pmeCharges(1, 1.0);
-        pme_exec_charge_derivatives(pmeData, pmePosData, pmeChargeDerivatives, pmeElectrodeIndices, pmeCharges, boxVectors);
-        pme_destroy(pmeData);
+        pme.exec_charge_derivatives(pmePosData, pmeChargeDerivatives, pmeElectrodeIndices, pmeCharges, boxVectors);
 
         // The diagonal has a contribution from reciprocal space, Ewald
         // self-interaction, Ewald neutralizing plasma, Gaussian self-interaction,
@@ -274,7 +268,7 @@ void ReferenceConstantPotentialCGSolver::solve(
     const std::vector<int>& elecToSys,
     const std::vector<std::array<double, 3> >& electrodeParamArray,
     ReferenceConstantPotential& conp,
-    pme_t pmeData
+    ReferencePME& pme
 ) {
     // Solves for charges using the conjugate gradient method.
     
@@ -302,7 +296,7 @@ void ReferenceConstantPotentialCGSolver::solve(
     }
 
     // Evaluate the initial gradient Aq - b.
-    conp.getDerivatives(numParticles, numElectrodeParticles, posData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, grad, pmeData);
+    conp.getDerivatives(numParticles, numElectrodeParticles, posData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, grad, pme);
 
     // Project the initial gradient without preconditioning.
     offset = 0.0;
@@ -332,7 +326,7 @@ void ReferenceConstantPotentialCGSolver::solve(
         q[ii] = charges[i];
         charges[i] = 0.0;
     }
-    conp.getDerivatives(numParticles, numElectrodeParticles, posData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, grad0, pmeData);
+    conp.getDerivatives(numParticles, numElectrodeParticles, posData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, grad0, pme);
 
     // Project the initial gradient with preconditioning.
     if (precond) {
@@ -362,7 +356,7 @@ void ReferenceConstantPotentialCGSolver::solve(
         for (int ii = 0; ii < numElectrodeParticles; ii++) {
             charges[elecToSys[ii]] = qStep[ii];
         }
-        conp.getDerivatives(numParticles, numElectrodeParticles, posData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, gradStep, pmeData);
+        conp.getDerivatives(numParticles, numElectrodeParticles, posData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, gradStep, pme);
         for (int ii = 0; ii < numElectrodeParticles; ii++) {
             gradStep[ii] -= grad0[ii];
         }
@@ -417,7 +411,7 @@ void ReferenceConstantPotentialCGSolver::solve(
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
                 charges[elecToSys[ii]] = q[ii];
             }
-            conp.getDerivatives(numParticles, numElectrodeParticles, posData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, grad, pmeData);
+            conp.getDerivatives(numParticles, numElectrodeParticles, posData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, grad, pme);
         }
         else {
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
@@ -542,13 +536,9 @@ void ReferenceConstantPotential::execute(
     double* energy,
     ReferenceConstantPotentialSolver* solver
 ) {
-    pme_t pmeData;
-    pme_init(&pmeData, ewaldAlpha, numParticles, gridSize, 5, 1);
-
-    solver->solve(numParticles, numElectrodeParticles, posData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, *this, pmeData);
-    getEnergyForces(numParticles, numElectrodeParticles, posData, forceData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, energy, pmeData);
-
-    pme_destroy(pmeData);
+    ReferencePME pme(ewaldAlpha, numParticles, gridSize, 5, 1);
+    solver->solve(numParticles, numElectrodeParticles, posData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, *this, pme);
+    getEnergyForces(numParticles, numElectrodeParticles, posData, forceData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, energy, pme);
 }
 
 void ReferenceConstantPotential::getCharges(
@@ -562,12 +552,8 @@ void ReferenceConstantPotential::getCharges(
     const std::vector<std::array<double, 3> >& electrodeParamArray,
     ReferenceConstantPotentialSolver* solver
 ) {
-    pme_t pmeData;
-    pme_init(&pmeData, ewaldAlpha, numParticles, gridSize, 5, 1);
-
-    solver->solve(numParticles, numElectrodeParticles, posData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, *this, pmeData);
-
-    pme_destroy(pmeData);
+    ReferencePME pme(ewaldAlpha, numParticles, gridSize, 5, 1);
+    solver->solve(numParticles, numElectrodeParticles, posData, charges, exclusions, sysToElec, elecToSys, electrodeParamArray, *this, pme);
 }
 
 void ReferenceConstantPotential::getEnergyForces(
@@ -581,7 +567,7 @@ void ReferenceConstantPotential::getEnergyForces(
     const std::vector<int>& elecToSys,
     const std::vector<std::array<double, 3> >& electrodeParamArray,
     double* energy,
-    pme_t pmeData
+    ReferencePME& pme
 ) {
     const double SQRT_PI = sqrt(PI_M);
     const double TWO_OVER_SQRT_PI = 2.0 / SQRT_PI;
@@ -671,7 +657,7 @@ void ReferenceConstantPotential::getEnergyForces(
     
     // Reciprocal space.
     double pmeEnergy = 0.0;
-    pme_exec(pmeData, posData, forceData, charges, boxVectors, &pmeEnergy);
+    pme.exec(posData, forceData, charges, boxVectors, pmeEnergy);
     energyAccum += pmeEnergy;
 
     // Ewald self-interaction and external field contributions (all particles).
@@ -710,7 +696,7 @@ void ReferenceConstantPotential::getDerivatives(
     const std::vector<int>& elecToSys,
     const std::vector<std::array<double, 3> >& electrodeParamArray,
     std::vector<double>& chargeDerivatives,
-    pme_t pmeData
+    ReferencePME& pme
 ) {
     const double SQRT_PI = sqrt(PI_M);
     const double SELF_ALPHA_SCALE = 2.0 * ONE_4PI_EPS0 / SQRT_PI;
@@ -757,7 +743,7 @@ void ReferenceConstantPotential::getDerivatives(
     }
 
     // Reciprocal space.
-    pme_exec_charge_derivatives(pmeData, posData, chargeDerivatives, elecToSys, charges, boxVectors);
+    pme.exec_charge_derivatives(posData, chargeDerivatives, elecToSys, charges, boxVectors);
 
     // Ewald neutralizing plasma precalculation.
     double qTotal = 0.0;

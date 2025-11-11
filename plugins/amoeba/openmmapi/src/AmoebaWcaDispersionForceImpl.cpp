@@ -133,9 +133,7 @@ double AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(const Amoeb
 }
 
 std::vector<std::string> AmoebaWcaDispersionForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcAmoebaWcaDispersionForceKernel::Name());
-    return names;
+    return {CalcAmoebaWcaDispersionForceKernel::Name()};
 }
 
 void AmoebaWcaDispersionForceImpl::updateParametersInContext(ContextImpl& context) {

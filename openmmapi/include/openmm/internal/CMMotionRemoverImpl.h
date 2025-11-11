@@ -53,7 +53,7 @@ public:
         return 0.0;
     }
     std::map<std::string, double> getDefaultParameters() {
-        return std::map<std::string, double>(); // This force doesn't define any parameters.
+        return {}; // This force doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
 private:

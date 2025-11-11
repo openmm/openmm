@@ -2873,8 +2873,7 @@ double AmoebaReferencePmeHippoNonbondedForce::calculateDispersionPairIxn(const M
 }
 
 double AmoebaReferencePmeHippoNonbondedForce::computeReciprocalSpaceDispersionForceAndEnergy(const vector<MultipoleParticleData>& particleData, vector<Vec3>& forces) const {
-    pme_t pmedata;
-    pme_init(&pmedata, _dalphaEwald, _numParticles, _dpmeGridDimensions, 5, 1);
+    ReferencePME pme(_dalphaEwald, _numParticles, _dpmeGridDimensions, 5, 1);
     vector<double> charges(_numParticles);
     vector<Vec3> dpmeforces(_numParticles, Vec3()), coords;
     for (int i = 0; i < _numParticles; i++) {
@@ -2882,8 +2881,7 @@ double AmoebaReferencePmeHippoNonbondedForce::computeReciprocalSpaceDispersionFo
         coords.push_back(particleData[i].position);
     }
     double recipDispersionEnergy;
-    pme_exec_dpme(pmedata, coords, dpmeforces, charges, _periodicBoxVectors, &recipDispersionEnergy);
-    pme_destroy(pmedata);
+    pme.exec_dpme(coords, dpmeforces, charges, _periodicBoxVectors, recipDispersionEnergy);
     for (int i = 0; i < _numParticles; i++)
         forces[i] += dpmeforces[i];
     return recipDispersionEnergy;

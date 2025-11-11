@@ -342,10 +342,7 @@ void testIllegalVariable() {
     system.addParticle(1.0);
     system.addParticle(1.0);
     CustomCompoundBondForce* force = new CustomCompoundBondForce(2, "1+none");
-    vector<int> particles;
-    particles.push_back(0);
-    particles.push_back(1);
-    force->addBond(particles);
+    force->addBond({0, 1});
     system.addForce(force);
     VerletIntegrator integrator(0.001);
     bool threwException = false;

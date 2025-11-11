@@ -98,9 +98,7 @@ void CustomIntegrator::stateChanged(State::DataType changed) {
 }
 
 vector<string> CustomIntegrator::getKernelNames() {
-    vector<string> names;
-    names.push_back(IntegrateCustomStepKernel::Name());
-    return names;
+    return {IntegrateCustomStepKernel::Name()};
 }
 
 double CustomIntegrator::computeKineticEnergy() {
