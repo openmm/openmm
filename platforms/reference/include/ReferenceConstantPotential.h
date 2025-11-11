@@ -90,14 +90,14 @@ public:
      * @param elecToSys              mapping from electrode particle indices to system particle indices
      * @param electrodeParamArray    electrode particle parameters
      * @param conp                   constant potential derivative evaluation class
-     * @param pmeData                reference PME solver
+     * @param pme                    reference PME solver
      */
     virtual void solve(int numParticles, int numElectrodeParticles,
         const std::vector<Vec3>& posData, std::vector<double>& charges,
         const std::vector<std::set<int>>& exclusions,
         const std::vector<int>& sysToElec, const std::vector<int>& elecToSys,
         const std::vector<std::array<double, 3> >& electrodeParamArray,
-        ReferenceConstantPotential& conp, pme_t pmeData) = 0;
+        ReferenceConstantPotential& conp, ReferencePME& pme) = 0;
 };
 
 /**
@@ -149,14 +149,14 @@ public:
      * @param elecToSys              mapping from electrode particle indices to system particle indices
      * @param electrodeParamArray    electrode particle parameters
      * @param conp                   constant potential derivative evaluation class
-     * @param pmeData                reference PME solver
+     * @param pme                    reference PME solver
      */
     void solve(int numParticles, int numElectrodeParticles,
         const std::vector<Vec3>& posData, std::vector<double>& charges,
         const std::vector<std::set<int>>& exclusions,
         const std::vector<int>& sysToElec, const std::vector<int>& elecToSys,
         const std::vector<std::array<double, 3> >& electrodeParamArray,
-        ReferenceConstantPotential& conp, pme_t pmeData);
+        ReferenceConstantPotential& conp, ReferencePME& pme);
 };
 
 /**
@@ -208,14 +208,14 @@ public:
      * @param elecToSys              mapping from electrode particle indices to system particle indices
      * @param electrodeParamArray    electrode particle parameters
      * @param conp                   constant potential derivative evaluation class
-     * @param pmeData                reference PME solver
+     * @param pme                    reference PME solver
      */
     void solve(int numParticles, int numElectrodeParticles,
         const std::vector<Vec3>& posData, std::vector<double>& charges,
         const std::vector<std::set<int>>& exclusions,
         const std::vector<int>& sysToElec, const std::vector<int>& elecToSys,
         const std::vector<std::array<double, 3> >& electrodeParamArray,
-        ReferenceConstantPotential& conp, pme_t pmeData);
+        ReferenceConstantPotential& conp, ReferencePME& pme);
 };
 
 /**
@@ -313,7 +313,7 @@ private:
      * @param elecToSys              mapping from electrode particle indices to system particle indices
      * @param electrodeParamArray    electrode particle parameters
      * @param energy                 output system energy
-     * @param pmeData                reference PME solver
+     * @param pme                    reference PME solver
      */
     void getEnergyForces(int numParticles, int numElectrodeParticles,
         const std::vector<Vec3>& posData, std::vector<Vec3>& forceData,
@@ -321,7 +321,7 @@ private:
         const std::vector<std::set<int>>& exclusions,
         const std::vector<int>& sysToElec, const std::vector<int>& elecToSys,
         const std::vector<std::array<double, 3> >& electrodeParamArray,
-        double* energy, pme_t pmeData);
+        double* energy, ReferencePME& pme);
     /**
      * Computes energy derivatives with respect to charges.
      * 
@@ -334,14 +334,14 @@ private:
      * @param elecToSys              mapping from electrode particle indices to system particle indices
      * @param electrodeParamArray    electrode particle parameters
      * @param chargeDerivatives      output charge derivatives
-     * @param pmeData                reference PME solver
+     * @param pme                    reference PME solver
      */
     void getDerivatives(int numParticles, int numElectrodeParticles,
         const std::vector<Vec3>& posData, std::vector<double>& charges,
         const std::vector<std::set<int>>& exclusions,
         const std::vector<int>& sysToElec, const std::vector<int>& elecToSys,
         const std::vector<std::array<double, 3> >& electrodeParamArray,
-        std::vector<double>& chargeDerivatives, pme_t pmeData);
+        std::vector<double>& chargeDerivatives, ReferencePME& pme);
 };
 
 } // namespace OpenMM

@@ -29,10 +29,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <complex>
+#include <cmath>
+#include <vector>
 
 #include "ReferencePME.h"
 #include "ReferenceForce.h"
@@ -45,171 +43,72 @@
 
 using namespace std;
 
-typedef int    ivec[3];
-
 namespace OpenMM {
 
-struct pme
-{
-    int          natoms;
-    double       ewaldcoeff;
-
-    complex<double>* grid;             /* Memory for the grid we spread charges on.
-                                        * Element (i,j,k) is accessed as:
-                                        * grid[i*ngrid[1]*ngrid[2] + j*ngrid[2] + k]
-                                        */
-    int          ngrid[3];             /* Total grid dimensions (all data is complex!) */
-
-    int          order;                /* PME interpolation order. Almost always 4 */
-
-    /* Data for bspline interpolation, see the Essman PME paper */
-    double *     bsplines_moduli[3];   /* 3 pointers, to x/y/z bspline moduli, each of length ngrid[x/y/z]   */
-    double *     bsplines_theta[3];    /* each of x/y/z has length order*natoms */
-    double *     bsplines_dtheta[3];   /* each of x/y/z has length order*natoms */
-
-    ivec *       particleindex;        /* Array of length natoms. Each element is
-                                        * an ivec (3 ints) that specify the grid
-                                        * indices for that particular atom. Updated every step!
-                                        */
-    rvec *       particlefraction;     /* Array of length natoms. Fractional offset in the grid for
-                                        * each atom in all three dimensions.
-                                        */
-
-    /* Further explanation of index/fraction:
-     *
-     * Assume we have a cell of size 10*10*10nm, and a total grid dimension of 100*100*100 cells.
-     * In other words, each cell is 0.1*0.1*0.1 nm.
-     *
-     * If particle i has coordinates { 0.543 , 6.235 , -0.73 }, we will get:
-     *
-     * particleindex[i]    = { 5 , 62 , 92 }         (-0.73 + 10 = 9.27, we always apply PBC for grid calculations!)
-     * particlefraction[i] = { 0.43 , 0.35 , 0.7 }   (this is the fraction of the cell length where the atom is)
-     *
-     * (The reason for precaculating / storing these is that it gets a bit more complex for triclinic cells :-)
-     *
-     * In the current code version we might assume that a particle is not more than a whole box length away from
-     * the central cell, i.e., in this case we would assume all coordinates fall in -10 nm < x,y,z < 20 nm.
-     */
-
-    double       epsilon_r;             /* Dielectric coefficient to use, typically 1.0 */
-};
-
-
-/* Internal setup routines */
-
-
-
-/* Only called once from init_pme(), performance does not matter! */
-static void
-pme_calculate_bsplines_moduli(pme_t pme)
-{
-    int       nmax;
-    int       i,j,k,l,d;
-    int       order;
-    int       ndata;
-    double *  data;
-    double *  ddata;
-    double *  bsplines_data;
-    double    div;
-    double    sc,ss,arg;
-
-    nmax = 0;
-    for (d=0;d<3;d++)
-    {
-        nmax = (pme->ngrid[d] > nmax) ? pme->ngrid[d] : nmax;
-        pme->bsplines_moduli[d] = (double *) malloc(sizeof(double)*pme->ngrid[d]);
+/* Only called once from constructor, performance does not matter! */
+void ReferencePME::calculate_bsplines_moduli() {
+    int nmax = 0;
+    for (int d = 0; d < 3; d++) {
+        nmax = (ngrid[d] > nmax) ? ngrid[d] : nmax;
+        bsplines_moduli[d].resize(ngrid[d]);
     }
 
-    order = pme->order;
-
     /* temp storage in this routine */
-    data          = (double *) malloc(sizeof(double)*order);
-    ddata         = (double *) malloc(sizeof(double)*order);
-    bsplines_data = (double *) malloc(sizeof(double)*nmax);
+    vector<double> data(order);
+    vector<double> ddata(order);
+    vector<double> bsplines_data(nmax);
 
     data[order-1]=0;
     data[1]=0;
     data[0]=1;
 
-    for (k=3;k<order;k++)
-    {
-        div=1.0/(k-1.0);
+    for (int k = 3; k < order; k++) {
+        double div=1.0/(k-1.0);
         data[k-1]=0;
-        for (l=1;l<(k-1);l++)
-        {
+        for (int l = 1; l < (k-1); l++)
             data[k-l-1]=div*(l*data[k-l-2]+(k-l)*data[k-l-1]);
-        }
         data[0]=div*data[0];
     }
 
     /* differentiate */
     ddata[0]=-data[0];
-    for (k=1;k<order;k++)
-    {
+    for (int k = 1 ; k < order; k++)
         ddata[k]=data[k-1]-data[k];
-    }
 
-    div=1.0/(order-1);
+    double div=1.0/(order-1);
     data[order-1]=0;
 
-    for (l=1;l<(order-1);l++)
-    {
+    for (int l = 1; l < (order-1); l++)
         data[order-l-1]=div*(l*data[order-l-2]+(order-l)*data[order-l-1]);
-    }
     data[0]=div*data[0];
 
-    for (i=0;i<nmax;i++)
-    {
+    for (int i = 0; i < nmax; i++)
         bsplines_data[i]=0;
-    }
-    for (i=1;i<=order;i++)
-    {
+    for (int i = 1; i <= order; i++)
         bsplines_data[i]=data[i-1];
-    }
 
     /* Evaluate the actual bspline moduli for X/Y/Z */
-    for (d=0;d<3;d++)
-    {
-        ndata = pme->ngrid[d];
-        for (i=0;i<ndata;i++)
-        {
-            sc=ss=0;
-            for (j=0;j<ndata;j++)
-            {
-                arg=(2.0*M_PI*i*j)/ndata;
+    for (int d = 0; d < 3; d++) {
+        int ndata = ngrid[d];
+        for (int i = 0; i < ndata; i++) {
+            double sc = 0;
+            double ss = 0;
+            for (int j = 0; j < ndata; j++) {
+                double arg=(2.0*M_PI*i*j)/ndata;
                 sc+=bsplines_data[j]*cos(arg);
                 ss+=bsplines_data[j]*sin(arg);
             }
-            pme->bsplines_moduli[d][i]=sc*sc+ss*ss;
+            bsplines_moduli[d][i]=sc*sc+ss*ss;
         }
-        for (i=0;i<ndata;i++)
-        {
-            if (pme->bsplines_moduli[d][i]<1.0e-7)
-            {
-                pme->bsplines_moduli[d][i]=(pme->bsplines_moduli[d][(i-1+ndata)%ndata]+pme->bsplines_moduli[d][(i+1)%ndata])/2;
-            }
+        for (int i = 0; i < ndata; i++) {
+            if (bsplines_moduli[d][i]<1.0e-7)
+                bsplines_moduli[d][i]=(bsplines_moduli[d][(i-1+ndata)%ndata]+bsplines_moduli[d][(i+1)%ndata])/2;
         }
     }
-
-    /* Release temp storage */
-    free(data);
-    free(ddata);
-    free(bsplines_data);
 }
 
-static void
-pme_update_grid_index_and_fraction(pme_t    pme,
-                                   const vector<Vec3>& atomCoordinates,
-                                   const Vec3 periodicBoxVectors[3],
-                                   const Vec3 recipBoxVectors[3])
-{
-    int    i;
-    int    d;
-    double t;
-    int    ti;
-
-    for (i=0;i<pme->natoms;i++)
-    {
+void ReferencePME::update_grid_index_and_fraction(const vector<Vec3>& atomCoordinates, const Vec3 recipBoxVectors[3]) {
+    for (int i = 0; i < natoms; i++) {
         /* Index calculation (Look mom, no conditionals!):
          *
          * Both for Cuda and modern CPUs it is nice to avoid conditionals, but we still need to apply periodic boundary conditions.
@@ -247,14 +146,13 @@ pme_update_grid_index_and_fraction(pme_t    pme,
          *    (And, by adding 100.0 box lengths, we would lose a bit of numerical accuracy here!)
          */
         Vec3 coord = atomCoordinates[i];
-        for (d=0;d<3;d++)
-        {
-            t = coord[0]*recipBoxVectors[0][d]+coord[1]*recipBoxVectors[1][d]+coord[2]*recipBoxVectors[2][d];
-            t = (t-floor(t))*pme->ngrid[d];
-            ti = (int) t;
+        for (int d = 0; d < 3; d++) {
+            double t = coord[0]*recipBoxVectors[0][d]+coord[1]*recipBoxVectors[1][d]+coord[2]*recipBoxVectors[2][d];
+            t = (t-floor(t))*ngrid[d];
+            int ti = (int) t;
 
-            pme->particlefraction[i][d] = t - ti;
-            pme->particleindex[i][d]    = ti % pme->ngrid[d];
+            particlefraction[i][d] = t - ti;
+            particleindex[i][d]    = ti % ngrid[d];
         }
     }
 }
@@ -265,97 +163,60 @@ pme_update_grid_index_and_fraction(pme_t    pme,
  *
  * In practice, it might help to require order=4 for the cuda port.
  */
-static void
-pme_update_bsplines(pme_t    pme)
-{
-    int       i,j,k,l;
-    int       order;
-    double    dr,div;
-    double *  data;
-    double *  ddata;
-
-    order = pme->order;
-
-    for (i=0; (i<pme->natoms); i++)
-    {
-        for (j=0; j<3; j++)
-        {
+void ReferencePME::update_bsplines() {
+    for (int i = 0; i < natoms; i++) {
+        for (int j = 0; j < 3; j++) {
             /* dr is relative offset from lower cell limit */
-            dr = pme->particlefraction[i][j];
+            double dr = particlefraction[i][j];
 
-            data  = &(pme->bsplines_theta[j][i*order]);
-            ddata = &(pme->bsplines_dtheta[j][i*order]);
+            double* data  = &(bsplines_theta[j][i*order]);
+            double* ddata = &(bsplines_dtheta[j][i*order]);
             data[order-1] = 0;
             data[1]       = dr;
             data[0]       = 1-dr;
 
-            for (k=3; k<order; k++)
-            {
-                div = 1.0/(k-1.0);
+            for (int k = 3; k < order; k++) {
+                double div = 1.0/(k-1.0);
                 data[k-1] = div*dr*data[k-2];
-                for (l=1; l<(k-1); l++)
-                {
+                for (int l = 1; l < (k-1); l++)
                     data[k-l-1] = div*((dr+l)*data[k-l-2]+(k-l-dr)*data[k-l-1]);
-                }
                 data[0] = div*(1-dr)*data[0];
             }
 
             /* differentiate */
             ddata[0] = -data[0];
 
-            for (k=1; k<order; k++)
-            {
+            for (int k = 1; k < order; k++)
                 ddata[k] = data[k-1]-data[k];
-            }
 
-            div           = 1.0/(order-1);
+            double div = 1.0/(order-1);
             data[order-1] = div*dr*data[order-2];
 
-            for (l=1; l<(order-1); l++)
-            {
+            for (int l = 1; l < (order-1); l++)
                 data[order-l-1] = div*((dr+l)*data[order-l-2]+(order-l-dr)*data[order-l-1]);
-            }
             data[0] = div*(1-dr)*data[0];
         }
     }
 }
 
 
-static void
-pme_grid_spread_charge(pme_t pme, const vector<double>& charges)
-{
-    int       order;
-    int       i;
-    int       ix,iy,iz;
-    int       x0index,y0index,z0index;
-    int       xindex,yindex,zindex;
-    int       index;
-    double    q;
-    double *  thetax;
-    double *  thetay;
-    double *  thetaz;
-
-    order = pme->order;
-
+void ReferencePME::grid_spread_charge(const vector<double>& charges) {
     /* Reset the grid */
-    for (i=0;i<pme->ngrid[0]*pme->ngrid[1]*pme->ngrid[2];i++)
-    {
-        pme->grid[i] = complex<double>(0, 0);
-    }
+    for (int i = 0; i < ngrid[0]*ngrid[1]*ngrid[2]; i++)
+        grid[i] = complex<double>(0, 0);
 
-    for (i=0;i<pme->natoms;i++)
-    {
-        q = charges[i];
+    for (int i = 0; i < natoms; i++) {
+        double q = charges[i];
 
         /* Grid index for the actual atom position */
-        x0index = pme->particleindex[i][0];
-        y0index = pme->particleindex[i][1];
-        z0index = pme->particleindex[i][2];
+        int x0index = particleindex[i][0];
+        int y0index = particleindex[i][1];
+        int z0index = particleindex[i][2];
 
         /* Bspline factors for this atom in each dimension , calculated from fractional coordinates */
-        thetax  = &(pme->bsplines_theta[0][i*order]);
-        thetay  = &(pme->bsplines_theta[1][i*order]);
-        thetaz  = &(pme->bsplines_theta[2][i*order]);
+        double* thetax  = &(bsplines_theta[0][i*order]);
+        double* thetay  = &(bsplines_theta[1][i*order]);
+        double* thetaz  = &(bsplines_theta[2][i*order]);
 
         /* Loop over norder*norder*norder (typically 5*5*5) neighbor cells.
          *
@@ -375,23 +236,20 @@ pme_grid_spread_charge(pme_t pme, const vector<double>& charges)
          * 3) When we parallelize things, we only need to communicate in one direction instead of two!
          */
 
-        for (ix=0;ix<order;ix++)
-        {
+        for (int ix = 0; ix < order; ix++) {
             /* Calculate index, apply PBC so we spread to index 0/1/2 when a particle is close to the upper limit of the grid */
-            xindex = (x0index + ix) % pme->ngrid[0];
+            int xindex = (x0index + ix) % ngrid[0];
 
-            for (iy=0;iy<order;iy++)
-            {
-                yindex = (y0index + iy) % pme->ngrid[1];
+            for (int iy = 0; iy < order; iy++) {
+                int yindex = (y0index + iy) % ngrid[1];
 
-                for (iz=0;iz<order;iz++)
-                {
+                for (int iz = 0; iz < order; iz++) {
                     /* Can be optimized, but we keep it simple here */
-                    zindex            = (z0index + iz) % pme->ngrid[2];
+                    int zindex = (z0index + iz) % ngrid[2];
                     /* Calculate index in the charge grid */
-                    index             = xindex*pme->ngrid[1]*pme->ngrid[2] + yindex*pme->ngrid[2] + zindex;
+                    int index = xindex*ngrid[1]*ngrid[2] + yindex*ngrid[2] + zindex;
                     /* Add the charge times the bspline spread/interpolation factors to this grid position */
-                    pme->grid[index] += q*thetax[ix]*thetay[iy]*thetaz[iz];
+                    grid[index] += q*thetax[ix]*thetay[iy]*thetaz[iz];
                 }
             }
         }
@@ -400,67 +258,36 @@ pme_grid_spread_charge(pme_t pme, const vector<double>& charges)
 
 
 
-static void
-pme_reciprocal_convolution(pme_t     pme,
-                           const Vec3 periodicBoxVectors[3],
-                           const Vec3 recipBoxVectors[3],
-                           double *  energy)
-{
-    int kx,ky,kz;
-    int nx,ny,nz;
-    double mx,my,mz;
-    double mhx,mhy,mhz,m2;
-    double one_4pi_eps;
-    double virxx,virxy,virxz,viryy,viryz,virzz;
-    double bx,by,bz;
-    double d1,d2;
-    double eterm,vfactor,struct2,ets2;
-    double esum;
-    double factor;
-    double denom;
-    double boxfactor;
-    double maxkx,maxky,maxkz;
+void ReferencePME::pme_reciprocal_convolution(const Vec3 periodicBoxVectors[3], const Vec3 recipBoxVectors[3], double& energy) {
+    int nx = ngrid[0];
+    int ny = ngrid[1];
+    int nz = ngrid[2];
 
-    complex<double> *ptr;
+    double one_4pi_eps = ONE_4PI_EPS0/epsilon_r;
+    double factor = M_PI*M_PI/(ewaldcoeff*ewaldcoeff);
+    double boxfactor = M_PI*periodicBoxVectors[0][0]*periodicBoxVectors[1][1]*periodicBoxVectors[2][2];
 
-    nx = pme->ngrid[0];
-    ny = pme->ngrid[1];
-    nz = pme->ngrid[2];
+    double esum = 0;
 
-    one_4pi_eps = ONE_4PI_EPS0/pme->epsilon_r;
-    factor = M_PI*M_PI/(pme->ewaldcoeff*pme->ewaldcoeff);
-    boxfactor = M_PI*periodicBoxVectors[0][0]*periodicBoxVectors[1][1]*periodicBoxVectors[2][2];
+    double maxkx = (nx+1)/2;
+    double maxky = (ny+1)/2;
+    double maxkz = (nz+1)/2;
 
-    esum = 0;
-    virxx = 0;
-    virxy = 0;
-    virxz = 0;
-    viryy = 0;
-    viryz = 0;
-    virzz = 0;
-
-    maxkx = (nx+1)/2;
-    maxky = (ny+1)/2;
-    maxkz = (nz+1)/2;
-
-    for (kx=0;kx<nx;kx++)
-    {
+    for (int kx = 0; kx < nx; kx++) {
         /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
-        mx  = (kx<maxkx) ? kx : (kx-nx);
-        mhx = mx*recipBoxVectors[0][0];
-        bx  = boxfactor*pme->bsplines_moduli[0][kx];
+        double mx  = (kx<maxkx) ? kx : (kx-nx);
+        double mhx = mx*recipBoxVectors[0][0];
+        double bx  = boxfactor*bsplines_moduli[0][kx];
 
-        for (ky=0;ky<ny;ky++)
-        {
+        for (int ky = 0; ky < ny; ky++) {
             /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
-            my  = (ky<maxky) ? ky : (ky-ny);
-            mhy = mx*recipBoxVectors[1][0]+my*recipBoxVectors[1][1];
-            by  = pme->bsplines_moduli[1][ky];
+            double my  = (ky<maxky) ? ky : (ky-ny);
+            double mhy = mx*recipBoxVectors[1][0]+my*recipBoxVectors[1][1];
+            double by  = bsplines_moduli[1][ky];
 
-            for (kz=0;kz<nz;kz++)
-            {
+            for (int kz = 0; kz < nz; kz++) {
                 /* Pointer to the grid cell in question */
-                ptr       = pme->grid + kx*ny*nz + ky*nz + kz;
+                complex<double>& ptr = grid[kx*ny*nz + ky*nz + kz];
 
                 /* The zero frequency term is undefined due to division by the frequency below.  Set this term to zero;
                  * in the case that the net charge of the system is non-zero, this is equivalent to applying a uniform
@@ -468,324 +295,234 @@ pme_reciprocal_convolution(pme_t     pme,
                  * this neutralizing plasma is applied elsewhere.  If this term is not zeroed, however, energies and
                  * forces will be unaffected but charge derivatives for non-neutral systems will be incorrect!
                  */
-                if (kx==0 && ky==0 && kz==0)
-                {
-                    *ptr = 0;
+                if (kx==0 && ky==0 && kz==0) {
+                    ptr = 0;
                     continue;
                 }
 
                 /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
-                mz        = (kz<maxkz) ? kz : (kz-nz);
-                mhz       = mx*recipBoxVectors[2][0]+my*recipBoxVectors[2][1]+mz*recipBoxVectors[2][2];
+                double mz        = (kz<maxkz) ? kz : (kz-nz);
+                double mhz       = mx*recipBoxVectors[2][0]+my*recipBoxVectors[2][1]+mz*recipBoxVectors[2][2];
 
                 /* Get grid data for this frequency */
-                d1        = ptr->real();
-                d2        = ptr->imag();
+                double d1        = ptr.real();
+                double d2        = ptr.imag();
 
                 /* Calculate the convolution - see the Essman/Darden paper for the equation! */
-                m2        = mhx*mhx+mhy*mhy+mhz*mhz;
-                bz        = pme->bsplines_moduli[2][kz];
-                denom     = m2*bx*by*bz;
+                double m2        = mhx*mhx+mhy*mhy+mhz*mhz;
+                double bz        = bsplines_moduli[2][kz];
+                double denom     = m2*bx*by*bz;
 
-                eterm     = one_4pi_eps*exp(-factor*m2)/denom;
+                double eterm     = one_4pi_eps*exp(-factor*m2)/denom;
 
                 /* write back convolution data to grid */
-                ptr->real(d1*eterm);
-                ptr->imag(d2*eterm);
+                ptr.real(d1*eterm);
+                ptr.imag(d2*eterm);
 
-                struct2   = (d1*d1+d2*d2);
+                double struct2   = (d1*d1+d2*d2);
 
                 /* Long-range PME contribution to the energy for this frequency */
-                ets2      = eterm*struct2;
+                double ets2      = eterm*struct2;
                 esum     += ets2;
             }
         }
     }
 
     /* The factor 0.5 is nothing special, but it is better to have it here than inside the loop :-) */
-    *energy = 0.5*esum;
+    energy = 0.5*esum;
 }
 
 
-static void
-dpme_reciprocal_convolution(pme_t pme,
-                           const Vec3 periodicBoxVectors[3],
-                           const Vec3 recipBoxVectors[3],
-                           double* energy)
-{
-    int kx,ky,kz;
-    int nx,ny,nz;
-    double mx,my,mz;
-    double mhx,mhy,mhz,m2;
-    double bx,by,bz;
-    double d1,d2;
-    double eterm,struct2,ets2;
-    double esum;
-    double denom;
-    double boxfactor;
-    double maxkx,maxky,maxkz;
+void ReferencePME::dpme_reciprocal_convolution(const Vec3 periodicBoxVectors[3], const Vec3 recipBoxVectors[3], double& energy) {
+    int nx = ngrid[0];
+    int ny = ngrid[1];
+    int nz = ngrid[2];
 
-    complex<double> *ptr;
+    double boxfactor = -2*M_PI*sqrt(M_PI) / (6.0*periodicBoxVectors[0][0]*periodicBoxVectors[1][1]*periodicBoxVectors[2][2]);
 
-    nx = pme->ngrid[0];
-    ny = pme->ngrid[1];
-    nz = pme->ngrid[2];
+    double esum = 0;
 
-    boxfactor = -2*M_PI*sqrt(M_PI) / (6.0*periodicBoxVectors[0][0]*periodicBoxVectors[1][1]*periodicBoxVectors[2][2]);
+    double maxkx = (nx+1)/2;
+    double maxky = (ny+1)/2;
+    double maxkz = (nz+1)/2;
 
-    esum = 0;
-
-    maxkx = (nx+1)/2;
-    maxky = (ny+1)/2;
-    maxkz = (nz+1)/2;
-
-    double bfac = M_PI / pme->ewaldcoeff;
+    double bfac = M_PI / ewaldcoeff;
     double fac1 = 2.0*M_PI*M_PI*M_PI*sqrt(M_PI);
-    double fac2 = pme->ewaldcoeff*pme->ewaldcoeff*pme->ewaldcoeff;
-    double fac3 = -2.0*pme->ewaldcoeff*M_PI*M_PI;
-    double b, m, m3, expfac, expterm, erfcterm;
+    double fac2 = ewaldcoeff*ewaldcoeff*ewaldcoeff;
+    double fac3 = -2.0*ewaldcoeff*M_PI*M_PI;
 
-    for (kx=0;kx<nx;kx++)
-    {
+    for (int kx = 0; kx < nx; kx++) {
         /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
-        mx  = ((kx<maxkx) ? kx : (kx-nx));
-        mhx = mx*recipBoxVectors[0][0];
-        bx  = pme->bsplines_moduli[0][kx];
+        double mx  = ((kx<maxkx) ? kx : (kx-nx));
+        double mhx = mx*recipBoxVectors[0][0];
+        double bx  = bsplines_moduli[0][kx];
 
-        for (ky=0;ky<ny;ky++)
-        {
+        for (int ky = 0; ky < ny; ky++) {
             /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
-            my  = ((ky<maxky) ? ky : (ky-ny));
-            mhy = mx*recipBoxVectors[1][0]+my*recipBoxVectors[1][1];
-            by  = pme->bsplines_moduli[1][ky];
+            double my  = ((ky<maxky) ? ky : (ky-ny));
+            double mhy = mx*recipBoxVectors[1][0]+my*recipBoxVectors[1][1];
+            double by  = bsplines_moduli[1][ky];
 
-            for (kz=0;kz<nz;kz++)
-            {
+            for (int kz = 0; kz < nz; kz++) {
                 /*
                  * Unlike the Coulombic case, there's an m=0 term so all terms are considered here.
                  */
 
                 /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
-                mz        = ((kz<maxkz) ? kz : (kz-nz));
-                mhz       = mx*recipBoxVectors[2][0]+my*recipBoxVectors[2][1]+mz*recipBoxVectors[2][2];
+                double mz  = ((kz<maxkz) ? kz : (kz-nz));
+                double mhz = mx*recipBoxVectors[2][0]+my*recipBoxVectors[2][1]+mz*recipBoxVectors[2][2];
 
                 /* Pointer to the grid cell in question */
-                ptr       = pme->grid + kx*ny*nz + ky*nz + kz;
+                complex<double>& ptr = grid[kx*ny*nz + ky*nz + kz];
 
                 /* Get grid data for this frequency */
-                d1        = ptr->real();
-                d2        = ptr->imag();
+                double d1 = ptr.real();
+                double d2 = ptr.imag();
 
                 /* Calculate the convolution - see the Essman/Darden paper for the equation! */
-                m2        = mhx*mhx+mhy*mhy+mhz*mhz;
-                bz        = pme->bsplines_moduli[2][kz];
-                denom     = boxfactor / (bx*by*bz);
+                double m2    = mhx*mhx+mhy*mhy+mhz*mhz;
+                double bz    = bsplines_moduli[2][kz];
+                double denom = boxfactor / (bx*by*bz);
 
-                m = sqrt(m2);
-                m3 = m*m2;
-                b = bfac*m;
-                expfac = -b*b;
-                erfcterm = erfc(b);
-                expterm = exp(expfac);
+                double m = sqrt(m2);
+                double m3 = m*m2;
+                double b = bfac*m;
+                double expfac = -b*b;
+                double erfcterm = erfc(b);
+                double expterm = exp(expfac);
 
-                eterm     = (fac1*erfcterm*m3 + expterm*(fac2 + fac3*m2)) * denom;
+                double eterm = (fac1*erfcterm*m3 + expterm*(fac2 + fac3*m2)) * denom;
 
                 /* write back convolution data to grid */
-                ptr->real(d1*eterm);
-                ptr->imag(d2*eterm);
+                ptr.real(d1*eterm);
+                ptr.imag(d2*eterm);
 
-                struct2   = (d1*d1+d2*d2);
+                double struct2 = (d1*d1+d2*d2);
 
                 /* Long-range PME contribution to the energy for this frequency */
-                ets2      = eterm*struct2;
-                esum     += ets2;
+                double ets2 = eterm*struct2;
+                esum += ets2;
             }
         }
     }
     // Remember the C6 energy is attractive, hence the negative sign.
-    *energy = 0.5*esum;
+    energy = 0.5*esum;
 }
 
 
-static void
-pme_grid_interpolate_force(pme_t pme,
-                           const Vec3 recipBoxVectors[3],
-                           const vector<double>& charges,
-                           vector<Vec3>& forces)
-{
-    int       i;
-    int       ix,iy,iz;
-    int       x0index,y0index,z0index;
-    int       xindex,yindex,zindex;
-    int       index;
-    int       order;
-    double    q;
-    double *  thetax;
-    double *  thetay;
-    double *  thetaz;
-    double *  dthetax;
-    double *  dthetay;
-    double *  dthetaz;
-    double    tx,ty,tz;
-    double    dtx,dty,dtz;
-    double    fx,fy,fz;
-    double    gridvalue;
-    int       nx,ny,nz;
-
-    nx    = pme->ngrid[0];
-    ny    = pme->ngrid[1];
-    nz    = pme->ngrid[2];
-
-    order = pme->order;
-
+void ReferencePME::grid_interpolate_force(const Vec3 recipBoxVectors[3], const vector<double>& charges, vector<Vec3>& forces) {
     /* This is almost identical to the charge spreading routine! */
 
-    for (i=0;i<pme->natoms;i++)
-    {
-        fx = fy = fz = 0;
+    for (int i = 0; i < natoms; i++) {
+        double fx = 0, fy = 0, fz = 0;
 
-        q = charges[i];
+        double q = charges[i];
 
         /* Grid index for the actual atom position */
-        x0index = pme->particleindex[i][0];
-        y0index = pme->particleindex[i][1];
-        z0index = pme->particleindex[i][2];
+        int x0index = particleindex[i][0];
+        int y0index = particleindex[i][1];
+        int z0index = particleindex[i][2];
 
         /* Bspline factors for this atom in each dimension , calculated from fractional coordinates */
-        thetax  = &(pme->bsplines_theta[0][i*order]);
-        thetay  = &(pme->bsplines_theta[1][i*order]);
-        thetaz  = &(pme->bsplines_theta[2][i*order]);
-        dthetax = &(pme->bsplines_dtheta[0][i*order]);
-        dthetay = &(pme->bsplines_dtheta[1][i*order]);
-        dthetaz = &(pme->bsplines_dtheta[2][i*order]);
+        double* thetax  = &(bsplines_theta[0][i*order]);
+        double* thetay  = &(bsplines_theta[1][i*order]);
+        double* thetaz  = &(bsplines_theta[2][i*order]);
+        double* dthetax = &(bsplines_dtheta[0][i*order]);
+        double* dthetay = &(bsplines_dtheta[1][i*order]);
+        double* dthetaz = &(bsplines_dtheta[2][i*order]);
 
-        /* See pme_grid_spread_charge() for comments about the order here, and only interpolation in one direction */
+        /* See grid_spread_charge() for comments about the order here, and only interpolation in one direction */
 
         /* Since we will add order^3 (typically 5*5*5=125) terms to the force on each particle, we use temporary fx/fy/fz
          * variables, and only add it to memory forces[] at the end.
          */
-        for (ix=0;ix<order;ix++)
-        {
-            xindex = (x0index + ix) % pme->ngrid[0];
+        for (int ix = 0; ix < order; ix++) {
+            int xindex = (x0index + ix) % ngrid[0];
             /* Get both the bspline factor and its derivative with respect to the x coordinate! */
-            tx     = thetax[ix];
-            dtx    = dthetax[ix];
+            double tx  = thetax[ix];
+            double dtx = dthetax[ix];
 
-            for (iy=0;iy<order;iy++)
-            {
-                yindex = (y0index + iy) % pme->ngrid[1];
+            for (int iy = 0; iy < order; iy++) {
+                int yindex = (y0index + iy) % ngrid[1];
                 /* bspline + derivative wrt y */
-                ty     = thetay[iy];
-                dty    = dthetay[iy];
+                double ty  = thetay[iy];
+                double dty = dthetay[iy];
 
-                for (iz=0;iz<order;iz++)
-                {
+                for (int iz = 0; iz < order; iz++) {
                     /* Can be optimized, but we keep it simple here */
-                    zindex               = (z0index + iz) % pme->ngrid[2];
+                    int zindex = (z0index + iz) % ngrid[2];
                     /* bspline + derivative wrt z */
-                    tz                   = thetaz[iz];
-                    dtz                  = dthetaz[iz];
-                    index                = xindex*pme->ngrid[1]*pme->ngrid[2] + yindex*pme->ngrid[2] + zindex;
+                    double tz  = thetaz[iz];
+                    double dtz = dthetaz[iz];
+                    int index  = xindex*ngrid[1]*ngrid[2] + yindex*ngrid[2] + zindex;
 
                     /* Get the fft+convoluted+ifft:d data from the grid, which must be real by definition */
                     /* Checking that the imaginary part is indeed zero might be a good check :-) */
-                    gridvalue            = pme->grid[index].real();
+                    double gridvalue = grid[index].real();
 
                     /* The d component of the force is calculated by taking the derived bspline in dimension d, normal bsplines in the other two */
-                    fx                  += dtx*ty*tz*gridvalue;
-                    fy                  += tx*dty*tz*gridvalue;
-                    fz                  += tx*ty*dtz*gridvalue;
+                    fx += dtx*ty*tz*gridvalue;
+                    fy += tx*dty*tz*gridvalue;
+                    fz += tx*ty*dtz*gridvalue;
                 }
             }
         }
         /* Update memory force, note that we multiply by charge and some box stuff */
-        forces[i][0] -= q*(fx*nx*recipBoxVectors[0][0]);
-        forces[i][1] -= q*(fx*nx*recipBoxVectors[1][0]+fy*ny*recipBoxVectors[1][1]);
-        forces[i][2] -= q*(fx*nx*recipBoxVectors[2][0]+fy*ny*recipBoxVectors[2][1]+fz*nz*recipBoxVectors[2][2]);
+        forces[i][0] -= q*(fx*ngrid[0]*recipBoxVectors[0][0]);
+        forces[i][1] -= q*(fx*ngrid[0]*recipBoxVectors[1][0]+fy*ngrid[1]*recipBoxVectors[1][1]);
+        forces[i][2] -= q*(fx*ngrid[0]*recipBoxVectors[2][0]+fy*ngrid[1]*recipBoxVectors[2][1]+fz*ngrid[2]*recipBoxVectors[2][2]);
     }
 }
 
 
-static void
-pme_grid_interpolate_charge_derivatives(pme_t pme,
-                                        const Vec3 recipBoxVectors[3],
-                                        const vector<double>& charges,
-                                        vector<double>& chargeDerivatives,
-                                        const vector<int>& chargeIndices)
-{
-    int       nderiv, ideriv, i;
-    int       ix,iy,iz;
-    int       x0index,y0index,z0index;
-    int       xindex,yindex,zindex;
-    int       index;
-    int       order;
-    double    q;
-    double *  thetax;
-    double *  thetay;
-    double *  thetaz;
-    double    tx,ty,tz;
-    double    dq;
-    double    gridvalue;
-    int       nx,ny,nz;
-
-    nx    = pme->ngrid[0];
-    ny    = pme->ngrid[1];
-    nz    = pme->ngrid[2];
-
-    order = pme->order;
-
-    /* This is similar to pme_grid_interpolate_force() */
+void ReferencePME::grid_interpolate_charge_derivatives(const Vec3 recipBoxVectors[3], const vector<double>& charges,
+            vector<double>& chargeDerivatives, const vector<int>& chargeIndices) {
+    /* This is similar to grid_interpolate_force() */
     
-    nderiv = chargeIndices.size();
-    for (ideriv=0;ideriv<nderiv;ideriv++)
-    {
-        i = chargeIndices[ideriv];
-        dq = 0;
-
-        q = charges[i];
+    int nderiv = chargeIndices.size();
+    for (int ideriv = 0; ideriv < nderiv; ideriv++) {
+        int i = chargeIndices[ideriv];
+        double dq = 0;
 
         /* Grid index for the actual atom position */
-        x0index = pme->particleindex[i][0];
-        y0index = pme->particleindex[i][1];
-        z0index = pme->particleindex[i][2];
+        int x0index = particleindex[i][0];
+        int y0index = particleindex[i][1];
+        int z0index = particleindex[i][2];
 
         /* Bspline factors for this atom in each dimension , calculated from fractional coordinates */
-        thetax  = &(pme->bsplines_theta[0][i*order]);
-        thetay  = &(pme->bsplines_theta[1][i*order]);
-        thetaz  = &(pme->bsplines_theta[2][i*order]);
+        double* thetax  = &(bsplines_theta[0][i*order]);
+        double* thetay  = &(bsplines_theta[1][i*order]);
+        double* thetaz  = &(bsplines_theta[2][i*order]);
 
-        /* See pme_grid_spread_charge() for comments about the order here, and only interpolation in one direction */
+        /* See grid_spread_charge() for comments about the order here, and only interpolation in one direction */
 
         /* Since we will add order^3 (typically 5*5*5=125) terms to the charge
          * derivative on each particle, we use a temporary dq variable, and only
          * add it to memory forces[] at the end.
          */
-        for (ix=0;ix<order;ix++)
-        {
-            xindex = (x0index + ix) % pme->ngrid[0];
+        for (int ix = 0; ix < order; ix++) {
+            int xindex = (x0index + ix) % ngrid[0];
             /* Get the bspline factor with respect to the x coordinate */
-            tx     = thetax[ix];
+            double tx  = thetax[ix];
 
-            for (iy=0;iy<order;iy++)
-            {
-                yindex = (y0index + iy) % pme->ngrid[1];
+            for (int iy = 0; iy < order; iy++) {
+                int yindex = (y0index + iy) % ngrid[1];
                 /* bspline wrt y */
-                ty     = thetay[iy];
+                double ty  = thetay[iy];
 
-                for (iz=0;iz<order;iz++)
-                {
+                for (int iz = 0; iz < order; iz++) {
                     /* Can be optimized, but we keep it simple here */
-                    zindex    = (z0index + iz) % pme->ngrid[2];
+                    int zindex = (z0index + iz) % ngrid[2];
                     /* bspline wrt z */
-                    tz        = thetaz[iz];
-                    index     = xindex*pme->ngrid[1]*pme->ngrid[2] + yindex*pme->ngrid[2] + zindex;
+                    double tz  = thetaz[iz];
+                    int index  = xindex*ngrid[1]*ngrid[2] + yindex*ngrid[2] + zindex;
 
                     /* Get the fft+convoluted+ifft:d data from the grid, which must be real by definition */
                     /* Checking that the imaginary part is indeed zero might be a good check :-) */
-                    gridvalue = pme->grid[index].real();
+                    double gridvalue = grid[index].real();
 
                     /* The d component of the force is calculated by taking the derived bspline in dimension d, normal bsplines in the other two */
-                    dq       += tx*ty*tz*gridvalue;
+                    dq += tx*ty*tz*gridvalue;
                 }
             }
         }
@@ -794,222 +531,146 @@ pme_grid_interpolate_charge_derivatives(pme_t pme,
     }
 }
 
-
-
-/* EXPORTED ROUTINES */
-
-int
-pme_init(pme_t *       ppme,
-         double        ewaldcoeff,
-         int           natoms,
-         const int     ngrid[3],
-         int           pme_order,
-         double        epsilon_r)
-{
-    pme_t pme;
-    int   d;
-
-    pme = (pme_t) malloc(sizeof(struct pme));
-
-    pme->order       = pme_order;
-    pme->epsilon_r   = epsilon_r;
-    pme->ewaldcoeff  = ewaldcoeff;
-    pme->natoms      = natoms;
-
-    for (d=0;d<3;d++)
-    {
-        pme->ngrid[d]            = ngrid[d];
-        pme->bsplines_theta[d]   = (double *)malloc(sizeof(double)*pme_order*natoms);
-        pme->bsplines_dtheta[d]  = (double *)malloc(sizeof(double)*pme_order*natoms);
+ReferencePME::ReferencePME(double ewaldcoeff, int natoms, const int ngrid[3], int pme_order, double epsilon_r) :
+                    order(pme_order), epsilon_r(epsilon_r), ewaldcoeff(ewaldcoeff), natoms(natoms) {
+    for (int d = 0; d < 3; d++) {
+        this->ngrid[d] = ngrid[d];
+        bsplines_theta[d].resize(pme_order*natoms);
+        bsplines_dtheta[d].resize(pme_order*natoms);
     }
 
-    pme->particlefraction = (rvec *)malloc(sizeof(rvec)*natoms);
-    pme->particleindex    = (ivec *)malloc(sizeof(ivec)*natoms);
+    particlefraction.resize(natoms);
+    particleindex.resize(natoms);
 
     /* Allocate charge grid storage */
-    pme->grid        = (complex<double> *)malloc(sizeof(complex<double>)*ngrid[0]*ngrid[1]*ngrid[2]);
+    grid.resize(ngrid[0]*ngrid[1]*ngrid[2]);
 
     /* Setup bspline moduli (see Essman paper) */
-    pme_calculate_bsplines_moduli(pme);
-
-    *ppme = pme;
-
-    return 0;
+    calculate_bsplines_moduli();
 }
 
-
-
-
-
-int pme_exec(pme_t       pme,
-             const vector<Vec3>& atomCoordinates,
-             vector<Vec3>& forces,
-             const vector<double>& charges,
-             const Vec3 periodicBoxVectors[3],
-             double* energy)
-{
+void ReferencePME::exec(const vector<Vec3>& atomCoordinates, vector<Vec3>& forces, const vector<double>& charges,
+            const Vec3 periodicBoxVectors[3], double& energy) {
     /* Routine is called with coordinates in x, a box, and charges in q */
 
     Vec3 recipBoxVectors[3];
     ReferenceForce::invertBoxVectors(periodicBoxVectors, recipBoxVectors);
     
     /* Before we can do the actual interpolation, we need to recalculate and update
-     * the indices for each particle in the charge grid (initialized in pme_init()),
+     * the indices for each particle in the charge grid (initialized in constructor),
      * and what its fractional offset in this grid cell is.
      */
 
     /* Update charge grid indices and fractional offsets for each atom.
      * The indices/fractions are stored internally in the pme datatype
      */
-    pme_update_grid_index_and_fraction(pme,atomCoordinates,periodicBoxVectors,recipBoxVectors);
+    update_grid_index_and_fraction(atomCoordinates, recipBoxVectors);
 
     /* Calculate bsplines (and their differentials) from current fractional coordinates, store in pme structure */
-    pme_update_bsplines(pme);
+    update_bsplines();
 
     /* Spread the charges on grid (using newly calculated bsplines in the pme structure) */
-    pme_grid_spread_charge(pme, charges);
+    grid_spread_charge(charges);
 
     /* do 3d-fft */
-    vector<size_t> shape = {(size_t) pme->ngrid[0], (size_t) pme->ngrid[1], (size_t) pme->ngrid[2]};
+    vector<size_t> shape = {(size_t) ngrid[0], (size_t) ngrid[1], (size_t) ngrid[2]};
     vector<size_t> axes = {0, 1, 2};
-    vector<ptrdiff_t> stride = {(ptrdiff_t) (pme->ngrid[1]*pme->ngrid[2]*sizeof(complex<double>)),
-                                (ptrdiff_t) (pme->ngrid[2]*sizeof(complex<double>)),
+    vector<ptrdiff_t> stride = {(ptrdiff_t) (ngrid[1]*ngrid[2]*sizeof(complex<double>)),
+                                (ptrdiff_t) (ngrid[2]*sizeof(complex<double>)),
                                 (ptrdiff_t) sizeof(complex<double>)};
-    pocketfft::c2c(shape, stride, stride, axes, true, pme->grid, pme->grid, 1.0, 0);
+    pocketfft::c2c(shape, stride, stride, axes, true, grid.data(), grid.data(), 1.0, 0);
 
     /* solve in k-space */
-    pme_reciprocal_convolution(pme,periodicBoxVectors,recipBoxVectors,energy);
+    pme_reciprocal_convolution(periodicBoxVectors, recipBoxVectors, energy);
 
     /* do 3d-invfft */
-    pocketfft::c2c(shape, stride, stride, axes, false, pme->grid, pme->grid, 1.0, 0);
+    pocketfft::c2c(shape, stride, stride, axes, false, grid.data(), grid.data(), 1.0, 0);
 
     /* Get the particle forces from the grid and bsplines in the pme structure */
-    pme_grid_interpolate_force(pme,recipBoxVectors,charges,forces);
-
-    return 0;
+    grid_interpolate_force(recipBoxVectors, charges, forces);
 }
 
-
-int pme_exec_charge_derivatives(pme_t pme,
-                                const vector<Vec3>& atomCoordinates,
-                                vector<double>& chargeDerivatives,
-                                const vector<int>& chargeIndices,
-                                const vector<double>& charges,
-                                const Vec3 periodicBoxVectors[3])
-{
+void ReferencePME::exec_charge_derivatives(const vector<Vec3>& atomCoordinates, vector<double>& chargeDerivatives,
+            const vector<int>& chargeIndices, const vector<double>& charges, const Vec3 periodicBoxVectors[3]) {
     /* Routine is called with coordinates in x, a box, and charges in q */
 
     Vec3 recipBoxVectors[3];
     ReferenceForce::invertBoxVectors(periodicBoxVectors, recipBoxVectors);
     
     /* Before we can do the actual interpolation, we need to recalculate and update
-     * the indices for each particle in the charge grid (initialized in pme_init()),
+     * the indices for each particle in the charge grid (initialized in constructor),
      * and what its fractional offset in this grid cell is.
      */
 
     /* Update charge grid indices and fractional offsets for each atom.
      * The indices/fractions are stored internally in the pme datatype
      */
-    pme_update_grid_index_and_fraction(pme,atomCoordinates,periodicBoxVectors,recipBoxVectors);
+    update_grid_index_and_fraction(atomCoordinates, recipBoxVectors);
 
     /* Calculate bsplines (and their differentials) from current fractional coordinates, store in pme structure */
-    pme_update_bsplines(pme);
+    update_bsplines();
 
     /* Spread the charges on grid (using newly calculated bsplines in the pme structure) */
-    pme_grid_spread_charge(pme, charges);
+    grid_spread_charge(charges);
 
     /* do 3d-fft */
-    vector<size_t> shape = {(size_t) pme->ngrid[0], (size_t) pme->ngrid[1], (size_t) pme->ngrid[2]};
+    vector<size_t> shape = {(size_t) ngrid[0], (size_t) ngrid[1], (size_t) ngrid[2]};
     vector<size_t> axes = {0, 1, 2};
-    vector<ptrdiff_t> stride = {(ptrdiff_t) (pme->ngrid[1]*pme->ngrid[2]*sizeof(complex<double>)),
-                                (ptrdiff_t) (pme->ngrid[2]*sizeof(complex<double>)),
+    vector<ptrdiff_t> stride = {(ptrdiff_t) (ngrid[1]*ngrid[2]*sizeof(complex<double>)),
+                                (ptrdiff_t) (ngrid[2]*sizeof(complex<double>)),
                                 (ptrdiff_t) sizeof(complex<double>)};
-    pocketfft::c2c(shape, stride, stride, axes, true, pme->grid, pme->grid, 1.0, 0);
+    pocketfft::c2c(shape, stride, stride, axes, true, grid.data(), grid.data(), 1.0, 0);
 
     /* solve in k-space */
     double energy;
-    pme_reciprocal_convolution(pme,periodicBoxVectors,recipBoxVectors,&energy);
+    pme_reciprocal_convolution(periodicBoxVectors, recipBoxVectors, energy);
 
     /* do 3d-invfft */
-    pocketfft::c2c(shape, stride, stride, axes, false, pme->grid, pme->grid, 1.0, 0);
+    pocketfft::c2c(shape, stride, stride, axes, false, grid.data(), grid.data(), 1.0, 0);
 
     /* Get the charge derivatives from the grid and bsplines in the pme structure */
-    pme_grid_interpolate_charge_derivatives(pme,recipBoxVectors,charges,chargeDerivatives,chargeIndices);
-
-    return 0;
+    grid_interpolate_charge_derivatives(recipBoxVectors, charges, chargeDerivatives, chargeIndices);
 }
 
-
-int pme_exec_dpme(pme_t       pme,
-             const vector<Vec3>& atomCoordinates,
-             vector<Vec3>& forces,
-             const vector<double>& c6s,
-             const Vec3 periodicBoxVectors[3],
-             double* energy)
-{
+void ReferencePME::exec_dpme(const vector<Vec3>& atomCoordinates, vector<Vec3>& forces, const vector<double>& c6s,
+            const Vec3 periodicBoxVectors[3], double& energy) {
     /* Routine is called with coordinates in x, a box, and charges in q */
 
     Vec3 recipBoxVectors[3];
     ReferenceForce::invertBoxVectors(periodicBoxVectors, recipBoxVectors);
 
     /* Before we can do the actual interpolation, we need to recalculate and update
-     * the indices for each particle in the charge grid (initialized in pme_init()),
+     * the indices for each particle in the charge grid (initialized in constructor),
      * and what its fractional offset in this grid cell is.
      */
 
     /* Update charge grid indices and fractional offsets for each atom.
      * The indices/fractions are stored internally in the pme datatype
      */
-    pme_update_grid_index_and_fraction(pme,atomCoordinates,periodicBoxVectors,recipBoxVectors);
+    update_grid_index_and_fraction(atomCoordinates, recipBoxVectors);
 
     /* Calculate bsplines (and their differentials) from current fractional coordinates, store in pme structure */
-    pme_update_bsplines(pme);
+    update_bsplines();
 
     /* Spread the charges on grid (using newly calculated bsplines in the pme structure) */
-    pme_grid_spread_charge(pme, c6s);
+    grid_spread_charge(c6s);
 
     /* do 3d-fft */
-    vector<size_t> shape = {(size_t) pme->ngrid[0], (size_t) pme->ngrid[1], (size_t) pme->ngrid[2]};
+    vector<size_t> shape = {(size_t) ngrid[0], (size_t) ngrid[1], (size_t) ngrid[2]};
     vector<size_t> axes = {0, 1, 2};
-    vector<ptrdiff_t> stride = {(ptrdiff_t) (pme->ngrid[1]*pme->ngrid[2]*sizeof(complex<double>)),
-                                (ptrdiff_t) (pme->ngrid[2]*sizeof(complex<double>)),
+    vector<ptrdiff_t> stride = {(ptrdiff_t) (ngrid[1]*ngrid[2]*sizeof(complex<double>)),
+                                (ptrdiff_t) (ngrid[2]*sizeof(complex<double>)),
                                 (ptrdiff_t) sizeof(complex<double>)};
-    pocketfft::c2c(shape, stride, stride, axes, true, pme->grid, pme->grid, 1.0, 0);
+    pocketfft::c2c(shape, stride, stride, axes, true, grid.data(), grid.data(), 1.0, 0);
 
     /* solve in k-space */
-    dpme_reciprocal_convolution(pme,periodicBoxVectors,recipBoxVectors,energy);
+    dpme_reciprocal_convolution(periodicBoxVectors, recipBoxVectors, energy);
 
     /* do 3d-invfft */
-    pocketfft::c2c(shape, stride, stride, axes, false, pme->grid, pme->grid, 1.0, 0);
+    pocketfft::c2c(shape, stride, stride, axes, false, grid.data(), grid.data(), 1.0, 0);
 
     /* Get the particle forces from the grid and bsplines in the pme structure */
-    pme_grid_interpolate_force(pme,recipBoxVectors,c6s,forces);
-
-    return 0;
-}
-
-
-int
-pme_destroy(pme_t    pme)
-{
-    int d;
-
-    free(pme->grid);
-
-    for (d=0;d<3;d++)
-    {
-        free(pme->bsplines_moduli[d]);
-        free(pme->bsplines_theta[d]);
-        free(pme->bsplines_dtheta[d]);
-    }
-
-    free(pme->particlefraction);
-    free(pme->particleindex);
-
-    /* destroy structure itself */
-    free(pme);
-
-    return 0;
+    grid_interpolate_force(recipBoxVectors, c6s, forces);
 }
 
 } // namespace OpenMM

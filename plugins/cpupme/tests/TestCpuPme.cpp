@@ -650,12 +650,10 @@ void testPME(bool triclinic, bool nonNeutral) {
 
     // Get charge derivatives from the reference PME implementation.
 
-    pme_t referencePme;
     int gridSize[3] = {gridx, gridy, gridz};
-    pme_init(&referencePme, alpha, numParticles, gridSize, 5, 1);
+    ReferencePME referencePme(alpha, numParticles, gridSize, 5, 1);
     vector<double> testDerivatives(numParticles);
-    pme_exec_charge_derivatives(referencePme, positions, testDerivatives, testIndices, testCharges, boxVectors);
-    pme_destroy(referencePme);
+    referencePme.exec_charge_derivatives(positions, testDerivatives, testIndices, testCharges, boxVectors);
 
     // See if they match.
     for (int i = 0; i < numParticles; i++) {
