@@ -2468,6 +2468,13 @@ double ReferenceCalcLCPOForceKernel::execute(ContextImpl& context, bool includeF
     vector<Vec3>& posData = extractPositions(context);
     vector<Vec3>& forceData = extractForces(context);
 
+    if (usePeriodic) {
+        double minAllowedSize = 1.999999 * cutoff;
+        if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize) {
+            throw OpenMMException("The periodic box size is less than twice the required cutoff for LCPO.");
+        }
+    }
+
     ReferenceLCPOIxn lcpo(indices, particles, parameters, cutoff, usePeriodic);
     return oneBodyEnergy + lcpo.execute(boxVectors, posData, forceData, includeForces, includeEnergy);
 }

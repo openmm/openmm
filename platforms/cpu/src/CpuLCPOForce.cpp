@@ -29,6 +29,7 @@
 
 #include "CpuLCPOForce.h"
 #include "SimTKOpenMMRealType.h"
+#include "openmm/OpenMMException.h"
 
 using namespace std;
 using namespace OpenMM;
@@ -132,14 +133,19 @@ void CpuLCPOForce::execute(Vec3* boxVectors, AlignedArray<float>& posq, vector<A
     this->threadForce = &threadForce;
     threadNeighbors.resize(numThreads);
 
-    neighborList->computeNeighborList(numActiveParticles, posq, exclusions, boxVectors, usePeriodic, cutoff, threads, &particles);
-
     if (usePeriodic) {
+        double minAllowedSize = 1.999999 * cutoff;
+        if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize) {
+            throw OpenMMException("The periodic box size is less than twice the required cutoff for LCPO.");
+        }
+
         this->boxVectors = boxVectors;
         recipBoxSize[0] = (float)(1.0 / boxVectors[0][0]);
         recipBoxSize[1] = (float)(1.0 / boxVectors[1][1]);
         recipBoxSize[2] = (float)(1.0 / boxVectors[2][2]);
     }
+
+    neighborList->computeNeighborList(numActiveParticles, posq, exclusions, boxVectors, usePeriodic, cutoff, threads, &particles);
 
     // Process neighbors from the neighbor list.
 
