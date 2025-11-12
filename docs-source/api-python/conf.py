@@ -30,7 +30,7 @@ copyright = u"2015-2025, Stanford University and the Authors"
 version = openmm.version.short_version
 release = openmm.version.full_version
 
-exclude_patterns = ["_build", "_templates"]
+exclude_patterns = ["_build", "_templates", "**/*.ComputationWrapper.*", "**/*.PythonForceProxy.*"]
 html_static_path = ["_static"]
 templates_path = ["_templates"]
 

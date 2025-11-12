@@ -213,7 +213,7 @@ void ReferenceUpdateStateDataKernel::setStepCount(const ContextImpl& context, lo
     data.stepCount = count;
 }
 
-void ReferenceUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector<Vec3>& positions) {
+void ReferenceUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector<Vec3>& positions, bool allowPeriodic) {
     positions = extractPositions(context);
 }
 
@@ -3481,6 +3481,32 @@ double ReferenceCalcCustomCPPForceKernel::execute(ContextImpl& context, bool inc
     vector<Vec3>& posData = extractPositions(context);
     vector<Vec3>& forceData = extractForces(context);
     double energy = force->computeForce(context, posData, forces);
+    if (includeForces)
+        for (int i = 0; i < forces.size(); i++)
+            forceData[i] += forces[i];
+    return energy;
+}
+
+void ReferenceCalcPythonForceKernel::initialize(const System& system, const PythonForce& force) {
+    computation = &force.getComputation();
+    forces.resize(system.getNumParticles());
+    usePeriodic = force.usesPeriodicBoundaryConditions();
+}
+
+double ReferenceCalcPythonForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
+    State::StateBuilder builder(context.getTime(), context.getStepCount());
+    builder.setPositions(posData);
+    builder.setParameters(context.getParameters());
+    if (usePeriodic) {
+        Vec3 a, b, c;
+        context.getPeriodicBoxVectors(a, b, c);
+        builder.setPeriodicBoxVectors(a, b, c);
+    }
+    double energy;
+    State state = builder.getState();
+    computation->compute(state, energy, forces.data(), true);
     if (includeForces)
         for (int i = 0; i < forces.size(); i++)
             forceData[i] += forces[i];

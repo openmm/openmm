@@ -123,6 +123,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new CommonCalcCustomCPPForceKernel(name, platform, context, cl);
     if (name == CalcOrientationRestraintForceKernel::Name())
         return new CommonCalcOrientationRestraintForceKernel(name, platform, cl);
+    if (name == CalcPythonForceKernel::Name())
+        return new CommonCalcPythonForceKernel(name, platform, context, cl);
     if (name == CalcRGForceKernel::Name())
         return new CommonCalcRGForceKernel(name, platform, cl);
     if (name == CalcRMSDForceKernel::Name())

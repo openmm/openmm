@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -86,6 +86,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcCustomCPPForceKernel(name, platform);
     if (name == CalcOrientationRestraintForceKernel::Name())
         return new ReferenceCalcOrientationRestraintForceKernel(name, platform);
+    if (name == CalcPythonForceKernel::Name())
+        return new ReferenceCalcPythonForceKernel(name, platform);
     if (name == CalcRGForceKernel::Name())
         return new ReferenceCalcRGForceKernel(name, platform);
     if (name == CalcRMSDForceKernel::Name())

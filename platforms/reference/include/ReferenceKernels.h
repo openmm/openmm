@@ -155,9 +155,12 @@ public:
     /**
      * Get the positions of all particles.
      *
+     * @param context    the context in which to execute this kernel
      * @param positions  on exit, this contains the particle positions
+     * @param allowPeriodic  if true, the returned positions might be translated into a
+     *                       different periodic box to keep them closer to the origin
      */
-    void getPositions(ContextImpl& context, std::vector<Vec3>& positions);
+    void getPositions(ContextImpl& context, std::vector<Vec3>& positions, bool allowPeriodic=false);
     /**
      * Set the positions of all particles.
      *
@@ -1942,6 +1945,35 @@ public:
 private:
     CustomCPPForceImpl* force;
     std::vector<Vec3> forces;
+};
+
+/**
+ * This kernel is invoked by PythonForceImpl to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcPythonForceKernel : public CalcPythonForceKernel {
+public:
+    ReferenceCalcPythonForceKernel(std::string name, const Platform& platform) : CalcPythonForceKernel(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the PythonForce this kernel will be used for
+     */
+    void initialize(const System& system, const PythonForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    const PythonForceComputation* computation;
+    std::vector<Vec3> forces;
+    bool usePeriodic;
 };
 
 } // namespace OpenMM

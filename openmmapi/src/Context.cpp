@@ -116,7 +116,7 @@ State Context::getState(int types, bool enforcePeriodicBox, int groups) const {
     }
     if (types&State::Positions) {
         vector<Vec3> positions;
-        impl->getPositions(positions);
+        impl->getPositions(positions, enforcePeriodicBox);
         if (enforcePeriodicBox) {
             const vector<vector<int> >& molecules = impl->getMolecules();
             for (auto& mol : molecules) {

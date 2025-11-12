@@ -223,8 +223,8 @@ void ContextImpl::setStepCount(long long count) {
     updateStateDataKernel.getAs<UpdateStateDataKernel>().setStepCount(*this, count);
 }
 
-void ContextImpl::getPositions(std::vector<Vec3>& positions) {
-    updateStateDataKernel.getAs<UpdateStateDataKernel>().getPositions(*this, positions);
+void ContextImpl::getPositions(std::vector<Vec3>& positions, bool allowPeriodic) {
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().getPositions(*this, positions, allowPeriodic);
 }
 
 void ContextImpl::setPositions(const std::vector<Vec3>& positions) {
