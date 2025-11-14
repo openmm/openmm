@@ -34,18 +34,14 @@
 using namespace std;
 using namespace OpenMM;
 
-CpuLCPOForce::Neighbors::Neighbors(int numParticles, int maxNumNeighborsInit) :
-        numParticles(numParticles), numNeighbors(numParticles) {
-    // Round up to the nearest positive multiple of 4 so we can vectorize the isNeighbor() test.
-    maxNumNeighbors = maxNumNeighborsInit ? (maxNumNeighborsInit + 3) & ~3 : 4;
-    // Initialize unused neighbor indices to -1 so the vectorized test will ignore them.
-    indices.assign(numParticles * maxNumNeighbors, -1);
-    data.resize(numParticles * maxNumNeighbors);
+CpuLCPOForce::Neighbors::Neighbors(int numParticles, int maxNumNeighbors) :
+        numParticles(numParticles), maxNumNeighbors(maxNumNeighbors), maxNumNeighborsFound(0),
+        numNeighbors(numParticles), indices(numParticles * maxNumNeighbors), data(numParticles * maxNumNeighbors) {
 }
 
 void CpuLCPOForce::Neighbors::clear() {
+    maxNumNeighborsFound = 0;
     numNeighbors.assign(numParticles, 0);
-    indices.assign(numParticles * maxNumNeighbors, -1);
 }
 
 void CpuLCPOForce::Neighbors::insert(int i, int j, fvec4 ijData, fvec4 jiData) {
@@ -59,49 +55,19 @@ void CpuLCPOForce::Neighbors::getNeighbors(int i, int& iNumNeighbors, const int*
     iData = &data[i * maxNumNeighbors];
 }
 
-bool CpuLCPOForce::Neighbors::isNeighbor(int i, int j) const {
-    int start = i * maxNumNeighbors;
-    int stop = start + (numNeighbors[i] + 3) & ~3;
-    ivec4 j4 = ivec4(j);
-    for (int k = start; k < stop; k += 4) {
-        if (any(ivec4(&indices[k]) == j4)) {
-            return true;
-        }
-    }
-    return false;
-}
-
 void CpuLCPOForce::Neighbors::insert(int i, int j, fvec4 ijData) {
-    // Get an index for the neighbor (we might have to resize the container).
     int k = numNeighbors[i]++;
-    if (k >= maxNumNeighbors) {
-        resize(maxNumNeighbors + 1);
+    if (k < maxNumNeighbors) {
+        k += i * maxNumNeighbors;
+        indices[k] = j;
+        data[k] = ijData;
     }
-    k += i * maxNumNeighbors;
-
-    indices[k] = j;
-    data[k] = ijData;
+    maxNumNeighborsFound = max(maxNumNeighborsFound, numNeighbors[i]);
 }
 
-void CpuLCPOForce::Neighbors::resize(int newMaxNumNeighbors) {
-    // Make a new container with maxNumNeighbors at least as large as desired.
-    Neighbors newNeighbors(numParticles, newMaxNumNeighbors);
-    for (int i = 0; i < numParticles; i++) {
-        int iNumNeighbors;
-        const int* iIndices;
-        const fvec4* iData;
-        getNeighbors(i, iNumNeighbors, iIndices, iData);
-        for (int k = 0; k < iNumNeighbors; k++) {
-            newNeighbors.insert(i, iIndices[k], iData[k]);
-        }
-    }
-    *this = newNeighbors;
-}
-
-CpuLCPOForce::CpuLCPOForce(ThreadPool& threads, const std::vector<int>& activeParticles, const std::vector<int>& activeParticlesInv, const std::vector<fvec4>& parameters, bool usePeriodic) :
+CpuLCPOForce::CpuLCPOForce(ThreadPool& threads, const vector<int>& activeParticles, const vector<int>& activeParticlesInv, const vector<fvec4>& parameters, bool usePeriodic) :
         numParticles(activeParticlesInv.size()), numActiveParticles(activeParticles.size()), neighbors(numActiveParticles),
         threads(threads), activeParticles(activeParticles), activeParticlesInv(activeParticlesInv), parameters(parameters), usePeriodic(usePeriodic), exclusions(numActiveParticles) {
-
     // Prepare a neighbor list with only self-interactions excluded.
     neighborList = new CpuNeighborList(4);
     for (int i = 0; i < numActiveParticles; i++) {
@@ -133,6 +99,7 @@ void CpuLCPOForce::execute(Vec3* boxVectors, AlignedArray<float>& posq, vector<A
     this->threadForce = &threadForce;
     threadNeighbors.resize(numThreads);
 
+    bool isTriclinic = false;
     if (usePeriodic) {
         double minAllowedSize = 1.999999 * cutoff;
         if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize) {
@@ -140,9 +107,14 @@ void CpuLCPOForce::execute(Vec3* boxVectors, AlignedArray<float>& posq, vector<A
         }
 
         this->boxVectors = boxVectors;
-        recipBoxSize[0] = (float)(1.0 / boxVectors[0][0]);
-        recipBoxSize[1] = (float)(1.0 / boxVectors[1][1]);
-        recipBoxSize[2] = (float)(1.0 / boxVectors[2][2]);
+        boxSize = fvec4(boxVectors[0][0], boxVectors[1][1], boxVectors[2][2], 0.0f);
+        recipBoxSize = fvec4(1.0 / boxVectors[0][0], 1.0 / boxVectors[1][1], 1.0 / boxVectors[2][2], 0.0f);
+        boxVec4[0] = fvec4(boxVectors[0][0], boxVectors[0][1], boxVectors[0][2], 0.0f);
+        boxVec4[1] = fvec4(boxVectors[1][0], boxVectors[1][1], boxVectors[1][2], 0.0f);
+        boxVec4[2] = fvec4(boxVectors[2][0], boxVectors[2][1], boxVectors[2][2], 0.0f);
+        isTriclinic = (boxVectors[0][1] != 0.0 || boxVectors[0][2] != 0.0 ||
+                boxVectors[1][0] != 0.0 || boxVectors[1][2] != 0.0 ||
+                boxVectors[2][0] != 0.0 || boxVectors[2][1] != 0.0);
     }
 
     neighborList->computeNeighborList(numActiveParticles, posq, exclusions, boxVectors, usePeriodic, cutoff, threads, &activeParticles);
@@ -150,15 +122,34 @@ void CpuLCPOForce::execute(Vec3* boxVectors, AlignedArray<float>& posq, vector<A
     // Process neighbors from the neighbor list.
 
     atomicCounter = 0;
-    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadExecute(threads, threadIndex); });
+    if (usePeriodic) {
+        if (isTriclinic) {
+            threads.execute([&] (ThreadPool& threads, int threadIndex) { threadExecute<true, true>(threads, threadIndex); });
+        }
+        else {
+            threads.execute([&] (ThreadPool& threads, int threadIndex) { threadExecute<true, false>(threads, threadIndex); });
+        }
+    }
+    else {
+        threads.execute([&] (ThreadPool& threads, int threadIndex) { threadExecute<false, false>(threads, threadIndex); });
+    }
     threads.waitForThreads();
 
     // Compile all of the neighbor information from the threads into a single collection.
 
     neighbors.clear();
-    for (auto threadNeighborInfo : threadNeighbors) {
-        for (NeighborInfo neighborInfo : threadNeighborInfo) {
-            neighbors.insert(neighborInfo.i, neighborInfo.j, neighborInfo.ijData, neighborInfo.jiData);
+    while (true) {
+        for (auto threadNeighborInfo : threadNeighbors) {
+            for (NeighborInfo neighborInfo : threadNeighborInfo) {
+                neighbors.insert(neighborInfo.i, neighborInfo.j, neighborInfo.ijData, neighborInfo.jiData);
+            }
+        }
+        int maxNumNeighborsNeeded;
+        if (neighbors.didOverflow(maxNumNeighborsNeeded)) {
+            neighbors = Neighbors(numActiveParticles, maxNumNeighborsNeeded);
+        }
+        else {
+            break;
         }
     }
 
@@ -175,24 +166,20 @@ void CpuLCPOForce::execute(Vec3* boxVectors, AlignedArray<float>& posq, vector<A
     }
 }
 
+template<bool USE_PERIODIC, bool IS_TRICLINIC>
 void CpuLCPOForce::threadExecute(ThreadPool& threads, int threadIndex) {
     int numThreads = threads.getNumThreads();
 
     // Process neighbors from the neighbor list.
 
-    std::vector<NeighborInfo>& threadNeighborInfo = threadNeighbors[threadIndex];
+    vector<NeighborInfo>& threadNeighborInfo = threadNeighbors[threadIndex];
     threadNeighborInfo.clear();
     while (true) {
         int blockIndex = atomicCounter++;
         if (blockIndex >= neighborList->getNumBlocks()) {
             break;
         }
-        if (usePeriodic) {
-            processNeighborListBlock<true>(blockIndex, threadNeighborInfo);
-        }
-        else {
-            processNeighborListBlock<false>(blockIndex, threadNeighborInfo);
-        }
+        processNeighborListBlock<USE_PERIODIC, IS_TRICLINIC>(blockIndex, threadNeighborInfo);
     }
 
     threads.syncThreads();
@@ -210,6 +197,8 @@ void CpuLCPOForce::threadExecute(ThreadPool& threads, int threadIndex) {
         int end = min(start + groupSize, numActiveParticles);
 
         for (int i = start; i < end; i++) {
+            fvec4 iPos(posq + 4 * activeParticles[i]);
+            float iRadius = parameters[i][RadiusIndex];
             float p2 = parameters[i][P2Index];
             float p3 = parameters[i][P3Index];
             float p4 = parameters[i][P4Index];
@@ -239,8 +228,28 @@ void CpuLCPOForce::threadExecute(ThreadPool& threads, int threadIndex) {
                 const fvec4* jData;
                 neighbors.getNeighbors(j, jNumNeighbors, jIndices, jData);
                 for (int kNeighbor = 0; kNeighbor < jNumNeighbors; kNeighbor++) {
+
+                    // We could check to see if k is in the list of neighbors of
+                    // i but it is faster to simply recompute the distance.
+
                     int k = jIndices[kNeighbor];
-                    if (!neighbors.isNeighbor(i, k)) {
+                    if (k == i) {
+                        continue;
+                    }
+                    fvec4 kPos(posq + 4 * activeParticles[k]);
+                    fvec4 delta = kPos - iPos;
+                    if (USE_PERIODIC) {
+                        if (IS_TRICLINIC) {
+                            delta -= boxVec4[2] * floorf(delta[2] * recipBoxSize[2] + 0.5f);
+                            delta -= boxVec4[1] * floorf(delta[1] * recipBoxSize[1] + 0.5f);
+                            delta -= boxVec4[0] * floorf(delta[0] * recipBoxSize[0] + 0.5f);
+                        }
+                        else {
+                            delta -= boxSize * round(delta * recipBoxSize);
+                        }
+                    }
+                    float rCut = iRadius + parameters[k][RadiusIndex];
+                    if (dot3(delta, delta) >= rCut * rCut) {
                         continue;
                     }
                     fvec4 Ajk = jData[kNeighbor];
@@ -267,8 +276,8 @@ void CpuLCPOForce::threadExecute(ThreadPool& threads, int threadIndex) {
     }
 }
 
-template<bool USE_PERIODIC>
-void CpuLCPOForce::processNeighborListBlock(int blockIndex, std::vector<NeighborInfo>& threadNeighborInfo) {
+template<bool USE_PERIODIC, bool IS_TRICLINIC>
+void CpuLCPOForce::processNeighborListBlock(int blockIndex, vector<NeighborInfo>& threadNeighborInfo) {
     const int* iBlock = &neighborList->getSortedAtoms()[4 * blockIndex];
     fvec4 iBlockPosq[4] {
         fvec4(posq + 4 * activeParticles[iBlock[0]]),
@@ -292,15 +301,22 @@ void CpuLCPOForce::processNeighborListBlock(int blockIndex, std::vector<Neighbor
         fvec4 deltaY = jPos[1] - iBlockY;
         fvec4 deltaZ = jPos[2] - iBlockZ;
         if (USE_PERIODIC) {
-            fvec4 scale3 = floor(deltaZ * recipBoxSize[2] + 0.5f);
-            deltaX -= scale3 * boxVectors[2][0];
-            deltaY -= scale3 * boxVectors[2][1];
-            deltaZ -= scale3 * boxVectors[2][2];
-            fvec4 scale2 = floor(deltaY * recipBoxSize[1] + 0.5f);
-            deltaX -= scale2 * boxVectors[1][0];
-            deltaY -= scale2 * boxVectors[1][1];
-            fvec4 scale1 = floor(deltaX * recipBoxSize[0] + 0.5f);
-            deltaX -= scale1 * boxVectors[0][0];
+            if (IS_TRICLINIC) {
+                fvec4 scale3 = round(deltaZ * recipBoxSize[2]);
+                deltaX -= scale3 * boxVec4[2][0];
+                deltaY -= scale3 * boxVec4[2][1];
+                deltaZ -= scale3 * boxVec4[2][2];
+                fvec4 scale2 = round(deltaY * recipBoxSize[1]);
+                deltaX -= scale2 * boxVec4[1][0];
+                deltaY -= scale2 * boxVec4[1][1];
+                fvec4 scale1 = round(deltaX * recipBoxSize[0]);
+                deltaX -= scale1 * boxVec4[0][0];
+            }
+            else {
+                deltaX -= boxSize[0] * round(deltaX * recipBoxSize[0]);
+                deltaY -= boxSize[1] * round(deltaY * recipBoxSize[1]);
+                deltaZ -= boxSize[2] * round(deltaZ * recipBoxSize[2]);
+            }
         }
         fvec4 r2 = deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ;
 

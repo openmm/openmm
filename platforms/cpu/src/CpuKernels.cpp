@@ -1819,7 +1819,7 @@ void CpuCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const
         bool isActive = radius != 0.0;
         bool wasActive = activeParticlesInv[i] != -1;
         if (isActive != wasActive) {
-            throw OpenMMException("updateParametersInContext: The set of non-excluded particles has changed");
+            throw OpenMMException("updateParametersInContext: The set of non-excluded particles for LCPO has changed");
         }
         if (isActive) {
             parameters[activeParticlesInv[i]] = fvec4(radius, p2, p3, p4);

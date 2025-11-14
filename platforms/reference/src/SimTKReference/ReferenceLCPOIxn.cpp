@@ -42,8 +42,12 @@ ReferenceLCPOIxn::ReferenceLCPOIxn(const vector<int>& activeParticles, const vec
 }
 
 double ReferenceLCPOIxn::execute(const Vec3* boxVectors, const std::vector<Vec3>& posData, std::vector<Vec3>& forceData, bool includeForces, bool includeEnergy) {
+    if (!numActiveParticles) {
+        return 0.0;
+    }
+
     // We want a neighbor list in a form allowing us to query neighbors of each
-    // particle.  Here, we use a NeighborList and then process its output: very
+    // particle.  Here, we use a NeighborList and then process its output:
     // inefficient, but simple, so suitable for this reference implementation.
 
     NeighborList neighborList;

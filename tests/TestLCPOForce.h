@@ -32,6 +32,8 @@
 #include "openmm/LCPOForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
+#include "ReferencePlatform.h"
+#include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
 
@@ -302,6 +304,35 @@ void testExcludeZeroRadius() {
             (r >= 0.3 ? 0.0 : 15.0 * 2.0 * PI_M * 0.2 * (-0.5 + (0.2 * 0.2 - 0.1 * 0.1) / (2.0 * r * r)));
         ASSERT_EQUAL_VEC(forceExpected * offset, forces[0], TOL);
         ASSERT_EQUAL_VEC(forceExpected * -offset, forces[1], TOL);
+    }
+}
+
+void testAllParticlesExcluded() {
+    // If all particles are excluded, LCPOForce should work correctly but give exactly zero for energy and forces.
+
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+
+    LCPOForce* lcpo = new LCPOForce();
+    lcpo->addParticle(0.0, 10.0, 11.0, 12.0, 13.0);
+    lcpo->addParticle(0.0, 14.0, 15.0, 16.0, 17.0);
+    lcpo->addParticle(0.0, 20.0, 20.0, 20.0, 20.0);
+    lcpo->addParticle(0.0, 30.0, 30.0, 30.0, 30.0);
+    system.addForce(lcpo);
+
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(vector<Vec3>{Vec3(), Vec3(1.0, 0.0, 0.0), Vec3(0.0, 1.0, 0.0), Vec3(0.0, 0.0, 1.0)});
+    State state = context.getState(State::Energy | State::Forces);
+    const vector<Vec3>& forces = state.getForces();
+    ASSERT_EQUAL(0.0, state.getPotentialEnergy());
+    for (int i = 0; i < forces.size(); i++) {
+        ASSERT_EQUAL(0.0, forces[i][0]);
+        ASSERT_EQUAL(0.0, forces[i][1]);
+        ASSERT_EQUAL(0.0, forces[i][2]);
     }
 }
 
@@ -683,6 +714,50 @@ void testUpdateInContext() {
     }
 }
 
+void testPeriodicShape(bool triclinic) {
+    System system;
+    vector<Vec3> positions;
+    double energy;
+
+    makeAlanineDipeptideTestCase(3, system, positions, energy);
+
+    Vec3 a = Vec3(10.0, 0.0, 0.0);
+    Vec3 b = triclinic ? Vec3(-1.0, 9.0, 0.0) : Vec3(0.0, 9.0, 0.0);
+    Vec3 c = triclinic ? Vec3(2.0, -3.0, 8.0) : Vec3(0.0, 0.0, 8.0);
+    system.setDefaultPeriodicBoxVectors(a, b, c);
+
+    LCPOForce* lcpo = dynamic_cast<LCPOForce*>(&system.getForce(0));
+    lcpo->setUsesPeriodicBoundaryConditions(true);
+
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+
+    context.setPositions(positions);
+    State referenceState = context.getState(State::Energy | State::Forces);
+
+    // Translate particles at random by some small number of periodic images.
+
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < system.getNumParticles(); i++) {
+        int ia = gen_rand32(sfmt) % 32;
+        int ib = gen_rand32(sfmt) % 32;
+        int ic = gen_rand32(sfmt) % 32;
+        positions[i] += a * (double) ia + b * (double) ib + c * (double) ic;
+    }
+
+    context.setPositions(positions);
+    State testState = context.getState(State::Energy | State::Forces);
+
+    // Check energies and forces.
+
+    ASSERT_EQUAL_TOL(referenceState.getPotentialEnergy(), testState.getPotentialEnergy(), TOL);
+
+    for (int i = 0; i < system.getNumParticles(); i++) {
+        ASSERT_EQUAL_VEC(referenceState.getForces()[i], testState.getForces()[i], TOL);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -696,7 +771,10 @@ int main(int argc, char* argv[]) {
         testUsePeriodic(true);
         testIncludeZeroScale();
         testExcludeZeroRadius();
+        testAllParticlesExcluded();
         testUpdateInContext();
+        testPeriodicShape(false);
+        testPeriodicShape(true);
         runPlatformTests();
     }
     catch(const exception& e) {

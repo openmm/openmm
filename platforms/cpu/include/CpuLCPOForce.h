@@ -59,6 +59,7 @@ private:
     private:
         int numParticles;
         int maxNumNeighbors;
+        int maxNumNeighborsFound;
         std::vector<int> numNeighbors;
         std::vector<int> indices;
         std::vector<fvec4> data;
@@ -67,10 +68,10 @@ private:
         /**
          * Creates an empty CpuLCPOForce::Neighbors.
          *
-         * @param numParticles         the number of particles to track (this will be numActiveParticles of the parent CpuLCPOForce)
-         * @param maxNumNeighborsInit  an initial guess for the maximum number of neighbors per particle
+         * @param numParticles     the number of particles to track (this will be numActiveParticles of the parent CpuLCPOForce)
+         * @param maxNumNeighbors  an initial guess for the maximum number of neighbors per particle
          */
-        Neighbors(int numParticles, int maxNumNeighborsInit = 0);
+        Neighbors(int numParticles, int maxNumNeighbors = 0);
 
         /**
          * Clears all neighbor data.
@@ -78,7 +79,8 @@ private:
         void clear();
 
         /**
-         * Records that two particles are neighbors of each other.
+         * Records that two particles are neighbors of each other.  This may
+         * fail silently if there is not enough room for the neighbor list.
          *
          * @param i       the index of the first particle
          * @param j       the index of the second particle
@@ -98,17 +100,18 @@ private:
         void getNeighbors(int i, int& iNumNeighbors, const int*& iIndices, const fvec4*& iData) const;
 
         /**
-         * Tests whether a particle is a neighbor of another.
+         * Checks whether or not the neighbor list overflowed (and one more more
+         * insertions failed) since the list was last cleared.
          *
-         * @param i  the index of the first particle
-         * @param j  the index of the second particle
-         * @return   whether or not the particles are neighbors
+         * @param maxNumNeighborsNeeded  the maximum number of neighbors per particle needed to avoid overflowing
          */
-        bool isNeighbor(int i, int j) const;
+        bool didOverflow(int& maxNumNeighborsNeeded) {
+            maxNumNeighborsNeeded = maxNumNeighborsFound;
+            return maxNumNeighborsFound > maxNumNeighbors;
+        }
 
     private:
         void insert(int i, int j, fvec4 ijData);
-        void resize(int newMaxNumNeighbors);
     };
 
 public:
@@ -147,12 +150,13 @@ private:
     /**
      * Thread worker for computing energies and forces.
      */
+    template<bool USE_PERIODIC, bool IS_TRICLINIC>
     void threadExecute(ThreadPool& threads, int threadIndex);
 
     /**
      * Helper for processing a block of the neighbor list.
      */
-    template<bool USE_PERIODIC>
+    template<bool USE_PERIODIC, bool IS_TRICLINIC>
     void processNeighborListBlock(int blockIndex, std::vector<NeighborInfo>& threadNeighborInfo);
 
 private:
@@ -175,7 +179,7 @@ private:
     Neighbors neighbors;
     float cutoff;
     Vec3* boxVectors;
-    float recipBoxSize[3];
+    fvec4 boxSize, recipBoxSize, boxVec4[3];
 
     float* posq;
     std::vector<double> threadEnergy;
