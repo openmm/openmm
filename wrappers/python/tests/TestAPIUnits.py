@@ -369,6 +369,61 @@ class TestAPIUnits(unittest.TestCase):
         self.assertIs(charge1.unit, elementary_charge)
         self.assertIs(charge2.unit, elementary_charge)
 
+    def testLCPOForce(self):
+        """ Tests the LCPOForce API features """
+        force = LCPOForce()
+
+        force.addParticle(1.0, 2.0, 3.0, 4.0, 5.0)
+        force.addParticle(6.0*bohr, 7.0*kilocalorie_per_mole/bohr**2, 8.0*kilocalorie_per_mole/bohr**2, 9.0*kilocalorie_per_mole/bohr**2, 10.0*kilocalorie_per_mole/bohr**4)
+        self.assertEqual(force.getNumParticles(), 2)
+
+        radius, p1, p2, p3, p4 = force.getParticleParameters(0)
+        self.assertAlmostEqualUnit(radius, 1.0*nanometer)
+        self.assertAlmostEqualUnit(p1, 2.0*kilojoule_per_mole/nanometer**2)
+        self.assertAlmostEqualUnit(p2, 3.0*kilojoule_per_mole/nanometer**2)
+        self.assertAlmostEqualUnit(p3, 4.0*kilojoule_per_mole/nanometer**2)
+        self.assertAlmostEqualUnit(p4, 5.0*kilojoule_per_mole/nanometer**4)
+        self.assertIs(radius.unit, nanometer)
+        self.assertIs(p1.unit, kilojoule_per_mole/nanometer**2)
+        self.assertIs(p2.unit, kilojoule_per_mole/nanometer**2)
+        self.assertIs(p3.unit, kilojoule_per_mole/nanometer**2)
+        self.assertIs(p4.unit, kilojoule_per_mole/nanometer**4)
+
+        radius, p1, p2, p3, p4 = force.getParticleParameters(1)
+        self.assertAlmostEqualUnit(radius, 6.0*bohr)
+        self.assertAlmostEqualUnit(p1, 7.0*kilocalorie_per_mole/bohr**2)
+        self.assertAlmostEqualUnit(p2, 8.0*kilocalorie_per_mole/bohr**2)
+        self.assertAlmostEqualUnit(p3, 9.0*kilocalorie_per_mole/bohr**2)
+        self.assertAlmostEqualUnit(p4, 10.0*kilocalorie_per_mole/bohr**4)
+        self.assertIs(radius.unit, nanometer)
+        self.assertIs(p1.unit, kilojoule_per_mole/nanometer**2)
+        self.assertIs(p2.unit, kilojoule_per_mole/nanometer**2)
+        self.assertIs(p3.unit, kilojoule_per_mole/nanometer**2)
+        self.assertIs(p4.unit, kilojoule_per_mole/nanometer**4)
+
+        force.setParticleParameters(0, 11.0, 12.0, 13.0, 14.0, 15.0)
+        force.setParticleParameters(1, 16.0*bohr, 17.0*kilocalorie_per_mole/bohr**2, 18.0*kilocalorie_per_mole/bohr**2, 19.0*kilocalorie_per_mole/bohr**2, 20.0*kilocalorie_per_mole/bohr**4)
+
+        radius, p1, p2, p3, p4 = force.getParticleParameters(0)
+        self.assertAlmostEqualUnit(radius, 11.0*nanometer)
+        self.assertAlmostEqualUnit(p1, 12.0*kilojoule_per_mole/nanometer**2)
+        self.assertAlmostEqualUnit(p2, 13.0*kilojoule_per_mole/nanometer**2)
+        self.assertAlmostEqualUnit(p3, 14.0*kilojoule_per_mole/nanometer**2)
+        self.assertAlmostEqualUnit(p4, 15.0*kilojoule_per_mole/nanometer**4)
+
+        radius, p1, p2, p3, p4 = force.getParticleParameters(1)
+        self.assertAlmostEqualUnit(radius, 16.0*bohr)
+        self.assertAlmostEqualUnit(p1, 17.0*kilocalorie_per_mole/bohr**2)
+        self.assertAlmostEqualUnit(p2, 18.0*kilocalorie_per_mole/bohr**2)
+        self.assertAlmostEqualUnit(p3, 19.0*kilocalorie_per_mole/bohr**2)
+        self.assertAlmostEqualUnit(p4, 20.0*kilocalorie_per_mole/bohr**4)
+
+        self.assertFalse(force.usesPeriodicBoundaryConditions())
+        force.setUsesPeriodicBoundaryConditions(True)
+        self.assertTrue(force.usesPeriodicBoundaryConditions())
+        force.setUsesPeriodicBoundaryConditions(False)
+        self.assertFalse(force.usesPeriodicBoundaryConditions())
+
     def testCmapForce(self):
         """ Tests the CMAPTorsionForce API features """
         map1 = [random.random() for i in range(24*24)]

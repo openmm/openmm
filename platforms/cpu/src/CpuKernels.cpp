@@ -1775,6 +1775,62 @@ void CpuCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context, c
     ixn = new CpuGayBerneForce(force);
 }
 
+CpuCalcLCPOForceKernel::~CpuCalcLCPOForceKernel() {
+    if (ixn != NULL) {
+        delete ixn;
+    }
+}
+
+void CpuCalcLCPOForceKernel::initialize(const System& system, const LCPOForce& force) {
+    oneBodyEnergy = 0.0;
+
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double radius, p1, p2, p3, p4;
+        force.getParticleParameters(i, radius, p1, p2, p3, p4);
+        oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
+
+        if (radius != 0.0) {
+            activeParticlesInv.push_back(activeParticles.size());
+            activeParticles.push_back(i);
+            parameters.push_back(fvec4(radius, p2, p3, p4));
+        }
+        else {
+            activeParticlesInv.push_back(-1);
+        }
+    }
+
+    bool usePeriodic = force.usesPeriodicBoundaryConditions();
+    ixn = new CpuLCPOForce(data.threads, activeParticles, activeParticlesInv, parameters, usePeriodic);
+    data.isPeriodic |= usePeriodic;
+}
+
+double CpuCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    double energy = oneBodyEnergy;
+    ixn->execute(extractBoxVectors(context), data.posq, data.threadForce, includeForces, includeEnergy, energy);
+    return energy;
+}
+
+void CpuCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const LCPOForce& force) {
+    oneBodyEnergy = 0.0;
+
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double radius, p1, p2, p3, p4;
+        force.getParticleParameters(i, radius, p1, p2, p3, p4);
+        oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
+
+        bool isActive = radius != 0.0;
+        bool wasActive = activeParticlesInv[i] != -1;
+        if (isActive != wasActive) {
+            throw OpenMMException("updateParametersInContext: The set of non-excluded particles for LCPO has changed");
+        }
+        if (isActive) {
+            parameters[activeParticlesInv[i]] = fvec4(radius, p2, p3, p4);
+        }
+    }
+
+    ixn->updateRadii();
+}
+
 CpuIntegrateLangevinMiddleStepKernel::~CpuIntegrateLangevinMiddleStepKernel() {
     if (dynamics)
         delete dynamics;

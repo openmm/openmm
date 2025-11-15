@@ -983,6 +983,16 @@ Debye-Huckel screening parameter\ :cite:`Srinivasan1999`:
 
     system = prmtop.createSystem(implicitSolvent=OBC2, implicitSolventKappa=1.0/nanometer)
 
+By default, OpenMM uses the ACE approximation :cite:`Schaefer1998`\ :cite:`Ponder`
+to the solvent-accessible surface area, but you can also use the LCPO
+approximation :cite:`Weiser1999`:
+::
+
+    system = prmtop.createSystem(implicitSolvent=OBC2, gbsaModel='LCPO')
+
+This will be slower but more accurate than ACE.  Specifying :code:`None` for the
+:code:`gbsaModel` parameter will disable calculation of the surface area term
+entirely.
 
 Nonbonded Interactions
 ======================
