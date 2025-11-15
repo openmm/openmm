@@ -66,18 +66,13 @@ void CpuLCPOForce::Neighbors::insert(int i, int j, fvec4 ijData) {
 }
 
 CpuLCPOForce::CpuLCPOForce(ThreadPool& threads, const vector<int>& activeParticles, const vector<int>& activeParticlesInv, const vector<fvec4>& parameters, bool usePeriodic) :
-        numParticles(activeParticlesInv.size()), numActiveParticles(activeParticles.size()), neighbors(numActiveParticles),
-        threads(threads), activeParticles(activeParticles), activeParticlesInv(activeParticlesInv), parameters(parameters), usePeriodic(usePeriodic), exclusions(numActiveParticles) {
-    // Prepare a neighbor list with only self-interactions excluded.
-    neighborList = new CpuNeighborList(4);
+        numParticles(activeParticlesInv.size()), numActiveParticles(activeParticles.size()),
+        threads(threads), activeParticles(activeParticles), activeParticlesInv(activeParticlesInv), parameters(parameters), usePeriodic(usePeriodic),
+        neighborList(4), exclusions(numActiveParticles), neighbors(numActiveParticles) {
     for (int i = 0; i < numActiveParticles; i++) {
         exclusions[i].insert(i);
     }
     updateRadii();
-}
-
-CpuLCPOForce::~CpuLCPOForce() {
-    delete neighborList;
 }
 
 void CpuLCPOForce::updateRadii() {
@@ -117,7 +112,7 @@ void CpuLCPOForce::execute(Vec3* boxVectors, AlignedArray<float>& posq, vector<A
                 boxVectors[2][0] != 0.0 || boxVectors[2][1] != 0.0);
     }
 
-    neighborList->computeNeighborList(numActiveParticles, posq, exclusions, boxVectors, usePeriodic, cutoff, threads, &activeParticles);
+    neighborList.computeNeighborList(numActiveParticles, posq, exclusions, boxVectors, usePeriodic, cutoff, threads, &activeParticles);
 
     // Process neighbors from the neighbor list.
 
@@ -146,7 +141,7 @@ void CpuLCPOForce::execute(Vec3* boxVectors, AlignedArray<float>& posq, vector<A
         }
         int maxNumNeighborsNeeded;
         if (neighbors.didOverflow(maxNumNeighborsNeeded)) {
-            neighbors = Neighbors(numActiveParticles, maxNumNeighborsNeeded);
+            neighbors = Neighbors(numActiveParticles, (int) (maxNumNeighborsNeeded * 1.1));
         }
         else {
             break;
@@ -176,7 +171,7 @@ void CpuLCPOForce::threadExecute(ThreadPool& threads, int threadIndex) {
     threadNeighborInfo.clear();
     while (true) {
         int blockIndex = atomicCounter++;
-        if (blockIndex >= neighborList->getNumBlocks()) {
+        if (blockIndex >= neighborList.getNumBlocks()) {
             break;
         }
         processNeighborListBlock<USE_PERIODIC, IS_TRICLINIC>(blockIndex, threadNeighborInfo);
@@ -278,7 +273,7 @@ void CpuLCPOForce::threadExecute(ThreadPool& threads, int threadIndex) {
 
 template<bool USE_PERIODIC, bool IS_TRICLINIC>
 void CpuLCPOForce::processNeighborListBlock(int blockIndex, vector<NeighborInfo>& threadNeighborInfo) {
-    const int* iBlock = &neighborList->getSortedAtoms()[4 * blockIndex];
+    const int* iBlock = &neighborList.getSortedAtoms()[4 * blockIndex];
     fvec4 iBlockPosq[4] {
         fvec4(posq + 4 * activeParticles[iBlock[0]]),
         fvec4(posq + 4 * activeParticles[iBlock[1]]),
@@ -290,7 +285,7 @@ void CpuLCPOForce::processNeighborListBlock(int blockIndex, vector<NeighborInfo>
 
     fvec4 iBlockRadius(parameters[iBlock[0]][RadiusIndex], parameters[iBlock[1]][RadiusIndex], parameters[iBlock[2]][RadiusIndex], parameters[iBlock[3]][RadiusIndex]);
 
-    CpuNeighborList::NeighborIterator iterator = neighborList->getNeighborIterator(blockIndex);
+    CpuNeighborList::NeighborIterator iterator = neighborList.getNeighborIterator(blockIndex);
     while (iterator.next()) {
         int j = iterator.getNeighbor();
         fvec4 jPos(posq + 4 * activeParticles[j]);

@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman, Evan Pretti                                        *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,12 +45,11 @@ namespace OpenMM {
  *
  * To use this class, create an LCPOForce object, then call addParticle() once
  * for each particle in the System to define its parameters.  The number of
- * particles for which you define nonbonded parameters must be exactly equal to
- * the number of particles in the System, or else an exception will be thrown
- * when you try to create a Context.  After a particle has been added, you can
- * modify its parameters by calling setParticleParameters().  This will have no
- * effect on Contexts that already exist unless you call
- * updateParametersInContext().
+ * particles for which you define parameters must be exactly equal to the number
+ * of particles in the System, or else an exception will be thrown when you try
+ * to create a Context.  After a particle has been added, you can modify its
+ * parameters by calling setParticleParameters().  This will have no effect on
+ * Contexts that already exist unless you call updateParametersInContext().
  *
  * To exclude a particle from the force entirely, set its radius to zero.
  */

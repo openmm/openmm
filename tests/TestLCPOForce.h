@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman, Evan Pretti                                        *
  * Contributors:                                                              *
  *                                                                            *
@@ -634,10 +634,12 @@ void runEnergyForcesTestCase(const System& system, vector<Vec3>& positions, doub
     }
 }
 
-void testEnergyForces(bool isReferencePlatform) {
+void testEnergyForces() {
     System system;
     vector<Vec3> positions;
     double energy;
+
+    bool isReferencePlatform = (platform.getName() == "Reference");
 
     // 5 particles:
     makeSmallTestCase(system, positions, energy);
@@ -740,9 +742,9 @@ void testPeriodicShape(bool triclinic) {
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     for (int i = 0; i < system.getNumParticles(); i++) {
-        int ia = gen_rand32(sfmt) % 32;
-        int ib = gen_rand32(sfmt) % 32;
-        int ic = gen_rand32(sfmt) % 32;
+        int ia = gen_rand32(sfmt) % 21 - 10;
+        int ib = gen_rand32(sfmt) % 21 - 10;
+        int ic = gen_rand32(sfmt) % 21 - 10;
         positions[i] += a * (double) ia + b * (double) ib + c * (double) ic;
     }
 
@@ -772,6 +774,7 @@ int main(int argc, char* argv[]) {
         testIncludeZeroScale();
         testExcludeZeroRadius();
         testAllParticlesExcluded();
+        testEnergyForces();
         testUpdateInContext();
         testPeriodicShape(false);
         testPeriodicShape(true);

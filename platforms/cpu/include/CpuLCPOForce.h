@@ -126,8 +126,6 @@ public:
      */
     CpuLCPOForce(ThreadPool& threads, const std::vector<int>& indices, const std::vector<int>& particles, const std::vector<fvec4>& parameters, bool usePeriodic);
 
-    ~CpuLCPOForce();
-
     /**
      * Indicates that the radii of some particles may have changed and that the
      * maximum required cutoff distance should be updated.
@@ -174,7 +172,7 @@ private:
     const std::vector<fvec4>& parameters;
     bool usePeriodic;
 
-    CpuNeighborList* neighborList;
+    CpuNeighborList neighborList;
     std::vector<std::set<int> > exclusions;
     Neighbors neighbors;
     float cutoff;

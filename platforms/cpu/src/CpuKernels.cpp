@@ -1799,7 +1799,9 @@ void CpuCalcLCPOForceKernel::initialize(const System& system, const LCPOForce& f
         }
     }
 
-    ixn = new CpuLCPOForce(data.threads, activeParticles, activeParticlesInv, parameters, force.usesPeriodicBoundaryConditions());
+    bool usePeriodic = force.usesPeriodicBoundaryConditions();
+    ixn = new CpuLCPOForce(data.threads, activeParticles, activeParticlesInv, parameters, usePeriodic);
+    data.isPeriodic |= usePeriodic;
 }
 
 double CpuCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
