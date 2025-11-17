@@ -64,7 +64,7 @@ LCPO_PARAMETERS = {
     'Mg': (1.18, 0.49392, -0.16038, -0.00015512, 0.00016453),
 }
 
-def addLCPOForces(system, paramsList, usePeriodic, surfaceEnergy=0.005*u.kilocalorie_per_mole/u.angstrom**2, probeRadius=1.4*u.angstrom):
+def addLCPOForces(system, paramsList, usePeriodic, surfaceTension=0.005*u.kilocalorie_per_mole/u.angstrom**2, probeRadius=1.4*u.angstrom):
     """
     Adds forces to an OpenMM System implementing the LCPO method for estimating
     solvent-accessible surface area of a molecule.
@@ -77,15 +77,16 @@ def addLCPOForces(system, paramsList, usePeriodic, surfaceEnergy=0.005*u.kilocal
         A list containing LCPO parameters for each atom, specifically, a sphere
         radiuis that does not include a solvent probe radius, and coefficients
         P1 through P4 in the LCPO equations.
-    surfaceEnergy : energy/area
-        The energy to scale the surface area from the LCPO method by.
+    surfaceTension : energy/area
+        The energy per area to scale the surface area from the LCPO method by.
     probeRadius : distance
         The radius of the solvent probe to use.
     """
 
     force = mm.LCPOForce()
+    force.setSurfaceTension(surfaceTension)
     for atomRadius, p1, p2, p3, p4 in paramsList:
-        force.addParticle(atomRadius + probeRadius if atomRadius else 0, p1 * surfaceEnergy, p2 * surfaceEnergy, p3 * surfaceEnergy, p4 * surfaceEnergy)
+        force.addParticle(atomRadius + probeRadius if atomRadius else 0, p1, p2, p3, p4)
     force.setUsesPeriodicBoundaryConditions(usePeriodic)
     system.addForce(force)
 

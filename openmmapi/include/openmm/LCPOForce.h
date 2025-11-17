@@ -65,6 +65,18 @@ public:
      */
     void setUsesPeriodicBoundaryConditions(bool periodic);
     /**
+     * Get the surface tension used to calculate the energy from the surface area.
+     *
+     * @return  the surface tension, measured in kJ/mol/nm^2
+     */
+    double getSurfaceTension() const;
+    /**
+     * Set the surface tension used to calculate the energy from the surface area.
+     *
+     * @param surfaceTension  the surface tension, measured in kJ/mol/nm^2
+     */
+    void setSurfaceTension(double surfaceTension);
+    /**
      * Get the number of particles for which force field parameters have been defined.
      */
     int getNumParticles() const;
@@ -72,11 +84,11 @@ public:
      * Add parameters for a particle.  This should be called once for each particle in the System.
      * When it is called for the i'th time, it specifies the parameters for the i'th particle.
      *
-     * @param radius  the radius of the particle for the LCPO method, including the solvent probe radius if applicable
-     * @param p1      the product of the surface energy with the value of the LCPO parameter P1 for the particle
-     * @param p2      the product of the surface energy with the value of the LCPO parameter P2 for the particle
-     * @param p3      the product of the surface energy with the value of the LCPO parameter P3 for the particle
-     * @param p4      the product of the surface energy with the value of the LCPO parameter P4 for the particle
+     * @param radius  the radius of the particle for the LCPO method, including the solvent probe radius if applicable, measured in nm
+     * @param p1      the value of the LCPO parameter P1 for the particle
+     * @param p2      the value of the LCPO parameter P2 for the particle
+     * @param p3      the value of the LCPO parameter P3 for the particle
+     * @param p4      the value of the LCPO parameter P4 for the particle, measured in nm^-2
      * @return        the index of the particle that was added
      */
     int addParticle(double radius, double p1, double p2, double p3, double p4);
@@ -84,22 +96,22 @@ public:
      * Get the nonbonded force parameters for a particle.
      *
      * @param index        the index of the particle for which to get parameters
-     * @param[out] radius  the radius of the particle for the LCPO method, including the solvent probe radius if applicable
-     * @param[out] p1      the product of the surface energy with the value of the LCPO parameter P1 for the particle
-     * @param[out] p2      the product of the surface energy with the value of the LCPO parameter P2 for the particle
-     * @param[out] p3      the product of the surface energy with the value of the LCPO parameter P3 for the particle
-     * @param[out] p4      the product of the surface energy with the value of the LCPO parameter P4 for the particle
+     * @param[out] radius  the radius of the particle for the LCPO method, including the solvent probe radius if applicable, measured in nm
+     * @param[out] p1      the value of the LCPO parameter P1 for the particle
+     * @param[out] p2      the value of the LCPO parameter P2 for the particle
+     * @param[out] p3      the value of the LCPO parameter P3 for the particle
+     * @param[out] p4      the value of the LCPO parameter P4 for the particle, measured in nm^-2
      */
     void getParticleParameters(int index, double& radius, double& p1, double& p2, double& p3, double& p4) const;
     /**
      * Set the nonbonded force parameters for a particle.
      *
      * @param index   the index of the particle for which to set parameters
-     * @param radius  the radius of the particle for the LCPO method, including the solvent probe radius if applicable
-     * @param p1      the product of the surface energy with the value of the LCPO parameter P1 for the particle
-     * @param p2      the product of the surface energy with the value of the LCPO parameter P2 for the particle
-     * @param p3      the product of the surface energy with the value of the LCPO parameter P3 for the particle
-     * @param p4      the product of the surface energy with the value of the LCPO parameter P4 for the particle
+     * @param radius  the radius of the particle for the LCPO method, including the solvent probe radius if applicable, measured in nm
+     * @param p1      the value of the LCPO parameter P1 for the particle
+     * @param p2      the value of the LCPO parameter P2 for the particle
+     * @param p3      the value of the LCPO parameter P3 for the particle
+     * @param p4      the value of the LCPO parameter P4 for the particle, measured in nm^-2
      */
     void setParticleParameters(int index, double radius, double p1, double p2, double p3, double p4);
     /**
@@ -108,8 +120,9 @@ public:
      * parameters in an existing Context without needing to reinitialize it.
      * Simply call setParticleParameters() to modify this object's parameters,
      * then call updateParametersInContext() to copy them over to the Context.
-     * Only the values of particle parameters can be updated by this method;
-     * other changes made will not be reflected in the Context after calling it.
+     * Only the surface tension and the values of particle parameters can be
+     * updated by this method; other changes made will not be reflected in the
+     * Context after calling it.
      */
     void updateParametersInContext(Context& context);
     /**
@@ -123,6 +136,7 @@ protected:
 private:
     class ParticleInfo;
     bool usePeriodic;
+    double surfaceTension;
     std::vector<ParticleInfo> particles;
 };
 

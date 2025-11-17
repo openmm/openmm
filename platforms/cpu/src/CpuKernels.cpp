@@ -1782,17 +1782,26 @@ CpuCalcLCPOForceKernel::~CpuCalcLCPOForceKernel() {
 }
 
 void CpuCalcLCPOForceKernel::initialize(const System& system, const LCPOForce& force) {
+    doInteraction = false;
     oneBodyEnergy = 0.0;
 
+    double surfaceTension = force.getSurfaceTension();
     for (int i = 0; i < force.getNumParticles(); i++) {
         double radius, p1, p2, p3, p4;
         force.getParticleParameters(i, radius, p1, p2, p3, p4);
+        p1 *= surfaceTension;
+        p2 *= surfaceTension;
+        p3 *= surfaceTension;
+        p4 *= surfaceTension;
         oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
 
         if (radius != 0.0) {
             activeParticlesInv.push_back(activeParticles.size());
             activeParticles.push_back(i);
             parameters.push_back(fvec4(radius, p2, p3, p4));
+            if (p2 != 0.0 || p3 != 0.0 || p4 != 0.0) {
+                doInteraction = true;
+            }
         }
         else {
             activeParticlesInv.push_back(-1);
@@ -1806,16 +1815,24 @@ void CpuCalcLCPOForceKernel::initialize(const System& system, const LCPOForce& f
 
 double CpuCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     double energy = oneBodyEnergy;
-    ixn->execute(extractBoxVectors(context), data.posq, data.threadForce, includeForces, includeEnergy, energy);
+    if (doInteraction) {
+        ixn->execute(extractBoxVectors(context), data.posq, data.threadForce, includeForces, includeEnergy, energy);
+    }
     return energy;
 }
 
 void CpuCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const LCPOForce& force) {
+    doInteraction = false;
     oneBodyEnergy = 0.0;
 
+    double surfaceTension = force.getSurfaceTension();
     for (int i = 0; i < force.getNumParticles(); i++) {
         double radius, p1, p2, p3, p4;
         force.getParticleParameters(i, radius, p1, p2, p3, p4);
+        p1 *= surfaceTension;
+        p2 *= surfaceTension;
+        p3 *= surfaceTension;
+        p4 *= surfaceTension;
         oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
 
         bool isActive = radius != 0.0;
@@ -1825,6 +1842,9 @@ void CpuCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const
         }
         if (isActive) {
             parameters[activeParticlesInv[i]] = fvec4(radius, p2, p3, p4);
+            if (p2 != 0.0 || p3 != 0.0 || p4 != 0.0) {
+                doInteraction = true;
+            }
         }
     }
 

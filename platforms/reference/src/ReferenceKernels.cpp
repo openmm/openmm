@@ -2443,9 +2443,14 @@ void ReferenceCalcLCPOForceKernel::initialize(const System& system, const LCPOFo
     oneBodyEnergy = 0.0;
     double maxRadius = 0.0;
 
+    double surfaceTension = force.getSurfaceTension();
     for (int i = 0; i < force.getNumParticles(); i++) {
         double radius, p1, p2, p3, p4;
         force.getParticleParameters(i, radius, p1, p2, p3, p4);
+        p1 *= surfaceTension;
+        p2 *= surfaceTension;
+        p3 *= surfaceTension;
+        p4 *= surfaceTension;
         oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
 
         if (radius != 0.0) {

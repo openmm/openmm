@@ -48,6 +48,7 @@ void testSingleParticle() {
     system.addParticle(1.0);
 
     LCPOForce* lcpo = new LCPOForce();
+    lcpo->setSurfaceTension(5.0);
     lcpo->addParticle(0.2, 10.0, 11.0, 12.0, 13.0);
     system.addForce(lcpo);
 
@@ -57,7 +58,7 @@ void testSingleParticle() {
     State state = context.getState(State::Energy | State::Forces);
     const vector<Vec3>& forces = state.getForces();
 
-    ASSERT_EQUAL_TOL(10.0 * 4.0 * PI_M * 0.2 * 0.2, state.getPotentialEnergy(), TOL);
+    ASSERT_EQUAL_TOL(5.0 * 10.0 * 4.0 * PI_M * 0.2 * 0.2, state.getPotentialEnergy(), TOL);
     ASSERT_EQUAL_VEC(Vec3(0.0, 0.0, 0.0), forces[0], TOL);
 }
 
@@ -67,6 +68,7 @@ void testTwoParticles() {
     system.addParticle(1.0);
 
     LCPOForce* lcpo = new LCPOForce();
+    lcpo->setSurfaceTension(5.0);
     lcpo->addParticle(0.1, 10.0, 11.0, 12.0, 13.0);
     lcpo->addParticle(0.2, 14.0, 15.0, 16.0, 17.0);
     system.addForce(lcpo);
@@ -81,20 +83,20 @@ void testTwoParticles() {
         context.setPositions(vector<Vec3>{Vec3(), r * offset});
         State state = context.getState(State::Energy | State::Forces);
         const vector<Vec3>& forces = state.getForces();
-        ASSERT_EQUAL_TOL(
+        ASSERT_EQUAL_TOL(5.0 * (
             // One-body terms
             10.0 * 4.0 * PI_M * 0.1 * 0.1 +
             14.0 * 4.0 * PI_M * 0.2 * 0.2 +
             // Two-body terms
             (r >= 0.3 ? 0.0 : 11.0 * 2.0 * PI_M * 0.1 * (0.1 - r / 2.0 - (0.1 * 0.1 - 0.2 * 0.2) / (2.0 * r))) +
-            (r >= 0.3 ? 0.0 : 15.0 * 2.0 * PI_M * 0.2 * (0.2 - r / 2.0 - (0.2 * 0.2 - 0.1 * 0.1) / (2.0 * r))),
+            (r >= 0.3 ? 0.0 : 15.0 * 2.0 * PI_M * 0.2 * (0.2 - r / 2.0 - (0.2 * 0.2 - 0.1 * 0.1) / (2.0 * r)))),
             state.getPotentialEnergy(), TOL
         );
 
-        double forceExpected =
+        double forceExpected = 5.0 * (
             // Two-body terms
             (r >= 0.3 ? 0.0 : 11.0 * 2.0 * PI_M * 0.1 * (-0.5 + (0.1 * 0.1 - 0.2 * 0.2) / (2.0 * r * r))) +
-            (r >= 0.3 ? 0.0 : 15.0 * 2.0 * PI_M * 0.2 * (-0.5 + (0.2 * 0.2 - 0.1 * 0.1) / (2.0 * r * r)));
+            (r >= 0.3 ? 0.0 : 15.0 * 2.0 * PI_M * 0.2 * (-0.5 + (0.2 * 0.2 - 0.1 * 0.1) / (2.0 * r * r))));
         ASSERT_EQUAL_VEC(forceExpected * offset, forces[0], TOL);
         ASSERT_EQUAL_VEC(forceExpected * -offset, forces[1], TOL);
     }
@@ -107,6 +109,7 @@ void testThreeParticles() {
     system.addParticle(1.0);
 
     LCPOForce* lcpo = new LCPOForce();
+    lcpo->setSurfaceTension(5.0);
     lcpo->addParticle(0.22, 10.0, 11.0, 12.0, 13.0);
     lcpo->addParticle(0.24, 14.0, 15.0, 16.0, 17.0);
     lcpo->addParticle(0.26, 18.0, 19.0, 20.0, 21.0);
@@ -142,7 +145,7 @@ void testThreeParticles() {
     double dA31 = 2.0 * PI_M * 0.26 * (-0.5 + (0.26 * 0.26 - 0.22 * 0.22) / (2.0 * r13 * r13)) / r13;
     double dA32 = 2.0 * PI_M * 0.26 * (-0.5 + (0.26 * 0.26 - 0.24 * 0.24) / (2.0 * r23 * r23)) / r23;
 
-    ASSERT_EQUAL_TOL(
+    ASSERT_EQUAL_TOL(5.0 * (
         // One-body terms
         10.0 * 4.0 * PI_M * 0.22 * 0.22 +
         14.0 * 4.0 * PI_M * 0.24 * 0.24 +
@@ -151,25 +154,25 @@ void testThreeParticles() {
         11.0 * (A12 + A13) + 15.0 * (A21 + A23) + 19.0 * (A31 + A32) +
         // Three-body terms
         12.0 * (A23 + A32) + 16.0 * (A13 + A31) + 20.0 * (A12 + A21) +
-        13.0 * (A12 * A23 + A13 * A32) + 17.0 * (A21 * A13 + A23 * A31) + 21.0 * (A31 * A12 + A32 * A21),
+        13.0 * (A12 * A23 + A13 * A32) + 17.0 * (A21 * A13 + A23 * A31) + 21.0 * (A31 * A12 + A32 * A21)),
         state.getPotentialEnergy(), TOL
     );
-    ASSERT_EQUAL_VEC(
+    ASSERT_EQUAL_VEC(5.0 * (
         11.0 * (dA12 * -x12 + dA13 * -x13) + 15.0 * dA21 * -x12 + 19.0 * dA31 * -x13 +
         16.0 * (dA13 * -x13 + dA31 * -x13) + 20.0 * (dA12 * -x12 + dA21 * -x12) +
-        13.0 * (dA12 * A23 * -x12 + dA13 * A32 * -x13) + 17.0 * (dA21 * A13 * -x12 + A21 * dA13 * -x13 + A23 * dA31 * -x13) + 21.0 * (dA31 * A12 * -x13 + A31 * dA12 * -x12 + A32 * dA21 * -x12),
+        13.0 * (dA12 * A23 * -x12 + dA13 * A32 * -x13) + 17.0 * (dA21 * A13 * -x12 + A21 * dA13 * -x13 + A23 * dA31 * -x13) + 21.0 * (dA31 * A12 * -x13 + A31 * dA12 * -x12 + A32 * dA21 * -x12)),
         -forces[0], TOL
     );
-    ASSERT_EQUAL_VEC(
+    ASSERT_EQUAL_VEC(5.0 * (
         11.0 * dA12 * x12 + 15.0 * (dA21 * x12 + dA23 * -x23) + 19.0 * dA32 * -x23 +
         12.0 * (dA23 * -x23 + dA32 * -x23) + 20.0 * (dA12 * x12 + dA21 * x12) +
-        13.0 * (dA12 * A23 * x12 + A12 * dA23 * -x23 + A13 * dA32 * -x23) + 17.0 * (dA21 * A13 * x12 + dA23 * A31 * -x23) + 21.0 * (A31 * dA12 * x12 + dA32 * A21 * -x23 + A32 * dA21 * x12),
+        13.0 * (dA12 * A23 * x12 + A12 * dA23 * -x23 + A13 * dA32 * -x23) + 17.0 * (dA21 * A13 * x12 + dA23 * A31 * -x23) + 21.0 * (A31 * dA12 * x12 + dA32 * A21 * -x23 + A32 * dA21 * x12)),
         -forces[1], TOL
     );
-    ASSERT_EQUAL_VEC(
+    ASSERT_EQUAL_VEC(5.0 * (
         11.0 * dA13 * x13 + 15.0 * dA23 * x23 + 19.0 * (dA31 * x13 + dA32 * x23) +
         12.0 * (dA23 * x23 + dA32 * x23) + 16.0 * (dA13 * x13 + dA31 * x13) +
-        13.0 * (A12 * dA23 * x23 + dA13 * A32 * x13 + A13 * dA32 * x23) + 17.0 * (A21 * dA13 * x13 + dA23 * A31 * x23 + A23 * dA31 * x13) + 21.0 * (dA31 * A12 * x13 + dA32 * A21 * x23),
+        13.0 * (A12 * dA23 * x23 + dA13 * A32 * x13 + A13 * dA32 * x23) + 17.0 * (A21 * dA13 * x13 + dA23 * A31 * x23 + A23 * dA31 * x13) + 21.0 * (dA31 * A12 * x13 + dA32 * A21 * x23)),
         -forces[2], TOL
     );
 }
@@ -180,6 +183,7 @@ void testUsePeriodic(bool usePeriodic) {
     system.addParticle(1.0);
 
     LCPOForce* lcpo = new LCPOForce();
+    lcpo->setSurfaceTension(5.0);
     lcpo->addParticle(0.1, 10.0, 11.0, 12.0, 13.0);
     lcpo->addParticle(0.2, 14.0, 15.0, 16.0, 17.0);
     lcpo->setUsesPeriodicBoundaryConditions(usePeriodic);
@@ -190,13 +194,13 @@ void testUsePeriodic(bool usePeriodic) {
     VerletIntegrator integrator(0.001);
     Context context(system, integrator, platform);
 
-    double energyOneBodyExpected = 10.0 * 4.0 * PI_M * 0.1 * 0.1 + 14.0 * 4.0 * PI_M * 0.2 * 0.2;
-    double energyTwoBodyExpected =
+    double energyOneBodyExpected = 5.0 * (10.0 * 4.0 * PI_M * 0.1 * 0.1 + 14.0 * 4.0 * PI_M * 0.2 * 0.2);
+    double energyTwoBodyExpected = 5.0 * (
         11.0 * 2.0 * PI_M * 0.1 * (0.1 - 0.25 / 2.0 - (0.1 * 0.1 - 0.2 * 0.2) / (2.0 * 0.25)) +
-        15.0 * 2.0 * PI_M * 0.2 * (0.2 - 0.25 / 2.0 - (0.2 * 0.2 - 0.1 * 0.1) / (2.0 * 0.25));
-    double forceExpected =
+        15.0 * 2.0 * PI_M * 0.2 * (0.2 - 0.25 / 2.0 - (0.2 * 0.2 - 0.1 * 0.1) / (2.0 * 0.25)));
+    double forceExpected = 5.0 * (
         11.0 * 2.0 * PI_M * 0.1 * (-0.5 + (0.1 * 0.1 - 0.2 * 0.2) / (2.0 * 0.25 * 0.25)) +
-        15.0 * 2.0 * PI_M * 0.2 * (-0.5 + (0.2 * 0.2 - 0.1 * 0.1) / (2.0 * 0.25 * 0.25));
+        15.0 * 2.0 * PI_M * 0.2 * (-0.5 + (0.2 * 0.2 - 0.1 * 0.1) / (2.0 * 0.25 * 0.25)));
 
     for (int image = -2; image <= 2; image++) {
         context.setPositions(vector<Vec3>{Vec3(0.0, 0.0, 0.0), Vec3(0.25, 0.0, 0.0) + image * Vec3(0.2, 0.3, 2.0)});
@@ -225,6 +229,7 @@ void testIncludeZeroScale() {
     system.addParticle(1.0);
 
     LCPOForce* lcpo = new LCPOForce();
+    lcpo->setSurfaceTension(5.0);
     lcpo->addParticle(0.22, 10.0, 11.0, 12.0, 13.0);
     lcpo->addParticle(0.24, 0.0, 0.0, 0.0, 0.0);
     lcpo->addParticle(0.26, 0.0, 0.0, 0.0, 0.0);
@@ -256,10 +261,10 @@ void testIncludeZeroScale() {
     double dA23 = 2.0 * PI_M * 0.24 * (-0.5 + (0.24 * 0.24 - 0.26 * 0.26) / (2.0 * r23 * r23)) / r23;
     double dA32 = 2.0 * PI_M * 0.26 * (-0.5 + (0.26 * 0.26 - 0.24 * 0.24) / (2.0 * r23 * r23)) / r23;
 
-    ASSERT_EQUAL_TOL(10.0 * 4.0 * PI_M * 0.22 * 0.22 + 11.0 * (A12 + A13) + 12.0 * (A23 + A32) + 13.0 * (A12 * A23 + A13 * A32), state.getPotentialEnergy(), TOL);
-    ASSERT_EQUAL_VEC(11.0 * (dA12 * -x12 + dA13 * -x13) + 13.0 * (dA12 * A23 * -x12 + dA13 * A32 * -x13), -forces[0], TOL);
-    ASSERT_EQUAL_VEC(11.0 * dA12 * x12 + 12.0 * (dA23 * -x23 + dA32 * -x23) + 13.0 * (dA12 * A23 * x12 + A12 * dA23 * -x23 + A13 * dA32 * -x23), -forces[1], TOL);
-    ASSERT_EQUAL_VEC(11.0 * dA13 * x13 + 12.0 * (dA23 * x23 + dA32 * x23) + 13.0 * (A12 * dA23 * x23 + dA13 * A32 * x13 + A13 * dA32 * x23), -forces[2], TOL);
+    ASSERT_EQUAL_TOL(5.0 * (10.0 * 4.0 * PI_M * 0.22 * 0.22 + 11.0 * (A12 + A13) + 12.0 * (A23 + A32) + 13.0 * (A12 * A23 + A13 * A32)), state.getPotentialEnergy(), TOL);
+    ASSERT_EQUAL_VEC(5.0 * (11.0 * (dA12 * -x12 + dA13 * -x13) + 13.0 * (dA12 * A23 * -x12 + dA13 * A32 * -x13)), -forces[0], TOL);
+    ASSERT_EQUAL_VEC(5.0 * (11.0 * dA12 * x12 + 12.0 * (dA23 * -x23 + dA32 * -x23) + 13.0 * (dA12 * A23 * x12 + A12 * dA23 * -x23 + A13 * dA32 * -x23)), -forces[1], TOL);
+    ASSERT_EQUAL_VEC(5.0 * (11.0 * dA13 * x13 + 12.0 * (dA23 * x23 + dA32 * x23) + 13.0 * (A12 * dA23 * x23 + dA13 * A32 * x13 + A13 * dA32 * x23)), -forces[2], TOL);
 }
 
 void testExcludeZeroRadius() {
@@ -272,6 +277,7 @@ void testExcludeZeroRadius() {
     system.addParticle(1.0);
 
     LCPOForce* lcpo = new LCPOForce();
+    lcpo->setSurfaceTension(5.0);
     lcpo->addParticle(0.1, 10.0, 11.0, 12.0, 13.0);
     lcpo->addParticle(0.2, 14.0, 15.0, 16.0, 17.0);
     lcpo->addParticle(0.0, 20.0, 20.0, 20.0, 20.0);
@@ -288,20 +294,20 @@ void testExcludeZeroRadius() {
         context.setPositions(vector<Vec3>{Vec3(), r * offset, r * offset * 0.3, r * offset * 0.7});
         State state = context.getState(State::Energy | State::Forces);
         const vector<Vec3>& forces = state.getForces();
-        ASSERT_EQUAL_TOL(
+        ASSERT_EQUAL_TOL(5.0 * (
             // One-body terms
             10.0 * 4.0 * PI_M * 0.1 * 0.1 +
             14.0 * 4.0 * PI_M * 0.2 * 0.2 +
             // Two-body terms
             (r >= 0.3 ? 0.0 : 11.0 * 2.0 * PI_M * 0.1 * (0.1 - r / 2.0 - (0.1 * 0.1 - 0.2 * 0.2) / (2.0 * r))) +
-            (r >= 0.3 ? 0.0 : 15.0 * 2.0 * PI_M * 0.2 * (0.2 - r / 2.0 - (0.2 * 0.2 - 0.1 * 0.1) / (2.0 * r))),
+            (r >= 0.3 ? 0.0 : 15.0 * 2.0 * PI_M * 0.2 * (0.2 - r / 2.0 - (0.2 * 0.2 - 0.1 * 0.1) / (2.0 * r)))),
             state.getPotentialEnergy(), TOL
         );
 
-        double forceExpected =
+        double forceExpected = 5.0 * (
             // Two-body terms
             (r >= 0.3 ? 0.0 : 11.0 * 2.0 * PI_M * 0.1 * (-0.5 + (0.1 * 0.1 - 0.2 * 0.2) / (2.0 * r * r))) +
-            (r >= 0.3 ? 0.0 : 15.0 * 2.0 * PI_M * 0.2 * (-0.5 + (0.2 * 0.2 - 0.1 * 0.1) / (2.0 * r * r)));
+            (r >= 0.3 ? 0.0 : 15.0 * 2.0 * PI_M * 0.2 * (-0.5 + (0.2 * 0.2 - 0.1 * 0.1) / (2.0 * r * r))));
         ASSERT_EQUAL_VEC(forceExpected * offset, forces[0], TOL);
         ASSERT_EQUAL_VEC(forceExpected * -offset, forces[1], TOL);
     }
@@ -336,6 +342,36 @@ void testAllParticlesExcluded() {
     }
 }
 
+void testZeroSurfaceTension() {
+    // If the surface tension is zero, LCPOForce should work correctly but give exactly zero for energy and forces.
+
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+
+    LCPOForce* lcpo = new LCPOForce();
+    lcpo->setSurfaceTension(0.0);
+    lcpo->addParticle(1.0, 10.0, 11.0, 12.0, 13.0);
+    lcpo->addParticle(1.0, 14.0, 15.0, 16.0, 17.0);
+    lcpo->addParticle(1.0, 20.0, 20.0, 20.0, 20.0);
+    lcpo->addParticle(1.0, 30.0, 30.0, 30.0, 30.0);
+    system.addForce(lcpo);
+
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(vector<Vec3>{Vec3(), Vec3(1.0, 0.0, 0.0), Vec3(0.0, 1.0, 0.0), Vec3(0.0, 0.0, 1.0)});
+    State state = context.getState(State::Energy | State::Forces);
+    const vector<Vec3>& forces = state.getForces();
+    ASSERT_EQUAL(0.0, state.getPotentialEnergy());
+    for (int i = 0; i < forces.size(); i++) {
+        ASSERT_EQUAL(0.0, forces[i][0]);
+        ASSERT_EQUAL(0.0, forces[i][1]);
+        ASSERT_EQUAL(0.0, forces[i][2]);
+    }
+}
+
 void makeSmallTestCase(System& system, vector<Vec3>& positions, double& energy) {
     system = System();
     system.addParticle(10.0);
@@ -345,6 +381,7 @@ void makeSmallTestCase(System& system, vector<Vec3>& positions, double& energy) 
     system.addParticle(10.0);
 
     LCPOForce* lcpo = new LCPOForce();
+    lcpo->setSurfaceTension(5.0);
     lcpo->addParticle(0.6, 10.0, 11.0, 12.0, 13.0);
     lcpo->addParticle(0.65, 14.0, 15.0, 16.0, 17.0);
     lcpo->addParticle(0.7, 18.0, 19.0, 20.0, 21.0);
@@ -380,6 +417,7 @@ void makeSmallTestCase(System& system, vector<Vec3>& positions, double& energy) 
     energy += 11.0 * A[0][1] + 15.0 * (A[1][0] + A[1][2] + A[1][3] + A[1][4]) + 19.0 * (A[2][1] + A[2][3] + A[2][4]) + 23.0 * (A[3][1] + A[3][2]) + 27.0 * (A[4][1] + A[4][2]);
     energy += 16.0 * (A[2][3] + A[2][4] + A[3][2] + A[4][2]) + 20.0 * (A[1][3] + A[1][4] + A[3][1] + A[4][1]) + 24.0 * (A[1][2] + A[2][1]) + 28.0 * (A[1][2] + A[2][1]);
     energy += 17.0 * (A[1][2] * (A[2][3] + A[2][4]) + A[1][3] * A[3][2] + A[1][4] * A[4][2]) + 21.0 * (A[2][1] * (A[1][3] + A[1][4]) + A[2][3] * A[3][1] + A[2][4] * A[4][1]) + 25.0 * (A[3][1] * A[1][2] + A[3][2] * A[2][1]) + 29.0 * (A[4][1] * A[1][2] + A[4][2] * A[2][1]);
+    energy *= 5.0;
 }
 
 void makeAlanineDipeptideTestCase(int n, System& system, vector<Vec3>& positions, double& energy) {
@@ -410,6 +448,7 @@ void makeAlanineDipeptideTestCase(int n, System& system, vector<Vec3>& positions
     }
 
     LCPOForce * lcpo = new LCPOForce();
+    lcpo->setSurfaceTension(1.0);
     for (int i = 0; i < n * n * n; i++) {
         lcpo->addParticle(0.0, 0.0, 0.0, 0.0, 0.0);
         lcpo->addParticle(0.31, 1.62939604, -0.58707796, -0.0027129056, 0.082274176);
@@ -488,6 +527,7 @@ void makeGridTestCase(int n, System& system, vector<Vec3>& positions, double& en
     // to the sum of their radii from each other.
 
     LCPOForce * lcpo = new LCPOForce();
+    lcpo->setSurfaceTension(5.0);
     for (int i = 0; i < n * n * n; i++) {
         lcpo->addParticle(0.6 + 0.2 * round(genrand_real2(sfmt)), genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
     }
@@ -585,6 +625,8 @@ void makeGridTestCase(int n, System& system, vector<Vec3>& positions, double& en
             }
         }
     }
+
+    energy *= 5.0;
 }
 
 void runEnergyForcesTestCase(const System& system, vector<Vec3>& positions, double refEnergy, bool doFiniteDifference) {
@@ -691,6 +733,7 @@ void testUpdateInContext() {
 
     // Change some parameters on atoms involved in the force.
 
+    lcpo->setSurfaceTension(7.0);
     lcpo->setParticleParameters(4, 0.4, 1.7, 1.8, 1.9, 2.0);
     lcpo->setParticleParameters(6, 0.5, 2.1, 2.2, 2.3, 2.4);
     lcpo->setParticleParameters(10, 0.6, 2.5, 2.6, 2.7, 2.8);
@@ -774,6 +817,7 @@ int main(int argc, char* argv[]) {
         testIncludeZeroScale();
         testExcludeZeroRadius();
         testAllParticlesExcluded();
+        testZeroSurfaceTension();
         testEnergyForces();
         testUpdateInContext();
         testPeriodicShape(false);

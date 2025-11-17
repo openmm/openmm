@@ -35,11 +35,19 @@
 using namespace OpenMM;
 using namespace std;
 
-LCPOForce::LCPOForce() : usePeriodic(false) {
+LCPOForce::LCPOForce() : usePeriodic(false), surfaceTension(1.0) {
 }
 
 void LCPOForce::setUsesPeriodicBoundaryConditions(bool periodic) {
     usePeriodic = periodic;
+}
+
+double LCPOForce::getSurfaceTension() const {
+    return surfaceTension;
+}
+
+void LCPOForce::setSurfaceTension(double surfaceTension) {
+    this->surfaceTension = surfaceTension;
 }
 
 int LCPOForce::getNumParticles() const {

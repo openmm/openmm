@@ -45,6 +45,7 @@ void LCPOForceProxy::serialize(const void* object, SerializationNode& node) cons
     node.setIntProperty("forceGroup", force.getForceGroup());
     node.setStringProperty("name", force.getName());
     node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
+    node.setDoubleProperty("surfaceTension", force.getSurfaceTension());
     SerializationNode& particles = node.createChildNode("Particles");
     for (int i = 0; i < force.getNumParticles(); i++) {
         double radius, p1, p2, p3, p4;
@@ -63,6 +64,7 @@ void* LCPOForceProxy::deserialize(const SerializationNode& node) const {
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setName(node.getStringProperty("name", force->getName()));
         force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
+        force->setSurfaceTension(node.getDoubleProperty("surfaceTension"));
         const SerializationNode& particles = node.getChildNode("Particles");
         for (auto& particle : particles.getChildren()) {
             force->addParticle(particle.getDoubleProperty("r"), particle.getDoubleProperty("p1"), particle.getDoubleProperty("p2"), particle.getDoubleProperty("p3"), particle.getDoubleProperty("p4"));

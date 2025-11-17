@@ -653,6 +653,7 @@ public:
 private:
     CpuPlatform::PlatformData& data;
     CpuLCPOForce* ixn;
+    bool doInteraction;
     double oneBodyEnergy;
     std::vector<int> activeParticles;
     std::vector<int> activeParticlesInv;

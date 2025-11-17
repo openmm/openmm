@@ -43,6 +43,7 @@ void testSerialization() {
     force.setForceGroup(3);
     force.setName("custom name");
     force.setUsesPeriodicBoundaryConditions(true);
+    force.setSurfaceTension(100.0);
     force.addParticle(1.0, 2.0, 3.0, 4.0, 5.0);
     force.addParticle(0.0, 0.0, 0.0, 0.0, 0.0);
     force.addParticle(6.0, 7.0, 8.0, 9.0, 10.0);
@@ -62,6 +63,7 @@ void testSerialization() {
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
     ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
+    ASSERT_EQUAL(force.getSurfaceTension(), force2.getSurfaceTension());
     ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());
     for (int i = 0; i < force.getNumParticles(); i++) {
         double radius1, radius2, p11, p12, p21, p22, p31, p32, p41, p42;
