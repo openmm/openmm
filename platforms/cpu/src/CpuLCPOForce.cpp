@@ -135,17 +135,7 @@ void CpuLCPOForce::execute(Vec3* boxVectors, AlignedArray<float>& posq, vector<A
     // Process neighbors from the neighbor list.
 
     atomicCounter = 0;
-    if (usePeriodic) {
-        if (isTriclinic) {
-            threads.execute([&] (ThreadPool& threads, int threadIndex) { threadExecute(threads, threadIndex); });
-        }
-        else {
-            threads.execute([&] (ThreadPool& threads, int threadIndex) { threadExecute(threads, threadIndex); });
-        }
-    }
-    else {
-        threads.execute([&] (ThreadPool& threads, int threadIndex) { threadExecute(threads, threadIndex); });
-    }
+    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadExecute(threads, threadIndex); });
     threads.waitForThreads();
 
     // Compile all of the neighbor information from the threads into a single collection.
