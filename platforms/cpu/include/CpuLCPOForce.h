@@ -45,11 +45,20 @@ namespace OpenMM {
 class CpuLCPOForce {
 private:
     /**
-     * Holds data from a thread's request to record a neighbor.
+     * Holds data about a neighbor pair (overlap areas for each sphere in the
+     * last component of each fvec4 following their derivative vectors).
+     */
+    struct NeighborData {
+        fvec4 ijData;
+        fvec4 jiData;
+    };
+
+    /**
+     * Holds information from a thread's request to record a neighbor.
      */
     struct NeighborInfo {
         int i, j;
-        fvec4 ijData, jiData;
+        NeighborData data;
     };
 
     /**
@@ -62,7 +71,7 @@ private:
         int maxNumNeighborsFound;
         std::vector<int> numNeighbors;
         std::vector<int> indices;
-        std::vector<fvec4> data;
+        std::vector<NeighborData> data;
 
     public:
         /**
@@ -71,7 +80,7 @@ private:
          * @param numParticles     the number of particles to track (this will be numActiveParticles of the parent CpuLCPOForce)
          * @param maxNumNeighbors  an initial guess for the maximum number of neighbors per particle
          */
-        Neighbors(int numParticles, int maxNumNeighbors = 0);
+        Neighbors(int numParticles, int maxNumNeighborsGuess = 0);
 
         /**
          * Clears all neighbor data.
@@ -82,12 +91,9 @@ private:
          * Records that two particles are neighbors of each other.  This may
          * fail silently if there is not enough room for the neighbor list.
          *
-         * @param i       the index of the first particle
-         * @param j       the index of the second particle
-         * @param ijData  the data to record for particle j as a neighbor of particle i
-         * @param jiData  the data to record for particle i as a neighbor of particle j
+         * @param info  neighbor information recorded by a worker thread.
          */
-        void insert(int i, int j, fvec4 ijData, fvec4 jiData);
+        void insert(const NeighborInfo& info);
 
         /**
          * Retrieves the neighbors of a particle.
@@ -97,7 +103,17 @@ private:
          * @param iIndices       pointer to the start of the indices of the neighbors
          * @param iData          pointer to the start of the data associated with the neighbors
          */
-        void getNeighbors(int i, int& iNumNeighbors, const int*& iIndices, const fvec4*& iData) const;
+        void getNeighbors(int i, int& iNumNeighbors, const int*& iIndices, const NeighborData*& iData) const;
+
+        /**
+         * Tests whether a particle is a neighbor of another particle.
+         *
+         * @param i          the index of the first particle
+         * @param j          the index of the second particle
+         * @param[out] data  data for the pair (only set if they are neighbors)
+         * @return           whether or not the second particle is a neighbor of the first
+         */
+        bool isNeighbor(int i, int j, NeighborData& data);
 
         /**
          * Checks whether or not the neighbor list overflowed (and one more more
@@ -109,9 +125,6 @@ private:
             maxNumNeighborsNeeded = maxNumNeighborsFound;
             return maxNumNeighborsFound > maxNumNeighbors;
         }
-
-    private:
-        void insert(int i, int j, fvec4 ijData);
     };
 
 public:
@@ -148,7 +161,6 @@ private:
     /**
      * Thread worker for computing energies and forces.
      */
-    template<bool USE_PERIODIC, bool IS_TRICLINIC>
     void threadExecute(ThreadPool& threads, int threadIndex);
 
     /**
@@ -170,7 +182,7 @@ private:
     const std::vector<int>& activeParticles;
     const std::vector<int>& activeParticlesInv;
     const std::vector<fvec4>& parameters;
-    bool usePeriodic;
+    bool usePeriodic, isTriclinic;
 
     CpuNeighborList neighborList;
     std::vector<std::set<int> > exclusions;
