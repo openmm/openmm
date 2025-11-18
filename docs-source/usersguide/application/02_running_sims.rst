@@ -517,8 +517,7 @@ proteins, DNA, RNA, water, and ions.
 ===================================  ===========================================
 File                                 Parameters
 ===================================  ===========================================
-:file:`amber19/protein.ff19SB.xml`   Protein\ :cite:`Tian2020` (recommended, includes residue-specific CMAP terms)
-:file:`amber19/protein.ff19ipq.xml`  Protein (alternative)
+:file:`amber19/protein.ff19SB.xml`   Protein\ :cite:`Tian2020`
 :file:`amber19/DNA.OL21.xml`         DNA\ :cite:`Zgarbova2021`
 :file:`amber14/RNA.OL3.xml`          RNA
 :file:`amber19/lipid21.xml`          Lipid
