@@ -41,7 +41,7 @@ using namespace OpenMM;
 using namespace std;
 
 const double TOL = 1e-5;
-const double REF_FORCE_TOL = 5e-4;
+const double FORCE_TOL = 5e-4;
 
 void testSingleParticle() {
     System system;
@@ -517,19 +517,26 @@ void makeGridTestCase(int n, System& system, vector<Vec3>& positions, double& en
     system = System();
     system.setDefaultPeriodicBoxVectors(Vec3(n, 0, 0), Vec3(0, n, 0), Vec3(0, 0, n));
     for (int i = 0; i < n * n * n; i++) {
-        system.addParticle(i);
+        system.addParticle(1);
     }
 
     // Round random variates into {0, 1} to generate radius and position
     // parameters from a discrete set.  Since the forces are discontinuous at
     // the cutoff in LCPO, single precision Platform calculations might not
     // match the ReferencePlatform if any particles are positioned very close
-    // to the sum of their radii from each other.
+    // to the sum of their radii from each other.  Also round the LCPO
+    // parameters since otherwise the GPU context will take too long to try to
+    // identify molecules.
 
     LCPOForce * lcpo = new LCPOForce();
     lcpo->setSurfaceTension(5.0);
     for (int i = 0; i < n * n * n; i++) {
-        lcpo->addParticle(0.6 + 0.2 * round(genrand_real2(sfmt)), genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
+        double ri = 0.6 + 0.2 * round(genrand_real2(sfmt));
+        double p1i = round(2 * genrand_real2(sfmt)) / 2;
+        double p2i = round(2 * genrand_real2(sfmt)) / 2;
+        double p3i = round(2 * genrand_real2(sfmt)) / 2;
+        double p4i = round(2 * genrand_real2(sfmt)) / 2;
+        lcpo->addParticle(ri, p1i, p2i, p3i, p4i);
     }
     lcpo->setUsesPeriodicBoundaryConditions(true);
     system.addForce(lcpo);
@@ -671,7 +678,7 @@ void runEnergyForcesTestCase(const System& system, vector<Vec3>& positions, doub
         const vector<Vec3>& refForces = refState.getForces();
 
         for (int i = 0; i < forces.size(); i++) {
-            ASSERT_EQUAL_VEC(refForces[i], forces[i], REF_FORCE_TOL);
+            ASSERT_EQUAL_VEC(refForces[i], forces[i], FORCE_TOL);
         }
     }
 }
@@ -799,7 +806,7 @@ void testPeriodicShape(bool triclinic) {
     ASSERT_EQUAL_TOL(referenceState.getPotentialEnergy(), testState.getPotentialEnergy(), TOL);
 
     for (int i = 0; i < system.getNumParticles(); i++) {
-        ASSERT_EQUAL_VEC(referenceState.getForces()[i], testState.getForces()[i], TOL);
+        ASSERT_EQUAL_VEC(referenceState.getForces()[i], testState.getForces()[i], FORCE_TOL);
     }
 }
 

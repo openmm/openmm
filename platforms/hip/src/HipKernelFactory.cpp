@@ -132,6 +132,8 @@ KernelImpl* HipKernelFactory::createKernelImpl(std::string name, const Platform&
         return new CommonCalcCustomManyParticleForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcGayBerneForceKernel::Name())
         return new CommonCalcGayBerneForceKernel(name, platform, cu);
+    if (name == CalcLCPOForceKernel::Name())
+        return new CommonCalcLCPOForceKernel(name, platform, cu);
     if (name == IntegrateVerletStepKernel::Name())
         return new CommonIntegrateVerletStepKernel(name, platform, cu);
     if (name == IntegrateLangevinMiddleStepKernel::Name())

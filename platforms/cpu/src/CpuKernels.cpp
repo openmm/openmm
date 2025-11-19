@@ -1796,20 +1796,16 @@ void CpuCalcLCPOForceKernel::initialize(const System& system, const LCPOForce& f
         oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
 
         if (radius != 0.0) {
-            activeParticlesInv.push_back(activeParticles.size());
             activeParticles.push_back(i);
             parameters.push_back(fvec4(radius, p2, p3, p4));
             if (p2 != 0.0 || p3 != 0.0 || p4 != 0.0) {
                 doInteraction = true;
             }
         }
-        else {
-            activeParticlesInv.push_back(-1);
-        }
     }
 
     bool usePeriodic = force.usesPeriodicBoundaryConditions();
-    ixn = new CpuLCPOForce(data.threads, activeParticles, activeParticlesInv, parameters, usePeriodic);
+    ixn = new CpuLCPOForce(data.threads, activeParticles, parameters, usePeriodic);
     data.isPeriodic |= usePeriodic;
 }
 
@@ -1826,6 +1822,7 @@ void CpuCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const
     oneBodyEnergy = 0.0;
 
     double surfaceTension = force.getSurfaceTension();
+    int activeIndex = 0;
     for (int i = 0; i < force.getNumParticles(); i++) {
         double radius, p1, p2, p3, p4;
         force.getParticleParameters(i, radius, p1, p2, p3, p4);
@@ -1835,17 +1832,19 @@ void CpuCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const
         p4 *= surfaceTension;
         oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
 
-        bool isActive = radius != 0.0;
-        bool wasActive = activeParticlesInv[i] != -1;
-        if (isActive != wasActive) {
-            throw OpenMMException("updateParametersInContext: The set of non-excluded particles for LCPO has changed");
-        }
-        if (isActive) {
-            parameters[activeParticlesInv[i]] = fvec4(radius, p2, p3, p4);
+        if (radius != 0.0) {
+            if (activeIndex < activeParticles.size()) {
+                activeParticles[activeIndex] = i;
+                parameters[activeIndex] = fvec4(radius, p2, p3, p4);
+            }
+            activeIndex++;
             if (p2 != 0.0 || p3 != 0.0 || p4 != 0.0) {
                 doInteraction = true;
             }
         }
+    }
+    if (activeIndex != activeParticles.size()) {
+        throw OpenMMException("updateParametersInContext: The number of non-excluded particles for LCPO has changed");
     }
 
     ixn->updateRadii();

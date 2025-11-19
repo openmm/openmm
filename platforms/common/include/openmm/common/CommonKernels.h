@@ -855,6 +855,51 @@ private:
 };
 
 /**
+ * This kernel is invoked by LCPOForce to calculate the forces acting on the system.
+ */
+class CommonCalcLCPOForceKernel : public CalcLCPOForceKernel {
+public:
+    CommonCalcLCPOForceKernel(std::string name, const Platform& platform, ComputeContext& cc) : CalcLCPOForceKernel(name, platform),
+            cc(cc), hasInitializedKernel(false) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the LCPOForce this kernel will be used for
+     */
+    void initialize(const System& system, const LCPOForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context        the context to copy parameters to
+     * @param force          the LCPOForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const LCPOForce& force);
+private:
+    class ForceInfo;
+    ComputeContext& cc;
+    ForceInfo* info;
+    bool hasInitializedKernel, usePeriodic, doInteraction;
+    int numActiveParticles, numBlocks, maxNeighborPairs, paddedNumActiveParticles;
+    int maxThreadBlockSize, numForceThreadBlocks, forceThreadBlockSize, findNeighborsThreadBlockSize;
+    double oneBodyEnergy, cutoffSquared;
+    ComputeArray activeParticles, parameters;
+    ComputeArray blockCenter, blockBoundingBox;
+    ComputeArray numNeighborPairs, numNeighborsForAtom, neighborStartIndex, neighborPairs, neighbors, neighborData;
+    ComputeKernel findBlockBoundsKernel, findNeighborsKernel, computeNeighborStartIndicesKernel, copyPairsToNeighborListKernel, computeInteractionKernel;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class CommonIntegrateVerletStepKernel : public IntegrateVerletStepKernel {

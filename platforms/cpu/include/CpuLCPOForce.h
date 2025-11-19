@@ -131,13 +131,12 @@ public:
     /**
      * Creates a CpuLCPOForce.
      *
-     * @param threads      thread pool for computations
-     * @param indices      active particle indices for each particle (-1 if not an active particle)
-     * @param particles    system particle indices for each active particle
-     * @param parameters   parameters (radius, P2, P3, and P4) for each active particle
-     * @param usePeriodic  whether or not to use periodic boundary conditions
+     * @param threads          thread pool for computations
+     * @param activeParticles  system particle indices for each active particle
+     * @param parameters       parameters (radius, P2, P3, and P4) for each active particle
+     * @param usePeriodic      whether or not to use periodic boundary conditions
      */
-    CpuLCPOForce(ThreadPool& threads, const std::vector<int>& indices, const std::vector<int>& particles, const std::vector<fvec4>& parameters, bool usePeriodic);
+    CpuLCPOForce(ThreadPool& threads, const std::vector<int>& activeParticles, const std::vector<fvec4>& parameters, bool usePeriodic);
 
     /**
      * Indicates that the radii of some particles may have changed and that the
@@ -175,12 +174,10 @@ private:
     static const int P3Index = 2;
     static const int P4Index = 3;
 
-    int numParticles;
     int numActiveParticles;
 
     ThreadPool& threads;
     const std::vector<int>& activeParticles;
-    const std::vector<int>& activeParticlesInv;
     const std::vector<fvec4>& parameters;
     bool usePeriodic, isTriclinic;
 

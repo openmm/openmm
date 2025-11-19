@@ -83,10 +83,9 @@ bool CpuLCPOForce::Neighbors::isNeighbor(int i, int j, NeighborData& data) {
     return false;
 }
 
-CpuLCPOForce::CpuLCPOForce(ThreadPool& threads, const vector<int>& activeParticles, const vector<int>& activeParticlesInv, const vector<fvec4>& parameters, bool usePeriodic) :
-        numParticles(activeParticlesInv.size()), numActiveParticles(activeParticles.size()),
-        threads(threads), activeParticles(activeParticles), activeParticlesInv(activeParticlesInv), parameters(parameters), usePeriodic(usePeriodic),
-        neighborList(4), exclusions(numActiveParticles), neighbors(numActiveParticles) {
+CpuLCPOForce::CpuLCPOForce(ThreadPool& threads, const vector<int>& activeParticles, const vector<fvec4>& parameters, bool usePeriodic) :
+        numActiveParticles(activeParticles.size()), threads(threads), activeParticles(activeParticles), parameters(parameters),
+        usePeriodic(usePeriodic), neighborList(4), exclusions(numActiveParticles), neighbors(numActiveParticles) {
     for (int i = 0; i < numActiveParticles; i++) {
         exclusions[i].insert(i);
     }
@@ -209,8 +208,6 @@ void CpuLCPOForce::threadExecute(ThreadPool& threads, int threadIndex) {
         int end = min(start + groupSize, numActiveParticles);
 
         for (int i = start; i < end; i++) {
-            fvec4 iPos(posq + 4 * activeParticles[i]);
-            float iRadius = parameters[i][RadiusIndex];
             float p2i = parameters[i][P2Index];
             float p3i = parameters[i][P3Index];
             float p4i = parameters[i][P4Index];

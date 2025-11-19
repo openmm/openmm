@@ -61,7 +61,7 @@ public:
     CpuCalcForcesAndEnergyKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data, ContextImpl& context);
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      */
     void initialize(const System& system);
@@ -107,13 +107,13 @@ public:
     }
     /**
      * Create a checkpoint recording the current state of the Context.
-     * 
+     *
      * @param stream    an output stream the checkpoint data should be written to
      */
     void createCheckpoint(ContextImpl& context, std::ostream& stream);
     /**
      * Load a checkpoint that was written by createCheckpoint().
-     * 
+     *
      * @param stream    an input stream the checkpoint data should be read from
      */
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
@@ -131,7 +131,7 @@ public:
     }
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the HarmonicAngleForce this kernel will be used for
      */
@@ -171,7 +171,7 @@ public:
     }
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the PeriodicTorsionForce this kernel will be used for
      */
@@ -213,7 +213,7 @@ public:
     }
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the RBTorsionForce this kernel will be used for
      */
@@ -461,7 +461,7 @@ public:
     ~CpuCalcGBSAOBCForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the GBSAOBCForce this kernel will be used for
      */
@@ -656,7 +656,6 @@ private:
     bool doInteraction;
     double oneBodyEnergy;
     std::vector<int> activeParticles;
-    std::vector<int> activeParticlesInv;
     std::vector<fvec4> parameters;
 };
 
@@ -671,21 +670,21 @@ public:
     ~CpuIntegrateLangevinMiddleStepKernel();
     /**
      * Initialize the kernel, setting up the particle masses.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param integrator the LangevinMiddleIntegrator this kernel will be used for
      */
     void initialize(const System& system, const LangevinMiddleIntegrator& integrator);
     /**
      * Execute the kernel.
-     * 
+     *
      * @param context    the context in which to execute this kernel
      * @param integrator the LangevinMiddleIntegrator this kernel is being used for
      */
     void execute(ContextImpl& context, const LangevinMiddleIntegrator& integrator);
     /**
      * Compute the kinetic energy.
-     * 
+     *
      * @param context    the context in which to execute this kernel
      * @param integrator the LangevinMiddleIntegrator this kernel is being used for
      */
