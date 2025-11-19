@@ -2842,6 +2842,8 @@ void CommonCalcLCPOForceKernel::initialize(const System& system, const LCPOForce
     copyPairsToNeighborListKernel = program->createKernel("copyPairsToNeighborList");
     computeInteractionKernel = program->createKernel("computeInteraction");
 
+    downloadFinishEvent = cc.createEvent();
+
     info = new ForceInfo(force);
     cc.addForce(info);
 }
@@ -2915,12 +2917,20 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
         setPeriodicBoxArgs(cc, findNeighborsKernel, 0);
     }
 
+    int* numNeighborPairsPinned = (int*) cc.getPinnedBuffer();
     while (true) {
         findBlockBoundsKernel->execute(numBlocks);
         findNeighborsKernel->execute(numActiveParticles, findNeighborsThreadBlockSize);
 
-        int hostNumNeighborPairs;
-        numNeighborPairs.download(&hostNumNeighborPairs, true);
+        numNeighborPairs.download(numNeighborPairsPinned, false);
+        downloadFinishEvent->enqueue();
+
+        computeNeighborStartIndicesKernel->execute(maxThreadBlockSize, maxThreadBlockSize);
+        copyPairsToNeighborListKernel->execute(maxNeighborPairs);
+        computeInteractionKernel->execute(numForceThreadBlocks * forceThreadBlockSize, forceThreadBlockSize);
+
+        downloadFinishEvent->wait();
+        int hostNumNeighborPairs = *numNeighborPairsPinned;
         if (hostNumNeighborPairs > maxNeighborPairs) {
             maxNeighborPairs = (int) (1.1 * hostNumNeighborPairs);
             neighborPairs.resize(maxNeighborPairs);
@@ -2930,14 +2940,10 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
             computeNeighborStartIndicesKernel->setArg(3, maxNeighborPairs);
             copyPairsToNeighborListKernel->setArg(5, maxNeighborPairs);
             computeInteractionKernel->setArg(9, maxNeighborPairs);
-            continue;
         }
-
-        computeNeighborStartIndicesKernel->execute(maxThreadBlockSize, maxThreadBlockSize);
-        copyPairsToNeighborListKernel->execute(maxNeighborPairs);
-        computeInteractionKernel->execute(numForceThreadBlocks * forceThreadBlockSize, forceThreadBlockSize);
-
-        break;
+        else {
+            break;
+        }
     }
 
     return oneBodyEnergy;

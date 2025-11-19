@@ -897,6 +897,7 @@ private:
     ComputeArray blockCenter, blockBoundingBox;
     ComputeArray numNeighborPairs, numNeighborsForAtom, neighborStartIndex, neighborPairs, neighbors, neighborData;
     ComputeKernel findBlockBoundsKernel, findNeighborsKernel, computeNeighborStartIndicesKernel, copyPairsToNeighborListKernel, computeInteractionKernel;
+    ComputeEvent downloadFinishEvent;
 };
 
 /**
