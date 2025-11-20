@@ -371,6 +371,9 @@ def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA, cutoff, k
                 CustomGBForce.SingleParticle)
     if SA=='ACE':
         force.addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6; radius=or+offset"+params, CustomGBForce.SingleParticle)
+    elif SA=='LCPO':
+        # Handled by caller
+        pass
     elif SA is not None:
         raise ValueError('Unknown surface area method: '+SA)
     if cutoff is None:

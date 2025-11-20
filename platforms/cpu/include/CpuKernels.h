@@ -38,6 +38,7 @@
 #include "CpuGayBerneForce.h"
 #include "CpuGBSAOBCForce.h"
 #include "CpuLangevinMiddleDynamics.h"
+#include "CpuLCPOForce.h"
 #include "CpuNeighborList.h"
 #include "CpuNonbondedForce.h"
 #include "CpuPlatform.h"
@@ -60,7 +61,7 @@ public:
     CpuCalcForcesAndEnergyKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data, ContextImpl& context);
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      */
     void initialize(const System& system);
@@ -106,13 +107,13 @@ public:
     }
     /**
      * Create a checkpoint recording the current state of the Context.
-     * 
+     *
      * @param stream    an output stream the checkpoint data should be written to
      */
     void createCheckpoint(ContextImpl& context, std::ostream& stream);
     /**
      * Load a checkpoint that was written by createCheckpoint().
-     * 
+     *
      * @param stream    an input stream the checkpoint data should be read from
      */
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
@@ -130,7 +131,7 @@ public:
     }
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the HarmonicAngleForce this kernel will be used for
      */
@@ -170,7 +171,7 @@ public:
     }
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the PeriodicTorsionForce this kernel will be used for
      */
@@ -212,7 +213,7 @@ public:
     }
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the RBTorsionForce this kernel will be used for
      */
@@ -460,7 +461,7 @@ public:
     ~CpuCalcGBSAOBCForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the GBSAOBCForce this kernel will be used for
      */
@@ -618,6 +619,47 @@ private:
 };
 
 /**
+ * This kernel is invoked by LCPOForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CpuCalcLCPOForceKernel : public CalcLCPOForceKernel {
+public:
+    CpuCalcLCPOForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcLCPOForceKernel(name, platform),
+            data(data), ixn(NULL) {
+    }
+    ~CpuCalcLCPOForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the LCPOForce this kernel will be used for
+     */
+    void initialize(const System& system, const LCPOForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context        the context to copy parameters to
+     * @param force          the LCPOForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const LCPOForce& force);
+private:
+    CpuPlatform::PlatformData& data;
+    CpuLCPOForce* ixn;
+    bool doInteraction;
+    double oneBodyEnergy;
+    std::vector<int> activeParticles;
+    std::vector<fvec4> parameters;
+};
+
+/**
  * This kernel is invoked by LangevinMiddleIntegrator to take one time step.
  */
 class CpuIntegrateLangevinMiddleStepKernel : public IntegrateLangevinMiddleStepKernel {
@@ -628,21 +670,21 @@ public:
     ~CpuIntegrateLangevinMiddleStepKernel();
     /**
      * Initialize the kernel, setting up the particle masses.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param integrator the LangevinMiddleIntegrator this kernel will be used for
      */
     void initialize(const System& system, const LangevinMiddleIntegrator& integrator);
     /**
      * Execute the kernel.
-     * 
+     *
      * @param context    the context in which to execute this kernel
      * @param integrator the LangevinMiddleIntegrator this kernel is being used for
      */
     void execute(ContextImpl& context, const LangevinMiddleIntegrator& integrator);
     /**
      * Compute the kinetic energy.
-     * 
+     *
      * @param context    the context in which to execute this kernel
      * @param integrator the LangevinMiddleIntegrator this kernel is being used for
      */
