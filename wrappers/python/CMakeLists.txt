@@ -164,6 +164,7 @@ set(SWIG_INPUT_FILES2
     "${SWIG_OPENMM_DIR}/swig_lib/python/features.i"
     "${SWIG_OPENMM_DIR}/swig_lib/python/header.i"
     "${SWIG_OPENMM_DIR}/swig_lib/python/pythoncode.i"
+    "${SWIG_OPENMM_DIR}/swig_lib/python/pythonforce.i"
     "${SWIG_OPENMM_DIR}/swig_lib/python/typemaps.i"
 )
 
