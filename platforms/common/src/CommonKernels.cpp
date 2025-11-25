@@ -2878,7 +2878,6 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
         findNeighborsKernel->addArg(numNeighborPairs);
         findNeighborsKernel->addArg(numNeighborsForAtom);
         findNeighborsKernel->addArg(neighborPairs);
-        findNeighborsKernel->addArg(neighborData);
         if (cc.getUseDoublePrecision()) {
             findNeighborsKernel->addArg(cutoffSquared);
         } else {
@@ -2891,6 +2890,13 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
         computeNeighborStartIndicesKernel->addArg(neighborStartIndex);
         computeNeighborStartIndicesKernel->addArg(maxNeighborPairs);
 
+        for (int i = 0; i < 5; i++) {
+            copyPairsToNeighborListKernel->addArg();
+        }
+        setPeriodicBoxArgs(cc, copyPairsToNeighborListKernel, 0);
+        copyPairsToNeighborListKernel->addArg(cc.getPosq());
+        copyPairsToNeighborListKernel->addArg(activeParticles);
+        copyPairsToNeighborListKernel->addArg(parameters);
         copyPairsToNeighborListKernel->addArg(numNeighborPairs);
         copyPairsToNeighborListKernel->addArg(numNeighborsForAtom);
         copyPairsToNeighborListKernel->addArg(neighborStartIndex);
@@ -2916,6 +2922,7 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
     if (usePeriodic) {
         setPeriodicBoxArgs(cc, findBlockBoundsKernel, 0);
         setPeriodicBoxArgs(cc, findNeighborsKernel, 0);
+        setPeriodicBoxArgs(cc, copyPairsToNeighborListKernel, 0);
     }
 
     int* numNeighborPairsPinned = (int*) cc.getPinnedBuffer();
@@ -2937,9 +2944,9 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
             neighborPairs.resize(maxNeighborPairs);
             neighbors.resize(maxNeighborPairs);
             neighborData.resize(maxNeighborPairs);
-            findNeighborsKernel->setArg(15, maxNeighborPairs);
+            findNeighborsKernel->setArg(14, maxNeighborPairs);
             computeNeighborStartIndicesKernel->setArg(3, maxNeighborPairs);
-            copyPairsToNeighborListKernel->setArg(6, maxNeighborPairs);
+            copyPairsToNeighborListKernel->setArg(14, maxNeighborPairs);
             computeInteractionKernel->setArg(9, maxNeighborPairs);
         }
         else {
@@ -2994,9 +3001,9 @@ void CommonCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, co
 
     if (hasInitializedKernel) {
         if (cc.getUseDoublePrecision()) {
-            findNeighborsKernel->setArg(14, cutoffSquared);
+            findNeighborsKernel->setArg(13, cutoffSquared);
         } else {
-            findNeighborsKernel->setArg(14, (float) cutoffSquared);
+            findNeighborsKernel->setArg(13, (float) cutoffSquared);
         }
     }
 

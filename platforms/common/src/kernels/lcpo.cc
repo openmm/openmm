@@ -88,7 +88,7 @@ KERNEL void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize,
         GLOBAL const real4* RESTRICT parameters, GLOBAL const real4* RESTRICT blockCenter,
         GLOBAL const real4* RESTRICT blockBoundingBox, GLOBAL int* RESTRICT numNeighborPairs,
         GLOBAL int* RESTRICT numNeighborsForAtom, GLOBAL int2* RESTRICT neighborPairs,
-        GLOBAL NeighborData* RESTRICT neighborData, real cutoffSquared, int maxNeighborPairs) {
+        real cutoffSquared, int maxNeighborPairs) {
 
     // parameters: each real4 holds [radius, p2, p3, p4].
     // posrCache:  each real4 holds [x, y, z, radius].
@@ -155,7 +155,6 @@ KERNEL void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize,
                     int active = start + indexInWarp;
 
                     int included[WARP_SIZE];
-                    NeighborData includedData[WARP_SIZE];
                     int numIncluded = 0;
 
                     // All threads in a warp will compare atoms with atoms in
@@ -179,13 +178,8 @@ KERNEL void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize,
                             real4 delta12 = delta(pos2, pos1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
                             real pairCutoff = radius1 + radius2;
                             if (active2 > active1 && active2 < NUM_ACTIVE && delta12.w < pairCutoff * pairCutoff) {
-                                NeighborData data;
-                                data.data12 = delta12;
-                                data.data21 = make_real4(radius1, radius2, 0, 0);
-
                                 int includedIndex = numIncluded++;
                                 included[includedIndex] = active2;
-                                includedData[includedIndex] = data;
                             }
                         }
                     }
@@ -197,7 +191,6 @@ KERNEL void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize,
                         if (baseIndex + numIncluded <= maxNeighborPairs) {
                             for (int j = 0; j < numIncluded; j++) {
                                 neighborPairs[baseIndex + j] = make_int2(active1, included[j]);
-                                neighborData[baseIndex + j] = includedData[j];
                             }
                         }
                         numNeighborsForAtom1 += numIncluded;
@@ -261,7 +254,10 @@ KERNEL void computeNeighborStartIndices(GLOBAL int* RESTRICT numNeighborPairsPoi
 /**
  * Assemble the final neighbor list.
  */
-KERNEL void copyPairsToNeighborList(GLOBAL int* RESTRICT numNeighborPairsPointer,
+KERNEL void copyPairsToNeighborList(real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        GLOBAL const real4* RESTRICT posq, GLOBAL const int* RESTRICT activeParticles,
+        GLOBAL const real4* RESTRICT parameters, GLOBAL int* RESTRICT numNeighborPairsPointer,
         GLOBAL int* RESTRICT numNeighborsForAtom, GLOBAL const int* RESTRICT neighborStartIndex,
         GLOBAL const int2* RESTRICT neighborPairs, GLOBAL int2* RESTRICT neighbors,
         GLOBAL NeighborData* RESTRICT neighborData, int maxNeighborPairs) {
@@ -273,10 +269,12 @@ KERNEL void copyPairsToNeighborList(GLOBAL int* RESTRICT numNeighborPairsPointer
 
     for (unsigned int pairIndex = GLOBAL_ID; pairIndex < numNeighborPairs; pairIndex += GLOBAL_SIZE) {
         int2 pair = neighborPairs[pairIndex];
-        NeighborData data = neighborData[pairIndex];
-        real4 delta12 = data.data12;
-        real radius1 = data.data21.x;
-        real radius2 = data.data21.y;
+
+        real3 pos1 = trimTo3(posq[activeParticles[pair.x]]);
+        real3 pos2 = trimTo3(posq[activeParticles[pair.y]]);
+        real4 delta12 = delta(pos2, pos1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
+        real radius1 = parameters[pair.x].x;
+        real radius2 = parameters[pair.y].x;
         real radius1Pi = PI * radius1;
         real radius2Pi = PI * radius2;
         real r = SQRT(delta12.w);
@@ -286,9 +284,12 @@ KERNEL void copyPairsToNeighborList(GLOBAL int* RESTRICT numNeighborPairsPointer
         real3 forceDir = trimTo3(delta12) * rRecip;
         real3 force1 = radius1Pi * ((real) -1 + deltaRadiusRSq) * forceDir;
         real3 force2 = radius2Pi * ((real) -1 - deltaRadiusRSq) * forceDir;
+
+        NeighborData data;
         data.data12 = make_real4(force1.x, force1.y, force1.z, radius1Pi * ((real) 2 * radius1 - r - deltaRadiusR));
         data.data21 = make_real4(force2.x, force2.y, force2.z, radius2Pi * ((real) 2 * radius2 - r + deltaRadiusR));
         neighborData[pairIndex] = data;
+
         int startIndex = neighborStartIndex[pair.x];
         int offset = ATOMIC_ADD(numNeighborsForAtom + pair.x, 1);
         // Store the original index so we can look up the saved neighbor data.
