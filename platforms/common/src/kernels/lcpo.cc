@@ -109,7 +109,6 @@ KERNEL void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize,
 
         real3 pos1 = trimTo3(posq[activeParticles[active1]]);
         real radius1 = parameters[active1].x;
-        real radius1Pi = PI * radius1;
 
         int block1 = active1 / WARP_SIZE;
         real4 blockCenter1 = blockCenter[block1];
@@ -180,17 +179,9 @@ KERNEL void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize,
                             real4 delta12 = delta(pos2, pos1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
                             real pairCutoff = radius1 + radius2;
                             if (active2 > active1 && active2 < NUM_ACTIVE && delta12.w < pairCutoff * pairCutoff) {
-                                real radius2Pi = PI * radius2;
-                                real r = SQRT(delta12.w);
-                                real rRecip = (real) 1 / r;
-                                real deltaRadiusR = (radius1 * radius1 - radius2 * radius2) * rRecip;
-                                real deltaRadiusRSq = deltaRadiusR * rRecip;
-                                real3 forceDir = trimTo3(delta12) * rRecip;
-                                real3 force1 = radius1Pi * ((real) -1 + deltaRadiusRSq) * forceDir;
-                                real3 force2 = radius2Pi * ((real) -1 - deltaRadiusRSq) * forceDir;
                                 NeighborData data;
-                                data.data12 = make_real4(force1.x, force1.y, force1.z, radius1Pi * ((real) 2 * radius1 - r - deltaRadiusR));
-                                data.data21 = make_real4(force2.x, force2.y, force2.z, radius2Pi * ((real) 2 * radius2 - r + deltaRadiusR));
+                                data.data12 = delta12;
+                                data.data21 = make_real4(radius1, radius2, 0, 0);
 
                                 int includedIndex = numIncluded++;
                                 included[includedIndex] = active2;
@@ -273,7 +264,7 @@ KERNEL void computeNeighborStartIndices(GLOBAL int* RESTRICT numNeighborPairsPoi
 KERNEL void copyPairsToNeighborList(GLOBAL int* RESTRICT numNeighborPairsPointer,
         GLOBAL int* RESTRICT numNeighborsForAtom, GLOBAL const int* RESTRICT neighborStartIndex,
         GLOBAL const int2* RESTRICT neighborPairs, GLOBAL int2* RESTRICT neighbors,
-        int maxNeighborPairs) {
+        GLOBAL NeighborData* RESTRICT neighborData, int maxNeighborPairs) {
 
     int numNeighborPairs = *numNeighborPairsPointer;
     if (numNeighborPairs > maxNeighborPairs) {
@@ -282,6 +273,22 @@ KERNEL void copyPairsToNeighborList(GLOBAL int* RESTRICT numNeighborPairsPointer
 
     for (unsigned int pairIndex = GLOBAL_ID; pairIndex < numNeighborPairs; pairIndex += GLOBAL_SIZE) {
         int2 pair = neighborPairs[pairIndex];
+        NeighborData data = neighborData[pairIndex];
+        real4 delta12 = data.data12;
+        real radius1 = data.data21.x;
+        real radius2 = data.data21.y;
+        real radius1Pi = PI * radius1;
+        real radius2Pi = PI * radius2;
+        real r = SQRT(delta12.w);
+        real rRecip = (real) 1 / r;
+        real deltaRadiusR = (radius1 * radius1 - radius2 * radius2) * rRecip;
+        real deltaRadiusRSq = deltaRadiusR * rRecip;
+        real3 forceDir = trimTo3(delta12) * rRecip;
+        real3 force1 = radius1Pi * ((real) -1 + deltaRadiusRSq) * forceDir;
+        real3 force2 = radius2Pi * ((real) -1 - deltaRadiusRSq) * forceDir;
+        data.data12 = make_real4(force1.x, force1.y, force1.z, radius1Pi * ((real) 2 * radius1 - r - deltaRadiusR));
+        data.data21 = make_real4(force2.x, force2.y, force2.z, radius2Pi * ((real) 2 * radius2 - r + deltaRadiusR));
+        neighborData[pairIndex] = data;
         int startIndex = neighborStartIndex[pair.x];
         int offset = ATOMIC_ADD(numNeighborsForAtom + pair.x, 1);
         // Store the original index so we can look up the saved neighbor data.

@@ -2821,7 +2821,7 @@ void CommonCalcLCPOForceKernel::initialize(const System& system, const LCPOForce
     maxThreadBlockSize = cc.getMaxThreadBlockSize();
     numForceThreadBlocks = cc.getNonbondedUtilities().getNumForceThreadBlocks();
     forceThreadBlockSize = cc.getNonbondedUtilities().getForceThreadBlockSize();
-    findNeighborsThreadBlockSize = cc.getIsCPU() ? 32 : maxThreadBlockSize;
+    findNeighborsThreadBlockSize = (cc.getSIMDWidth() >= 32 ? 128 : 32);
 
     map<string, string> defines;
     defines["FIND_NEIGHBORS_THREAD_BLOCK_SIZE"] = cc.intToString(findNeighborsThreadBlockSize);
@@ -2896,6 +2896,7 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
         copyPairsToNeighborListKernel->addArg(neighborStartIndex);
         copyPairsToNeighborListKernel->addArg(neighborPairs);
         copyPairsToNeighborListKernel->addArg(neighbors);
+        copyPairsToNeighborListKernel->addArg(neighborData);
         copyPairsToNeighborListKernel->addArg(maxNeighborPairs);
 
         computeInteractionKernel->addArg(cc.getLongForceBuffer());
@@ -2938,7 +2939,7 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
             neighborData.resize(maxNeighborPairs);
             findNeighborsKernel->setArg(15, maxNeighborPairs);
             computeNeighborStartIndicesKernel->setArg(3, maxNeighborPairs);
-            copyPairsToNeighborListKernel->setArg(5, maxNeighborPairs);
+            copyPairsToNeighborListKernel->setArg(6, maxNeighborPairs);
             computeInteractionKernel->setArg(9, maxNeighborPairs);
         }
         else {

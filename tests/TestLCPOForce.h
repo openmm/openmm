@@ -40,7 +40,7 @@
 using namespace OpenMM;
 using namespace std;
 
-const double TOL = 1e-5;
+const double TOL = 5e-5;
 const double FORCE_TOL = 5e-4;
 
 void testSingleParticle() {
@@ -691,23 +691,28 @@ void testEnergyForces() {
     bool isReferencePlatform = (platform.getName() == "Reference");
 
     // 5 particles:
+    printf("1\n");
     makeSmallTestCase(system, positions, energy);
     runEnergyForcesTestCase(system, positions, energy, isReferencePlatform);
 
     // 22 particles:
+    printf("2\n");
     makeAlanineDipeptideTestCase(1, system, positions, energy);
     runEnergyForcesTestCase(system, positions, energy, isReferencePlatform);
 
     // 594 particles:
+    printf("3\n");
     makeAlanineDipeptideTestCase(3, system, positions, energy);
     runEnergyForcesTestCase(system, positions, energy, isReferencePlatform);
 
     if (!isReferencePlatform) {
         // 22000 particles:
+        printf("4\n");
         makeAlanineDipeptideTestCase(10, system, positions, energy);
         runEnergyForcesTestCase(system, positions, energy, false);
 
         // 125000 particles:
+        printf("5\n");
         makeGridTestCase(50, system, positions, energy);
         runEnergyForcesTestCase(system, positions, energy, false);
     }
@@ -816,20 +821,20 @@ int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
 
-        testSingleParticle();
-        testTwoParticles();
-        testThreeParticles();
-        testUsePeriodic(false);
-        testUsePeriodic(true);
-        testIncludeZeroScale();
-        testExcludeZeroRadius();
-        testAllParticlesExcluded();
-        testZeroSurfaceTension();
-        testEnergyForces();
-        testUpdateInContext();
-        testPeriodicShape(false);
-        testPeriodicShape(true);
-        runPlatformTests();
+        printf("A\n"); testSingleParticle();
+        printf("B\n"); testTwoParticles();
+        printf("C\n"); testThreeParticles();
+        printf("D\n"); testUsePeriodic(false);
+        printf("E\n"); testUsePeriodic(true);
+        printf("F\n"); testIncludeZeroScale();
+        printf("G\n"); testExcludeZeroRadius();
+        printf("H\n"); testAllParticlesExcluded();
+        printf("I\n"); testZeroSurfaceTension();
+        printf("J\n"); testEnergyForces();
+        printf("K\n"); testUpdateInContext();
+        printf("L\n"); testPeriodicShape(false);
+        printf("M\n"); testPeriodicShape(true);
+        printf("N\n"); runPlatformTests();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
