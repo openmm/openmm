@@ -894,9 +894,9 @@ private:
     int maxThreadBlockSize, numForceThreadBlocks, forceThreadBlockSize, findNeighborsThreadBlockSize;
     double oneBodyEnergy, cutoffSquared;
     ComputeArray activeParticles, parameters;
-    ComputeArray blockCenter, blockBoundingBox;
+    ComputeArray condensedPos, blockCenter, blockBoundingBox;
     ComputeArray numNeighborPairs, numNeighborsForAtom, neighborStartIndex, neighborPairs, neighbors, neighborData;
-    ComputeKernel findBlockBoundsKernel, findNeighborsKernel, computeNeighborStartIndicesKernel, copyPairsToNeighborListKernel, computeInteractionKernel;
+    ComputeKernel condensePosKernel, findBlockBoundsKernel, findNeighborsKernel, computeNeighborStartIndicesKernel, copyPairsToNeighborListKernel, computeInteractionKernel;
     ComputeEvent downloadFinishEvent;
 };
 

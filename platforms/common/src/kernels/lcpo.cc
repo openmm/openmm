@@ -4,6 +4,14 @@ typedef struct {
 } NeighborData;
 
 /**
+ * Load the position of an atom from global memory.
+ */
+inline DEVICE real3 loadCondensedPos(GLOBAL const real* RESTRICT condensedPos, int atom) {
+    int offset = 3 * atom;
+    return make_real3(condensedPos[offset], condensedPos[offset + 1], condensedPos[offset + 2]);
+}
+
+/**
  * Record the force on an atom to global memory.
  */
 inline DEVICE void storeForce(int atom, real3 force, GLOBAL mm_ulong* RESTRICT forceBuffers) {
@@ -29,13 +37,25 @@ inline DEVICE real4 delta(real3 vec1, real3 vec2, real4 periodicBoxSize, real4 i
 }
 
 /**
+ * Copies positions of active particles to a separate array for performance.
+ */
+KERNEL void condensePos(GLOBAL const int* RESTRICT activeParticles, GLOBAL const real4* RESTRICT posq, GLOBAL real* RESTRICT condensedPos) {
+    for (int i = GLOBAL_ID; i < NUM_ACTIVE; i += GLOBAL_SIZE) {
+        real3 pos = trimTo3(posq[activeParticles[i]]);
+        int iOffset = 3 * i;
+        condensedPos[iOffset] = pos.x;
+        condensedPos[iOffset + 1] = pos.y;
+        condensedPos[iOffset + 2] = pos.z;
+    }
+}
+
+/**
  * Find a bounding box for the atoms in each block.
  */
 KERNEL void findBlockBounds(real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
-        GLOBAL const real4* RESTRICT posq, GLOBAL const int* RESTRICT activeParticles,
-        GLOBAL real4* RESTRICT blockCenter, GLOBAL real4* RESTRICT blockBoundingBox,
-        GLOBAL int* RESTRICT numNeighborPairs) {
+        GLOBAL const real* RESTRICT condensedPos, GLOBAL real4* RESTRICT blockCenter,
+        GLOBAL real4* RESTRICT blockBoundingBox, GLOBAL int* RESTRICT numNeighborPairs) {
 
     // Each thread (index) processes one block of WARP_SIZE atoms (from base
     // through min(base + WARP_SIZE, NUM_ACTIVE) - 1) at a time.
@@ -44,7 +64,8 @@ KERNEL void findBlockBounds(real4 periodicBoxSize, real4 invPeriodicBoxSize,
     int base = index * WARP_SIZE;
 
     while (base < NUM_ACTIVE) {
-        real4 pos = posq[activeParticles[base]];
+        real3 pos3 = loadCondensedPos(condensedPos, base);
+        real4 pos = make_real4(pos3.x, pos3.y, pos3.z, 0);
 #ifdef USE_PERIODIC
         APPLY_PERIODIC_TO_POS(pos)
 #endif
@@ -52,7 +73,8 @@ KERNEL void findBlockBounds(real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 maxPos = pos;
         int last = min(base + WARP_SIZE, NUM_ACTIVE);
         for (int i = base + 1; i < last; i++) {
-            pos = posq[activeParticles[i]];
+            pos3 = loadCondensedPos(condensedPos, i);
+            pos = make_real4(pos3.x, pos3.y, pos3.z, 0);
 #ifdef USE_PERIODIC
             real4 center = 0.5f * (maxPos + minPos);
             APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, center)
@@ -84,11 +106,10 @@ KERNEL void findBlockBounds(real4 periodicBoxSize, real4 invPeriodicBoxSize,
  */
 KERNEL void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
-        GLOBAL const real4* RESTRICT posq, GLOBAL const int* RESTRICT activeParticles,
-        GLOBAL const real4* RESTRICT parameters, GLOBAL const real4* RESTRICT blockCenter,
-        GLOBAL const real4* RESTRICT blockBoundingBox, GLOBAL int* RESTRICT numNeighborPairs,
-        GLOBAL int* RESTRICT numNeighborsForAtom, GLOBAL int2* RESTRICT neighborPairs,
-        real cutoffSquared, int maxNeighborPairs) {
+        GLOBAL const real* RESTRICT condensedPos, GLOBAL const real4* RESTRICT parameters,
+        GLOBAL const real4* RESTRICT blockCenter, GLOBAL const real4* RESTRICT blockBoundingBox,
+        GLOBAL int* RESTRICT numNeighborPairs, GLOBAL int* RESTRICT numNeighborsForAtom,
+        GLOBAL int2* RESTRICT neighborPairs, real cutoffSquared, int maxNeighborPairs) {
 
     // parameters: each real4 holds [radius, p2, p3, p4].
     // posrCache:  each real4 holds [x, y, z, radius].
@@ -107,7 +128,7 @@ KERNEL void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize,
 
         int numNeighborsForAtom1 = 0;
 
-        real3 pos1 = trimTo3(posq[activeParticles[active1]]);
+        real3 pos1 = loadCondensedPos(condensedPos, active1);
         real radius1 = parameters[active1].x;
 
         int block1 = active1 / WARP_SIZE;
@@ -161,9 +182,8 @@ KERNEL void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize,
                     // block2, so load their parameters into shared memory.
 
                     SYNC_WARPS;
-                    real4 posr = posq[activeParticles[active]];
-                    posr.w = parameters[active].x;
-                    posrCache[LOCAL_ID] = posr;
+                    real3 pos = loadCondensedPos(condensedPos, active);
+                    posrCache[LOCAL_ID] = make_real4(pos.x, pos.y, pos.z, parameters[active].x);
                     SYNC_WARPS;
 
                     if (active1 < NUM_ACTIVE) {
@@ -256,11 +276,10 @@ KERNEL void computeNeighborStartIndices(GLOBAL int* RESTRICT numNeighborPairsPoi
  */
 KERNEL void copyPairsToNeighborList(real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
-        GLOBAL const real4* RESTRICT posq, GLOBAL const int* RESTRICT activeParticles,
-        GLOBAL const real4* RESTRICT parameters, GLOBAL int* RESTRICT numNeighborPairsPointer,
-        GLOBAL int* RESTRICT numNeighborsForAtom, GLOBAL const int* RESTRICT neighborStartIndex,
-        GLOBAL const int2* RESTRICT neighborPairs, GLOBAL int2* RESTRICT neighbors,
-        GLOBAL NeighborData* RESTRICT neighborData, int maxNeighborPairs) {
+        GLOBAL const real* RESTRICT condensedPos, GLOBAL const real4* RESTRICT parameters,
+        GLOBAL int* RESTRICT numNeighborPairsPointer, GLOBAL int* RESTRICT numNeighborsForAtom,
+        GLOBAL const int* RESTRICT neighborStartIndex, GLOBAL const int2* RESTRICT neighborPairs,
+        GLOBAL int2* RESTRICT neighbors, GLOBAL NeighborData* RESTRICT neighborData, int maxNeighborPairs) {
 
     int numNeighborPairs = *numNeighborPairsPointer;
     if (numNeighborPairs > maxNeighborPairs) {
@@ -279,8 +298,8 @@ KERNEL void copyPairsToNeighborList(real4 periodicBoxSize, real4 invPeriodicBoxS
 
         // Precompute data for this pair to be looked up later.
 
-        real3 iPos = trimTo3(posq[activeParticles[pair.x]]);
-        real3 jPos = trimTo3(posq[activeParticles[pair.y]]);
+        real3 iPos = loadCondensedPos(condensedPos, pair.x);
+        real3 jPos = loadCondensedPos(condensedPos, pair.y);
         real4 ijDelta = delta(jPos, iPos, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
         real iRadius = parameters[pair.x].x;
         real jRadius = parameters[pair.y].x;
@@ -305,11 +324,11 @@ KERNEL void copyPairsToNeighborList(real4 periodicBoxSize, real4 invPeriodicBoxS
 KERNEL void computeInteraction(
         real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
-        GLOBAL const real4* RESTRICT posq, GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mixed* RESTRICT energyBuffer,
-        GLOBAL const int* RESTRICT activeParticles, GLOBAL const real4* RESTRICT parameters,
-        GLOBAL int* RESTRICT numNeighborPairsPointer, GLOBAL const int* RESTRICT neighborStartIndex,
-        GLOBAL const int2* RESTRICT neighborPairs, GLOBAL int2* RESTRICT neighbors,
-        GLOBAL NeighborData* RESTRICT neighborData, int maxNeighborPairs) {
+        GLOBAL const real* RESTRICT condensedPos, GLOBAL mm_ulong* RESTRICT forceBuffers,
+        GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const int* RESTRICT activeParticles,
+        GLOBAL const real4* RESTRICT parameters, GLOBAL int* RESTRICT numNeighborPairsPointer,
+        GLOBAL const int* RESTRICT neighborStartIndex, GLOBAL const int2* RESTRICT neighborPairs,
+        GLOBAL int2* RESTRICT neighbors, GLOBAL NeighborData* RESTRICT neighborData, int maxNeighborPairs) {
 
     int numNeighborPairs = *numNeighborPairsPointer;
     if (numNeighborPairs > maxNeighborPairs) {
@@ -321,7 +340,7 @@ KERNEL void computeInteraction(
         int2 pair = neighbors[pairIndex];
         int i = neighborPairs[pair.y].x;
         int j = pair.x;
-        real3 iPos = trimTo3(posq[activeParticles[i]]);
+        real3 iPos = loadCondensedPos(condensedPos, i);
         real4 iParams = parameters[i];
         real4 jParams = parameters[j];
         real3 iForce = make_real3(0);
@@ -348,7 +367,7 @@ KERNEL void computeInteraction(
             // parameters to decide whether or not to include k than to try to
             // look up its index in the neighbor list of i.
 
-            real3 kPos = trimTo3(posq[activeParticles[k]]);
+            real3 kPos = loadCondensedPos(condensedPos, k);
             real4 kParams = parameters[k];
             real kRadius = kParams.x;
             real kRadiusPi = PI * kRadius;

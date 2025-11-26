@@ -2806,6 +2806,7 @@ void CommonCalcLCPOForceKernel::initialize(const System& system, const LCPOForce
     int elementSize = cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float);
     activeParticles.initialize<int>(cc, paddedNumActiveParticles, "activeParticles");
     parameters.initialize(cc, paddedNumActiveParticles, 4 * elementSize, "parameters");
+    condensedPos.initialize(cc, paddedNumActiveParticles, 3 * elementSize, "condensedPos");
     blockCenter.initialize(cc, numBlocks, 4 * elementSize, "blockCenter");
     blockBoundingBox.initialize(cc, numBlocks, 4 * elementSize, "blockBoundingBox");
     numNeighborPairs.initialize<int>(cc, 1, "numNeighborPairs");
@@ -2836,6 +2837,7 @@ void CommonCalcLCPOForceKernel::initialize(const System& system, const LCPOForce
         defines["USE_PERIODIC"] = "1";
     }
     ComputeProgram program = cc.compileProgram(CommonKernelSources::lcpo, defines);
+    condensePosKernel = program->createKernel("condensePos");
     findBlockBoundsKernel = program->createKernel("findBlockBounds");
     findNeighborsKernel = program->createKernel("findNeighbors");
     computeNeighborStartIndicesKernel = program->createKernel("computeNeighborStartIndices");
@@ -2856,12 +2858,15 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
     }
 
     if (!hasInitializedKernel) {
+        condensePosKernel->addArg(activeParticles);
+        condensePosKernel->addArg(cc.getPosq());
+        condensePosKernel->addArg(condensedPos);
+
         for (int i = 0; i < 5; i++) {
             findBlockBoundsKernel->addArg();
         }
         setPeriodicBoxArgs(cc, findBlockBoundsKernel, 0);
-        findBlockBoundsKernel->addArg(cc.getPosq());
-        findBlockBoundsKernel->addArg(activeParticles);
+        findBlockBoundsKernel->addArg(condensedPos);
         findBlockBoundsKernel->addArg(blockCenter);
         findBlockBoundsKernel->addArg(blockBoundingBox);
         findBlockBoundsKernel->addArg(numNeighborPairs);
@@ -2870,8 +2875,7 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
             findNeighborsKernel->addArg();
         }
         setPeriodicBoxArgs(cc, findNeighborsKernel, 0);
-        findNeighborsKernel->addArg(cc.getPosq());
-        findNeighborsKernel->addArg(activeParticles);
+        findNeighborsKernel->addArg(condensedPos);
         findNeighborsKernel->addArg(parameters);
         findNeighborsKernel->addArg(blockCenter);
         findNeighborsKernel->addArg(blockBoundingBox);
@@ -2894,8 +2898,7 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
             copyPairsToNeighborListKernel->addArg();
         }
         setPeriodicBoxArgs(cc, copyPairsToNeighborListKernel, 0);
-        copyPairsToNeighborListKernel->addArg(cc.getPosq());
-        copyPairsToNeighborListKernel->addArg(activeParticles);
+        copyPairsToNeighborListKernel->addArg(condensedPos);
         copyPairsToNeighborListKernel->addArg(parameters);
         copyPairsToNeighborListKernel->addArg(numNeighborPairs);
         copyPairsToNeighborListKernel->addArg(numNeighborsForAtom);
@@ -2909,7 +2912,7 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
             computeInteractionKernel->addArg();
         }
         setPeriodicBoxArgs(cc, computeInteractionKernel, 0);
-        computeInteractionKernel->addArg(cc.getPosq());
+        computeInteractionKernel->addArg(condensedPos);
         computeInteractionKernel->addArg(cc.getLongForceBuffer());
         computeInteractionKernel->addArg(cc.getEnergyBuffer());
         computeInteractionKernel->addArg(activeParticles);
@@ -2933,6 +2936,7 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
 
     int* numNeighborPairsPinned = (int*) cc.getPinnedBuffer();
     while (true) {
+        condensePosKernel->execute(numActiveParticles);
         findBlockBoundsKernel->execute(numBlocks);
         findNeighborsKernel->execute(numActiveParticles, findNeighborsThreadBlockSize);
 
@@ -2950,9 +2954,9 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
             neighborPairs.resize(maxNeighborPairs);
             neighbors.resize(maxNeighborPairs);
             neighborData.resize(maxNeighborPairs);
-            findNeighborsKernel->setArg(14, maxNeighborPairs);
+            findNeighborsKernel->setArg(13, maxNeighborPairs);
             computeNeighborStartIndicesKernel->setArg(3, maxNeighborPairs);
-            copyPairsToNeighborListKernel->setArg(14, maxNeighborPairs);
+            copyPairsToNeighborListKernel->setArg(13, maxNeighborPairs);
             computeInteractionKernel->setArg(15, maxNeighborPairs);
         }
         else {
