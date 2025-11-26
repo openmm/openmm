@@ -270,37 +270,42 @@ KERNEL void copyPairsToNeighborList(real4 periodicBoxSize, real4 invPeriodicBoxS
     for (unsigned int pairIndex = GLOBAL_ID; pairIndex < numNeighborPairs; pairIndex += GLOBAL_SIZE) {
         int2 pair = neighborPairs[pairIndex];
 
-        real3 pos1 = trimTo3(posq[activeParticles[pair.x]]);
-        real3 pos2 = trimTo3(posq[activeParticles[pair.y]]);
-        real4 delta12 = delta(pos2, pos1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
-        real radius1 = parameters[pair.x].x;
-        real radius2 = parameters[pair.y].x;
-        real radius1Pi = PI * radius1;
-        real radius2Pi = PI * radius2;
-        real r = SQRT(delta12.w);
-        real rRecip = (real) 1 / r;
-        real deltaRadiusR = (radius1 * radius1 - radius2 * radius2) * rRecip;
-        real deltaRadiusRSq = deltaRadiusR * rRecip;
-        real3 forceDir = trimTo3(delta12) * rRecip;
-        real3 force1 = radius1Pi * ((real) -1 + deltaRadiusRSq) * forceDir;
-        real3 force2 = radius2Pi * ((real) -1 - deltaRadiusRSq) * forceDir;
-
-        NeighborData data;
-        data.data12 = make_real4(force1.x, force1.y, force1.z, radius1Pi * ((real) 2 * radius1 - r - deltaRadiusR));
-        data.data21 = make_real4(force2.x, force2.y, force2.z, radius2Pi * ((real) 2 * radius2 - r + deltaRadiusR));
-        neighborData[pairIndex] = data;
-
-        int startIndex = neighborStartIndex[pair.x];
         int offset = ATOMIC_ADD(numNeighborsForAtom + pair.x, 1);
-        // Store the original index so we can look up the saved neighbor data.
-        neighbors[startIndex + offset] = make_int2(pair.y, pairIndex);
+        int storeIndex = neighborStartIndex[pair.x] + offset;
+
+        // Store the original index so we can get back to (i, j) pairs.
+
+        neighbors[storeIndex] = make_int2(pair.y, pairIndex);
+
+        // Precompute data for this pair to be looked up later.
+
+        real3 iPos = trimTo3(posq[activeParticles[pair.x]]);
+        real3 jPos = trimTo3(posq[activeParticles[pair.y]]);
+        real4 ijDelta = delta(jPos, iPos, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
+        real iRadius = parameters[pair.x].x;
+        real jRadius = parameters[pair.y].x;
+        real iRadiusPi = PI * iRadius;
+        real jRadiusPi = PI * jRadius;
+        real r = SQRT(ijDelta.w);
+        real rRecip = (real) 1 / r;
+        real deltaRadiusR = (iRadius * iRadius - jRadius * jRadius) * rRecip;
+        real deltaRadiusRSq = deltaRadiusR * rRecip;
+        real3 forceDir = trimTo3(ijDelta) * rRecip;
+        real3 iForceDir = iRadiusPi * ((real) -1 + deltaRadiusRSq) * forceDir;
+        real3 jForceDir = jRadiusPi * ((real) -1 - deltaRadiusRSq) * forceDir;
+
+        neighborData[storeIndex].data12 = make_real4(iForceDir.x, iForceDir.y, iForceDir.z, iRadiusPi * ((real) 2 * iRadius - r - deltaRadiusR));
+        neighborData[storeIndex].data21 = make_real4(jForceDir.x, jForceDir.y, jForceDir.z, jRadiusPi * ((real) 2 * jRadius - r + deltaRadiusR));
     }
 }
 
 /**
  * Compute the LCPO interaction.
  */
-KERNEL void computeInteraction(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mixed* RESTRICT energyBuffer,
+KERNEL void computeInteraction(
+        real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        GLOBAL const real4* RESTRICT posq, GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mixed* RESTRICT energyBuffer,
         GLOBAL const int* RESTRICT activeParticles, GLOBAL const real4* RESTRICT parameters,
         GLOBAL int* RESTRICT numNeighborPairsPointer, GLOBAL const int* RESTRICT neighborStartIndex,
         GLOBAL const int2* RESTRICT neighborPairs, GLOBAL int2* RESTRICT neighbors,
@@ -313,9 +318,10 @@ KERNEL void computeInteraction(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mi
 
     mixed energy = 0;
     for (unsigned int pairIndex = GLOBAL_ID; pairIndex < numNeighborPairs; pairIndex += GLOBAL_SIZE) {
-        int2 pair = neighborPairs[pairIndex];
-        int i = pair.x;
-        int j = pair.y;
+        int2 pair = neighbors[pairIndex];
+        int i = neighborPairs[pair.y].x;
+        int j = pair.x;
+        real3 iPos = trimTo3(posq[activeParticles[i]]);
         real4 iParams = parameters[i];
         real4 jParams = parameters[j];
         real3 iForce = make_real3(0);
@@ -330,32 +336,43 @@ KERNEL void computeInteraction(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mi
         jForce -= ijForce2_3;
         energy += ijForce2.w;
 
-        int iStart = neighborStartIndex[i];
-        int iEnd = neighborStartIndex[i + 1];
+        real iRadius = iParams.x;
+        real iRadiusPi = PI * iRadius;
+
         int jStart = neighborStartIndex[j];
         int jEnd = neighborStartIndex[j + 1];
         for (int jNeighbor = jStart; jNeighbor < jEnd; jNeighbor++) {
-            int2 jIndices = neighbors[jNeighbor];
-            int k = jIndices.x;
-            bool found = false;
-            NeighborData ikData;
-            for (int iNeighbor = iStart; iNeighbor < iEnd; iNeighbor++) {
-                int2 iIndices = neighbors[iNeighbor];
-                if (k == iIndices.x) {
-                    found = true;
-                    ikData = neighborData[iIndices.y];
-                    break;
-                }
-            }
-            if (!found) {
+            int k = neighbors[jNeighbor].x;
+
+            // It is faster to recompute the i-k interaction distance and
+            // parameters to decide whether or not to include k than to try to
+            // look up its index in the neighbor list of i.
+
+            real3 kPos = trimTo3(posq[activeParticles[k]]);
+            real4 kParams = parameters[k];
+            real kRadius = kParams.x;
+            real kRadiusPi = PI * kRadius;
+
+            real4 ikDelta = delta(kPos, iPos, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
+            real pairCutoff = iRadius + kRadius;
+            if (ikDelta.w >= pairCutoff * pairCutoff) {
                 continue;
             }
-            real4 kParams = parameters[k];
-            NeighborData jkData = neighborData[jIndices.y];
+
+            real r = SQRT(ikDelta.w);
+            real rRecip = (real) 1 / r;
+            real deltaRadiusR = (iRadius * iRadius - kRadius * kRadius) * rRecip;
+            real deltaRadiusRSq = deltaRadiusR * rRecip;
+            real3 forceDir = trimTo3(ikDelta) * rRecip;
+            real3 iForceDir = iRadiusPi * ((real) -1 + deltaRadiusRSq) * forceDir;
+            real3 jForceDir = kRadiusPi * ((real) -1 - deltaRadiusRSq) * forceDir;
+
+            real4 Aik = make_real4(iForceDir.x, iForceDir.y, iForceDir.z, iRadiusPi * ((real) 2 * iRadius - r - deltaRadiusR));
+            real4 Aki = make_real4(jForceDir.x, jForceDir.y, jForceDir.z, kRadiusPi * ((real) 2 * kRadius - r + deltaRadiusR));
+
+            NeighborData jkData = neighborData[jNeighbor];
             real4 Ajk = jkData.data12;
             real4 Akj = jkData.data21;
-            real4 Aik = ikData.data12;
-            real4 Aki = ikData.data21;
 
             real4 ijkForce34 = (iParams.z + iParams.w * Aij.w) * Ajk + (iParams.z + iParams.w * Aik.w) * Akj;
             real4 jikForce34 = (jParams.z + jParams.w * Aji.w) * Aik + (jParams.z + jParams.w * Ajk.w) * Aki;

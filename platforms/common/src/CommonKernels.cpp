@@ -2905,6 +2905,11 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
         copyPairsToNeighborListKernel->addArg(neighborData);
         copyPairsToNeighborListKernel->addArg(maxNeighborPairs);
 
+        for (int i = 0; i < 5; i++) {
+            computeInteractionKernel->addArg();
+        }
+        setPeriodicBoxArgs(cc, computeInteractionKernel, 0);
+        computeInteractionKernel->addArg(cc.getPosq());
         computeInteractionKernel->addArg(cc.getLongForceBuffer());
         computeInteractionKernel->addArg(cc.getEnergyBuffer());
         computeInteractionKernel->addArg(activeParticles);
@@ -2923,6 +2928,7 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
         setPeriodicBoxArgs(cc, findBlockBoundsKernel, 0);
         setPeriodicBoxArgs(cc, findNeighborsKernel, 0);
         setPeriodicBoxArgs(cc, copyPairsToNeighborListKernel, 0);
+        setPeriodicBoxArgs(cc, computeInteractionKernel, 0);
     }
 
     int* numNeighborPairsPinned = (int*) cc.getPinnedBuffer();
@@ -2947,7 +2953,7 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
             findNeighborsKernel->setArg(14, maxNeighborPairs);
             computeNeighborStartIndicesKernel->setArg(3, maxNeighborPairs);
             copyPairsToNeighborListKernel->setArg(14, maxNeighborPairs);
-            computeInteractionKernel->setArg(9, maxNeighborPairs);
+            computeInteractionKernel->setArg(15, maxNeighborPairs);
         }
         else {
             break;
