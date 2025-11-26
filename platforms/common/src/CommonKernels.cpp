@@ -2844,7 +2844,9 @@ void CommonCalcLCPOForceKernel::initialize(const System& system, const LCPOForce
     copyPairsToNeighborListKernel = program->createKernel("copyPairsToNeighborList");
     computeInteractionKernel = program->createKernel("computeInteraction");
 
+    downloadStartEvent = cc.createEvent();
     downloadFinishEvent = cc.createEvent();
+    downloadQueue = cc.createQueue();
 
     info = new ForceInfo(force);
     cc.addForce(info);
@@ -2940,8 +2942,12 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
         findBlockBoundsKernel->execute(numBlocks);
         findNeighborsKernel->execute(numActiveParticles, findNeighborsThreadBlockSize);
 
+        downloadStartEvent->enqueue();
+        cc.setCurrentQueue(downloadQueue);
+        downloadStartEvent->queueWait(downloadQueue);
         numNeighborPairs.download(numNeighborPairsPinned, false);
         downloadFinishEvent->enqueue();
+        cc.restoreDefaultQueue();
 
         computeNeighborStartIndicesKernel->execute(maxThreadBlockSize, maxThreadBlockSize);
         copyPairsToNeighborListKernel->execute(maxNeighborPairs);

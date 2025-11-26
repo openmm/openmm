@@ -897,7 +897,8 @@ private:
     ComputeArray condensedPos, blockCenter, blockBoundingBox;
     ComputeArray numNeighborPairs, numNeighborsForAtom, neighborStartIndex, neighborPairs, neighbors, neighborData;
     ComputeKernel condensePosKernel, findBlockBoundsKernel, findNeighborsKernel, computeNeighborStartIndicesKernel, copyPairsToNeighborListKernel, computeInteractionKernel;
-    ComputeEvent downloadFinishEvent;
+    ComputeEvent downloadStartEvent, downloadFinishEvent;
+    ComputeQueue downloadQueue;
 };
 
 /**
