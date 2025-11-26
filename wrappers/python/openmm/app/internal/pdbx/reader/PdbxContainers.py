@@ -393,15 +393,18 @@ class DataCategory(DataCategoryBase):
 
     def getAttributeIndex(self,attributeName):
         try:
+            attributeName = self._catalog[attributeName.lower()]
             return self._attributeNameList.index(attributeName)
         except:
             return -1
 
     def hasAttribute(self,attributeName):
+        attributeName = self._catalog[attributeName.lower()]
         return attributeName in self._attributeNameList
     
     def getIndex(self,attributeName):
         try:
+            attributeName = self._catalog[attributeName.lower()]
             return self._attributeNameList.index(attributeName)
         except:
             return -1
