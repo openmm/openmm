@@ -110,12 +110,12 @@ void CommonUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3
         mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
         cc.getPosq().download(posq);
     }
-    
+
     // Filling in the output array is done in parallel for speed.
-    
+
     cc.getThreadPool().execute([&] (ThreadPool& threads, int threadIndex) {
         // Compute the position of each particle to return to the user.  This is done in parallel for speed.
-        
+
         const vector<int>& order = cc.getAtomIndex();
         int numParticles = cc.getNumAtoms();
         Vec3 boxVectors[3];
@@ -341,7 +341,7 @@ void CommonUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, co
             break;
         }
     }
-    
+
     // Update the vectors.
 
     for (auto ctx : cc.getAllContexts())
@@ -527,9 +527,9 @@ void CommonCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& con
         return;
     firstBond = max(firstBond, startIndex);
     lastBond = min(lastBond, endIndex-1);
-    
+
     // Record the per-bond parameters.
-    
+
     int numToSet = lastBond-firstBond+1;
     vector<mm_float2> paramVector(numToSet);
     for (int i = 0; i < numToSet; i++) {
@@ -539,9 +539,9 @@ void CommonCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& con
         paramVector[i] = mm_float2((float) length, (float) k);
     }
     params.uploadSubArray(paramVector.data(), firstBond-startIndex, numToSet);
-    
+
     // Mark that the current reordering may be invalid.
-    
+
     cc.invalidateMolecules(info, false, true);
 }
 class CommonCalcCustomBondForceKernel::ForceInfo : public ComputeForceInfo {
@@ -657,18 +657,18 @@ void CommonCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& conte
         return;
     firstBond = max(firstBond, startIndex);
     lastBond = min(lastBond, endIndex-1);
-    
+
     // Record the per-bond parameters.
-    
+
     int numToSet = lastBond-firstBond+1;
     vector<vector<double> > paramVector(numToSet);
     int atom1, atom2;
     for (int i = 0; i < numToSet; i++)
         force.getBondParameters(firstBond+i, atom1, atom2, paramVector[i]);
     params->setParameterValuesSubset(firstBond-startIndex, paramVector, true);
-    
+
     // Mark that the current reordering may be invalid.
-    
+
     cc.invalidateMolecules(info, false, true);
 }
 
@@ -741,9 +741,9 @@ void CommonCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& co
         return;
     firstAngle = max(firstAngle, startIndex);
     lastAngle = min(lastAngle, endIndex-1);
-    
+
     // Record the per-angle parameters.
-    
+
     int numToSet = lastAngle-firstAngle+1;
     vector<mm_float2> paramVector(numToSet);
     for (int i = 0; i < numToSet; i++) {
@@ -753,9 +753,9 @@ void CommonCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& co
         paramVector[i] = mm_float2((float) angle, (float) k);
     }
     params.uploadSubArray(paramVector.data(), firstAngle-startIndex, numToSet);
-    
+
     // Mark that the current reordering may be invalid.
-    
+
     cc.invalidateMolecules(info, false, true);
 }
 
@@ -873,18 +873,18 @@ void CommonCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl& cont
         return;
     firstAngle = max(firstAngle, startIndex);
     lastAngle = min(lastAngle, endIndex-1);
-    
+
     // Record the per-angle parameters.
-    
+
     int numToSet = lastAngle-firstAngle+1;
     vector<vector<double> > paramVector(numToSet);
     int atom1, atom2, atom3;
     for (int i = 0; i < numToSet; i++)
         force.getAngleParameters(firstAngle+i, atom1, atom2, atom3, paramVector[i]);
     params->setParameterValuesSubset(firstAngle-startIndex, paramVector, true);
-    
+
     // Mark that the current reordering may be invalid.
-    
+
     cc.invalidateMolecules(info, false, true);
 }
 
@@ -958,9 +958,9 @@ void CommonCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& 
         return;
     firstTorsion = max(firstTorsion, startIndex);
     lastTorsion = min(lastTorsion, endIndex-1);
-    
+
     // Record the per-torsion parameters.
-    
+
     int numToSet = lastTorsion-firstTorsion+1;
     vector<mm_float4> paramVector(numToSet);
     for (int i = 0; i < numToSet; i++) {
@@ -970,9 +970,9 @@ void CommonCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& 
         paramVector[i] = mm_float4((float) k, (float) phase, (float) periodicity, 0.0f);
     }
     params.uploadSubArray(paramVector.data(), firstTorsion-startIndex, numToSet);
-    
+
     // Mark that the current reordering may be invalid.
-    
+
     cc.invalidateMolecules(info, false, true);
 }
 
@@ -1049,9 +1049,9 @@ void CommonCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl& contex
         throw OpenMMException("updateParametersInContext: The number of torsions has changed");
     if (numTorsions == 0)
         return;
-    
+
     // Record the per-torsion parameters.
-    
+
     vector<mm_float4> paramVector1(numTorsions);
     vector<mm_float2> paramVector2(numTorsions);
     for (int i = 0; i < numTorsions; i++) {
@@ -1063,9 +1063,9 @@ void CommonCalcRBTorsionForceKernel::copyParametersToContext(ContextImpl& contex
     }
     params1.upload(paramVector1);
     params2.upload(paramVector2);
-    
+
     // Mark that the current reordering may be invalid.
-    
+
     cc.invalidateMolecules(info, false, true);
 }
 
@@ -1192,9 +1192,9 @@ void CommonCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl& co
     for (int i = 0; i < numToSet; i++)
         force.getTorsionParameters(firstTorsion+i, atom1, atom2, atom3, atom4, paramVector[i]);
     params->setParameterValuesSubset(firstTorsion-startIndex, paramVector, true);
-    
+
     // Mark that the current reordering may be invalid.
-    
+
     cc.invalidateMolecules(info, false, true);
 }
 
@@ -1438,18 +1438,18 @@ void CommonCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& c
         return;
     firstParticle = max(firstParticle, startIndex);
     lastParticle = min(lastParticle, endIndex-1);
-    
+
     // Record the per-particle parameters.
-    
+
     int numToSet = lastParticle-firstParticle+1;
     vector<vector<double> > paramVector(numToSet);
     int particle;
     for (int i = 0; i < numToSet; i++)
         force.getParticleParameters(firstParticle+i, particle, paramVector[i]);
     params->setParameterValuesSubset(firstParticle-startIndex, paramVector, true);
-    
+
     // Mark that the current reordering may be invalid.
-    
+
     cc.invalidateMolecules(info, true, false);
 }
 
@@ -1520,7 +1520,7 @@ void CommonCalcCustomCompoundBondForceKernel::initialize(const System& system, c
         string arrayName = cc.getBondedUtilities().addArgument(tabulatedFunctionArrays[i], width == 1 ? "float" : "float"+cc.intToString(width));
         functionDefinitions.push_back(make_pair(name, arrayName));
     }
-    
+
     // Record information about parameters.
 
     map<string, string> variables;
@@ -1679,9 +1679,9 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
         return;
     info = new ForceInfo(force);
     cc.addForce(info);
-    
+
     // Record the groups.
-    
+
     numGroups = force.getNumGroups();
     vector<int> groupParticleVec;
     vector<double> groupWeightVec;
@@ -1713,9 +1713,9 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
     groupOffsets.upload(groupOffsetVec);
     groupForces.initialize<long long>(cc, numGroups*3, "groupForces");
     cc.addAutoclearBuffer(groupForces);
-    
+
     // Record the bonds.
-    
+
     int groupsPerBond = force.getNumGroupsPerBond();
     vector<int> bondGroupVec(numBonds*groupsPerBond);
     params = new ComputeParameterSet(cc, force.getNumPerBondParameters(), numBonds, "customCentroidBondParams", false, cc.getUseDoublePrecision());
@@ -1753,7 +1753,7 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
             extraArgs << width;
         extraArgs << "* RESTRICT " << arrayName;
     }
-    
+
     // Record information about parameters.
 
     map<string, string> variables;
@@ -1828,9 +1828,9 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
             forceExpressions[forceName+".z -= "] = forceExpressionZ;
     }
     compute << cc.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp", "real", force.usesPeriodicBoundaryConditions());
-    
+
     // Save the forces to global memory.
-    
+
     for (int i = 0; i < groupsPerBond; i++) {
         compute<<"ATOMIC_ADD(&groupForce[group"<<(i+1)<<"], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".x));\n";
         compute<<"ATOMIC_ADD(&groupForce[group"<<(i+1)<<"+numParticleGroups], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".y));\n";
@@ -2105,14 +2105,14 @@ double CommonCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
 
 void CommonCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force) {
     // Make sure the new parameters are acceptable.
-    
+
     ContextSelector selector(cc);
     int numParticles = force.getNumParticles();
     if (numParticles != cc.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
-    
+
     // Record the per-particle parameters.
-    
+
     vector<double> chargeVector(cc.getPaddedNumAtoms(), 0.0);
     vector<mm_float2> paramsVector(cc.getPaddedNumAtoms());
     const double dielectricOffset = 0.009;
@@ -2127,9 +2127,9 @@ void CommonCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context,
         paramsVector[i] = mm_float2(1,1);
     charges.upload(chargeVector, true);
     params.upload(paramsVector);
-    
+
     // Mark that the current reordering may be invalid.
-    
+
     cc.invalidateMolecules(info, true, false);
 }
 
@@ -2228,7 +2228,7 @@ void CommonCalcGayBerneForceKernel::initialize(const System& system, const GayBe
     epsParams.upload(epsParamsVector);
     scale.upload(scaleVector);
     axisParticleIndices.upload(axisParticleVector);
-    
+
     // Record exceptions and exclusions.
 
     vector<mm_float2> exceptionParamsVec;
@@ -2256,7 +2256,7 @@ void CommonCalcGayBerneForceKernel::initialize(const System& system, const GayBe
     exceptionParams.initialize<mm_float2>(cc, max(1, numExceptions), "exceptionParams");
     if (numExceptions > 0)
         exceptionParams.upload(exceptionParamsVec);
-    
+
     // Create data structures used for the neighbor list.
 
     int numAtomBlocks = (numRealParticles+31)/32;
@@ -2271,12 +2271,12 @@ void CommonCalcGayBerneForceKernel::initialize(const System& system, const GayBe
     event = cc.createEvent();
 
     // Create array for accumulating torques.
-    
+
     torque.initialize<long long>(cc, 3*cc.getPaddedNumAtoms(), "torque");
     cc.addAutoclearBuffer(torque);
 
     // Create the kernels.
-    
+
     nonbondedMethod = force.getNonbondedMethod();
     bool useCutoff = (nonbondedMethod != GayBerneForce::NoCutoff);
     bool usePeriodic = (nonbondedMethod == GayBerneForce::CutoffPeriodic);
@@ -2288,9 +2288,9 @@ void CommonCalcGayBerneForceKernel::initialize(const System& system, const GayBe
         defines["USE_CUTOFF"] = 1;
         if (usePeriodic)
             defines["USE_PERIODIC"] = "1";
-        
+
         // Compute the switching coefficients.
-        
+
         if (force.getUseSwitchingFunction()) {
             defines["SWITCH_CUTOFF"] = cc.doubleToString(force.getSwitchingDistance());
             defines["SWITCH_C3"] = cc.doubleToString(10/pow(force.getSwitchingDistance()-cutoff, 3.0));
@@ -2393,7 +2393,7 @@ double CommonCalcGayBerneForceKernel::execute(ContextImpl& context, bool include
             event->wait();
             if (*count <= maxNeighborBlocks)
                 break;
-            
+
             // There wasn't enough room for the neighbor list, so we need to recreate it.
 
             maxNeighborBlocks = (int) ceil((*count)*1.1);
@@ -2411,7 +2411,7 @@ double CommonCalcGayBerneForceKernel::execute(ContextImpl& context, bool include
 
 void CommonCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context, const GayBerneForce& force) {
     // Make sure the new parameters are acceptable.
-    
+
     if (force.getNumParticles() != cc.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
     vector<int> exceptions;
@@ -2425,9 +2425,9 @@ void CommonCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context
             throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
     }
     int numExceptions = exceptionAtoms.size();
-    
+
     // Record the per-particle parameters.
-    
+
     ContextSelector selector(cc);
     vector<mm_float4> sigParamsVector(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
     vector<mm_float2> epsParamsVector(cc.getPaddedNumAtoms(), mm_float2(0, 0));
@@ -2445,9 +2445,9 @@ void CommonCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context
     sigParams.upload(sigParamsVector);
     epsParams.upload(epsParamsVector);
     scale.upload(scaleVector);
-    
+
     // Record the exceptions.
-    
+
     if (numExceptions > 0) {
         vector<mm_float2> exceptionParamsVec(numExceptions);
         for (int i = 0; i < numExceptions; i++) {
@@ -2465,7 +2465,7 @@ void CommonCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context
 void CommonCalcGayBerneForceKernel::sortAtoms() {
     // Sort the list of atoms by type to avoid thread divergence.  This is executed every time
     // the atoms are reordered.
-    
+
     int nextIndex = 0;
     vector<int> particles(cc.getPaddedNumAtoms(), 0);
     const vector<int>& order = cc.getAtomIndex();
@@ -2478,9 +2478,9 @@ void CommonCalcGayBerneForceKernel::sortAtoms() {
         }
     }
     sortedParticles.upload(particles);
-    
+
     // Update the list of exception particles.
-    
+
     int numExceptions = exceptionAtoms.size();
     if (numExceptions > 0) {
         vector<mm_int4> exceptionParticlesVec(numExceptions);
@@ -2488,9 +2488,9 @@ void CommonCalcGayBerneForceKernel::sortAtoms() {
             exceptionParticlesVec[i] = mm_int4(exceptionAtoms[i].first, exceptionAtoms[i].second, inverseOrder[exceptionAtoms[i].first], inverseOrder[exceptionAtoms[i].second]);
         exceptionParticles.upload(exceptionParticlesVec);
     }
-    
+
     // Rebuild the list of exclusions.
-    
+
     vector<vector<int> > excludedAtoms(numRealParticles);
     for (int i = 0; i < excludedPairs.size(); i++) {
         int first = inverseOrder[min(excludedPairs[i].first, excludedPairs[i].second)];
@@ -2566,7 +2566,7 @@ public:
         return new TabulatedFunctionWrapper(tabulatedFunctions, index);
     }
 private:
-    vector<Lepton::CustomFunction*>& tabulatedFunctions;    
+    vector<Lepton::CustomFunction*>& tabulatedFunctions;
     int index;
 };
 
@@ -2625,17 +2625,17 @@ void CommonCalcCustomCVForceKernel::initialize(const System& system, const Custo
     ComputeContext& cc2 = getInnerComputeContext(innerContext);
     for (auto& param : cc2.getEnergyParamDerivNames())
         cc.addEnergyParameterDerivative(param);
-    
+
     // Create arrays for storing information.
-    
+
     cvForces.resize(numCVs);
     for (int i = 0; i < numCVs; i++)
         cvForces[i].initialize<long long>(cc, 3*cc.getPaddedNumAtoms(), "cvForce");
     invAtomOrder.initialize<int>(cc, cc.getPaddedNumAtoms(), "invAtomOrder");
     innerInvAtomOrder.initialize<int>(cc, cc.getPaddedNumAtoms(), "innerInvAtomOrder");
-    
+
     // Create the kernels.
-    
+
     stringstream args, add;
     for (int i = 0; i < numCVs; i++) {
         args << ", GLOBAL mm_long * RESTRICT force" << i << ", real dEdV" << i;
@@ -2735,9 +2735,9 @@ void CommonCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextImpl&
     ComputeContext& cc2 = getInnerComputeContext(innerContext);
     if (!hasInitializedListeners) {
         hasInitializedListeners = true;
-        
+
         // Initialize the listeners.
-        
+
         ReorderListener* listener1 = new ReorderListener(cc, invAtomOrder);
         ReorderListener* listener2 = new ReorderListener(cc2, innerInvAtomOrder);
         cc.addReorderListener(listener1);
@@ -2766,6 +2766,291 @@ void CommonCalcCustomCVForceKernel::copyParametersToContext(ContextImpl& context
         }
         tabulatedFunctions[i] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
     }
+}
+
+class CommonCalcLCPOForceKernel::ForceInfo : public ComputeForceInfo {
+public:
+    ForceInfo(const LCPOForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double radius1, p11, p21, p31, p41;
+        double radius2, p12, p22, p32, p42;
+        force.getParticleParameters(particle1, radius1, p11, p21, p31, p41);
+        force.getParticleParameters(particle2, radius2, p12, p22, p32, p42);
+        return radius1 == radius2 && p11 == p12 && p21 == p22 && p31 == p32 && p41 == p42;
+    }
+private:
+    const LCPOForce& force;
+};
+
+void CommonCalcLCPOForceKernel::initialize(const System& system, const LCPOForce& force) {
+    ContextSelector selector(cc);
+
+    if (cc.getNumContexts() > 1) {
+        throw OpenMMException("LCPOForce does not support using multiple devices");
+    }
+
+    usePeriodic = force.usesPeriodicBoundaryConditions();
+
+    doInteraction = false;
+    oneBodyEnergy = cutoffSquared = 0.0;
+    double surfaceTension = force.getSurfaceTension();
+    vector<int> hostActiveParticles;
+    vector<mm_double4> hostParameters;
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double radius, p1, p2, p3, p4;
+        force.getParticleParameters(i, radius, p1, p2, p3, p4);
+        p1 *= surfaceTension;
+        p2 *= surfaceTension;
+        p3 *= surfaceTension;
+        p4 *= surfaceTension;
+        oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
+
+        if (radius != 0.0) {
+            cutoffSquared = max(cutoffSquared, radius);
+            hostActiveParticles.push_back(i);
+            hostParameters.push_back(mm_double4(radius, p2, p3, p4));
+            if (p2 != 0.0 || p3 != 0.0 || p4 != 0.0) {
+                doInteraction = true;
+            }
+        }
+    }
+    cutoffSquared *= 2.0;
+    cutoffSquared *= cutoffSquared;
+    numActiveParticles = hostActiveParticles.size();
+    numBlocks = (numActiveParticles + 31) / 32;
+    maxNeighborPairs = 4 * numActiveParticles;
+
+    if (!numActiveParticles) {
+        return;
+    }
+
+    paddedNumActiveParticles = numBlocks * 32;
+    hostParameters.resize(paddedNumActiveParticles);
+
+    int elementSize = cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float);
+    activeParticles.initialize<int>(cc, numActiveParticles, "activeParticles");
+    parameters.initialize(cc, paddedNumActiveParticles, 4 * elementSize, "parameters");
+    condensedPos.initialize(cc, paddedNumActiveParticles, 3 * elementSize, "condensedPos");
+    blockCenter.initialize(cc, numBlocks, 4 * elementSize, "blockCenter");
+    blockBoundingBox.initialize(cc, numBlocks, 4 * elementSize, "blockBoundingBox");
+    numNeighborPairs.initialize<int>(cc, 1, "numNeighborPairs");
+    numNeighborsForAtom.initialize<int>(cc, paddedNumActiveParticles, "numNeighborsForAtom");
+    neighborStartIndex.initialize<int>(cc, numActiveParticles + 1, "neighborStartIndex");
+    neighborPairs.initialize<mm_int2>(cc, maxNeighborPairs, "neighborPairs");
+    neighbors.initialize<mm_int2>(cc, maxNeighborPairs, "neighbors");
+    neighborData.initialize(cc, maxNeighborPairs, 8 * elementSize, "neighborData");
+
+    activeParticles.upload(hostActiveParticles);
+    parameters.upload(hostParameters, true);
+
+    maxThreadBlockSize = cc.getMaxThreadBlockSize();
+    numForceThreadBlocks = cc.getNonbondedUtilities().getNumForceThreadBlocks();
+    forceThreadBlockSize = cc.getNonbondedUtilities().getForceThreadBlockSize();
+    findNeighborsThreadBlockSize = (cc.getSIMDWidth() >= 32 ? 128 : 32);
+
+    map<string, string> defines;
+    defines["FIND_NEIGHBORS_THREAD_BLOCK_SIZE"] = cc.intToString(findNeighborsThreadBlockSize);
+    defines["NUM_ACTIVE"] = cc.intToString(numActiveParticles);
+    defines["NUM_BLOCKS"] = cc.intToString(numBlocks);
+    defines["PADDED_NUM_ACTIVE"] = cc.intToString(paddedNumActiveParticles);
+    defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
+    defines["PI"] = cc.doubleToString(M_PI);
+    defines["THREAD_BLOCK_SIZE"] = cc.intToString(maxThreadBlockSize);
+    defines["WARP_SIZE"] = cc.intToString(32);
+    if (usePeriodic) {
+        defines["USE_PERIODIC"] = "1";
+    }
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::lcpo, defines);
+    condensePosKernel = program->createKernel("condensePos");
+    findBlockBoundsKernel = program->createKernel("findBlockBounds");
+    findNeighborsKernel = program->createKernel("findNeighbors");
+    computeNeighborStartIndicesKernel = program->createKernel("computeNeighborStartIndices");
+    copyPairsToNeighborListKernel = program->createKernel("copyPairsToNeighborList");
+    computeInteractionKernel = program->createKernel("computeInteraction");
+
+    downloadStartEvent = cc.createEvent();
+    downloadFinishEvent = cc.createEvent();
+    downloadQueue = cc.createQueue();
+
+    info = new ForceInfo(force);
+    cc.addForce(info);
+}
+
+double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    ContextSelector selector(cc);
+
+    if (!numActiveParticles) {
+        return oneBodyEnergy;
+    }
+
+    if (!hasInitializedKernel) {
+        cc.clearBuffer(condensedPos);
+
+        condensePosKernel->addArg(activeParticles);
+        condensePosKernel->addArg(cc.getPosq());
+        condensePosKernel->addArg(condensedPos);
+
+        for (int i = 0; i < 5; i++) {
+            findBlockBoundsKernel->addArg();
+        }
+        setPeriodicBoxArgs(cc, findBlockBoundsKernel, 0);
+        findBlockBoundsKernel->addArg(condensedPos);
+        findBlockBoundsKernel->addArg(blockCenter);
+        findBlockBoundsKernel->addArg(blockBoundingBox);
+        findBlockBoundsKernel->addArg(numNeighborPairs);
+
+        for (int i = 0; i < 5; i++) {
+            findNeighborsKernel->addArg();
+        }
+        setPeriodicBoxArgs(cc, findNeighborsKernel, 0);
+        findNeighborsKernel->addArg(condensedPos);
+        findNeighborsKernel->addArg(parameters);
+        findNeighborsKernel->addArg(blockCenter);
+        findNeighborsKernel->addArg(blockBoundingBox);
+        findNeighborsKernel->addArg(numNeighborPairs);
+        findNeighborsKernel->addArg(numNeighborsForAtom);
+        findNeighborsKernel->addArg(neighborPairs);
+        if (cc.getUseDoublePrecision()) {
+            findNeighborsKernel->addArg(cutoffSquared);
+        }
+        else {
+            findNeighborsKernel->addArg((float) cutoffSquared);
+        }
+        findNeighborsKernel->addArg(maxNeighborPairs);
+
+        computeNeighborStartIndicesKernel->addArg(numNeighborPairs);
+        computeNeighborStartIndicesKernel->addArg(numNeighborsForAtom);
+        computeNeighborStartIndicesKernel->addArg(neighborStartIndex);
+        computeNeighborStartIndicesKernel->addArg(maxNeighborPairs);
+
+        for (int i = 0; i < 5; i++) {
+            copyPairsToNeighborListKernel->addArg();
+        }
+        setPeriodicBoxArgs(cc, copyPairsToNeighborListKernel, 0);
+        copyPairsToNeighborListKernel->addArg(condensedPos);
+        copyPairsToNeighborListKernel->addArg(parameters);
+        copyPairsToNeighborListKernel->addArg(numNeighborPairs);
+        copyPairsToNeighborListKernel->addArg(numNeighborsForAtom);
+        copyPairsToNeighborListKernel->addArg(neighborStartIndex);
+        copyPairsToNeighborListKernel->addArg(neighborPairs);
+        copyPairsToNeighborListKernel->addArg(neighbors);
+        copyPairsToNeighborListKernel->addArg(neighborData);
+        copyPairsToNeighborListKernel->addArg(maxNeighborPairs);
+
+        for (int i = 0; i < 5; i++) {
+            computeInteractionKernel->addArg();
+        }
+        setPeriodicBoxArgs(cc, computeInteractionKernel, 0);
+        computeInteractionKernel->addArg(condensedPos);
+        computeInteractionKernel->addArg(cc.getLongForceBuffer());
+        computeInteractionKernel->addArg(cc.getEnergyBuffer());
+        computeInteractionKernel->addArg(activeParticles);
+        computeInteractionKernel->addArg(parameters);
+        computeInteractionKernel->addArg(numNeighborPairs);
+        computeInteractionKernel->addArg(neighborStartIndex);
+        computeInteractionKernel->addArg(neighborPairs);
+        computeInteractionKernel->addArg(neighbors);
+        computeInteractionKernel->addArg(neighborData);
+        computeInteractionKernel->addArg(maxNeighborPairs);
+
+        hasInitializedKernel = true;
+    }
+
+    if (usePeriodic) {
+        setPeriodicBoxArgs(cc, findBlockBoundsKernel, 0);
+        setPeriodicBoxArgs(cc, findNeighborsKernel, 0);
+        setPeriodicBoxArgs(cc, copyPairsToNeighborListKernel, 0);
+        setPeriodicBoxArgs(cc, computeInteractionKernel, 0);
+    }
+
+    int* numNeighborPairsPinned = (int*) cc.getPinnedBuffer();
+    while (true) {
+        condensePosKernel->execute(numActiveParticles);
+        findBlockBoundsKernel->execute(numBlocks);
+        findNeighborsKernel->execute(numActiveParticles, findNeighborsThreadBlockSize);
+
+        downloadStartEvent->enqueue();
+        cc.setCurrentQueue(downloadQueue);
+        downloadStartEvent->queueWait(downloadQueue);
+        numNeighborPairs.download(numNeighborPairsPinned, false);
+        downloadFinishEvent->enqueue();
+        cc.restoreDefaultQueue();
+
+        computeNeighborStartIndicesKernel->execute(maxThreadBlockSize, maxThreadBlockSize);
+        copyPairsToNeighborListKernel->execute(maxNeighborPairs);
+        computeInteractionKernel->execute(numForceThreadBlocks * forceThreadBlockSize, forceThreadBlockSize);
+
+        downloadFinishEvent->wait();
+        int hostNumNeighborPairs = *numNeighborPairsPinned;
+        if (hostNumNeighborPairs > maxNeighborPairs) {
+            maxNeighborPairs = (int) (1.1 * hostNumNeighborPairs);
+            neighborPairs.resize(maxNeighborPairs);
+            neighbors.resize(maxNeighborPairs);
+            neighborData.resize(maxNeighborPairs);
+            findNeighborsKernel->setArg(13, maxNeighborPairs);
+            computeNeighborStartIndicesKernel->setArg(3, maxNeighborPairs);
+            copyPairsToNeighborListKernel->setArg(13, maxNeighborPairs);
+            computeInteractionKernel->setArg(15, maxNeighborPairs);
+        }
+        else {
+            break;
+        }
+    }
+
+    return oneBodyEnergy;
+}
+
+void CommonCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const LCPOForce& force) {
+    ContextSelector selector(cc);
+
+    doInteraction = false;
+    oneBodyEnergy = cutoffSquared = 0.0;
+    double surfaceTension = force.getSurfaceTension();
+    vector<int> hostActiveParticles;
+    vector<mm_double4> hostParameters;
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double radius, p1, p2, p3, p4;
+        force.getParticleParameters(i, radius, p1, p2, p3, p4);
+        p1 *= surfaceTension;
+        p2 *= surfaceTension;
+        p3 *= surfaceTension;
+        p4 *= surfaceTension;
+        oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
+
+        if (radius != 0.0) {
+            cutoffSquared = max(cutoffSquared, radius);
+            hostActiveParticles.push_back(i);
+            hostParameters.push_back(mm_double4(radius, p2, p3, p4));
+            if (p2 != 0.0 || p3 != 0.0 || p4 != 0.0) {
+                doInteraction = true;
+            }
+        }
+    }
+    cutoffSquared *= 2.0;
+    cutoffSquared *= cutoffSquared;
+    if (hostActiveParticles.size() != numActiveParticles) {
+        throw OpenMMException("updateParametersInContext: The number of non-excluded particles for LCPO has changed");
+    }
+
+    if (!numActiveParticles) {
+        return;
+    }
+
+    hostParameters.resize(paddedNumActiveParticles);
+    activeParticles.upload(hostActiveParticles);
+    parameters.upload(hostParameters, true);
+
+    if (hasInitializedKernel) {
+        if (cc.getUseDoublePrecision()) {
+            findNeighborsKernel->setArg(12, cutoffSquared);
+        }
+        else {
+            findNeighborsKernel->setArg(12, (float) cutoffSquared);
+        }
+    }
+
+    cc.invalidateMolecules(info);
 }
 
 void CommonIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
@@ -2821,7 +3106,7 @@ void CommonIntegrateVerletStepKernel::execute(ContextImpl& context, const Verlet
     cc.setTime(cc.getTime()+dt);
     cc.setStepCount(cc.getStepCount()+1);
     cc.reorderAtoms();
-    
+
     // Reduce UI lag.
 
     flushPeriodically(cc);
@@ -2913,7 +3198,7 @@ void CommonIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, cons
     cc.setTime(cc.getTime()+stepSize);
     cc.setStepCount(cc.getStepCount()+1);
     cc.reorderAtoms();
-    
+
     // Reduce UI lag.
 
     flushPeriodically(cc);
@@ -2996,7 +3281,7 @@ void CommonIntegrateBrownianStepKernel::execute(ContextImpl& context, const Brow
     cc.setTime(cc.getTime()+stepSize);
     cc.setStepCount(cc.getStepCount()+1);
     cc.reorderAtoms();
-    
+
     // Reduce UI lag.
 
     flushPeriodically(cc);
@@ -3077,7 +3362,7 @@ double CommonIntegrateVariableVerletStepKernel::execute(ContextImpl& context, co
 
     kernel2->execute(numAtoms);
     integration.computeVirtualSites();
-    
+
     // Reduce UI lag.
 
     flushPeriodically(cc);
@@ -3193,7 +3478,7 @@ double CommonIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
     integration.applyConstraints(integrator.getConstraintTolerance());
     kernel3->execute(numAtoms);
     integration.computeVirtualSites();
-    
+
     // Reduce UI lag.
 
     flushPeriodically(cc);
@@ -3466,7 +3751,7 @@ private:
 
 void CommonCalcRMSDForceKernel::initialize(const System& system, const RMSDForce& force) {
     // Create data structures.
-    
+
     ContextSelector selector(cc);
     bool useDouble = cc.getUseDoublePrecision();
     int elementSize = (useDouble ? sizeof(double) : sizeof(float));
@@ -3481,7 +3766,7 @@ void CommonCalcRMSDForceKernel::initialize(const System& system, const RMSDForce
     recordParameters(force);
     info = new ForceInfo(force);
     cc.addForce(info);
-    
+
     // Create the kernels.
 
     blockSize = min(256, cc.getMaxThreadBlockSize());
@@ -3506,7 +3791,7 @@ void CommonCalcRMSDForceKernel::initialize(const System& system, const RMSDForce
 
 void CommonCalcRMSDForceKernel::recordParameters(const RMSDForce& force) {
     // Record the parameters and center the reference positions.
-    
+
     particleVec = force.getParticles();
     if (particleVec.size() == 0)
         for (int i = 0; i < cc.getNumAtoms(); i++)
@@ -3544,7 +3829,7 @@ double CommonCalcRMSDForceKernel::executeImpl(ContextImpl& context) {
     int numParticles = particles.getSize();
     kernel1->setArg(0, numParticles);
     kernel1->execute(blockSize, blockSize);
-    
+
     // Download the results, build the F matrix, and find the maximum eigenvalue
     // and eigenvector.
 
@@ -3556,7 +3841,7 @@ double CommonCalcRMSDForceKernel::executeImpl(ContextImpl& context) {
         if (b[i] != b[i])
             throw OpenMMException("NaN encountered during RMSD force calculation");
     }
-    
+
     Array2D<double> F(4, 4);
     F[0][0] =  b[0*3+0] + b[1*3+1] + b[2*3+2];
     F[1][0] =  b[1*3+2] - b[2*3+1];
@@ -3609,7 +3894,7 @@ double CommonCalcRMSDForceKernel::executeImpl(ContextImpl& context) {
     b[8] = q00-q11-q22+q33;
 
     // Upload it to the device and invoke the kernel to apply forces.
-    
+
     buffer.upload(b);
     kernel2->setArg(0, numParticles);
     kernel2->execute(numParticles);
@@ -3626,9 +3911,9 @@ void CommonCalcRMSDForceKernel::copyParametersToContext(ContextImpl& context, co
     if (numParticles != particles.getSize())
         particles.resize(numParticles);
     recordParameters(force);
-    
+
     // Mark that the current reordering may be invalid.
-    
+
     info->updateParticles();
     cc.invalidateMolecules(info);
 }
@@ -4450,9 +4735,9 @@ void CommonCalcCustomCPPForceKernel::beginComputation(bool includeForces, bool i
     if ((groups&forceGroupFlag) == 0)
         return;
     contextImpl.getPositions(positionsVec);
-    
+
     // The actual force computation will be done on a different thread.
-    
+
     cc.getWorkThread().addTask(new ExecuteTask(*this, includeForces));
 }
 
@@ -4479,19 +4764,19 @@ double CommonCalcCustomCPPForceKernel::addForces(bool includeForces, bool includ
         return 0;
 
     // Wait until executeOnWorkerThread() is finished.
-    
+
     if (cc.getNumContexts() == 1)
         cc.getWorkThread().flush();
 
     // Add in the forces.
-    
+
     if (includeForces) {
         ContextSelector selector(cc);
         addForcesKernel->execute(cc.getNumAtoms());
     }
-    
+
     // Return the energy.
-    
+
     return energy;
 }
 

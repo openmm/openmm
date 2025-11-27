@@ -56,9 +56,10 @@ public:
      * @param usePeriodic         whether to apply periodic boundary conditions
      * @param maxDistance         the neighbor list will contain all pairs that are within this distance of each other
      * @param threads             used for parallelization
+     * @param indices             numAtoms indices into the atomLocations array for indirect lookup
      */
     void computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
-            const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads);
+            const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads, const std::vector<int>* indices = NULL);
     /**
      * Build a dense neighbor list, in which every atom interacts with every other (except exclusions), regardless of distance.
      * 
@@ -83,11 +84,16 @@ public:
 
     const std::vector<BlockExclusionMask>& getBlockExclusions(int blockIndex) const;
 
+private:
+    template<bool USE_INDICES>
+    void computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
+            const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads);
+
     /**
      * This routine contains the code executed by each thread.
      */
+    template<bool USE_INDICES>
     void threadComputeNeighborList(ThreadPool& threads, int threadIndex);
-    void runThread(int index);
 private:
     int blockSize;
     std::vector<int> sortedAtoms;
@@ -100,6 +106,7 @@ private:
     Voxels* voxels;
     const std::vector<std::set<int> >* exclusions;
     const float* atomLocations;
+    const int* indices;
     Vec3 periodicBoxVectors[3];
     int numAtoms;
     bool usePeriodic, dense;

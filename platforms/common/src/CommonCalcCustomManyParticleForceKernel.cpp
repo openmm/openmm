@@ -353,7 +353,11 @@ void CommonCalcCustomManyParticleForceKernel::initialize(const System& system, c
     replacements["COMPUTE_INTERACTION"] = compute.str();
     replacements["NUM_CANDIDATE_COMBINATIONS"] = numCombinations.str();
     replacements["FIND_ATOMS_FOR_COMBINATION_INDEX"] = atomsForCombination.str();
-    replacements["IS_VALID_COMBINATION"] = isValidCombination.str();
+    string isValidCombinationStr = isValidCombination.str();
+    if (isValidCombinationStr.empty()) {
+        isValidCombinationStr = "true";
+    }
+    replacements["IS_VALID_COMBINATION"] = isValidCombinationStr;
     replacements["VERIFY_CUTOFF"] = verifyCutoff.str();
     replacements["VERIFY_EXCLUSIONS"] = verifyExclusions.str();
     replacements["PERMUTE_ATOMS"] = permute.str();

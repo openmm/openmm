@@ -412,6 +412,17 @@ CpuNeighborList::CpuNeighborList(int blockSize) : blockSize(blockSize) {
 }
 
 void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const vector<set<int> >& exclusions,
+            const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads, const std::vector<int>* indices) {
+    if (indices != NULL) {
+        this->indices = indices->data();
+        computeNeighborList<true>(numAtoms, atomLocations, exclusions, periodicBoxVectors, usePeriodic, maxDistance, threads);
+    } else {
+        computeNeighborList<false>(numAtoms, atomLocations, exclusions, periodicBoxVectors, usePeriodic, maxDistance, threads);
+    }
+}
+
+template<bool USE_INDICES>
+void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const vector<set<int> >& exclusions,
             const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads) {
     dense = false;
     int numBlocks = (numAtoms+blockSize-1)/blockSize;
@@ -433,10 +444,12 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
     
     // Identify the range of atom positions along each axis.
     
-    fvec4 minPos(&atomLocations[0]);
+    int minPosIndex = USE_INDICES ? indices[0] : 0;
+    fvec4 minPos(&atomLocations[4*minPosIndex]);
     fvec4 maxPos = minPos;
-    for (int i = 0; i < numAtoms; i++) {
-        fvec4 pos(&atomLocations[4*i]);
+    for (int i = 1; i < numAtoms; i++) {
+        int posIndex = USE_INDICES ? indices[i] : i;
+        fvec4 pos(&atomLocations[4*posIndex]);
         minPos = min(minPos, pos);
         maxPos = max(maxPos, pos);
     }
@@ -450,7 +463,7 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
     // Sort the atoms based on a Hilbert curve.
     
     atomBins.resize(numAtoms);
-    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeNeighborList(threads, threadIndex); });
+    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeNeighborList<USE_INDICES>(threads, threadIndex); });
     threads.waitForThreads();
     sort(atomBins.begin(), atomBins.end());
 
@@ -467,9 +480,10 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
     for (int i = 0; i < numAtoms; i++) {
         int atomIndex = atomBins[i].second;
         sortedAtoms[i] = atomIndex;
-        fvec4 atomPos(&atomLocations[4*atomIndex]);
+        int atomPosIndex = USE_INDICES ? indices[atomIndex] : atomIndex;
+        fvec4 atomPos(&atomLocations[4*atomPosIndex]);
         atomPos.store(&sortedPositions[4*i]);
-        voxels.insert(i, &atomLocations[4*atomIndex]);
+        voxels.insert(i, &atomLocations[4*atomPosIndex]);
     }
     voxels.sortItems();
     this->voxels = &voxels;
@@ -573,6 +587,7 @@ CpuNeighborList::NeighborIterator CpuNeighborList::getNeighborIterator(int block
         return NeighborIterator(blockNeighbors[blockIndex], blockExclusions[blockIndex]);
 }
 
+template<bool USE_INDICES>
 void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadIndex) {
     // Compute the positions of atoms along the Hilbert curve.
 
@@ -581,7 +596,8 @@ void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadI
     bitmask_t coords[3];
     int numThreads = threads.getNumThreads();
     for (int i = threadIndex; i < numAtoms; i += numThreads) {
-        const float* pos = &atomLocations[4*i];
+        int posIndex = USE_INDICES ? indices[i] : i;
+        const float* pos = &atomLocations[4*posIndex];
         coords[0] = (bitmask_t) ((pos[0]-minx)*invBinWidth);
         coords[1] = (bitmask_t) ((pos[1]-miny)*invBinWidth);
         coords[2] = (bitmask_t) ((pos[2]-minz)*invBinWidth);
@@ -609,7 +625,8 @@ void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadI
         atomVoxelIndex.resize(atomsInBlock);
         for (int j = 0; j < atomsInBlock; j++) {
             blockAtoms[j] = sortedAtoms[firstIndex+j];
-            atomVoxelIndex[j] = voxels->getVoxelIndex(&atomLocations[4*blockAtoms[j]]);
+            int posIndex = USE_INDICES ? indices[blockAtoms[j]] : blockAtoms[j];
+            atomVoxelIndex[j] = voxels->getVoxelIndex(&atomLocations[4*posIndex]);
         }
         fvec4 minPos(&sortedPositions[4*firstIndex]);
         fvec4 maxPos = minPos;
