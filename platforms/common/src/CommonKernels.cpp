@@ -2800,11 +2800,10 @@ void CommonCalcLCPOForceKernel::initialize(const System& system, const LCPOForce
     }
 
     paddedNumActiveParticles = numBlocks * 32;
-    hostActiveParticles.resize(paddedNumActiveParticles, 0);
     hostParameters.resize(paddedNumActiveParticles);
 
     int elementSize = cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float);
-    activeParticles.initialize<int>(cc, paddedNumActiveParticles, "activeParticles");
+    activeParticles.initialize<int>(cc, numActiveParticles, "activeParticles");
     parameters.initialize(cc, paddedNumActiveParticles, 4 * elementSize, "parameters");
     condensedPos.initialize(cc, paddedNumActiveParticles, 3 * elementSize, "condensedPos");
     blockCenter.initialize(cc, numBlocks, 4 * elementSize, "blockCenter");
@@ -2860,6 +2859,8 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
     }
 
     if (!hasInitializedKernel) {
+        cc.clearBuffer(condensedPos);
+
         condensePosKernel->addArg(activeParticles);
         condensePosKernel->addArg(cc.getPosq());
         condensePosKernel->addArg(condensedPos);
@@ -2886,7 +2887,8 @@ double CommonCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForc
         findNeighborsKernel->addArg(neighborPairs);
         if (cc.getUseDoublePrecision()) {
             findNeighborsKernel->addArg(cutoffSquared);
-        } else {
+        }
+        else {
             findNeighborsKernel->addArg((float) cutoffSquared);
         }
         findNeighborsKernel->addArg(maxNeighborPairs);
@@ -3009,17 +3011,16 @@ void CommonCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, co
         return;
     }
 
-    hostActiveParticles.resize(paddedNumActiveParticles, 0);
     hostParameters.resize(paddedNumActiveParticles);
-
     activeParticles.upload(hostActiveParticles);
     parameters.upload(hostParameters, true);
 
     if (hasInitializedKernel) {
         if (cc.getUseDoublePrecision()) {
-            findNeighborsKernel->setArg(13, cutoffSquared);
-        } else {
-            findNeighborsKernel->setArg(13, (float) cutoffSquared);
+            findNeighborsKernel->setArg(12, cutoffSquared);
+        }
+        else {
+            findNeighborsKernel->setArg(12, (float) cutoffSquared);
         }
     }
 
