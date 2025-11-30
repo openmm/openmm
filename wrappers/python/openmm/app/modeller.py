@@ -424,7 +424,7 @@ class Modeller(object):
         forcefield : ForceField
             the ForceField to use for determining van der Waals radii and atomic charges
         model : str='tip3p'
-            the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', 'tip5p', and 'swm4ndp' (polarizable).
+            the water model to use.  Supported values are 'tip3p', 'spce', 'opc3', 'tip4pew', 'tip5p', and 'swm4ndp' (polarizable).
         boxSize : Vec3=None
             the size of the box to fill with water
         boxVectors : tuple of Vec3=None
@@ -464,6 +464,8 @@ class Modeller(object):
             waterRadius = 0.31507524065751241*vdwRadiusPerSigma
         elif model == 'spce':
             waterRadius = 0.31657195050398818*vdwRadiusPerSigma
+        elif model == 'opc3':
+            waterRadius = 0.31742703509365927*vdwRadiusPerSigma
         elif model == 'tip4pew':
             waterRadius = 0.315365*vdwRadiusPerSigma
         elif model == 'tip5p':
