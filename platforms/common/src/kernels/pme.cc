@@ -102,17 +102,19 @@ KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq,
                 ybase = ybase*GRID_SIZE_Z;
                 int index = xbase + ybase + zindex;
                 real add = dzdx*data[iy].y;
+                if (fabs(add) > 2.3e-10f) { // Smallest value representable in 64 bit fixed point
 #ifdef USE_FIXED_POINT_CHARGE_SPREADING
-                ATOMIC_ADD(&pmeGrid[index], (mm_ulong) realToFixedPoint(add));
+                    ATOMIC_ADD(&pmeGrid[index], (mm_ulong) realToFixedPoint(add));
 #if defined(__GFX12__)
-                // Workaround for rare cases when few values of pmeGrid are very large and
-                // incorrect. The cause is unknown. Why this workaround or other irrelevant
-                // changes like printf help is also unknown.
-                asm volatile("s_wait_storecnt 0x0");
+                    // Workaround for rare cases when few values of pmeGrid are very large and
+                    // incorrect. The cause is unknown. Why this workaround or other irrelevant
+                    // changes like printf help is also unknown.
+                    asm volatile("s_wait_storecnt 0x0");
 #endif
 #else
-                ATOMIC_ADD(&pmeGrid[index], add);
+                    ATOMIC_ADD(&pmeGrid[index], add);
 #endif
+                }
             }
         }
     }
