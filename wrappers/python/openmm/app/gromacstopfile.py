@@ -4,7 +4,7 @@ gromacstopfile.py: Used for loading Gromacs top files.
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2012-2024 Stanford University and the Authors.
+Portions copyright (c) 2012-2025 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -525,7 +525,7 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 7:
             raise ValueError('Too few fields in [ virtual_sites3 ] line: ' + line)
-        if fields[4] not in ('1', '4'):
+        if fields[4] not in ('1', '3', '4'):
             raise ValueError('Unsupported function type in [ virtual_sites3 ] line: '+line)
         self._currentMoleculeType.vsites3.append(fields)
 
@@ -1117,6 +1117,10 @@ class GromacsTopFile(object):
                     c2 = float(fields[6])
                     if vsiteType == '1':
                         vsite = mm.ThreeParticleAverageSite(baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], 1-c1-c2, c1, c2)
+                    elif vsiteType == '3':
+                        theta = c1*math.pi/180
+                        vsite = mm.LocalCoordinatesSite(baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3],
+                                                        (1, 0, 0), (-1, 1, 0), (0, -1, 1), (c2*math.cos(theta), c2*math.sin(theta), 0))
                     elif vsiteType == '4':
                         c3 = float(fields[7])
                         vsite = mm.OutOfPlaneSite(baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], c1, c2, c3)
