@@ -102,7 +102,7 @@ KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq,
                 ybase = ybase*GRID_SIZE_Z;
                 int index = xbase + ybase + zindex;
                 real add = dzdx*data[iy].y;
-                if (add > 2.3e-10f || add < -2.3e-10f) { // Smallest value representable in 64 bit fixed point
+                if (fabs(add) > 2.3e-10f) { // Smallest value representable in 64 bit fixed point
 #ifdef USE_FIXED_POINT_CHARGE_SPREADING
                     ATOMIC_ADD(&pmeGrid[index], (mm_ulong) realToFixedPoint(add));
 #if defined(__GFX12__)
