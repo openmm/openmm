@@ -225,6 +225,18 @@ class TestGromacsTopFile(unittest.TestCase):
         self.assertAlmostEqual(0.106676721, vs.getWeight(1))
         self.assertAlmostEqual(0.106676721, vs.getWeight(2))
 
+    def test_Vsite3Func3(self):
+        """Test a three particle virtual site with function 3."""
+        top = GromacsTopFile('systems/vsite3-3.top')
+        gro = GromacsGroFile('systems/vsite3-3.gro')
+        system = top.createSystem()
+        context = Context(system, VerletIntegrator(1.0), Platform.getPlatform('Reference'))
+        context.setPositions(gro.positions)
+        context.computeVirtualSites()
+        positions = context.getState(positions=True).getPositions().value_in_unit(nanometer)
+        # Compare to the position computed by Gromacs
+        assert_allclose([2.45, 0.7794, 0.0], positions[3], atol=1e-4)
+
     def test_Vsite3Func4(self):
         """Test a three particle virtual site."""
         top = GromacsTopFile('systems/tip5p.top')
