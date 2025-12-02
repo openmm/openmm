@@ -68,7 +68,7 @@ class TestCharmmFiles(unittest.TestCase):
         """Test implicit solvent using the implicitSolvent parameter.
 
         """
-        system = self.psf_v.createSystem(self.params, implicitSolvent=OBC2, gbsaModel='ACE')
+        system = self.psf_v.createSystem(self.params, implicitSolvent=OBC2, sasaMethod='ACE')
         self.assertTrue(any(isinstance(f, CustomGBForce) for f in system.getForces()))
 
     def test_ImplicitSolventParameters(self):

@@ -41,7 +41,7 @@ import openmm as mm
 from openmm.vec3 import Vec3
 import openmm.unit as u
 from openmm.app import (forcefield as ff, Topology, element, PDBFile)
-from openmm.app.amberprmtopfile import HCT, OBC1, OBC2, GBn, GBn2
+from openmm.app.amberprmtopfile import HCT, OBC1, OBC2, GBn, GBn2, Unspecified
 from openmm.app.internal.customgbforces import (GBSAHCTForce,
                 GBSAOBC1Force, GBSAOBC2Force, GBSAGBnForce, GBSAGBn2Force)
 from openmm.app.internal.unitcell import computePeriodicBoxVectors
@@ -795,7 +795,8 @@ class CharmmPsfFile(object):
                      ewaldErrorTolerance=0.0005,
                      flexibleConstraints=True,
                      verbose=False,
-                     gbsaModel=None,
+                     sasaMethod=Unspecified,
+                     gbsaModel=Unspecified,
                      drudeMass=0.4*u.amu):
         """Construct an OpenMM System representing the topology described by the
         prmtop file. You MUST have loaded a parameter set into this PSF before
@@ -852,9 +853,14 @@ class CharmmPsfFile(object):
             If True, parameters for constrained degrees of freedom will be added to the System
         verbose : bool=False
             Optionally prints out a running progress report
-        gbsaModel : str=None
-            Can be ACE (to use the ACE solvation model) or None. Other values
-            raise a ValueError
+        sasaMethod : str, optional
+            The SA model used to model the nonpolar solvation component of GB
+            implicit solvent models. If GB is active, this must be 'ACE',
+            'LCPO', or None (the latter indicates no SA model will be used,
+            which is the default behavior if this parameter is not specified).
+            Other values will result in a ValueError.
+        gbsaModel : str, optional
+            Deprecated.  Use `sasaMethod` instead.
         drudeMass : mass=0.4*amu
             The mass to use for Drude particles.  Any mass added to a Drude particle is
             subtracted from its parent atom to keep their total mass the same.
@@ -863,8 +869,12 @@ class CharmmPsfFile(object):
         self.loadParameters(params)
         hasbox = self.topology.getUnitCellDimensions() is not None
         # Check GB input parameters
-        if implicitSolvent is not None and gbsaModel not in ('ACE', None):
-            raise ValueError('gbsaModel must be ACE or None')
+        if sasaMethod is Unspecified and gbsaModel is not Unspecified:
+            sasaMethod = gbsaModel
+        if sasaMethod is Unspecified:
+            sasaMethod = None
+        if implicitSolvent is not None and sasaMethod not in ('ACE', 'LCPO', None):
+            raise ValueError('sasaMethod must be ACE, LCPO, or None')
         # Set the cutoff distance in nanometers
         cutoff = None
         if nonbondedMethod is not ff.NoCutoff:
@@ -1536,19 +1546,19 @@ class CharmmPsfFile(object):
                 implicitSolventKappa = implicitSolventKappa.value_in_unit(
                                             (1.0/u.nanometer).unit)
             if implicitSolvent is HCT:
-                gb = GBSAHCTForce(solventDielectric, soluteDielectric, gbsaModel,
+                gb = GBSAHCTForce(solventDielectric, soluteDielectric, sasaMethod,
                                   cutoff, kappa=implicitSolventKappa)
             elif implicitSolvent is OBC1:
-                gb = GBSAOBC1Force(solventDielectric, soluteDielectric, gbsaModel,
+                gb = GBSAOBC1Force(solventDielectric, soluteDielectric, sasaMethod,
                                    cutoff, kappa=implicitSolventKappa)
             elif implicitSolvent is OBC2:
-                gb = GBSAOBC2Force(solventDielectric, soluteDielectric, gbsaModel,
+                gb = GBSAOBC2Force(solventDielectric, soluteDielectric, sasaMethod,
                                    cutoff, kappa=implicitSolventKappa)
             elif implicitSolvent is GBn:
-                gb = GBSAGBnForce(solventDielectric, soluteDielectric, gbsaModel,
+                gb = GBSAGBnForce(solventDielectric, soluteDielectric, sasaMethod,
                                   cutoff, kappa=implicitSolventKappa)
             elif implicitSolvent is GBn2:
-                gb = GBSAGBn2Force(solventDielectric, soluteDielectric, gbsaModel,
+                gb = GBSAGBn2Force(solventDielectric, soluteDielectric, sasaMethod,
                                    cutoff, kappa=implicitSolventKappa)
             gb_parms = gb.getStandardParameters(self.topology)
             for atom, gb_parm in zip(self.atom_list, gb_parms):
@@ -1568,6 +1578,9 @@ class CharmmPsfFile(object):
             gb.finalize()
             system.addForce(gb)
             force.setReactionFieldDielectric(1.0) # applies to NonbondedForce
+
+            if sasaMethod == 'LCPO':
+                lcpo.addLCPOForce(system, lcpo.getLCPOParamsTopology(self.topology), nonbondedMethod is ff.CutoffPeriodic)
 
         # See if we repartition the hydrogen masses
         if hydrogenMass is not None:

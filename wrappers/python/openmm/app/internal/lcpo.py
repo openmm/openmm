@@ -27,6 +27,7 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+import collections
 import math
 import openmm as mm
 import openmm.unit as u
@@ -64,15 +65,15 @@ LCPO_PARAMETERS = {
     'Mg': (1.18, 0.49392, -0.16038, -0.00015512, 0.00016453),
 }
 
-def addLCPOForces(system, paramsList, usePeriodic, surfaceTension=0.005*u.kilocalorie_per_mole/u.angstrom**2, probeRadius=1.4*u.angstrom):
+def addLCPOForce(system, paramsList, usePeriodic, surfaceTension=0.005*u.kilocalorie_per_mole/u.angstrom**2, probeRadius=1.4*u.angstrom):
     """
-    Adds forces to an OpenMM System implementing the LCPO method for estimating
+    Adds a force to an OpenMM System implementing the LCPO method for estimating
     solvent-accessible surface area of a molecule.
 
     Parameters
     ----------
     system : System
-        The OpenMM System to add forces to.
+        The OpenMM System to add the force to.
     paramsList : list
         A list containing LCPO parameters for each atom, specifically, a sphere
         radiuis that does not include a solvent probe radius, and coefficients
@@ -221,3 +222,168 @@ def getLCPOParamsAmber(prmtop, elements):
         paramsList.append((params[0] * u.angstrom, params[1], params[2], params[3], params[4] / u.angstrom ** 2))
 
     return paramsList
+
+def getLCPOParamsTopology(topology):
+    """
+    Generates LCPO parameters for each atom in a Topology.
+
+    Parameters
+    ----------
+    topology : Topology
+        The Topology object containing element and bond information.
+
+    Returns
+    -------
+    list
+        A list containing LCPO parameters for each atom, specifically, a sphere
+        radiuis that does not include a solvent probe radius, and coefficients
+        P1 through P4 in the LCPO equations.
+    """
+
+    numAtoms = topology.getNumAtoms()
+    atomicNumbers = [0 if atom.element is None else atom.element.atomic_number for atom in topology.atoms()]
+    bondedToList = [set() for index in range(numAtoms)]
+    for atom1, atom2 in topology.bonds():
+        bondedToList[atom1.index].add(atom2.index)
+        bondedToList[atom2.index].add(atom1.index)
+
+    numHeavyBondsList = [0] * numAtoms
+    numTotalBondsList = [0] * numAtoms
+    for index1, bondedTo in enumerate(bondedToList):
+        for index2 in bondedTo:
+            numTotalBondsList[index1] += 1
+            if atomicNumbers[index2] > 1:
+                numHeavyBondsList[index1] += 1
+
+    # Identify carbonyl Os and their partner Cs, then identify carboxylate Cs.
+    carbonylO = {}
+    for index1, (atomicNumber, bondedTo, numTotalBonds) in enumerate(zip(atomicNumbers, bondedToList, numTotalBondsList)):
+        if atomicNumber == 8 and numTotalBonds == 1:
+            index2, = bondedTo
+            if atomicNumbers[index2] == 6 and numTotalBondsList[index2] == 3:
+                carbonylO[index1] = index2
+    carboxylateC = {indexC for indexC, countO in collections.Counter(carbonylO.values()).items() if countO > 1}
+
+    # Identify sp2-hybridized Ns with 3 bonding partners based on the
+    # hybridization of surrounding C atoms.  This may fail in a few unusual
+    # cases but should handle standard amino and nucleic acids correctly.
+    planarC = set(index for index, (atomicNumber, numTotalBonds) in enumerate(zip(atomicNumbers, numTotalBondsList))
+        if atomicNumber == 6 and numTotalBonds == 3)
+    planarN = set(index1 for index1, (atomicNumber, bondedTo, numTotalBonds) in enumerate(zip(atomicNumbers, bondedToList, numTotalBondsList))
+        if atomicNumber == 7 and numTotalBonds == 3 and any(index2 in planarC for index2 in bondedTo))
+
+    paramsList = []
+    for index, (atomicNumber, numHeavyBonds, numTotalBonds) in enumerate(zip(atomicNumbers, numHeavyBondsList, numTotalBondsList)):
+        params = LCPO_PARAMETERS['none']
+        warn = False
+
+        # Default fallback behavior is taken from the Amber parameter selection
+        # logic.  In some cases, this routine is more stringent than the Amber
+        # routine, issuing a warning for cases not covered by the LCPO paper but
+        # that Amber would silently assign different parameters to.
+        if atomicNumber <= 1:
+            # Use default 'none' parameters for H and virtual sites.
+            pass
+        elif atomicNumber == 6:
+            if numTotalBonds == 4:
+                if numHeavyBonds == 1:
+                    params = LCPO_PARAMETERS['C_sp3_1']
+                elif numHeavyBonds == 2:
+                    params = LCPO_PARAMETERS['C_sp3_2']
+                elif numHeavyBonds == 3:
+                    params = LCPO_PARAMETERS['C_sp3_3']
+                elif numHeavyBonds == 4:
+                    params = LCPO_PARAMETERS['C_sp3_4']
+                else:
+                    warn = True
+                    params = LCPO_PARAMETERS['C_sp3_1']
+            else:
+                if numTotalBonds != 3:
+                    warn = True
+                if numHeavyBonds == 2:
+                    params = LCPO_PARAMETERS['C_sp2_2']
+                elif numHeavyBonds == 3:
+                    params = LCPO_PARAMETERS['C_sp2_3']
+                else:
+                    warn = True
+                    params = LCPO_PARAMETERS['C_sp3_1']
+        elif atomicNumber == 7:
+            if (numTotalBonds == 3 and index not in planarN) or numTotalBonds == 4:
+                # sp3 N.
+                if numHeavyBonds == 1:
+                    params = LCPO_PARAMETERS['N_sp3_1']
+                elif numHeavyBonds == 2:
+                    params = LCPO_PARAMETERS['N_sp3_2']
+                elif numHeavyBonds == 3:
+                    params = LCPO_PARAMETERS['N_sp3_3']
+                else:
+                    warn = True
+                    params = LCPO_PARAMETERS['N_sp3_1']
+            else:
+                # Assume sp2 N (warn if it looks like something else).
+                if not (numTotalBonds == 2 or index in planarN):
+                    warn = True
+                if numHeavyBonds == 1:
+                    params = LCPO_PARAMETERS['N_sp2_1']
+                elif numHeavyBonds == 2:
+                    params = LCPO_PARAMETERS['N_sp2_2']
+                elif numHeavyBonds == 3:
+                    params = LCPO_PARAMETERS['N_sp2_3']
+                else:
+                    warn = True
+                    params = LCPO_PARAMETERS['N_sp3_1']
+        elif atomicNumber == 8:
+            if numTotalBonds == 1:
+                # sp2 O (check to see if it is a carboxylate O).
+                if index in carbonylO and carbonylO[index] in carboxylateC:
+                    params = LCPO_PARAMETERS['O_carboxylate']
+                else:
+                    params = LCPO_PARAMETERS['O_sp2_1']
+            else:
+                # Assume sp3 O (warn if it doesn't have 2 bonds).
+                if numTotalBonds != 2:
+                    warn = True
+                if numHeavyBonds == 1:
+                    params = LCPO_PARAMETERS['O_sp3_1']
+                elif numHeavyBonds == 2:
+                    params = LCPO_PARAMETERS['O_sp3_2']
+                else:
+                    warn = True
+                    params = LCPO_PARAMETERS['O_sp3_1']
+        elif atomicNumber == 9:
+            # Parameters for F are from Amber (not in original LCPO paper).
+            params = LCPO_PARAMETERS['F']
+        elif atomicNumber == 12:
+            # Parameters for Mg are from Amber (not in original LCPO paper).
+            params = LCPO_PARAMETERS['Mg']
+        elif atomicNumber == 15:
+            if numHeavyBonds == 3:
+                params = LCPO_PARAMETERS['P_3']
+            elif numHeavyBonds == 4:
+                params = LCPO_PARAMETERS['P_4']
+            else:
+                warn = True
+                params = LCPO_PARAMETERS['P_3']
+        elif atomicNumber == 16:
+            if numHeavyBonds == 1:
+                params = LCPO_PARAMETERS['S_1']
+            elif numHeavyBonds == 2:
+                params = LCPO_PARAMETERS['S_2']
+            else:
+                warn = True
+                params = LCPO_PARAMETERS['S_2']
+        elif atomicNumber == 17:
+            if numHeavyBonds != 1:
+                warn = True
+            params = LCPO_PARAMETERS['Cl']
+        else:
+            warn = True
+            params = LCPO_PARAMETERS['C_sp2_2']
+
+        if warn:
+            warnings.warn(
+                f'Using fallback LCPO parameters for atom with atomic number {atomicNumber}, '
+                f'{numTotalBonds} bonds, and {numHeavyBonds} bonds excluding H'
+            )
+
+        paramsList.append((params[0] * u.angstrom, params[1], params[2], params[3], params[4] / u.angstrom ** 2))

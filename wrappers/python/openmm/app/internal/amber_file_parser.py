@@ -675,7 +675,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
           implicitSolventKappa=0.0*(1/units.nanometer), nonbondedCutoff=None,
           nonbondedMethod='NoCutoff', scee=None, scnb=None, mm=None, verbose=False,
           EwaldErrorTolerance=None, flexibleConstraints=True, rigidWater=True, elements=None,
-          gbsaModel='ACE'):
+          sasaMethod='ACE'):
     """
     Create an OpenMM System from an Amber prmtop file.
 
@@ -699,7 +699,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
       verbose (boolean) - if True, print out information on progress (default: False)
       flexibleConstraints (boolean) - if True, flexible bonds will be added in addition ot constrained bonds
       rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the shake argument
-      gbsaModel (str='ACE') The string representing the SA model to use for GB calculations. Must be 'ACE', 'LCPO', or None
+      sasaMethod (str='ACE') The string representing the SA model to use for GB calculations. Must be 'ACE', 'LCPO', or None
 
     NOTES
 
@@ -745,8 +745,8 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         warnings.warn("1-4 scaling parameters in topology file are being ignored. "
             "This is not recommended unless you know what you are doing.")
 
-    if gbmodel is not None and gbsaModel not in ('ACE', 'LCPO', None):
-        raise ValueError('gbsaModel must be ACE, LCPO, or None')
+    if gbmodel is not None and sasaMethod not in ('ACE', 'LCPO', None):
+        raise ValueError('sasaMethod must be ACE, LCPO, or None')
 
     has_1264 = 'LENNARD_JONES_CCOEF' in prmtop._raw_data.keys()
     if has_1264:
@@ -1130,22 +1130,22 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
             if units.is_quantity(cutoff):
                 cutoff = cutoff.value_in_unit(units.nanometers)
         if gbmodel == 'HCT':
-            gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
+            gb = customgb.GBSAHCTForce(solventDielectric, soluteDielectric, sasaMethod, cutoff, implicitSolventKappa)
         elif gbmodel == 'OBC1':
-            gb = customgb.GBSAOBC1Force(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
+            gb = customgb.GBSAOBC1Force(solventDielectric, soluteDielectric, sasaMethod, cutoff, implicitSolventKappa)
         elif gbmodel == 'OBC2':
             if implicitSolventKappa > 0:
-                gb = customgb.GBSAOBC2Force(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
+                gb = customgb.GBSAOBC2Force(solventDielectric, soluteDielectric, sasaMethod, cutoff, implicitSolventKappa)
             else:
                 gb = mm.GBSAOBCForce()
                 gb.setSoluteDielectric(soluteDielectric)
                 gb.setSolventDielectric(solventDielectric)
-                if gbsaModel != 'ACE':
+                if sasaMethod != 'ACE':
                     gb.setSurfaceAreaEnergy(0)
         elif gbmodel == 'GBn':
-            gb = customgb.GBSAGBnForce(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
+            gb = customgb.GBSAGBnForce(solventDielectric, soluteDielectric, sasaMethod, cutoff, implicitSolventKappa)
         elif gbmodel == 'GBn2':
-            gb = customgb.GBSAGBn2Force(solventDielectric, soluteDielectric, gbsaModel, cutoff, implicitSolventKappa)
+            gb = customgb.GBSAGBn2Force(solventDielectric, soluteDielectric, sasaMethod, cutoff, implicitSolventKappa)
         else:
             raise ValueError("Illegal value specified for implicit solvent model")
         if isinstance(gb, mm.GBSAOBCForce):
@@ -1200,8 +1200,8 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         # created above. Do not bind force to another name before this!
         force.setReactionFieldDielectric(1.0)
 
-        if gbsaModel == 'LCPO':
-            lcpo.addLCPOForces(system, lcpo.getLCPOParamsAmber(prmtop, elements), nonbondedMethod == 'CutoffPeriodic')
+        if sasaMethod == 'LCPO':
+            lcpo.addLCPOForce(system, lcpo.getLCPOParamsAmber(prmtop, elements), nonbondedMethod == 'CutoffPeriodic')
 
     return system
 

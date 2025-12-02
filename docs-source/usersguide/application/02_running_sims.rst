@@ -740,6 +740,19 @@ The screening parameter can be calculated as
 where :math:`I` is the ionic strength in moles/liter, :math:`\epsilon` is the solvent
 dielectric constant, and :math:`T` is the temperature in Kelvin.
 
+When one of these implicit solvent force field files is included, you can
+specify the :code:`sasaMethod` parameter to select a method for calculating the
+solvent-accessible surface area (SASA), e.g.:
+::
+
+    system = forcefield.createSystem(sasaMethod='LCPO')
+
+Supported options are :code:`'ACE'` for the ACE approximation
+:cite:`Schaefer1998`\ :cite:`Ponder` (which is also the default if
+:code:`sasaMethod` is not given), :code:`'LCPO'` for the LCPO approximation
+:cite:`Weiser1999`, and :code:`None` to disable calculation of the surface area
+term entirely.
+
 AMOEBA
 ------
 
@@ -988,10 +1001,10 @@ to the solvent-accessible surface area, but you can also use the LCPO
 approximation :cite:`Weiser1999`:
 ::
 
-    system = prmtop.createSystem(implicitSolvent=OBC2, gbsaModel='LCPO')
+    system = prmtop.createSystem(implicitSolvent=OBC2, sasaMethod='LCPO')
 
 This will be slower but more accurate than ACE.  Specifying :code:`None` for the
-:code:`gbsaModel` parameter will disable calculation of the surface area term
+:code:`sasaMethod` parameter will disable calculation of the surface area term
 entirely.
 
 Nonbonded Interactions
