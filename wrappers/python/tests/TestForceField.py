@@ -238,6 +238,16 @@ class TestForceField(unittest.TestCase):
         self.assertTrue(found_matching_solvent_dielectric and
                         found_matching_solute_dielectric)
 
+    def test_LCPO(self):
+        """Check LCPO parameter assignment vs. the Amber implementation."""
+        prmtop = AmberPrmtopFile('systems/lcpo_test.prmtop')
+        pdb = PDBFile('systems/lcpo_test.pdb')
+        system1 = prmtop.createSystem(implicitSolvent=GBn2, sasaMethod='LCPO')
+        system2 = ForceField('amber14-all.xml', 'implicit/gbn2.xml').createSystem(pdb.topology, sasaMethod='LCPO')
+        lcpo1, = (force for force in system1.getForces() if isinstance(force, LCPOForce))
+        lcpo2, = (force for force in system2.getForces() if isinstance(force, LCPOForce))
+        self.assertEqual(XmlSerializer.serialize(lcpo1), XmlSerializer.serialize(lcpo2))
+
     def test_HydrogenMass(self):
         """Test that altering the mass of hydrogens works correctly."""
 

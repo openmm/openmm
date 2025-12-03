@@ -45,6 +45,7 @@ from openmm.app.amberprmtopfile import HCT, OBC1, OBC2, GBn, GBn2, Unspecified
 from openmm.app.internal.customgbforces import (GBSAHCTForce,
                 GBSAOBC1Force, GBSAOBC2Force, GBSAGBnForce, GBSAGBn2Force)
 from openmm.app.internal.unitcell import computePeriodicBoxVectors
+from openmm.app.internal import lcpo
 # CHARMM imports
 from openmm.app.internal.charmm.topologyobjects import (
                 ResidueList, AtomList, TrackedList, Bond, Angle, Dihedral,

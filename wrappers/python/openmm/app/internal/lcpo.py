@@ -387,3 +387,5 @@ def getLCPOParamsTopology(topology):
             )
 
         paramsList.append((params[0] * u.angstrom, params[1], params[2], params[3], params[4] / u.angstrom ** 2))
+
+    return paramsList
