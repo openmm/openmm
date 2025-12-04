@@ -240,6 +240,7 @@ class TestForceField(unittest.TestCase):
 
     def test_LCPO(self):
         """Check LCPO parameter assignment vs. the Amber implementation."""
+
         prmtop = AmberPrmtopFile('systems/lcpo_test.prmtop')
         pdb = PDBFile('systems/lcpo_test.pdb')
         system1 = prmtop.createSystem(implicitSolvent=GBn2, sasaMethod='LCPO')
@@ -247,6 +248,25 @@ class TestForceField(unittest.TestCase):
         lcpo1, = (force for force in system1.getForces() if isinstance(force, LCPOForce))
         lcpo2, = (force for force in system2.getForces() if isinstance(force, LCPOForce))
         self.assertEqual(XmlSerializer.serialize(lcpo1), XmlSerializer.serialize(lcpo2))
+
+    def test_LCPOInvalid(self):
+        """Check that LCPO parameter assignment fails instead of assigning incorrect parameters for unsupported atom types."""
+
+        # Build a water molecule.
+        topology = Topology()
+        chain = topology.addChain()
+        residue = topology.addResidue("HOH", chain)
+        o = topology.addAtom("O", elem.oxygen, residue)
+        h1 = topology.addAtom("H1", elem.hydrogen, residue)
+        h2 = topology.addAtom("H2", elem.hydrogen, residue)
+        topology.addBond(o, h1)
+        topology.addBond(o, h2)
+
+        # Water should be matched correctly but there are no LCPO parameters for
+        # O bonded to two H atoms, so an exception should be raised.
+        ff = ForceField('amber14-all.xml', 'amber14/opc3.xml', 'implicit/gbn2.xml')
+        with self.assertRaisesRegex(ValueError, 'atomic number 8.+2 bonds.+0 bonds excluding H'):
+            ff.createSystem(topology, sasaMethod='LCPO')
 
     def test_HydrogenMass(self):
         """Test that altering the mass of hydrogens works correctly."""

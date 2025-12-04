@@ -31,7 +31,6 @@ import collections
 import math
 import openmm as mm
 import openmm.unit as u
-import warnings
 
 LCPO_PARAMETERS = {
     # For H atoms, virtual sites, etc.
@@ -91,6 +90,9 @@ def addLCPOForce(system, paramsList, usePeriodic, surfaceTension=0.005*u.kilocal
     force.setUsesPeriodicBoundaryConditions(usePeriodic)
     system.addForce(force)
 
+def _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds):
+    raise ValueError(f'No LCPO parameters found for element with atomic number {atomicNumber}, {numTotalBonds} bonds, and {numHeavyBonds} bonds excluding H')
+
 def getLCPOParamsAmber(prmtop, elements):
     """
     Generates LCPO parameters for each atom in an Amber prmtop file.
@@ -127,10 +129,10 @@ def getLCPOParamsAmber(prmtop, elements):
         atomType = prmtop.getAtomType(atom)
 
         params = LCPO_PARAMETERS['none']
-        warn = False
 
-        # Use Amber logic for selecting parameters, and Amber default fallback
-        # behavior for cases where no suitable parameters can be assigned.
+        # Use Amber logic for selecting parameters, except that in cases where
+        # Amber would raise an error for assigning incorrect parameters, OpenMM
+        # will raise an exception.
         if atomicNumber == 6:
             if numTotalBonds == 4:
                 if numHeavyBonds == 1:
@@ -142,16 +144,14 @@ def getLCPOParamsAmber(prmtop, elements):
                 elif numHeavyBonds == 4:
                     params = LCPO_PARAMETERS['C_sp3_4']
                 else:
-                    warn = True
-                    params = LCPO_PARAMETERS['C_sp3_1']
+                    _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
             else:
                 if numHeavyBonds == 2:
                     params = LCPO_PARAMETERS['C_sp2_2']
                 elif numHeavyBonds == 3:
                     params = LCPO_PARAMETERS['C_sp2_3']
                 else:
-                    warn = True
-                    params = LCPO_PARAMETERS['C_sp3_1']
+                    _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
         elif atomicNumber == 8:
             if atomType == 'O':
                 params = LCPO_PARAMETERS['O_sp2_1']
@@ -163,8 +163,7 @@ def getLCPOParamsAmber(prmtop, elements):
                 elif numHeavyBonds == 2:
                     params = LCPO_PARAMETERS['O_sp3_2']
                 else:
-                    warn = True
-                    params = LCPO_PARAMETERS['O_sp3_1']
+                    _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
         elif atomicNumber == 7:
             if atomType == 'N3':
                 if numHeavyBonds == 1:
@@ -174,8 +173,7 @@ def getLCPOParamsAmber(prmtop, elements):
                 elif numHeavyBonds == 3:
                     params = LCPO_PARAMETERS['N_sp3_3']
                 else:
-                    warn = True
-                    params = LCPO_PARAMETERS['N_sp3_1']
+                    _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
             else:
                 if numHeavyBonds == 1:
                     params = LCPO_PARAMETERS['N_sp2_1']
@@ -184,8 +182,7 @@ def getLCPOParamsAmber(prmtop, elements):
                 elif numHeavyBonds == 3:
                     params = LCPO_PARAMETERS['N_sp2_3']
                 else:
-                    warn = True
-                    params = LCPO_PARAMETERS['N_sp3_1']
+                    _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
         elif atomicNumber == 16:
             if atomType == 'SH':
                 params = LCPO_PARAMETERS['S_1']
@@ -197,8 +194,7 @@ def getLCPOParamsAmber(prmtop, elements):
             elif numHeavyBonds == 4:
                 params = LCPO_PARAMETERS['P_4']
             else:
-                warn = True
-                params = LCPO_PARAMETERS['P_3']
+                _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
         elif atomType.startswith('Z') or atomicNumber <= 1:
             # Use default 'none' parameters.
             pass
@@ -210,14 +206,7 @@ def getLCPOParamsAmber(prmtop, elements):
             # Cl is the only element in the LCPO paper not implemented in Amber.
             params = LCPO_PARAMETERS['Cl']
         else:
-            warn = True
-            params = LCPO_PARAMETERS['C_sp2_2']
-
-        if warn:
-            warnings.warn(
-                f'Using fallback LCPO parameters for atom with atomic number {atomicNumber}, '
-                f'type {atomType}, {numTotalBonds} bonds, and {numHeavyBonds} bonds excluding H'
-            )
+            _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
 
         paramsList.append((params[0] * u.angstrom, params[1], params[2], params[3], params[4] / u.angstrom ** 2))
 
@@ -275,12 +264,7 @@ def getLCPOParamsTopology(topology):
     paramsList = []
     for index, (atomicNumber, numHeavyBonds, numTotalBonds) in enumerate(zip(atomicNumbers, numHeavyBondsList, numTotalBondsList)):
         params = LCPO_PARAMETERS['none']
-        warn = False
 
-        # Default fallback behavior is taken from the Amber parameter selection
-        # logic.  In some cases, this routine is more stringent than the Amber
-        # routine, issuing a warning for cases not covered by the LCPO paper but
-        # that Amber would silently assign different parameters to.
         if atomicNumber <= 1:
             # Use default 'none' parameters for H and virtual sites.
             pass
@@ -295,18 +279,16 @@ def getLCPOParamsTopology(topology):
                 elif numHeavyBonds == 4:
                     params = LCPO_PARAMETERS['C_sp3_4']
                 else:
-                    warn = True
-                    params = LCPO_PARAMETERS['C_sp3_1']
+                    _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
             else:
                 if numTotalBonds != 3:
-                    warn = True
+                    _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
                 if numHeavyBonds == 2:
                     params = LCPO_PARAMETERS['C_sp2_2']
                 elif numHeavyBonds == 3:
                     params = LCPO_PARAMETERS['C_sp2_3']
                 else:
-                    warn = True
-                    params = LCPO_PARAMETERS['C_sp3_1']
+                    _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
         elif atomicNumber == 7:
             if (numTotalBonds == 3 and index not in planarN) or numTotalBonds == 4:
                 # sp3 N.
@@ -317,12 +299,11 @@ def getLCPOParamsTopology(topology):
                 elif numHeavyBonds == 3:
                     params = LCPO_PARAMETERS['N_sp3_3']
                 else:
-                    warn = True
-                    params = LCPO_PARAMETERS['N_sp3_1']
+                    _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
             else:
-                # Assume sp2 N (warn if it looks like something else).
+                # Fail if this is not an sp2 N.
                 if not (numTotalBonds == 2 or index in planarN):
-                    warn = True
+                    _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
                 if numHeavyBonds == 1:
                     params = LCPO_PARAMETERS['N_sp2_1']
                 elif numHeavyBonds == 2:
@@ -330,8 +311,7 @@ def getLCPOParamsTopology(topology):
                 elif numHeavyBonds == 3:
                     params = LCPO_PARAMETERS['N_sp2_3']
                 else:
-                    warn = True
-                    params = LCPO_PARAMETERS['N_sp3_1']
+                    _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
         elif atomicNumber == 8:
             if numTotalBonds == 1:
                 # sp2 O (check to see if it is a carboxylate O).
@@ -340,16 +320,15 @@ def getLCPOParamsTopology(topology):
                 else:
                     params = LCPO_PARAMETERS['O_sp2_1']
             else:
-                # Assume sp3 O (warn if it doesn't have 2 bonds).
+                # Assume sp3 O (fail if it doesn't have 2 bonds).
                 if numTotalBonds != 2:
-                    warn = True
+                    _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
                 if numHeavyBonds == 1:
                     params = LCPO_PARAMETERS['O_sp3_1']
                 elif numHeavyBonds == 2:
                     params = LCPO_PARAMETERS['O_sp3_2']
                 else:
-                    warn = True
-                    params = LCPO_PARAMETERS['O_sp3_1']
+                    _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
         elif atomicNumber == 9:
             # Parameters for F are from Amber (not in original LCPO paper).
             params = LCPO_PARAMETERS['F']
@@ -362,29 +341,20 @@ def getLCPOParamsTopology(topology):
             elif numHeavyBonds == 4:
                 params = LCPO_PARAMETERS['P_4']
             else:
-                warn = True
-                params = LCPO_PARAMETERS['P_3']
+                _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
         elif atomicNumber == 16:
             if numHeavyBonds == 1:
                 params = LCPO_PARAMETERS['S_1']
             elif numHeavyBonds == 2:
                 params = LCPO_PARAMETERS['S_2']
             else:
-                warn = True
-                params = LCPO_PARAMETERS['S_2']
+                _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
         elif atomicNumber == 17:
             if numHeavyBonds != 1:
-                warn = True
+                _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
             params = LCPO_PARAMETERS['Cl']
         else:
-            warn = True
-            params = LCPO_PARAMETERS['C_sp2_2']
-
-        if warn:
-            warnings.warn(
-                f'Using fallback LCPO parameters for atom with atomic number {atomicNumber}, '
-                f'{numTotalBonds} bonds, and {numHeavyBonds} bonds excluding H'
-            )
+            _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
 
         paramsList.append((params[0] * u.angstrom, params[1], params[2], params[3], params[4] / u.angstrom ** 2))
 

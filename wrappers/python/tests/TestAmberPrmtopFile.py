@@ -354,6 +354,13 @@ class TestAmberPrmtopFile(unittest.TestCase):
         energyLCPO = contextLCPO.getState(energy=True).getPotentialEnergy() - contextNone.getState(energy=True).getPotentialEnergy()
         self.assertAlmostEqual(energyLCPO.value_in_unit(kilocalorie_per_mole), energyRef.value_in_unit(kilocalorie_per_mole), 4)
 
+    def test_LCPOInvalid(self):
+        """Check that LCPO parameter assignment fails instead of assigning incorrect parameters for unsupported atom types."""
+
+        prmtop = AmberPrmtopFile('systems/lcpo_invalid.prmtop')
+        with self.assertRaisesRegex(ValueError, 'atomic number 8.+2 bonds.+0 bonds excluding H'):
+            prmtop.createSystem(implicitSolvent=GBn2, sasaMethod='LCPO')
+
     def testSwitchFunction(self):
         """ Tests the switching function option in AmberPrmtopFile """
         system = prmtop1.createSystem(nonbondedMethod=PME,
