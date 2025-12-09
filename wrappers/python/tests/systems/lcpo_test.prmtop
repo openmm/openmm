@@ -3772,17 +3772,17 @@ H   CX  H1  3C  H1  CT  HC  HC  HC  OH  HO  C   O   N   H   CX  H1  CT  HC  HC
 C*  CW  H4  NA  H   CN  CA  HA  CA  HA  CA  HA  CA  HA  CB  C   O   N   H   CX  
 H1  CT  HC  HC  CA  CA  HA  CA  HA  C   OH  HO  CA  HA  CA  HA  C   O   N   H   
 CT  H1  H1  H1  HO  OH  CI  H1  H1  CT  H1  OS  CT  H2  N*  CK  H5  NB  CB  CA  
-N2  H   H   NC  CQ  H5  NC  CB  CT  H1  CT  HC  HC  OS  P   O   O   OS  CI  H1  
+N2  H   H   NC  CQ  H5  NC  CB  CT  H1  CT  HC  HC  OS  P   O2  O2  OS  CI  H1  
 H1  CT  H1  OS  CT  H2  N*  CM  H4  CM  HA  CA  N2  H   H   NC  C   O   CT  H1  
-CT  HC  HC  OS  P   O   O   OS  CI  H1  H1  CT  H1  OS  CT  H2  N*  CK  H5  NB  
-CB  C   O   NA  H   CA  N2  H   H   NC  CB  CT  H1  CT  HC  HC  OS  P   O   O   
+CT  HC  HC  OS  P   O2  O2  OS  CI  H1  H1  CT  H1  OS  CT  H2  N*  CK  H5  NB  
+CB  C   O   NA  H   CA  N2  H   H   NC  CB  CT  H1  CT  HC  HC  OS  P   O2  O2  
 OS  CI  H1  H1  CT  H1  OS  CT  H2  N*  CM  H4  CM  CT  HC  HC  HC  C   O   NA  
 H   C   O   CT  H1  CT  HC  HC  OH  HO  HO  OH  CI  H1  H1  CT  H1  OS  CT  H2  
 N*  C4  H4  C4  HA  CA  N2  H   H   NC  C   O   CT  H1  CT  H1  OH  HO  OS  P   
-O   O   OS  CI  H1  H1  CT  H1  OS  CT  H2  N*  C5  H5  NB  CB  CA  N2  H   H   
-NC  CQ  H5  NC  CB  CT  H1  CT  H1  OH  HO  OS  P   O   O   OS  CI  H1  H1  CT  
+O2  O2  OS  CI  H1  H1  CT  H1  OS  CT  H2  N*  C5  H5  NB  CB  CA  N2  H   H   
+NC  CQ  H5  NC  CB  CT  H1  CT  H1  OH  HO  OS  P   O2  O2  OS  CI  H1  H1  CT  
 H1  OS  CT  H2  N*  CS  H4  CS  HA  C   O   NA  H   C   O   CT  H1  CT  H1  OH  
-HO  OS  P   O   O   OS  CI  H1  H1  CT  H1  OS  CT  H2  N*  CP  H5  NB  CB  C   
+HO  OS  P   O2  O2  OS  CI  H1  H1  CT  H1  OS  CT  H2  N*  CP  H5  NB  CB  C   
 O   NA  H   CA  N2  H   H   NC  CB  CT  H1  CT  H1  OH  HO  OH  HO  
 %FLAG TREE_CHAIN_CLASSIFICATION                                                 
 %FORMAT(20a4)                                                                   

@@ -350,7 +350,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         contextLCPO = Context(systemLCPO, VerletIntegrator(0.001), Platform.getPlatformByName("Reference"))
         contextNone.setPositions(pdb.positions)
         contextLCPO.setPositions(pdb.positions)
-        energyRef = 13.7350 * kilocalorie_per_mole
+        energyRef = 14.1908 * kilocalorie_per_mole
         energyLCPO = contextLCPO.getState(energy=True).getPotentialEnergy() - contextNone.getState(energy=True).getPotentialEnergy()
         self.assertAlmostEqual(energyLCPO.value_in_unit(kilocalorie_per_mole), energyRef.value_in_unit(kilocalorie_per_mole), 4)
 

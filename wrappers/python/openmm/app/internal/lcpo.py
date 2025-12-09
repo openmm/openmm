@@ -244,14 +244,19 @@ def getLCPOParamsTopology(topology):
             if atomicNumbers[index2] > 1:
                 numHeavyBondsList[index1] += 1
 
-    # Identify carbonyl Os and their partner Cs, then identify carboxylate Cs.
-    carbonylO = {}
+    # Identify terminal O atoms (-O(-), =O) and their bonding partners, then
+    # identify partners that look like carboxylate C or phosphate P atoms.  Note
+    # that we follow Amber's implementation and assign phosphate O atoms the
+    # LCPO carboxylate O- type.  The original LCPO publication does not comment
+    # on the appropriate parameters for this case, and NAMD's implementation has
+    # inconsistent behavior between Amber and CHARMM, so we follow Amber here.
+    terminalO = {}
     for index1, (atomicNumber, bondedTo, numTotalBonds) in enumerate(zip(atomicNumbers, bondedToList, numTotalBondsList)):
         if atomicNumber == 8 and numTotalBonds == 1:
             index2, = bondedTo
-            if atomicNumbers[index2] == 6 and numTotalBondsList[index2] == 3:
-                carbonylO[index1] = index2
-    carboxylateC = {indexC for indexC, countO in collections.Counter(carbonylO.values()).items() if countO > 1}
+            if (atomicNumbers[index2], numTotalBondsList[index2]) in (6, 3) or (15, 4):
+                terminalO[index1] = index2
+    terminalOPartners = {indexPartner for indexPartner, countO in collections.Counter(terminalO.values()).items() if countO > 1}
 
     # Identify sp2-hybridized Ns with 3 bonding partners based on the
     # hybridization of surrounding C atoms.  This may fail in a few unusual
@@ -314,8 +319,9 @@ def getLCPOParamsTopology(topology):
                     _raiseLCPOException(atomicNumber, numTotalBonds, numHeavyBonds)
         elif atomicNumber == 8:
             if numTotalBonds == 1:
-                # sp2 O (check to see if it is a carboxylate O).
-                if index in carbonylO and carbonylO[index] in carboxylateC:
+                # sp2 O (check to see if it is a carboxylate or phosphate O: see
+                # above regarding assigning the carboxylate type on phosphates).
+                if index in terminalO and terminalO[index] in terminalOPartners:
                     params = LCPO_PARAMETERS['O_carboxylate']
                 else:
                     params = LCPO_PARAMETERS['O_sp2_1']
