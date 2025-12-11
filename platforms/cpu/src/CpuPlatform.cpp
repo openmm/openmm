@@ -73,6 +73,7 @@ CpuPlatform::CpuPlatform() {
     registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomGBForceKernel::Name(), factory);
     registerKernelFactory(CalcGayBerneForceKernel::Name(), factory);
+    registerKernelFactory(CalcLCPOForceKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinMiddleStepKernel::Name(), factory);
     platformProperties.push_back(CpuThreads());
     platformProperties.push_back(CpuDeterministicForces());

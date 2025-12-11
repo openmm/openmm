@@ -68,7 +68,7 @@ class TestCharmmFiles(unittest.TestCase):
         """Test implicit solvent using the implicitSolvent parameter.
 
         """
-        system = self.psf_v.createSystem(self.params, implicitSolvent=OBC2, gbsaModel='ACE')
+        system = self.psf_v.createSystem(self.params, implicitSolvent=OBC2, sasaMethod='ACE')
         self.assertTrue(any(isinstance(f, CustomGBForce) for f in system.getForces()))
 
     def test_ImplicitSolventParameters(self):
@@ -81,6 +81,27 @@ class TestCharmmFiles(unittest.TestCase):
         for force in system.getForces():
             if isinstance(force, NonbondedForce):
                 self.assertEqual(force.getReactionFieldDielectric(), 1.0)
+
+    def test_SASAMethodAlias(self):
+        """Tests that gbsaModel is an alias for sasaMethod"""
+        for method in (None, 'ACE', 'LCPO'):
+            system1 = self.psf_c.createSystem(self.params, implicitSolvent=OBC2, sasaMethod=method)
+            system2 = self.psf_c.createSystem(self.params, implicitSolvent=OBC2, gbsaModel=method)
+            self.assertEqual(XmlSerializer.serialize(system1), XmlSerializer.serialize(system2))
+
+    def test_SASAMethodDefault(self):
+        """Tests that None is the default for sasaMethod"""
+        system1 = self.psf_c.createSystem(self.params, implicitSolvent=OBC2)
+        system2 = self.psf_c.createSystem(self.params, implicitSolvent=OBC2, sasaMethod=None)
+        self.assertEqual(XmlSerializer.serialize(system1), XmlSerializer.serialize(system2))
+
+    def test_LCPO(self):
+        """Check LCPO parameter assignment vs. using a Topology and ForceField."""
+        system1 = self.psf_v.createSystem(self.params, implicitSolvent=GBn2, sasaMethod='LCPO')
+        system2 = ForceField('charmm36.xml', 'implicit/gbn2.xml').createSystem(self.pdb.topology, sasaMethod='LCPO')
+        lcpo1, = (force for force in system1.getForces() if isinstance(force, LCPOForce))
+        lcpo2, = (force for force in system2.getForces() if isinstance(force, LCPOForce))
+        self.assertEqual(XmlSerializer.serialize(lcpo1), XmlSerializer.serialize(lcpo2))
 
     def test_HydrogenMass(self):
         """Test that altering the mass of hydrogens works correctly."""

@@ -31,6 +31,7 @@ These classes implement forces that are widely used in biomolecular simulation.
     generated/GayBerneForce
     generated/HarmonicAngleForce
     generated/HarmonicBondForce
+    generated/LCPOForce
     generated/NonbondedForce
     generated/PeriodicTorsionForce
     generated/RBTorsionForce

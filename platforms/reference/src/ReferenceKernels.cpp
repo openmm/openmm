@@ -53,6 +53,7 @@
 #include "ReferenceGayBerneForce.h"
 #include "ReferenceHarmonicBondIxn.h"
 #include "ReferenceLangevinMiddleDynamics.h"
+#include "ReferenceLCPOIxn.h"
 #include "ReferenceLJCoulomb14.h"
 #include "ReferenceLJCoulombIxn.h"
 #include "ReferenceMonteCarloBarostat.h"
@@ -2436,6 +2437,60 @@ void ReferenceCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& cont
     delete ixn;
     ixn = NULL;
     ixn = new ReferenceGayBerneForce(force);
+}
+
+void ReferenceCalcLCPOForceKernel::initialize(const System& system, const LCPOForce& force) {
+    oneBodyEnergy = 0.0;
+    double maxRadius = 0.0;
+
+    double surfaceTension = force.getSurfaceTension();
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double radius, p1, p2, p3, p4;
+        force.getParticleParameters(i, radius, p1, p2, p3, p4);
+        p1 *= surfaceTension;
+        p2 *= surfaceTension;
+        p3 *= surfaceTension;
+        p4 *= surfaceTension;
+        oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
+
+        if (radius != 0.0) {
+            activeParticlesInv.push_back(activeParticles.size());
+            activeParticles.push_back(i);
+            parameters.push_back({radius, p2, p3, p4});
+            maxRadius = max(maxRadius, radius);
+        }
+        else {
+            activeParticlesInv.push_back(-1);
+        }
+    }
+
+    cutoff = 2.0 * maxRadius;
+    usePeriodic = force.usesPeriodicBoundaryConditions();
+}
+
+double ReferenceCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    Vec3* boxVectors = extractBoxVectors(context);
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
+
+    if (usePeriodic) {
+        double minAllowedSize = 1.999999 * cutoff;
+        if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize) {
+            throw OpenMMException("The periodic box size is less than twice the required cutoff for LCPO.");
+        }
+    }
+
+    ReferenceLCPOIxn lcpo(activeParticles, activeParticlesInv, parameters, cutoff, usePeriodic);
+    return oneBodyEnergy + lcpo.execute(boxVectors, posData, forceData, includeForces, includeEnergy);
+}
+
+void ReferenceCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const LCPOForce& force) {
+    // For the reference implementation, just reinitialize everything.
+
+    activeParticles.clear();
+    activeParticlesInv.clear();
+    parameters.clear();
+    initialize(context.getSystem(), force);
 }
 
 ReferenceCalcCustomCVForceKernel::~ReferenceCalcCustomCVForceKernel() {

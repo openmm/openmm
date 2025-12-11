@@ -133,6 +133,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new CommonCalcCustomManyParticleForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcGayBerneForceKernel::Name())
         return new CommonCalcGayBerneForceKernel(name, platform, cl);
+    if (name == CalcLCPOForceKernel::Name())
+        return new CommonCalcLCPOForceKernel(name, platform, cl);
     if (name == IntegrateVerletStepKernel::Name())
         return new CommonIntegrateVerletStepKernel(name, platform, cl);
     if (name == IntegrateLangevinMiddleStepKernel::Name())

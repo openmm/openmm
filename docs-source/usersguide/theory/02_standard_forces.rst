@@ -462,6 +462,38 @@ where :math:`r_i` is the atomic radius of particle *i*\ , :math:`r_i` is
 its atomic radius, and :math:`r_\mathit{solvent}` is the solvent radius, which is taken
 to be 0.14 nm.  The default value for the energy scale :math:`E_{SA}` is 2.25936 kJ/mol/nm\ :sup:`2`\ .
 
+LCPOForce
+*********
+
+LCPOForce implements the LCPO (linear combinations of pairwise overlaps) method
+for estimating solvent-accessible surface areas :cite:`Weiser1999`.  This force
+only implements the functional form of the three-body potential used in the LCPO
+method, and does not automatically assign standard LCPO parameters; this is
+handled in the application layer.
+
+The LCPO approximation estimates the surface area contribution to the energy as
+a sum of terms for each atom:
+
+.. math::
+   E=\gamma\sum_iA_i
+
+where
+
+.. math::
+   A_i=P_{1,i}S_i+P_{2,i}\sum_{j\in N_i}A_{ij}+P_{3,i}\sum_{\substack{j,k\in N_i\\k\in N_j}}A_{jk}+P_{4,i}\sum_{j\in N_i}A_{ij}\sum_{\substack{k\in N_i\\k\in N_j}}A_{jk}
+
+In this expression, :math:`N_i` refers to the set of all neighbors of atom
+:math:`i` (not including :math:`i`), :math:`P_{1,i}` through :math:`P_{4,i}` are
+LCPO coefficients specific to atom :math:`i`,
+
+.. math::
+   S_i=4\pi r_i^2
+
+where :math:`r_i` is the radius of atom :math:`i`, and
+
+.. math::
+   A_{ij}=2\pi r_i\left(r_i-\frac{d_{ij}}{2}-\frac{r_i^2-r_j^2}{2d_{ij}}\right)
+
 ConstantPotentialForce
 **********************
 

@@ -15,7 +15,7 @@ nonbonded.setReactionFieldDielectric(1)
 # Construct the CustomGBForce.
 
 from openmm.app.internal.customgbforces import GBSAOBC2Force
-argMap = {'soluteDielectric':'soluteDielectric', 'solventDielectric':'solventDielectric', 'implicitSolventKappa':'kappa'}
+argMap = {'soluteDielectric':'soluteDielectric', 'solventDielectric':'solventDielectric', 'implicitSolventKappa':'kappa', 'sasaMethod':'SA'}
 solventArgs = {'SA':'ACE'}
 for key in argMap:
     if key in args:
@@ -42,5 +42,9 @@ elif nonbondedMethod == app.CutoffPeriodic:
 else:
     raise ValueError("Illegal nonbonded method for use with implicit solvent")
 sys.addForce(force)
+
+if solventArgs['SA'] == 'LCPO':
+    from openmm.app.internal import lcpo
+    lcpo.addLCPOForce(sys, lcpo.getLCPOParamsTopology(topology), nonbondedMethod == app.CutoffPeriodic)
  </Script>
 </ForceField>

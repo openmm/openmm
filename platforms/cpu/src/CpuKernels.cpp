@@ -1775,6 +1775,81 @@ void CpuCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context, c
     ixn = new CpuGayBerneForce(force);
 }
 
+CpuCalcLCPOForceKernel::~CpuCalcLCPOForceKernel() {
+    if (ixn != NULL) {
+        delete ixn;
+    }
+}
+
+void CpuCalcLCPOForceKernel::initialize(const System& system, const LCPOForce& force) {
+    doInteraction = false;
+    oneBodyEnergy = 0.0;
+
+    double surfaceTension = force.getSurfaceTension();
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double radius, p1, p2, p3, p4;
+        force.getParticleParameters(i, radius, p1, p2, p3, p4);
+        p1 *= surfaceTension;
+        p2 *= surfaceTension;
+        p3 *= surfaceTension;
+        p4 *= surfaceTension;
+        oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
+
+        if (radius != 0.0) {
+            activeParticles.push_back(i);
+            parameters.push_back(fvec4(radius, p2, p3, p4));
+            if (p2 != 0.0 || p3 != 0.0 || p4 != 0.0) {
+                doInteraction = true;
+            }
+        }
+    }
+
+    bool usePeriodic = force.usesPeriodicBoundaryConditions();
+    ixn = new CpuLCPOForce(data.threads, activeParticles, parameters, usePeriodic);
+    data.isPeriodic |= usePeriodic;
+}
+
+double CpuCalcLCPOForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    double energy = oneBodyEnergy;
+    if (doInteraction) {
+        ixn->execute(extractBoxVectors(context), data.posq, data.threadForce, includeForces, includeEnergy, energy);
+    }
+    return energy;
+}
+
+void CpuCalcLCPOForceKernel::copyParametersToContext(ContextImpl& context, const LCPOForce& force) {
+    doInteraction = false;
+    oneBodyEnergy = 0.0;
+
+    double surfaceTension = force.getSurfaceTension();
+    int activeIndex = 0;
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double radius, p1, p2, p3, p4;
+        force.getParticleParameters(i, radius, p1, p2, p3, p4);
+        p1 *= surfaceTension;
+        p2 *= surfaceTension;
+        p3 *= surfaceTension;
+        p4 *= surfaceTension;
+        oneBodyEnergy += 4.0 * PI_M * p1 * radius * radius;
+
+        if (radius != 0.0) {
+            if (activeIndex < activeParticles.size()) {
+                activeParticles[activeIndex] = i;
+                parameters[activeIndex] = fvec4(radius, p2, p3, p4);
+            }
+            activeIndex++;
+            if (p2 != 0.0 || p3 != 0.0 || p4 != 0.0) {
+                doInteraction = true;
+            }
+        }
+    }
+    if (activeIndex != activeParticles.size()) {
+        throw OpenMMException("updateParametersInContext: The number of non-excluded particles for LCPO has changed");
+    }
+
+    ixn->updateRadii();
+}
+
 CpuIntegrateLangevinMiddleStepKernel::~CpuIntegrateLangevinMiddleStepKernel() {
     if (dynamics)
         delete dynamics;

@@ -100,7 +100,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
 
         """
         for implicitSolvent_value, gbsa in zip([HCT, OBC1, OBC2, GBn], ['ACE', None, 'ACE', None]):
-            system = prmtop2.createSystem(implicitSolvent=implicitSolvent_value, gbsaModel=gbsa)
+            system = prmtop2.createSystem(implicitSolvent=implicitSolvent_value, sasaMethod=gbsa)
             forces = system.getForces()
             if implicitSolvent_value in set([HCT, OBC1, GBn]):
                 force_type = CustomGBForce
@@ -139,12 +139,25 @@ class TestAmberPrmtopFile(unittest.TestCase):
                                     found_matching_solute_dielectric)
 
     def test_ImplicitSolventZeroSA(self):
-        """Test that requesting gbsaModel=None yields a surface area energy of 0 when 
+        """Test that requesting sasaMethod=None yields a surface area energy of 0 when
            prmtop.createSystem produces a GBSAOBCForce"""
-        system = prmtop2.createSystem(implicitSolvent=OBC2, gbsaModel=None)
+        system = prmtop2.createSystem(implicitSolvent=OBC2, sasaMethod=None)
         for force in system.getForces():
             if isinstance(force, GBSAOBCForce):
                 self.assertEqual(force.getSurfaceAreaEnergy(), 0*kilojoule/(nanometer**2*mole))
+
+    def test_SASAMethodAlias(self):
+        """Tests that gbsaModel is an alias for sasaMethod"""
+        for method in (None, 'ACE', 'LCPO'):
+            system1 = prmtop2.createSystem(implicitSolvent=OBC2, sasaMethod=method)
+            system2 = prmtop2.createSystem(implicitSolvent=OBC2, gbsaModel=method)
+            self.assertEqual(XmlSerializer.serialize(system1), XmlSerializer.serialize(system2))
+
+    def test_SASAMethodDefault(self):
+        """Tests that ACE is the default for sasaMethod"""
+        system1 = prmtop2.createSystem(implicitSolvent=OBC2)
+        system2 = prmtop2.createSystem(implicitSolvent=OBC2, sasaMethod='ACE')
+        self.assertEqual(XmlSerializer.serialize(system1), XmlSerializer.serialize(system2))
 
     def test_HydrogenMass(self):
         """Test that altering the mass of hydrogens works correctly."""
@@ -326,6 +339,28 @@ class TestAmberPrmtopFile(unittest.TestCase):
                 diff = norm(f1-f2)
                 self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-4)
 
+    def test_LCPO(self):
+        """Compute LCPO energy and compare it to a reference value from Amber."""
+
+        prmtopLCPO = AmberPrmtopFile('systems/lcpo_test.prmtop')
+        pdb = PDBFile('systems/lcpo_test.pdb')
+        systemNone = prmtopLCPO.createSystem(implicitSolvent=GBn2, sasaMethod=None)
+        systemLCPO = prmtopLCPO.createSystem(implicitSolvent=GBn2, sasaMethod='LCPO')
+        contextNone = Context(systemNone, VerletIntegrator(0.001), Platform.getPlatformByName("Reference"))
+        contextLCPO = Context(systemLCPO, VerletIntegrator(0.001), Platform.getPlatformByName("Reference"))
+        contextNone.setPositions(pdb.positions)
+        contextLCPO.setPositions(pdb.positions)
+        energyRef = 14.1908 * kilocalorie_per_mole
+        energyLCPO = contextLCPO.getState(energy=True).getPotentialEnergy() - contextNone.getState(energy=True).getPotentialEnergy()
+        self.assertAlmostEqual(energyLCPO.value_in_unit(kilocalorie_per_mole), energyRef.value_in_unit(kilocalorie_per_mole), 4)
+
+    def test_LCPOInvalid(self):
+        """Check that LCPO parameter assignment fails instead of assigning incorrect parameters for unsupported atom types."""
+
+        prmtop = AmberPrmtopFile('systems/lcpo_invalid.prmtop')
+        with self.assertRaisesRegex(ValueError, 'atomic number 8.+2 bonds.+0 bonds excluding H'):
+            prmtop.createSystem(implicitSolvent=GBn2, sasaMethod='LCPO')
+
     def testSwitchFunction(self):
         """ Tests the switching function option in AmberPrmtopFile """
         system = prmtop1.createSystem(nonbondedMethod=PME,
@@ -424,7 +459,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         inpcrd = AmberInpcrdFile('systems/DNA_mbondi3.inpcrd')
         sanderEnergy = [-19223.87993545, -19527.40433175, -19788.1070698]
         for solvent, expectedEnergy in zip([OBC2, GBn, GBn2], sanderEnergy):
-            system = prmtop.createSystem(implicitSolvent=solvent, gbsaModel=None)
+            system = prmtop.createSystem(implicitSolvent=solvent, sasaMethod=None)
             for f in system.getForces():
                 if isinstance(f, CustomGBForce) or isinstance(f, GBSAOBCForce):
                     f.setForceGroup(1)

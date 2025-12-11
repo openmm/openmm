@@ -1,0 +1,200 @@
+#ifndef OPENMM_CPULCPOFORCE_H_
+#define OPENMM_CPULCPOFORCE_H_
+
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit.                   *
+ * See https://openmm.org/development.                                        *
+ *                                                                            *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
+ * Authors: Evan Pretti                                                       *
+ * Contributors:                                                              *
+ *                                                                            *
+ * Permission is hereby granted, free of charge, to any person obtaining a    *
+ * copy of this software and associated documentation files (the "Software"), *
+ * to deal in the Software without restriction, including without limitation  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
+ * and/or sell copies of the Software, and to permit persons to whom the      *
+ * Software is furnished to do so, subject to the following conditions:       *
+ *                                                                            *
+ * The above copyright notice and this permission notice shall be included in *
+ * all copies or substantial portions of the Software.                        *
+ *                                                                            *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
+ * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
+ * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
+ * -------------------------------------------------------------------------- */
+
+#include <map>
+#include <vector>
+
+#include "CpuNeighborList.h"
+#include "openmm/internal/vectorize.h"
+
+namespace OpenMM {
+
+/**
+ * Performs energy, force, and charge derivative calculations for the CPU kernel
+ * for LCPOForce.
+ */
+class CpuLCPOForce {
+private:
+    /**
+     * Holds data about a neighbor pair (overlap areas for each sphere in the
+     * last component of each fvec4 following their derivative vectors).
+     */
+    struct NeighborData {
+        fvec4 ijData;
+        fvec4 jiData;
+    };
+
+    /**
+     * Holds information from a thread's request to record a neighbor.
+     */
+    struct NeighborInfo {
+        int i, j;
+        NeighborData data;
+    };
+
+    /**
+     * Keeps track of neighbors for CpuLCPOForce.
+     */
+    class Neighbors {
+    private:
+        int numParticles;
+        int maxNumNeighbors;
+        int maxNumNeighborsFound;
+        std::vector<int> numNeighbors;
+        std::vector<int> indices;
+        std::vector<NeighborData> data;
+
+    public:
+        /**
+         * Creates an empty CpuLCPOForce::Neighbors.
+         *
+         * @param numParticles     the number of particles to track (this will be numActiveParticles of the parent CpuLCPOForce)
+         * @param maxNumNeighbors  an initial guess for the maximum number of neighbors per particle
+         */
+        Neighbors(int numParticles, int maxNumNeighborsGuess = 0);
+
+        /**
+         * Clears all neighbor data.
+         */
+        void clear();
+
+        /**
+         * Records that two particles are neighbors of each other.  This may
+         * fail silently if there is not enough room for the neighbor list.
+         *
+         * @param info  neighbor information recorded by a worker thread.
+         */
+        void insert(const NeighborInfo& info);
+
+        /**
+         * Retrieves the neighbors of a particle.
+         *
+         * @param i              the index of the particle
+         * @param iNumNeighbors  the number of neighbors of the particle
+         * @param iIndices       pointer to the start of the indices of the neighbors
+         * @param iData          pointer to the start of the data associated with the neighbors
+         */
+        void getNeighbors(int i, int& iNumNeighbors, const int*& iIndices, const NeighborData*& iData) const;
+
+        /**
+         * Tests whether a particle is a neighbor of another particle.
+         *
+         * @param i          the index of the first particle
+         * @param j          the index of the second particle
+         * @param[out] data  data for the pair (only set if they are neighbors)
+         * @return           whether or not the second particle is a neighbor of the first
+         */
+        bool isNeighbor(int i, int j, NeighborData& data);
+
+        /**
+         * Checks whether or not the neighbor list overflowed (and one more more
+         * insertions failed) since the list was last cleared.
+         *
+         * @param maxNumNeighborsNeeded  the maximum number of neighbors per particle needed to avoid overflowing
+         */
+        bool didOverflow(int& maxNumNeighborsNeeded) {
+            maxNumNeighborsNeeded = maxNumNeighborsFound;
+            return maxNumNeighborsFound > maxNumNeighbors;
+        }
+    };
+
+public:
+    /**
+     * Creates a CpuLCPOForce.
+     *
+     * @param threads          thread pool for computations
+     * @param activeParticles  system particle indices for each active particle
+     * @param parameters       parameters (radius, P2, P3, and P4) for each active particle
+     * @param usePeriodic      whether or not to use periodic boundary conditions
+     */
+    CpuLCPOForce(ThreadPool& threads, const std::vector<int>& activeParticles, const std::vector<fvec4>& parameters, bool usePeriodic);
+
+    /**
+     * Indicates that the radii of some particles may have changed and that the
+     * maximum required cutoff distance should be updated.
+     */
+    void updateRadii();
+
+    /**
+     * Computes energies and forces.
+     *
+     * @param boxVectors     periodic box vectors
+     * @param posq           particle positions
+     * @param threadForce    thread force accumulators
+     * @param includeForces  whether or not to calculate interaction forces
+     * @param includeEnergy  whether or not to calculate interaction energies
+     * @param energy         energy accumulator
+     */
+    void execute(Vec3* boxVectors, AlignedArray<float>& posq, std::vector<AlignedArray<float> >& threadForce, bool includeForces, bool includeEnergy, double& energy);
+
+private:
+    /**
+     * Thread worker for computing energies and forces.
+     */
+    void threadExecute(ThreadPool& threads, int threadIndex);
+
+    /**
+     * Helper for processing a block of the neighbor list.
+     */
+    template<bool USE_PERIODIC, bool IS_TRICLINIC>
+    void processNeighborListBlock(int blockIndex, std::vector<NeighborInfo>& threadNeighborInfo);
+
+private:
+    static const int RadiusIndex = 0;
+    static const int P2Index = 1;
+    static const int P3Index = 2;
+    static const int P4Index = 3;
+
+    int numActiveParticles;
+
+    ThreadPool& threads;
+    const std::vector<int>& activeParticles;
+    const std::vector<fvec4>& parameters;
+    bool usePeriodic, isTriclinic;
+
+    CpuNeighborList neighborList;
+    std::vector<std::set<int> > exclusions;
+    Neighbors neighbors;
+    float cutoff;
+    Vec3* boxVectors;
+    fvec4 boxSize, recipBoxSize, boxVec4[3];
+
+    float* posq;
+    std::vector<double> threadEnergy;
+    std::vector<AlignedArray<float> >* threadForce;
+    std::vector<std::vector<NeighborInfo> > threadNeighbors;
+    std::atomic<int> atomicCounter;
+};
+
+} // namespace OpenMM
+
+#endif // OPENMM_CPULCPOFORCE_H_
