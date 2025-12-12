@@ -315,8 +315,8 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE) void findBlocksWithInteracti
     if (rebuildNeighborList[0] == 0)
         return; // The neighbor list doesn't need to be rebuilt.
 
-    constexpr int tilesPerWarp = warpSize/TILE_SIZE;
-    constexpr int warpsPerBlock = GROUP_SIZE/warpSize;
+    const int tilesPerWarp = warpSize/TILE_SIZE;
+    const int warpsPerBlock = GROUP_SIZE/warpSize;
     const int indexInWarp = threadIdx.x%warpSize;
     const int indexInTile = threadIdx.x%TILE_SIZE;
     const int tileInWarp = tilesPerWarp == 1 ? 0 : (threadIdx.x/TILE_SIZE)%tilesPerWarp;

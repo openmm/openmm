@@ -33,14 +33,14 @@ T warpShuffle(const T& input, const int src_lane) {
 
 template<int Subwarp, class T>
 static __inline__ __device__
-typename std::enable_if<(Subwarp == warpSize), T>::type
+typename __hip_internal::enable_if<(Subwarp == warpSize), T>::type
 warpRotateLeft(const T& input) {
     return warpShuffle(input, threadIdx.x + 1);
 }
 
 template<int Subwarp, class T>
 static __inline__ __device__
-typename std::enable_if<!(Subwarp == warpSize), T>::type
+typename __hip_internal::enable_if<!(Subwarp == warpSize), T>::type
 warpRotateLeft(const T& input) {
     return warpShuffle(input, ((threadIdx.x + 1) & (Subwarp - 1)) | (threadIdx.x & ~(Subwarp - 1)));
 }
