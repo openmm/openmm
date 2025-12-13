@@ -192,6 +192,12 @@ jobs:
           miniforge-variant: Miniforge3
           use-mamba: true
 
+      # See https://github.com/kou/arrow/blob/main/ci/scripts/util_free_space.sh.  We can delete more if we need to.
+      - name: "Free disk space"
+        if: matrix.OPENCL == true && startsWith(matrix.os, 'ubuntu')
+        run: |
+          rm -rf /opt/hostedtoolcache/*
+
       - name: "Install CUDA on Ubuntu (if needed)"
         if: matrix.cuda-version != '' && startsWith(matrix.os, 'ubuntu')
         env:
