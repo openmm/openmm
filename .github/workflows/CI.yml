@@ -196,7 +196,9 @@ jobs:
       - name: "Free disk space"
         if: matrix.OPENCL == true && startsWith(matrix.os, 'ubuntu')
         run: |
-          rm -rf /__t/* || true
+          rm -rf /__t/*
+          rm -rf /host/usr/local/.ghcup
+          rm -rf /host/usr/local/lib/android
 
       - name: "Install CUDA on Ubuntu (if needed)"
         if: matrix.cuda-version != '' && startsWith(matrix.os, 'ubuntu')
