@@ -51,7 +51,9 @@ void CommonIntegrateQTBStepKernel::initialize(const System& system, const QTBInt
     noise.upload(noiseVec);
     int elementSize = (cc.getUseMixedPrecision() || cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
     randomForce.initialize(cc, 3*segmentLength*numParticles, elementSize, "randomForce");
+    cc.clearBuffer(randomForce);
     segmentVelocity.initialize(cc, 3*segmentLength*numParticles, elementSize, "segmentVelocity");
+    cc.clearBuffer(segmentVelocity);
     oldDelta.initialize(cc, cc.getPaddedNumAtoms(), 4*elementSize, "oldDelta");
     thetad.initialize(cc, numFreq, elementSize, "thetad");
     workspace.initialize(cc, 18*segmentLength*cc.getNumThreadBlocks(), elementSize, "workspace");
