@@ -197,8 +197,6 @@ jobs:
         if: matrix.OPENCL == true && startsWith(matrix.os, 'ubuntu')
         run: |
           rm -rf /opt/hostedtoolcache/*
-          rm -rf /usr/local/.ghcup
-          rm -rf /usr/local/lib/android
 
       - name: "Install CUDA on Ubuntu (if needed)"
         if: matrix.cuda-version != '' && startsWith(matrix.os, 'ubuntu')
