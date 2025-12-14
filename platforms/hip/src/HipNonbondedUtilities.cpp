@@ -680,10 +680,10 @@ hipFunction_t HipNonbondedUtilities::createInteractionKernel(const string& sourc
     replacements["SAVE_DERIVATIVES"] = saveDerivs.str();
 
     stringstream shuffleWarpData;
-    shuffleWarpData << "shflPosq = warpRotateLeft<TILE_SIZE>(shflPosq);\n";
-    shuffleWarpData << "shflForce = warpRotateLeft<TILE_SIZE>(shflForce);\n";
+    shuffleWarpData << "shflPosq = warpRotateLeft(shflPosq);\n";
+    shuffleWarpData << "shflForce = warpRotateLeft(shflForce);\n";
     for (const ComputeParameterInfo& param : params) {
-        shuffleWarpData<<"shfl"<<param.getName()<<"=warpRotateLeft<TILE_SIZE>(shfl"<<param.getName()<<");\n";
+        shuffleWarpData<<"shfl"<<param.getName()<<"=warpRotateLeft(shfl"<<param.getName()<<");\n";
     }
     replacements["SHUFFLE_WARP_DATA"] = shuffleWarpData.str();
 

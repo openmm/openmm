@@ -636,6 +636,7 @@ private:
     int multiprocessors;
     int sharedMemPerBlock;
     bool supportsHardwareFloatGlobalAtomicAdd;
+    unsigned int hostMallocFlags;
     bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, boxIsTriclinic, hasAssignedPosqCharges;
     bool isLinkedContext;
     std::string tempDir, cacheDir, gpuArchitecture;

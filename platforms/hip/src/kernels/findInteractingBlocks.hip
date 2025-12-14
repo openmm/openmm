@@ -315,6 +315,13 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE) void findBlocksWithInteracti
     if (rebuildNeighborList[0] == 0)
         return; // The neighbor list doesn't need to be rebuilt.
 
+    // Starting from ROCm 7 warpSize is no longer constexpr. Redefine as a local value for using it
+    // in sizes of __shared__ arrays:
+#if defined(AMD_RDNA)
+    constexpr int warpSize = 32;
+#else
+    constexpr int warpSize = 64;
+#endif
     constexpr int tilesPerWarp = warpSize/TILE_SIZE;
     constexpr int warpsPerBlock = GROUP_SIZE/warpSize;
     const int indexInWarp = threadIdx.x%warpSize;

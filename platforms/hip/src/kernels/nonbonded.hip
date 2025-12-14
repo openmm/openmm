@@ -213,7 +213,7 @@ extern "C" __launch_bounds__(THREAD_BLOCK_SIZE) __global__ void computeNonbonded
                 excl >>= 1;
 #endif
                 SHUFFLE_WARP_DATA
-                atomIndex = warpRotateLeft<TILE_SIZE>(atomIndex);
+                atomIndex = warpRotateLeft(atomIndex);
             }
             const unsigned int offset = atomIndex;
             // write results for off diagonal tiles
@@ -367,7 +367,7 @@ extern "C" __launch_bounds__(THREAD_BLOCK_SIZE) __global__ void computeNonbonded
                     }
 #endif
                     SHUFFLE_WARP_DATA
-                    atomIndex = warpRotateLeft<TILE_SIZE>(atomIndex);
+                    atomIndex = warpRotateLeft(atomIndex);
                 }
             }
             else
@@ -426,7 +426,7 @@ extern "C" __launch_bounds__(THREAD_BLOCK_SIZE) __global__ void computeNonbonded
                     }
 #endif
                     SHUFFLE_WARP_DATA
-                    atomIndex = warpRotateLeft<TILE_SIZE>(atomIndex);
+                    atomIndex = warpRotateLeft(atomIndex);
                 }
             }
 

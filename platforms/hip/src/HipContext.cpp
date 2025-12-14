@@ -182,6 +182,17 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
         this->supportsHardwareFloatGlobalAtomicAdd = true;
     }
 
+    hostMallocFlags = hipHostMallocDefault;
+#if !defined(WIN32)
+    // hipHostMallocNumaUser may not be allowed in some conditions, for example, if docker container 
+    // is created without --security-opt seccomp=unconfined or --cap-add=SYS_NICE
+    int* tmpHostBuffer;
+    if(hipHostMalloc(&tmpHostBuffer, sizeof(*tmpHostBuffer), hipHostMallocNumaUser) == hipSuccess) {
+        CHECK_RESULT(hipHostFree(tmpHostBuffer));
+        hostMallocFlags = hipHostMallocNumaUser;
+    }
+#endif
+
     contextIsValid = true;
     ContextSelector selector(*this);
     if (contextIndex > 0 && originalContext == NULL) {
@@ -911,9 +922,5 @@ unsigned int HipContext::getEventFlags() {
 }
 
 unsigned int HipContext::getHostMallocFlags() {
-#ifdef WIN32
-    return hipHostMallocDefault;
-#else
-    return hipHostMallocNumaUser;
-#endif
+    return hostMallocFlags;
 }
