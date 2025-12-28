@@ -1,5 +1,5 @@
 """
-pdbstructure.py: Used for managing PDB formated files.
+pdbstructure.py: Used for managing PDB formatted files.
 
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
@@ -890,7 +890,7 @@ class Atom(object):
         if alternate_location_indicator is None:
             alternate_location_indicator = self.alternate_location_indicator
         # produce PDB line in three parts: names, numbers, and end
-        # Accomodate 4-character residue names that use column 21
+        # Accommodate 4-character residue names that use column 21
         long_res_name = self.residue_name_with_spaces
         if len(long_res_name) == 3:
             long_res_name += " "

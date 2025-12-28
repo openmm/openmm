@@ -2,7 +2,7 @@
 Run test suite through CTest, with some options set for the CI environment.
 
 - Runs with a per-test and overall timeout which can be governed by the
-  avialable time on the CI system.
+  available time on the CI system.
 - Reruns tests which fail (does not rerun tests which merely timeout).
 
 """

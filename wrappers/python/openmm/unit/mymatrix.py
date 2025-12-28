@@ -223,7 +223,7 @@ class MyMatrix(MyVector):
         n = len(rhs[0])
         r = len(rhs)
         if self.numCols() != r:
-            raise ArithmeticError("Matrix multplication size mismatch (%d vs %d)" % (self.numCols(), r))
+            raise ArithmeticError("Matrix multiplication size mismatch (%d vs %d)" % (self.numCols(), r))
         result = zeros(m, n)
         for i in range(m):
             for j in range(n):

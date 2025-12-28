@@ -151,10 +151,10 @@ class Quantity(object):
                         if isinstance(value, numpy.ndarray):
                             value = numpy.array(new_container._value)
                         else:
-                            # delegate contruction to container class from list
+                            # delegate construction to container class from list
                             value = value.__class__(new_container._value)
                     except ImportError:
-                        # delegate contruction to container class from list
+                        # delegate construction to container class from list
                         value = value.__class__(new_container._value)
                 else:
                     # Non-Quantity, non container

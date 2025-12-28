@@ -23,7 +23,7 @@ A base container class is defined which supports common features of
 data and definition containers.   PDBx data files are organized in
 sections called data blocks which are mapped to data containers.
 PDBx dictionaries contain definition sections and data sections
-which are mapped to definition and data containes respectively.
+which are mapped to definition and data containers respectively.
 
 Data in both PDBx data files and dictionaries are organized in
 data categories. In the PDBx syntax individual items or data

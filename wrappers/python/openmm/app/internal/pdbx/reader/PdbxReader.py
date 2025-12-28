@@ -323,7 +323,7 @@ class PdbxReader(object):
                 curCatName,curAttName,curQuotedString,curWord = next(tokenizer)
 
             elif state == "ST_UNKNOWN":
-                self.__syntaxError("Unrecogized syntax element: " + str(curWord))
+                self.__syntaxError("Unrecognized syntax element: " + str(curWord))
                 return
                 
 
