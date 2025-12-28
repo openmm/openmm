@@ -52,9 +52,9 @@ class TestTopology(unittest.TestCase):
         topology.addBond(atom_B1, atom_B2)
         topology.addBond(atom_B2, atom_C1)
         # Check bonds
-        all_bonds = [ bond for bond in residue2.bonds() ]
-        internal_bonds = [ bond for bond in residue2.internal_bonds() ]
-        external_bonds = [ bond for bond in residue2.external_bonds() ]
+        all_bonds = list(residue2.bonds())
+        internal_bonds = list(residue2.internal_bonds())
+        external_bonds = list(residue2.external_bonds())
         self.assertEqual(all_bonds, [ (atom_A1, atom_B1), (atom_B1, atom_B2), (atom_B2, atom_C1) ])
         self.assertEqual(internal_bonds, [ (atom_B1, atom_B2) ])
         self.assertEqual(external_bonds, [ (atom_A1, atom_B1), (atom_B2, atom_C1) ])

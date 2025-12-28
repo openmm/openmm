@@ -393,7 +393,7 @@ class ForceField(object):
                         patchData.deletedExternalBonds.append(atom)
                     # The following three lines are only correct for single residue patches.  Multi-residue patches with
                     # virtual sites currently don't work correctly.  See issue #2848.
-                    atomIndices = dict((atom.name, i) for i, atom in enumerate(patchData.addedAtoms[0]+patchData.changedAtoms[0]))
+                    atomIndices = {atom.name: i for i, atom in enumerate(patchData.addedAtoms[0]+patchData.changedAtoms[0])}
                     for site in patch.findall('VirtualSite'):
                         patchData.virtualSites[0].append(ForceField._VirtualSiteData(site, atomIndices))
                     for residue in patch.findall('ApplyToResidue'):
@@ -679,7 +679,7 @@ class ForceField(object):
             forcefield : ForceField
                 The ForceField object containing atom type definitions
             """
-            classNameForType = dict((t.name, str(t.atomClass)) for t in forcefield._atomTypes.values())
+            classNameForType = {t.name: str(t.atomClass) for t in forcefield._atomTypes.values()}
             self.atomClasses = [classNameForType[self.atomType[atom]] for atom in self.atoms]
 
     class _TemplateData(object):
@@ -703,7 +703,7 @@ class ForceField(object):
 
             # Provide a helpful error message if atom name not found.
             msg =  "Atom name '%s' not found in residue template '%s'.\n" % (atom_name, self.name)
-            msg += "Possible atom names are: %s" % str(list(map(lambda x: x.name, self.atoms)))
+            msg += "Possible atom names are: %s" % str([x.name for x in self.atoms])
             raise ValueError(msg)
 
         def addAtom(self, atom):
@@ -863,8 +863,8 @@ class ForceField(object):
                     if any(a.name == atom.name for a in newTemplate.atoms):
                         raise ValueError("Patch '%s' adds an atom with the same name as an existing atom: %s" % (self.name, atom.name))
                     newTemplate.addAtom(ForceField._TemplateAtomData(atom.name, atom.type, atom.element, atom.parameters))
-                oldAtomIndex = dict([(atom.name, i) for i, atom in enumerate(template.atoms)])
-                newAtomIndex = dict([(atom.name, i) for i, atom in enumerate(newTemplate.atoms)])
+                oldAtomIndex = {atom.name: i for i, atom in enumerate(template.atoms)}
+                newAtomIndex = {atom.name: i for i, atom in enumerate(newTemplate.atoms)}
                 for atom in self.changedAtoms[index]:
                     if atom.name not in newAtomIndex:
                         raise ValueError("Patch '%s' modifies nonexistent atom '%s' in template '%s'" % (self.name, atom.name, template.name))
@@ -872,7 +872,7 @@ class ForceField(object):
 
                 # Copy over the virtual sites, translating the atom indices.
 
-                indexMap = dict([(oldAtomIndex[name], newAtomIndex[name]) for name in newAtomIndex if name in oldAtomIndex])
+                indexMap = {oldAtomIndex[name]: newAtomIndex[name] for name in newAtomIndex if name in oldAtomIndex}
                 for site in template.virtualSites:
                     if site.index in indexMap and all(i in indexMap for i in site.atoms):
                         newSite = deepcopy(site)
@@ -883,7 +883,7 @@ class ForceField(object):
 
                 # Build the lists of bonds and external bonds.
 
-                atomMap = dict([(template.atoms[i], indexMap[i]) for i in indexMap])
+                atomMap = {template.atoms[i]: indexMap[i] for i in indexMap}
                 deletedBonds = [(atom1.name, atom2.name) for atom1, atom2 in self.deletedBonds if atom1.residue == index and atom2.residue == index]
                 for atom1, atom2 in template.bonds:
                     a1 = template.atoms[atom1]
@@ -906,7 +906,7 @@ class ForceField(object):
 
                 # Add new virtual sites.
 
-                indexMap = dict((i, newAtomIndex[atom.name]) for i, atom in enumerate(self.addedAtoms[index]+self.changedAtoms[index]))
+                indexMap = {i: newAtomIndex[atom.name] for i, atom in enumerate(self.addedAtoms[index]+self.changedAtoms[index])}
                 for site in self.virtualSites[index]:
                     newSite = deepcopy(site)
                     newSite.index = indexMap[site.index]
@@ -1077,7 +1077,7 @@ class ForceField(object):
         bondedToAtom = [sorted(b) for b in bondedToAtom]
         return bondedToAtom
 
-    def getUnmatchedResidues(self, topology, residueTemplates=dict()):
+    def getUnmatchedResidues(self, topology, residueTemplates={}):
         """Return a list of Residue objects from specified topology for which no forcefield templates are available.
 
         .. CAUTION:: This method is experimental, and its API is subject to change.
@@ -1103,7 +1103,7 @@ class ForceField(object):
         """
         # Find the template matching each residue, compiling a list of residues for which no templates are available.
         bondedToAtom = self._buildBondedToAtomList(topology)
-        unmatched_residues = list() # list of unmatched residues
+        unmatched_residues = [] # list of unmatched residues
         for res in topology.residues():
             if res in residueTemplates:
                 # Make sure the specified template matches.
@@ -1139,7 +1139,7 @@ class ForceField(object):
         """
         # Find the template matching each residue, compiling a list of residues for which no templates are available.
         bondedToAtom = self._buildBondedToAtomList(topology)
-        templates = list() # list of templates matching the corresponding residues
+        templates = [] # list of templates matching the corresponding residues
         for residue in topology.residues():
             # Attempt to match one of the existing templates.
             [template, matches] = self._getResidueTemplateMatches(residue, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
@@ -1175,8 +1175,8 @@ class ForceField(object):
         unmatched_residues = self.getUnmatchedResidues(topology)
         # Generate a unique list of unmatched residues by comparing fingerprints.
         bondedToAtom = self._buildBondedToAtomList(topology)
-        unique_unmatched_residues = list() # list of unique unmatched Residue objects from topology
-        templates = list() # corresponding _TemplateData templates
+        unique_unmatched_residues = [] # list of unique unmatched Residue objects from topology
+        templates = [] # corresponding _TemplateData templates
         signatures = set()
         for residue in unmatched_residues:
             signature = _createResidueSignature([ atom.element for atom in residue.atoms() ])
@@ -1197,7 +1197,7 @@ class ForceField(object):
         return [templates, unique_unmatched_residues]
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=None, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(),
+                     constraints=None, rigidWater=None, removeCMMotion=True, hydrogenMass=None, residueTemplates={},
                      ignoreExternalBonds=False, switchDistance=None, flexibleConstraints=False, drudeMass=0.4*unit.amu, **args):
         """Construct an OpenMM System representing a Topology with this force field.
 
@@ -1334,7 +1334,7 @@ class ForceField(object):
                         uniqueAngles.add((bond.atom1, bond.atom2, atom))
                     else:
                         uniqueAngles.add((atom, bond.atom2, bond.atom1))
-        data.angles = sorted(list(uniqueAngles))
+        data.angles = sorted(uniqueAngles)
 
         # Make a list of all unique proper torsions
 
@@ -1352,7 +1352,7 @@ class ForceField(object):
                         uniquePropers.add((angle[0], angle[1], angle[2], atom))
                     else:
                         uniquePropers.add((atom, angle[2], angle[1], angle[0]))
-        data.propers = sorted(list(uniquePropers))
+        data.propers = sorted(uniquePropers)
 
         # Make a list of all unique improper torsions
 
@@ -1695,7 +1695,7 @@ def _applyPatchesToMatchResidues(forcefield, data, residues, templateForResidue,
                 for cluster in matchedClusters:
                     for residue in cluster:
                         unmatchedResidues.remove(residue)
-                bonds = set(bond for bond in bonds if bond[0] in unmatchedResidues and bond[1] in unmatchedResidues)
+                bonds = {bond for bond in bonds if bond[0] in unmatchedResidues and bond[1] in unmatchedResidues}
 
         # Now extend the clusters to find ones of the next size up.
 
@@ -1923,7 +1923,7 @@ def _findMatchErrors(forcefield, res):
     # residue uses an element not supported.  Otherwise, prepare fingerprints of
     # the residue and templates based on counts of the elements of their atoms.
 
-    supportedElements = set(elemToNum(atom.element) for template in forcefield._templates.values() for atom in template.atoms)
+    supportedElements = {elemToNum(atom.element) for template in forcefield._templates.values() for atom in template.atoms}
     residueAtomCounts = Counter(elemToNum(atom.element) for atom in res.atoms())
     unsupportedElements = set(residueAtomCounts.keys()) - supportedElements
     if unsupportedElements:
@@ -2054,7 +2054,7 @@ def _createResidueTemplate(residue):
         template.addAtom(ForceField._TemplateAtomData(atom.name, None, atom.element))
     for (atom1,atom2) in residue.internal_bonds():
         template.addBondByName(atom1.name, atom2.name)
-    residue_atoms = [ atom for atom in residue.atoms() ]
+    residue_atoms = list(residue.atoms())
     for (atom1,atom2) in residue.external_bonds():
         if atom1 in residue_atoms:
             template.addExternalBondByName(atom1.name)
@@ -2603,7 +2603,7 @@ class CMAPTorsionGenerator(object):
                     atom = bond.atom1
                 if atom != torsion[2]:
                     uniqueTorsions.add((torsion[0], torsion[1], torsion[2], torsion[3], atom))
-        torsions = sorted(list(uniqueTorsions))
+        torsions = sorted(uniqueTorsions)
         wildcard = self.ff._atomClasses['']
         for torsion in torsions:
             type1 = data.atomType[data.atoms[torsion[0]]]
@@ -2796,7 +2796,7 @@ class LennardJonesGenerator(object):
         # that a) appears in the system and b) has unique parameters.
 
         nbfixTypeSet = {t for nbfixTypes in (self.nbfixTypes1, self.nbfixTypes2) for t in nbfixTypes if nbfixTypes[t]}
-        allTypes = set(data.atomType[atom] for atom in data.atoms)
+        allTypes = {data.atomType[atom] for atom in data.atoms}
         mergedTypes = []
         mergedTypeParams = []
         paramsToMergedType = {}
@@ -2894,7 +2894,7 @@ class LennardJonesGenerator(object):
             bonded.addPerBondParameter('epsilon')
             bonded.setName('LennardJones14')
             sys.addForce(bonded)
-            skip = set(tuple(forceCopy.getExclusionParticles(i)) for i in range(forceCopy.getNumExclusions()))
+            skip = {tuple(forceCopy.getExclusionParticles(i)) for i in range(forceCopy.getNumExclusions())}
             for i in range(self.force.getNumExclusions()):
                 p1,p2 = self.force.getExclusionParticles(i)
                 a1 = data.atoms[p1]
@@ -3416,7 +3416,7 @@ class CustomHbondGenerator(object):
 
         for donor in range(force.getNumDonors()):
             (d1, d2, d3, params) = force.getDonorParameters(donor)
-            outerAtoms = set((d1, d2, d3))
+            outerAtoms = {d1, d2, d3}
             if -1 in outerAtoms:
                 outerAtoms.remove(-1)
             excludedAtoms = set(outerAtoms)

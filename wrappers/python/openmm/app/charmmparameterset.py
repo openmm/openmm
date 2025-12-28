@@ -101,17 +101,17 @@ class CharmmParameterSet(object):
 
     def __init__(self, *args, **kwargs):
         # Instantiate the list types
-        self.atom_types_str = dict()
-        self.atom_types_int = dict()
-        self.atom_types_tuple = dict()
-        self.bond_types = dict()
-        self.angle_types = dict()
-        self.urey_bradley_types = dict()
-        self.dihedral_types = dict()
-        self.improper_types = dict()
-        self.cmap_types = dict()
-        self.nbfix_types = dict()
-        self.nbthole_types = dict()
+        self.atom_types_str = {}
+        self.atom_types_int = {}
+        self.atom_types_tuple = {}
+        self.bond_types = {}
+        self.angle_types = {}
+        self.urey_bradley_types = {}
+        self.dihedral_types = {}
+        self.improper_types = {}
+        self.cmap_types = {}
+        self.nbfix_types = {}
+        self.nbthole_types = {}
         self.parametersets = []
         self.nbxmod = 5
         self.e14fac = 1.0
@@ -224,7 +224,7 @@ class CharmmParameterSet(object):
         current_cmap = None
         current_cmap_data = []
         current_cmap_res = 0
-        nonbonded_types = dict() # Holder
+        nonbonded_types = {} # Holder
         parameterset = None
         read_first_nonbonded = False
         previous = ''

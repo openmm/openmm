@@ -42,7 +42,7 @@ def appendTestResult(filename=None, test_result=None, system_info=None):
     if filename is None:
         return
 
-    all_results = { 'benchmarks' : list() }
+    all_results = { 'benchmarks' : [] }
     if system_info is not None:
         all_results['system'] = system_info
 
@@ -157,7 +157,7 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, bond_constraints='hbonds', pola
     hydrogenMass = None
 
     # Create dictionary of test parameters
-    test_parameters = dict()
+    test_parameters = {}
 
     # Store the test name
     test_parameters['test'] = testName
@@ -410,7 +410,7 @@ def runOneTest(testName, options):
         ncheckpoints_per_wu = 2
         nsteps_per_wu = int(wu_duration / time_per_step)
 
-        coredata = dict()
+        coredata = {}
         coredata['checkpointFreq'] = int(nsteps_per_wu / ncheckpoints_per_wu)
         coredata['numSteps'] = ncheckpoints_per_wu * coredata['checkpointFreq']
         coredata['xtcFreq'] = coredata['numSteps']
@@ -493,7 +493,7 @@ if args.platform is None:
     parser.error('No platform specified')
 
 # Collect system information
-system_info = dict()
+system_info = {}
 import socket, platform
 system_info['hostname'] = socket.gethostname()
 system_info['timestamp'] = datetime.now(timezone.utc).isoformat()

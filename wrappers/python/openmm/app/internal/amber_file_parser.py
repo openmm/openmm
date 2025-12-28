@@ -558,7 +558,7 @@ class PrmtopLoader(object):
         self._cmapList=[]
         forceConstConversionFactor = (units.kilocalorie_per_mole).conversion_factor_to(units.kilojoule_per_mole)
         for ii in range(0,len(cmapPointers),6):
-            if any([int(cmapPointers[ii+jj])<0 for jj in range(5)]):
+            if any(int(cmapPointers[ii+jj])<0 for jj in range(5)):
                 raise ValueError("Found negative cmap atom pointers %s"
                                 % ((cmapPointers[ii],
                                    cmapPointers[ii+1],
@@ -1062,7 +1062,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
     epNames = ['EP', 'LP']
     ep = [i for i in range(prmtop.getNumAtoms()) if isWater[i] and prmtop.getAtomName(i)[:2] in epNames]
     if len(ep) > 0:
-        epRes = set((prmtop.getResidueNumber(i) for i in ep))
+        epRes = {prmtop.getResidueNumber(i) for i in ep}
         numRes = max(epRes)+1
         # For each residue that contains an "extra point", find the oxygen, hydrogens, and points.
         waterO = []

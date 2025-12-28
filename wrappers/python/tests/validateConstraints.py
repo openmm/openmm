@@ -25,8 +25,8 @@ def validateConstraints(self, topology, system, constraints_value, rigidWater_va
             if bond[0].element.symbol=='H' or bond[1].element.symbol=='H':
                 expected_constraint_set.add(tuple(sorted([bond[0].index, 
                                                           bond[1].index])))
-    if constraints_value in set([AllBonds, HAngles]):
-        bonds=[b for b in topology.bonds()]
+    if constraints_value in {AllBonds, HAngles}:
+        bonds=list(topology.bonds())
         for b in bonds:
             expected_constraint_set.add(tuple(sorted([b[0].index, 
                                                       b[1].index])))

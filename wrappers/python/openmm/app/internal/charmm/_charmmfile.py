@@ -90,7 +90,7 @@ class CharmmFile(object):
         return line[:idx] + end
 
     def readlines(self):
-        return [line for line in self]
+        return list(self)
 
     def read(self):
         return ''.join(self.readlines())

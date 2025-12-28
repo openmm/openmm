@@ -23,7 +23,7 @@ def find_numbered_toctree_nodes(
 ) -> Tuple[Set[str], List[addnodes.toctree]]:
     """Recursively walk the toctree, recording docnames and numbered nodes"""
     toctree_nodes = []
-    assigned = set([])
+    assigned = set()
     for node in iterable:
         if node["numbered"]:
             toctree_nodes.append(node)

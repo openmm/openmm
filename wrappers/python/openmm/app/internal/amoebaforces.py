@@ -90,7 +90,7 @@ class BaseAmoebaForceBuilder:
         if hasattr(atom, 'bondedAtoms'):
             return [a.index for a in atom.bondedAtoms]
         elif hasattr(atom, 'bonds'):
-            return [a for a in atom.bonds]
+            return list(atom.bonds)
         else:
             raise ValueError(f"Atom {atom} does not have bonded atoms information.")
 
@@ -2319,7 +2319,7 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
             selfSet = set()
             selfSet.add(i)
             bonded13Set = bonded13Set - selfSet
-            bonded13Set = set(sorted(bonded13Set))
+            bonded13Set = set(bonded13Set)
             bonded13ParticleSets.append(bonded13Set)
 
         # 1-4
@@ -2336,7 +2336,7 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
             selfSet = set()
             selfSet.add(i)
             bonded14Set = bonded14Set - selfSet
-            bonded14Set = set(sorted(bonded14Set))
+            bonded14Set = set(bonded14Set)
             bonded14ParticleSets.append(bonded14Set)
 
         # 1-5
@@ -2354,7 +2354,7 @@ class AmoebaMultipoleForceBuilder(BaseAmoebaForceBuilder):
             selfSet = set()
             selfSet.add(i)
             bonded15Set = bonded15Set - selfSet
-            bonded15Set = set(sorted(bonded15Set))
+            bonded15Set = set(bonded15Set)
             bonded15ParticleSets.append(bonded15Set)
 
         self.bonded12ParticleSets = bonded12ParticleSets

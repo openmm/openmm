@@ -102,7 +102,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         for implicitSolvent_value, gbsa in zip([HCT, OBC1, OBC2, GBn], ['ACE', None, 'ACE', None]):
             system = prmtop2.createSystem(implicitSolvent=implicitSolvent_value, sasaMethod=gbsa)
             forces = system.getForces()
-            if implicitSolvent_value in set([HCT, OBC1, GBn]):
+            if implicitSolvent_value in {HCT, OBC1, GBn}:
                 force_type = CustomGBForce
             else:
                 force_type = GBSAOBCForce
@@ -117,7 +117,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
             for method in methodMap:
                 system = prmtop2.createSystem(implicitSolvent=implicitSolvent_value,
                                     solventDielectric=50.0, soluteDielectric=0.9, nonbondedMethod=method)
-                if implicitSolvent_value in set([HCT, OBC1, GBn]):
+                if implicitSolvent_value in {HCT, OBC1, GBn}:
                     for force in system.getForces():
                         if isinstance(force, CustomGBForce):
                             self.assertEqual(force.getNonbondedMethod(), methodMap[method])

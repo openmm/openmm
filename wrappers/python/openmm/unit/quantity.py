@@ -172,7 +172,7 @@ class Quantity(object):
         self.unit = unit
 
     def __getstate__(self):
-        state = dict()
+        state = {}
         state['_value'] = self._value
         state['unit'] = self.unit
         return state

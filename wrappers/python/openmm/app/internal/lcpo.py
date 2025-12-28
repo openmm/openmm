@@ -261,10 +261,10 @@ def getLCPOParamsTopology(topology):
     # Identify sp2-hybridized Ns with 3 bonding partners based on the
     # hybridization of surrounding C atoms.  This may fail in a few unusual
     # cases but should handle standard amino and nucleic acids correctly.
-    planarC = set(index for index, (atomicNumber, numTotalBonds) in enumerate(zip(atomicNumbers, numTotalBondsList))
-        if atomicNumber == 6 and numTotalBonds == 3)
-    planarN = set(index1 for index1, (atomicNumber, bondedTo, numTotalBonds) in enumerate(zip(atomicNumbers, bondedToList, numTotalBondsList))
-        if atomicNumber == 7 and numTotalBonds == 3 and any(index2 in planarC for index2 in bondedTo))
+    planarC = {index for index, (atomicNumber, numTotalBonds) in enumerate(zip(atomicNumbers, numTotalBondsList))
+        if atomicNumber == 6 and numTotalBonds == 3}
+    planarN = {index1 for index1, (atomicNumber, bondedTo, numTotalBonds) in enumerate(zip(atomicNumbers, bondedToList, numTotalBondsList))
+        if atomicNumber == 7 and numTotalBonds == 3 and any(index2 in planarC for index2 in bondedTo)}
 
     paramsList = []
     for index, (atomicNumber, numHeavyBonds, numTotalBonds) in enumerate(zip(atomicNumbers, numHeavyBondsList, numTotalBondsList)):

@@ -779,7 +779,7 @@ class GBSAGBnForce(CustomAmberGBForceBase):
 
     def _findUniqueRadii(self):
         radii = [p[self.RADIUS_ARG_POSITION] for p in self.parameters]
-        self._uniqueRadii = list(sorted(set(radii)))
+        self._uniqueRadii = sorted(set(radii))
 
     def _createRadiusToIndexMap(self):
         self._radiusToIndex = {r: i for i, r in enumerate(self._uniqueRadii)}

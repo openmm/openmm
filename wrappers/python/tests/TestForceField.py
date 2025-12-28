@@ -796,11 +796,11 @@ class TestForceField(unittest.TestCase):
         self.assertEqual(len(unmatched_residues), 24)
         self.assertEqual(len(residues), 2)
         self.assertEqual(len(templates), 2)
-        unique_names = set([ residue.name for residue in residues ])
+        unique_names = { residue.name for residue in residues }
         self.assertTrue('HOH' not in unique_names)
         self.assertTrue('NA' in unique_names)
         self.assertTrue('CL' in unique_names)
-        template_names = set([ template.name for template in templates ])
+        template_names = { template.name for template in templates }
         self.assertTrue('HOH' not in template_names)
         self.assertTrue('NA' in template_names)
         self.assertTrue('CL' in template_names)
@@ -858,7 +858,7 @@ class TestForceField(unittest.TestCase):
         # Get list of matching residue templates.
         templates = forcefield.getMatchingTemplates(pdb.topology)
         # Check results.
-        residues = [ residue for residue in pdb.topology.residues() ]
+        residues = list(pdb.topology.residues())
         self.assertEqual(len(templates), len(residues))
         self.assertEqual(templates[0].name, 'NALA')
         self.assertEqual(templates[1].name, 'ALA')
@@ -1554,7 +1554,7 @@ class TestForceField(unittest.TestCase):
         for index in range(force.getNumTorsions()):
             i,j,k,l,_,_,_ = force.getTorsionParameters(index)
             created_torsions.add((i,j,k,l))
-        expected_torsions = set([(0,3,1,2), (0,1,2,3), (0,2,3,1)])
+        expected_torsions = {(0,3,1,2), (0,1,2,3), (0,2,3,1)}
         self.assertEqual(expected_torsions, created_torsions)
 
     def test_Disulfides(self):
@@ -1930,7 +1930,7 @@ class AmoebaTestForceField(unittest.TestCase):
         """Test that AMOEBA creates rigid water with the correct geometry."""
 
         system = self.forcefield1.createSystem(self.pdb1.topology, rigidWater=True)
-        constraints = dict()
+        constraints = {}
         for i in range(system.getNumConstraints()):
             p1,p2,dist = system.getConstraintParameters(i)
             if p1 < 3:

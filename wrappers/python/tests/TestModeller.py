@@ -77,15 +77,15 @@ class TestModeller(unittest.TestCase):
 
         # Create the list of items to be deleted.
         # Start with the first 50 water chains
-        chains = [chain for chain in topology_before.chains()]
+        chains = list(topology_before.chains())
         toDelete = chains[1:51]
 
         # Next add water residues 103->152 to the list of items to be deleted
-        residues = [residue for residue in topology_before.residues()]
+        residues = list(topology_before.residues())
         toDelete.extend(residues[103:153])
 
         # Finally add water atoms 622->771 to the list of items to be deleted
-        atoms = [atom for atom in topology_before.atoms()]
+        atoms = list(topology_before.atoms())
         toDelete.extend(atoms[622:772])
 
         modeller.delete(toDelete)
@@ -435,7 +435,7 @@ class TestModeller(unittest.TestCase):
             newChain = topology_toAdd.addChain()
             for i in range(5):
                 topology_toAdd.addResidue('CL',  newChain)
-            residues = [residue for residue in topology_toAdd.residues()]
+            residues = list(topology_toAdd.residues())
             for i in range(5):
                 topology_toAdd.addAtom('Cl',Element.getBySymbol('Cl'), residues[i])
             positions_toAdd = [Vec3(1.0,1.2,1.5), Vec3(1.7,1.0,1.4), Vec3(1.5,2.0,1.0),
@@ -478,7 +478,7 @@ class TestModeller(unittest.TestCase):
             newChain = topology_toAdd.addChain()
             for i in range(5):
                 topology_toAdd.addResidue('NA', newChain)
-            residues = [residue for residue in topology_toAdd.residues()]
+            residues = list(topology_toAdd.residues())
             for i in range(5):
                  topology_toAdd.addAtom('Na',Element.getBySymbol('Na'), residues[i])
             positions_toAdd = [Vec3(1.0,1.2,1.5), Vec3(1.7,1.0,1.4), Vec3(1.5,2.0,1.0),
@@ -581,7 +581,7 @@ class TestModeller(unittest.TestCase):
         modeller.delete(toDelete)
 
         # Create a variants list to force the one histidine to be of the right variation.
-        residues = [residue for residue in topology_start.residues()]
+        residues = list(topology_start.residues())
         variants = [None]*len(residues)
         # For this protein, when you add hydrogens, the hydrogen is added to the delta nitrogen.
         # By setting variants[30] to 'HIE', we force the hydrogen onto the epsilon nitrogen, so
@@ -647,14 +647,14 @@ class TestModeller(unittest.TestCase):
         # Negative control
         oriH_fixed = oriH_pos[:-1*n_deleted]
         newH_fixed = newH_pos[:-1*n_deleted]
-        xyz_diff = any([norm(o-n) > 1e-6 for o, n in zip(oriH_fixed, newH_fixed)])
+        xyz_diff = any(norm(o-n) > 1e-6 for o, n in zip(oriH_fixed, newH_fixed))
         self.assertEqual(xyz_diff, False)
 
         # Were the new ones optimized?
         # Positive control
         oriH_added = oriH_pos[-1*n_deleted:]
         newH_added = newH_pos[-1*n_deleted:]
-        xyz_diff = all([norm(o-n) > 1e-6 for o, n in zip(oriH_added, newH_added)])
+        xyz_diff = all(norm(o-n) > 1e-6 for o, n in zip(oriH_added, newH_added))
         self.assertEqual(xyz_diff, True)
 
     def test_addHydrogensASH(self):
@@ -672,7 +672,7 @@ class TestModeller(unittest.TestCase):
         modeller.delete(toDelete)
 
         # Create a variants list to force the one histidine to be of the right variation.
-        residues = [residue for residue in topology_start.residues()]
+        residues = list(topology_start.residues())
         variants = [None]*len(residues)
         # For this protein, when you add hydrogens, the hydrogen is added to the delta nitrogen.
         # By setting variants[30] to 'HIE', we force the hydrogen onto the epsilon nitrogen, so
@@ -690,7 +690,7 @@ class TestModeller(unittest.TestCase):
         # There should be extra hydrogens on the ASP residues.  Assert that they exist,
         # then we delete them and validate that the topology matches what we started with.
         index_list_ASH = [176, 357, 761, 976, 1121, 1150, 1430, 1473, 2028, 2556]
-        atoms = [atom for atom in topology_ASH.atoms()]
+        atoms = list(topology_ASH.atoms())
         toDelete2 = []
         for index in index_list_ASH:
             self.assertTrue(atoms[index].element.symbol=='H')
@@ -715,7 +715,7 @@ class TestModeller(unittest.TestCase):
         modeller.delete(toDelete)
 
         # Create a variants list to force the cysteins to be of the CYX variety.
-        residues = [residue for residue in topology_start.residues()]
+        residues = list(topology_start.residues())
         variants = [None]*len(residues)
         CYS_residues = [2,4,10,12,16,18,21]
         for index in CYS_residues:
@@ -734,7 +734,7 @@ class TestModeller(unittest.TestCase):
 
        # These are the indices of the hydrogens to delete from CYS to make CYX.
         index_list_CYS = [31, 49, 110, 135, 171, 193, 229]
-        atoms = [atom for atom in topology2.atoms()]
+        atoms = list(topology2.atoms())
         toDelete2 = []
         for index in index_list_CYS:
             self.assertTrue(atoms[index].element.symbol=='H')
@@ -759,7 +759,7 @@ class TestModeller(unittest.TestCase):
         modeller.delete(toDelete)
 
         # Create a variants list to force the one histidine to be of the right variation.
-        residues = [residue for residue in topology_start.residues()]
+        residues = list(topology_start.residues())
         variants = [None]*len(residues)
         # For this protein, when you add hydrogens, the hydrogen is added to the delta nitrogen.
         # By setting variants[30] to 'HIE', we force the hydrogen onto the epsilon nitrogen, so
@@ -777,7 +777,7 @@ class TestModeller(unittest.TestCase):
         # There should be extra hydrogens on the GLU residues.  Assert that they exist,
         # then we delete them and validate that the topology matches what we started with.
         index_list_GLH = [85, 192, 387, 731, 992, 1018, 1718, 2042]
-        atoms = [atom for atom in topology_GLH.atoms()]
+        atoms = list(topology_GLH.atoms())
         toDelete2 = []
         for index in index_list_GLH:
             self.assertTrue(atoms[index].element.symbol=='H')
@@ -802,7 +802,7 @@ class TestModeller(unittest.TestCase):
         modeller.delete(toDelete)
 
         # Create a variants list to force the one histidine to be of the right variation.
-        residues = [residue for residue in topology_start.residues()]
+        residues = list(topology_start.residues())
         variants = [None]*len(residues)
         # For this protein, when you add hydrogens, the hydrogen is added to the delta nitrogen.
         # By setting variants[30] to 'HIE', we force the hydrogen onto the epsilon nitrogen, so
@@ -829,7 +829,7 @@ class TestModeller(unittest.TestCase):
 
         # These are the indices of the hydrogens to delete from LYN to make LYS.
         index_list_LYN = [281,343,590,701,780,960,1034,1319,1360,1959,2135,2344]
-        atoms = [atom for atom in topology_start.atoms()]
+        atoms = list(topology_start.atoms())
         toDelete2 = []
         for index in index_list_LYN:
              self.assertTrue(atoms[index].element.symbol=='H')
@@ -854,7 +854,7 @@ class TestModeller(unittest.TestCase):
         modeller.delete(toDelete)
 
         # Create a variants list to force the one histidine to be of the right variation.
-        residues = [residue for residue in topology_start.residues()]
+        residues = list(topology_start.residues())
         variants = [None]*len(residues)
         # For this protein, when you add hydrogens, the hydrogen is added to the delta nitrogen.
         # By setting variants[30] to 'HIE', we force the hydrogen onto the epsilon nitrogen, so
@@ -870,7 +870,7 @@ class TestModeller(unittest.TestCase):
         # then we delete them and validate that the topology matches what we started with.
         index_list_ASH = [177, 359, 765, 980, 1127, 1156, 1436, 1479, 2035, 2564]
         index_list_GLH = [85, 193, 389, 733, 996, 1022, 1726, 2051]
-        atoms = [atom for atom in topology_ASH_GLH.atoms()]
+        atoms = list(topology_ASH_GLH.atoms())
         toDelete2 = []
         for index in index_list_ASH:
             self.assertTrue(atoms[index].element.symbol=='H')
@@ -910,7 +910,7 @@ class TestModeller(unittest.TestCase):
 
         # These are the indices of the hydrogens to delete from CYS to make CYX.
         index_list_CYS = [31, 49, 110, 135, 171, 193, 229]
-        atoms = [atom for atom in topology2.atoms()]
+        atoms = list(topology2.atoms())
         toDelete2 = []
         for index in index_list_CYS:
             self.assertTrue(atoms[index].element.symbol=='H')
@@ -935,7 +935,7 @@ class TestModeller(unittest.TestCase):
         modeller.delete(toDelete)
 
         # Create a variants list to force the one histidine to be of the right variation.
-        residues = [residue for residue in topology_start.residues()]
+        residues = list(topology_start.residues())
         variants = [None]*len(residues)
         # For this protein, when you add hydrogens, the hydrogen is added to the delta nitrogen.
         # By setting variants[30] to 'HIE', we force the hydrogen onto the epsilon nitrogen, so
@@ -956,7 +956,7 @@ class TestModeller(unittest.TestCase):
         # There should be extra hydrogens on the LYS residues.  Assert that they exist
         # on modeller2, then delete them and validate that the topologies match.
         index_list_LYN = [281,343,590,701,780,960,1034,1319,1360,1959,2135,2344]
-        atoms = [atom for atom in topology_start.atoms()]
+        atoms = list(topology_start.atoms())
         toDelete2 = []
         for index in index_list_LYN:
             self.assertTrue(atoms[index].element.symbol=='H')
@@ -1310,7 +1310,7 @@ class TestModeller(unittest.TestCase):
         modeller.addExtraParticles(new_forcefield)
         # sanity check: extra sites were added
         self.assertEqual(
-            set([len(list(res.atoms())) for res in modeller.topology.residues() if res.name == "HOH"]),
+            {len(list(res.atoms())) for res in modeller.topology.residues() if res.name == "HOH"},
             {4}
         )
 

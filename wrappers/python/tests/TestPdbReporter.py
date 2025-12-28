@@ -280,8 +280,8 @@ class TestPDBxReporter(unittest.TestCase):
             validpdb = pdb
             testpdb = app.PDBxFile(filename)
 
-            validBonds = set(tuple(sorted((bond[0].index, bond[1].index))) for bond in validpdb.topology.bonds())
-            testBonds = set(tuple(sorted((bond[0].index, bond[1].index))) for bond in testpdb.topology.bonds())
+            validBonds = {tuple(sorted((bond[0].index, bond[1].index))) for bond in validpdb.topology.bonds()}
+            testBonds = {tuple(sorted((bond[0].index, bond[1].index))) for bond in testpdb.topology.bonds()}
             
             self.assertEqual(len(validBonds), len(testBonds))
 

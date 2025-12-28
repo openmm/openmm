@@ -699,7 +699,7 @@ class GromacsTopFile(object):
             for _ in range(moleculeCount):
                 for atom in moleculeType.atoms:
                     atom_types.append(atom[1])
-        has_nbfix_terms = any([pair in self._nonbondTypes for pair in combinations_with_replacement(sorted(set(atom_types)), 2)])
+        has_nbfix_terms = any(pair in self._nonbondTypes for pair in combinations_with_replacement(sorted(set(atom_types)), 2))
 
         if has_nbfix_terms:
             self._matchingNBFIX = {
@@ -1282,7 +1282,7 @@ class GromacsTopFile(object):
                 ljnbfix.setSwitchingDistance(switchDistance)
             ljnbfix.setName('LennardJonesForce')
 
-            atom_nbfix_types = set([])
+            atom_nbfix_types = set()
             for pair in self._matchingNBFIX:
                 atom_nbfix_types.add(pair[0])
                 atom_nbfix_types.add(pair[1])

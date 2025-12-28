@@ -407,9 +407,9 @@ class TinkerFiles:
         # Store data from files
         self.atoms = None
         self.topology = None
-        self._atomTypes = dict()
-        self._forces = dict()
-        self._scalars = dict()
+        self._atomTypes = {}
+        self._forces = {}
+        self._scalars = {}
 
         # Load the xyz file
         self.atoms, self.boxVectors, self.positions = TinkerFiles._loadXyzFile(xyzFile)
@@ -559,7 +559,7 @@ class TinkerFiles:
                     for n2 in neighbors[i+1:]:  
                         angle = (min(n1, n2), atom, max(n1, n2))
                         uniqueAngles.add(angle)
-            angles = sorted(list(uniqueAngles))
+            angles = sorted(uniqueAngles)
 
             if "opbend" in self._forces:
                 opbendParams = {(at1, at2, at3 if at3 != '0' else '', at4 if at4 != '0' else ''): {"k": float(k)} for at1, at2, at3, at4, k in self._forces["opbend"]}
@@ -658,7 +658,7 @@ class TinkerFiles:
                         uniquePropers.add((angle[0], angle[1], angle[2], atom))
                     else:
                         uniquePropers.add((atom, angle[2], angle[1], angle[0]))
-        propers = sorted(list(uniquePropers))
+        propers = sorted(uniquePropers)
 
         # Add AmoebaTorsionForce
         if "torsion" in self._forces:
@@ -1152,7 +1152,7 @@ class TinkerFiles:
             # Check for N/C-terminal cap groups (ACE, NME)
             capAtoms = TinkerFiles._checkCapGroup(ia, ib, ic, id, ie, atoms)
             if capAtoms is not None:
-                allAtoms = sorted(list(capAtoms))
+                allAtoms = sorted(capAtoms)
                 seenAtoms.update(allAtoms)
                 residues.append((allAtoms, "ACE" if atoms[ia].atomicNumber == 6 else "NME"))
                 continue
@@ -1832,7 +1832,7 @@ class TinkerFiles:
                 residueAtoms.add(bond)
 
         # Add side chain atoms
-        for key, index in sideChain.items():
+        for index in sideChain.values():
             if index != 0:
                 residueAtoms.add(index)
                 residueAtoms.update(atoms[index].bonds)
@@ -1843,7 +1843,7 @@ class TinkerFiles:
                 if atoms[bond].atomicNumber == 1:
                     residueAtoms.add(bond)
 
-        return sorted(list(residueAtoms))
+        return sorted(residueAtoms)
 
     # ------------------------------------------------------------------------------------------ #
     #                                   NUCLEIC ACID PROCESSING                                  #
@@ -2549,8 +2549,8 @@ class TinkerFiles:
             - Forces dictionary
             - Scalars dictionary
         """
-        atomTypesDict = dict()
-        forcesDict = dict()
+        atomTypesDict = {}
+        forcesDict = {}
         scalarsDict = TinkerFiles.RECOGNIZED_SCALARS.copy()
 
         try:

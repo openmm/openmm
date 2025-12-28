@@ -274,7 +274,7 @@ class Simulation(object):
         '''
         
         includes = set.union(*[set(report[1]['include']) for report in reports])
-        includeArgs = {property:True for property in includes}
+        includeArgs = dict.fromkeys(includes, True)
 
         state = self.context.getState(groups=self.context.getIntegrator().getIntegrationForceGroups(), enforcePeriodicBox=periodic, parameters=True, **includeArgs)
         for reporter, nextReport in reports:

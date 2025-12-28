@@ -142,7 +142,7 @@ class Metadynamics(object):
         else:
             raise ValueError('Metadynamics requires 1, 2, or 3 collective variables')
         self._force.addTabulatedFunction('table', self._table)
-        freeGroups = set(range(32)) - set(force.getForceGroup() for force in system.getForces())
+        freeGroups = set(range(32)) - {force.getForceGroup() for force in system.getForces()}
         if len(freeGroups) == 0:
             raise RuntimeError('Cannot assign a force group to the metadynamics force. '
                                'The maximum number (32) of the force groups is already used.')

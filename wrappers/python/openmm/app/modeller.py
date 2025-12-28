@@ -255,7 +255,7 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
-    def _addIons(self, forcefield, numWaters, replaceableMols, ionCutoff=0.05*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True, residueTemplates=dict()):
+    def _addIons(self, forcefield, numWaters, replaceableMols, ionCutoff=0.05*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True, residueTemplates={}):
         """Adds ions to the system by replacing certain molecules.
 
         Parameters
@@ -383,7 +383,7 @@ class Modeller(object):
             self.topology = modeller.topology
             self.positions = modeller.positions
 
-    def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, numAdded=None, boxShape='cube', positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True, residueTemplates=dict()):
+    def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, numAdded=None, boxShape='cube', positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True, residueTemplates={}):
         """Add solvent (both water and ions) to the model to fill a periodic box.
 
         The algorithm works as follows:
@@ -545,7 +545,7 @@ class Modeller(object):
         newTopology.setPeriodicBoxVectors(vectors*nanometer)
         newAtoms = {}
         newPositions = []*nanometer
-        newResidueTemplates=dict()
+        newResidueTemplates={}
         for chain in self.topology.chains():
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
@@ -750,7 +750,7 @@ class Modeller(object):
             Modeller.loadHydrogenDefinitions(os.path.join(os.path.dirname(__file__), 'data', 'hydrogens.xml'))
             Modeller._hasLoadedStandardHydrogens = True
 
-    def addHydrogens(self, forcefield=None, pH=7.0, variants=None, platform=None, residueTemplates=dict()):
+    def addHydrogens(self, forcefield=None, pH=7.0, variants=None, platform=None, residueTemplates={}):
         """Add missing hydrogens to the model.
 
         Some residues can exist in multiple forms depending on the pH and properties of the local environment.  These
@@ -1085,7 +1085,7 @@ class Modeller(object):
                     atoms = list(residue.atoms())
                     oindex = [i for i in range(len(atoms)) if atoms[i].element == elem.oxygen]
                     if len(atoms) == 3 and len(oindex) == 1:
-                        hindex = list(set([0,1,2])-set(oindex))
+                        hindex = list({0,1,2}-set(oindex))
                         angles.addAngle(atoms[hindex[0]].index, atoms[oindex[0]].index, atoms[hindex[1]].index, 1.824, 836.8)
                 else:
                     # Add angle terms for any hydroxyls.
@@ -1106,7 +1106,7 @@ class Modeller(object):
         del context
         return actualVariants
 
-    def addExtraParticles(self, forcefield, ignoreExternalBonds=False, residueTemplates=dict()):
+    def addExtraParticles(self, forcefield, ignoreExternalBonds=False, residueTemplates={}):
         """Add missing extra particles to the model that are required by a force
         field.
 
@@ -1306,7 +1306,7 @@ class Modeller(object):
 
 
     def addMembrane(self, forcefield, lipidType='POPC', membraneCenterZ=0*nanometer, minimumPadding=1*nanometer, positiveIon='Na+', negativeIon='Cl-',
-                    ionicStrength=0*molar, neutralize=True, residueTemplates=dict(), platform=None):
+                    ionicStrength=0*molar, neutralize=True, residueTemplates={}, platform=None):
         """Add a lipid membrane to the model.
 
         This method actually adds both a membrane and a water box.  It is best to build them together,
@@ -1417,7 +1417,7 @@ class Modeller(object):
                 membraneMeanZ += sumZ
                 resMeanZ[res] = sumZ/numResAtoms
         membraneMeanZ /= numLipidAtoms
-        lipidLeaf = dict((res, 0 if resMeanZ[res] < membraneMeanZ else 1) for res in resMeanZ)
+        lipidLeaf = {res: 0 if resMeanZ[res] < membraneMeanZ else 1 for res in resMeanZ}
 
         # Compute scaled positions for the protein.
 

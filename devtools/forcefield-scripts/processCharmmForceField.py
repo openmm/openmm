@@ -64,7 +64,7 @@ def createPatchedResidue(residue, patch):
     r = Residue(patch.name+'-'+residue.name)
     for atom in patch.atoms:
         r.addAtom(atom)
-    atomNames = set(atom.name for atom in r.atoms)
+    atomNames = {atom.name for atom in r.atoms}
     for atom in residue.atoms:
         if atom.name not in patch.deletions:
             if atom.name not in atomNames:
@@ -401,7 +401,7 @@ print("""
 # Conversion from atom types to atom classes.
 
 typeToClass = {""")
-classOrder = dict((c, i) for i,c in enumerate(atomClasses))
+classOrder = {c: i for i,c in enumerate(atomClasses)}
 for type in atomTypes:
     print("  '%s':%s," % (type.type, classOrder[type.atomClass]))
 print("""}

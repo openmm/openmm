@@ -3,8 +3,8 @@ def validate_preserved(self, topology_before, topology_after, chain_dict, residu
     """ Validate that the residues and atoms are correctly preserved in the given topologies. """    
 
     # validate that residues are preserved
-    residues_before = [residue for residue in topology_before.residues()]
-    residues_after = [residue for residue in topology_after.residues()]
+    residues_before = list(topology_before.residues())
+    residues_after = list(topology_after.residues())
     for residue_index in residue_dict:
         # validate that before and after residues have the same name
         self.assertTrue(residues_before[residue_index].name == 
@@ -14,8 +14,8 @@ def validate_preserved(self, topology_before, topology_after, chain_dict, residu
                         residues_after[residue_dict[residue_index]].chain.index)
 
     # validate that atoms are preserved
-    atoms_before = [atom for atom in topology_before.atoms()]
-    atoms_after = [atom for atom in topology_after.atoms()]
+    atoms_before = list(topology_before.atoms())
+    atoms_after = list(topology_after.atoms())
     for atom_index in atom_dict:
         # validate that before and after atoms have the same name
         self.assertTrue(atoms_before[atom_index].name == 
@@ -32,18 +32,18 @@ def validate_deltas(self, topology_before, topology_after, chain_delta, residue_
     """ Validate that the number of chains, residues, and atoms have changes the expected amounts. """
 
     # validate that the correct number of chains are deleted
-    chains_before = [chain for chain in topology_before.chains()]
-    chains_after = [chain for chain in topology_after.chains()]
+    chains_before = list(topology_before.chains())
+    chains_after = list(topology_after.chains())
     self.assertTrue(len(chains_after) == len(chains_before) + chain_delta)
 
     # validate that the correct number of residues are deleted
-    residues_before = [residue for residue in topology_before.residues()]
-    residues_after = [residue for residue in topology_after.residues()]
+    residues_before = list(topology_before.residues())
+    residues_after = list(topology_after.residues())
     self.assertTrue(len(residues_after) == len(residues_before) + residue_delta)
 
     # validate that the correct number of atoms are deleted
-    atoms_before = [atom for atom in topology_before.atoms()]
-    atoms_after = [atom for atom in topology_after.atoms()]
+    atoms_before = list(topology_before.atoms())
+    atoms_after = list(topology_after.atoms())
     self.assertTrue(len(atoms_after) == len(atoms_before) + atoms_delta)
 # end of validate_deltas()
 

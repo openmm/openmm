@@ -476,7 +476,7 @@ class CSourceGenerator(WrapperGenerator):
                                  'std::vector< double >': 'OpenMM_DoubleArray',
                                  'std::vector< int >': 'OpenMM_IntArray',
                                  'std::set< int >': 'OpenMM_IntSet'}
-        self.inverseTranslations = dict((self.typeTranslations[key], key) for key in self.typeTranslations)
+        self.inverseTranslations = {self.typeTranslations[key]: key for key in self.typeTranslations}
         self.classesByShortName = {}
         self.enumerationTypes = {}
         self.findTypes()
@@ -1536,7 +1536,7 @@ class FortranSourceGenerator(WrapperGenerator):
                                  'std::vector< double >': 'OpenMM_DoubleArray',
                                  'std::vector< int >': 'OpenMM_IntArray',
                                  'std::set< int >': 'OpenMM_IntSet'}
-        self.inverseTranslations = dict((self.typeTranslations[key], key) for key in self.typeTranslations)
+        self.inverseTranslations = {self.typeTranslations[key]: key for key in self.typeTranslations}
         self.classesByShortName = {}
         self.enumerationTypes = {}
         self.findTypes()

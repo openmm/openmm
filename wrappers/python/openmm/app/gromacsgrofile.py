@@ -71,7 +71,7 @@ def _is_gro_coord(line):
     fields.append(line[21:28].strip()) # x coord
     fields.append(line[29:36].strip()) # y coord
     fields.append(line[37:44].strip()) # z coord
-    if (all([f != '' for f in fields])): # check for empty fields
+    if (all(f != '' for f in fields)): # check for empty fields
         return all([_isint(fields[0]), _isfloat(fields[1]), _isfloat(fields[2]), _isfloat(fields[3])])
     else:
         return 0
@@ -83,9 +83,9 @@ def _is_gro_box(line):
 
     """
     sline = line.split()
-    if len(sline) == 9 and all([_isfloat(i) for i in sline]):
+    if len(sline) == 9 and all(_isfloat(i) for i in sline):
         return 1
-    elif len(sline) == 3 and all([_isfloat(i) for i in sline]):
+    elif len(sline) == 3 and all(_isfloat(i) for i in sline):
         return 1
     else:
         return 0

@@ -136,9 +136,9 @@ class AtomType(object):
         self.epsilon = self.rmin = self.epsilon_14 = self.rmin_14 = None
         # Store each NBFIX term as a dict with the atom type string matching to
         # a 2-element tuple that is rmin, epsilon
-        self.nbfix = dict()
+        self.nbfix = {}
         # Likewise, store each NBTHOLE term as a dict 
-        self.nbthole = dict()
+        self.nbthole = {}
 
     def __eq__(self, other):
         """
@@ -343,16 +343,16 @@ class Atom(object):
 
     @property
     def bond_partners(self):
-        return sorted(list(self._bond_partners))
+        return sorted(self._bond_partners)
 
     @property
     def angle_partners(self):
-        return sorted(list(self._angle_partners - self._bond_partners))
+        return sorted(self._angle_partners - self._bond_partners)
 
     @property
     def dihedral_partners(self):
-        return sorted(list(self._dihedral_partners - self._angle_partners -
-                           self._bond_partners))
+        return sorted(self._dihedral_partners - self._angle_partners -
+                           self._bond_partners)
 
     def type_to_int(self):
         """
@@ -1126,7 +1126,7 @@ class CmapType(object):
 
     def __eq__(self, other):
         return (self.resolution == other.resolution and
-                all([abs(i - j) < TINY for i, j in zip(self.grid, other.grid)]))
+                all(abs(i - j) < TINY for i, j in zip(self.grid, other.grid)))
 
     def __ne__(self, other):
         return not self == other

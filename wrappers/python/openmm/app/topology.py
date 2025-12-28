@@ -308,7 +308,7 @@ class Topology(object):
 
         # Record the existing bonds to avoid adding duplicate ones.
 
-        existingBonds = set([(bond[0], bond[1]) for bond in self._bonds])
+        existingBonds = {(bond[0], bond[1]) for bond in self._bonds}
 
         # Add the new bonds.
 

@@ -169,7 +169,7 @@ class TestPatches(unittest.TestCase):
         self.assertTrue(any(a.name == 'B' and a.type == 'A type' for a in t.atoms))
         self.assertTrue(any(a.name == 'C' and a.type == 'C type' for a in t.atoms))
         self.assertTrue(any(a.name == 'D' and a.type == 'D type' for a in t.atoms))
-        indexMap = dict([(a.name, i) for i, a in enumerate(t.atoms)])
+        indexMap = {a.name: i for i, a in enumerate(t.atoms)}
         self.assertEqual(2, len(t.bonds))
         self.assertTrue((indexMap['B'], indexMap['C']) in t.bonds)
         self.assertTrue((indexMap['B'], indexMap['D']) in t.bonds)

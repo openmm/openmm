@@ -61,7 +61,7 @@ print("cutoff = %s" % cutoff)
 # =============================================================================
 
 print("Building alchemically-modified systems...")
-alchemical_systems = list() # alchemical_systems[i] is the alchemically-modified System object corresponding to lambda_values[i]
+alchemical_systems = [] # alchemical_systems[i] is the alchemically-modified System object corresponding to lambda_values[i]
 for lambda_value in lambda_values:
    # Create argon system where first particle is alchemically modified by lambda_value.
    system = System()
@@ -121,7 +121,7 @@ for (lambda_index, lambda_value) in enumerate(lambda_values):
    integrator.step(nequil_steps)
 
    # Sample.
-   position_history = list() # position_history[i] is the set of positions after iteration i
+   position_history = [] # position_history[i] is the set of positions after iteration i
    for iteration in range(nprod_iterations):
       print("Lambda %d/%d : production iteration %d/%d" % (lambda_index+1, nlambda, iteration+1, nprod_iterations))
 

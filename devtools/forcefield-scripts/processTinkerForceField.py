@@ -109,10 +109,10 @@ def xml_float(x, min_decimals=1):
 
 def getDefaultAtom( ):
  
-    atom                     = dict();
+    atom                     = {};
     atom['tinkerLookupName'] = 'XXX'
     atom['type']             = -1
-    atom['bonds']            = dict()
+    atom['bonds']            = {}
 
     return atom
 
@@ -136,7 +136,7 @@ def addBond( atomDict, atom1, atom2 ):
 
 def getXmlAtoms( atoms ):
  
-    atomInfo = dict();
+    atomInfo = {};
     for atom in atoms:
         name                               = atom.attrib['name']
         atomInfo[name]                     = getDefaultAtom()
@@ -150,14 +150,14 @@ def getXmlAtoms( atoms ):
 
 def getXmlBonds( bonds ):
  
-    bondInfo = dict();
+    bondInfo = {};
     for bond in bonds:
         atom1                     = bond.attrib['from']
         atom2                     = bond.attrib['to']
         if( atom1 not in bondInfo ):
-            bondInfo[atom1]       = dict()
+            bondInfo[atom1]       = {}
         if( atom2 not in bondInfo ):
-            bondInfo[atom2]       = dict()
+            bondInfo[atom2]       = {}
     
         bondInfo[atom1][atom2] = 1
         bondInfo[atom2][atom1] = 1
@@ -177,7 +177,7 @@ def buildProteinResidue( residueDict, atoms, bondInfo, abbr, loc, tinkerLookupNa
     # residueDict[abbr]['residueName']          residueName
     # residueDict[abbr]['include']              include in output
 
-    residueDict[abbr]                         = dict()
+    residueDict[abbr]                         = {}
     residueDict[abbr]['atoms']                = atoms
     residueDict[abbr]['type']                 = type
     residueDict[abbr]['loc']                  = loc
@@ -193,12 +193,12 @@ def buildProteinResidue( residueDict, atoms, bondInfo, abbr, loc, tinkerLookupNa
         if( atom in residueDict[abbr]['atoms'] ):
 
             if( 'bonds' not in  residueDict[abbr]['atoms'][atom] ):
-                residueDict[abbr]['atoms'][atom]['bonds'] = dict() 
+                residueDict[abbr]['atoms'][atom]['bonds'] = {} 
 
             for bondedAtom in bondInfo[atom]:
                 if( bondedAtom in  residueDict[abbr]['atoms'] ):
                     if( 'bonds' not in  residueDict[abbr]['atoms'][bondedAtom] ):
-                        residueDict[abbr]['atoms'][bondedAtom]['bonds'] = dict() 
+                        residueDict[abbr]['atoms'][bondedAtom]['bonds'] = {} 
                     residueDict[abbr]['atoms'][bondedAtom]['bonds'][atom] = 1
                     residueDict[abbr]['atoms'][atom]['bonds'][bondedAtom] = 1
                 else:
@@ -213,7 +213,7 @@ def buildProteinResidue( residueDict, atoms, bondInfo, abbr, loc, tinkerLookupNa
 #=============================================================================================
 
 def copyBonds( bonds ):
-    bondCopy = dict()
+    bondCopy = {}
     for key in bonds.keys():
         bondCopy[key] = bonds[key]
     return bondCopy
@@ -223,7 +223,7 @@ def copyBonds( bonds ):
 #=============================================================================================
 
 def copyAtom( atom ):
-    atomCopy = dict()
+    atomCopy = {}
     for key in atom.keys():
         if( key != 'bonds' ):
             atomCopy[key]      = atom[key]
@@ -237,8 +237,8 @@ def copyAtom( atom ):
 
 def copyProteinResidue( residue ):
     
-    residueCopy                        = dict()
-    residueCopy['atoms']               = dict()
+    residueCopy                        = {}
+    residueCopy['atoms']               = {}
     residueCopy['type']                = residue['type']
     residueCopy['loc']                 = residue['loc']
     residueCopy['tinkerLookupName']    = residue['tinkerLookupName']
@@ -259,7 +259,7 @@ def buildResidueDict( residueXmlFileName ):
     residueTree = etree.parse(residueXmlFileName)
     print("Read %s" % (residueXmlFileName))
     root        = residueTree.getroot()
-    residueDict = dict()
+    residueDict = {}
 
     # residueDict[residueName] = dict()
     #      ['loc']
@@ -368,16 +368,16 @@ def buildResidueDict( residueXmlFileName ):
                     outputString = """  <Atom name="%s" tinkerLookupName="%s" />""" % (atomName, tinkerLookupName)
                     print("%s" % outputString)
 
-                includedBonds = dict()
+                includedBonds = {}
                 for atomName in sorted( atomsInfo.keys() ):
                     bondsInfo    = atomsInfo[atomName]['bonds']
                     for bondedAtom  in bondsInfo:
                         if( bondedAtom not in includedBonds or atomName not in includedBonds[bondedAtom] ):
                             outputString = """  <Bond from="%s" to="%s" />""" % (atomName, bondedAtom)
                             if( atomName not in includedBonds ):
-                                includedBonds[atomName] = dict()
+                                includedBonds[atomName] = {}
                             if( bondedAtom not in includedBonds ):
-                                includedBonds[bondedAtom] = dict()
+                                includedBonds[bondedAtom] = {}
                             includedBonds[atomName][bondedAtom] = 1
                             includedBonds[bondedAtom][atomName] = 1
                             print("%s" % outputString)
@@ -392,7 +392,7 @@ def buildResidueDict( residueXmlFileName ):
 
 def setBioTypes( bioTypes, residueDict ):
 
-    for resname, res in residueDict.items():
+    for res in residueDict.values():
         for atom in res['atoms']:
             atomLookup = res['atoms'][atom]['tinkerLookupName']
             resLookup = []
@@ -766,7 +766,7 @@ for resname, res in sorted(residueDict.items()):
             tinkerXmlFile.write(f'  <Residue name="{resname}" rigidWater="false">\n')
         else:
             tinkerXmlFile.write(f'  <Residue name="{resname}">\n')
-        atomIndex    = dict()
+        atomIndex    = {}
         atomCount    = 0
         for atom in sorted( res['atoms'].keys() ):
             type  = res['atoms'][atom]['type']
@@ -778,16 +778,16 @@ for resname, res in sorted(residueDict.items()):
             atomCount       += 1
             tinkerXmlFile.write( "%s\n" % (tag) )
     
-        includedBonds = dict()
+        includedBonds = {}
         for atomName in sorted( res['atoms'].keys() ):
             bondsInfo    = res['atoms'][atomName]['bonds']
             for bondedAtom  in bondsInfo:
                 if( bondedAtom not in includedBonds or atomName not in includedBonds[bondedAtom] ):
                     outputString = """   <Bond from="%s" to="%s" />""" % (str(atomIndex[atomName]), str(atomIndex[bondedAtom]))
                     if( atomName not in includedBonds ):
-                        includedBonds[atomName] = dict()
+                        includedBonds[atomName] = {}
                     if( bondedAtom not in includedBonds ):
-                        includedBonds[bondedAtom] = dict()
+                        includedBonds[bondedAtom] = {}
                     includedBonds[atomName][bondedAtom] = 1
                     includedBonds[bondedAtom][atomName] = 1
                     tinkerXmlFile.write( "%s\n" % (outputString) )
@@ -847,7 +847,7 @@ tinkerXmlFile.write('  </Residue>\n')
 
 # ions
  
-for ion,ionInfo in ions.items():
+for ionInfo in ions.values():
     outputString  = """  <Residue name="%s">\n""" % (ionInfo[0])
     outputString += """   <Atom name="%s" type="%s"/>\n""" % (ionInfo[0], str(ionInfo[1]))
     outputString += """  </Residue>\n""" 
@@ -1065,7 +1065,7 @@ if( isAmoeba ):
 
     # AmoebaMultipoleForce
 
-    scalarList                  = dict()
+    scalarList                  = {}
     scalarList['mpole12Scale']  = recognizedScalars['mpole-12-scale']
     scalarList['mpole13Scale']  = recognizedScalars['mpole-13-scale']
     scalarList['mpole14Scale']  = recognizedScalars['mpole-14-scale']

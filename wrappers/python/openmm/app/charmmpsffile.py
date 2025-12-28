@@ -504,9 +504,9 @@ class CharmmPsfFile(object):
                         pair_14_set.add(pair)
 
         # in case there are 3,4,5-member rings
-        self.pair_12_list = list(sorted(pair_12_set))
-        self.pair_13_list = list(sorted(pair_13_set - pair_12_set))
-        self.pair_14_list = list(sorted(pair_14_set - pair_13_set.union(pair_12_set)))
+        self.pair_12_list = sorted(pair_12_set)
+        self.pair_13_list = sorted(pair_13_set - pair_12_set)
+        self.pair_14_list = sorted(pair_14_set - pair_13_set.union(pair_12_set))
 
     @staticmethod
     def _convert(string, type, message):
@@ -1114,7 +1114,7 @@ class CharmmPsfFile(object):
             # First get the list of cmap maps we're going to use. Just store the
             # IDs so we have simple integer comparisons to do later
             cmap_type_list = []
-            cmap_map = dict()
+            cmap_map = {}
             for cmap in self.cmap_list:
                 if not id(cmap.cmap_type) in cmap_type_list:
                     ct = cmap.cmap_type
