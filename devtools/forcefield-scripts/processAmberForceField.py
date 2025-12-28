@@ -299,8 +299,8 @@ def fix(atomClass):
         return ''
     return atomClass
 
-print "<ForceField>"
-print " <AtomTypes>"
+print("<ForceField>")
+print(" <AtomTypes>")
 for index, type in enumerate(types):
     if type[1] is None:
         el = ""
@@ -308,22 +308,22 @@ for index, type in enumerate(types):
     else:
         el = type[1].symbol
         mass = type[1].mass.value_in_unit(unit.amu)
-    print """  <Type name="%d" class="%s" element="%s" mass="%s"/>""" % (index, type[0], el, mass)
-print " </AtomTypes>"
-print " <Residues>"
+    print("""  <Type name="%d" class="%s" element="%s" mass="%s"/>""" % (index, type[0], el, mass))
+print(" </AtomTypes>")
+print(" <Residues>")
 for res in sorted(residueAtoms):
-    print """  <Residue name="%s">""" % res
+    print("""  <Residue name="%s">""" % res)
     for atom in residueAtoms[res]:
-        print "   <Atom name=\"%s\" type=\"%d\"/>" % tuple(atom)
+        print("   <Atom name=\"%s\" type=\"%d\"/>" % tuple(atom))
     if res in residueBonds:
         for bond in residueBonds[res]:
-            print """   <Bond from="%d" to="%d"/>""" % bond
+            print("""   <Bond from="%d" to="%d"/>""" % bond)
     if res in residueConnections:
         for bond in residueConnections[res]:
-            print """   <ExternalBond from="%d"/>""" % bond
-    print "  </Residue>"
-print " </Residues>"
-print " <HarmonicBondForce>"
+            print("""   <ExternalBond from="%d"/>""" % bond)
+    print("  </Residue>")
+print(" </Residues>")
+print(" <HarmonicBondForce>")
 processed = set()
 for bond in bonds:
     signature = (bond[0], bond[1])
@@ -334,9 +334,9 @@ for bond in bonds:
     processed.add(signature)
     length = float(bond[3])*0.1
     k = float(bond[2])*2*100*4.184
-    print """  <Bond class1="%s" class2="%s" length="%s" k="%s"/>""" % (bond[0], bond[1], str(length), str(k))
-print " </HarmonicBondForce>"
-print " <HarmonicAngleForce>"
+    print("""  <Bond class1="%s" class2="%s" length="%s" k="%s"/>""" % (bond[0], bond[1], str(length), str(k)))
+print(" </HarmonicBondForce>")
+print(" <HarmonicAngleForce>")
 processed = set()
 for angle in angles:
     signature = (angle[0], angle[1], angle[2])
@@ -347,9 +347,9 @@ for angle in angles:
     processed.add(signature)
     theta = float(angle[4])*math.pi/180.0
     k = float(angle[3])*2*4.184
-    print """  <Angle class1="%s" class2="%s" class3="%s" angle="%s" k="%s"/>""" % (angle[0], angle[1], angle[2], str(theta), str(k))
-print " </HarmonicAngleForce>"
-print " <PeriodicTorsionForce>"
+    print("""  <Angle class1="%s" class2="%s" class3="%s" angle="%s" k="%s"/>""" % (angle[0], angle[1], angle[2], str(theta), str(k)))
+print(" </HarmonicAngleForce>")
+print(" <PeriodicTorsionForce>")
 processed = set()
 for tor in reversed(torsions):
     signature = (fix(tor[0]), fix(tor[1]), fix(tor[2]), fix(tor[3]))
@@ -368,7 +368,7 @@ for tor in reversed(torsions):
         tag += " periodicity%d=\"%d\" phase%d=\"%s\" k%d=\"%s\"" % (index, periodicity, index, str(phase), index, str(k))
         i += 3
     tag += "/>"
-    print tag
+    print(tag)
 processed = set()
 for tor in reversed(impropers):
     signature = (fix(tor[2]), fix(tor[0]), fix(tor[1]), fix(tor[3]))
@@ -387,9 +387,9 @@ for tor in reversed(impropers):
         tag += " periodicity%d=\"%d\" phase%d=\"%s\" k%d=\"%s\"" % (index, periodicity, index, str(phase), index, str(k))
         i += 3
     tag += "/>"
-    print tag
-print " </PeriodicTorsionForce>"
-print """ <NonbondedForce coulomb14scale="%g" lj14scale="%s">""" % (charge14scale, epsilon14scale)
+    print(tag)
+print(" </PeriodicTorsionForce>")
+print(""" <NonbondedForce coulomb14scale="%g" lj14scale="%s">""" % (charge14scale, epsilon14scale))
 sigmaScale = 0.1*2.0/(2.0**(1.0/6.0))
 for index, type in enumerate(types):
     atomClass = type[0]
@@ -410,7 +410,7 @@ for index, type in enumerate(types):
     if sigma == 0 or epsilon == 0:
         sigma, epsilon = 1, 0
     if q != 0 or epsilon != 0:
-        print """  <Atom type="%d" charge="%s" sigma="%s" epsilon="%s"/>""" % (index, q, sigma, epsilon)
-print " </NonbondedForce>"
-print "</ForceField>"
+        print("""  <Atom type="%d" charge="%s" sigma="%s" epsilon="%s"/>""" % (index, q, sigma, epsilon))
+print(" </NonbondedForce>")
+print("</ForceField>")
 
