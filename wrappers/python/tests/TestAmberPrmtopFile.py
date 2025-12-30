@@ -470,10 +470,10 @@ class TestAmberPrmtopFile(unittest.TestCase):
             self.assertAlmostEqual(energy, expectedEnergy, delta=5e-4*abs(energy))
 
     def testAmberCMAP(self):
-        """Check that CMAP energy calcultion compared to AMber."""
+        """Check that CMAP energy calculation compared to AMber."""
         temperature = 50*kelvin
         conversion = 4.184 # 4.184 kJ/mol
-        sander_CMAP_E = 8.2864 # CMAP energy calcluated by Amber, unit kcal/mol
+        sander_CMAP_E = 8.2864 # CMAP energy calculated by Amber, unit kcal/mol
 
         prmtop = prmtop7  # systems/18protein.parm7
         inpcrd = inpcrd7  # systems/18protein.rst7

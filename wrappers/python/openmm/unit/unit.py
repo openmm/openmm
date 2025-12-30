@@ -91,7 +91,7 @@ class Unit(object):
                 if base_unit not in self._all_base_units[dim]:
                     self._all_base_units[dim][base_unit] = 0
                 self._all_base_units[dim][base_unit] += exponent1 * exponent2
-        # What about heterogenous units that cancel? --> leave them
+        # What about heterogeneous units that cancel? --> leave them
         self._scaled_units.sort()
 
     def create_unit(self, scale, name, symbol):
@@ -466,7 +466,7 @@ class Unit(object):
     def get_name(self):
         """
         Returns a unit name (string) for this Unit, composed of its various
-        BaseUnit symbols.  e.g. 'kilogram meter**2 secon**-1'.
+        BaseUnit symbols.  e.g. 'kilogram meter**2 second**-1'.
         """
         try:
             return self._name

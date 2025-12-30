@@ -322,7 +322,7 @@ class TestForceField(unittest.TestCase):
         # Specifying a non-default value should.
         with self.assertRaises(ValueError):
             self.forcefield1.createSystem(topology, drudeMass=0.5*amu)
-        # Specifying a nonexistant argument should raise an exception.
+        # Specifying a nonexistent argument should raise an exception.
         with self.assertRaises(ValueError):
             self.forcefield1.createSystem(topology, nonbndedCutoff=1.0*nanometer)
 

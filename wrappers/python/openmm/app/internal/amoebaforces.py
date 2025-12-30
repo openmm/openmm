@@ -280,7 +280,7 @@ class AmoebaBondForceBuilder(BaseAmoebaForceBuilder):
         bonds : list
             List of bonds indices as tuples of (atom1, atom2).
         isConstrained : list
-            List of flags indicating if a given bond is constrainted.
+            List of flags indicating if a given bond is constrained.
         flexibleConstraints : bool
             If True, constrained bonds will still be added to the system.
         """   
@@ -426,7 +426,7 @@ class AmoebaAngleForceBuilder(BaseAmoebaForceBuilder):
         angles : List[Tuple[int, int, int]]
             List of angle indices as tuples of (atom1, atom2, atom3).
         anglesConstraints : Optional[list]
-            List of flags indicating if a given angle is constrainted.
+            List of flags indicating if a given angle is constrained.
         flexibleConstraints : bool
             If True, constrained angles will still be added to the system.
         """
@@ -545,7 +545,7 @@ class AmoebaInPlaneAngleForceBuilder(BaseAmoebaForceBuilder):
         inPlaneAngles : List[Tuple[int, int, int, int]]
             List of in-plane angle indices as tuples of (atom1, atom2, atom3, atom4).
         anglesConstraints : Optional[list]
-            List of flags indicating if a given angle is constrainted.
+            List of flags indicating if a given angle is constrained.
         flexibleConstraints : bool
             If True, constrained angles will still be added to the system.
         """

@@ -1258,7 +1258,7 @@ class TestAPIUnits(unittest.TestCase):
         integrator.setRelativeCollisionFrequency(0.1/picosecond)
         self.assertEqual(integrator.getRelativeCollisionFrequency(), 0.1/picosecond)
 
-        # Test bare consructor and addThermostat
+        # Test bare constructor and addThermostat
         integrator = NoseHooverIntegrator(1*femtosecond)
         self.assertEqual(integrator.getStepSize(), 1*femtosecond)
 

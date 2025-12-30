@@ -6,7 +6,7 @@
 #
 # 2009-11-05 - (jdw) Change table storage architecture for list of
 #                   dictionaries to list of lists.
-# 2012-01-09 - (jdw) This module now obsolted by PdbxReader/PdbxWriter
+# 2012-01-09 - (jdw) This module now obsoleted by PdbxReader/PdbxWriter
 #                   modules.  APIs are preserved.
 #
 # 2012-09-01 - (jdw) Revise tokenizer to better handle embedded quoting.
@@ -334,7 +334,7 @@ class PdbxReader(object):
                 curCatName,curAttName,curQuotedString,curWord = next(tokenizer)
 
             elif state == "ST_UNKNOWN":
-                self.__syntaxError("Unrecogized syntax element: " + str(curWord))
+                self.__syntaxError("Unrecognized syntax element: " + str(curWord))
                 return
                 
 
@@ -532,7 +532,7 @@ class PdbxWriter(object):
             if len(objL) == 0:
                 continue
 
-            # Item - value formattting 
+            # Item - value formatting 
             elif len(objL) == 1:
                 self.__writeItemValueFormat(obj)
 

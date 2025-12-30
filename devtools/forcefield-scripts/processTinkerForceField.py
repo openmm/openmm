@@ -293,7 +293,7 @@ def buildResidueDict( residueXmlFileName ):
         atoms       = getXmlAtoms( residue.findall('Atom') ) 
         bondInfo    = getXmlBonds( residue.findall('Bond') ) 
 
-        # if residue is an amino acid, then create CALA and NALA residues, in addition to non-termianal residue, and include approriate atoms
+        # if residue is an amino acid, then create CALA and NALA residues, in addition to non-termianal residue, and include appropriate atoms
         # HXT is excluded from all residues
 
         if( isWater ):

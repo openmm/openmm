@@ -34,7 +34,7 @@ def appendTestResult(filename=None, test_result=None, system_info=None):
         The filename to append a result to, ending either in .yaml or .json
         If None, no result is written
     test_result : dict, optional, default=None
-        The test result to append to the 'benchmarks' blcok
+        The test result to append to the 'benchmarks' block
     system_info : dict, optional, default=None
         System info to append to the 'system' block
     """

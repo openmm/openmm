@@ -75,7 +75,7 @@ class PdbxWriter(object):
             if len(objL) == 0:
                 continue
 
-            # Item - value formattting 
+            # Item - value formatting 
             elif len(objL) == 1:
                 self.__writeItemValueFormat(obj)
 

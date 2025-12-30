@@ -52,7 +52,7 @@ def createRigidBodies(system, positions, bodies):
     
     Care is needed when using constraints, since virtual particles cannot participate in constraints.  If the
     input system includes any constraints, this function will automatically remove ones that connect two
-    particles in the same rigid body.  But if there is a constraint beween a particle in a rigid body and
+    particles in the same rigid body.  But if there is a constraint between a particle in a rigid body and
     another particle not in that body, it will likely lead to an exception when you try to create a context.
     
     Parameters:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Build swig imput file from xml encoded header files (see gccxml)."""
+"""Build swig input file from xml encoded header files (see gccxml)."""
 __author__ = "Randall J. Radmer"
 __version__ = "1.0"
 

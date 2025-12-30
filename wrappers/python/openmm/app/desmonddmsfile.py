@@ -60,7 +60,7 @@ class DesmondDMSFile(object):
 
         # sqlite3 is included in the standard lib, but at python
         # compile time, you can disable support (I think), so it's
-        # not *guarenteed* to be available. Doing the import here
+        # not *guaranteed* to be available. Doing the import here
         # means we only raise an ImportError if people try to use
         # this class, so the module can be safely imported
         import sqlite3
@@ -90,7 +90,7 @@ class DesmondDMSFile(object):
             self._open[fcounter] = True
             tables = self._readSchemas(conn)
             if len(tables) == 0:
-                raise IOError('DMS file %s was not loaded sucessfully. No tables found' % str(f))
+                raise IOError('DMS file %s was not loaded successfully. No tables found' % str(f))
             if 'nbtype' not in tables['particle']:
                 raise ValueError('No nonbonded parameters associated with '
                                  'DMS file %s. You can add a forcefield with the '
@@ -882,7 +882,7 @@ class DesmondDMSFile(object):
 
 
     def _checkForUnsupportedTerms(self):
-        """Check the file for forcefield terms that are not currenty supported,
+        """Check the file for forcefield terms that are not currently supported,
         raising a NotImplementedError
         """
         flat_bottom_potential_terms = ['stretch_fbhw_term', 'angle_fbhw_term',

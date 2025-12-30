@@ -697,7 +697,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
       scee (float) - 1-4 electrostatics scaling factor (default: taken from prmtop or 2.0 if not present there)
       mm - if specified, this module will be used in place of pyopenmm (default: None)
       verbose (boolean) - if True, print out information on progress (default: False)
-      flexibleConstraints (boolean) - if True, flexible bonds will be added in addition ot constrained bonds
+      flexibleConstraints (boolean) - if True, flexible bonds will be added in addition to constrained bonds
       rigidWater (boolean=True) If true, water molecules will be fully rigid regardless of the value passed for the shake argument
       sasaMethod (str='ACE') The string representing the SA model to use for GB calculations. Must be 'ACE', 'LCPO', or None
 
