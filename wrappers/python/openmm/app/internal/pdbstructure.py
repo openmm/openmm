@@ -4,7 +4,7 @@ pdbstructure.py: Used for managing PDB formatted files.
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2012-2021 Stanford University and the Authors.
+Portions copyright (c) 2012-2026 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
@@ -153,11 +153,14 @@ class PdbStructure(object):
     def _load(self, input_stream):
         self._reset_atom_numbers()
         self._reset_residue_numbers()
+        skip_remaining_models = False
         # Read one line at a time
         for pdb_line in input_stream:
             if not isinstance(pdb_line, str):
                 pdb_line = pdb_line.decode('utf-8')
             command = pdb_line[:6]
+            if skip_remaining_models and command != "CONECT":
+                continue
             # Look for atoms
             if command == "ATOM  " or command == "HETATM":
                 self._add_atom(Atom(pdb_line, self, self.extraParticleIdentifier))
@@ -179,7 +182,7 @@ class PdbStructure(object):
             elif command == "ENDMDL":
                 self._current_model._finalize()
                 if not self.load_all_models:
-                    break
+                    skip_remaining_models = True
             elif pdb_line[:3] == "END":
                 self._current_model._finalize()
                 if not self.load_all_models:
