@@ -1870,6 +1870,96 @@ self.scriptExecuted = True
         self.assertTrue(abs(energy1 - energy_amber) < energy_tolerance)
         self.assertTrue(abs(energy1 - energy2) < energy_tolerance)
 
+    def testWholeMolecule(self):
+        """Test matching a template to a whole molecule."""
+        xml = """
+<ForceField>
+  <AtomTypes>
+    <Type class="C" element="C" mass="12.01" name="C" />
+    <Type class="CT" element="C" mass="12.01" name="CT" />
+    <Type class="CX" element="C" mass="12.01" name="CX"/>
+    <Type class="H" element="H" mass="1.008" name="H"/>
+    <Type class="HC" element="H" mass="1.008" name="HC" />
+    <Type class="H1" element="H" mass="1.008" name="H1" />
+    <Type class="N" element="N" mass="14.01" name="N" />
+    <Type class="O" element="O" mass="16.0" name="O" />
+  </AtomTypes>
+  <Residues>
+    <Residue name="Alanine-Dipeptide">
+      <Atom charge="0.1123" name="ACE-H1" type="HC" />
+      <Atom charge="-0.3662" name="ACE-CH3" type="CT" />
+      <Atom charge="0.1123" name="ACE-H2" type="HC" />
+      <Atom charge="0.1123" name="ACE-H3" type="HC" />
+      <Atom charge="0.5972" name="ACE-C" type="C" />
+      <Atom charge="-0.5679" name="ACE-O" type="O" />
+      <Bond atomName1="ACE-H1" atomName2="ACE-CH3" />
+      <Bond atomName1="ACE-CH3" atomName2="ACE-H2" />
+      <Bond atomName1="ACE-CH3" atomName2="ACE-H3" />
+      <Bond atomName1="ACE-CH3" atomName2="ACE-C" />
+      <Bond atomName1="ACE-C" atomName2="ACE-O" />
+      <Atom charge="-0.4157" name="ALA-N" type="N" />
+      <Atom charge="0.2719" name="ALA-H" type="H" />
+      <Atom charge="0.0337" name="ALA-CA" type="CX" />
+      <Atom charge="0.0823" name="ALA-HA" type="H1" />
+      <Atom charge="-0.1825" name="ALA-CB" type="CT" />
+      <Atom charge="0.0603" name="ALA-HB1" type="HC" />
+      <Atom charge="0.0603" name="ALA-HB2" type="HC" />
+      <Atom charge="0.0603" name="ALA-HB3" type="HC" />
+      <Atom charge="0.5973" name="ALA-C" type="C" />
+      <Atom charge="-0.5679" name="ALA-O" type="O" />
+      <Bond atomName1="ALA-N" atomName2="ALA-H" />
+      <Bond atomName1="ALA-N" atomName2="ALA-CA" />
+      <Bond atomName1="ALA-CA" atomName2="ALA-HA" />
+      <Bond atomName1="ALA-CA" atomName2="ALA-CB" />
+      <Bond atomName1="ALA-CA" atomName2="ALA-C" />
+      <Bond atomName1="ALA-CB" atomName2="ALA-HB1" />
+      <Bond atomName1="ALA-CB" atomName2="ALA-HB2" />
+      <Bond atomName1="ALA-CB" atomName2="ALA-HB3" />
+      <Bond atomName1="ALA-C" atomName2="ALA-O" />
+      <Atom charge="-0.4157" name="NME-N" type="N" />
+      <Atom charge="0.2719" name="NME-H" type="H" />
+      <Atom charge="-0.149" name="NME-C" type="CT" />
+      <Atom charge="0.0976" name="NME-H1" type="H1" />
+      <Atom charge="0.0976" name="NME-H2" type="H1" />
+      <Atom charge="0.0976" name="NME-H3" type="H1" />
+      <Bond atomName1="NME-N" atomName2="NME-H" />
+      <Bond atomName1="NME-N" atomName2="NME-C" />
+      <Bond atomName1="NME-C" atomName2="NME-H1" />
+      <Bond atomName1="NME-C" atomName2="NME-H2" />
+      <Bond atomName1="NME-C" atomName2="NME-H3" />
+      <Bond atomName1="ACE-C" atomName2="ALA-N" />
+      <Bond atomName1="ALA-C" atomName2="NME-N" />
+    </Residue>
+  </Residues>
+  <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+    <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="0.359824" sigma="0.3399669508423535" type="C"/>
+    <Atom epsilon="0.4577296" sigma="0.3399669508423535" type="CT"/>
+    <Atom epsilon="0.4577296" sigma="0.3399669508423535" type="CX"/>
+    <Atom epsilon="0.06568879999999999" sigma="0.2649532787749369" type="HC"/>
+    <Atom epsilon="0.06568879999999999" sigma="0.10690784617684071" type="H"/>
+    <Atom epsilon="0.06568879999999999" sigma="0.2471353044121301" type="H1"/>
+    <Atom epsilon="0.7112800000000001" sigma="0.3249998523775958" type="N"/>
+    <Atom epsilon="0.87864" sigma="0.2959921901149463" type="O"/>
+  </NonbondedForce>
+</ForceField>"""
+        pdb = PDBFile('systems/alanine-dipeptide-implicit.pdb')
+        ff = ForceField(StringIO(xml))
+        system = ff.createSystem(pdb.topology)
+        nonbonded = next(f for f in system.getForces() if isinstance(f, NonbondedForce))
+
+        def checkAtom(resName, atomName, expected):
+            for atom in pdb.topology.atoms():
+                if atom.name == atomName and atom.residue.name == resName:
+                    params = nonbonded.getParticleParameters(atom.index)
+                    self.assertEqual(expected, params)
+                    return
+            raise ValueError(f'{resName} {atomName} not found')
+
+        checkAtom('ACE', 'C', [0.5972*elementary_charge, 0.3399669508423535*nanometers, 0.359824*kilojoules_per_mole])
+        checkAtom('ACE', 'H2', [0.1123*elementary_charge, 0.2649532787749369*nanometers, 0.06568879999999999*kilojoules_per_mole])
+        checkAtom('ALA', 'CA', [0.0337*elementary_charge, 0.3399669508423535*nanometers, 0.4577296*kilojoules_per_mole])
+        checkAtom('NME', 'N', [-0.4157*elementary_charge, 0.3249998523775958*nanometers, 0.7112800000000001*kilojoules_per_mole])
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""

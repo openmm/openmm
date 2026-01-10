@@ -4,7 +4,7 @@ modeller.py: Provides tools for editing molecular models
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2012-2025 Stanford University and the Authors.
+Portions copyright (c) 2012-2026 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: 
 
@@ -1170,7 +1170,7 @@ class Modeller(object):
                 newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
                 if residue in residueTemplates:
                     newResidueTemplates[newResidue] = residueTemplates[residue]
-                template = templates[residue.index]
+                template = templates[residue]
                 if len(template.atoms) == len(list(residue.atoms())):
                     # Just copy the residue over.
 
