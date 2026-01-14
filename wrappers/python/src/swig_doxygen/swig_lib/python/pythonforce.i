@@ -12,6 +12,10 @@ namespace OpenMM {
     class ComputationWrapper : public PythonForceComputation {
     public:
         ComputationWrapper(PyObject* computation) : computation(computation) {
+            Py_INCREF(computation);
+        }
+        ~ComputationWrapper() {
+            Py_XDECREF(computation);
         }
         void compute(const State& state, double& energy, void* forces, bool forcesAreDouble) const {
             PyGILState_STATE gstate;
