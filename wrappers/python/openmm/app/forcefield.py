@@ -1513,7 +1513,7 @@ class ForceField(object):
                     unmatchedResidues.remove(res)
                 if recordParameters:
                     data.recordMatchedAtomParameters(matchedRes, template, matches)
-                templateForResidue[res] = template
+                templateForResidue[matchedRes] = template
         return templateForResidue
 
 
