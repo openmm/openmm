@@ -81,8 +81,11 @@ ReferencePlatform::ReferencePlatform() {
     registerKernelFactory(IntegrateDPDStepKernel::Name(), factory);
     registerKernelFactory(IntegrateQTBStepKernel::Name(), factory);
     registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
+    registerKernelFactory(ApplyBussiThermostatKernel::Name(), factory);
     registerKernelFactory(ApplyMonteCarloBarostatKernel::Name(), factory);
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
+    registerKernelFactory(CalcCavityForceKernel::Name(), factory);
+    registerKernelFactory(ApplyCavityDisplacementKernel::Name(), factory);
 }
 
 double ReferencePlatform::getSpeed() const {

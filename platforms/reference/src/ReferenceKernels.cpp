@@ -75,7 +75,11 @@
 #include "openmm/Context.h"
 #include "openmm/System.h"
 #include "openmm/internal/AndersenThermostatImpl.h"
+#include "openmm/internal/BussiThermostatImpl.h"
+#include "openmm/internal/CavityForceImpl.h"
+#include "openmm/internal/CavityParticleDisplacerImpl.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/NonbondedForce.h"
 #include "openmm/internal/CustomCentroidBondForceImpl.h"
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
@@ -3287,6 +3291,279 @@ void ReferenceApplyAndersenThermostatKernel::execute(ContextImpl& context) {
         context.getParameter(AndersenThermostat::Temperature()),
         context.getParameter(AndersenThermostat::CollisionFrequency()),
         context.getIntegrator().getStepSize());
+}
+
+// ==================== BussiThermostat Kernel Implementation ====================
+
+void ReferenceApplyBussiThermostatKernel::initialize(const System& system, const BussiThermostat& thermostat,
+                                                      const vector<int>& indices) {
+    particleIndices = indices;
+    masses.resize(particleIndices.size());
+    for (size_t i = 0; i < particleIndices.size(); ++i)
+        masses[i] = system.getParticleMass(particleIndices[i]);
+    randomSeed = thermostat.getRandomNumberSeed();
+    if (randomSeed == 0)
+        randomSeed = (unsigned int) time(NULL);
+    SimTKOpenMMUtilities::setRandomNumberSeed(randomSeed);
+}
+
+void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
+    // Get parameters from context
+    double temperature = context.getParameter(BussiThermostat::Temperature());
+    double tau = context.getParameter(BussiThermostat::Tau());
+    double dt = context.getIntegrator().getStepSize();
+    
+    vector<Vec3>& velData = extractVelocities(context);
+    
+    // Compute current kinetic energy for the particle subset
+    double kineticEnergy = 0.0;
+    for (size_t i = 0; i < particleIndices.size(); ++i) {
+        int idx = particleIndices[i];
+        double m = masses[i];
+        if (m > 0) {
+            Vec3& v = velData[idx];
+            kineticEnergy += 0.5 * m * (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+        }
+    }
+    
+    // Compute degrees of freedom (3 * number of particles with mass > 0)
+    int dof = 0;
+    for (size_t i = 0; i < masses.size(); ++i)
+        if (masses[i] > 0)
+            dof += 3;
+    
+    if (dof <= 0 || kineticEnergy <= 0)
+        return;
+    
+    // Compute the rescaling factor using Bussi's algorithm
+    // c = exp(-dt/tau)
+    double c = exp(-dt / tau);
+    
+    // Target kinetic energy: K_target = (dof/2) * kB * T
+    // In OpenMM units: kB = BOLTZ (kJ/mol/K), T in K
+    double targetKE = 0.5 * dof * BOLTZ * temperature;
+    
+    // Generate random numbers
+    // R1 ~ N(0,1), and sum of (dof-1) squared normals is chi2(dof-1)
+    double R1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+    double sumRiSquared = 0.0;
+    for (int i = 1; i < dof; ++i) {
+        double Ri = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+        sumRiSquared += Ri * Ri;
+    }
+    
+    // Compute alpha^2 (rescaling factor squared) using Bussi formula
+    // alpha^2 = c + (1-c) * (K_target / K) * (sum_Ri^2 / dof) + 2 * sqrt(c * (1-c) * K_target / (dof * K)) * R1
+    double ratio = targetKE / (dof * kineticEnergy);
+    double alphaSquared = c + (1 - c) * ratio * sumRiSquared 
+                         + 2.0 * R1 * sqrt(c * (1 - c) * ratio);
+    
+    // Ensure alpha^2 is positive
+    if (alphaSquared < 0)
+        alphaSquared = 0;
+    
+    double alpha = sqrt(alphaSquared);
+    
+    // Track reservoir energy: delta_E = K * (1 - alpha^2)
+    double deltaE = kineticEnergy * (1.0 - alphaSquared);
+    reservoirEnergyTranslational += deltaE;
+    
+    // Rescale velocities for particles in the subset
+    for (size_t i = 0; i < particleIndices.size(); ++i) {
+        int idx = particleIndices[i];
+        velData[idx][0] *= alpha;
+        velData[idx][1] *= alpha;
+        velData[idx][2] *= alpha;
+    }
+}
+
+// ==================== CavityForce Kernel Implementation ====================
+
+// Unit conversion constants for cavity force
+// omegac is given in Hartree (atomic units where ℏ=1)
+// OpenMM uses: mass in amu, length in nm, energy in kJ/mol
+// 
+// Spring constant K = m × ω² needs conversion:
+//   1 Hartree = 4.3597447e-18 J = ℏω, so ω = E/ℏ = 4.1363e16 rad/s per Hartree
+//   K [kJ/(mol·nm²)] = m [amu] × 1e-24 [kg/amu × mol⁻¹ × nm⁻²] × ω² [rad²/s²]
+//   Combined factor: (4.1363e16)² × 1e-24 × 1000/NA = 1.7109e9
+static const double OMEGAC_AU_TO_K_CONVERSION = 1.7109e9;  // (Hartree)² → (kJ/(mol·nm²))/amu
+static const double OMEGAC_AU_TO_EPSILON_CONVERSION = 1.3083e5;  // Hartree → sqrt(kJ/(mol·nm²·e²))
+
+void ReferenceCalcCavityForceKernel::initialize(const System& system, const CavityForce& force) {
+    cavityParticleIndex = force.getCavityParticleIndex();
+    omegac = force.getOmegac();
+    lambdaCoupling = force.getLambdaCoupling();
+    photonMass = force.getPhotonMass();
+    couplingSchedule = force.getLambdaCouplingSchedule();
+    stepCount = 0;
+    
+    // Store charges for all particles
+    int numParticles = system.getNumParticles();
+    charges.resize(numParticles, 0.0);
+    
+    // Find NonbondedForce to get charges
+    for (int i = 0; i < system.getNumForces(); i++) {
+        const Force& f = system.getForce(i);
+        const NonbondedForce* nonbonded = dynamic_cast<const NonbondedForce*>(&f);
+        if (nonbonded != NULL) {
+            for (int j = 0; j < numParticles; j++) {
+                double charge, sigma, epsilon;
+                nonbonded->getParticleParameters(j, charge, sigma, epsilon);
+                charges[j] = charge;
+            }
+            break;
+        }
+    }
+}
+
+double ReferenceCalcCavityForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    // Get current lambda from schedule or use default
+    double currentLambda = lambdaCoupling;
+    if (!couplingSchedule.empty()) {
+        for (const auto& entry : couplingSchedule) {
+            if (entry.first <= stepCount)
+                currentLambda = entry.second;
+            else
+                break;
+        }
+    }
+    stepCount++;
+    
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
+    Vec3* boxVectors = extractBoxVectors(context);
+    
+    int numParticles = posData.size();
+    
+    // Compute unwrapped positions using image flags
+    // For reference platform, we need to track images separately
+    // Here we use the positions as-is since OpenMM's reference platform handles this
+    
+    // Get cavity particle position (unwrapped)
+    Vec3 qPhoton = posData[cavityParticleIndex];
+    Vec3 qPhotonXY(qPhoton[0], qPhoton[1], 0.0);
+    
+    // Compute molecular dipole moment (excluding cavity particle)
+    Vec3 dipole(0.0, 0.0, 0.0);
+    for (int i = 0; i < numParticles; i++) {
+        if (i != cavityParticleIndex) {
+            double q = charges[i];
+            dipole[0] += q * posData[i][0];
+            dipole[1] += q * posData[i][1];
+            dipole[2] += q * posData[i][2];
+        }
+    }
+    Vec3 dipoleXY(dipole[0], dipole[1], 0.0);
+    
+    // Compute spring constant and effective coupling with proper unit conversion
+    // omegac is in Hartree (atomic units), need to convert to OpenMM units
+    // K [kJ/(mol·nm²)] = m [amu] × CONVERSION × ω² [Hartree²]
+    // ε [kJ/(mol·e·nm²)] = λ × ω [Hartree] × 2625.5 / 0.0529177²
+    double K = photonMass * OMEGAC_AU_TO_K_CONVERSION * omegac * omegac;
+    double epsilon = currentLambda * omegac * 937679.0;  // Hartree → kJ/(mol·e·nm²)
+    
+    // Compute energy components
+    // Harmonic: (1/2) * K * q^2
+    harmonicEnergy = 0.5 * K * (qPhoton[0]*qPhoton[0] + qPhoton[1]*qPhoton[1] + qPhoton[2]*qPhoton[2]);
+    
+    // Coupling: epsilon * q_xy . d_xy
+    couplingEnergy = epsilon * (qPhotonXY[0]*dipoleXY[0] + qPhotonXY[1]*dipoleXY[1]);
+    
+    // Dipole self-energy: (epsilon^2 / 2K) * d_xy^2
+    dipoleSelfEnergy = 0.5 * epsilon * epsilon / K * (dipoleXY[0]*dipoleXY[0] + dipoleXY[1]*dipoleXY[1]);
+    
+    double totalEnergy = harmonicEnergy + couplingEnergy + dipoleSelfEnergy;
+    
+    if (includeForces) {
+        // Dq = q + (epsilon/K) * d (displaced cavity mode position)
+        // Using epsilon/K ensures correct unit conversion
+        double epsilonOverK = epsilon / K;  // units: 1/e
+        Vec3 Dq(qPhoton[0] + epsilonOverK * dipole[0],
+                qPhoton[1] + epsilonOverK * dipole[1],
+                0.0);
+        
+        // Force on molecular particles: F = -epsilon * q_i * Dq (only xy components)
+        for (int i = 0; i < numParticles; i++) {
+            if (i != cavityParticleIndex) {
+                double q = charges[i];
+                forceData[i][0] -= epsilon * q * Dq[0];
+                forceData[i][1] -= epsilon * q * Dq[1];
+                // No force in z direction
+            }
+        }
+        
+        // Force on cavity particle: F = -K*q - epsilon*d_xy
+        forceData[cavityParticleIndex][0] -= K * qPhoton[0] + epsilon * dipoleXY[0];
+        forceData[cavityParticleIndex][1] -= K * qPhoton[1] + epsilon * dipoleXY[1];
+        forceData[cavityParticleIndex][2] -= K * qPhoton[2];
+    }
+    
+    return totalEnergy;
+}
+
+void ReferenceCalcCavityForceKernel::copyParametersToContext(ContextImpl& context, const CavityForce& force) {
+    cavityParticleIndex = force.getCavityParticleIndex();
+    omegac = force.getOmegac();
+    lambdaCoupling = force.getLambdaCoupling();
+    photonMass = force.getPhotonMass();
+    couplingSchedule = force.getLambdaCouplingSchedule();
+}
+
+// ==================== CavityParticleDisplacer Kernel Implementation ====================
+
+void ReferenceApplyCavityDisplacementKernel::initialize(const System& system, const CavityParticleDisplacer& displacer) {
+    cavityParticleIndex = displacer.getCavityParticleIndex();
+    omegac = displacer.getOmegac();
+    photonMass = displacer.getPhotonMass();
+    
+    // Store charges for all particles
+    int numParticles = system.getNumParticles();
+    charges.resize(numParticles, 0.0);
+    
+    // Find NonbondedForce to get charges
+    for (int i = 0; i < system.getNumForces(); i++) {
+        const Force& f = system.getForce(i);
+        const NonbondedForce* nonbonded = dynamic_cast<const NonbondedForce*>(&f);
+        if (nonbonded != NULL) {
+            for (int j = 0; j < numParticles; j++) {
+                double charge, sigma, epsilon;
+                nonbonded->getParticleParameters(j, charge, sigma, epsilon);
+                charges[j] = charge;
+            }
+            break;
+        }
+    }
+}
+
+void ReferenceApplyCavityDisplacementKernel::execute(ContextImpl& context, double lambdaCoupling) {
+    vector<Vec3>& posData = extractPositions(context);
+    int numParticles = posData.size();
+    
+    // Compute molecular dipole moment (excluding cavity particle)
+    Vec3 dipole(0.0, 0.0, 0.0);
+    for (int i = 0; i < numParticles; i++) {
+        if (i != cavityParticleIndex) {
+            double q = charges[i];
+            dipole[0] += q * posData[i][0];
+            dipole[1] += q * posData[i][1];
+            dipole[2] += q * posData[i][2];
+        }
+    }
+    
+    // Compute equilibrium position: q_eq = -(epsilon/K) * d_xy
+    // With proper unit conversion:
+    // epsilon = lambda * omega * 937679 [kJ/(mol·e·nm²)]
+    // K = photonMass * 1.7109e9 * omega² [kJ/(mol·nm²)]
+    // epsilon/K = lambda * 937679 / (photonMass * 1.7109e9 * omega) [1/e]
+    double epsilonOverK = lambdaCoupling * 937679.0 / (photonMass * 1.7109e9 * omegac);
+    double factor = -epsilonOverK;
+    
+    // Update cavity particle position (only x,y, preserve z)
+    double originalZ = posData[cavityParticleIndex][2];
+    posData[cavityParticleIndex][0] = factor * dipole[0];
+    posData[cavityParticleIndex][1] = factor * dipole[1];
+    posData[cavityParticleIndex][2] = originalZ;
 }
 
 ReferenceApplyMonteCarloBarostatKernel::~ReferenceApplyMonteCarloBarostatKernel() {

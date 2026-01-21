@@ -118,6 +118,12 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceIntegrateQTBStepKernel(name, platform, data);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new ReferenceApplyAndersenThermostatKernel(name, platform);
+    if (name == ApplyBussiThermostatKernel::Name())
+        return new ReferenceApplyBussiThermostatKernel(name, platform);
+    if (name == CalcCavityForceKernel::Name())
+        return new ReferenceCalcCavityForceKernel(name, platform);
+    if (name == ApplyCavityDisplacementKernel::Name())
+        return new ReferenceApplyCavityDisplacementKernel(name, platform);
     if (name == ApplyMonteCarloBarostatKernel::Name())
         return new ReferenceApplyMonteCarloBarostatKernel(name, platform);
     if (name == RemoveCMMotionKernel::Name())

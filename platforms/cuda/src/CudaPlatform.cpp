@@ -110,6 +110,9 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(IntegrateDPDStepKernel::Name(), factory);
     registerKernelFactory(IntegrateQTBStepKernel::Name(), factory);
     registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
+    registerKernelFactory(ApplyBussiThermostatKernel::Name(), factory);
+    registerKernelFactory(CalcCavityForceKernel::Name(), factory);
+    registerKernelFactory(ApplyCavityDisplacementKernel::Name(), factory);
     registerKernelFactory(ApplyMonteCarloBarostatKernel::Name(), factory);
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
     platformProperties.push_back(CudaDeviceIndex());

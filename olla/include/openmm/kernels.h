@@ -31,6 +31,9 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/AndersenThermostat.h"
+#include "openmm/BussiThermostat.h"
+#include "openmm/CavityForce.h"
+#include "openmm/CavityParticleDisplacer.h"
 #include "openmm/LangevinMiddleIntegrator.h"
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CMAPTorsionForce.h"
@@ -1687,6 +1690,129 @@ public:
      * @param context    the context in which to execute this kernel
      */
     virtual void execute(ContextImpl& context) = 0;
+};
+
+/**
+ * This kernel is invoked by BussiThermostat at the start of each time step to 
+ * rescale the particle velocities using stochastic velocity rescaling.
+ */
+class ApplyBussiThermostatKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "ApplyBussiThermostat";
+    }
+    ApplyBussiThermostatKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system          the System this kernel will be applied to
+     * @param thermostat      the BussiThermostat this kernel will be used for
+     * @param particleIndices the indices of particles to apply the thermostat to
+     */
+    virtual void initialize(const System& system, const BussiThermostat& thermostat, 
+                           const std::vector<int>& particleIndices) = 0;
+    /**
+     * Execute the kernel to rescale velocities.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    virtual void execute(ContextImpl& context) = 0;
+    /**
+     * Get the cumulative reservoir energy from translational degrees of freedom.
+     * This is the total energy transferred to/from the heat bath.
+     * 
+     * @param context    the context to query
+     * @return the reservoir energy in kJ/mol
+     */
+    virtual double getReservoirEnergyTranslational(ContextImpl& context) const = 0;
+    /**
+     * Get the cumulative reservoir energy from rotational degrees of freedom.
+     * 
+     * @param context    the context to query
+     * @return the reservoir energy in kJ/mol
+     */
+    virtual double getReservoirEnergyRotational(ContextImpl& context) const = 0;
+    /**
+     * Reset the reservoir energy counters to zero.
+     * 
+     * @param context    the context to modify
+     */
+    virtual void resetReservoirEnergy(ContextImpl& context) = 0;
+};
+
+/**
+ * This kernel is invoked by CavityForce to compute the cavity-molecule interaction.
+ */
+class CalcCavityForceKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CalcCavityForce";
+    }
+    CalcCavityForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system  the System this kernel will be applied to
+     * @param force   the CavityForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const CavityForce& force) = 0;
+    /**
+     * Execute the kernel to calculate forces and energy.
+     * 
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if energy should be calculated
+     * @return the total potential energy due to the cavity force
+     */
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters to a context.
+     *
+     * @param context  the context to copy parameters to
+     * @param force    the CavityForce to copy parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const CavityForce& force) = 0;
+    /**
+     * Get the harmonic energy component: (1/2) * K * q^2
+     */
+    virtual double getHarmonicEnergy() const = 0;
+    /**
+     * Get the coupling energy component: epsilon * q . d
+     */
+    virtual double getCouplingEnergy() const = 0;
+    /**
+     * Get the dipole self-energy component: (epsilon^2 / 2K) * d^2
+     */
+    virtual double getDipoleSelfEnergy() const = 0;
+};
+
+/**
+ * This kernel is invoked by CavityParticleDisplacer to displace the cavity particle
+ * to its equilibrium position when the coupling is switched on.
+ */
+class ApplyCavityDisplacementKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "ApplyCavityDisplacement";
+    }
+    ApplyCavityDisplacementKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param displacer  the CavityParticleDisplacer this kernel will be used for
+     */
+    virtual void initialize(const System& system, const CavityParticleDisplacer& displacer) = 0;
+    /**
+     * Execute the kernel to displace the cavity particle.
+     * 
+     * @param context        the context in which to execute this kernel
+     * @param lambdaCoupling the coupling value to use for displacement calculation
+     */
+    virtual void execute(ContextImpl& context, double lambdaCoupling) = 0;
 };
 
 /**

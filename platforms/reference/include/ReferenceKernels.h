@@ -1821,6 +1821,121 @@ private:
 };
 
 /**
+ * This kernel is invoked by BussiThermostat to rescale particle velocities using
+ * the stochastic velocity rescaling thermostat (Bussi et al. 2007).
+ */
+class ReferenceApplyBussiThermostatKernel : public ApplyBussiThermostatKernel {
+public:
+    ReferenceApplyBussiThermostatKernel(std::string name, const Platform& platform) : 
+        ApplyBussiThermostatKernel(name, platform), 
+        reservoirEnergyTranslational(0.0), reservoirEnergyRotational(0.0) {
+    }
+    /**
+     * Initialize the kernel.
+     */
+    void initialize(const System& system, const BussiThermostat& thermostat, 
+                   const std::vector<int>& particleIndices);
+    /**
+     * Execute the kernel.
+     */
+    void execute(ContextImpl& context);
+    /**
+     * Get reservoir energy from translational DOF.
+     */
+    double getReservoirEnergyTranslational(ContextImpl& context) const {
+        return reservoirEnergyTranslational;
+    }
+    /**
+     * Get reservoir energy from rotational DOF.
+     */
+    double getReservoirEnergyRotational(ContextImpl& context) const {
+        return reservoirEnergyRotational;
+    }
+    /**
+     * Reset reservoir energies.
+     */
+    void resetReservoirEnergy(ContextImpl& context) {
+        reservoirEnergyTranslational = 0.0;
+        reservoirEnergyRotational = 0.0;
+    }
+private:
+    std::vector<int> particleIndices;
+    std::vector<double> masses;
+    double reservoirEnergyTranslational;
+    double reservoirEnergyRotational;
+    unsigned int randomSeed;
+};
+
+/**
+ * This kernel is invoked by CavityForce to compute the cavity-molecule interaction.
+ */
+class ReferenceCalcCavityForceKernel : public CalcCavityForceKernel {
+public:
+    ReferenceCalcCavityForceKernel(std::string name, const Platform& platform) : 
+        CalcCavityForceKernel(name, platform),
+        harmonicEnergy(0.0), couplingEnergy(0.0), dipoleSelfEnergy(0.0) {
+    }
+    /**
+     * Initialize the kernel.
+     */
+    void initialize(const System& system, const CavityForce& force);
+    /**
+     * Execute the kernel.
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters to a context.
+     */
+    void copyParametersToContext(ContextImpl& context, const CavityForce& force);
+    /**
+     * Get harmonic energy component.
+     */
+    double getHarmonicEnergy() const { return harmonicEnergy; }
+    /**
+     * Get coupling energy component.
+     */
+    double getCouplingEnergy() const { return couplingEnergy; }
+    /**
+     * Get dipole self-energy component.
+     */
+    double getDipoleSelfEnergy() const { return dipoleSelfEnergy; }
+private:
+    int cavityParticleIndex;
+    double omegac;
+    double lambdaCoupling;
+    double photonMass;
+    std::vector<std::pair<int, double>> couplingSchedule;
+    std::vector<double> charges;
+    double harmonicEnergy;
+    double couplingEnergy;
+    double dipoleSelfEnergy;
+    int stepCount;
+};
+
+/**
+ * This kernel is invoked by CavityParticleDisplacer to displace the cavity particle.
+ */
+class ReferenceApplyCavityDisplacementKernel : public ApplyCavityDisplacementKernel {
+public:
+    ReferenceApplyCavityDisplacementKernel(std::string name, const Platform& platform) : 
+        ApplyCavityDisplacementKernel(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     */
+    void initialize(const System& system, const CavityParticleDisplacer& displacer);
+    /**
+     * Execute the kernel.
+     */
+    void execute(ContextImpl& context, double lambdaCoupling);
+private:
+    int cavityParticleIndex;
+    double omegac;
+    double photonMass;
+    std::vector<double> charges;
+};
+
+/**
  * This kernel is invoked by MonteCarloBarostat to adjust the periodic box volume
  */
 class ReferenceApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {

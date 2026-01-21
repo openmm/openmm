@@ -28,7 +28,11 @@
 #include "openmm/common/ExpressionUtilities.h"
 #include "openmm/Context.h"
 #include "openmm/internal/AndersenThermostatImpl.h"
+#include "openmm/internal/BussiThermostatImpl.h"
+#include "openmm/internal/CavityForceImpl.h"
+#include "openmm/internal/CavityParticleDisplacerImpl.h"
 #include "openmm/internal/CMAPTorsionForceImpl.h"
+#include "openmm/NonbondedForce.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomCentroidBondForceImpl.h"
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
@@ -4249,6 +4253,359 @@ void CommonApplyAndersenThermostatKernel::execute(ContextImpl& context) {
         kernel->setArg(4, (float) stepSize);
     kernel->setArg(6, cc.getIntegrationUtilities().prepareRandomNumbers(cc.getPaddedNumAtoms()));
     kernel->execute(cc.getNumAtoms());
+}
+
+// ==================== BussiThermostat Kernel Implementation ====================
+
+void CommonApplyBussiThermostatKernel::initialize(const System& system, const BussiThermostat& thermostat,
+                                                   const vector<int>& particleIndices) {
+    ContextSelector selector(cc);
+    randomSeed = thermostat.getRandomNumberSeed();
+    numParticles = particleIndices.size();
+    
+    // Initialize random number generator
+    cc.getIntegrationUtilities().initRandomNumberGenerator(randomSeed);
+    
+    // Create array for particle indices
+    particleIndicesArray.initialize<int>(cc, numParticles, "bussiParticleIndices");
+    particleIndicesArray.upload(particleIndices);
+    
+    // Create array for masses
+    vector<float> masses(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        masses[i] = (float) system.getParticleMass(particleIndices[i]);
+    massesArray.initialize<float>(cc, numParticles, "bussiMasses");
+    massesArray.upload(masses);
+    
+    // Create buffer for kinetic energy reduction
+    int numBlocks = cc.getNumThreadBlocks();
+    kineticEnergyBuffer.initialize<float>(cc, numBlocks, "bussiKineticEnergy");
+    reservoirEnergyBuffer.initialize<float>(cc, 1, "bussiReservoirEnergy");
+    
+    // Compile kernel
+    map<string, string> defines;
+    defines["WORK_GROUP_SIZE"] = cc.intToString(cc.ThreadBlockSize);
+    defines["NUM_PARTICLES"] = cc.intToString(numParticles);
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::bussiThermostat, defines);
+    sumKineticEnergyKernel = program->createKernel("sumBussiKineticEnergy");
+    rescaleKernel = program->createKernel("applyBussiThermostat");
+    
+    // Set up kernels
+    sumKineticEnergyKernel->addArg(numParticles);
+    sumKineticEnergyKernel->addArg(cc.getVelm());
+    sumKineticEnergyKernel->addArg(particleIndicesArray);
+    sumKineticEnergyKernel->addArg(massesArray);
+    sumKineticEnergyKernel->addArg(kineticEnergyBuffer);
+    
+    rescaleKernel->addArg(numParticles);
+    rescaleKernel->addArg(cc.getVelm());
+    rescaleKernel->addArg(particleIndicesArray);
+    rescaleKernel->addArg(); // alpha (rescaling factor) - set at runtime
+}
+
+void CommonApplyBussiThermostatKernel::execute(ContextImpl& context) {
+    ContextSelector selector(cc);
+    
+    // Get parameters
+    double temperature = context.getParameter(BussiThermostat::Temperature());
+    double tau = context.getParameter(BussiThermostat::Tau());
+    double dt = context.getIntegrator().getStepSize();
+    
+    // First, compute kinetic energy on GPU
+    sumKineticEnergyKernel->execute(numParticles);
+    
+    // Download kinetic energy (this is a synchronization point)
+    vector<float> keBuffer(kineticEnergyBuffer.getSize());
+    kineticEnergyBuffer.download(keBuffer);
+    
+    double kineticEnergy = 0.0;
+    for (float ke : keBuffer)
+        kineticEnergy += ke;
+    
+    // Compute DOF (3 per particle)
+    int dof = 3 * numParticles;
+    
+    if (dof <= 0 || kineticEnergy <= 0)
+        return;
+    
+    // Compute rescaling factor using Bussi's algorithm
+    double c = exp(-dt / tau);
+    double targetKE = 0.5 * dof * BOLTZ * temperature;
+    
+    // Generate random numbers on CPU for now (more accurate for such critical calculations)
+    double R1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+    double sumRiSquared = 0.0;
+    for (int i = 1; i < dof; i++) {
+        double Ri = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+        sumRiSquared += Ri * Ri;
+    }
+    
+    double ratio = targetKE / (dof * kineticEnergy);
+    double alphaSquared = c + (1 - c) * ratio * sumRiSquared 
+                         + 2.0 * R1 * sqrt(c * (1 - c) * ratio);
+    
+    if (alphaSquared < 0)
+        alphaSquared = 0;
+    
+    double alpha = sqrt(alphaSquared);
+    
+    // Track reservoir energy
+    double deltaE = kineticEnergy * (1.0 - alphaSquared);
+    reservoirEnergyTranslational += deltaE;
+    
+    // Rescale velocities
+    rescaleKernel->setArg(3, (float) alpha);
+    rescaleKernel->execute(numParticles);
+}
+
+// ==================== CavityForce Kernel Implementation ====================
+
+void CommonCalcCavityForceKernel::initialize(const System& system, const CavityForce& force) {
+    ContextSelector selector(cc);
+    cavityParticleIndex = force.getCavityParticleIndex();
+    omegac = force.getOmegac();
+    lambdaCoupling = force.getLambdaCoupling();
+    photonMass = force.getPhotonMass();
+    couplingSchedule = force.getLambdaCouplingSchedule();
+    stepCount = 0;
+    
+    int numParticles = system.getNumParticles();
+    
+    // Store charges for all particles
+    vector<float> charges(numParticles, 0.0f);
+    for (int i = 0; i < system.getNumForces(); i++) {
+        const Force& f = system.getForce(i);
+        const NonbondedForce* nonbonded = dynamic_cast<const NonbondedForce*>(&f);
+        if (nonbonded != NULL) {
+            for (int j = 0; j < numParticles; j++) {
+                double charge, sigma, epsilon;
+                nonbonded->getParticleParameters(j, charge, sigma, epsilon);
+                charges[j] = (float) charge;
+            }
+            break;
+        }
+    }
+    chargesArray.initialize<float>(cc, numParticles, "cavityCharges");
+    chargesArray.upload(charges);
+    
+    // Create buffers
+    dipoleBuffer.initialize<float>(cc, 4, "cavityDipole"); // x, y, z, unused
+    int numBlocks = cc.getNumThreadBlocks();
+    energyBuffer.initialize<float>(cc, numBlocks * 3, "cavityEnergy"); // harmonic, coupling, dipole self
+    unwrappedCavityPosBuffer.initialize<float>(cc, 4, "unwrappedCavityPos"); // x, y, z, unused
+    
+    // Initialize tracking variables
+    firstStep = true;
+    prevCavityPos[0] = prevCavityPos[1] = prevCavityPos[2] = 0.0;
+    cavityImage[0] = cavityImage[1] = cavityImage[2] = 0;
+    
+    // Compile kernels
+    map<string, string> defines;
+    defines["WORK_GROUP_SIZE"] = cc.intToString(cc.ThreadBlockSize);
+    defines["CAVITY_PARTICLE_INDEX"] = cc.intToString(cavityParticleIndex);
+    defines["NUM_ATOMS"] = cc.intToString(numParticles);
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::cavityForce, defines);
+    clearDipoleKernel = program->createKernel("clearDipoleBuffer");
+    computeDipoleKernel = program->createKernel("computeCavityDipole");
+    computeForceKernel = program->createKernel("computeCavityForces");
+    
+    // Set up kernels
+    clearDipoleKernel->addArg(dipoleBuffer);
+    
+    computeDipoleKernel->addArg(cc.getPosq());
+    computeDipoleKernel->addArg(chargesArray);
+    computeDipoleKernel->addArg(dipoleBuffer);
+    computeDipoleKernel->addArg(cavityParticleIndex);
+    
+    computeForceKernel->addArg(cc.getPosq());
+    computeForceKernel->addArg(chargesArray);
+    computeForceKernel->addArg(cc.getLongForceBuffer());
+    computeForceKernel->addArg(dipoleBuffer);
+    computeForceKernel->addArg(energyBuffer);
+    computeForceKernel->addArg(unwrappedCavityPosBuffer);  // Unwrapped cavity position
+    computeForceKernel->addArg(cavityParticleIndex);
+    computeForceKernel->addArg(); // omegac - set at runtime
+    computeForceKernel->addArg(); // lambdaCoupling - set at runtime
+    computeForceKernel->addArg(); // photonMass - set at runtime
+    computeForceKernel->addArg(cc.getPaddedNumAtoms());
+}
+
+double CommonCalcCavityForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    ContextSelector selector(cc);
+    
+    // Get current lambda from schedule
+    double currentLambda = lambdaCoupling;
+    if (!couplingSchedule.empty()) {
+        for (const auto& entry : couplingSchedule) {
+            if (entry.first <= stepCount)
+                currentLambda = entry.second;
+            else
+                break;
+        }
+    }
+    stepCount++;
+    
+    // Get periodic box size for unwrapping
+    Vec3 boxVectors[3];
+    context.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    double boxSize[3] = {boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]};
+    
+    // Download current cavity position (wrapped)
+    vector<Vec3> positions;
+    context.getPositions(positions);
+    double currentPos[3] = {positions[cavityParticleIndex][0], 
+                            positions[cavityParticleIndex][1], 
+                            positions[cavityParticleIndex][2]};
+    
+    // Track unwrapped position using image flags
+    if (firstStep) {
+        // Initialize: assume current position is the true unwrapped position
+        prevCavityPos[0] = currentPos[0];
+        prevCavityPos[1] = currentPos[1];
+        prevCavityPos[2] = currentPos[2];
+        cavityImage[0] = cavityImage[1] = cavityImage[2] = 0;
+        firstStep = false;
+    } else {
+        // Detect wrapping: if position changed by more than half box, adjust image
+        for (int i = 0; i < 3; i++) {
+            double delta = currentPos[i] - prevCavityPos[i];
+            if (delta > 0.5 * boxSize[i]) {
+                cavityImage[i]--;  // Wrapped from high to low
+            } else if (delta < -0.5 * boxSize[i]) {
+                cavityImage[i]++;  // Wrapped from low to high
+            }
+            prevCavityPos[i] = currentPos[i];
+        }
+    }
+    
+    // Compute unwrapped position
+    float unwrappedPos[4];
+    unwrappedPos[0] = (float)(currentPos[0] + cavityImage[0] * boxSize[0]);
+    unwrappedPos[1] = (float)(currentPos[1] + cavityImage[1] * boxSize[1]);
+    unwrappedPos[2] = (float)(currentPos[2] + cavityImage[2] * boxSize[2]);
+    unwrappedPos[3] = 0.0f;
+    unwrappedCavityPosBuffer.upload(unwrappedPos);
+    
+    // Clear dipole buffer on GPU (much faster than CPU upload)
+    clearDipoleKernel->execute(1);
+    
+    // Clear energy buffer only if we need energies
+    if (includeEnergy) {
+        int numBlocks = cc.getNumThreadBlocks();
+        vector<float> energy_zeros(numBlocks * 3, 0.0f);
+        energyBuffer.upload(energy_zeros);
+    }
+    
+    // Compute dipole moment
+    computeDipoleKernel->execute(cc.getNumAtoms());
+    
+    // Compute forces and energies
+    computeForceKernel->setArg(7, (float) omegac);
+    computeForceKernel->setArg(8, (float) currentLambda);
+    computeForceKernel->setArg(9, (float) photonMass);
+    computeForceKernel->execute(cc.getNumAtoms());
+    
+    // Download energy components
+    if (includeEnergy) {
+        vector<float> energies(energyBuffer.getSize());
+        energyBuffer.download(energies);
+        
+        harmonicEnergy = 0.0;
+        couplingEnergy = 0.0;
+        dipoleSelfEnergy = 0.0;
+        
+        int numBlocks = cc.getNumThreadBlocks();
+        for (int i = 0; i < numBlocks; i++) {
+            harmonicEnergy += energies[i * 3];
+            couplingEnergy += energies[i * 3 + 1];
+            dipoleSelfEnergy += energies[i * 3 + 2];
+        }
+    }
+    
+    return harmonicEnergy + couplingEnergy + dipoleSelfEnergy;
+}
+
+void CommonCalcCavityForceKernel::copyParametersToContext(ContextImpl& context, const CavityForce& force) {
+    cavityParticleIndex = force.getCavityParticleIndex();
+    omegac = force.getOmegac();
+    lambdaCoupling = force.getLambdaCoupling();
+    photonMass = force.getPhotonMass();
+    couplingSchedule = force.getLambdaCouplingSchedule();
+}
+
+// ==================== CavityParticleDisplacer Kernel Implementation ====================
+
+void CommonApplyCavityDisplacementKernel::initialize(const System& system, const CavityParticleDisplacer& displacer) {
+    ContextSelector selector(cc);
+    cavityParticleIndex = displacer.getCavityParticleIndex();
+    omegac = displacer.getOmegac();
+    photonMass = displacer.getPhotonMass();
+    
+    int numParticles = system.getNumParticles();
+    
+    // Store charges
+    vector<float> charges(numParticles, 0.0f);
+    for (int i = 0; i < system.getNumForces(); i++) {
+        const Force& f = system.getForce(i);
+        const NonbondedForce* nonbonded = dynamic_cast<const NonbondedForce*>(&f);
+        if (nonbonded != NULL) {
+            for (int j = 0; j < numParticles; j++) {
+                double charge, sigma, epsilon;
+                nonbonded->getParticleParameters(j, charge, sigma, epsilon);
+                charges[j] = (float) charge;
+            }
+            break;
+        }
+    }
+    chargesArray.initialize<float>(cc, numParticles, "displacerCharges");
+    chargesArray.upload(charges);
+    
+    // Create dipole buffer
+    dipoleBuffer.initialize<float>(cc, 4, "displacerDipole");
+    
+    // Compile kernels
+    map<string, string> defines;
+    defines["WORK_GROUP_SIZE"] = cc.intToString(cc.ThreadBlockSize);
+    defines["CAVITY_PARTICLE_INDEX"] = cc.intToString(cavityParticleIndex);
+    defines["NUM_ATOMS"] = cc.intToString(numParticles);
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::cavityDisplacer, defines);
+    clearDipoleKernel = program->createKernel("clearDipoleBuffer");
+    computeDipoleKernel = program->createKernel("computeCavityDipole");
+    displacementKernel = program->createKernel("displaceCavityParticle");
+    
+    clearDipoleKernel->addArg(dipoleBuffer);
+    
+    computeDipoleKernel->addArg(cc.getPosq());
+    computeDipoleKernel->addArg(chargesArray);
+    computeDipoleKernel->addArg(dipoleBuffer);
+    computeDipoleKernel->addArg(cavityParticleIndex);
+    
+    displacementKernel->addArg(cc.getPosq());
+    displacementKernel->addArg(dipoleBuffer);
+    displacementKernel->addArg(cavityParticleIndex);
+    displacementKernel->addArg(); // lambda/omega factor - set at runtime
+}
+
+void CommonApplyCavityDisplacementKernel::execute(ContextImpl& context, double lambdaCoupling) {
+    ContextSelector selector(cc);
+    
+    // Clear dipole buffer on GPU
+    clearDipoleKernel->execute(1);
+    
+    // Compute dipole moment
+    computeDipoleKernel->execute(cc.getNumAtoms());
+    
+    // Displace cavity particle
+    // The equilibrium position is q_eq = -(epsilon/K) * d
+    // With proper unit conversion:
+    //   epsilon = lambda * omega * CONV
+    //   K = photonMass_au * omega^2 * CONV
+    //   epsilon/K = lambda / (photonMass_au * omega) = lambda / (photonMass * 1822.888 * omega)
+    const double AMU_TO_AU = 1822.888;  // 1 amu = 1822.888 electron masses
+    double photonMass_au = photonMass * AMU_TO_AU;
+    float factor = (float) (-lambdaCoupling / (photonMass_au * omegac));
+    displacementKernel->setArg(3, factor);
+    displacementKernel->execute(1); // Only need to execute for one particle
 }
 
 void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat, int components, bool rigidMolecules) {

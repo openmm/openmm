@@ -1323,6 +1323,105 @@ private:
 };
 
 /**
+ * This kernel is invoked by BussiThermostat to rescale particle velocities.
+ */
+class CommonApplyBussiThermostatKernel : public ApplyBussiThermostatKernel {
+public:
+    CommonApplyBussiThermostatKernel(std::string name, const Platform& platform, ComputeContext& cc) : 
+        ApplyBussiThermostatKernel(name, platform), cc(cc),
+        reservoirEnergyTranslational(0.0), reservoirEnergyRotational(0.0) {
+    }
+    void initialize(const System& system, const BussiThermostat& thermostat,
+                   const std::vector<int>& particleIndices);
+    void execute(ContextImpl& context);
+    double getReservoirEnergyTranslational(ContextImpl& context) const {
+        return reservoirEnergyTranslational;
+    }
+    double getReservoirEnergyRotational(ContextImpl& context) const {
+        return reservoirEnergyRotational;
+    }
+    void resetReservoirEnergy(ContextImpl& context) {
+        reservoirEnergyTranslational = 0.0;
+        reservoirEnergyRotational = 0.0;
+    }
+private:
+    ComputeContext& cc;
+    int randomSeed;
+    int numParticles;
+    ComputeArray particleIndicesArray;
+    ComputeArray massesArray;
+    ComputeArray kineticEnergyBuffer;
+    ComputeArray reservoirEnergyBuffer;
+    ComputeKernel rescaleKernel;
+    ComputeKernel sumKineticEnergyKernel;
+    double reservoirEnergyTranslational;
+    double reservoirEnergyRotational;
+};
+
+/**
+ * This kernel is invoked by CavityForce to compute cavity-molecule interactions.
+ */
+class CommonCalcCavityForceKernel : public CalcCavityForceKernel {
+public:
+    CommonCalcCavityForceKernel(std::string name, const Platform& platform, ComputeContext& cc) : 
+        CalcCavityForceKernel(name, platform), cc(cc),
+        harmonicEnergy(0.0), couplingEnergy(0.0), dipoleSelfEnergy(0.0), stepCount(0), firstStep(true) {
+        prevCavityPos[0] = prevCavityPos[1] = prevCavityPos[2] = 0.0;
+        cavityImage[0] = cavityImage[1] = cavityImage[2] = 0;
+    }
+    void initialize(const System& system, const CavityForce& force);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    void copyParametersToContext(ContextImpl& context, const CavityForce& force);
+    double getHarmonicEnergy() const { return harmonicEnergy; }
+    double getCouplingEnergy() const { return couplingEnergy; }
+    double getDipoleSelfEnergy() const { return dipoleSelfEnergy; }
+private:
+    ComputeContext& cc;
+    int cavityParticleIndex;
+    double omegac;
+    double lambdaCoupling;
+    double photonMass;
+    std::vector<std::pair<int, double>> couplingSchedule;
+    ComputeArray chargesArray;
+    ComputeArray dipoleBuffer;
+    ComputeArray energyBuffer;
+    ComputeKernel clearDipoleKernel;
+    ComputeKernel computeDipoleKernel;
+    ComputeKernel computeForceKernel;
+    ComputeArray unwrappedCavityPosBuffer;
+    double harmonicEnergy;
+    double couplingEnergy;
+    double dipoleSelfEnergy;
+    int stepCount;
+    // For tracking unwrapped cavity position
+    double prevCavityPos[3];
+    int cavityImage[3];
+    bool firstStep;
+};
+
+/**
+ * This kernel is invoked by CavityParticleDisplacer to displace the cavity particle.
+ */
+class CommonApplyCavityDisplacementKernel : public ApplyCavityDisplacementKernel {
+public:
+    CommonApplyCavityDisplacementKernel(std::string name, const Platform& platform, ComputeContext& cc) : 
+        ApplyCavityDisplacementKernel(name, platform), cc(cc) {
+    }
+    void initialize(const System& system, const CavityParticleDisplacer& displacer);
+    void execute(ContextImpl& context, double lambdaCoupling);
+private:
+    ComputeContext& cc;
+    int cavityParticleIndex;
+    double omegac;
+    double photonMass;
+    ComputeArray chargesArray;
+    ComputeArray dipoleBuffer;
+    ComputeKernel clearDipoleKernel;
+    ComputeKernel computeDipoleKernel;
+    ComputeKernel displacementKernel;
+};
+
+/**
  * This kernel is invoked by MonteCarloBarostat to adjust the periodic box volume
  */
 class CommonApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
