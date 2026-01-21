@@ -4360,6 +4360,37 @@ void CommonApplyBussiThermostatKernel::execute(ContextImpl& context) {
 
 // ==================== CavityForce Kernel Implementation ====================
 
+class CommonCalcCavityForceKernel::ReorderListener : public ComputeContext::ReorderListener {
+public:
+    ReorderListener(CommonCalcCavityForceKernel& owner) : owner(owner) {
+    }
+    void execute() {
+        owner.reorderCharges();
+        owner.updatePosCellOffsets();
+    }
+private:
+    CommonCalcCavityForceKernel& owner;
+};
+
+void CommonCalcCavityForceKernel::reorderCharges() {
+    // Reorder charges to match the current atom ordering
+    const vector<int>& atomIndex = cc.getAtomIndex();
+    int numParticles = originalCharges.size();
+    vector<float> reorderedCharges(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        // atomIndex[reorderedIdx] = originalIdx
+        // So: reorderedCharges[reorderedIdx] = originalCharges[atomIndex[reorderedIdx]]
+        reorderedCharges[i] = originalCharges[atomIndex[i]];
+    }
+    chargesArray.upload(reorderedCharges);
+}
+
+void CommonCalcCavityForceKernel::updatePosCellOffsets() {
+    // Upload current posCellOffsets to the device buffer to keep unwrapping consistent
+    const vector<mm_int4>& offsets = cc.getPosCellOffsets();
+    posCellOffsetsBuffer.upload(offsets);
+}
+
 void CommonCalcCavityForceKernel::initialize(const System& system, const CavityForce& force) {
     ContextSelector selector(cc);
     cavityParticleIndex = force.getCavityParticleIndex();
@@ -4371,8 +4402,8 @@ void CommonCalcCavityForceKernel::initialize(const System& system, const CavityF
     
     int numParticles = system.getNumParticles();
     
-    // Store charges for all particles
-    vector<float> charges(numParticles, 0.0f);
+    // Store charges for all particles in ORIGINAL order
+    originalCharges.resize(numParticles, 0.0f);
     for (int i = 0; i < system.getNumForces(); i++) {
         const Force& f = system.getForce(i);
         const NonbondedForce* nonbonded = dynamic_cast<const NonbondedForce*>(&f);
@@ -4380,23 +4411,26 @@ void CommonCalcCavityForceKernel::initialize(const System& system, const CavityF
             for (int j = 0; j < numParticles; j++) {
                 double charge, sigma, epsilon;
                 nonbonded->getParticleParameters(j, charge, sigma, epsilon);
-                charges[j] = (float) charge;
+                originalCharges[j] = (float) charge;
             }
             break;
         }
     }
     chargesArray.initialize<float>(cc, numParticles, "cavityCharges");
-    chargesArray.upload(charges);
     
     // Create buffers
     dipoleBuffer.initialize<float>(cc, 4, "cavityDipole"); // x, y, z, unused
     int numBlocks = cc.getNumThreadBlocks();
     energyBuffer.initialize<float>(cc, numBlocks * 3, "cavityEnergy"); // harmonic, coupling, dipole self
-    // Buffer: [unwrapped_x, unwrapped_y, unwrapped_z, prev_wrapped_x, prev_wrapped_y, prev_wrapped_z]
-    unwrappedCavityPosBuffer.initialize<float>(cc, 6, "unwrappedCavityPos");
+    posCellOffsetsBuffer.initialize<mm_int4>(cc, cc.getPaddedNumAtoms(), "cavityPosCellOffsets");
     
-    // Initialize tracking variables
-    firstStep = true;
+    // Add reorder listener to update charges and offsets when atoms are reordered
+    ReorderListener* listener = new ReorderListener(*this);
+    cc.addReorderListener(listener);
+    
+    // Apply initial reordering (atoms may already be reordered at this point)
+    reorderCharges();
+    updatePosCellOffsets();
     
     // Compile kernels
     map<string, string> defines;
@@ -4407,7 +4441,6 @@ void CommonCalcCavityForceKernel::initialize(const System& system, const CavityF
     clearDipoleKernel = program->createKernel("clearDipoleBuffer");
     computeDipoleKernel = program->createKernel("computeCavityDipole");
     computeForceKernel = program->createKernel("computeCavityForces");
-    updateUnwrappedPosKernel = program->createKernel("updateUnwrappedCavityPosition");
     
     // Set up kernels
     clearDipoleKernel->addArg(dipoleBuffer);
@@ -4415,27 +4448,23 @@ void CommonCalcCavityForceKernel::initialize(const System& system, const CavityF
     computeDipoleKernel->addArg(cc.getPosq());
     computeDipoleKernel->addArg(chargesArray);
     computeDipoleKernel->addArg(dipoleBuffer);
-    computeDipoleKernel->addArg(cavityParticleIndex);
+    computeDipoleKernel->addArg();  // reorderedCavityIndex - set at runtime
     
+    // Force kernel uses posCellOffsets to unwrap cavity position on GPU
     computeForceKernel->addArg(cc.getPosq());
     computeForceKernel->addArg(chargesArray);
     computeForceKernel->addArg(cc.getLongForceBuffer());
     computeForceKernel->addArg(dipoleBuffer);
     computeForceKernel->addArg(energyBuffer);
-    computeForceKernel->addArg(unwrappedCavityPosBuffer);  // Unwrapped cavity position
-    computeForceKernel->addArg(cavityParticleIndex);
+    computeForceKernel->addArg(posCellOffsetsBuffer);
+    computeForceKernel->addArg(); // periodicBoxVecX - set at runtime
+    computeForceKernel->addArg(); // periodicBoxVecY - set at runtime
+    computeForceKernel->addArg(); // periodicBoxVecZ - set at runtime
+    computeForceKernel->addArg(); // reorderedCavityIndex - set at runtime
     computeForceKernel->addArg(); // omegac - set at runtime
     computeForceKernel->addArg(); // lambdaCoupling - set at runtime
     computeForceKernel->addArg(); // photonMass - set at runtime
     computeForceKernel->addArg(cc.getPaddedNumAtoms());
-    
-    // Set up unwrapped position update kernel
-    updateUnwrappedPosKernel->addArg(cc.getPosq());
-    updateUnwrappedPosKernel->addArg(unwrappedCavityPosBuffer);
-    updateUnwrappedPosKernel->addArg(cavityParticleIndex);
-    updateUnwrappedPosKernel->addArg(); // boxSizeX - set at runtime
-    updateUnwrappedPosKernel->addArg(); // boxSizeY - set at runtime
-    updateUnwrappedPosKernel->addArg(); // boxSizeZ - set at runtime
 }
 
 double CommonCalcCavityForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -4453,45 +4482,36 @@ double CommonCalcCavityForceKernel::execute(ContextImpl& context, bool includeFo
     }
     stepCount++;
     
-    // Get periodic box size for unwrapping (this is cheap - just reads cached values)
+    // Get reordered index of the cavity particle (OpenMM may reorder atoms internally)
+    const vector<int>& atomIndex = cc.getAtomIndex();
+    int reorderedCavityIndex = cavityParticleIndex;  // Default if no reordering
+    for (int i = 0; i < (int)atomIndex.size(); i++) {
+        if (atomIndex[i] == cavityParticleIndex) {
+            reorderedCavityIndex = i;
+            break;
+        }
+    }
+    
+    // Get periodic box vectors for unwrapping
     Vec3 boxVectors[3];
     context.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-    float boxSizeX = (float) boxVectors[0][0];
-    float boxSizeY = (float) boxVectors[1][1];
-    float boxSizeZ = (float) boxVectors[2][2];
-    
-    // On first step, initialize the unwrapped position buffer on GPU
-    if (firstStep) {
-        // Download just the initial cavity position to initialize the buffer
-        vector<Vec3> positions;
-        context.getPositions(positions);
-        float initPos[6];
-        initPos[0] = (float) positions[cavityParticleIndex][0];  // unwrapped x
-        initPos[1] = (float) positions[cavityParticleIndex][1];  // unwrapped y
-        initPos[2] = (float) positions[cavityParticleIndex][2];  // unwrapped z
-        initPos[3] = initPos[0];  // prev wrapped x
-        initPos[4] = initPos[1];  // prev wrapped y
-        initPos[5] = initPos[2];  // prev wrapped z
-        unwrappedCavityPosBuffer.upload(initPos);
-        firstStep = false;
-    } else {
-        // Update unwrapped position on GPU (no CPU roundtrip!)
-        updateUnwrappedPosKernel->setArg(3, boxSizeX);
-        updateUnwrappedPosKernel->setArg(4, boxSizeY);
-        updateUnwrappedPosKernel->setArg(5, boxSizeZ);
-        updateUnwrappedPosKernel->execute(1);
-    }
     
     // Clear dipole buffer on GPU (much faster than CPU upload)
     clearDipoleKernel->execute(1);
     
-    // Compute dipole moment
+    // Compute dipole moment (pass reordered cavity index to exclude cavity from dipole)
+    computeDipoleKernel->setArg(3, reorderedCavityIndex);
     computeDipoleKernel->execute(cc.getNumAtoms());
     
     // Compute forces and energies
-    computeForceKernel->setArg(7, (float) omegac);
-    computeForceKernel->setArg(8, (float) currentLambda);
-    computeForceKernel->setArg(9, (float) photonMass);
+    // Arguments: posq, charges, forces, dipole, energy, posCellOffsets, boxX, boxY, boxZ, reorderedIdx, omegac, lambda, mass, paddedNum
+    computeForceKernel->setArg(6, mm_float4((float)boxVectors[0][0], (float)boxVectors[0][1], (float)boxVectors[0][2], 0.0f));
+    computeForceKernel->setArg(7, mm_float4((float)boxVectors[1][0], (float)boxVectors[1][1], (float)boxVectors[1][2], 0.0f));
+    computeForceKernel->setArg(8, mm_float4((float)boxVectors[2][0], (float)boxVectors[2][1], (float)boxVectors[2][2], 0.0f));
+    computeForceKernel->setArg(9, reorderedCavityIndex);
+    computeForceKernel->setArg(10, (float) omegac);
+    computeForceKernel->setArg(11, (float) currentLambda);
+    computeForceKernel->setArg(12, (float) photonMass);
     computeForceKernel->execute(cc.getNumAtoms());
     
     // Download energy components

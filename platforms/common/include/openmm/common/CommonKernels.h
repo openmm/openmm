@@ -1365,7 +1365,7 @@ class CommonCalcCavityForceKernel : public CalcCavityForceKernel {
 public:
     CommonCalcCavityForceKernel(std::string name, const Platform& platform, ComputeContext& cc) : 
         CalcCavityForceKernel(name, platform), cc(cc),
-        harmonicEnergy(0.0), couplingEnergy(0.0), dipoleSelfEnergy(0.0), stepCount(0), firstStep(true) {
+        harmonicEnergy(0.0), couplingEnergy(0.0), dipoleSelfEnergy(0.0), stepCount(0) {
     }
     void initialize(const System& system, const CavityForce& force);
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
@@ -1373,26 +1373,34 @@ public:
     double getHarmonicEnergy() const { return harmonicEnergy; }
     double getCouplingEnergy() const { return couplingEnergy; }
     double getDipoleSelfEnergy() const { return dipoleSelfEnergy; }
+    /**
+     * Reorder the charges array when atoms are reordered.
+     */
+    void reorderCharges();
+    /**
+     * Update the posCellOffsets buffer when atoms are reordered.
+     */
+    void updatePosCellOffsets();
 private:
+    class ReorderListener;
     ComputeContext& cc;
     int cavityParticleIndex;
     double omegac;
     double lambdaCoupling;
     double photonMass;
     std::vector<std::pair<int, double>> couplingSchedule;
+    std::vector<float> originalCharges;  // Charges in original order
     ComputeArray chargesArray;
     ComputeArray dipoleBuffer;
     ComputeArray energyBuffer;
+    ComputeArray posCellOffsetsBuffer;
     ComputeKernel clearDipoleKernel;
     ComputeKernel computeDipoleKernel;
     ComputeKernel computeForceKernel;
-    ComputeKernel updateUnwrappedPosKernel;
-    ComputeArray unwrappedCavityPosBuffer;
     double harmonicEnergy;
     double couplingEnergy;
     double dipoleSelfEnergy;
     int stepCount;
-    bool firstStep;
 };
 
 /**

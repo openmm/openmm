@@ -227,6 +227,8 @@ def main():
             elapsed = time.time() - start
             rate = (step + 1) / max(elapsed, 1e-8)  # Avoid division by zero
             eta = (total_steps - step - 1) / max(rate, 1e-8)
+            sim_us = (step + 1) * DT_PS / 1e6
+            speed_us_day = sim_us * 86400.0 / max(elapsed, 1e-8)
             phase = "EQUIL" if step < EQUIL_STEPS else "PROD"
 
             state = context.getState(getEnergy=True, getPositions=True)
@@ -254,10 +256,13 @@ def main():
             print(f"[{pct:5.1f}%] {phase} | PE: {pe:.1f} | "
                   f"d_xy: ({dipole_now[0]:.3f}, {dipole_now[1]:.3f}) | "
                   f"q_cav: ({q_cav[0]:.3f}, {q_cav[1]:.3f}) | "
-                  f"ETA: {eta/60:.1f}m", flush=True)
+                  f"ETA: {eta/60:.1f}m | "
+                  f"Speed: {speed_us_day:.2f} us/day", flush=True)
                 
     elapsed = time.time() - start
-    print(f"\nCompleted in {elapsed/60:.1f} min ({elapsed/total_steps*1e6:.1f} μs/step)", flush=True)
+    sim_us_total = total_steps * DT_PS / 1e6
+    speed_us_day_total = sim_us_total * 86400.0 / max(elapsed, 1e-8)
+    print(f"\nCompleted in {elapsed/60:.1f} min ({elapsed/total_steps*1e6:.1f} μs/step, {speed_us_day_total:.2f} us/day)", flush=True)
     
     # Final save
     np.savez('rabi_250mol_40bohr.npz',

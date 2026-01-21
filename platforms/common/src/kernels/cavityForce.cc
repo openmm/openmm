@@ -11,53 +11,6 @@ KERNEL void clearDipoleBuffer(GLOBAL float* RESTRICT dipole) {
 }
 
 /**
- * Update unwrapped cavity position on GPU (avoids CPU roundtrip).
- * Detects periodic boundary crossings and updates the unwrapped position.
- * 
- * unwrappedPos[0-2] = unwrapped x,y,z
- * unwrappedPos[3-5] = previous wrapped x,y,z (for detecting crossings)
- */
-KERNEL void updateUnwrappedCavityPosition(GLOBAL const real4* RESTRICT posq,
-        GLOBAL float* RESTRICT unwrappedPos, int cavityParticleIndex,
-        float boxSizeX, float boxSizeY, float boxSizeZ) {
-    if (GLOBAL_ID == 0) {
-        // Get current wrapped position
-        real4 currentPos = posq[cavityParticleIndex];
-        
-        // Get previous wrapped position
-        float prevX = unwrappedPos[3];
-        float prevY = unwrappedPos[4];
-        float prevZ = unwrappedPos[5];
-        
-        // Detect wrapping and compute delta
-        float deltaX = currentPos.x - prevX;
-        float deltaY = currentPos.y - prevY;
-        float deltaZ = currentPos.z - prevZ;
-        
-        // If delta > half box, particle wrapped from high to low
-        // If delta < -half box, particle wrapped from low to high
-        if (deltaX > 0.5f * boxSizeX) deltaX -= boxSizeX;
-        else if (deltaX < -0.5f * boxSizeX) deltaX += boxSizeX;
-        
-        if (deltaY > 0.5f * boxSizeY) deltaY -= boxSizeY;
-        else if (deltaY < -0.5f * boxSizeY) deltaY += boxSizeY;
-        
-        if (deltaZ > 0.5f * boxSizeZ) deltaZ -= boxSizeZ;
-        else if (deltaZ < -0.5f * boxSizeZ) deltaZ += boxSizeZ;
-        
-        // Update unwrapped position
-        unwrappedPos[0] += deltaX;
-        unwrappedPos[1] += deltaY;
-        unwrappedPos[2] += deltaZ;
-        
-        // Store current wrapped position for next step
-        unwrappedPos[3] = currentPos.x;
-        unwrappedPos[4] = currentPos.y;
-        unwrappedPos[5] = currentPos.z;
-    }
-}
-
-/**
  * Compute the molecular dipole moment (excluding cavity particle).
  * Uses atomic additions to accumulate the dipole.
  */
@@ -120,11 +73,15 @@ KERNEL void computeCavityDipole(GLOBAL const real4* RESTRICT posq, GLOBAL const 
  *   - On molecular particles: F = -epsilon * charge * Dq
  *     where Dq = q + (lambda/omega) * d (displaced cavity position)
  *   - On cavity particle: F = -K * q - epsilon * d_xy
+ * 
+ * NOTE: qPhoton is reconstructed from wrapped positions using posCellOffsets,
+ * which track periodic crossings in the reordered index space.
  */
 KERNEL void computeCavityForces(GLOBAL const real4* RESTRICT posq, GLOBAL const float* RESTRICT charges,
         GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL const float* RESTRICT dipole,
-        GLOBAL float* RESTRICT energyBuffer, GLOBAL const float* RESTRICT unwrappedCavityPos,
-        int cavityParticleIndex,
+        GLOBAL float* RESTRICT energyBuffer, GLOBAL const int4* RESTRICT posCellOffsets,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        int reorderedCavityIndex,
         float omegac, float lambdaCoupling, float photonMass, int paddedNumAtoms) {
     
     // Unit conversion constants
@@ -137,8 +94,13 @@ KERNEL void computeCavityForces(GLOBAL const real4* RESTRICT posq, GLOBAL const 
     float dipoleX = dipole[0];
     float dipoleY = dipole[1];
     
-    // Get UNWRAPPED cavity particle position (not from posq which contains wrapped positions)
-    real4 qPhoton = make_real4(unwrappedCavityPos[0], unwrappedCavityPos[1], unwrappedCavityPos[2], 0.0f);
+    // Read wrapped cavity position and unwrap using posCellOffsets
+    real4 posWrapped = posq[reorderedCavityIndex];
+    int4 offset = posCellOffsets[reorderedCavityIndex];
+    real4 qPhoton;
+    qPhoton.x = posWrapped.x - offset.x * periodicBoxVecX.x - offset.y * periodicBoxVecY.x - offset.z * periodicBoxVecZ.x;
+    qPhoton.y = posWrapped.y - offset.x * periodicBoxVecX.y - offset.y * periodicBoxVecY.y - offset.z * periodicBoxVecZ.y;
+    qPhoton.z = posWrapped.z - offset.x * periodicBoxVecX.z - offset.y * periodicBoxVecY.z - offset.z * periodicBoxVecZ.z;
     
     // Compute constants with proper unit conversion
     // CRITICAL: photonMass is in amu, but omegac is in atomic units (Hartree)
@@ -175,8 +137,9 @@ KERNEL void computeCavityForces(GLOBAL const real4* RESTRICT posq, GLOBAL const 
     }
     
     // Force on molecular particles: F = -epsilon * charge * Dq (only x,y components)
+    // Note: Both posq/charges and forceBuffers are indexed by REORDERED position
     for (int i = GLOBAL_ID; i < NUM_ATOMS; i += GLOBAL_SIZE) {
-        if (i != cavityParticleIndex) {
+        if (i != reorderedCavityIndex) {
             float q = charges[i];
             real fx = -epsilon * q * DqX;
             real fy = -epsilon * q * DqY;
@@ -189,13 +152,14 @@ KERNEL void computeCavityForces(GLOBAL const real4* RESTRICT posq, GLOBAL const 
     }
     
     // Force on cavity particle: F = -K*q - epsilon*d_xy
+    // Use reorderedCavityIndex for force buffer access
     if (GLOBAL_ID == 0) {
         real fxCavity = -K * qPhoton.x - epsilon * dipoleX;
         real fyCavity = -K * qPhoton.y - epsilon * dipoleY;
         real fzCavity = -K * qPhoton.z;
         
-        ATOMIC_ADD(&forceBuffers[cavityParticleIndex], (mm_ulong) realToFixedPoint(fxCavity));
-        ATOMIC_ADD(&forceBuffers[cavityParticleIndex+paddedNumAtoms], (mm_ulong) realToFixedPoint(fyCavity));
-        ATOMIC_ADD(&forceBuffers[cavityParticleIndex+2*paddedNumAtoms], (mm_ulong) realToFixedPoint(fzCavity));
+        ATOMIC_ADD(&forceBuffers[reorderedCavityIndex], (mm_ulong) realToFixedPoint(fxCavity));
+        ATOMIC_ADD(&forceBuffers[reorderedCavityIndex+paddedNumAtoms], (mm_ulong) realToFixedPoint(fyCavity));
+        ATOMIC_ADD(&forceBuffers[reorderedCavityIndex+2*paddedNumAtoms], (mm_ulong) realToFixedPoint(fzCavity));
     }
 }
