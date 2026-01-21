@@ -1,0 +1,172 @@
+✓ OpenMM loaded successfully
+============================================================
+Cavity OpenMM Diamer Test
+============================================================
+
+Simulation parameters:
+  Temperature: 100.0 K
+  Timestep: 0.001 ps
+  Cavity frequency: 1560.0 cm⁻¹ (0.007108 Hartree)
+  Lambda coupling: 0.07
+  Equilibration: 0.0 ps (0 steps)
+  Production: 20.0 ps (20000 steps)
+  Total time: 20.0 ps
+  Dipole output: Every timestep (1.0 fs) for accurate IR spectrum
+
+--- Creating Diamer System ---
+Created system with 100 particles (50 molecules)
+  O-O dimers: 40
+  N-N dimers: 10
+  Box size: 2.5 nm
+
+--- Adding Cavity Particle ---
+Added cavity particle at index 100
+  Omega_c: 0.007107883038691078 (OpenMM energy units)
+  Photon mass: 1.0 amu
+
+--- Adding Cavity Force ---
+  CavityForce added successfully
+  Omega_c: 0.007108 a.u. (Hartree)
+  Photon mass: 1.0 amu = 1822.9 a.u.
+  Expected spring constant K: 86348 kJ/(mol·nm^2)
+  Lambda coupling: 0.07 (ACTIVE from t=0)
+  CavityParticleDisplacer added (finite-Q mode)
+
+--- Adding Bussi Thermostat ---
+  BussiThermostat added for 100 particles
+  Temperature: 100.0 K
+  Tau: 0.1 ps
+
+--- Creating Integrator ---
+  LangevinMiddleIntegrator created
+  Friction: 0.01 ps^-1 (low to preserve vibrations)
+  Note: Bussi thermostat handles molecular thermalization
+
+--- Creating Simulation ---
+  Using Reference platform (CPU, exact arithmetic)
+
+--- Energy Minimization ---
+  Initial energy: -16.851339641411336 kJ/mol
+  Final energy: -95.80994921061792 kJ/mol
+
+--- Applying Finite-Q Displacement ---
+  Cavity position before: (-0.002287, -0.002207, 0.000000) nm
+  Cavity position after:  (0.010000, 0.000000, 0.000000) nm
+  Displacement: 0.01 nm along x-axis
+
+--- Running Full Simulation (Coupling ON from t=0) ---
+  Running 20000 steps (1 ns)...
+  Progress updates every 1 ps (1,000 steps)
+
+  [  5.0%] Step    1000/20000 | Sim time:    1.0 ps | Speed:  157.3 ns/day | ETA:   0.0 hr
+         PE:  -132.45 kJ/mol | Cavity: H=  0.12, C=  0.07, D=  0.04
+         Cavity: ( 0.0004,  0.0013, -0.0009) nm
+
+  [ 10.0%] Step    2000/20000 | Sim time:    2.0 ps | Speed:  151.6 ns/day | ETA:   0.0 hr
+         PE:  -201.51 kJ/mol | Cavity: H=  0.30, C= -0.12, D=  0.20
+         Cavity: ( 0.0015, -0.0006, -0.0021) nm
+
+  [ 15.0%] Step    3000/20000 | Sim time:    3.0 ps | Speed:  153.5 ns/day | ETA:   0.0 hr
+         PE:  -246.75 kJ/mol | Cavity: H=  0.41, C= -0.01, D=  0.18
+         Cavity: (-0.0005,  0.0004, -0.0030) nm
+
+  [ 20.0%] Step    4000/20000 | Sim time:    4.0 ps | Speed:  149.5 ns/day | ETA:   0.0 hr
+         PE:  -287.13 kJ/mol | Cavity: H=  0.99, C= -0.13, D=  0.08
+         Cavity: ( 0.0004,  0.0029, -0.0038) nm
+
+  [ 25.0%] Step    5000/20000 | Sim time:    5.0 ps | Speed:  154.0 ns/day | ETA:   0.0 hr
+         PE:  -316.00 kJ/mol | Cavity: H=  1.09, C= -0.02, D=  0.05
+         Cavity: ( 0.0005,  0.0025, -0.0043) nm
+
+  [ 30.0%] Step    6000/20000 | Sim time:    6.0 ps | Speed:  146.1 ns/day | ETA:   0.0 hr
+         PE:  -325.41 kJ/mol | Cavity: H=  1.29, C= -0.15, D=  0.01
+         Cavity: ( 0.0025,  0.0022, -0.0043) nm
+
+  [ 35.0%] Step    7000/20000 | Sim time:    7.0 ps | Speed:  153.5 ns/day | ETA:   0.0 hr
+         PE:  -395.25 kJ/mol | Cavity: H=  1.10, C= -0.03, D=  0.00
+         Cavity: ( 0.0023,  0.0017, -0.0042) nm
+
+  [ 40.0%] Step    8000/20000 | Sim time:    8.0 ps | Speed:  147.9 ns/day | ETA:   0.0 hr
+         PE:  -385.01 kJ/mol | Cavity: H=  0.92, C= -0.10, D=  0.05
+         Cavity: ( 0.0019,  0.0025, -0.0034) nm
+
+  [ 45.0%] Step    9000/20000 | Sim time:    9.0 ps | Speed:  154.3 ns/day | ETA:   0.0 hr
+         PE:  -388.34 kJ/mol | Cavity: H=  0.37, C=  0.10, D=  0.04
+         Cavity: ( 0.0010,  0.0007, -0.0026) nm
+
+  [ 50.0%] Step   10000/20000 | Sim time:   10.0 ps | Speed:  148.4 ns/day | ETA:   0.0 hr
+         PE:  -413.13 kJ/mol | Cavity: H=  0.17, C= -0.01, D=  0.01
+         Cavity: ( 0.0013,  0.0004, -0.0015) nm
+
+  [ 55.0%] Step   11000/20000 | Sim time:   11.0 ps | Speed:  153.6 ns/day | ETA:   0.0 hr
+         PE:  -421.55 kJ/mol | Cavity: H=  0.54, C= -0.39, D=  0.08
+         Cavity: ( 0.0024,  0.0024, -0.0011) nm
+
+  [ 60.0%] Step   12000/20000 | Sim time:   12.0 ps | Speed:  150.7 ns/day | ETA:   0.0 hr
+         PE:  -427.72 kJ/mol | Cavity: H=  0.41, C= -0.17, D=  0.03
+         Cavity: ( 0.0023,  0.0020, -0.0005) nm
+
+  [ 65.0%] Step   13000/20000 | Sim time:   13.0 ps | Speed:  152.2 ns/day | ETA:   0.0 hr
+         PE:  -438.19 kJ/mol | Cavity: H=  0.46, C= -0.23, D=  0.06
+         Cavity: ( 0.0026,  0.0018,  0.0007) nm
+
+  [ 70.0%] Step   14000/20000 | Sim time:   14.0 ps | Speed:  151.2 ns/day | ETA:   0.0 hr
+         PE:  -433.99 kJ/mol | Cavity: H=  0.15, C=  0.09, D=  0.04
+         Cavity: ( 0.0014,  0.0001,  0.0012) nm
+
+  [ 75.0%] Step   15000/20000 | Sim time:   15.0 ps | Speed:  157.3 ns/day | ETA:   0.0 hr
+         PE:  -438.42 kJ/mol | Cavity: H=  0.34, C= -0.13, D=  0.06
+         Cavity: ( 0.0017, -0.0007,  0.0021) nm
+
+  [ 80.0%] Step   16000/20000 | Sim time:   16.0 ps | Speed:  157.3 ns/day | ETA:   0.0 hr
+         PE:  -409.21 kJ/mol | Cavity: H=  0.30, C=  0.03, D=  0.04
+         Cavity: ( 0.0006, -0.0002,  0.0026) nm
+
+  [ 85.0%] Step   17000/20000 | Sim time:   17.0 ps | Speed:  153.7 ns/day | ETA:   0.0 hr
+         PE:  -434.92 kJ/mol | Cavity: H=  0.40, C= -0.07, D=  0.03
+         Cavity: ( 0.0000,  0.0011,  0.0028) nm
+
+  [ 90.0%] Step   18000/20000 | Sim time:   18.0 ps | Speed:  155.5 ns/day | ETA:   0.0 hr
+         PE:  -436.23 kJ/mol | Cavity: H=  0.42, C= -0.09, D=  0.04
+         Cavity: ( 0.0006,  0.0010,  0.0029) nm
+
+  [ 95.0%] Step   19000/20000 | Sim time:   19.0 ps | Speed:  151.0 ns/day | ETA:   0.0 hr
+         PE:  -425.09 kJ/mol | Cavity: H=  0.42, C= -0.26, D=  0.17
+         Cavity: ( 0.0004, -0.0015,  0.0027) nm
+
+  [100.0%] Step   20000/20000 | Sim time:   20.0 ps | Speed:  153.3 ns/day | ETA:   0.0 hr
+         PE:  -420.44 kJ/mol | Cavity: H=  0.26, C= -0.00, D=  0.00
+         Cavity: ( 0.0005, -0.0001,  0.0024) nm
+
+  Simulation complete! Total elapsed time: 0.00 hr (0.2 min)
+
+--- Saving Dipole Trajectory ---
+  Saved dipole trajectory to: cavity_diamer_lambda0.0700.npz
+  Total data points: 20000
+  Time range: 0.00 - 20.00 ps
+
+============================================================
+Test completed successfully!
+============================================================
+
+--- IR Spectrum Calculation Instructions ---
+To calculate the IR spectrum from the dipole trajectory:
+1. Load the data:
+   data = np.load('cavity_diamer_dipole.npz')
+   time = data['time_ps']
+   dipole = data['dipole_nm']
+
+2. Cut off first 20 ps (as requested):
+   idx_cutoff = np.where(time >= 20.0)[0][0]
+   time_cut = time[idx_cutoff:]
+   dipole_cut = dipole[idx_cutoff:]
+
+3. Compute dipole autocorrelation function:
+   C(t) = <M(0) · M(t)> where M is dipole moment
+
+4. Fourier transform C(t) to get IR spectrum:
+   I(ω) ∝ FT[C(t)]
+
+Note: The first 100 ps is equilibration (coupling OFF),
+      the remaining 900 ps is production (coupling ON).
+============================================================

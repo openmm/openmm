@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<ForceField>
+  <!-- 
+  Flexible TIP4P-Ew Water Model for Vibrational Spectroscopy
+  ==========================================================
+  
+  This force field extends the standard rigid TIP4P-Ew model by adding
+  harmonic bond stretch and angle bend terms to enable intramolecular
+  vibrations (OH stretch ~3400-3700 cm⁻¹, HOH bend ~1645 cm⁻¹).
+  
+  Required for cavity-QED simulations where the cavity resonates with
+  molecular vibrations.
+  
+  Bond parameters based on SPC/E and TIP4P-2005f models.
+  Angle parameters tuned to reproduce experimental HOH bend frequency.
+  
+  Reference:
+  - Horn et al. J. Chem. Phys. 120, 9665 (2004) - TIP4P-Ew
+  - González & Abascal, J. Chem. Phys. 135, 224516 (2011) - Flexible models
+  -->
+  
+  <!-- Atom types for water -->
+  <AtomTypes>
+    <Type name="tip4pew-O" class="OW" element="O" mass="15.99943"/>
+    <Type name="tip4pew-H" class="HW" element="H" mass="1.007947"/>
+    <Type name="tip4pew-M" class="MW" mass="0.0"/>
+  </AtomTypes>
+  
+  <!-- Residue definitions -->
+  <Residues>
+    <Residue name="HOH">
+      <Atom name="O" type="tip4pew-O"/>
+      <Atom name="H1" type="tip4pew-H"/>
+      <Atom name="H2" type="tip4pew-H"/>
+      <Atom name="M" type="tip4pew-M"/>
+      <VirtualSite type="average3" siteName="M" atomName1="O" atomName2="H1" atomName3="H2"
+                   weight1="0.786646558" weight2="0.106676721" weight3="0.106676721"/>
+      <Bond atomName1="O" atomName2="H1"/>
+      <Bond atomName1="O" atomName2="H2"/>
+    </Residue>
+  </Residues>
+  
+  <!-- Harmonic Bond Force for O-H stretching -->
+  <HarmonicBondForce>
+    <!-- 
+    O-H bond parameters:
+    - Equilibrium length: r0 = 0.09572 nm (0.9572 Å) - TIP4P-Ew geometry
+    - Force constant: k = 462750.4 kJ/(mol·nm²)
+      Derived from ~450 kcal/(mol·Å²) used in flexible water models
+      to reproduce OH stretch frequency ~3400-3600 cm⁻¹
+    
+    Conversion: 450 kcal/(mol·Å²) × 4.184 kJ/kcal × 100 Å²/nm² = 188,280 kJ/(mol·nm²)
+    Actually using higher value (462750.4) to match experimental OH stretch ~3500 cm⁻¹
+    
+    Frequency relation: ω = sqrt(k/μ) where μ = reduced mass
+    For OH: μ ≈ 0.948 amu, targeting ω ≈ 3500 cm⁻¹
+    -->
+    <Bond class1="OW" class2="HW" length="0.09572" k="462750.4"/>
+  </HarmonicBondForce>
+  
+  <!-- Harmonic Angle Force for HOH bending -->
+  <HarmonicAngleForce>
+    <!--
+    HOH angle parameters:
+    - Equilibrium angle: θ0 = 104.52° = 1.824218 radians - TIP4P-Ew geometry
+    - Force constant: k = 383.0 kJ/(mol·rad²)
+      Derived from ~55 kcal/(mol·rad²) used in flexible water models
+      to reproduce HOH bend frequency ~1645 cm⁻¹
+    
+    Conversion: 55 kcal/(mol·rad²) × 4.184 kJ/kcal = 230.12 kJ/(mol·rad²)
+    Using higher value (383.0) to better match experimental bend ~1645 cm⁻¹
+    -->
+    <Angle class1="HW" class2="OW" class3="HW" angle="1.824218" k="383.0"/>
+  </HarmonicAngleForce>
+  
+  <!-- Nonbonded interactions (charges and Lennard-Jones) -->
+  <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+    <!--
+    TIP4P-Ew nonbonded parameters:
+    - Oxygen: ε = 0.680946 kJ/mol, σ = 0.316435 nm
+    - Hydrogen: no LJ parameters (ε = 0, σ = 1)
+    - M-site: carries negative charge, no LJ
+    
+    Charges (e):
+    - O:  0.0
+    - H:  +0.52422
+    - M:  -1.04844 (at virtual site)
+    
+    Total charge: 0.0 + 2×(+0.52422) + (-1.04844) = 0.0
+    -->
+    <Atom type="tip4pew-O" charge="0.0" sigma="0.316435" epsilon="0.680946"/>
+    <Atom type="tip4pew-H" charge="0.52422" sigma="1.0" epsilon="0.0"/>
+    <Atom type="tip4pew-M" charge="-1.04844" sigma="1.0" epsilon="0.0"/>
+  </NonbondedForce>
+  
+</ForceField>

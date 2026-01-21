@@ -1,0 +1,57 @@
+Traceback (most recent call last):
+  File "/tmp/cavity_sim_1265590/test_cavity_diamer.py", line 589, in <module>
+    success = run_test()
+              ^^^^^^^^^^
+  File "/tmp/cavity_sim_1265590/test_cavity_diamer.py", line 401, in run_test
+    print(f"  Running {total_steps} steps (1 ns)...")
+                       ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'total_steps' where it is not associated with a value
+✓ OpenMM loaded successfully
+============================================================
+Cavity OpenMM Diamer Test
+============================================================
+
+Simulation parameters:
+  Temperature: 100.0 K
+  Timestep: 0.001 ps
+  Equilibration: 100.0 ps (100000 steps)
+  Production: 900.0 ps (900000 steps)
+  Total time: 1000.0 ps (1 ns)
+  Dipole output: Every timestep (1 fs) for accurate IR spectrum
+
+--- Creating Diamer System ---
+Created system with 100 particles (50 molecules)
+  O-O dimers: 40
+  N-N dimers: 10
+  Box size: 2.5 nm
+
+--- Adding Cavity Particle ---
+Added cavity particle at index 100
+  Omega_c: 23.970814999999998 (OpenMM energy units)
+  Photon mass: 1.0 amu
+
+--- Adding Cavity Force ---
+  CavityForce added successfully
+  Initial lambda: 0.0
+  Coupling will turn on at step 100000 with lambda=0.001
+
+--- Adding Bussi Thermostat ---
+  BussiThermostat added for 100 particles
+  Temperature: 100.0 K
+  Tau: 0.1 ps
+
+--- Creating Integrator ---
+  LangevinMiddleIntegrator created
+  Friction: 0.01 ps^-1 (low to preserve vibrations)
+  Note: Bussi thermostat handles molecular thermalization
+
+--- Creating Simulation ---
+  Using Reference platform (for testing)
+
+--- Energy Minimization ---
+  Initial energy: -16.86575132752513 kJ/mol
+  Final energy: -88.14085709038888 kJ/mol
+
+--- Running Full Simulation (Coupling ON from t=0) ---
+
+Test failed with error: cannot access local variable 'total_steps' where it is not associated with a value
