@@ -11,6 +11,53 @@ KERNEL void clearDipoleBuffer(GLOBAL float* RESTRICT dipole) {
 }
 
 /**
+ * Update unwrapped cavity position on GPU (avoids CPU roundtrip).
+ * Detects periodic boundary crossings and updates the unwrapped position.
+ * 
+ * unwrappedPos[0-2] = unwrapped x,y,z
+ * unwrappedPos[3-5] = previous wrapped x,y,z (for detecting crossings)
+ */
+KERNEL void updateUnwrappedCavityPosition(GLOBAL const real4* RESTRICT posq,
+        GLOBAL float* RESTRICT unwrappedPos, int cavityParticleIndex,
+        float boxSizeX, float boxSizeY, float boxSizeZ) {
+    if (GLOBAL_ID == 0) {
+        // Get current wrapped position
+        real4 currentPos = posq[cavityParticleIndex];
+        
+        // Get previous wrapped position
+        float prevX = unwrappedPos[3];
+        float prevY = unwrappedPos[4];
+        float prevZ = unwrappedPos[5];
+        
+        // Detect wrapping and compute delta
+        float deltaX = currentPos.x - prevX;
+        float deltaY = currentPos.y - prevY;
+        float deltaZ = currentPos.z - prevZ;
+        
+        // If delta > half box, particle wrapped from high to low
+        // If delta < -half box, particle wrapped from low to high
+        if (deltaX > 0.5f * boxSizeX) deltaX -= boxSizeX;
+        else if (deltaX < -0.5f * boxSizeX) deltaX += boxSizeX;
+        
+        if (deltaY > 0.5f * boxSizeY) deltaY -= boxSizeY;
+        else if (deltaY < -0.5f * boxSizeY) deltaY += boxSizeY;
+        
+        if (deltaZ > 0.5f * boxSizeZ) deltaZ -= boxSizeZ;
+        else if (deltaZ < -0.5f * boxSizeZ) deltaZ += boxSizeZ;
+        
+        // Update unwrapped position
+        unwrappedPos[0] += deltaX;
+        unwrappedPos[1] += deltaY;
+        unwrappedPos[2] += deltaZ;
+        
+        // Store current wrapped position for next step
+        unwrappedPos[3] = currentPos.x;
+        unwrappedPos[4] = currentPos.y;
+        unwrappedPos[5] = currentPos.z;
+    }
+}
+
+/**
  * Compute the molecular dipole moment (excluding cavity particle).
  * Uses atomic additions to accumulate the dipole.
  */

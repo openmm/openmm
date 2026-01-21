@@ -1366,8 +1366,6 @@ public:
     CommonCalcCavityForceKernel(std::string name, const Platform& platform, ComputeContext& cc) : 
         CalcCavityForceKernel(name, platform), cc(cc),
         harmonicEnergy(0.0), couplingEnergy(0.0), dipoleSelfEnergy(0.0), stepCount(0), firstStep(true) {
-        prevCavityPos[0] = prevCavityPos[1] = prevCavityPos[2] = 0.0;
-        cavityImage[0] = cavityImage[1] = cavityImage[2] = 0;
     }
     void initialize(const System& system, const CavityForce& force);
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
@@ -1388,14 +1386,12 @@ private:
     ComputeKernel clearDipoleKernel;
     ComputeKernel computeDipoleKernel;
     ComputeKernel computeForceKernel;
+    ComputeKernel updateUnwrappedPosKernel;
     ComputeArray unwrappedCavityPosBuffer;
     double harmonicEnergy;
     double couplingEnergy;
     double dipoleSelfEnergy;
     int stepCount;
-    // For tracking unwrapped cavity position
-    double prevCavityPos[3];
-    int cavityImage[3];
     bool firstStep;
 };
 

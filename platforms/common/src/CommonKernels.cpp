@@ -4392,12 +4392,11 @@ void CommonCalcCavityForceKernel::initialize(const System& system, const CavityF
     dipoleBuffer.initialize<float>(cc, 4, "cavityDipole"); // x, y, z, unused
     int numBlocks = cc.getNumThreadBlocks();
     energyBuffer.initialize<float>(cc, numBlocks * 3, "cavityEnergy"); // harmonic, coupling, dipole self
-    unwrappedCavityPosBuffer.initialize<float>(cc, 4, "unwrappedCavityPos"); // x, y, z, unused
+    // Buffer: [unwrapped_x, unwrapped_y, unwrapped_z, prev_wrapped_x, prev_wrapped_y, prev_wrapped_z]
+    unwrappedCavityPosBuffer.initialize<float>(cc, 6, "unwrappedCavityPos");
     
     // Initialize tracking variables
     firstStep = true;
-    prevCavityPos[0] = prevCavityPos[1] = prevCavityPos[2] = 0.0;
-    cavityImage[0] = cavityImage[1] = cavityImage[2] = 0;
     
     // Compile kernels
     map<string, string> defines;
@@ -4408,6 +4407,7 @@ void CommonCalcCavityForceKernel::initialize(const System& system, const CavityF
     clearDipoleKernel = program->createKernel("clearDipoleBuffer");
     computeDipoleKernel = program->createKernel("computeCavityDipole");
     computeForceKernel = program->createKernel("computeCavityForces");
+    updateUnwrappedPosKernel = program->createKernel("updateUnwrappedCavityPosition");
     
     // Set up kernels
     clearDipoleKernel->addArg(dipoleBuffer);
@@ -4428,6 +4428,14 @@ void CommonCalcCavityForceKernel::initialize(const System& system, const CavityF
     computeForceKernel->addArg(); // lambdaCoupling - set at runtime
     computeForceKernel->addArg(); // photonMass - set at runtime
     computeForceKernel->addArg(cc.getPaddedNumAtoms());
+    
+    // Set up unwrapped position update kernel
+    updateUnwrappedPosKernel->addArg(cc.getPosq());
+    updateUnwrappedPosKernel->addArg(unwrappedCavityPosBuffer);
+    updateUnwrappedPosKernel->addArg(cavityParticleIndex);
+    updateUnwrappedPosKernel->addArg(); // boxSizeX - set at runtime
+    updateUnwrappedPosKernel->addArg(); // boxSizeY - set at runtime
+    updateUnwrappedPosKernel->addArg(); // boxSizeZ - set at runtime
 }
 
 double CommonCalcCavityForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -4445,56 +4453,37 @@ double CommonCalcCavityForceKernel::execute(ContextImpl& context, bool includeFo
     }
     stepCount++;
     
-    // Get periodic box size for unwrapping
+    // Get periodic box size for unwrapping (this is cheap - just reads cached values)
     Vec3 boxVectors[3];
     context.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-    double boxSize[3] = {boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]};
+    float boxSizeX = (float) boxVectors[0][0];
+    float boxSizeY = (float) boxVectors[1][1];
+    float boxSizeZ = (float) boxVectors[2][2];
     
-    // Download current cavity position (wrapped)
-    vector<Vec3> positions;
-    context.getPositions(positions);
-    double currentPos[3] = {positions[cavityParticleIndex][0], 
-                            positions[cavityParticleIndex][1], 
-                            positions[cavityParticleIndex][2]};
-    
-    // Track unwrapped position using image flags
+    // On first step, initialize the unwrapped position buffer on GPU
     if (firstStep) {
-        // Initialize: assume current position is the true unwrapped position
-        prevCavityPos[0] = currentPos[0];
-        prevCavityPos[1] = currentPos[1];
-        prevCavityPos[2] = currentPos[2];
-        cavityImage[0] = cavityImage[1] = cavityImage[2] = 0;
+        // Download just the initial cavity position to initialize the buffer
+        vector<Vec3> positions;
+        context.getPositions(positions);
+        float initPos[6];
+        initPos[0] = (float) positions[cavityParticleIndex][0];  // unwrapped x
+        initPos[1] = (float) positions[cavityParticleIndex][1];  // unwrapped y
+        initPos[2] = (float) positions[cavityParticleIndex][2];  // unwrapped z
+        initPos[3] = initPos[0];  // prev wrapped x
+        initPos[4] = initPos[1];  // prev wrapped y
+        initPos[5] = initPos[2];  // prev wrapped z
+        unwrappedCavityPosBuffer.upload(initPos);
         firstStep = false;
     } else {
-        // Detect wrapping: if position changed by more than half box, adjust image
-        for (int i = 0; i < 3; i++) {
-            double delta = currentPos[i] - prevCavityPos[i];
-            if (delta > 0.5 * boxSize[i]) {
-                cavityImage[i]--;  // Wrapped from high to low
-            } else if (delta < -0.5 * boxSize[i]) {
-                cavityImage[i]++;  // Wrapped from low to high
-            }
-            prevCavityPos[i] = currentPos[i];
-        }
+        // Update unwrapped position on GPU (no CPU roundtrip!)
+        updateUnwrappedPosKernel->setArg(3, boxSizeX);
+        updateUnwrappedPosKernel->setArg(4, boxSizeY);
+        updateUnwrappedPosKernel->setArg(5, boxSizeZ);
+        updateUnwrappedPosKernel->execute(1);
     }
-    
-    // Compute unwrapped position
-    float unwrappedPos[4];
-    unwrappedPos[0] = (float)(currentPos[0] + cavityImage[0] * boxSize[0]);
-    unwrappedPos[1] = (float)(currentPos[1] + cavityImage[1] * boxSize[1]);
-    unwrappedPos[2] = (float)(currentPos[2] + cavityImage[2] * boxSize[2]);
-    unwrappedPos[3] = 0.0f;
-    unwrappedCavityPosBuffer.upload(unwrappedPos);
     
     // Clear dipole buffer on GPU (much faster than CPU upload)
     clearDipoleKernel->execute(1);
-    
-    // Clear energy buffer only if we need energies
-    if (includeEnergy) {
-        int numBlocks = cc.getNumThreadBlocks();
-        vector<float> energy_zeros(numBlocks * 3, 0.0f);
-        energyBuffer.upload(energy_zeros);
-    }
     
     // Compute dipole moment
     computeDipoleKernel->execute(cc.getNumAtoms());
