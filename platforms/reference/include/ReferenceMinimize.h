@@ -1,3 +1,6 @@
+#ifndef OPENMM_REFERENCEMINIMIZE_H_
+#define OPENMM_REFERENCEMINIMIZE_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -27,13 +30,16 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/kernels.h"
 
-using namespace OpenMM;
-using namespace std;
+namespace OpenMM {
 
-void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxIterations, MinimizationReporter* reporter) {
-    ContextImpl& contextImpl = context.getImpl();
-    context.getPlatform().createKernel(MinimizeKernel::Name(), contextImpl).getAs<MinimizeKernel>().execute(contextImpl, tolerance, maxIterations, reporter);
-}
+class ReferenceMinimize {
+public:
+    static void minimize(ContextImpl& context, double tolerance, int maxIterations, MinimizationReporter* reporter);
+};
+
+} // namespace OpenMM
+
+#endif // OPENMM_REFERENCEMINIMIZE_H_
