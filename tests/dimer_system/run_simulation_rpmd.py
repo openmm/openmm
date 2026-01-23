@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
 """
-Cavity OpenMM Diamer Test - Extended IR Simulation
-===================================================
+Cavity OpenMM Dimer RPMD Simulation - IR Spectrum Calculation
+==============================================================
 
-This test creates a system of O-O and N-N dimers (similar to the cav-hoomd diamer system)
-and tests the cavity coupling functionality:
+This script runs Ring Polymer Molecular Dynamics (RPMD) simulations of O-O and N-N dimers
+coupled to a cavity photon, computing the IR spectrum from centroid dipole moments.
 
-1. Equilibrate for 100 ps with coupling OFF (lambda=0)
-2. Turn on coupling and run for 900 ps (total 1 ns)
-3. Output dipole moment trajectory for IR spectrum calculation
+Features:
+- RPMD with user-specified number of beads for quantum nuclear effects
+- PILE_G thermostat: Bussi for centroid + Langevin for internal modes
+- Cavity coupling with lambda parameter
+- IR spectrum from centroid dipole moment autocorrelation
+- GPU-accelerated with CUDA
 
-The system uses:
-- Harmonic bonds for dimers
-- Lennard-Jones interactions
-- Coulomb interactions
-- Cavity coupling with Bussi thermostat for molecules
-- Langevin dynamics for the cavity photon
+Usage:
+    python run_simulation_rpmd.py --dimers 250 --beads 8 --lambda 0.0700
 """
 
 import sys
@@ -27,7 +26,6 @@ import time
 try:
     from openmm import openmm
     from openmm import unit
-    from openmm.app import Simulation, StateDataReporter
     print("✓ OpenMM loaded successfully")
 except ImportError as e:
     print(f"Error importing OpenMM: {e}")
@@ -35,21 +33,13 @@ except ImportError as e:
     sys.exit(1)
 
 # Physical constants for unit conversion
-# We'll work in OpenMM native units (nm, kJ/mol, ps)
 BOHR_TO_NM = 0.0529177  # 1 Bohr = 0.0529177 nm
 HARTREE_TO_KJMOL = 2625.5  # 1 Hartree = 2625.5 kJ/mol
 AMU_TO_KG = 1.66054e-27
-# Time conversion: 1 a.u. of time = 0.02418884254 ps
 AU_TIME_TO_PS = 0.02418884254  # 1 atomic time unit = 0.02418884254 ps
 
-def _system_xml_paths(num_molecules, fraction_OO, box_size_nm, seed):
-    tag = f"diamer_{num_molecules}_OO{fraction_OO:.2f}_box{box_size_nm:.3f}_seed{seed}"
-    base_dir = Path(__file__).parent
-    return base_dir / f"{tag}.xml", base_dir / f"{tag}_positions.npz"
-
-
-def create_diamer_system_in_code(num_molecules=50, fraction_OO=0.8, box_size_nm=2.0,
-                                 temperature_K=100.0, seed=42):
+def create_diamer_system(num_molecules=50, fraction_OO=0.8, box_size_nm=2.0,
+                         temperature_K=100.0, seed=42):
     """
     Create a system of O-O and N-N dimers.
     
@@ -76,26 +66,17 @@ def create_diamer_system_in_code(num_molecules=50, fraction_OO=0.8, box_size_nm=
     system = openmm.System()
     positions = []
     
-    # Particle masses (in atomic units converted to amu)
-    # O mass ~ 29150 a.u. ≈ 16 amu
-    # N mass ~ 25527 a.u. ≈ 14 amu  
+    # Particle masses
     mass_O = 16.0  # amu
     mass_N = 14.0  # amu
     
-    # Bond parameters (converted from atomic units to OpenMM units)
-    # HOOMD-blue uses: E = 0.5 * k * (r - r0)²  (has 1/2 factor, same as OpenMM!)
-    # OpenMM uses: E = 0.5 * k * (r - r0)²  (has 1/2 factor)
-    # Therefore we use the SAME force constants!
-    # 
-    # HOOMD force constants (from cav-hoomd code):
-    #   k_OO = 2*0.36602 = 0.73204 Hartree/Bohr²  → ω_OO ≈ 1560 cm⁻¹
-    #   k_NN = 2*0.71625 = 1.4325 Hartree/Bohr²   → ω_NN ≈ 2325 cm⁻¹
-    k_OO_au = 0.73204  # Hartree/Bohr² (same as HOOMD)
+    # Bond parameters
+    k_OO_au = 0.73204  # Hartree/Bohr²
     r0_OO_au = 2.281655158  # Bohr
     k_OO = k_OO_au * HARTREE_TO_KJMOL / (BOHR_TO_NM**2)  # kJ/(mol·nm²)
     r0_OO = r0_OO_au * BOHR_TO_NM  # nm
     
-    k_NN_au = 1.4325  # Hartree/Bohr² (same as HOOMD)
+    k_NN_au = 1.4325  # Hartree/Bohr²
     r0_NN_au = 2.0743522177  # Bohr
     k_NN = k_NN_au * HARTREE_TO_KJMOL / (BOHR_TO_NM**2)
     r0_NN = r0_NN_au * BOHR_TO_NM
@@ -104,26 +85,12 @@ def create_diamer_system_in_code(num_molecules=50, fraction_OO=0.8, box_size_nm=
     charge_magnitude = 0.3  # elementary charge
     
     # LJ parameters - Molecular Kob-Andersen Model
-    # ==============================================
-    # These values are converted from cav-hoomd atomic units to OpenMM units.
-    # The molecular KA model is a 4:1 mixture of diatomics with Kob-Andersen
-    # LJ interactions. Parameters follow the original KA model ratios:
-    #   ε_BB/ε_AA = 0.5, σ_BB/σ_AA = 0.88 (for N-N vs O-O)
-    #   ε_AB = 1.5 × ε_AA, σ_AB = 0.8 × σ_AA (for N-O cross-term)
-    #
-    # Unit conversions: 1 Bohr = 0.0529177 nm, 1 Hartree = 2625.5 kJ/mol
-    #
-    # HOOMD values (atomic units):
-    #   O-O: epsilon=0.00016685201 Ha, sigma=6.230426584 Bohr
-    #   N-N: epsilon=0.000083426 Ha, sigma=5.48277488 Bohr
-    #   N-O: epsilon=0.00025027802 Ha, sigma=4.9832074319 Bohr
-    sigma_O = 6.230426584 * BOHR_TO_NM  # nm (= 0.32971 nm)
-    epsilon_O = 0.00016685201 * HARTREE_TO_KJMOL  # kJ/mol (= 0.4381 kJ/mol)
-    sigma_N = 5.48277488 * BOHR_TO_NM  # nm (= 0.29015 nm)
-    epsilon_N = 0.000083426 * HARTREE_TO_KJMOL  # kJ/mol (= 0.2190 kJ/mol)
-    # Cross-term (N-O): non-additive parameters from KA model
-    sigma_NO = 4.9832074319 * BOHR_TO_NM  # nm (= 0.26370 nm)
-    epsilon_NO = 0.00025027802 * HARTREE_TO_KJMOL  # kJ/mol (= 0.6571 kJ/mol)
+    sigma_O = 6.230426584 * BOHR_TO_NM  # nm
+    epsilon_O = 0.00016685201 * HARTREE_TO_KJMOL  # kJ/mol
+    sigma_N = 5.48277488 * BOHR_TO_NM  # nm
+    epsilon_N = 0.000083426 * HARTREE_TO_KJMOL  # kJ/mol
+    sigma_NO = 4.9832074319 * BOHR_TO_NM  # nm
+    epsilon_NO = 0.00025027802 * HARTREE_TO_KJMOL  # kJ/mol
     
     # Create forces
     bond_force = openmm.HarmonicBondForce()
@@ -137,8 +104,8 @@ def create_diamer_system_in_code(num_molecules=50, fraction_OO=0.8, box_size_nm=
     spacing = box_size_nm / side
     
     # Track O and N particle indices for cross-term exceptions
-    O_indices = []  # List of (idx1, idx2, charge1, charge2) for O atoms
-    N_indices = []  # List of (idx1, idx2, charge1, charge2) for N atoms
+    O_indices = []
+    N_indices = []
     
     mol_idx = 0
     for i in range(side):
@@ -190,8 +157,6 @@ def create_diamer_system_in_code(num_molecules=50, fraction_OO=0.8, box_size_nm=
                 # Add bond
                 bond_force.addBond(idx1, idx2, r0, k)
                 
-                # Note: OpenMM automatically creates exceptions for bonded atoms
-                
                 # Add nonbonded parameters (charge, sigma, epsilon)
                 charge1, charge2 = -charge_magnitude, +charge_magnitude
                 nonbonded_force.addParticle(charge1, sigma, epsilon)
@@ -215,22 +180,18 @@ def create_diamer_system_in_code(num_molecules=50, fraction_OO=0.8, box_size_nm=
             break
     
     # Add N-O cross-term exceptions (Kob-Andersen non-additive parameters)
-    # The KA model uses ε_NO = 1.5 × ε_OO and σ_NO = 0.8 × σ_OO, which differs
-    # from the default Lorentz-Berthelot combining rules.
     n_cross_terms = 0
     for (idx_O, charge_O) in O_indices:
         for (idx_N, charge_N) in N_indices:
-            # chargeProd for Coulomb: q_O * q_N
             chargeProd = charge_O * charge_N
-            # Add exception with KA cross-term parameters
             nonbonded_force.addException(idx_O, idx_N, chargeProd, sigma_NO, epsilon_NO)
             n_cross_terms += 1
     
     print(f"Added {n_cross_terms} N-O cross-term exceptions for KA non-additive interactions")
     
     # Add forces to system
-    system.addForce(bond_force)
-    system.addForce(nonbonded_force)
+    system.addForce(bond_force)  # Force group 0 (default)
+    system.addForce(nonbonded_force)  # Force group 0 (default)
     
     # Set periodic box
     system.setDefaultPeriodicBoxVectors(
@@ -244,27 +205,6 @@ def create_diamer_system_in_code(num_molecules=50, fraction_OO=0.8, box_size_nm=
     print(f"  N-N dimers: {num_molecules - num_OO}")
     print(f"  Box size: {box_size_nm} nm")
     
-    return system, positions
-
-
-def create_diamer_system(num_molecules=50, fraction_OO=0.8, box_size_nm=2.0,
-                         temperature_K=100.0, seed=42):
-    """
-    Create or load a system of O-O and N-N dimers from XML.
-    """
-    xml_path, pos_path = _system_xml_paths(num_molecules, fraction_OO, box_size_nm, seed)
-    if not (xml_path.exists() and pos_path.exists()):
-        raise FileNotFoundError(
-            f"Missing system files. Expected {xml_path.name} and {pos_path.name} in {xml_path.parent}"
-        )
-    print(f"Loading system from XML: {xml_path.name}")
-    with open(xml_path, 'r') as f:
-        system = openmm.XmlSerializer.deserialize(f.read())
-    data = np.load(pos_path, allow_pickle=True)
-    positions_nm = data["positions_nm"]
-    positions = [openmm.Vec3(*pos) * unit.nanometer for pos in positions_nm]
-    if system.getNumParticles() != len(positions):
-        raise ValueError("XML system and positions count do not match.")
     return system, positions
 
 
@@ -305,50 +245,63 @@ def add_cavity_particle(system, positions, omegac, photon_mass=1.0):
     return cavity_index
 
 
-def compute_dipole_moment(state, charges, num_molecular_particles):
+def compute_centroid_dipole_moment(integrator, charges, num_molecular_particles, num_beads):
     """
-    Compute the total molecular dipole moment.
+    Compute the centroid dipole moment for RPMD.
     
     Parameters
     ----------
-    state : openmm.State
-        Current state with positions
+    integrator : openmm.RPMDIntegrator
+        RPMD integrator with bead positions
     charges : list
-        Particle charges (as Quantity with elementary charge units or float)
+        Particle charges
     num_molecular_particles : int
         Number of molecular particles (excluding cavity)
+    num_beads : int
+        Number of RPMD beads
         
     Returns
     -------
     dipole : np.ndarray
-        Dipole moment vector (3,) in e*nm units
+        Centroid dipole moment vector (3,) in e*nm units
     """
-    positions = state.getPositions(asNumpy=True)
     dipole = np.zeros(3)
     
+    # Average over all beads to get centroid
     for i in range(num_molecular_particles):
-        # positions[i] is in nm, charges[i] in elementary charge
-        pos_nm = positions[i].value_in_unit(unit.nanometer)
-        # Extract charge value (handle both Quantity and float)
+        centroid_pos = np.zeros(3)
+        
+        # Sum positions across all beads
+        for bead in range(num_beads):
+            state = integrator.getState(bead, getPositions=True)
+            positions = state.getPositions(asNumpy=True)
+            pos_nm = positions[i].value_in_unit(unit.nanometer)
+            centroid_pos += pos_nm
+        
+        # Average to get centroid
+        centroid_pos /= num_beads
+        
+        # Extract charge value
         if hasattr(charges[i], 'value_in_unit'):
             charge_e = charges[i].value_in_unit(unit.elementary_charge)
         else:
             charge_e = float(charges[i])
         
-        dipole[0] += charge_e * pos_nm[0]
-        dipole[1] += charge_e * pos_nm[1]
-        dipole[2] += charge_e * pos_nm[2]
+        dipole[0] += charge_e * centroid_pos[0]
+        dipole[1] += charge_e * centroid_pos[1]
+        dipole[2] += charge_e * centroid_pos[2]
     
     return dipole
 
 
-def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
-             dt=0.001, equilibration_time_ps=100.0, production_time_ps=900.0,
-             cavity_freq_cm=1560.0, disable_dipole_output=False):
-    """Run the cavity diamer simulation test."""
+def run_rpmd_simulation(num_molecules=250, num_beads=8, lambda_coupling=0.001, 
+                       temperature_K=100.0, dt=0.001, equilibration_time_ps=100.0, 
+                       production_time_ps=900.0, cavity_freq_cm=1560.0, 
+                       disable_dipole_output=False):
+    """Run the RPMD cavity dimer simulation."""
     
     print("=" * 60)
-    print("Cavity OpenMM Diamer Test")
+    print("Cavity OpenMM Dimer RPMD Simulation")
     print("=" * 60)
     
     # System parameters
@@ -356,33 +309,41 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     
     # Cavity parameters
     # Convert from cm⁻¹ to atomic units (Hartree)
-    # E(Hartree) = E(cm⁻¹) / 219474.63
-    omegac_au = cavity_freq_cm / 219474.63  # Hartree (energy = ℏω in atomic units where ℏ=1)
-    photon_mass = 1.0 / 1822.888  # amu, so mass_au = 1.0
+    omegac_au = cavity_freq_cm / 219474.63  # Hartree
+    photon_mass = 1.0 / 1822.888  # amu
     
     # Simulation parameters
     equilibration_steps = int(equilibration_time_ps / dt)
     production_steps = int(production_time_ps / dt)
+    total_steps = equilibration_steps + production_steps
     
     # Dipole output parameters
-    dipole_output_interval_ps = dt  # Output EVERY timestep (1 fs) for proper IR spectrum
-    dipole_output_interval_steps = 1  # Every single step
+    # For IR spectrum: getState() is EXTREMELY expensive (CPU-GPU transfer for all beads)
+    # Strategy: Sample VERY sparsely (every 5 ps) for production runs
+    # Nyquist: For ν_max = 2000 cm⁻¹, need Δt < 8.3 fs
+    # Using 5 ps sampling gives Δν = 0.2 cm⁻¹ resolution (excellent!)
+    # and reduces CPU-GPU transfers by 1000x vs 5 fs sampling
+    dipole_output_interval_steps = 1250  # Every 5 ps (5000 fs) at dt=4fs
+    dipole_output_interval_ps = dt * dipole_output_interval_steps
     
     print(f"\nSimulation parameters:")
     print(f"  Temperature: {temperature_K} K")
-    print(f"  Timestep: {dt} ps")
+    print(f"  RPMD beads: {num_beads}")
+    print(f"  Timestep: {dt} ps ({dt*1000:.1f} fs)")
     print(f"  Cavity frequency: {cavity_freq_cm} cm⁻¹ ({omegac_au:.6f} Hartree)")
     print(f"  Lambda coupling: {lambda_coupling}")
     print(f"  Equilibration: {equilibration_time_ps} ps ({equilibration_steps} steps)")
     print(f"  Production: {production_time_ps} ps ({production_steps} steps)")
     print(f"  Total time: {equilibration_time_ps + production_time_ps} ps")
     if not disable_dipole_output:
-        print(f"  Dipole output: Every timestep ({dt*1000:.1f} fs) for accurate IR spectrum")
-    else:
-        print(f"  Dipole output: DISABLED (benchmark mode)")
+        freq_resolution = 1000.0 / (production_time_ps)  # cm⁻¹
+        max_freq = 1000.0 / (2 * dipole_output_interval_ps)  # Nyquist limit in cm⁻¹
+        print(f"  Centroid dipole output: Every {dipole_output_interval_steps} steps ({dipole_output_interval_ps*1000:.1f} fs)")
+        print(f"  Expected {total_steps // dipole_output_interval_steps:,} dipole samples")
+        print(f"  Frequency resolution: {freq_resolution:.2f} cm⁻¹, Max freq: {max_freq:.0f} cm⁻¹")
     
     # Create system
-    print("\n--- Creating Diamer System ---")
+    print("\n--- Creating Dimer System ---")
     system, positions = create_diamer_system(
         num_molecules=num_molecules,
         fraction_OO=0.8,
@@ -401,134 +362,129 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     # Add cavity particle
     print("\n--- Adding Cavity Particle ---")
     cavity_index = add_cavity_particle(system, positions, omegac_au, photon_mass)
-    num_molecular_particles = cavity_index  # All particles before cavity are molecular
+    num_molecular_particles = cavity_index
     
-    # Check if CavityForce is available
+    # Add cavity force
     print("\n--- Adding Cavity Force ---")
     try:
-        # Create CavityForce with target lambda from t=0 (omegac in atomic units)
         cavity_force = openmm.CavityForce(cavity_index, omegac_au, lambda_coupling, photon_mass)
         system.addForce(cavity_force)
         print(f"  CavityForce added successfully")
         print(f"  Omega_c: {omegac_au:.6f} a.u.")
-        print(f"  Photon mass: {photon_mass:.6f} amu = {photon_mass * 1822.888:.1f} a.u.")
-        # Calculate expected spring constant (with correct unit conversion)
-        AMU_TO_AU = 1822.888  # 1 amu = 1822.888 electron masses
-        photon_mass_au = photon_mass * AMU_TO_AU
-        K_au = photon_mass_au * omegac_au**2  # In atomic units
-        K_openmm = K_au * HARTREE_TO_KJMOL / (BOHR_TO_NM**2)
-        print(f"  Expected spring constant K: {K_openmm:.0f} kJ/(mol·nm^2)")
         print(f"  Lambda coupling: {lambda_coupling} (ACTIVE from t=0)")
         
-        # Create CavityParticleDisplacer for finite-Q displacement
         displacer = openmm.CavityParticleDisplacer(cavity_index, omegac_au, photon_mass)
-        displacer.setSwitchOnLambda(lambda_coupling)  # Use target lambda
+        displacer.setSwitchOnLambda(lambda_coupling)
         system.addForce(displacer)
         print(f"  CavityParticleDisplacer added (finite-Q mode)")
         
         cavity_available = True
     except AttributeError as e:
         print(f"  CavityForce not available: {e}")
-        print("  Skipping cavity coupling test")
         cavity_available = False
     
-    # Check if BussiThermostat is available
-    print("\n--- Adding Bussi Thermostat ---")
-    try:
-        # Create BussiThermostat for molecules only (not the cavity particle)
-        tau = 0.1  # ps
-        bussi = openmm.BussiThermostat(temperature_K, tau)
-        bussi.setApplyToAllParticles(False)
-        
-        # Add all molecular particles (not the cavity)
-        for i in range(system.getNumParticles() - 1):  # Exclude cavity particle
-            bussi.addParticle(i)
-        
-        system.addForce(bussi)
-        print(f"  BussiThermostat added for {bussi.getNumParticles()} particles")
-        print(f"  Temperature: {temperature_K} K")
-        print(f"  Tau: {tau} ps")
-        bussi_available = True
-    except AttributeError as e:
-        print(f"  BussiThermostat not available: {e}")
-        bussi_available = False
+    # Create RPMD integrator with PILE_G thermostat
+    # NOTE: Ring polymer contractions have too much FFT overhead for small systems
+    # Running WITHOUT contractions for maximum speed on this 500-particle system
+    print("\n--- Creating RPMD Integrator ---")
+    friction = 1.0  # ps^-1 - standard friction for RPMD
+    centroid_friction = 0.5  # ps^-1 - friction for Bussi centroid thermostat
     
-    # Create integrator - use Langevin for the cavity particle dynamics
-    print("\n--- Creating Integrator ---")
-    friction = 0.01  # ps^-1 - very low friction to preserve vibrational dynamics
-    integrator = openmm.LangevinMiddleIntegrator(
+    integrator = openmm.RPMDIntegrator(
+        num_beads,
         temperature_K * unit.kelvin,
         friction / unit.picosecond,
         dt * unit.picosecond
     )
-    print(f"  LangevinMiddleIntegrator created")
-    print(f"  Friction: {friction} ps^-1 (low to preserve vibrations)")
-    print(f"  Note: Bussi thermostat handles molecular thermalization")
     
-    # Create simulation - try CUDA first, fall back to Reference
+    # Set PILE_G thermostat (Bussi on centroid, Langevin on internal modes)
+    integrator.setThermostatType(openmm.RPMDIntegrator.PileG)
+    integrator.setCentroidFriction(centroid_friction / unit.picosecond)
+    
+    print(f"  RPMDIntegrator created")
+    print(f"  Thermostat: PILE_G (Bussi centroid + Langevin internal)")
+    print(f"  Centroid friction (Bussi): {centroid_friction} ps^-1")
+    print(f"  Internal mode friction (PILE): {friction} ps^-1")
+    print(f"  Number of beads: {num_beads}")
+
+
+
+
+    
+    # Create simulation with CUDA platform
     print("\n--- Creating Simulation ---")
-    # Always use CUDA platform
-    platform = openmm.Platform.getPlatformByName('CUDA')
-    print(f"  Using CUDA platform (GPU acceleration)")
+    try:
+        platform = openmm.Platform.getPlatformByName('CUDA')
+        print(f"  Using CUDA platform (GPU acceleration)")
+    except Exception:
+        platform = openmm.Platform.getPlatformByName('CPU')
+        print(f"  Using CPU platform (CUDA not available)")
     
     # Create context
     context = openmm.Context(system, integrator, platform)
+    
+    # Set positions for all beads
+    print("\n--- Initializing RPMD Beads ---")
+    for bead in range(num_beads):
+        # Add small random perturbations for each bead
+        bead_positions = []
+        for pos in positions:
+            # pos is already a Vec3 with units
+            pos_nm = pos.value_in_unit(unit.nanometer)
+            dx = np.random.randn() * 0.01
+            dy = np.random.randn() * 0.01
+            dz = np.random.randn() * 0.01
+            bead_pos = openmm.Vec3(pos_nm[0] + dx, pos_nm[1] + dy, pos_nm[2] + dz) * unit.nanometer
+            bead_positions.append(bead_pos)
+        integrator.setPositions(bead, bead_positions)
+    
+    # Also set context positions (for the underlying OpenMM context)
     context.setPositions(positions)
+    print(f"  Positions set for {num_beads} beads")
     
-    # Minimize energy
-    print("\n--- Energy Minimization ---")
-    state = context.getState(getEnergy=True)
-    print(f"  Initial energy: {state.getPotentialEnergy()}")
-    openmm.LocalEnergyMinimizer.minimize(context, maxIterations=100)
-    state = context.getState(getEnergy=True)
-    print(f"  Final energy: {state.getPotentialEnergy()}")
+    # Set velocities for all beads
+    print("\n--- Initializing Velocities ---")
+    context.setVelocitiesToTemperature(temperature_K * unit.kelvin)
     
-    # Apply finite-Q displacement to cavity particle BEFORE starting dynamics
+    # Get velocities from context and set for each bead with perturbations
+    state = context.getState(getVelocities=True)
+    base_velocities = state.getVelocities()
+    
+    for bead in range(num_beads):
+        bead_velocities = []
+        for v in base_velocities:
+            vx = v[0].value_in_unit(unit.nanometers/unit.picoseconds) + 0.01 * np.random.randn()
+            vy = v[1].value_in_unit(unit.nanometers/unit.picoseconds) + 0.01 * np.random.randn()
+            vz = v[2].value_in_unit(unit.nanometers/unit.picoseconds) + 0.01 * np.random.randn()
+            bead_velocities.append(openmm.Vec3(vx, vy, vz) * unit.nanometers/unit.picoseconds)
+        integrator.setVelocities(bead, bead_velocities)
+    
+    print(f"  Velocities initialized for {num_beads} beads")
+    
+    # Apply finite-Q displacement to cavity particle
     if cavity_available:
         print("\n--- Applying Finite-Q Displacement ---")
-        state = context.getState(getPositions=True)
-        positions_with_units = state.getPositions()
-        
-        # Get cavity particle position and extract numeric values
-        cavity_pos = positions_with_units[cavity_index]
-        x_nm = cavity_pos[0].value_in_unit(unit.nanometer)
-        y_nm = cavity_pos[1].value_in_unit(unit.nanometer)
-        z_nm = cavity_pos[2].value_in_unit(unit.nanometer)
-        print(f"  Cavity position before: ({x_nm:.6f}, {y_nm:.6f}, {z_nm:.6f}) nm")
-        
-        # Calculate displacement magnitude (typical value ~0.01 nm)
-        # This gives the cavity mode an initial excitation
         displacement_magnitude = 0.01  # nm
-        
-        # Modify positions
-        positions_list = list(positions_with_units)
-        positions_list[cavity_index] = [displacement_magnitude, 0.0, 0.0] * unit.nanometer
-        
-        context.setPositions(positions_list)
-        state = context.getState(getPositions=True)
-        cavity_pos = state.getPositions()[cavity_index]
-        x_nm = cavity_pos[0].value_in_unit(unit.nanometer)
-        y_nm = cavity_pos[1].value_in_unit(unit.nanometer)
-        z_nm = cavity_pos[2].value_in_unit(unit.nanometer)
-        print(f"  Cavity position after:  ({x_nm:.6f}, {y_nm:.6f}, {z_nm:.6f}) nm")
-        print(f"  Displacement: {displacement_magnitude} nm along x-axis")
-    
-    # Set velocities
-    context.setVelocitiesToTemperature(temperature_K * unit.kelvin)
+        for bead in range(num_beads):
+            state = integrator.getState(bead, getPositions=True)
+            positions_list = list(state.getPositions())
+            positions_list[cavity_index] = openmm.Vec3(displacement_magnitude, 0.0, 0.0) * unit.nanometer
+            integrator.setPositions(bead, positions_list)
+        print(f"  Displacement: {displacement_magnitude} nm along x-axis for all beads")
     
     # Calculate total steps
     total_steps = equilibration_steps + production_steps
     
-    # Run full simulation (no separate equilibration/production phases)
-    print("\n--- Running Full Simulation (Coupling ON from t=0) ---")
-    print(f"  Running {total_steps} steps (1 ns)...")
+    # Run simulation
+    print("\n--- Running RPMD Simulation ---")
+    print(f"  Running {total_steps} steps...")
     print(f"  Progress updates every 1 ps (1,000 steps)")
     print("")
     
     # Prepare dipole trajectory storage
     dipole_times = []
     dipole_trajectory = []
-    step_counter = 0  # Manual step counter
+    step_counter = 0
     
     report_interval = 1000  # Report every 1 ps
     num_reports = total_steps // report_interval
@@ -537,68 +493,45 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     last_report_time = start_time
     
     for i in range(num_reports):
-        # Run and collect dipole data
+        # Run and collect centroid dipole data
         for step in range(report_interval):
             integrator.step(1)
             step_counter += 1
             if not disable_dipole_output and (step_counter % dipole_output_interval_steps) == 0:
-                state = context.getState(getPositions=True)
                 current_time = step_counter * dt
-                dipole = compute_dipole_moment(state, charges, num_molecular_particles)
+                dipole = compute_centroid_dipole_moment(integrator, charges, num_molecular_particles, num_beads)
                 dipole_times.append(current_time)
                 dipole_trajectory.append(dipole)
         
-        # Report progress with timing
+        # Report progress
         current_wall_time = time.time()
         elapsed = current_wall_time - start_time
         elapsed_since_last = current_wall_time - last_report_time
         last_report_time = current_wall_time
         
-        state = context.getState(getEnergy=True, getPositions=True)
-        pe = state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
-        positions_now = state.getPositions()
-        cavity_pos = positions_now[cavity_index]
+        energy = integrator.getTotalEnergy()
+        if hasattr(energy, 'value_in_unit'):
+            energy_val = energy.value_in_unit(unit.kilojoule_per_mole)
+        else:
+            energy_val = float(energy)
         
         sim_time_ps = step_counter * dt
         progress_pct = (step_counter / total_steps) * 100
         steps_per_sec = report_interval / elapsed_since_last
-        
-        # Calculate ns/day (same as μs/day)
-        # steps_per_sec * dt (ps/step) * 86400 (sec/day) / 1000 (ps/ns) = ns/day
         ns_per_day = steps_per_sec * dt * 86400.0 / 1000.0
         
-        # Estimate time remaining
         steps_remaining = total_steps - step_counter
         time_remaining_sec = steps_remaining / steps_per_sec if steps_per_sec > 0 else 0
-        time_remaining_min = time_remaining_sec / 60
-        time_remaining_hr = time_remaining_min / 60
+        time_remaining_hr = time_remaining_sec / 3600
         
         print(f"  [{progress_pct:5.1f}%] Step {step_counter:7d}/{total_steps} | "
               f"Sim time: {sim_time_ps:6.1f} ps | "
               f"Speed: {ns_per_day:6.1f} ns/day | "
               f"ETA: {time_remaining_hr:5.1f} hr")
-        
-        # Get cavity energy if available
-        cavity_energy_str = ""
-        if cavity_available:
-            try:
-                harmonic_e = cavity_force.getHarmonicEnergy(context)
-                coupling_e = cavity_force.getCouplingEnergy(context)
-                dipole_e = cavity_force.getDipoleSelfEnergy(context)
-                # Handle unit.Quantity objects
-                if hasattr(harmonic_e, 'value_in_unit'):
-                    harmonic_e = harmonic_e.value_in_unit(unit.kilojoule_per_mole)
-                    coupling_e = coupling_e.value_in_unit(unit.kilojoule_per_mole)
-                    dipole_e = dipole_e.value_in_unit(unit.kilojoule_per_mole)
-                cavity_energy_str = f" | Cavity: H={harmonic_e:6.2f}, C={coupling_e:6.2f}, D={dipole_e:6.2f}"
-            except Exception as e:
-                pass  # Skip if not available
-        
-        print(f"         PE: {pe:8.2f} kJ/mol{cavity_energy_str}")
-        print(f"         Cavity: ({cavity_pos.x:7.4f}, {cavity_pos.y:7.4f}, {cavity_pos.z:7.4f}) nm")
+        print(f"         Total Energy: {energy_val:8.2f} kJ/mol")
         print("")
         
-        # Save NPZ file on the fly (streaming save)
+        # Save NPZ file on the fly
         if not disable_dipole_output and len(dipole_times) > 0:
             output_file = f"cavity_diamer_lambda{lambda_coupling:.4f}.npz"
             np.savez(output_file,
@@ -607,6 +540,7 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
                      metadata={
                          'temperature_K': temperature_K,
                          'num_molecules': num_molecules,
+                         'num_beads': num_beads,
                          'cavity_freq_cm': cavity_freq_cm,
                          'equilibration_ps': equilibration_time_ps,
                          'production_ps': production_time_ps,
@@ -615,6 +549,8 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
                          'lambda_coupling': lambda_coupling,
                          'omegac_au': omegac_au,
                          'cavity_index': cavity_index,
+                         'thermostat': 'PILE_G',
+                         'centroid_friction': centroid_friction,
                          'status': 'running',
                          'step': step_counter,
                          'total_steps': total_steps
@@ -623,9 +559,9 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     total_elapsed = time.time() - start_time
     print(f"  Simulation complete! Total elapsed time: {total_elapsed/3600:.2f} hr ({total_elapsed/60:.1f} min)")
     
-    # Save dipole trajectory
+    # Save final dipole trajectory
     if not disable_dipole_output:
-        print("\n--- Saving Dipole Trajectory ---")
+        print("\n--- Saving Centroid Dipole Trajectory ---")
         dipole_times_array = np.array(dipole_times)
         dipole_trajectory_array = np.array(dipole_trajectory)
         
@@ -636,51 +572,29 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
                  metadata={
                      'temperature_K': temperature_K,
                      'num_molecules': num_molecules,
+                     'num_beads': num_beads,
                      'cavity_freq_cm': cavity_freq_cm,
                      'equilibration_ps': equilibration_time_ps,
-                    'production_ps': production_time_ps,
-                    'dt_ps': dt,
-                    'output_interval_ps': dipole_output_interval_ps,
-                    'lambda_coupling': lambda_coupling,
-                    'omegac_au': omegac_au,
-                    'cavity_index': cavity_index,
-                    'status': 'complete',
-                    'step': total_steps,
-                    'total_steps': total_steps,
-                    'elapsed_time_s': total_elapsed
+                     'production_ps': production_time_ps,
+                     'dt_ps': dt,
+                     'output_interval_ps': dipole_output_interval_ps,
+                     'lambda_coupling': lambda_coupling,
+                     'omegac_au': omegac_au,
+                     'cavity_index': cavity_index,
+                     'thermostat': 'PILE_G',
+                     'centroid_friction': centroid_friction,
+                     'status': 'complete',
+                     'step': total_steps,
+                     'total_steps': total_steps,
+                     'elapsed_time_s': total_elapsed
                  })
         
-        print(f"  Saved dipole trajectory to: {output_file}")
+        print(f"  Saved centroid dipole trajectory to: {output_file}")
         print(f"  Total data points: {len(dipole_times_array)}")
         print(f"  Time range: {dipole_times_array[0]:.2f} - {dipole_times_array[-1]:.2f} ps")
-    else:
-        print("\n--- Dipole output disabled (benchmark mode) ---")
     
     print("\n" + "=" * 60)
-    print("Test completed successfully!")
-    print("=" * 60)
-    
-    if not disable_dipole_output:
-        print("\n--- IR Spectrum Calculation Instructions ---")
-        print("To calculate the IR spectrum from the dipole trajectory:")
-    print("1. Load the data:")
-    print("   data = np.load('cavity_diamer_dipole.npz')")
-    print("   time = data['time_ps']")
-    print("   dipole = data['dipole_nm']")
-    print("")
-    print("2. Cut off first 20 ps (as requested):")
-    print("   idx_cutoff = np.where(time >= 20.0)[0][0]")
-    print("   time_cut = time[idx_cutoff:]")
-    print("   dipole_cut = dipole[idx_cutoff:]")
-    print("")
-    print("3. Compute dipole autocorrelation function:")
-    print("   C(t) = <M(0) · M(t)> where M is dipole moment")
-    print("")
-    print("4. Fourier transform C(t) to get IR spectrum:")
-    print("   I(ω) ∝ FT[C(t)]")
-    print("")
-    print("Note: The first 100 ps is equilibration (coupling OFF),")
-    print("      the remaining 900 ps is production (coupling ON).")
+    print("RPMD simulation completed successfully!")
     print("=" * 60)
     
     return True
@@ -690,11 +604,13 @@ def main():
     """Main entry point with command-line argument parsing."""
     import argparse
     
-    parser = argparse.ArgumentParser(description='Dimer Cavity MD Simulation')
+    parser = argparse.ArgumentParser(description='Dimer Cavity RPMD Simulation')
     parser.add_argument('--dimers', type=int, default=250,
                        help='Number of dimers (default: 250)')
-    parser.add_argument('--lambda', type=float, default=0.001, dest='lambda_coupling',
-                       help='Coupling strength (default: 0.001)')
+    parser.add_argument('--beads', type=int, default=8,
+                       help='Number of RPMD beads (default: 8)')
+    parser.add_argument('--lambda', type=float, default=0.0700, dest='lambda_coupling',
+                       help='Coupling strength (default: 0.0700)')
     parser.add_argument('--temp', type=float, default=100.0,
                        help='Temperature in K (default: 100)')
     parser.add_argument('--dt', type=float, default=0.001,
@@ -711,8 +627,9 @@ def main():
     args = parser.parse_args()
     
     try:
-        success = run_test(
+        success = run_rpmd_simulation(
             num_molecules=args.dimers,
+            num_beads=args.beads,
             lambda_coupling=args.lambda_coupling,
             temperature_K=args.temp,
             dt=args.dt,
@@ -723,7 +640,7 @@ def main():
         )
         sys.exit(0 if success else 1)
     except Exception as e:
-        print(f"\nTest failed with error: {e}")
+        print(f"\nSimulation failed with error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

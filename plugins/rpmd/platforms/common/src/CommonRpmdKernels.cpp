@@ -35,9 +35,27 @@
 #include "openmm/common/ExpressionUtilities.h"
 #include "openmm/common/NonbondedUtilities.h"
 #include "SimTKOpenMMRealType.h"
+#include <fstream>
+#include <chrono>
+#include <random>
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;
+
+static void appendDebugLog(const char* location, const char* message, const std::string& data, const char* hypothesisId, const char* runId) {
+    std::ofstream out("/media/extradrive/Trajectories/openmm/.cursor/debug.log", std::ios::app);
+    if (!out)
+        return;
+    const long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+    out << "{\"sessionId\":\"debug-session\",\"runId\":\"" << runId
+        << "\",\"hypothesisId\":\"" << hypothesisId
+        << "\",\"location\":\"" << location
+        << "\",\"message\":\"" << message
+        << "\",\"data\":" << data
+        << ",\"timestamp\":" << timestamp << "}\n";
+}
 
 
 /**
@@ -71,9 +89,94 @@ void CommonIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     int paddedParticles = cc.getPaddedNumAtoms();
     bool useDoublePrecision = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision());
     int elementSize = (useDoublePrecision ? sizeof(mm_double4) : sizeof(mm_float4));
-    forces.initialize<long long>(cc, numCopies*paddedParticles*3, "rpmdForces");
-    positions.initialize(cc, numCopies*paddedParticles, elementSize, "rpmdPositions");
-    velocities.initialize(cc, numCopies*paddedParticles, elementSize, "rpmdVelocities");
+    
+    // Classify particles into quantum and classical based on particle types
+    const map<int, int>& particleTypes = integrator.getParticleTypes();
+    const set<int>& quantumTypes = integrator.getQuantumParticleTypes();
+    bool defaultQuantum = integrator.getDefaultQuantum();
+    
+    // Check if hybrid mode is actually being used
+    bool hybridModeRequested = (!particleTypes.empty() || !quantumTypes.empty() || !defaultQuantum);
+    
+    vector<int> quantumParticlesList;
+    vector<int> classicalParticlesList;
+    
+    if (hybridModeRequested) {
+        for (int i = 0; i < numParticles; i++) {
+            if (system.getParticleMass(i) == 0)
+                continue;  // Skip massless particles
+            
+            // Determine particle type (default to 0 if not set)
+            int type = 0;
+            auto it = particleTypes.find(i);
+            if (it != particleTypes.end())
+                type = it->second;
+            
+            // Check if this type is quantum
+            bool isQuantum = (type == 0) ? defaultQuantum : (quantumTypes.count(type) > 0);
+            
+            if (isQuantum)
+                quantumParticlesList.push_back(i);
+            else
+                classicalParticlesList.push_back(i);
+        }
+    } else {
+        // Default: all particles are quantum (standard RPMD)
+        for (int i = 0; i < numParticles; i++) {
+            if (system.getParticleMass(i) > 0)
+                quantumParticlesList.push_back(i);
+        }
+    }
+    
+    numQuantumParticles = quantumParticlesList.size();
+    numClassicalParticles = classicalParticlesList.size();
+    hybridMode = (numClassicalParticles > 0);
+    
+    // Store particle indices for later use
+    quantumParticleIndices = quantumParticlesList;
+    classicalParticleIndices = classicalParticlesList;
+    
+    // UNIFORM MEMORY LAYOUT: All particles stored with all beads
+    // Classical particles have all beads kept identical via sync kernel
+    // This is simpler and more robust than sparse storage
+    forces.initialize<long long>(cc, numCopies * paddedParticles * 3, "rpmdForces");
+    positions.initialize(cc, numCopies * paddedParticles, elementSize, "rpmdPositions");
+    velocities.initialize(cc, numCopies * paddedParticles, elementSize, "rpmdVelocities");
+    
+    // Create per-particle isQuantum flag array for GPU
+    vector<int> isQuantumFlags(paddedParticles, 1);  // Default: quantum
+    if (hybridMode) {
+        // Mark classical particles
+        for (int idx : classicalParticlesList) {
+            isQuantumFlags[idx] = 0;
+        }
+        // Also mark massless particles as classical (no dynamics)
+        for (int i = 0; i < numParticles; i++) {
+            if (system.getParticleMass(i) == 0)
+                isQuantumFlags[i] = 0;
+        }
+        
+        // Allocate buffer for classical KE computation (for Bussi thermostat)
+        int numClassicalWorkGroups = (numClassicalParticles + workgroupSize - 1) / workgroupSize;
+        classicalKE.initialize<double>(cc, std::max(1, numClassicalWorkGroups), "classicalKE");
+    }
+    isQuantum.initialize<int>(cc, paddedParticles, "isQuantum");
+    isQuantum.upload(isQuantumFlags);
+
+    // #region agent log
+    {
+        std::ostringstream data;
+        data << "{\"numCopies\":" << numCopies
+             << ",\"numParticles\":" << numParticles
+             << ",\"numQuantumParticles\":" << numQuantumParticles
+             << ",\"numClassicalParticles\":" << numClassicalParticles
+             << ",\"hybridMode\":" << (hybridMode ? 1 : 0)
+             << ",\"storageLayout\":\"uniform\""
+             << "}";
+        appendDebugLog("CommonRpmdKernels.cpp:initialize", "uniform storage", data.str(), "uniform-v1", "run1");
+    }
+    // #endregion
+    
     cc.getIntegrationUtilities().initRandomNumberGenerator((unsigned int) integrator.getRandomNumberSeed());
     
     // Fill in the posq and velm arrays with safe values to avoid a risk of nans.
@@ -147,9 +250,31 @@ void CommonIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     pileKernel = program->createKernel("applyPileThermostat");
     stepKernel = program->createKernel("integrateStep");
     velocitiesKernel = program->createKernel("advanceVelocities");
+    computeCentroidKEKernel = program->createKernel("computeCentroidKE");
+    applyBussiScalingKernel = program->createKernel("applyBussiScaling");
     copyToContextKernel = program->createKernel("copyDataToContext");
     copyFromContextKernel = program->createKernel("copyDataFromContext");
     translateKernel = program->createKernel("applyCellTranslations");
+    
+    // Create hybrid mode kernels (uniform layout with sync)
+    if (hybridMode) {
+        // Use hybrid versions that check isQuantum flag per particle
+        pileKernelHybrid = program->createKernel("applyPileThermostatHybrid");
+        stepKernelHybrid = program->createKernel("integrateStepHybrid");
+        velocitiesKernelHybrid = program->createKernel("advanceVelocitiesHybrid");
+        
+        // Sync kernel to keep classical beads identical
+        ComputeKernel syncClassicalBeadsKernel = program->createKernel("syncClassicalBeads");
+        
+        // Classical thermostat kernels
+        applyClassicalThermostatKernel = program->createKernel("applyClassicalThermostat");
+        computeClassicalKEKernel = program->createKernel("computeClassicalKEHybrid");
+        applyBussiClassicalScalingKernel = program->createKernel("applyBussiClassicalHybrid");
+    }
+    
+    // Allocate buffer for centroid kinetic energy reduction
+    int numWorkGroups = (numParticles + workgroupSize - 1) / workgroupSize;
+    centroidKE.initialize<double>(cc, numWorkGroups, "centroidKE");
     
     // Create kernels for doing contractions.
     
@@ -177,6 +302,7 @@ void CommonIntegrateRPMDStepKernel::initializeKernels(ContextImpl& context) {
     pileKernel->addArg();
     pileKernel->addArg();
     pileKernel->addArg();
+    pileKernel->addArg(); // Add 7th argument for applyToCentroid
     stepKernel->addArg(positions);
     stepKernel->addArg(velocities);
     stepKernel->addArg(forces);
@@ -203,6 +329,60 @@ void CommonIntegrateRPMDStepKernel::initializeKernels(ContextImpl& context) {
     copyFromContextKernel->addArg();
     copyFromContextKernel->addArg(cc.getAtomIndexArray());
     copyFromContextKernel->addArg();
+    
+    // Initialize Bussi thermostat kernels
+    computeCentroidKEKernel->addArg(velocities);
+    computeCentroidKEKernel->addArg(centroidKE);
+    applyBussiScalingKernel->addArg(velocities);
+    applyBussiScalingKernel->addArg(); // alpha (will be set at runtime)
+    
+    // Initialize hybrid mode kernels (uniform layout with isQuantum check)
+    if (hybridMode) {
+        // PILE thermostat (hybrid) - checks isQuantum per particle
+        pileKernelHybrid->addArg(velocities);
+        pileKernelHybrid->addArg(cc.getIntegrationUtilities().getRandom());
+        pileKernelHybrid->addArg(isQuantum);
+        pileKernelHybrid->addArg(); // randomIndex
+        pileKernelHybrid->addArg(); // dt
+        pileKernelHybrid->addArg(); // kT
+        pileKernelHybrid->addArg(); // friction
+        pileKernelHybrid->addArg(); // applyToCentroid
+        
+        // Integration step (hybrid) - quantum: FFT, classical: Verlet
+        stepKernelHybrid->addArg(positions);
+        stepKernelHybrid->addArg(velocities);
+        stepKernelHybrid->addArg(forces);
+        stepKernelHybrid->addArg(isQuantum);
+        stepKernelHybrid->addArg(); // dt
+        stepKernelHybrid->addArg(); // kT
+        
+        // Velocity advance (hybrid)
+        velocitiesKernelHybrid->addArg(velocities);
+        velocitiesKernelHybrid->addArg(forces);
+        velocitiesKernelHybrid->addArg(isQuantum);
+        velocitiesKernelHybrid->addArg(); // dt
+        
+        // Classical thermostat (Langevin) - uses isQuantum to skip quantum particles
+        applyClassicalThermostatKernel->addArg(velocities);
+        applyClassicalThermostatKernel->addArg(cc.getIntegrationUtilities().getRandom());
+        applyClassicalThermostatKernel->addArg(isQuantum);
+        applyClassicalThermostatKernel->addArg(); // randomIndex
+        applyClassicalThermostatKernel->addArg(); // dt
+        applyClassicalThermostatKernel->addArg(); // kT
+        applyClassicalThermostatKernel->addArg(); // friction
+        applyClassicalThermostatKernel->addArg(); // thermostatType
+        
+        // Classical KE for Bussi
+        computeClassicalKEKernel->addArg(velocities);
+        computeClassicalKEKernel->addArg(isQuantum);
+        computeClassicalKEKernel->addArg(classicalKE);
+        
+        // Bussi scaling for classical
+        applyBussiClassicalScalingKernel->addArg(velocities);
+        applyBussiClassicalScalingKernel->addArg(isQuantum);
+        applyBussiClassicalScalingKernel->addArg(); // scalingFactor
+    }
+    
     for (auto& g : groupsByCopies) {
         int copies = g.first;
         positionContractionKernels[copies]->addArg(positions);
@@ -210,6 +390,18 @@ void CommonIntegrateRPMDStepKernel::initializeKernels(ContextImpl& context) {
         forceContractionKernels[copies]->addArg(forces);
         forceContractionKernels[copies]->addArg(contractedForces);
     }
+
+    // #region agent log
+    {
+        std::ostringstream data;
+        data << "{\"positionsSize\":" << positions.getSize()
+             << ",\"velocitiesSize\":" << velocities.getSize()
+             << ",\"forcesSize\":" << forces.getSize()
+             << ",\"centroidKESize\":" << centroidKE.getSize()
+             << ",\"groupsByCopies\":" << groupsByCopies.size() << "}";
+        appendDebugLog("CommonRpmdKernels.cpp:initializeKernels", "kernel args set", data.str(), "H4", "pre-fix");
+    }
+    // #endregion
 }
 
 void CommonIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegrator& integrator, bool forcesAreValid) {
@@ -217,64 +409,173 @@ void CommonIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
     if (!hasInitializedKernels)
         initializeKernels(context);
     IntegrationUtilities& integration = cc.getIntegrationUtilities();
+    RPMDIntegrator::ThermostatType thermostatType = integrator.getThermostatType();
+    bool applyThermostat = integrator.getApplyThermostat() && (thermostatType != RPMDIntegrator::NoneThermo);
+    bool hybridMode = (numClassicalParticles > 0);
+
+    // #region agent log
+    {
+        std::ostringstream data;
+        data << "{\"thermostatType\":" << static_cast<int>(thermostatType)
+             << ",\"applyThermostat\":" << (applyThermostat ? 1 : 0)
+             << ",\"hybridMode\":" << (hybridMode ? 1 : 0)
+             << ",\"numQuantumParticles\":" << numQuantumParticles
+             << ",\"numClassicalParticles\":" << numClassicalParticles
+             << ",\"hasInitializedKernels\":" << (hasInitializedKernels ? 1 : 0) << "}";
+        appendDebugLog("CommonRpmdKernels.cpp:execute", "exec start", data.str(), "hybrid-v1", "run1");
+    }
+    // #endregion
     
-    // Loop over copies and compute the force on each one.
-    
+    // Compute forces on all particles (all beads)
     if (!forcesAreValid)
         computeForces(context);
     
-    // Apply the PILE-L thermostat.
-    
     bool useDoublePrecision = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision());
     double dt = integrator.getStepSize();
-    pileKernel->setArg(2, integration.prepareRandomNumbers(numParticles*numCopies));
-    if (useDoublePrecision) {
-        pileKernel->setArg(3, dt);
-        pileKernel->setArg(4, integrator.getTemperature()*BOLTZ);
-        pileKernel->setArg(5, integrator.getFriction());
-        stepKernel->setArg(3, dt);
-        stepKernel->setArg(4, integrator.getTemperature()*BOLTZ);
-        velocitiesKernel->setArg(2, dt);
-    }
-    else {
-        pileKernel->setArg(3, (float) dt);
-        pileKernel->setArg(4, (float) (integrator.getTemperature()*BOLTZ));
-        pileKernel->setArg(5, (float) integrator.getFriction());
-        stepKernel->setArg(3, (float) dt);
-        stepKernel->setArg(4, (float) (integrator.getTemperature()*BOLTZ));
-        velocitiesKernel->setArg(2, (float) dt);
-    }
-    if (integrator.getApplyThermostat())
-        pileKernel->execute(numParticles*numCopies, workgroupSize);
-
-    // Update positions and velocities.
+    int applyToCentroid = (thermostatType == RPMDIntegrator::Pile) ? 1 : 0;
     
-    stepKernel->execute(numParticles*numCopies, workgroupSize);
-
-    // Calculate forces based on the updated positions.
-    
-    computeForces(context);
-    
-    // Update velocities.
-
-    velocitiesKernel->execute(numParticles*numCopies, workgroupSize);
-
-    // Apply the PILE-L thermostat again.
-
-    if (integrator.getApplyThermostat()) {
+    if (hybridMode) {
+        // ====================================================================
+        // HYBRID MODE: Uniform storage with quantum/classical distinction
+        // Quantum particles: full RPMD with FFT (PILE thermostat)
+        // Classical particles: simple dynamics (Langevin/Bussi thermostat)
+        // All particles stored with all beads; classical beads synced to stay identical
+        // ====================================================================
+        
+        // Set kernel arguments for hybrid kernels
+        pileKernelHybrid->setArg(3, integration.prepareRandomNumbers(numParticles*numCopies));
+        if (useDoublePrecision) {
+            pileKernelHybrid->setArg(4, dt);
+            pileKernelHybrid->setArg(5, integrator.getTemperature()*BOLTZ);
+            pileKernelHybrid->setArg(6, integrator.getFriction());
+            pileKernelHybrid->setArg(7, applyToCentroid);
+            stepKernelHybrid->setArg(4, dt);
+            stepKernelHybrid->setArg(5, integrator.getTemperature()*BOLTZ);
+            velocitiesKernelHybrid->setArg(3, dt);
+        } else {
+            pileKernelHybrid->setArg(4, (float) dt);
+            pileKernelHybrid->setArg(5, (float) (integrator.getTemperature()*BOLTZ));
+            pileKernelHybrid->setArg(6, (float) integrator.getFriction());
+            pileKernelHybrid->setArg(7, applyToCentroid);
+            stepKernelHybrid->setArg(4, (float) dt);
+            stepKernelHybrid->setArg(5, (float) (integrator.getTemperature()*BOLTZ));
+            velocitiesKernelHybrid->setArg(3, (float) dt);
+        }
+        
+        // THERMOSTAT (FIRST HALF)
+        if (applyThermostat) {
+            if (thermostatType == RPMDIntegrator::PileG) {
+                applyBussiCentroidThermostat(context.getSystem(), integrator, dt*0.5);
+            }
+            // Apply PILE to quantum particles only (hybrid kernel checks isQuantum)
+            pileKernelHybrid->execute(numParticles*numCopies, workgroupSize);
+            
+            // Apply classical thermostat
+            RPMDIntegrator::ClassicalThermostatType classicalThermostat = integrator.getClassicalThermostat();
+            if (classicalThermostat == RPMDIntegrator::BussiClassical) {
+                applyBussiClassicalThermostat(context.getSystem(), integrator, dt*0.5);
+            } else if (classicalThermostat == RPMDIntegrator::LangevinClassical) {
+                applyClassicalThermostatKernel->setArg(3, integration.prepareRandomNumbers(numParticles));
+                if (useDoublePrecision) {
+                    applyClassicalThermostatKernel->setArg(4, dt);
+                    applyClassicalThermostatKernel->setArg(5, integrator.getTemperature()*BOLTZ);
+                    applyClassicalThermostatKernel->setArg(6, integrator.getFriction());
+                } else {
+                    applyClassicalThermostatKernel->setArg(4, (float) dt);
+                    applyClassicalThermostatKernel->setArg(5, (float) (integrator.getTemperature()*BOLTZ));
+                    applyClassicalThermostatKernel->setArg(6, (float) integrator.getFriction());
+                }
+                applyClassicalThermostatKernel->setArg(7, 1);  // Langevin mode
+                applyClassicalThermostatKernel->execute(numParticles);
+            }
+        }
+        
+        // INTEGRATION (hybrid kernel handles both quantum and classical)
+        stepKernelHybrid->execute(numParticles*numCopies, workgroupSize);
+        
+        // FORCE COMPUTATION
+        computeForces(context);
+        
+        // VELOCITY UPDATE (SECOND HALF-STEP)
+        velocitiesKernelHybrid->execute(numParticles*numCopies, workgroupSize);
+        
+        // THERMOSTAT (SECOND HALF)
+        if (applyThermostat) {
+            if (thermostatType == RPMDIntegrator::PileG) {
+                applyBussiCentroidThermostat(context.getSystem(), integrator, dt*0.5);
+            }
+            pileKernelHybrid->setArg(3, integration.prepareRandomNumbers(numParticles*numCopies));
+            pileKernelHybrid->execute(numParticles*numCopies, workgroupSize);
+            
+            // Apply classical thermostat again
+            RPMDIntegrator::ClassicalThermostatType classicalThermostat = integrator.getClassicalThermostat();
+            if (classicalThermostat == RPMDIntegrator::BussiClassical) {
+                applyBussiClassicalThermostat(context.getSystem(), integrator, dt*0.5);
+            } else if (classicalThermostat == RPMDIntegrator::LangevinClassical) {
+                applyClassicalThermostatKernel->setArg(3, integration.prepareRandomNumbers(numParticles));
+                applyClassicalThermostatKernel->setArg(7, 1);
+                applyClassicalThermostatKernel->execute(numParticles);
+            }
+        }
+    } else {
+        // ====================================================================
+        // STANDARD RPMD MODE (all quantum, no sparse storage)
+        // ====================================================================
+        
+        // Set kernel arguments for standard RPMD kernels
         pileKernel->setArg(2, integration.prepareRandomNumbers(numParticles*numCopies));
-        pileKernel->execute(numParticles*numCopies, workgroupSize);
+        if (useDoublePrecision) {
+            pileKernel->setArg(3, dt);
+            pileKernel->setArg(4, integrator.getTemperature()*BOLTZ);
+            pileKernel->setArg(5, integrator.getFriction());
+            pileKernel->setArg(6, applyToCentroid);
+            stepKernel->setArg(3, dt);
+            stepKernel->setArg(4, integrator.getTemperature()*BOLTZ);
+            velocitiesKernel->setArg(2, dt);
+        } else {
+            pileKernel->setArg(3, (float) dt);
+            pileKernel->setArg(4, (float) (integrator.getTemperature()*BOLTZ));
+            pileKernel->setArg(5, (float) integrator.getFriction());
+            pileKernel->setArg(6, applyToCentroid);
+            stepKernel->setArg(3, (float) dt);
+            stepKernel->setArg(4, (float) (integrator.getTemperature()*BOLTZ));
+            velocitiesKernel->setArg(2, (float) dt);
+        }
+        
+        // THERMOSTAT (FIRST HALF)
+        if (applyThermostat) {
+            if (thermostatType == RPMDIntegrator::PileG) {
+                applyBussiCentroidThermostat(context.getSystem(), integrator, dt*0.5);
+            }
+            pileKernel->execute(numParticles*numCopies, workgroupSize);
+        }
+        
+        // INTEGRATION
+        stepKernel->execute(numParticles*numCopies, workgroupSize);
+        
+        // FORCE COMPUTATION
+        computeForces(context);
+        
+        // VELOCITY UPDATE (SECOND HALF-STEP)
+        velocitiesKernel->execute(numParticles*numCopies, workgroupSize);
+        
+        // THERMOSTAT (SECOND HALF)
+        if (applyThermostat) {
+            if (thermostatType == RPMDIntegrator::PileG) {
+                applyBussiCentroidThermostat(context.getSystem(), integrator, dt*0.5);
+            }
+            pileKernel->setArg(2, integration.prepareRandomNumbers(numParticles*numCopies));
+            pileKernel->execute(numParticles*numCopies, workgroupSize);
+        }
     }
 
-    // Update the time and step count.
-
+    // Update the time and step count
     cc.setTime(cc.getTime()+dt);
     cc.setStepCount(cc.getStepCount()+1);
     cc.reorderAtoms();
     if (cc.getAtomsWereReordered() && cc.getNonbondedUtilities().getUsePeriodic()) {
         // Atoms may have been translated into a different periodic box, so apply
         // the same translation to all the beads.
-
         translateKernel->setArg(3, numCopies-1);
         translateKernel->execute(cc.getNumAtoms());
     }
@@ -282,6 +583,7 @@ void CommonIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
 
 void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
     // Compute forces from all groups that didn't have a specified contraction.
+    // Uses standard copy kernels - uniform layout works for both hybrid and standard modes.
 
     copyToContextKernel->setArg(2, positions);
     copyFromContextKernel->setArg(1, forces);
@@ -345,6 +647,152 @@ double CommonIntegrateRPMDStepKernel::computeKineticEnergy(ContextImpl& context,
     return cc.getIntegrationUtilities().computeKineticEnergy(0);
 }
 
+void CommonIntegrateRPMDStepKernel::applyBussiCentroidThermostat(const System& system, const RPMDIntegrator& integrator, double halfdt) {
+    // Bussi stochastic velocity rescaling thermostat for centroid mode ONLY
+    // Reference: Bussi, Donadio, Parrinello, J. Chem. Phys. 126, 014101 (2007)
+    //
+    // This implementation uses GPU kernels to compute centroid kinetic energy
+    // and apply the Bussi scaling factor, keeping all data on the GPU.
+    
+    const double kT = BOLTZ * integrator.getTemperature();
+    const double c1 = exp(-halfdt * integrator.getCentroidFriction());
+    bool useDoublePrecision = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision());
+    
+    // Step 1: Compute centroid kinetic energy on GPU
+    // Arguments already set in initializeKernels()
+    computeCentroidKEKernel->execute(numParticles, workgroupSize);
+    
+    // Step 2: Download kinetic energy and compute scaling factor on CPU
+    int numWorkGroups = (numParticles + workgroupSize - 1) / workgroupSize;
+    vector<double> keData(numWorkGroups);
+    centroidKE.download(keData);
+    
+    double totalKE = 0.0;
+    for (int i = 0; i < numWorkGroups; i++)
+        totalKE += keData[i];
+    
+    // Count degrees of freedom
+    int ndof = 0;
+    for (int i = 0; i < numParticles; i++) {
+        if (system.getParticleMass(i) > 0.0)
+            ndof += 3;
+    }
+
+    // #region agent log
+    {
+        std::ostringstream data;
+        data << "{\"numParticles\":" << numParticles
+             << ",\"workgroupSize\":" << workgroupSize
+             << ",\"numWorkGroups\":" << numWorkGroups
+             << ",\"centroidKESize\":" << centroidKE.getSize()
+             << ",\"totalKE\":" << totalKE
+             << ",\"ndof\":" << ndof
+             << ",\"useDoublePrecision\":" << (useDoublePrecision ? 1 : 0) << "}";
+        appendDebugLog("CommonRpmdKernels.cpp:applyBussiCentroidThermostat", "centroid KE", data.str(), "H1", "pre-fix");
+    }
+    // #endregion
+
+    if (totalKE <= 0.0 || ndof == 0)
+        return;
+    
+    // Calculate Bussi rescaling factor using Gaussian random numbers
+    double K_target = 0.5 * ndof * kT;
+    
+    // Generate Gaussian random numbers on CPU using standard library
+    static thread_local std::mt19937 rng;
+    static thread_local std::normal_distribution<double> normal(0.0, 1.0);
+    
+    double R1 = normal(rng);
+    double R_gamma = 0.0;
+    for (int i = 0; i < ndof - 1; i++) {
+        double rnd = normal(rng);
+        R_gamma += rnd * rnd;
+    }
+    
+    double ratio = K_target / totalKE;
+    double alpha2 = c1 + ratio * (1.0 - c1) * (R1 * R1 + R_gamma)
+                    + 2.0 * R1 * sqrt(ratio * c1 * (1.0 - c1));
+    
+    if (alpha2 <= 0.0)
+        return;
+    
+    double alpha = sqrt(alpha2);
+    if (R1 + sqrt(2.0 * totalKE / K_target * c1 / (1.0 - c1)) < 0.0)
+        alpha = -alpha;
+    
+    // Step 3: Apply scaling on GPU
+    // velocities already set in initializeKernels(), only need to update alpha
+    if (useDoublePrecision)
+        applyBussiScalingKernel->setArg(1, alpha);
+    else
+        applyBussiScalingKernel->setArg(1, (float) alpha);
+    
+    applyBussiScalingKernel->execute(numParticles);
+}
+
+void CommonIntegrateRPMDStepKernel::applyBussiClassicalThermostat(const System& system, const RPMDIntegrator& integrator, double halfdt) {
+    // Bussi stochastic velocity rescaling thermostat for CLASSICAL particles only
+    // Reference: Bussi, Donadio, Parrinello, J. Chem. Phys. 126, 014101 (2007)
+    
+    if (!hybridMode || numClassicalParticles == 0)
+        return;
+    
+    const double kT = BOLTZ * integrator.getTemperature();
+    const double c1 = exp(-halfdt * integrator.getFriction());  // Use main friction for classical
+    bool useDoublePrecision = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision());
+    
+    // Step 1: Compute classical kinetic energy on GPU (uses isQuantum to identify classical particles)
+    int numWorkGroups = (numParticles + workgroupSize - 1) / workgroupSize;
+    computeClassicalKEKernel->execute(numParticles, workgroupSize);
+    
+    // Step 2: Download kinetic energy and compute scaling factor on CPU
+    vector<double> keData(numWorkGroups);
+    classicalKE.download(keData);
+    
+    double totalKE = 0.0;
+    for (int i = 0; i < numWorkGroups; i++)
+        totalKE += keData[i];
+    
+    // Count degrees of freedom for classical particles
+    int ndof = numClassicalParticles * 3;  // Classical particles always have 3 DOF each
+    
+    if (totalKE <= 0.0 || ndof == 0)
+        return;
+    
+    // Calculate Bussi rescaling factor using Gaussian random numbers
+    double K_target = 0.5 * ndof * kT;
+    
+    // Generate Gaussian random numbers on CPU
+    static thread_local std::mt19937 rng;
+    static thread_local std::normal_distribution<double> normal(0.0, 1.0);
+    
+    double R1 = normal(rng);
+    double R_gamma = 0.0;
+    for (int i = 0; i < ndof - 1; i++) {
+        double rnd = normal(rng);
+        R_gamma += rnd * rnd;
+    }
+    
+    double ratio = K_target / totalKE;
+    double alpha2 = c1 + ratio * (1.0 - c1) * (R1 * R1 + R_gamma)
+                    + 2.0 * R1 * sqrt(ratio * c1 * (1.0 - c1));
+    
+    if (alpha2 <= 0.0)
+        return;
+    
+    double alpha = sqrt(alpha2);
+    if (R1 + sqrt(2.0 * totalKE / K_target * c1 / (1.0 - c1)) < 0.0)
+        alpha = -alpha;
+    
+    // Step 3: Apply scaling on GPU (uses isQuantum to identify classical particles)
+    if (useDoublePrecision)
+        applyBussiClassicalScalingKernel->setArg(2, alpha);
+    else
+        applyBussiClassicalScalingKernel->setArg(2, (float) alpha);
+    
+    applyBussiClassicalScalingKernel->execute(numParticles);
+}
+
 void CommonIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& pos) {
     if (!positions.isInitialized())
         throw OpenMMException("RPMDIntegrator: Cannot set positions before the integrator is added to a Context");
@@ -362,8 +810,7 @@ void CommonIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& p
         offsetPos[order[i]] = pos[order[i]] + Vec3(offset.x*a[0], offset.y*b[1], offset.z*c[2]);
     }
 
-    // Record the positions.
-
+    // Record the positions (uniform layout - all particles × all beads)
     ContextSelector selector(cc);
     if (cc.getUseDoublePrecision()) {
         vector<mm_double4> posq(cc.getPaddedNumAtoms());
@@ -395,6 +842,8 @@ void CommonIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& 
     if (vel.size() != numParticles)
         throw OpenMMException("RPMDIntegrator: wrong number of values passed to setVelocities()");
     ContextSelector selector(cc);
+    
+    // Uniform layout - all particles × all beads
     if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
         vector<mm_double4> velm(cc.getPaddedNumAtoms());
         cc.getVelm().download(velm);

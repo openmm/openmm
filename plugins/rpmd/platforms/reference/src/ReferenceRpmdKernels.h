@@ -82,6 +82,13 @@ public:
     void copyToContext(int copy, ContextImpl& context);
 private:
     void computeForces(ContextImpl& context, const RPMDIntegrator& integrator);
+    /**
+     * Apply the Bussi stochastic velocity rescaling thermostat to the centroid mode.
+     * This is used for PILE_G mode where Bussi thermostat is applied to centroid only.
+     */
+    void applyBussiCentroidThermostat(const System& system, const RPMDIntegrator& integrator,
+                                       int numCopies, int numParticles, double scale,
+                                       double nkT, double c1);
     std::vector<std::vector<Vec3> > positions;
     std::vector<std::vector<Vec3> > velocities;
     std::vector<std::vector<Vec3> > forces;

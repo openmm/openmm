@@ -36,6 +36,7 @@
 #include "openmm/Vec3.h"
 #include "openmm/internal/windowsExportRpmd.h"
 #include <map>
+#include <set>
 
 namespace OpenMM {
 
@@ -46,7 +47,13 @@ namespace OpenMM {
  * simulated.
  * 
  * By default this Integrator applies a PILE thermostat to the system to simulate constant
- * temperature dynamics.  You can disable the thermostat by calling setApplyThermostat(false).
+ * temperature dynamics.  You can disable the thermostat by calling setApplyThermostat(false)
+ * or setThermostatType(RPMDIntegrator::NoneThermo).
+ * 
+ * Alternatively, you can use PILE_G mode which applies a Bussi stochastic velocity rescaling
+ * (SVR) thermostat to the centroid mode while keeping PILE Langevin thermostat for internal
+ * modes.  This follows the i-PI convention and can provide better ergodicity for the centroid
+ * kinetic energy distribution.
  * 
  * Because this Integrator simulates many copies of the System at once, it must be used
  * differently from other Integrators.  Instead of setting positions and velocities by
@@ -66,6 +73,50 @@ namespace OpenMM {
 
 class OPENMM_EXPORT_RPMD RPMDIntegrator : public Integrator {
 public:
+    /**
+     * This is an enumeration of the different thermostat types that can be used with RPMD.
+     */
+    enum ThermostatType {
+        /**
+         * PILE: Path Integral Langevin Equation thermostat applied to all normal modes.
+         * This is the default and applies Langevin dynamics with mode-dependent
+         * friction to all normal modes including the centroid.
+         */
+        Pile = 0,
+        /**
+         * PILE_G: PILE Global thermostat. Applies Bussi stochastic velocity rescaling
+         * (SVR) to the centroid mode and PILE Langevin to internal modes.
+         * This follows the i-PI convention and can improve ergodicity for
+         * the centroid kinetic energy distribution.
+         */
+        PileG = 1,
+        /**
+         * No thermostat is applied. Useful for NVE dynamics or when an external
+         * thermostat is used.
+         */
+        NoneThermo = 2
+    };
+    /**
+     * This is an enumeration of the different thermostat types that can be used
+     * for classical (non-RPMD) particles in hybrid quantum/classical simulations.
+     */
+    enum ClassicalThermostatType {
+        /**
+         * Bussi stochastic velocity rescaling for classical particles.
+         * This maintains canonical ensemble efficiently.
+         */
+        BussiClassical = 0,
+        /**
+         * Langevin dynamics with friction matching RPMD friction coefficient.
+         * Provides consistent friction with quantum sector.
+         */
+        LangevinClassical = 1,
+        /**
+         * No thermostat for classical particles (NVE dynamics).
+         * Useful for microcanonical sampling.
+         */
+        NoneClassical = 2
+    };
     /**
      * Create a RPMDIntegrator.
      *
@@ -141,6 +192,51 @@ public:
         applyThermostat = apply;
     }
     /**
+     * Get the type of thermostat being used.
+     * 
+     * @return the thermostat type (Pile, PileG, or NoneThermo)
+     */
+    ThermostatType getThermostatType() const {
+        return thermostatType;
+    }
+    /**
+     * Set the type of thermostat to use.
+     * 
+     * - Pile: Path Integral Langevin Equation thermostat on all normal modes (default)
+     * - PileG: Bussi/SVR on centroid + PILE Langevin on internal modes (i-PI convention)
+     * - NoneThermo: No thermostat (NVE dynamics)
+     * 
+     * Note: Setting this to NoneThermo has the same effect as setApplyThermostat(false).
+     * Setting to Pile or PileG will also set applyThermostat to true.
+     * 
+     * @param type the thermostat type to use
+     */
+    void setThermostatType(ThermostatType type) {
+        thermostatType = type;
+        applyThermostat = (type != NoneThermo);
+    }
+    /**
+     * Get the friction coefficient for the Bussi thermostat on the centroid mode
+     * (only used when thermostatType is PILE_G), in inverse picoseconds.
+     * If not explicitly set, defaults to the same value as getFriction().
+     * 
+     * @return the centroid thermostat friction coefficient, measured in 1/ps
+     */
+    double getCentroidFriction() const {
+        return centroidFriction;
+    }
+    /**
+     * Set the friction coefficient for the Bussi thermostat on the centroid mode
+     * (only used when thermostatType is PILE_G), in inverse picoseconds.
+     * This controls the coupling strength of the Bussi thermostat to the centroid.
+     * Larger values give stronger coupling; smaller values give weaker coupling.
+     * 
+     * @param coeff the centroid thermostat friction coefficient, measured in 1/ps
+     */
+    void setCentroidFriction(double coeff) {
+        centroidFriction = coeff;
+    }
+    /**
      * Get the random number seed.  See setRandomNumberSeed() for details.
      */
     int getRandomNumberSeed() const {
@@ -170,6 +266,65 @@ public:
     const std::map<int, int>& getContractions() const {
         return contractions;
     }
+    /**
+     * Get a map whose keys are particle indices and whose values are particle types.
+     * This contains only the particles that have been explicitly set with setParticleType().
+     * Particles without explicit type assignment are treated as type 0.
+     */
+    const std::map<int, int>& getParticleTypes() const;
+    /**
+     * Set the type of a particle. This is an arbitrary integer that can be used to
+     * group particles. Use setQuantumParticleTypes() to specify which types receive
+     * quantum (RPMD) treatment.
+     * 
+     * @param index  the index of the particle
+     * @param type   the particle type (arbitrary integer)
+     */
+    void setParticleType(int index, int type);
+    /**
+     * Get the set of particle types that receive quantum (RPMD) treatment.
+     * Particles with types in this set will be propagated with multiple beads,
+     * while other particles will be treated classically (single copy).
+     */
+    const std::set<int>& getQuantumParticleTypes() const;
+    /**
+     * Set which particle types receive quantum (RPMD) treatment.
+     * Particles with types in this set will be propagated with multiple beads,
+     * while other particles will be treated classically (single copy).
+     * 
+     * @param types  the set of particle types to treat as quantum
+     */
+    void setQuantumParticleTypes(const std::set<int>& types);
+    /**
+     * Get whether particles of type 0 (the default type) are treated as quantum.
+     * 
+     * @return true if type 0 particles get RPMD treatment, false if classical
+     */
+    bool getDefaultQuantum() const;
+    /**
+     * Set whether particles of type 0 (the default type) are treated as quantum.
+     * This is convenient for setting the default behavior for particles without
+     * explicit type assignment.
+     * 
+     * @param quantum  true to treat type 0 as quantum, false for classical
+     */
+    void setDefaultQuantum(bool quantum);
+    /**
+     * Get the type of thermostat used for classical (non-RPMD) particles.
+     * 
+     * @return the classical thermostat type
+     */
+    ClassicalThermostatType getClassicalThermostat() const;
+    /**
+     * Set the type of thermostat to use for classical (non-RPMD) particles.
+     * Options are:
+     * - BussiClassical: Bussi stochastic velocity rescaling (default)
+     * - LangevinClassical: Langevin dynamics with RPMD friction coefficient
+     * - NoneClassical: No thermostat (NVE dynamics)
+     * 
+     * @param type  the thermostat type for classical particles
+     */
+    void setClassicalThermostat(ClassicalThermostatType type);
     /**
      * Set the positions of all particles in one copy of the system.
      * 
@@ -233,10 +388,15 @@ protected:
      */
     double computeKineticEnergy();
 private:
-    double temperature, friction;
+    double temperature, friction, centroidFriction;
     int numCopies, randomNumberSeed;
     bool applyThermostat;
+    ThermostatType thermostatType;
+    ClassicalThermostatType classicalThermostat;
     std::map<int, int> contractions;
+    std::map<int, int> particleType;
+    std::set<int> quantumParticleTypes;
+    bool defaultQuantum;
     bool forcesAreValid, hasSetPosition, hasSetVelocity, isFirstStep;
     Kernel kernel;
 };

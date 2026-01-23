@@ -36,9 +36,26 @@
 #endif
 #include "pocketfft_hdronly.h"
 #include <complex>
+#include <fstream>
+#include <chrono>
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;
+
+static void appendDebugLog(const char* location, const char* message, const std::string& data, const char* hypothesisId, const char* runId) {
+    std::ofstream out("/media/extradrive/Trajectories/openmm/.cursor/debug.log", std::ios::app);
+    if (!out)
+        return;
+    const long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+    out << "{\"sessionId\":\"debug-session\",\"runId\":\"" << runId
+        << "\",\"hypothesisId\":\"" << hypothesisId
+        << "\",\"location\":\"" << location
+        << "\",\"message\":\"" << message
+        << "\",\"data\":" << data
+        << ",\"timestamp\":" << timestamp << "}\n";
+}
 
 static vector<Vec3>& extractPositions(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
@@ -112,13 +129,14 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
     vector<Vec3>& pos = extractPositions(context);
     vector<Vec3>& vel = extractVelocities(context);
     vector<Vec3>& f = extractForces(context);
+    const RPMDIntegrator::ThermostatType thermostatType = integrator.getThermostatType();
     
     // Loop over copies and compute the force on each one.
     
     if (!forcesAreValid)
         computeForces(context, integrator);
 
-    // Apply the PILE-L thermostat.
+    // Apply the thermostat (first half).
     
     vector<complex<double>> v(numCopies);
     vector<complex<double>> q(numCopies);
@@ -128,7 +146,17 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
     const double twown = 2.0*nkT/hbar;
     const double c1_0 = exp(-halfdt*integrator.getFriction());
     const double c2_0 = sqrt(1.0-c1_0*c1_0);
-    if (integrator.getApplyThermostat()) {
+    
+    // Bussi thermostat parameters for centroid (PILE_G mode)
+    const double c1_bussi = exp(-halfdt*integrator.getCentroidFriction());
+    
+    if (integrator.getApplyThermostat() && thermostatType != RPMDIntegrator::NoneThermo) {
+        
+        // For PILE_G mode, apply Bussi thermostat to centroid first
+        if (thermostatType == RPMDIntegrator::PileG) {
+            applyBussiCentroidThermostat(system, integrator, numCopies, numParticles, scale, nkT, c1_bussi);
+        }
+        
         for (int particle = 0; particle < numParticles; particle++) {
             if (system.getParticleMass(particle) == 0.0)
                 continue;
@@ -138,11 +166,14 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
                     v[k] = complex<double>(scale*velocities[k][particle][component], 0.0);
                 pocketfft::c2c({(size_t) numCopies}, {sizeof(complex<double>)}, {sizeof(complex<double>)}, {0}, true, v.data(), v.data(), 1.0, 0);
 
-                // Apply a local Langevin thermostat to the centroid mode.
+                // Apply thermostat to the centroid mode (PILE mode only - PILE_G uses Bussi above)
+                if (thermostatType == RPMDIntegrator::Pile) {
+                    v[0].real(v[0].real()*c1_0 + c3_0*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+                }
+                // For PILE_G, centroid is already handled by Bussi - skip v[0]
 
-                v[0].real(v[0].real()*c1_0 + c3_0*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
-
-                // Use critical damping white noise for the remaining modes.
+                // Use critical damping white noise for the remaining (internal) modes.
+                // This is the same for both PILE and PILE_G modes.
 
                 for (int k = 1; k <= numCopies/2; k++) {
                     const bool isCenter = (numCopies%2 == 0 && k == numCopies/2);
@@ -213,9 +244,15 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
             if (system.getParticleMass(j) != 0.0)
                 velocities[i][j] += forces[i][j]*(halfdt/system.getParticleMass(j));
 
-    // Apply the PILE-L thermostat again.
+    // Apply the thermostat again (second half).
     
-    if (integrator.getApplyThermostat()) {
+    if (integrator.getApplyThermostat() && thermostatType != RPMDIntegrator::NoneThermo) {
+        
+        // For PILE_G mode, apply Bussi thermostat to centroid first
+        if (thermostatType == RPMDIntegrator::PileG) {
+            applyBussiCentroidThermostat(system, integrator, numCopies, numParticles, scale, nkT, c1_bussi);
+        }
+        
         for (int particle = 0; particle < numParticles; particle++) {
             if (system.getParticleMass(particle) == 0.0)
                 continue;
@@ -225,11 +262,14 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
                     v[k] = complex<double>(scale*velocities[k][particle][component], 0.0);
                 pocketfft::c2c({(size_t) numCopies}, {sizeof(complex<double>)}, {sizeof(complex<double>)}, {0}, true, v.data(), v.data(), 1.0, 0);
 
-                // Apply a local Langevin thermostat to the centroid mode.
+                // Apply thermostat to the centroid mode (PILE mode only - PILE_G uses Bussi above)
+                if (thermostatType == RPMDIntegrator::Pile) {
+                    v[0].real(v[0].real()*c1_0 + c3_0*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+                }
+                // For PILE_G, centroid is already handled by Bussi - skip v[0]
 
-                v[0].real(v[0].real()*c1_0 + c3_0*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
-
-                // Use critical damping white noise for the remaining modes.
+                // Use critical damping white noise for the remaining (internal) modes.
+                // This is the same for both PILE and PILE_G modes.
 
                 for (int k = 1; k <= numCopies/2; k++) {
                     const bool isCenter = (numCopies%2 == 0 && k == numCopies/2);
@@ -253,6 +293,101 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
     // Update the time.
     
     context.setTime(context.getTime()+dt);
+}
+
+void ReferenceIntegrateRPMDStepKernel::applyBussiCentroidThermostat(const System& system, const RPMDIntegrator& integrator,
+                                                                    int numCopies, int numParticles, double scale,
+                                                                    double nkT, double c1) {
+    // Bussi stochastic velocity rescaling thermostat for centroid mode ONLY
+    // Reference: Bussi, Donadio, Parrinello, J. Chem. Phys. 126, 014101 (2007)
+    //
+    // The algorithm rescales centroid velocities to achieve the canonical distribution
+    // of kinetic energy, while leaving internal mode velocities unchanged.
+    // The target temperature is T (not nT, since centroid represents a single "classical" particle).
+    
+    const double kT = BOLTZ * integrator.getTemperature();  // Target kT for centroid
+    
+    // Step 1: Compute current centroid kinetic energy and store centroid velocities
+    // Centroid velocity = (1/numCopies) * sum of bead velocities
+    double centroidKE = 0.0;
+    int ndof = 0;  // Number of degrees of freedom for centroid
+    vector<Vec3> centroidVel(numParticles, Vec3(0.0, 0.0, 0.0));
+    
+    for (int particle = 0; particle < numParticles; particle++) {
+        double mass = system.getParticleMass(particle);
+        if (mass == 0.0)
+            continue;
+        
+        // Compute centroid velocity for this particle
+        for (int copy = 0; copy < numCopies; copy++) {
+            centroidVel[particle] += velocities[copy][particle];
+        }
+        centroidVel[particle] *= (1.0 / numCopies);
+        
+        centroidKE += 0.5 * mass * centroidVel[particle].dot(centroidVel[particle]);
+        ndof += 3;
+    }
+    
+    // #region agent log
+    {
+        std::ostringstream data;
+        data << "{\"numCopies\":" << numCopies
+             << ",\"numParticles\":" << numParticles
+             << ",\"centroidKE\":" << centroidKE
+             << ",\"ndof\":" << ndof
+             << ",\"c1\":" << c1 << "}";
+        appendDebugLog("ReferenceRpmdKernels.cpp:applyBussiCentroidThermostat", "centroid KE", data.str(), "H3", "pre-fix");
+    }
+    // #endregion
+
+    if (centroidKE <= 0.0 || ndof == 0)
+        return;  // Cannot rescale if no kinetic energy
+    
+    // Step 2: Calculate target kinetic energy and rescaling factor
+    // K_target = (ndof/2) * kT
+    double K_target = 0.5 * ndof * kT;
+    
+    // The Bussi algorithm:
+    // alpha^2 = c1 + (K_target/K)(1 - c1)(R1^2 + R_gamma) + 2*R1*sqrt(K_target/K * c1 * (1-c1))
+    // where R1 is a normal random number and R_gamma is a sum of (ndof-1) squared normal random numbers
+    
+    double R1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+    
+    // R_gamma is sum of (ndof-1) squared normal random numbers
+    double R_gamma = 0.0;
+    if (ndof > 1) {
+        for (int i = 0; i < ndof - 1; i++) {
+            double rnd = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+            R_gamma += rnd * rnd;
+        }
+    }
+    
+    double ratio = K_target / centroidKE;
+    double alpha2 = c1 + ratio * (1.0 - c1) * (R1 * R1 + R_gamma) 
+                    + 2.0 * R1 * sqrt(ratio * c1 * (1.0 - c1));
+    
+    if (alpha2 <= 0.0)
+        return;  // Invalid rescaling factor, skip
+        
+    double alpha = sqrt(alpha2);
+    
+    // Determine the sign of alpha based on R1
+    if (R1 + sqrt(2.0 * centroidKE / K_target * c1 / (1.0 - c1)) < 0.0)
+        alpha = -alpha;
+    
+    // Step 3: Rescale ONLY the centroid component of velocities
+    // To change centroid by factor alpha while keeping internal modes (deviations from centroid) unchanged:
+    // new_vel[k] = (old_vel[k] - old_centroid) + alpha * old_centroid
+    //            = old_vel[k] + (alpha - 1) * old_centroid
+    double deltaAlpha = alpha - 1.0;
+    for (int particle = 0; particle < numParticles; particle++) {
+        if (system.getParticleMass(particle) == 0.0)
+            continue;
+        Vec3 deltaCentroid = centroidVel[particle] * deltaAlpha;
+        for (int copy = 0; copy < numCopies; copy++) {
+            velocities[copy][particle] += deltaCentroid;
+        }
+    }
 }
 
 void ReferenceIntegrateRPMDStepKernel::computeForces(ContextImpl& context, const RPMDIntegrator& integrator) {

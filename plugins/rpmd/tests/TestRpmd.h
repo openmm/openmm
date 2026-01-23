@@ -466,6 +466,116 @@ void testWithoutThermostat() {
     }
 }
 
+void testPileGThermostat() {
+    // Test the PILE_G thermostat mode (Bussi on centroid, PILE on internal modes)
+    const int numParticles = 100;
+    const int numCopies = 8;
+    const double temperature = 300.0;
+    const double mass = 1.0;
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(mass);
+    
+    // Create RPMD integrator with PILE_G thermostat
+    RPMDIntegrator integ(numCopies, temperature, 1.0, 0.001);
+    integ.setThermostatType(RPMDIntegrator::PileG);
+    ASSERT(integ.getThermostatType() == RPMDIntegrator::PileG);
+    ASSERT(integ.getApplyThermostat() == true);
+    
+    Context context(system, integ, platform);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numCopies; i++) {
+        for (int j = 0; j < numParticles; j++)
+            positions[j] = Vec3(0.02*genrand_real2(sfmt), 0.02*genrand_real2(sfmt), 0.02*genrand_real2(sfmt));
+        integ.setPositions(i, positions);
+    }
+    
+    // Equilibrate
+    integ.step(1000);
+    
+    // Collect kinetic energy statistics
+    const int numSteps = 1000;
+    vector<double> ke(numCopies, 0.0);
+    double centroidKE = 0.0;
+    
+    for (int i = 0; i < numSteps; i++) {
+        integ.step(1);
+        vector<State> state(numCopies);
+        for (int j = 0; j < numCopies; j++)
+            state[j] = integ.getState(j, State::Velocities, true);
+        
+        // Compute per-copy kinetic energy
+        for (int j = 0; j < numParticles; j++) {
+            for (int k = 0; k < numCopies; k++) {
+                Vec3 v = state[k].getVelocities()[j];
+                ke[k] += 0.5*mass*v.dot(v);
+            }
+        }
+        
+        // Compute centroid kinetic energy
+        for (int j = 0; j < numParticles; j++) {
+            Vec3 centroidVel(0, 0, 0);
+            for (int k = 0; k < numCopies; k++)
+                centroidVel += state[k].getVelocities()[j];
+            centroidVel *= 1.0/numCopies;
+            centroidKE += 0.5*mass*centroidVel.dot(centroidVel);
+        }
+    }
+    
+    // Check total kinetic energy per copy
+    double meanKE = 0.0;
+    for (int i = 0; i < numCopies; i++)
+        meanKE += ke[i];
+    meanKE /= numSteps*numCopies;
+    double expectedKE = 0.5*numCopies*numParticles*3*BOLTZ*temperature;
+    ASSERT_USUALLY_EQUAL_TOL(expectedKE, meanKE, 0.05);
+    
+    // Check centroid kinetic energy (should be classical: 3/2 NkT per particle)
+    centroidKE /= numSteps;
+    double expectedCentroidKE = 0.5*numParticles*3*BOLTZ*temperature;
+    ASSERT_USUALLY_EQUAL_TOL(expectedCentroidKE, centroidKE, 0.1);
+}
+
+void testThermostatTypes() {
+    // Test that thermostat type switching works correctly
+    const int numParticles = 10;
+    const int numCopies = 4;
+    const double temperature = 300.0;
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    
+    RPMDIntegrator integ(numCopies, temperature, 1.0, 0.001);
+    
+    // Default should be PILE
+    ASSERT(integ.getThermostatType() == RPMDIntegrator::Pile);
+    ASSERT(integ.getApplyThermostat() == true);
+    
+    // Switch to PILE_G
+    integ.setThermostatType(RPMDIntegrator::PileG);
+    ASSERT(integ.getThermostatType() == RPMDIntegrator::PileG);
+    ASSERT(integ.getApplyThermostat() == true);
+    
+    // Switch to NoneThermo
+    integ.setThermostatType(RPMDIntegrator::NoneThermo);
+    ASSERT(integ.getThermostatType() == RPMDIntegrator::NoneThermo);
+    ASSERT(integ.getApplyThermostat() == false);
+    
+    // Switch back to PILE
+    integ.setThermostatType(RPMDIntegrator::Pile);
+    ASSERT(integ.getThermostatType() == RPMDIntegrator::Pile);
+    ASSERT(integ.getApplyThermostat() == true);
+    
+    // Test centroid friction
+    double defaultFriction = integ.getFriction();
+    ASSERT_EQUAL_TOL(defaultFriction, integ.getCentroidFriction(), 1e-10);
+    
+    integ.setCentroidFriction(0.5);
+    ASSERT_EQUAL_TOL(0.5, integ.getCentroidFriction(), 1e-10);
+}
+
 void testWithBarostat() {
     const int gridSize = 3;
     const int numMolecules = gridSize*gridSize*gridSize;
@@ -550,6 +660,8 @@ int main(int argc, char* argv[]) {
         testVirtualSites();
         testContractions();
         testWithoutThermostat();
+        testThermostatTypes();
+        testPileGThermostat();
         testWithBarostat();
         runPlatformTests();
     }

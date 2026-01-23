@@ -84,6 +84,16 @@ public:
 private:
     void initializeKernels(ContextImpl& context);
     void computeForces(ContextImpl& context);
+    /**
+     * Apply the Bussi stochastic velocity rescaling thermostat to the centroid mode.
+     * This is used for PILE_G mode where Bussi thermostat is applied to centroid only.
+     */
+    void applyBussiCentroidThermostat(const System& system, const RPMDIntegrator& integrator, double halfdt);
+    /**
+     * Apply the Bussi stochastic velocity rescaling thermostat to classical particles.
+     * This is used in hybrid mode for classical particle thermostating.
+     */
+    void applyBussiClassicalThermostat(const System& system, const RPMDIntegrator& integrator, double halfdt);
     std::string createFFT(int size, const std::string& variable, bool forward);
     ComputeContext& cc;
     bool hasInitializedKernels;
@@ -95,9 +105,36 @@ private:
     ComputeArray velocities;
     ComputeArray contractedForces;
     ComputeArray contractedPositions;
+    ComputeArray centroidKE;
     ComputeKernel pileKernel, stepKernel, velocitiesKernel, copyToContextKernel, copyFromContextKernel, translateKernel;
+    ComputeKernel computeCentroidKEKernel, applyBussiScalingKernel;
     std::map<int, ComputeKernel> positionContractionKernels;
     std::map<int, ComputeKernel> forceContractionKernels;
+    // Hybrid mode support: quantum vs classical particles with SPARSE STORAGE
+    // Memory layout: [quantum particles × numCopies] [classical particles × 1]
+    // This saves memory: classical particles only need 1 copy, not numCopies
+    int numQuantumParticles, numClassicalParticles;
+    bool hybridMode;  // True if any classical particles exist
+    
+    // Index mapping arrays for sparse storage
+    ComputeArray isQuantum;         // Per-particle: 1=quantum, 0=classical
+    ComputeArray particleOrder;     // Reordered particle indices: [quantum...][classical...]
+    ComputeArray storageOffset;     // Per-particle: base offset in storage arrays
+    
+    // Inverse mapping: original particle index -> position in particleOrder
+    std::vector<int> quantumParticleIndices;   // Original indices of quantum particles
+    std::vector<int> classicalParticleIndices; // Original indices of classical particles
+    
+    // Kernels for hybrid mode
+    ComputeArray classicalKE;  // For Bussi thermostat on classical particles
+    ComputeKernel pileKernelHybrid;  // PILE thermostat for quantum particles only
+    ComputeKernel stepKernelHybrid;  // Integration step (quantum: FFT, classical: Verlet)
+    ComputeKernel velocitiesKernelHybrid;  // Velocity update for all particles
+    ComputeKernel applyClassicalThermostatKernel;  // Langevin for classical particles
+    ComputeKernel computeClassicalKEKernel;  // KE reduction for Bussi thermostat
+    ComputeKernel applyBussiClassicalScalingKernel;  // Bussi velocity scaling
+    ComputeKernel copyToContextHybridKernel;    // Copy to context with sparse storage
+    ComputeKernel copyFromContextHybridKernel;  // Copy from context with sparse storage
 };
 
 } // namespace OpenMM

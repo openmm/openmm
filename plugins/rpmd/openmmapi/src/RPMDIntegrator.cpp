@@ -36,23 +36,44 @@
 #include "SimTKOpenMMRealType.h"
 #include <cmath>
 #include <string>
+#include <fstream>
+#include <chrono>
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
+static void appendDebugLog(const char* location, const char* message, const std::string& data, const char* hypothesisId, const char* runId) {
+    std::ofstream out("/media/extradrive/Trajectories/openmm/.cursor/debug.log", std::ios::app);
+    if (!out)
+        return;
+    const long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+    out << "{\"sessionId\":\"debug-session\",\"runId\":\"" << runId
+        << "\",\"hypothesisId\":\"" << hypothesisId
+        << "\",\"location\":\"" << location
+        << "\",\"message\":\"" << message
+        << "\",\"data\":" << data
+        << ",\"timestamp\":" << timestamp << "}\n";
+}
+
 RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize, const map<int, int>& contractions) :
-        numCopies(numCopies), applyThermostat(true), contractions(contractions), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true) {
+        numCopies(numCopies), applyThermostat(true), thermostatType(Pile), classicalThermostat(BussiClassical), contractions(contractions), 
+        defaultQuantum(true), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true) {
     setTemperature(temperature);
     setFriction(frictionCoeff);
+    setCentroidFriction(frictionCoeff);  // Default centroid friction equals main friction
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
     setRandomNumberSeed(0);
 }
 
 RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize) :
-        numCopies(numCopies), applyThermostat(true), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true) {
+        numCopies(numCopies), applyThermostat(true), thermostatType(Pile), classicalThermostat(BussiClassical), 
+        defaultQuantum(true), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true) {
     setTemperature(temperature);
     setFriction(frictionCoeff);
+    setCentroidFriction(frictionCoeff);  // Default centroid friction equals main friction
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
     setRandomNumberSeed(0);
@@ -67,10 +88,24 @@ void RPMDIntegrator::initialize(ContextImpl& contextRef) {
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateRPMDStepKernel::Name(), contextRef);
     kernel.getAs<IntegrateRPMDStepKernel>().initialize(contextRef.getSystem(), *this);
+
+    // #region agent log
+    {
+        std::ostringstream data;
+        data << "{\"numCopies\":" << numCopies
+             << ",\"thermostatType\":" << static_cast<int>(thermostatType)
+             << ",\"applyThermostat\":" << (applyThermostat ? 1 : 0)
+             << ",\"defaultQuantum\":" << (defaultQuantum ? 1 : 0)
+             << ",\"particleTypesSize\":" << particleType.size()
+             << ",\"quantumTypesSize\":" << quantumParticleTypes.size() << "}";
+        appendDebugLog("RPMDIntegrator.cpp:initialize", "integrator init", data.str(), "H2", "pre-fix");
+    }
+    // #endregion
 }
 
 void RPMDIntegrator::cleanup() {
     kernel = Kernel();
+    // No file I/O here - cleanup() may be called during shutdown
 }
 
 void RPMDIntegrator::stateChanged(State::DataType changed) {
@@ -82,12 +117,30 @@ vector<string> RPMDIntegrator::getKernelNames() {
 }
 
 void RPMDIntegrator::setPositions(int copy, const vector<Vec3>& positions) {
+    // #region agent log
+    {
+        std::ostringstream data;
+        data << "{\"copy\":" << copy
+             << ",\"positionsSize\":" << positions.size()
+             << ",\"numCopies\":" << numCopies << "}";
+        appendDebugLog("RPMDIntegrator.cpp:setPositions", "set positions", data.str(), "H6", "pre-fix");
+    }
+    // #endregion
     kernel.getAs<IntegrateRPMDStepKernel>().setPositions(copy, positions);
     forcesAreValid = false;
     hasSetPosition = true;
 }
 
 void RPMDIntegrator::setVelocities(int copy, const vector<Vec3>& velocities) {
+    // #region agent log
+    {
+        std::ostringstream data;
+        data << "{\"copy\":" << copy
+             << ",\"velocitiesSize\":" << velocities.size()
+             << ",\"numCopies\":" << numCopies << "}";
+        appendDebugLog("RPMDIntegrator.cpp:setVelocities", "set velocities", data.str(), "H6", "pre-fix");
+    }
+    // #endregion
     kernel.getAs<IntegrateRPMDStepKernel>().setVelocities(copy, velocities);
     hasSetVelocity = true;
 }
@@ -159,6 +212,17 @@ double RPMDIntegrator::computeKineticEnergy() {
 }
 
 void RPMDIntegrator::step(int steps) {
+    // #region agent log
+    {
+        std::ostringstream data;
+        data << "{\"steps\":" << steps
+             << ",\"hasSetPosition\":" << (hasSetPosition ? 1 : 0)
+             << ",\"hasSetVelocity\":" << (hasSetVelocity ? 1 : 0)
+             << ",\"isFirstStep\":" << (isFirstStep ? 1 : 0)
+             << ",\"forcesAreValid\":" << (forcesAreValid ? 1 : 0) << "}";
+        appendDebugLog("RPMDIntegrator.cpp:step", "step entry", data.str(), "H6", "pre-fix");
+    }
+    // #endregion
     if (context == NULL)
         throw OpenMMException("This Integrator is not bound to a context!");
     if (!hasSetPosition) {
@@ -193,6 +257,38 @@ void RPMDIntegrator::step(int steps) {
         kernel.getAs<IntegrateRPMDStepKernel>().execute(*context, *this, forcesAreValid);
         forcesAreValid = true;
     }
+}
+
+const map<int, int>& RPMDIntegrator::getParticleTypes() const {
+    return particleType;
+}
+
+void RPMDIntegrator::setParticleType(int index, int type) {
+    particleType[index] = type;
+}
+
+const set<int>& RPMDIntegrator::getQuantumParticleTypes() const {
+    return quantumParticleTypes;
+}
+
+void RPMDIntegrator::setQuantumParticleTypes(const set<int>& types) {
+    quantumParticleTypes = types;
+}
+
+bool RPMDIntegrator::getDefaultQuantum() const {
+    return defaultQuantum;
+}
+
+void RPMDIntegrator::setDefaultQuantum(bool quantum) {
+    defaultQuantum = quantum;
+}
+
+RPMDIntegrator::ClassicalThermostatType RPMDIntegrator::getClassicalThermostat() const {
+    return classicalThermostat;
+}
+
+void RPMDIntegrator::setClassicalThermostat(ClassicalThermostatType type) {
+    classicalThermostat = type;
 }
 
 double RPMDIntegrator::getTotalEnergy() {
