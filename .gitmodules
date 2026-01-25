@@ -9,7 +9,7 @@
 	url = https://github.com/i-pi/i-pi.git
 [submodule "fairchem"]
 	path = fairchem
-	url = https://github.com/santi921/fairchem.git
+	url = https://github.com/muhammadhasyim/fairchem.git
 	branch = les_branch
 [submodule "cace"]
 	path = cace
