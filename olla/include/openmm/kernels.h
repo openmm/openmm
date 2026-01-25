@@ -2133,6 +2133,23 @@ public:
      * @return the potential energy due to the force
      */
     virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Check if this kernel supports batched evaluation for multiple copies (e.g., RPMD beads).
+     */
+    virtual bool supportsBatchedEvaluation() const {
+        return false;
+    }
+    /**
+     * Execute batched evaluation for multiple copies (e.g., RPMD beads).
+     * 
+     * @param contexts       vector of contexts, one per copy
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the total potential energy across all copies
+     */
+    virtual double executeBatch(const std::vector<ContextImpl*>& contexts, bool includeForces, bool includeEnergy) {
+        throw OpenMMException("executeBatch() not implemented for this kernel");
+    }
 };
 
 } // namespace OpenMM

@@ -30,10 +30,13 @@
 #include "CommonRpmdKernels.h"
 #include "CommonRpmdKernelSources.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/PythonForceImpl.h"
 #include "openmm/common/ContextSelector.h"
 #include "openmm/common/IntegrationUtilities.h"
 #include "openmm/common/ExpressionUtilities.h"
 #include "openmm/common/NonbondedUtilities.h"
+#include "openmm/PythonForce.h"
+#include "openmm/CMMotionRemover.h"
 #include "SimTKOpenMMRealType.h"
 #include <fstream>
 #include <chrono>
@@ -582,26 +585,104 @@ void CommonIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
 }
 
 void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
-    // Compute forces from all groups that didn't have a specified contraction.
-    // Uses standard copy kernels - uniform layout works for both hybrid and standard modes.
+    // Check if we can use batched force evaluation
+    bool useBatchedEvaluation = false;
+    const PythonForce* batchedPythonForce = nullptr;
+    int batchedForceIndex = -1;
+    const System& system = context.getSystem();
+    
+    // Check all forces in groupsNotContracted to see if any support batching
+    for (int i = 0; i < system.getNumForces(); i++) {
+        if ((groupsNotContracted & (1<<system.getForce(i).getForceGroup())) != 0) {
+            if (const PythonForce* pythonForce = dynamic_cast<const PythonForce*>(&system.getForce(i))) {
+                if (pythonForce->supportsBatchedEvaluation()) {
+                    useBatchedEvaluation = true;
+                    batchedPythonForce = pythonForce;
+                    batchedForceIndex = i;
+                    break;
+                }
+            }
+        }
+    }
+    
+    if (useBatchedEvaluation && batchedPythonForce != nullptr) {
+        // NEW BATCHED PATH: Evaluate all copies at once
+        // printf("DEBUG: Using batched RPMD evaluation for %d beads\n", numCopies);
+        
+        // 1. Collect all bead positions from GPU
+        std::vector<std::vector<Vec3>> allBeadPositions(numCopies);
+        for (int i = 0; i < numCopies; i++) {
+            downloadPositionsFromGPU(i, allBeadPositions[i]);
+        }
+        
+        // 2. Get the PythonForce implementation and call batched evaluation
+        const std::vector<ForceImpl*>& forceImpls = context.getForceImpls();
+        ForceImpl& forceImpl = *forceImpls[batchedForceIndex];
+        PythonForceImpl& pyImpl = dynamic_cast<PythonForceImpl&>(forceImpl);
+        
+        // Allocate output forces
+        std::vector<std::vector<Vec3>> allBeadForces(numCopies);
+        for (auto& beadForces : allBeadForces) {
+            beadForces.resize(numParticles);
+        }
+        
+        // Call batched force evaluation (single Python call for all beads!)
+        double energy = pyImpl.calcForcesAndEnergyBatched(context, allBeadPositions, allBeadForces);
+        
+        // 3. Upload all forces back to GPU in one shot
+        uploadAllForcesToGPU(allBeadForces);
+        
+        // 4. Handle any non-PythonForce forces sequentially (if any exist)
+        for (int i = 0; i < system.getNumForces(); i++) {
+            if ((groupsNotContracted & (1<<system.getForce(i).getForceGroup())) != 0) {
+                if (i != batchedForceIndex) {
+                    // Skip CMMotionRemover - it doesn't compute forces
+                    if (dynamic_cast<const CMMotionRemover*>(&system.getForce(i)) != nullptr) {
+                        // printf("DEBUG: Skipping CMMotionRemover (index %d)\n", i);
+                        continue;
+                    }
+                    
+                    // Non-batched force: use original sequential path
+                    // printf("DEBUG: Force %d (type %s) using sequential path\n", i, typeid(system.getForce(i)).name());
+                    int forceGroupFlag = 1 << system.getForce(i).getForceGroup();
+                    copyToContextKernel->setArg(2, positions);
+                    copyFromContextKernel->setArg(1, forces);
+                    copyFromContextKernel->setArg(5, positions);
+                    for (int bead = 0; bead < numCopies; bead++) {
+                        copyToContextKernel->setArg(5, bead);
+                        copyToContextKernel->execute(cc.getNumAtoms());
+                        context.computeVirtualSites();
+                        context.updateContextState();
+                        context.calcForcesAndEnergy(true, false, forceGroupFlag);
+                        copyFromContextKernel->setArg(7, bead);
+                        copyFromContextKernel->execute(cc.getNumAtoms());
+                    }
+                }
+            }
+        }
+    } else {
+        // ORIGINAL PATH: Compute forces from all groups that didn't have a specified contraction.
+        // Uses standard copy kernels - uniform layout works for both hybrid and standard modes.
+        // printf("DEBUG: Using sequential RPMD evaluation (%d beads)\n", numCopies);
 
-    copyToContextKernel->setArg(2, positions);
-    copyFromContextKernel->setArg(1, forces);
-    copyFromContextKernel->setArg(5, positions);
-    for (int i = 0; i < numCopies; i++) {
-        copyToContextKernel->setArg(5, i);
-        copyToContextKernel->execute(cc.getNumAtoms());
-        context.computeVirtualSites();
-        Vec3 initialBox[3];
-        context.getPeriodicBoxVectors(initialBox[0], initialBox[1], initialBox[2]);
-        context.updateContextState();
-        Vec3 finalBox[3];
-        context.getPeriodicBoxVectors(finalBox[0], finalBox[1], finalBox[2]);
-        if (initialBox[0] != finalBox[0] || initialBox[1] != finalBox[1] || initialBox[2] != finalBox[2])
-            throw OpenMMException("Standard barostats cannot be used with RPMDIntegrator.  Use RPMDMonteCarloBarostat instead.");
-        context.calcForcesAndEnergy(true, false, groupsNotContracted);
-        copyFromContextKernel->setArg(7, i);
-        copyFromContextKernel->execute(cc.getNumAtoms());
+        copyToContextKernel->setArg(2, positions);
+        copyFromContextKernel->setArg(1, forces);
+        copyFromContextKernel->setArg(5, positions);
+        for (int i = 0; i < numCopies; i++) {
+            copyToContextKernel->setArg(5, i);
+            copyToContextKernel->execute(cc.getNumAtoms());
+            context.computeVirtualSites();
+            Vec3 initialBox[3];
+            context.getPeriodicBoxVectors(initialBox[0], initialBox[1], initialBox[2]);
+            context.updateContextState();
+            Vec3 finalBox[3];
+            context.getPeriodicBoxVectors(finalBox[0], finalBox[1], finalBox[2]);
+            if (initialBox[0] != finalBox[0] || initialBox[1] != finalBox[1] || initialBox[2] != finalBox[2])
+                throw OpenMMException("Standard barostats cannot be used with RPMDIntegrator.  Use RPMDMonteCarloBarostat instead.");
+            context.calcForcesAndEnergy(true, false, groupsNotContracted);
+            copyFromContextKernel->setArg(7, i);
+            copyFromContextKernel->execute(cc.getNumAtoms());
+        }
     }
     
     // Now loop over contractions and compute forces from them.
@@ -1023,4 +1104,69 @@ string CommonIntegrateRPMDStepKernel::createFFT(int size, const string& variable
     }
     source<<"}\n";
     return source.str();
+}
+
+void CommonIntegrateRPMDStepKernel::downloadPositionsFromGPU(int beadIndex, std::vector<Vec3>& outPositions) {
+    // positions array layout: stored as mm_float4 or mm_double4 depending on precision
+    // [bead0_atom0, bead0_atom1, ..., bead1_atom0, ...]
+    outPositions.resize(numParticles);
+    
+    int paddedParticles = cc.getPaddedNumAtoms();
+    bool useDoublePrecision = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision());
+    
+    // Download all positions from GPU
+    if (useDoublePrecision) {
+        vector<mm_double4> posData(paddedParticles * numCopies);
+        positions.download(posData);  // Pass vector directly, not .data()
+        
+        // Extract this bead's slice (only non-padded particles)
+        int offset = beadIndex * paddedParticles;
+        for (int i = 0; i < numParticles; i++) {
+            outPositions[i] = Vec3(posData[offset + i].x, posData[offset + i].y, posData[offset + i].z);
+        }
+    } else {
+        vector<mm_float4> posData(paddedParticles * numCopies);
+        positions.download(posData);  // Pass vector directly, not .data()
+        
+        // Extract this bead's slice (only non-padded particles)
+        int offset = beadIndex * paddedParticles;
+        for (int i = 0; i < numParticles; i++) {
+            outPositions[i] = Vec3(posData[offset + i].x, posData[offset + i].y, posData[offset + i].z);
+        }
+    }
+}
+
+void CommonIntegrateRPMDStepKernel::uploadForcesToGPU(int beadIndex, const std::vector<Vec3>& inForces) {
+    // This function is deprecated - use uploadAllForcesToGPU instead
+    throw OpenMMException("uploadForcesToGPU should not be called - use uploadAllForcesToGPU");
+}
+
+void CommonIntegrateRPMDStepKernel::uploadAllForcesToGPU(const std::vector<std::vector<Vec3>>& allBeadForces) {
+    // Upload all bead forces at once to avoid multiple download/upload cycles
+    // forces array layout: [bead0_atom0_x, bead0_atom0_y, bead0_atom0_z, bead0_atom1_x, ...]
+    // forces is stored as long long (fixed point for atomics)
+    
+    int paddedParticles = cc.getPaddedNumAtoms();
+    int totalSize = paddedParticles * numCopies * 3;
+    vector<long long> forceData(totalSize, 0);  // Initialize to zero (important for padded atoms)
+    
+    double forceScale = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? 1.0 : 0x100000000);
+    
+    // Pack all bead forces into flat array
+    for (int b = 0; b < numCopies; b++) {
+        if (allBeadForces[b].size() != (size_t)numParticles) {
+            throw OpenMMException("uploadAllForcesToGPU: force vector size mismatch for bead " + std::to_string(b));
+        }
+        
+        int offset = b * paddedParticles * 3;  // Use paddedParticles, not numParticles
+        for (int i = 0; i < numParticles; i++) {
+            forceData[offset + i*3 + 0] = (long long)(allBeadForces[b][i][0] * forceScale);
+            forceData[offset + i*3 + 1] = (long long)(allBeadForces[b][i][1] * forceScale);
+            forceData[offset + i*3 + 2] = (long long)(allBeadForces[b][i][2] * forceScale);
+        }
+        // Padded atoms (from numParticles to paddedParticles) remain zero
+    }
+    
+    // Upload to GPU in one shot - pass vector directly, not .data()
+    forces.upload(forceData);
 }

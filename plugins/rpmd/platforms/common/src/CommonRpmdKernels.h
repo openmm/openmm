@@ -85,6 +85,27 @@ private:
     void initializeKernels(ContextImpl& context);
     void computeForces(ContextImpl& context);
     /**
+     * Download bead positions from GPU for batched force evaluation.
+     * 
+     * @param beadIndex    which bead to download (0 to numCopies-1)
+     * @param outPositions output vector to fill with positions
+     */
+    void downloadPositionsFromGPU(int beadIndex, std::vector<Vec3>& outPositions);
+    /**
+     * Upload bead forces to GPU after batched force evaluation.
+     * 
+     * @param beadIndex which bead to upload (0 to numCopies-1)
+     * @param inForces  input vector with forces
+     */
+    void uploadForcesToGPU(int beadIndex, const std::vector<Vec3>& inForces);
+    /**
+     * Upload all bead forces to GPU at once after batched force evaluation.
+     * This is more efficient than calling uploadForcesToGPU multiple times.
+     * 
+     * @param allBeadForces vector of force vectors for all beads [numCopies][numParticles]
+     */
+    void uploadAllForcesToGPU(const std::vector<std::vector<Vec3>>& allBeadForces);
+    /**
      * Apply the Bussi stochastic velocity rescaling thermostat to the centroid mode.
      * This is used for PILE_G mode where Bussi thermostat is applied to centroid only.
      */

@@ -4,3 +4,16 @@
 [submodule "cavOTF"]
 	path = cavOTF
 	url = https://github.com/mandalgrouptamu/cavOTF.git
+[submodule "i-pi"]
+	path = i-pi
+	url = https://github.com/i-pi/i-pi.git
+[submodule "fairchem"]
+	path = fairchem
+	url = https://github.com/santi921/fairchem.git
+	branch = les_branch
+[submodule "cace"]
+	path = cace
+	url = https://github.com/BingqingCheng/cace.git
+[submodule "LES-BEC"]
+	path = LES-BEC
+	url = https://github.com/BingqingCheng/LES-BEC.git

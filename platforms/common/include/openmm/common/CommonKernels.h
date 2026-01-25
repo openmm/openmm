@@ -1648,6 +1648,16 @@ public:
      * This is called by the post-computation to add the forces to the main array.
      */
     double addForces(bool includeForces, bool includeEnergy, int groups);
+    /**
+     * Check if this kernel supports batched evaluation (delegates to computation).
+     */
+    bool supportsBatchedEvaluation() const override {
+        return computation != nullptr && computation->supportsBatchedEvaluation();
+    }
+    /**
+     * Execute batched evaluation for multiple copies (e.g., RPMD beads).
+     */
+    double executeBatch(const std::vector<ContextImpl*>& contexts, bool includeForces, bool includeEnergy) override;
 private:
     class ExecuteTask;
     class StartCalculationPreComputation;

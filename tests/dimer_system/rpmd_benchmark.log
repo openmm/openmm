@@ -1,0 +1,3061 @@
+✓ OpenMM loaded successfully
+============================================================
+Cavity OpenMM Dimer RPMD Simulation
+============================================================
+
+Simulation parameters:
+  Temperature: 100.0 K
+  RPMD beads: 8
+  Timestep: 0.001 ps (1.0 fs)
+  Cavity frequency: 1560.0 cm⁻¹ (0.007108 Hartree)
+  Lambda coupling: 0.07
+  Equilibration: 100.0 ps (100000 steps)
+  Production: 900.0 ps (900000 steps)
+  Total time: 1000.0 ps
+
+--- Creating Dimer System ---
+Added 40000 N-O cross-term exceptions for KA non-additive interactions
+Created system with 500 particles (250 molecules)
+  O-O dimers: 200
+  N-N dimers: 50
+  Box size: 2.5 nm
+
+--- Adding Cavity Particle ---
+Added cavity particle at index 500
+  Omega_c: 0.007107883038691078 (OpenMM energy units)
+  Photon mass: 0.0005485800553846424 amu
+
+--- Adding Cavity Force ---
+  CavityForce added successfully
+  Omega_c: 0.007108 a.u.
+  Lambda coupling: 0.07 (ACTIVE from t=0)
+  CavityParticleDisplacer added (finite-Q mode)
+
+--- Creating RPMD Integrator ---
+  RPMDIntegrator created
+  Thermostat: PILE_G (Bussi centroid + Langevin internal)
+  Centroid friction (Bussi): 0.5 ps^-1
+  Internal mode friction (PILE): 1.0 ps^-1
+  Number of beads: 8
+
+--- Creating Simulation ---
+  Using CUDA platform (GPU acceleration)
+
+--- Initializing RPMD Beads ---
+  Positions set for 8 beads
+
+--- Initializing Velocities ---
+  Velocities initialized for 8 beads
+
+--- Applying Finite-Q Displacement ---
+  Displacement: 0.01 nm along x-axis for all beads
+
+--- Running RPMD Simulation ---
+  Running 1000000 steps...
+  Progress updates every 1 ps (1,000 steps)
+
+  [  0.1%] Step    1000/1000000 | Sim time:    1.0 ps | Speed:  205.5 ns/day | ETA:   0.1 hr
+         Total Energy: 77463.40 kJ/mol
+
+  [  0.2%] Step    2000/1000000 | Sim time:    2.0 ps | Speed:  215.2 ns/day | ETA:   0.1 hr
+         Total Energy: 63651.35 kJ/mol
+
+  [  0.3%] Step    3000/1000000 | Sim time:    3.0 ps | Speed:  215.2 ns/day | ETA:   0.1 hr
+         Total Energy: 58380.11 kJ/mol
+
+  [  0.4%] Step    4000/1000000 | Sim time:    4.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 54713.93 kJ/mol
+
+  [  0.5%] Step    5000/1000000 | Sim time:    5.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 54177.36 kJ/mol
+
+  [  0.6%] Step    6000/1000000 | Sim time:    6.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 49948.08 kJ/mol
+
+  [  0.7%] Step    7000/1000000 | Sim time:    7.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 50165.28 kJ/mol
+
+  [  0.8%] Step    8000/1000000 | Sim time:    8.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 48000.04 kJ/mol
+
+  [  0.9%] Step    9000/1000000 | Sim time:    9.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 47457.46 kJ/mol
+
+  [  1.0%] Step   10000/1000000 | Sim time:   10.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 47724.27 kJ/mol
+
+  [  1.1%] Step   11000/1000000 | Sim time:   11.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 44820.11 kJ/mol
+
+  [  1.2%] Step   12000/1000000 | Sim time:   12.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 44929.10 kJ/mol
+
+  [  1.3%] Step   13000/1000000 | Sim time:   13.0 ps | Speed:  214.6 ns/day | ETA:   0.1 hr
+         Total Energy: 44528.20 kJ/mol
+
+  [  1.4%] Step   14000/1000000 | Sim time:   14.0 ps | Speed:  214.7 ns/day | ETA:   0.1 hr
+         Total Energy: 43327.37 kJ/mol
+
+  [  1.5%] Step   15000/1000000 | Sim time:   15.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 44106.17 kJ/mol
+
+  [  1.6%] Step   16000/1000000 | Sim time:   16.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 43298.59 kJ/mol
+
+  [  1.7%] Step   17000/1000000 | Sim time:   17.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 44294.47 kJ/mol
+
+  [  1.8%] Step   18000/1000000 | Sim time:   18.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 42812.59 kJ/mol
+
+  [  1.9%] Step   19000/1000000 | Sim time:   19.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 42364.47 kJ/mol
+
+  [  2.0%] Step   20000/1000000 | Sim time:   20.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 43795.48 kJ/mol
+
+  [  2.1%] Step   21000/1000000 | Sim time:   21.0 ps | Speed:  215.1 ns/day | ETA:   0.1 hr
+         Total Energy: 43751.13 kJ/mol
+
+  [  2.2%] Step   22000/1000000 | Sim time:   22.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 41441.39 kJ/mol
+
+  [  2.3%] Step   23000/1000000 | Sim time:   23.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 43194.02 kJ/mol
+
+  [  2.4%] Step   24000/1000000 | Sim time:   24.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 43170.72 kJ/mol
+
+  [  2.5%] Step   25000/1000000 | Sim time:   25.0 ps | Speed:  214.9 ns/day | ETA:   0.1 hr
+         Total Energy: 42825.24 kJ/mol
+
+  [  2.6%] Step   26000/1000000 | Sim time:   26.0 ps | Speed:  205.8 ns/day | ETA:   0.1 hr
+         Total Energy: 42265.74 kJ/mol
+
+  [  2.7%] Step   27000/1000000 | Sim time:   27.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 42890.30 kJ/mol
+
+  [  2.8%] Step   28000/1000000 | Sim time:   28.0 ps | Speed:  214.1 ns/day | ETA:   0.1 hr
+         Total Energy: 42431.08 kJ/mol
+
+  [  2.9%] Step   29000/1000000 | Sim time:   29.0 ps | Speed:  215.9 ns/day | ETA:   0.1 hr
+         Total Energy: 42490.30 kJ/mol
+
+  [  3.0%] Step   30000/1000000 | Sim time:   30.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 42481.69 kJ/mol
+
+  [  3.1%] Step   31000/1000000 | Sim time:   31.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 42872.46 kJ/mol
+
+  [  3.2%] Step   32000/1000000 | Sim time:   32.0 ps | Speed:  214.9 ns/day | ETA:   0.1 hr
+         Total Energy: 42103.10 kJ/mol
+
+  [  3.3%] Step   33000/1000000 | Sim time:   33.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 41565.16 kJ/mol
+
+  [  3.4%] Step   34000/1000000 | Sim time:   34.0 ps | Speed:  215.1 ns/day | ETA:   0.1 hr
+         Total Energy: 42705.78 kJ/mol
+
+  [  3.5%] Step   35000/1000000 | Sim time:   35.0 ps | Speed:  215.9 ns/day | ETA:   0.1 hr
+         Total Energy: 41921.24 kJ/mol
+
+  [  3.6%] Step   36000/1000000 | Sim time:   36.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 41882.92 kJ/mol
+
+  [  3.7%] Step   37000/1000000 | Sim time:   37.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40858.93 kJ/mol
+
+  [  3.8%] Step   38000/1000000 | Sim time:   38.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 42069.00 kJ/mol
+
+  [  3.9%] Step   39000/1000000 | Sim time:   39.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41895.33 kJ/mol
+
+  [  4.0%] Step   40000/1000000 | Sim time:   40.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41501.01 kJ/mol
+
+  [  4.1%] Step   41000/1000000 | Sim time:   41.0 ps | Speed:  215.2 ns/day | ETA:   0.1 hr
+         Total Energy: 41357.34 kJ/mol
+
+  [  4.2%] Step   42000/1000000 | Sim time:   42.0 ps | Speed:  215.2 ns/day | ETA:   0.1 hr
+         Total Energy: 42049.96 kJ/mol
+
+  [  4.3%] Step   43000/1000000 | Sim time:   43.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 42346.73 kJ/mol
+
+  [  4.4%] Step   44000/1000000 | Sim time:   44.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 42031.30 kJ/mol
+
+  [  4.5%] Step   45000/1000000 | Sim time:   45.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41462.55 kJ/mol
+
+  [  4.6%] Step   46000/1000000 | Sim time:   46.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 42428.10 kJ/mol
+
+  [  4.7%] Step   47000/1000000 | Sim time:   47.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41406.32 kJ/mol
+
+  [  4.8%] Step   48000/1000000 | Sim time:   48.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 41674.83 kJ/mol
+
+  [  4.9%] Step   49000/1000000 | Sim time:   49.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41776.97 kJ/mol
+
+  [  5.0%] Step   50000/1000000 | Sim time:   50.0 ps | Speed:  214.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41738.32 kJ/mol
+
+  [  5.1%] Step   51000/1000000 | Sim time:   51.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 42018.09 kJ/mol
+
+  [  5.2%] Step   52000/1000000 | Sim time:   52.0 ps | Speed:  214.0 ns/day | ETA:   0.1 hr
+         Total Energy: 41571.99 kJ/mol
+
+  [  5.3%] Step   53000/1000000 | Sim time:   53.0 ps | Speed:  214.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41520.25 kJ/mol
+
+  [  5.4%] Step   54000/1000000 | Sim time:   54.0 ps | Speed:  214.8 ns/day | ETA:   0.1 hr
+         Total Energy: 42249.32 kJ/mol
+
+  [  5.5%] Step   55000/1000000 | Sim time:   55.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41439.64 kJ/mol
+
+  [  5.6%] Step   56000/1000000 | Sim time:   56.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41635.52 kJ/mol
+
+  [  5.7%] Step   57000/1000000 | Sim time:   57.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 42016.10 kJ/mol
+
+  [  5.8%] Step   58000/1000000 | Sim time:   58.0 ps | Speed:  216.2 ns/day | ETA:   0.1 hr
+         Total Energy: 41823.22 kJ/mol
+
+  [  5.9%] Step   59000/1000000 | Sim time:   59.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41548.97 kJ/mol
+
+  [  6.0%] Step   60000/1000000 | Sim time:   60.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 42166.41 kJ/mol
+
+  [  6.1%] Step   61000/1000000 | Sim time:   61.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41391.52 kJ/mol
+
+  [  6.2%] Step   62000/1000000 | Sim time:   62.0 ps | Speed:  215.0 ns/day | ETA:   0.1 hr
+         Total Energy: 40836.00 kJ/mol
+
+  [  6.3%] Step   63000/1000000 | Sim time:   63.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41308.31 kJ/mol
+
+  [  6.4%] Step   64000/1000000 | Sim time:   64.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 42306.02 kJ/mol
+
+  [  6.5%] Step   65000/1000000 | Sim time:   65.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41519.26 kJ/mol
+
+  [  6.6%] Step   66000/1000000 | Sim time:   66.0 ps | Speed:  216.1 ns/day | ETA:   0.1 hr
+         Total Energy: 40853.21 kJ/mol
+
+  [  6.7%] Step   67000/1000000 | Sim time:   67.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 42439.41 kJ/mol
+
+  [  6.8%] Step   68000/1000000 | Sim time:   68.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41595.63 kJ/mol
+
+  [  6.9%] Step   69000/1000000 | Sim time:   69.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40756.72 kJ/mol
+
+  [  7.0%] Step   70000/1000000 | Sim time:   70.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41280.04 kJ/mol
+
+  [  7.1%] Step   71000/1000000 | Sim time:   71.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 42167.81 kJ/mol
+
+  [  7.2%] Step   72000/1000000 | Sim time:   72.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 41235.71 kJ/mol
+
+  [  7.3%] Step   73000/1000000 | Sim time:   73.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41398.86 kJ/mol
+
+  [  7.4%] Step   74000/1000000 | Sim time:   74.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41670.40 kJ/mol
+
+  [  7.5%] Step   75000/1000000 | Sim time:   75.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41557.41 kJ/mol
+
+  [  7.6%] Step   76000/1000000 | Sim time:   76.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40846.78 kJ/mol
+
+  [  7.7%] Step   77000/1000000 | Sim time:   77.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40472.26 kJ/mol
+
+  [  7.8%] Step   78000/1000000 | Sim time:   78.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40450.06 kJ/mol
+
+  [  7.9%] Step   79000/1000000 | Sim time:   79.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40886.66 kJ/mol
+
+  [  8.0%] Step   80000/1000000 | Sim time:   80.0 ps | Speed:  214.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41553.05 kJ/mol
+
+  [  8.1%] Step   81000/1000000 | Sim time:   81.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41563.15 kJ/mol
+
+  [  8.2%] Step   82000/1000000 | Sim time:   82.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41668.70 kJ/mol
+
+  [  8.3%] Step   83000/1000000 | Sim time:   83.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41410.85 kJ/mol
+
+  [  8.4%] Step   84000/1000000 | Sim time:   84.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40558.59 kJ/mol
+
+  [  8.5%] Step   85000/1000000 | Sim time:   85.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41304.23 kJ/mol
+
+  [  8.6%] Step   86000/1000000 | Sim time:   86.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41062.90 kJ/mol
+
+  [  8.7%] Step   87000/1000000 | Sim time:   87.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41276.45 kJ/mol
+
+  [  8.8%] Step   88000/1000000 | Sim time:   88.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 39835.57 kJ/mol
+
+  [  8.9%] Step   89000/1000000 | Sim time:   89.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 42190.05 kJ/mol
+
+  [  9.0%] Step   90000/1000000 | Sim time:   90.0 ps | Speed:  214.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41323.83 kJ/mol
+
+  [  9.1%] Step   91000/1000000 | Sim time:   91.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41364.10 kJ/mol
+
+  [  9.2%] Step   92000/1000000 | Sim time:   92.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 42426.14 kJ/mol
+
+  [  9.3%] Step   93000/1000000 | Sim time:   93.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40661.97 kJ/mol
+
+  [  9.4%] Step   94000/1000000 | Sim time:   94.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 42400.46 kJ/mol
+
+  [  9.5%] Step   95000/1000000 | Sim time:   95.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 42787.20 kJ/mol
+
+  [  9.6%] Step   96000/1000000 | Sim time:   96.0 ps | Speed:  216.0 ns/day | ETA:   0.1 hr
+         Total Energy: 41513.13 kJ/mol
+
+  [  9.7%] Step   97000/1000000 | Sim time:   97.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40946.10 kJ/mol
+
+  [  9.8%] Step   98000/1000000 | Sim time:   98.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40418.87 kJ/mol
+
+  [  9.9%] Step   99000/1000000 | Sim time:   99.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41223.04 kJ/mol
+
+  [ 10.0%] Step  100000/1000000 | Sim time:  100.0 ps | Speed:  214.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41249.02 kJ/mol
+
+  [ 10.1%] Step  101000/1000000 | Sim time:  101.0 ps | Speed:  215.2 ns/day | ETA:   0.1 hr
+         Total Energy: 41728.64 kJ/mol
+
+  [ 10.2%] Step  102000/1000000 | Sim time:  102.0 ps | Speed:  213.8 ns/day | ETA:   0.1 hr
+         Total Energy: 41938.89 kJ/mol
+
+  [ 10.3%] Step  103000/1000000 | Sim time:  103.0 ps | Speed:  207.3 ns/day | ETA:   0.1 hr
+         Total Energy: 40053.35 kJ/mol
+
+  [ 10.4%] Step  104000/1000000 | Sim time:  104.0 ps | Speed:  215.2 ns/day | ETA:   0.1 hr
+         Total Energy: 39714.08 kJ/mol
+
+  [ 10.5%] Step  105000/1000000 | Sim time:  105.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41571.12 kJ/mol
+
+  [ 10.6%] Step  106000/1000000 | Sim time:  106.0 ps | Speed:  214.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40459.07 kJ/mol
+
+  [ 10.7%] Step  107000/1000000 | Sim time:  107.0 ps | Speed:  215.0 ns/day | ETA:   0.1 hr
+         Total Energy: 40725.30 kJ/mol
+
+  [ 10.8%] Step  108000/1000000 | Sim time:  108.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40026.78 kJ/mol
+
+  [ 10.9%] Step  109000/1000000 | Sim time:  109.0 ps | Speed:  215.9 ns/day | ETA:   0.1 hr
+         Total Energy: 41230.41 kJ/mol
+
+  [ 11.0%] Step  110000/1000000 | Sim time:  110.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40857.44 kJ/mol
+
+  [ 11.1%] Step  111000/1000000 | Sim time:  111.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40376.35 kJ/mol
+
+  [ 11.2%] Step  112000/1000000 | Sim time:  112.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40633.16 kJ/mol
+
+  [ 11.3%] Step  113000/1000000 | Sim time:  113.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41166.65 kJ/mol
+
+  [ 11.4%] Step  114000/1000000 | Sim time:  114.0 ps | Speed:  212.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41970.13 kJ/mol
+
+  [ 11.5%] Step  115000/1000000 | Sim time:  115.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41570.11 kJ/mol
+
+  [ 11.6%] Step  116000/1000000 | Sim time:  116.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40837.70 kJ/mol
+
+  [ 11.7%] Step  117000/1000000 | Sim time:  117.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40881.15 kJ/mol
+
+  [ 11.8%] Step  118000/1000000 | Sim time:  118.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 39977.88 kJ/mol
+
+  [ 11.9%] Step  119000/1000000 | Sim time:  119.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41689.90 kJ/mol
+
+  [ 12.0%] Step  120000/1000000 | Sim time:  120.0 ps | Speed:  214.0 ns/day | ETA:   0.1 hr
+         Total Energy: 42330.54 kJ/mol
+
+  [ 12.1%] Step  121000/1000000 | Sim time:  121.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 42262.56 kJ/mol
+
+  [ 12.2%] Step  122000/1000000 | Sim time:  122.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41131.01 kJ/mol
+
+  [ 12.3%] Step  123000/1000000 | Sim time:  123.0 ps | Speed:  214.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40032.88 kJ/mol
+
+  [ 12.4%] Step  124000/1000000 | Sim time:  124.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40529.52 kJ/mol
+
+  [ 12.5%] Step  125000/1000000 | Sim time:  125.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41168.55 kJ/mol
+
+  [ 12.6%] Step  126000/1000000 | Sim time:  126.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40863.01 kJ/mol
+
+  [ 12.7%] Step  127000/1000000 | Sim time:  127.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41784.02 kJ/mol
+
+  [ 12.8%] Step  128000/1000000 | Sim time:  128.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40459.20 kJ/mol
+
+  [ 12.9%] Step  129000/1000000 | Sim time:  129.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41767.25 kJ/mol
+
+  [ 13.0%] Step  130000/1000000 | Sim time:  130.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40787.32 kJ/mol
+
+  [ 13.1%] Step  131000/1000000 | Sim time:  131.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 42433.53 kJ/mol
+
+  [ 13.2%] Step  132000/1000000 | Sim time:  132.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40535.41 kJ/mol
+
+  [ 13.3%] Step  133000/1000000 | Sim time:  133.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40530.16 kJ/mol
+
+  [ 13.4%] Step  134000/1000000 | Sim time:  134.0 ps | Speed:  215.9 ns/day | ETA:   0.1 hr
+         Total Energy: 42118.81 kJ/mol
+
+  [ 13.5%] Step  135000/1000000 | Sim time:  135.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41503.20 kJ/mol
+
+  [ 13.6%] Step  136000/1000000 | Sim time:  136.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41193.24 kJ/mol
+
+  [ 13.7%] Step  137000/1000000 | Sim time:  137.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40892.21 kJ/mol
+
+  [ 13.8%] Step  138000/1000000 | Sim time:  138.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41698.36 kJ/mol
+
+  [ 13.9%] Step  139000/1000000 | Sim time:  139.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41000.64 kJ/mol
+
+  [ 14.0%] Step  140000/1000000 | Sim time:  140.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40023.87 kJ/mol
+
+  [ 14.1%] Step  141000/1000000 | Sim time:  141.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 42299.88 kJ/mol
+
+  [ 14.2%] Step  142000/1000000 | Sim time:  142.0 ps | Speed:  216.2 ns/day | ETA:   0.1 hr
+         Total Energy: 41081.03 kJ/mol
+
+  [ 14.3%] Step  143000/1000000 | Sim time:  143.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40094.94 kJ/mol
+
+  [ 14.4%] Step  144000/1000000 | Sim time:  144.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40775.89 kJ/mol
+
+  [ 14.5%] Step  145000/1000000 | Sim time:  145.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41106.34 kJ/mol
+
+  [ 14.6%] Step  146000/1000000 | Sim time:  146.0 ps | Speed:  214.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41634.00 kJ/mol
+
+  [ 14.7%] Step  147000/1000000 | Sim time:  147.0 ps | Speed:  215.9 ns/day | ETA:   0.1 hr
+         Total Energy: 40760.59 kJ/mol
+
+  [ 14.8%] Step  148000/1000000 | Sim time:  148.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40725.39 kJ/mol
+
+  [ 14.9%] Step  149000/1000000 | Sim time:  149.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40856.82 kJ/mol
+
+  [ 15.0%] Step  150000/1000000 | Sim time:  150.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40021.48 kJ/mol
+
+  [ 15.1%] Step  151000/1000000 | Sim time:  151.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41242.51 kJ/mol
+
+  [ 15.2%] Step  152000/1000000 | Sim time:  152.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 41674.95 kJ/mol
+
+  [ 15.3%] Step  153000/1000000 | Sim time:  153.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40704.14 kJ/mol
+
+  [ 15.4%] Step  154000/1000000 | Sim time:  154.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41483.43 kJ/mol
+
+  [ 15.5%] Step  155000/1000000 | Sim time:  155.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40066.69 kJ/mol
+
+  [ 15.6%] Step  156000/1000000 | Sim time:  156.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 39745.12 kJ/mol
+
+  [ 15.7%] Step  157000/1000000 | Sim time:  157.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40331.49 kJ/mol
+
+  [ 15.8%] Step  158000/1000000 | Sim time:  158.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41150.27 kJ/mol
+
+  [ 15.9%] Step  159000/1000000 | Sim time:  159.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41460.48 kJ/mol
+
+  [ 16.0%] Step  160000/1000000 | Sim time:  160.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41439.54 kJ/mol
+
+  [ 16.1%] Step  161000/1000000 | Sim time:  161.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40118.90 kJ/mol
+
+  [ 16.2%] Step  162000/1000000 | Sim time:  162.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 41499.35 kJ/mol
+
+  [ 16.3%] Step  163000/1000000 | Sim time:  163.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40584.49 kJ/mol
+
+  [ 16.4%] Step  164000/1000000 | Sim time:  164.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40816.87 kJ/mol
+
+  [ 16.5%] Step  165000/1000000 | Sim time:  165.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40859.98 kJ/mol
+
+  [ 16.6%] Step  166000/1000000 | Sim time:  166.0 ps | Speed:  214.3 ns/day | ETA:   0.1 hr
+         Total Energy: 41025.45 kJ/mol
+
+  [ 16.7%] Step  167000/1000000 | Sim time:  167.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41737.35 kJ/mol
+
+  [ 16.8%] Step  168000/1000000 | Sim time:  168.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40520.50 kJ/mol
+
+  [ 16.9%] Step  169000/1000000 | Sim time:  169.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41150.34 kJ/mol
+
+  [ 17.0%] Step  170000/1000000 | Sim time:  170.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41422.54 kJ/mol
+
+  [ 17.1%] Step  171000/1000000 | Sim time:  171.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41461.17 kJ/mol
+
+  [ 17.2%] Step  172000/1000000 | Sim time:  172.0 ps | Speed:  215.0 ns/day | ETA:   0.1 hr
+         Total Energy: 40891.86 kJ/mol
+
+  [ 17.3%] Step  173000/1000000 | Sim time:  173.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41021.60 kJ/mol
+
+  [ 17.4%] Step  174000/1000000 | Sim time:  174.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40306.71 kJ/mol
+
+  [ 17.5%] Step  175000/1000000 | Sim time:  175.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40878.03 kJ/mol
+
+  [ 17.6%] Step  176000/1000000 | Sim time:  176.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 41742.87 kJ/mol
+
+  [ 17.7%] Step  177000/1000000 | Sim time:  177.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 42726.49 kJ/mol
+
+  [ 17.8%] Step  178000/1000000 | Sim time:  178.0 ps | Speed:  214.3 ns/day | ETA:   0.1 hr
+         Total Energy: 41362.55 kJ/mol
+
+  [ 17.9%] Step  179000/1000000 | Sim time:  179.0 ps | Speed:  196.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41618.65 kJ/mol
+
+  [ 18.0%] Step  180000/1000000 | Sim time:  180.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 38685.11 kJ/mol
+
+  [ 18.1%] Step  181000/1000000 | Sim time:  181.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40292.72 kJ/mol
+
+  [ 18.2%] Step  182000/1000000 | Sim time:  182.0 ps | Speed:  215.9 ns/day | ETA:   0.1 hr
+         Total Energy: 42288.36 kJ/mol
+
+  [ 18.3%] Step  183000/1000000 | Sim time:  183.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40803.39 kJ/mol
+
+  [ 18.4%] Step  184000/1000000 | Sim time:  184.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41966.85 kJ/mol
+
+  [ 18.5%] Step  185000/1000000 | Sim time:  185.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40156.30 kJ/mol
+
+  [ 18.6%] Step  186000/1000000 | Sim time:  186.0 ps | Speed:  214.9 ns/day | ETA:   0.1 hr
+         Total Energy: 41633.04 kJ/mol
+
+  [ 18.7%] Step  187000/1000000 | Sim time:  187.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40860.67 kJ/mol
+
+  [ 18.8%] Step  188000/1000000 | Sim time:  188.0 ps | Speed:  214.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40962.71 kJ/mol
+
+  [ 18.9%] Step  189000/1000000 | Sim time:  189.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41057.83 kJ/mol
+
+  [ 19.0%] Step  190000/1000000 | Sim time:  190.0 ps | Speed:  214.9 ns/day | ETA:   0.1 hr
+         Total Energy: 41278.17 kJ/mol
+
+  [ 19.1%] Step  191000/1000000 | Sim time:  191.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40653.29 kJ/mol
+
+  [ 19.2%] Step  192000/1000000 | Sim time:  192.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41607.94 kJ/mol
+
+  [ 19.3%] Step  193000/1000000 | Sim time:  193.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40336.63 kJ/mol
+
+  [ 19.4%] Step  194000/1000000 | Sim time:  194.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40850.50 kJ/mol
+
+  [ 19.5%] Step  195000/1000000 | Sim time:  195.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40141.31 kJ/mol
+
+  [ 19.6%] Step  196000/1000000 | Sim time:  196.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40098.33 kJ/mol
+
+  [ 19.7%] Step  197000/1000000 | Sim time:  197.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40542.65 kJ/mol
+
+  [ 19.8%] Step  198000/1000000 | Sim time:  198.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40323.70 kJ/mol
+
+  [ 19.9%] Step  199000/1000000 | Sim time:  199.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40776.84 kJ/mol
+
+  [ 20.0%] Step  200000/1000000 | Sim time:  200.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40652.65 kJ/mol
+
+  [ 20.1%] Step  201000/1000000 | Sim time:  201.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40705.87 kJ/mol
+
+  [ 20.2%] Step  202000/1000000 | Sim time:  202.0 ps | Speed:  214.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41579.65 kJ/mol
+
+  [ 20.3%] Step  203000/1000000 | Sim time:  203.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41761.21 kJ/mol
+
+  [ 20.4%] Step  204000/1000000 | Sim time:  204.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40523.66 kJ/mol
+
+  [ 20.5%] Step  205000/1000000 | Sim time:  205.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41745.16 kJ/mol
+
+  [ 20.6%] Step  206000/1000000 | Sim time:  206.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 42451.69 kJ/mol
+
+  [ 20.7%] Step  207000/1000000 | Sim time:  207.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41192.77 kJ/mol
+
+  [ 20.8%] Step  208000/1000000 | Sim time:  208.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 42353.37 kJ/mol
+
+  [ 20.9%] Step  209000/1000000 | Sim time:  209.0 ps | Speed:  215.0 ns/day | ETA:   0.1 hr
+         Total Energy: 41077.33 kJ/mol
+
+  [ 21.0%] Step  210000/1000000 | Sim time:  210.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40742.32 kJ/mol
+
+  [ 21.1%] Step  211000/1000000 | Sim time:  211.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40792.26 kJ/mol
+
+  [ 21.2%] Step  212000/1000000 | Sim time:  212.0 ps | Speed:  215.1 ns/day | ETA:   0.1 hr
+         Total Energy: 39904.73 kJ/mol
+
+  [ 21.3%] Step  213000/1000000 | Sim time:  213.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 41411.06 kJ/mol
+
+  [ 21.4%] Step  214000/1000000 | Sim time:  214.0 ps | Speed:  215.9 ns/day | ETA:   0.1 hr
+         Total Energy: 40651.99 kJ/mol
+
+  [ 21.5%] Step  215000/1000000 | Sim time:  215.0 ps | Speed:  213.6 ns/day | ETA:   0.1 hr
+         Total Energy: 39612.96 kJ/mol
+
+  [ 21.6%] Step  216000/1000000 | Sim time:  216.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40625.36 kJ/mol
+
+  [ 21.7%] Step  217000/1000000 | Sim time:  217.0 ps | Speed:  215.1 ns/day | ETA:   0.1 hr
+         Total Energy: 40955.45 kJ/mol
+
+  [ 21.8%] Step  218000/1000000 | Sim time:  218.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40836.69 kJ/mol
+
+  [ 21.9%] Step  219000/1000000 | Sim time:  219.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41469.14 kJ/mol
+
+  [ 22.0%] Step  220000/1000000 | Sim time:  220.0 ps | Speed:  215.2 ns/day | ETA:   0.1 hr
+         Total Energy: 40356.43 kJ/mol
+
+  [ 22.1%] Step  221000/1000000 | Sim time:  221.0 ps | Speed:  214.2 ns/day | ETA:   0.1 hr
+         Total Energy: 39663.32 kJ/mol
+
+  [ 22.2%] Step  222000/1000000 | Sim time:  222.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40298.10 kJ/mol
+
+  [ 22.3%] Step  223000/1000000 | Sim time:  223.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41250.00 kJ/mol
+
+  [ 22.4%] Step  224000/1000000 | Sim time:  224.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41812.76 kJ/mol
+
+  [ 22.5%] Step  225000/1000000 | Sim time:  225.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 41452.60 kJ/mol
+
+  [ 22.6%] Step  226000/1000000 | Sim time:  226.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 39708.60 kJ/mol
+
+  [ 22.7%] Step  227000/1000000 | Sim time:  227.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41237.18 kJ/mol
+
+  [ 22.8%] Step  228000/1000000 | Sim time:  228.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41404.55 kJ/mol
+
+  [ 22.9%] Step  229000/1000000 | Sim time:  229.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40645.79 kJ/mol
+
+  [ 23.0%] Step  230000/1000000 | Sim time:  230.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41162.00 kJ/mol
+
+  [ 23.1%] Step  231000/1000000 | Sim time:  231.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40412.90 kJ/mol
+
+  [ 23.2%] Step  232000/1000000 | Sim time:  232.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40993.38 kJ/mol
+
+  [ 23.3%] Step  233000/1000000 | Sim time:  233.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 42161.34 kJ/mol
+
+  [ 23.4%] Step  234000/1000000 | Sim time:  234.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40384.71 kJ/mol
+
+  [ 23.5%] Step  235000/1000000 | Sim time:  235.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41031.00 kJ/mol
+
+  [ 23.6%] Step  236000/1000000 | Sim time:  236.0 ps | Speed:  215.9 ns/day | ETA:   0.1 hr
+         Total Energy: 40997.90 kJ/mol
+
+  [ 23.7%] Step  237000/1000000 | Sim time:  237.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40192.39 kJ/mol
+
+  [ 23.8%] Step  238000/1000000 | Sim time:  238.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40048.73 kJ/mol
+
+  [ 23.9%] Step  239000/1000000 | Sim time:  239.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40783.57 kJ/mol
+
+  [ 24.0%] Step  240000/1000000 | Sim time:  240.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41104.38 kJ/mol
+
+  [ 24.1%] Step  241000/1000000 | Sim time:  241.0 ps | Speed:  215.0 ns/day | ETA:   0.1 hr
+         Total Energy: 40864.30 kJ/mol
+
+  [ 24.2%] Step  242000/1000000 | Sim time:  242.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41063.50 kJ/mol
+
+  [ 24.3%] Step  243000/1000000 | Sim time:  243.0 ps | Speed:  214.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40581.31 kJ/mol
+
+  [ 24.4%] Step  244000/1000000 | Sim time:  244.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41436.35 kJ/mol
+
+  [ 24.5%] Step  245000/1000000 | Sim time:  245.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40079.43 kJ/mol
+
+  [ 24.6%] Step  246000/1000000 | Sim time:  246.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40215.39 kJ/mol
+
+  [ 24.7%] Step  247000/1000000 | Sim time:  247.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 42089.39 kJ/mol
+
+  [ 24.8%] Step  248000/1000000 | Sim time:  248.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40537.30 kJ/mol
+
+  [ 24.9%] Step  249000/1000000 | Sim time:  249.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40927.78 kJ/mol
+
+  [ 25.0%] Step  250000/1000000 | Sim time:  250.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 40494.19 kJ/mol
+
+  [ 25.1%] Step  251000/1000000 | Sim time:  251.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 39801.08 kJ/mol
+
+  [ 25.2%] Step  252000/1000000 | Sim time:  252.0 ps | Speed:  214.9 ns/day | ETA:   0.1 hr
+         Total Energy: 40728.75 kJ/mol
+
+  [ 25.3%] Step  253000/1000000 | Sim time:  253.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40081.67 kJ/mol
+
+  [ 25.4%] Step  254000/1000000 | Sim time:  254.0 ps | Speed:  215.2 ns/day | ETA:   0.1 hr
+         Total Energy: 41919.98 kJ/mol
+
+  [ 25.5%] Step  255000/1000000 | Sim time:  255.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40641.30 kJ/mol
+
+  [ 25.6%] Step  256000/1000000 | Sim time:  256.0 ps | Speed:  201.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40183.37 kJ/mol
+
+  [ 25.7%] Step  257000/1000000 | Sim time:  257.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 39663.35 kJ/mol
+
+  [ 25.8%] Step  258000/1000000 | Sim time:  258.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 40365.46 kJ/mol
+
+  [ 25.9%] Step  259000/1000000 | Sim time:  259.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 39835.64 kJ/mol
+
+  [ 26.0%] Step  260000/1000000 | Sim time:  260.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41998.37 kJ/mol
+
+  [ 26.1%] Step  261000/1000000 | Sim time:  261.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 42073.95 kJ/mol
+
+  [ 26.2%] Step  262000/1000000 | Sim time:  262.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41930.35 kJ/mol
+
+  [ 26.3%] Step  263000/1000000 | Sim time:  263.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41097.04 kJ/mol
+
+  [ 26.4%] Step  264000/1000000 | Sim time:  264.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41322.58 kJ/mol
+
+  [ 26.5%] Step  265000/1000000 | Sim time:  265.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 42196.23 kJ/mol
+
+  [ 26.6%] Step  266000/1000000 | Sim time:  266.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 39992.29 kJ/mol
+
+  [ 26.7%] Step  267000/1000000 | Sim time:  267.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 42449.29 kJ/mol
+
+  [ 26.8%] Step  268000/1000000 | Sim time:  268.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41666.14 kJ/mol
+
+  [ 26.9%] Step  269000/1000000 | Sim time:  269.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40621.81 kJ/mol
+
+  [ 27.0%] Step  270000/1000000 | Sim time:  270.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41823.19 kJ/mol
+
+  [ 27.1%] Step  271000/1000000 | Sim time:  271.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41332.38 kJ/mol
+
+  [ 27.2%] Step  272000/1000000 | Sim time:  272.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 39802.43 kJ/mol
+
+  [ 27.3%] Step  273000/1000000 | Sim time:  273.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41444.00 kJ/mol
+
+  [ 27.4%] Step  274000/1000000 | Sim time:  274.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41824.64 kJ/mol
+
+  [ 27.5%] Step  275000/1000000 | Sim time:  275.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40723.70 kJ/mol
+
+  [ 27.6%] Step  276000/1000000 | Sim time:  276.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41317.58 kJ/mol
+
+  [ 27.7%] Step  277000/1000000 | Sim time:  277.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41612.31 kJ/mol
+
+  [ 27.8%] Step  278000/1000000 | Sim time:  278.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41483.18 kJ/mol
+
+  [ 27.9%] Step  279000/1000000 | Sim time:  279.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41043.62 kJ/mol
+
+  [ 28.0%] Step  280000/1000000 | Sim time:  280.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41280.32 kJ/mol
+
+  [ 28.1%] Step  281000/1000000 | Sim time:  281.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40527.52 kJ/mol
+
+  [ 28.2%] Step  282000/1000000 | Sim time:  282.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41460.60 kJ/mol
+
+  [ 28.3%] Step  283000/1000000 | Sim time:  283.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 39846.86 kJ/mol
+
+  [ 28.4%] Step  284000/1000000 | Sim time:  284.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41049.84 kJ/mol
+
+  [ 28.5%] Step  285000/1000000 | Sim time:  285.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41915.87 kJ/mol
+
+  [ 28.6%] Step  286000/1000000 | Sim time:  286.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41001.90 kJ/mol
+
+  [ 28.7%] Step  287000/1000000 | Sim time:  287.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41089.67 kJ/mol
+
+  [ 28.8%] Step  288000/1000000 | Sim time:  288.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41014.44 kJ/mol
+
+  [ 28.9%] Step  289000/1000000 | Sim time:  289.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40656.23 kJ/mol
+
+  [ 29.0%] Step  290000/1000000 | Sim time:  290.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40416.32 kJ/mol
+
+  [ 29.1%] Step  291000/1000000 | Sim time:  291.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40343.90 kJ/mol
+
+  [ 29.2%] Step  292000/1000000 | Sim time:  292.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40743.09 kJ/mol
+
+  [ 29.3%] Step  293000/1000000 | Sim time:  293.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 40705.91 kJ/mol
+
+  [ 29.4%] Step  294000/1000000 | Sim time:  294.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41046.52 kJ/mol
+
+  [ 29.5%] Step  295000/1000000 | Sim time:  295.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 39364.31 kJ/mol
+
+  [ 29.6%] Step  296000/1000000 | Sim time:  296.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40308.02 kJ/mol
+
+  [ 29.7%] Step  297000/1000000 | Sim time:  297.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40663.49 kJ/mol
+
+  [ 29.8%] Step  298000/1000000 | Sim time:  298.0 ps | Speed:  214.8 ns/day | ETA:   0.1 hr
+         Total Energy: 39910.26 kJ/mol
+
+  [ 29.9%] Step  299000/1000000 | Sim time:  299.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40823.35 kJ/mol
+
+  [ 30.0%] Step  300000/1000000 | Sim time:  300.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40374.23 kJ/mol
+
+  [ 30.1%] Step  301000/1000000 | Sim time:  301.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40740.99 kJ/mol
+
+  [ 30.2%] Step  302000/1000000 | Sim time:  302.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40394.58 kJ/mol
+
+  [ 30.3%] Step  303000/1000000 | Sim time:  303.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 39873.34 kJ/mol
+
+  [ 30.4%] Step  304000/1000000 | Sim time:  304.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41560.18 kJ/mol
+
+  [ 30.5%] Step  305000/1000000 | Sim time:  305.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40779.25 kJ/mol
+
+  [ 30.6%] Step  306000/1000000 | Sim time:  306.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41131.79 kJ/mol
+
+  [ 30.7%] Step  307000/1000000 | Sim time:  307.0 ps | Speed:  214.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40605.38 kJ/mol
+
+  [ 30.8%] Step  308000/1000000 | Sim time:  308.0 ps | Speed:  215.0 ns/day | ETA:   0.1 hr
+         Total Energy: 39435.30 kJ/mol
+
+  [ 30.9%] Step  309000/1000000 | Sim time:  309.0 ps | Speed:  216.1 ns/day | ETA:   0.1 hr
+         Total Energy: 40921.81 kJ/mol
+
+  [ 31.0%] Step  310000/1000000 | Sim time:  310.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40450.35 kJ/mol
+
+  [ 31.1%] Step  311000/1000000 | Sim time:  311.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 41376.70 kJ/mol
+
+  [ 31.2%] Step  312000/1000000 | Sim time:  312.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40037.79 kJ/mol
+
+  [ 31.3%] Step  313000/1000000 | Sim time:  313.0 ps | Speed:  213.3 ns/day | ETA:   0.1 hr
+         Total Energy: 41460.40 kJ/mol
+
+  [ 31.4%] Step  314000/1000000 | Sim time:  314.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40778.60 kJ/mol
+
+  [ 31.5%] Step  315000/1000000 | Sim time:  315.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 39667.35 kJ/mol
+
+  [ 31.6%] Step  316000/1000000 | Sim time:  316.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40814.63 kJ/mol
+
+  [ 31.7%] Step  317000/1000000 | Sim time:  317.0 ps | Speed:  214.9 ns/day | ETA:   0.1 hr
+         Total Energy: 39786.10 kJ/mol
+
+  [ 31.8%] Step  318000/1000000 | Sim time:  318.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 39709.87 kJ/mol
+
+  [ 31.9%] Step  319000/1000000 | Sim time:  319.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40879.59 kJ/mol
+
+  [ 32.0%] Step  320000/1000000 | Sim time:  320.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40599.23 kJ/mol
+
+  [ 32.1%] Step  321000/1000000 | Sim time:  321.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40170.54 kJ/mol
+
+  [ 32.2%] Step  322000/1000000 | Sim time:  322.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40699.40 kJ/mol
+
+  [ 32.3%] Step  323000/1000000 | Sim time:  323.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 39563.64 kJ/mol
+
+  [ 32.4%] Step  324000/1000000 | Sim time:  324.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40244.81 kJ/mol
+
+  [ 32.5%] Step  325000/1000000 | Sim time:  325.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40495.81 kJ/mol
+
+  [ 32.6%] Step  326000/1000000 | Sim time:  326.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40074.51 kJ/mol
+
+  [ 32.7%] Step  327000/1000000 | Sim time:  327.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41724.18 kJ/mol
+
+  [ 32.8%] Step  328000/1000000 | Sim time:  328.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 41657.74 kJ/mol
+
+  [ 32.9%] Step  329000/1000000 | Sim time:  329.0 ps | Speed:  215.9 ns/day | ETA:   0.1 hr
+         Total Energy: 39612.75 kJ/mol
+
+  [ 33.0%] Step  330000/1000000 | Sim time:  330.0 ps | Speed:  216.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40988.83 kJ/mol
+
+  [ 33.1%] Step  331000/1000000 | Sim time:  331.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41553.36 kJ/mol
+
+  [ 33.2%] Step  332000/1000000 | Sim time:  332.0 ps | Speed:  202.3 ns/day | ETA:   0.1 hr
+         Total Energy: 39718.21 kJ/mol
+
+  [ 33.3%] Step  333000/1000000 | Sim time:  333.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 39624.93 kJ/mol
+
+  [ 33.4%] Step  334000/1000000 | Sim time:  334.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41555.36 kJ/mol
+
+  [ 33.5%] Step  335000/1000000 | Sim time:  335.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40578.47 kJ/mol
+
+  [ 33.6%] Step  336000/1000000 | Sim time:  336.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41922.97 kJ/mol
+
+  [ 33.7%] Step  337000/1000000 | Sim time:  337.0 ps | Speed:  212.3 ns/day | ETA:   0.1 hr
+         Total Energy: 41307.90 kJ/mol
+
+  [ 33.8%] Step  338000/1000000 | Sim time:  338.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41912.02 kJ/mol
+
+  [ 33.9%] Step  339000/1000000 | Sim time:  339.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40628.64 kJ/mol
+
+  [ 34.0%] Step  340000/1000000 | Sim time:  340.0 ps | Speed:  215.9 ns/day | ETA:   0.1 hr
+         Total Energy: 39773.61 kJ/mol
+
+  [ 34.1%] Step  341000/1000000 | Sim time:  341.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40300.29 kJ/mol
+
+  [ 34.2%] Step  342000/1000000 | Sim time:  342.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 39761.22 kJ/mol
+
+  [ 34.3%] Step  343000/1000000 | Sim time:  343.0 ps | Speed:  215.1 ns/day | ETA:   0.1 hr
+         Total Energy: 40323.37 kJ/mol
+
+  [ 34.4%] Step  344000/1000000 | Sim time:  344.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40364.37 kJ/mol
+
+  [ 34.5%] Step  345000/1000000 | Sim time:  345.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 41038.24 kJ/mol
+
+  [ 34.6%] Step  346000/1000000 | Sim time:  346.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41241.31 kJ/mol
+
+  [ 34.7%] Step  347000/1000000 | Sim time:  347.0 ps | Speed:  215.9 ns/day | ETA:   0.1 hr
+         Total Energy: 41037.22 kJ/mol
+
+  [ 34.8%] Step  348000/1000000 | Sim time:  348.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41164.57 kJ/mol
+
+  [ 34.9%] Step  349000/1000000 | Sim time:  349.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 39695.10 kJ/mol
+
+  [ 35.0%] Step  350000/1000000 | Sim time:  350.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 38435.25 kJ/mol
+
+  [ 35.1%] Step  351000/1000000 | Sim time:  351.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40209.70 kJ/mol
+
+  [ 35.2%] Step  352000/1000000 | Sim time:  352.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 39509.58 kJ/mol
+
+  [ 35.3%] Step  353000/1000000 | Sim time:  353.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 41068.66 kJ/mol
+
+  [ 35.4%] Step  354000/1000000 | Sim time:  354.0 ps | Speed:  214.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40963.75 kJ/mol
+
+  [ 35.5%] Step  355000/1000000 | Sim time:  355.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41187.97 kJ/mol
+
+  [ 35.6%] Step  356000/1000000 | Sim time:  356.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40699.41 kJ/mol
+
+  [ 35.7%] Step  357000/1000000 | Sim time:  357.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41474.87 kJ/mol
+
+  [ 35.8%] Step  358000/1000000 | Sim time:  358.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 39754.14 kJ/mol
+
+  [ 35.9%] Step  359000/1000000 | Sim time:  359.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41715.63 kJ/mol
+
+  [ 36.0%] Step  360000/1000000 | Sim time:  360.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41587.58 kJ/mol
+
+  [ 36.1%] Step  361000/1000000 | Sim time:  361.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40412.42 kJ/mol
+
+  [ 36.2%] Step  362000/1000000 | Sim time:  362.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40340.42 kJ/mol
+
+  [ 36.3%] Step  363000/1000000 | Sim time:  363.0 ps | Speed:  215.0 ns/day | ETA:   0.1 hr
+         Total Energy: 40292.89 kJ/mol
+
+  [ 36.4%] Step  364000/1000000 | Sim time:  364.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40361.85 kJ/mol
+
+  [ 36.5%] Step  365000/1000000 | Sim time:  365.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40752.97 kJ/mol
+
+  [ 36.6%] Step  366000/1000000 | Sim time:  366.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41582.05 kJ/mol
+
+  [ 36.7%] Step  367000/1000000 | Sim time:  367.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 39720.95 kJ/mol
+
+  [ 36.8%] Step  368000/1000000 | Sim time:  368.0 ps | Speed:  213.9 ns/day | ETA:   0.1 hr
+         Total Energy: 39350.33 kJ/mol
+
+  [ 36.9%] Step  369000/1000000 | Sim time:  369.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40902.86 kJ/mol
+
+  [ 37.0%] Step  370000/1000000 | Sim time:  370.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 38969.65 kJ/mol
+
+  [ 37.1%] Step  371000/1000000 | Sim time:  371.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 41814.94 kJ/mol
+
+  [ 37.2%] Step  372000/1000000 | Sim time:  372.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40620.26 kJ/mol
+
+  [ 37.3%] Step  373000/1000000 | Sim time:  373.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 39753.47 kJ/mol
+
+  [ 37.4%] Step  374000/1000000 | Sim time:  374.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41079.80 kJ/mol
+
+  [ 37.5%] Step  375000/1000000 | Sim time:  375.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40472.60 kJ/mol
+
+  [ 37.6%] Step  376000/1000000 | Sim time:  376.0 ps | Speed:  214.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40404.04 kJ/mol
+
+  [ 37.7%] Step  377000/1000000 | Sim time:  377.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41331.14 kJ/mol
+
+  [ 37.8%] Step  378000/1000000 | Sim time:  378.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40291.09 kJ/mol
+
+  [ 37.9%] Step  379000/1000000 | Sim time:  379.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40487.44 kJ/mol
+
+  [ 38.0%] Step  380000/1000000 | Sim time:  380.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 39240.04 kJ/mol
+
+  [ 38.1%] Step  381000/1000000 | Sim time:  381.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40482.65 kJ/mol
+
+  [ 38.2%] Step  382000/1000000 | Sim time:  382.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 39435.35 kJ/mol
+
+  [ 38.3%] Step  383000/1000000 | Sim time:  383.0 ps | Speed:  216.0 ns/day | ETA:   0.1 hr
+         Total Energy: 40398.91 kJ/mol
+
+  [ 38.4%] Step  384000/1000000 | Sim time:  384.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 41155.27 kJ/mol
+
+  [ 38.5%] Step  385000/1000000 | Sim time:  385.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41130.22 kJ/mol
+
+  [ 38.6%] Step  386000/1000000 | Sim time:  386.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40716.58 kJ/mol
+
+  [ 38.7%] Step  387000/1000000 | Sim time:  387.0 ps | Speed:  209.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40013.72 kJ/mol
+
+  [ 38.8%] Step  388000/1000000 | Sim time:  388.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 39634.47 kJ/mol
+
+  [ 38.9%] Step  389000/1000000 | Sim time:  389.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 41187.84 kJ/mol
+
+  [ 39.0%] Step  390000/1000000 | Sim time:  390.0 ps | Speed:  214.3 ns/day | ETA:   0.1 hr
+         Total Energy: 39619.16 kJ/mol
+
+  [ 39.1%] Step  391000/1000000 | Sim time:  391.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 38996.60 kJ/mol
+
+  [ 39.2%] Step  392000/1000000 | Sim time:  392.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40308.34 kJ/mol
+
+  [ 39.3%] Step  393000/1000000 | Sim time:  393.0 ps | Speed:  213.9 ns/day | ETA:   0.1 hr
+         Total Energy: 39826.74 kJ/mol
+
+  [ 39.4%] Step  394000/1000000 | Sim time:  394.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 39802.05 kJ/mol
+
+  [ 39.5%] Step  395000/1000000 | Sim time:  395.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40490.48 kJ/mol
+
+  [ 39.6%] Step  396000/1000000 | Sim time:  396.0 ps | Speed:  211.4 ns/day | ETA:   0.1 hr
+         Total Energy: 39585.58 kJ/mol
+
+  [ 39.7%] Step  397000/1000000 | Sim time:  397.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 39867.82 kJ/mol
+
+  [ 39.8%] Step  398000/1000000 | Sim time:  398.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40024.07 kJ/mol
+
+  [ 39.9%] Step  399000/1000000 | Sim time:  399.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40362.59 kJ/mol
+
+  [ 40.0%] Step  400000/1000000 | Sim time:  400.0 ps | Speed:  214.7 ns/day | ETA:   0.1 hr
+         Total Energy: 38795.13 kJ/mol
+
+  [ 40.1%] Step  401000/1000000 | Sim time:  401.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40264.48 kJ/mol
+
+  [ 40.2%] Step  402000/1000000 | Sim time:  402.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 39368.91 kJ/mol
+
+  [ 40.3%] Step  403000/1000000 | Sim time:  403.0 ps | Speed:  215.0 ns/day | ETA:   0.1 hr
+         Total Energy: 40665.54 kJ/mol
+
+  [ 40.4%] Step  404000/1000000 | Sim time:  404.0 ps | Speed:  214.1 ns/day | ETA:   0.1 hr
+         Total Energy: 40026.00 kJ/mol
+
+  [ 40.5%] Step  405000/1000000 | Sim time:  405.0 ps | Speed:  213.9 ns/day | ETA:   0.1 hr
+         Total Energy: 41296.00 kJ/mol
+
+  [ 40.6%] Step  406000/1000000 | Sim time:  406.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40712.73 kJ/mol
+
+  [ 40.7%] Step  407000/1000000 | Sim time:  407.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40741.99 kJ/mol
+
+  [ 40.8%] Step  408000/1000000 | Sim time:  408.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 39674.67 kJ/mol
+
+  [ 40.9%] Step  409000/1000000 | Sim time:  409.0 ps | Speed:  123.2 ns/day | ETA:   0.1 hr
+         Total Energy: 40862.53 kJ/mol
+
+  [ 41.0%] Step  410000/1000000 | Sim time:  410.0 ps | Speed:  214.8 ns/day | ETA:   0.1 hr
+         Total Energy: 39712.50 kJ/mol
+
+  [ 41.1%] Step  411000/1000000 | Sim time:  411.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40493.47 kJ/mol
+
+  [ 41.2%] Step  412000/1000000 | Sim time:  412.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 40147.79 kJ/mol
+
+  [ 41.3%] Step  413000/1000000 | Sim time:  413.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40453.00 kJ/mol
+
+  [ 41.4%] Step  414000/1000000 | Sim time:  414.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 41971.20 kJ/mol
+
+  [ 41.5%] Step  415000/1000000 | Sim time:  415.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40618.63 kJ/mol
+
+  [ 41.6%] Step  416000/1000000 | Sim time:  416.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41360.98 kJ/mol
+
+  [ 41.7%] Step  417000/1000000 | Sim time:  417.0 ps | Speed:  213.8 ns/day | ETA:   0.1 hr
+         Total Energy: 41382.74 kJ/mol
+
+  [ 41.8%] Step  418000/1000000 | Sim time:  418.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40234.92 kJ/mol
+
+  [ 41.9%] Step  419000/1000000 | Sim time:  419.0 ps | Speed:  213.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40734.61 kJ/mol
+
+  [ 42.0%] Step  420000/1000000 | Sim time:  420.0 ps | Speed:  213.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40693.01 kJ/mol
+
+  [ 42.1%] Step  421000/1000000 | Sim time:  421.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 39658.51 kJ/mol
+
+  [ 42.2%] Step  422000/1000000 | Sim time:  422.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40901.33 kJ/mol
+
+  [ 42.3%] Step  423000/1000000 | Sim time:  423.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40871.95 kJ/mol
+
+  [ 42.4%] Step  424000/1000000 | Sim time:  424.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40969.85 kJ/mol
+
+  [ 42.5%] Step  425000/1000000 | Sim time:  425.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 39588.56 kJ/mol
+
+  [ 42.6%] Step  426000/1000000 | Sim time:  426.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 39455.30 kJ/mol
+
+  [ 42.7%] Step  427000/1000000 | Sim time:  427.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41122.64 kJ/mol
+
+  [ 42.8%] Step  428000/1000000 | Sim time:  428.0 ps | Speed:  214.3 ns/day | ETA:   0.1 hr
+         Total Energy: 40424.77 kJ/mol
+
+  [ 42.9%] Step  429000/1000000 | Sim time:  429.0 ps | Speed:  214.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40664.62 kJ/mol
+
+  [ 43.0%] Step  430000/1000000 | Sim time:  430.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 41453.41 kJ/mol
+
+  [ 43.1%] Step  431000/1000000 | Sim time:  431.0 ps | Speed:  215.1 ns/day | ETA:   0.1 hr
+         Total Energy: 40680.37 kJ/mol
+
+  [ 43.2%] Step  432000/1000000 | Sim time:  432.0 ps | Speed:  215.2 ns/day | ETA:   0.1 hr
+         Total Energy: 41200.08 kJ/mol
+
+  [ 43.3%] Step  433000/1000000 | Sim time:  433.0 ps | Speed:  215.2 ns/day | ETA:   0.1 hr
+         Total Energy: 40786.98 kJ/mol
+
+  [ 43.4%] Step  434000/1000000 | Sim time:  434.0 ps | Speed:  215.2 ns/day | ETA:   0.1 hr
+         Total Energy: 39498.65 kJ/mol
+
+  [ 43.5%] Step  435000/1000000 | Sim time:  435.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40838.99 kJ/mol
+
+  [ 43.6%] Step  436000/1000000 | Sim time:  436.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41194.85 kJ/mol
+
+  [ 43.7%] Step  437000/1000000 | Sim time:  437.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41258.02 kJ/mol
+
+  [ 43.8%] Step  438000/1000000 | Sim time:  438.0 ps | Speed:  214.0 ns/day | ETA:   0.1 hr
+         Total Energy: 40758.76 kJ/mol
+
+  [ 43.9%] Step  439000/1000000 | Sim time:  439.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 42508.89 kJ/mol
+
+  [ 44.0%] Step  440000/1000000 | Sim time:  440.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 39499.63 kJ/mol
+
+  [ 44.1%] Step  441000/1000000 | Sim time:  441.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40425.46 kJ/mol
+
+  [ 44.2%] Step  442000/1000000 | Sim time:  442.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40886.17 kJ/mol
+
+  [ 44.3%] Step  443000/1000000 | Sim time:  443.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 39762.51 kJ/mol
+
+  [ 44.4%] Step  444000/1000000 | Sim time:  444.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40964.91 kJ/mol
+
+  [ 44.5%] Step  445000/1000000 | Sim time:  445.0 ps | Speed:  213.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41206.63 kJ/mol
+
+  [ 44.6%] Step  446000/1000000 | Sim time:  446.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 42618.69 kJ/mol
+
+  [ 44.7%] Step  447000/1000000 | Sim time:  447.0 ps | Speed:  215.2 ns/day | ETA:   0.1 hr
+         Total Energy: 40027.86 kJ/mol
+
+  [ 44.8%] Step  448000/1000000 | Sim time:  448.0 ps | Speed:  214.3 ns/day | ETA:   0.1 hr
+         Total Energy: 40417.75 kJ/mol
+
+  [ 44.9%] Step  449000/1000000 | Sim time:  449.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41451.06 kJ/mol
+
+  [ 45.0%] Step  450000/1000000 | Sim time:  450.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 39299.61 kJ/mol
+
+  [ 45.1%] Step  451000/1000000 | Sim time:  451.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40457.93 kJ/mol
+
+  [ 45.2%] Step  452000/1000000 | Sim time:  452.0 ps | Speed:  214.9 ns/day | ETA:   0.1 hr
+         Total Energy: 40127.44 kJ/mol
+
+  [ 45.3%] Step  453000/1000000 | Sim time:  453.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 38948.97 kJ/mol
+
+  [ 45.4%] Step  454000/1000000 | Sim time:  454.0 ps | Speed:  215.1 ns/day | ETA:   0.1 hr
+         Total Energy: 40579.31 kJ/mol
+
+  [ 45.5%] Step  455000/1000000 | Sim time:  455.0 ps | Speed:  215.2 ns/day | ETA:   0.1 hr
+         Total Energy: 39749.58 kJ/mol
+
+  [ 45.6%] Step  456000/1000000 | Sim time:  456.0 ps | Speed:  215.2 ns/day | ETA:   0.1 hr
+         Total Energy: 41164.00 kJ/mol
+
+  [ 45.7%] Step  457000/1000000 | Sim time:  457.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40721.79 kJ/mol
+
+  [ 45.8%] Step  458000/1000000 | Sim time:  458.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40658.80 kJ/mol
+
+  [ 45.9%] Step  459000/1000000 | Sim time:  459.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 40662.58 kJ/mol
+
+  [ 46.0%] Step  460000/1000000 | Sim time:  460.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40721.59 kJ/mol
+
+  [ 46.1%] Step  461000/1000000 | Sim time:  461.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41338.84 kJ/mol
+
+  [ 46.2%] Step  462000/1000000 | Sim time:  462.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 39015.88 kJ/mol
+
+  [ 46.3%] Step  463000/1000000 | Sim time:  463.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40360.63 kJ/mol
+
+  [ 46.4%] Step  464000/1000000 | Sim time:  464.0 ps | Speed:  214.0 ns/day | ETA:   0.1 hr
+         Total Energy: 41011.45 kJ/mol
+
+  [ 46.5%] Step  465000/1000000 | Sim time:  465.0 ps | Speed:  215.1 ns/day | ETA:   0.1 hr
+         Total Energy: 39122.48 kJ/mol
+
+  [ 46.6%] Step  466000/1000000 | Sim time:  466.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 40619.36 kJ/mol
+
+  [ 46.7%] Step  467000/1000000 | Sim time:  467.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 39038.74 kJ/mol
+
+  [ 46.8%] Step  468000/1000000 | Sim time:  468.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 40592.25 kJ/mol
+
+  [ 46.9%] Step  469000/1000000 | Sim time:  469.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41497.99 kJ/mol
+
+  [ 47.0%] Step  470000/1000000 | Sim time:  470.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 38732.65 kJ/mol
+
+  [ 47.1%] Step  471000/1000000 | Sim time:  471.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 40258.11 kJ/mol
+
+  [ 47.2%] Step  472000/1000000 | Sim time:  472.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41577.90 kJ/mol
+
+  [ 47.3%] Step  473000/1000000 | Sim time:  473.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 39888.03 kJ/mol
+
+  [ 47.4%] Step  474000/1000000 | Sim time:  474.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41299.19 kJ/mol
+
+  [ 47.5%] Step  475000/1000000 | Sim time:  475.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 38534.30 kJ/mol
+
+  [ 47.6%] Step  476000/1000000 | Sim time:  476.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40351.78 kJ/mol
+
+  [ 47.7%] Step  477000/1000000 | Sim time:  477.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 40107.02 kJ/mol
+
+  [ 47.8%] Step  478000/1000000 | Sim time:  478.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 41223.04 kJ/mol
+
+  [ 47.9%] Step  479000/1000000 | Sim time:  479.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 39810.64 kJ/mol
+
+  [ 48.0%] Step  480000/1000000 | Sim time:  480.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 39670.17 kJ/mol
+
+  [ 48.1%] Step  481000/1000000 | Sim time:  481.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40241.87 kJ/mol
+
+  [ 48.2%] Step  482000/1000000 | Sim time:  482.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40048.95 kJ/mol
+
+  [ 48.3%] Step  483000/1000000 | Sim time:  483.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40591.32 kJ/mol
+
+  [ 48.4%] Step  484000/1000000 | Sim time:  484.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40866.34 kJ/mol
+
+  [ 48.5%] Step  485000/1000000 | Sim time:  485.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 39735.30 kJ/mol
+
+  [ 48.6%] Step  486000/1000000 | Sim time:  486.0 ps | Speed:  203.1 ns/day | ETA:   0.1 hr
+         Total Energy: 40390.85 kJ/mol
+
+  [ 48.7%] Step  487000/1000000 | Sim time:  487.0 ps | Speed:  215.2 ns/day | ETA:   0.1 hr
+         Total Energy: 41406.74 kJ/mol
+
+  [ 48.8%] Step  488000/1000000 | Sim time:  488.0 ps | Speed:  216.0 ns/day | ETA:   0.1 hr
+         Total Energy: 40882.10 kJ/mol
+
+  [ 48.9%] Step  489000/1000000 | Sim time:  489.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 40508.27 kJ/mol
+
+  [ 49.0%] Step  490000/1000000 | Sim time:  490.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41162.41 kJ/mol
+
+  [ 49.1%] Step  491000/1000000 | Sim time:  491.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40732.01 kJ/mol
+
+  [ 49.2%] Step  492000/1000000 | Sim time:  492.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41231.14 kJ/mol
+
+  [ 49.3%] Step  493000/1000000 | Sim time:  493.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 39845.37 kJ/mol
+
+  [ 49.4%] Step  494000/1000000 | Sim time:  494.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 41487.43 kJ/mol
+
+  [ 49.5%] Step  495000/1000000 | Sim time:  495.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40866.95 kJ/mol
+
+  [ 49.6%] Step  496000/1000000 | Sim time:  496.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40496.50 kJ/mol
+
+  [ 49.7%] Step  497000/1000000 | Sim time:  497.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40656.63 kJ/mol
+
+  [ 49.8%] Step  498000/1000000 | Sim time:  498.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40148.00 kJ/mol
+
+  [ 49.9%] Step  499000/1000000 | Sim time:  499.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41337.94 kJ/mol
+
+  [ 50.0%] Step  500000/1000000 | Sim time:  500.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 41445.71 kJ/mol
+
+  [ 50.1%] Step  501000/1000000 | Sim time:  501.0 ps | Speed:  212.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40252.14 kJ/mol
+
+  [ 50.2%] Step  502000/1000000 | Sim time:  502.0 ps | Speed:  214.9 ns/day | ETA:   0.1 hr
+         Total Energy: 41958.79 kJ/mol
+
+  [ 50.3%] Step  503000/1000000 | Sim time:  503.0 ps | Speed:  215.0 ns/day | ETA:   0.1 hr
+         Total Energy: 40352.57 kJ/mol
+
+  [ 50.4%] Step  504000/1000000 | Sim time:  504.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 39920.23 kJ/mol
+
+  [ 50.5%] Step  505000/1000000 | Sim time:  505.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40750.92 kJ/mol
+
+  [ 50.6%] Step  506000/1000000 | Sim time:  506.0 ps | Speed:  215.8 ns/day | ETA:   0.1 hr
+         Total Energy: 39745.20 kJ/mol
+
+  [ 50.7%] Step  507000/1000000 | Sim time:  507.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41932.30 kJ/mol
+
+  [ 50.8%] Step  508000/1000000 | Sim time:  508.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40619.70 kJ/mol
+
+  [ 50.9%] Step  509000/1000000 | Sim time:  509.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 40237.18 kJ/mol
+
+  [ 51.0%] Step  510000/1000000 | Sim time:  510.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40871.27 kJ/mol
+
+  [ 51.1%] Step  511000/1000000 | Sim time:  511.0 ps | Speed:  214.3 ns/day | ETA:   0.1 hr
+         Total Energy: 41187.42 kJ/mol
+
+  [ 51.2%] Step  512000/1000000 | Sim time:  512.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40854.11 kJ/mol
+
+  [ 51.3%] Step  513000/1000000 | Sim time:  513.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40271.69 kJ/mol
+
+  [ 51.4%] Step  514000/1000000 | Sim time:  514.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 42034.93 kJ/mol
+
+  [ 51.5%] Step  515000/1000000 | Sim time:  515.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 39423.93 kJ/mol
+
+  [ 51.6%] Step  516000/1000000 | Sim time:  516.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 41479.81 kJ/mol
+
+  [ 51.7%] Step  517000/1000000 | Sim time:  517.0 ps | Speed:  215.9 ns/day | ETA:   0.1 hr
+         Total Energy: 40913.47 kJ/mol
+
+  [ 51.8%] Step  518000/1000000 | Sim time:  518.0 ps | Speed:  216.1 ns/day | ETA:   0.1 hr
+         Total Energy: 40399.81 kJ/mol
+
+  [ 51.9%] Step  519000/1000000 | Sim time:  519.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40491.26 kJ/mol
+
+  [ 52.0%] Step  520000/1000000 | Sim time:  520.0 ps | Speed:  215.0 ns/day | ETA:   0.1 hr
+         Total Energy: 40068.17 kJ/mol
+
+  [ 52.1%] Step  521000/1000000 | Sim time:  521.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40598.62 kJ/mol
+
+  [ 52.2%] Step  522000/1000000 | Sim time:  522.0 ps | Speed:  215.2 ns/day | ETA:   0.1 hr
+         Total Energy: 40005.35 kJ/mol
+
+  [ 52.3%] Step  523000/1000000 | Sim time:  523.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 39358.86 kJ/mol
+
+  [ 52.4%] Step  524000/1000000 | Sim time:  524.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 39992.16 kJ/mol
+
+  [ 52.5%] Step  525000/1000000 | Sim time:  525.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40911.49 kJ/mol
+
+  [ 52.6%] Step  526000/1000000 | Sim time:  526.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 39280.36 kJ/mol
+
+  [ 52.7%] Step  527000/1000000 | Sim time:  527.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 39811.19 kJ/mol
+
+  [ 52.8%] Step  528000/1000000 | Sim time:  528.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40878.12 kJ/mol
+
+  [ 52.9%] Step  529000/1000000 | Sim time:  529.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 39646.12 kJ/mol
+
+  [ 53.0%] Step  530000/1000000 | Sim time:  530.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41748.32 kJ/mol
+
+  [ 53.1%] Step  531000/1000000 | Sim time:  531.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40018.02 kJ/mol
+
+  [ 53.2%] Step  532000/1000000 | Sim time:  532.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41177.46 kJ/mol
+
+  [ 53.3%] Step  533000/1000000 | Sim time:  533.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 39520.30 kJ/mol
+
+  [ 53.4%] Step  534000/1000000 | Sim time:  534.0 ps | Speed:  214.9 ns/day | ETA:   0.1 hr
+         Total Energy: 41124.80 kJ/mol
+
+  [ 53.5%] Step  535000/1000000 | Sim time:  535.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40067.12 kJ/mol
+
+  [ 53.6%] Step  536000/1000000 | Sim time:  536.0 ps | Speed:  213.6 ns/day | ETA:   0.1 hr
+         Total Energy: 41167.94 kJ/mol
+
+  [ 53.7%] Step  537000/1000000 | Sim time:  537.0 ps | Speed:  215.9 ns/day | ETA:   0.1 hr
+         Total Energy: 41772.34 kJ/mol
+
+  [ 53.8%] Step  538000/1000000 | Sim time:  538.0 ps | Speed:  214.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40002.18 kJ/mol
+
+  [ 53.9%] Step  539000/1000000 | Sim time:  539.0 ps | Speed:  214.9 ns/day | ETA:   0.1 hr
+         Total Energy: 41291.75 kJ/mol
+
+  [ 54.0%] Step  540000/1000000 | Sim time:  540.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40508.46 kJ/mol
+
+  [ 54.1%] Step  541000/1000000 | Sim time:  541.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 39673.62 kJ/mol
+
+  [ 54.2%] Step  542000/1000000 | Sim time:  542.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40331.48 kJ/mol
+
+  [ 54.3%] Step  543000/1000000 | Sim time:  543.0 ps | Speed:  215.3 ns/day | ETA:   0.1 hr
+         Total Energy: 41218.20 kJ/mol
+
+  [ 54.4%] Step  544000/1000000 | Sim time:  544.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 39844.44 kJ/mol
+
+  [ 54.5%] Step  545000/1000000 | Sim time:  545.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 39457.39 kJ/mol
+
+  [ 54.6%] Step  546000/1000000 | Sim time:  546.0 ps | Speed:  215.7 ns/day | ETA:   0.1 hr
+         Total Energy: 40571.40 kJ/mol
+
+  [ 54.7%] Step  547000/1000000 | Sim time:  547.0 ps | Speed:  215.4 ns/day | ETA:   0.1 hr
+         Total Energy: 40219.19 kJ/mol
+
+  [ 54.8%] Step  548000/1000000 | Sim time:  548.0 ps | Speed:  215.6 ns/day | ETA:   0.1 hr
+         Total Energy: 40543.11 kJ/mol
+
+  [ 54.9%] Step  549000/1000000 | Sim time:  549.0 ps | Speed:  214.5 ns/day | ETA:   0.1 hr
+         Total Energy: 41407.22 kJ/mol
+
+  [ 55.0%] Step  550000/1000000 | Sim time:  550.0 ps | Speed:  215.5 ns/day | ETA:   0.1 hr
+         Total Energy: 40430.59 kJ/mol
+
+  [ 55.1%] Step  551000/1000000 | Sim time:  551.0 ps | Speed:  214.7 ns/day | ETA:   0.1 hr
+         Total Energy: 39608.98 kJ/mol
+
+  [ 55.2%] Step  552000/1000000 | Sim time:  552.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40715.63 kJ/mol
+
+  [ 55.3%] Step  553000/1000000 | Sim time:  553.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40354.56 kJ/mol
+
+  [ 55.4%] Step  554000/1000000 | Sim time:  554.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40511.81 kJ/mol
+
+  [ 55.5%] Step  555000/1000000 | Sim time:  555.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40882.77 kJ/mol
+
+  [ 55.6%] Step  556000/1000000 | Sim time:  556.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39952.08 kJ/mol
+
+  [ 55.7%] Step  557000/1000000 | Sim time:  557.0 ps | Speed:  216.0 ns/day | ETA:   0.0 hr
+         Total Energy: 40283.67 kJ/mol
+
+  [ 55.8%] Step  558000/1000000 | Sim time:  558.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39902.60 kJ/mol
+
+  [ 55.9%] Step  559000/1000000 | Sim time:  559.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41193.69 kJ/mol
+
+  [ 56.0%] Step  560000/1000000 | Sim time:  560.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 39369.62 kJ/mol
+
+  [ 56.1%] Step  561000/1000000 | Sim time:  561.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 42011.24 kJ/mol
+
+  [ 56.2%] Step  562000/1000000 | Sim time:  562.0 ps | Speed:  202.1 ns/day | ETA:   0.1 hr
+         Total Energy: 40728.46 kJ/mol
+
+  [ 56.3%] Step  563000/1000000 | Sim time:  563.0 ps | Speed:  216.0 ns/day | ETA:   0.0 hr
+         Total Energy: 40469.22 kJ/mol
+
+  [ 56.4%] Step  564000/1000000 | Sim time:  564.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41322.62 kJ/mol
+
+  [ 56.5%] Step  565000/1000000 | Sim time:  565.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40945.49 kJ/mol
+
+  [ 56.6%] Step  566000/1000000 | Sim time:  566.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41013.25 kJ/mol
+
+  [ 56.7%] Step  567000/1000000 | Sim time:  567.0 ps | Speed:  215.0 ns/day | ETA:   0.0 hr
+         Total Energy: 40042.01 kJ/mol
+
+  [ 56.8%] Step  568000/1000000 | Sim time:  568.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40228.55 kJ/mol
+
+  [ 56.9%] Step  569000/1000000 | Sim time:  569.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40399.96 kJ/mol
+
+  [ 57.0%] Step  570000/1000000 | Sim time:  570.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40387.99 kJ/mol
+
+  [ 57.1%] Step  571000/1000000 | Sim time:  571.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41095.59 kJ/mol
+
+  [ 57.2%] Step  572000/1000000 | Sim time:  572.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41759.86 kJ/mol
+
+  [ 57.3%] Step  573000/1000000 | Sim time:  573.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40554.96 kJ/mol
+
+  [ 57.4%] Step  574000/1000000 | Sim time:  574.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 41250.67 kJ/mol
+
+  [ 57.5%] Step  575000/1000000 | Sim time:  575.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41289.87 kJ/mol
+
+  [ 57.6%] Step  576000/1000000 | Sim time:  576.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41329.09 kJ/mol
+
+  [ 57.7%] Step  577000/1000000 | Sim time:  577.0 ps | Speed:  215.0 ns/day | ETA:   0.0 hr
+         Total Energy: 39267.12 kJ/mol
+
+  [ 57.8%] Step  578000/1000000 | Sim time:  578.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40393.85 kJ/mol
+
+  [ 57.9%] Step  579000/1000000 | Sim time:  579.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40149.83 kJ/mol
+
+  [ 58.0%] Step  580000/1000000 | Sim time:  580.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41384.61 kJ/mol
+
+  [ 58.1%] Step  581000/1000000 | Sim time:  581.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39987.00 kJ/mol
+
+  [ 58.2%] Step  582000/1000000 | Sim time:  582.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40633.39 kJ/mol
+
+  [ 58.3%] Step  583000/1000000 | Sim time:  583.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 41570.81 kJ/mol
+
+  [ 58.4%] Step  584000/1000000 | Sim time:  584.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 41275.46 kJ/mol
+
+  [ 58.5%] Step  585000/1000000 | Sim time:  585.0 ps | Speed:  213.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40613.20 kJ/mol
+
+  [ 58.6%] Step  586000/1000000 | Sim time:  586.0 ps | Speed:  214.9 ns/day | ETA:   0.0 hr
+         Total Energy: 40843.51 kJ/mol
+
+  [ 58.7%] Step  587000/1000000 | Sim time:  587.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 39755.22 kJ/mol
+
+  [ 58.8%] Step  588000/1000000 | Sim time:  588.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40687.61 kJ/mol
+
+  [ 58.9%] Step  589000/1000000 | Sim time:  589.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40076.04 kJ/mol
+
+  [ 59.0%] Step  590000/1000000 | Sim time:  590.0 ps | Speed:  214.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40993.42 kJ/mol
+
+  [ 59.1%] Step  591000/1000000 | Sim time:  591.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40879.12 kJ/mol
+
+  [ 59.2%] Step  592000/1000000 | Sim time:  592.0 ps | Speed:  214.9 ns/day | ETA:   0.0 hr
+         Total Energy: 41274.30 kJ/mol
+
+  [ 59.3%] Step  593000/1000000 | Sim time:  593.0 ps | Speed:  215.0 ns/day | ETA:   0.0 hr
+         Total Energy: 42086.22 kJ/mol
+
+  [ 59.4%] Step  594000/1000000 | Sim time:  594.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40047.88 kJ/mol
+
+  [ 59.5%] Step  595000/1000000 | Sim time:  595.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41842.99 kJ/mol
+
+  [ 59.6%] Step  596000/1000000 | Sim time:  596.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41775.04 kJ/mol
+
+  [ 59.7%] Step  597000/1000000 | Sim time:  597.0 ps | Speed:  214.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40998.86 kJ/mol
+
+  [ 59.8%] Step  598000/1000000 | Sim time:  598.0 ps | Speed:  215.2 ns/day | ETA:   0.0 hr
+         Total Energy: 39391.79 kJ/mol
+
+  [ 59.9%] Step  599000/1000000 | Sim time:  599.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40005.44 kJ/mol
+
+  [ 60.0%] Step  600000/1000000 | Sim time:  600.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40788.86 kJ/mol
+
+  [ 60.1%] Step  601000/1000000 | Sim time:  601.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40485.34 kJ/mol
+
+  [ 60.2%] Step  602000/1000000 | Sim time:  602.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 41522.38 kJ/mol
+
+  [ 60.3%] Step  603000/1000000 | Sim time:  603.0 ps | Speed:  215.1 ns/day | ETA:   0.0 hr
+         Total Energy: 40472.03 kJ/mol
+
+  [ 60.4%] Step  604000/1000000 | Sim time:  604.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40167.35 kJ/mol
+
+  [ 60.5%] Step  605000/1000000 | Sim time:  605.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40677.76 kJ/mol
+
+  [ 60.6%] Step  606000/1000000 | Sim time:  606.0 ps | Speed:  214.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40752.86 kJ/mol
+
+  [ 60.7%] Step  607000/1000000 | Sim time:  607.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40655.08 kJ/mol
+
+  [ 60.8%] Step  608000/1000000 | Sim time:  608.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41306.60 kJ/mol
+
+  [ 60.9%] Step  609000/1000000 | Sim time:  609.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39571.79 kJ/mol
+
+  [ 61.0%] Step  610000/1000000 | Sim time:  610.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40547.20 kJ/mol
+
+  [ 61.1%] Step  611000/1000000 | Sim time:  611.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40536.02 kJ/mol
+
+  [ 61.2%] Step  612000/1000000 | Sim time:  612.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39045.30 kJ/mol
+
+  [ 61.3%] Step  613000/1000000 | Sim time:  613.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39248.74 kJ/mol
+
+  [ 61.4%] Step  614000/1000000 | Sim time:  614.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39498.60 kJ/mol
+
+  [ 61.5%] Step  615000/1000000 | Sim time:  615.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40403.40 kJ/mol
+
+  [ 61.6%] Step  616000/1000000 | Sim time:  616.0 ps | Speed:  213.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40693.73 kJ/mol
+
+  [ 61.7%] Step  617000/1000000 | Sim time:  617.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 41523.28 kJ/mol
+
+  [ 61.8%] Step  618000/1000000 | Sim time:  618.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 41037.83 kJ/mol
+
+  [ 61.9%] Step  619000/1000000 | Sim time:  619.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 41463.21 kJ/mol
+
+  [ 62.0%] Step  620000/1000000 | Sim time:  620.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39942.32 kJ/mol
+
+  [ 62.1%] Step  621000/1000000 | Sim time:  621.0 ps | Speed:  215.2 ns/day | ETA:   0.0 hr
+         Total Energy: 41670.08 kJ/mol
+
+  [ 62.2%] Step  622000/1000000 | Sim time:  622.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40484.43 kJ/mol
+
+  [ 62.3%] Step  623000/1000000 | Sim time:  623.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40487.94 kJ/mol
+
+  [ 62.4%] Step  624000/1000000 | Sim time:  624.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 41168.05 kJ/mol
+
+  [ 62.5%] Step  625000/1000000 | Sim time:  625.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40616.95 kJ/mol
+
+  [ 62.6%] Step  626000/1000000 | Sim time:  626.0 ps | Speed:  213.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40484.03 kJ/mol
+
+  [ 62.7%] Step  627000/1000000 | Sim time:  627.0 ps | Speed:  215.2 ns/day | ETA:   0.0 hr
+         Total Energy: 41086.89 kJ/mol
+
+  [ 62.8%] Step  628000/1000000 | Sim time:  628.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40187.89 kJ/mol
+
+  [ 62.9%] Step  629000/1000000 | Sim time:  629.0 ps | Speed:  215.2 ns/day | ETA:   0.0 hr
+         Total Energy: 40294.74 kJ/mol
+
+  [ 63.0%] Step  630000/1000000 | Sim time:  630.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41948.56 kJ/mol
+
+  [ 63.1%] Step  631000/1000000 | Sim time:  631.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 39905.66 kJ/mol
+
+  [ 63.2%] Step  632000/1000000 | Sim time:  632.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40971.16 kJ/mol
+
+  [ 63.3%] Step  633000/1000000 | Sim time:  633.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41488.75 kJ/mol
+
+  [ 63.4%] Step  634000/1000000 | Sim time:  634.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40561.35 kJ/mol
+
+  [ 63.5%] Step  635000/1000000 | Sim time:  635.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39652.62 kJ/mol
+
+  [ 63.6%] Step  636000/1000000 | Sim time:  636.0 ps | Speed:  213.2 ns/day | ETA:   0.0 hr
+         Total Energy: 41649.73 kJ/mol
+
+  [ 63.7%] Step  637000/1000000 | Sim time:  637.0 ps | Speed:  213.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40850.78 kJ/mol
+
+  [ 63.8%] Step  638000/1000000 | Sim time:  638.0 ps | Speed:  214.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40841.73 kJ/mol
+
+  [ 63.9%] Step  639000/1000000 | Sim time:  639.0 ps | Speed:  208.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39939.22 kJ/mol
+
+  [ 64.0%] Step  640000/1000000 | Sim time:  640.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40213.81 kJ/mol
+
+  [ 64.1%] Step  641000/1000000 | Sim time:  641.0 ps | Speed:  213.9 ns/day | ETA:   0.0 hr
+         Total Energy: 41604.49 kJ/mol
+
+  [ 64.2%] Step  642000/1000000 | Sim time:  642.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41615.42 kJ/mol
+
+  [ 64.3%] Step  643000/1000000 | Sim time:  643.0 ps | Speed:  213.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40540.58 kJ/mol
+
+  [ 64.4%] Step  644000/1000000 | Sim time:  644.0 ps | Speed:  215.2 ns/day | ETA:   0.0 hr
+         Total Energy: 41254.37 kJ/mol
+
+  [ 64.5%] Step  645000/1000000 | Sim time:  645.0 ps | Speed:  214.7 ns/day | ETA:   0.0 hr
+         Total Energy: 41024.69 kJ/mol
+
+  [ 64.6%] Step  646000/1000000 | Sim time:  646.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41379.62 kJ/mol
+
+  [ 64.7%] Step  647000/1000000 | Sim time:  647.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40476.19 kJ/mol
+
+  [ 64.8%] Step  648000/1000000 | Sim time:  648.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 41156.57 kJ/mol
+
+  [ 64.9%] Step  649000/1000000 | Sim time:  649.0 ps | Speed:  214.9 ns/day | ETA:   0.0 hr
+         Total Energy: 40777.45 kJ/mol
+
+  [ 65.0%] Step  650000/1000000 | Sim time:  650.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 38815.92 kJ/mol
+
+  [ 65.1%] Step  651000/1000000 | Sim time:  651.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40812.11 kJ/mol
+
+  [ 65.2%] Step  652000/1000000 | Sim time:  652.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40119.51 kJ/mol
+
+  [ 65.3%] Step  653000/1000000 | Sim time:  653.0 ps | Speed:  214.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40815.10 kJ/mol
+
+  [ 65.4%] Step  654000/1000000 | Sim time:  654.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 39260.45 kJ/mol
+
+  [ 65.5%] Step  655000/1000000 | Sim time:  655.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40817.67 kJ/mol
+
+  [ 65.6%] Step  656000/1000000 | Sim time:  656.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40535.99 kJ/mol
+
+  [ 65.7%] Step  657000/1000000 | Sim time:  657.0 ps | Speed:  214.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40558.06 kJ/mol
+
+  [ 65.8%] Step  658000/1000000 | Sim time:  658.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40621.09 kJ/mol
+
+  [ 65.9%] Step  659000/1000000 | Sim time:  659.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40077.87 kJ/mol
+
+  [ 66.0%] Step  660000/1000000 | Sim time:  660.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40727.64 kJ/mol
+
+  [ 66.1%] Step  661000/1000000 | Sim time:  661.0 ps | Speed:  215.1 ns/day | ETA:   0.0 hr
+         Total Energy: 41285.69 kJ/mol
+
+  [ 66.2%] Step  662000/1000000 | Sim time:  662.0 ps | Speed:  214.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40454.65 kJ/mol
+
+  [ 66.3%] Step  663000/1000000 | Sim time:  663.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40370.62 kJ/mol
+
+  [ 66.4%] Step  664000/1000000 | Sim time:  664.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40515.12 kJ/mol
+
+  [ 66.5%] Step  665000/1000000 | Sim time:  665.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40985.41 kJ/mol
+
+  [ 66.6%] Step  666000/1000000 | Sim time:  666.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 39198.10 kJ/mol
+
+  [ 66.7%] Step  667000/1000000 | Sim time:  667.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40468.20 kJ/mol
+
+  [ 66.8%] Step  668000/1000000 | Sim time:  668.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40131.46 kJ/mol
+
+  [ 66.9%] Step  669000/1000000 | Sim time:  669.0 ps | Speed:  215.2 ns/day | ETA:   0.0 hr
+         Total Energy: 40267.74 kJ/mol
+
+  [ 67.0%] Step  670000/1000000 | Sim time:  670.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39275.86 kJ/mol
+
+  [ 67.1%] Step  671000/1000000 | Sim time:  671.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40505.87 kJ/mol
+
+  [ 67.2%] Step  672000/1000000 | Sim time:  672.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40496.75 kJ/mol
+
+  [ 67.3%] Step  673000/1000000 | Sim time:  673.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39779.09 kJ/mol
+
+  [ 67.4%] Step  674000/1000000 | Sim time:  674.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40759.02 kJ/mol
+
+  [ 67.5%] Step  675000/1000000 | Sim time:  675.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 38866.16 kJ/mol
+
+  [ 67.6%] Step  676000/1000000 | Sim time:  676.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40515.85 kJ/mol
+
+  [ 67.7%] Step  677000/1000000 | Sim time:  677.0 ps | Speed:  214.9 ns/day | ETA:   0.0 hr
+         Total Energy: 39817.99 kJ/mol
+
+  [ 67.8%] Step  678000/1000000 | Sim time:  678.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 39729.77 kJ/mol
+
+  [ 67.9%] Step  679000/1000000 | Sim time:  679.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 39235.68 kJ/mol
+
+  [ 68.0%] Step  680000/1000000 | Sim time:  680.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40312.71 kJ/mol
+
+  [ 68.1%] Step  681000/1000000 | Sim time:  681.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40663.92 kJ/mol
+
+  [ 68.2%] Step  682000/1000000 | Sim time:  682.0 ps | Speed:  214.2 ns/day | ETA:   0.0 hr
+         Total Energy: 40166.94 kJ/mol
+
+  [ 68.3%] Step  683000/1000000 | Sim time:  683.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40171.31 kJ/mol
+
+  [ 68.4%] Step  684000/1000000 | Sim time:  684.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39476.04 kJ/mol
+
+  [ 68.5%] Step  685000/1000000 | Sim time:  685.0 ps | Speed:  215.2 ns/day | ETA:   0.0 hr
+         Total Energy: 40393.68 kJ/mol
+
+  [ 68.6%] Step  686000/1000000 | Sim time:  686.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40045.15 kJ/mol
+
+  [ 68.7%] Step  687000/1000000 | Sim time:  687.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40199.33 kJ/mol
+
+  [ 68.8%] Step  688000/1000000 | Sim time:  688.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 41120.93 kJ/mol
+
+  [ 68.9%] Step  689000/1000000 | Sim time:  689.0 ps | Speed:  216.4 ns/day | ETA:   0.0 hr
+         Total Energy: 41497.50 kJ/mol
+
+  [ 69.0%] Step  690000/1000000 | Sim time:  690.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40023.34 kJ/mol
+
+  [ 69.1%] Step  691000/1000000 | Sim time:  691.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 41090.85 kJ/mol
+
+  [ 69.2%] Step  692000/1000000 | Sim time:  692.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41201.91 kJ/mol
+
+  [ 69.3%] Step  693000/1000000 | Sim time:  693.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39413.71 kJ/mol
+
+  [ 69.4%] Step  694000/1000000 | Sim time:  694.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 41970.10 kJ/mol
+
+  [ 69.5%] Step  695000/1000000 | Sim time:  695.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 39153.21 kJ/mol
+
+  [ 69.6%] Step  696000/1000000 | Sim time:  696.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39797.22 kJ/mol
+
+  [ 69.7%] Step  697000/1000000 | Sim time:  697.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 39995.12 kJ/mol
+
+  [ 69.8%] Step  698000/1000000 | Sim time:  698.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40869.14 kJ/mol
+
+  [ 69.9%] Step  699000/1000000 | Sim time:  699.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 41097.13 kJ/mol
+
+  [ 70.0%] Step  700000/1000000 | Sim time:  700.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 41330.30 kJ/mol
+
+  [ 70.1%] Step  701000/1000000 | Sim time:  701.0 ps | Speed:  216.1 ns/day | ETA:   0.0 hr
+         Total Energy: 40157.59 kJ/mol
+
+  [ 70.2%] Step  702000/1000000 | Sim time:  702.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40646.12 kJ/mol
+
+  [ 70.3%] Step  703000/1000000 | Sim time:  703.0 ps | Speed:  215.0 ns/day | ETA:   0.0 hr
+         Total Energy: 40730.58 kJ/mol
+
+  [ 70.4%] Step  704000/1000000 | Sim time:  704.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40806.77 kJ/mol
+
+  [ 70.5%] Step  705000/1000000 | Sim time:  705.0 ps | Speed:  217.0 ns/day | ETA:   0.0 hr
+         Total Energy: 40518.18 kJ/mol
+
+  [ 70.6%] Step  706000/1000000 | Sim time:  706.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39773.81 kJ/mol
+
+  [ 70.7%] Step  707000/1000000 | Sim time:  707.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40021.85 kJ/mol
+
+  [ 70.8%] Step  708000/1000000 | Sim time:  708.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40795.86 kJ/mol
+
+  [ 70.9%] Step  709000/1000000 | Sim time:  709.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40641.04 kJ/mol
+
+  [ 71.0%] Step  710000/1000000 | Sim time:  710.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 39744.23 kJ/mol
+
+  [ 71.1%] Step  711000/1000000 | Sim time:  711.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41050.28 kJ/mol
+
+  [ 71.2%] Step  712000/1000000 | Sim time:  712.0 ps | Speed:  214.4 ns/day | ETA:   0.0 hr
+         Total Energy: 41557.26 kJ/mol
+
+  [ 71.3%] Step  713000/1000000 | Sim time:  713.0 ps | Speed:  214.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40762.40 kJ/mol
+
+  [ 71.4%] Step  714000/1000000 | Sim time:  714.0 ps | Speed:  215.2 ns/day | ETA:   0.0 hr
+         Total Energy: 40654.94 kJ/mol
+
+  [ 71.5%] Step  715000/1000000 | Sim time:  715.0 ps | Speed:  208.8 ns/day | ETA:   0.0 hr
+         Total Energy: 41034.60 kJ/mol
+
+  [ 71.6%] Step  716000/1000000 | Sim time:  716.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40489.35 kJ/mol
+
+  [ 71.7%] Step  717000/1000000 | Sim time:  717.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39605.40 kJ/mol
+
+  [ 71.8%] Step  718000/1000000 | Sim time:  718.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 42358.86 kJ/mol
+
+  [ 71.9%] Step  719000/1000000 | Sim time:  719.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40924.53 kJ/mol
+
+  [ 72.0%] Step  720000/1000000 | Sim time:  720.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40264.48 kJ/mol
+
+  [ 72.1%] Step  721000/1000000 | Sim time:  721.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41295.21 kJ/mol
+
+  [ 72.2%] Step  722000/1000000 | Sim time:  722.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 39728.48 kJ/mol
+
+  [ 72.3%] Step  723000/1000000 | Sim time:  723.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40189.49 kJ/mol
+
+  [ 72.4%] Step  724000/1000000 | Sim time:  724.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40438.59 kJ/mol
+
+  [ 72.5%] Step  725000/1000000 | Sim time:  725.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40035.74 kJ/mol
+
+  [ 72.6%] Step  726000/1000000 | Sim time:  726.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39810.60 kJ/mol
+
+  [ 72.7%] Step  727000/1000000 | Sim time:  727.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40574.39 kJ/mol
+
+  [ 72.8%] Step  728000/1000000 | Sim time:  728.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40647.78 kJ/mol
+
+  [ 72.9%] Step  729000/1000000 | Sim time:  729.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40510.57 kJ/mol
+
+  [ 73.0%] Step  730000/1000000 | Sim time:  730.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39033.78 kJ/mol
+
+  [ 73.1%] Step  731000/1000000 | Sim time:  731.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39573.54 kJ/mol
+
+  [ 73.2%] Step  732000/1000000 | Sim time:  732.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39723.38 kJ/mol
+
+  [ 73.3%] Step  733000/1000000 | Sim time:  733.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40013.92 kJ/mol
+
+  [ 73.4%] Step  734000/1000000 | Sim time:  734.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40205.31 kJ/mol
+
+  [ 73.5%] Step  735000/1000000 | Sim time:  735.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40864.27 kJ/mol
+
+  [ 73.6%] Step  736000/1000000 | Sim time:  736.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40081.55 kJ/mol
+
+  [ 73.7%] Step  737000/1000000 | Sim time:  737.0 ps | Speed:  216.0 ns/day | ETA:   0.0 hr
+         Total Energy: 40716.53 kJ/mol
+
+  [ 73.8%] Step  738000/1000000 | Sim time:  738.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 41053.16 kJ/mol
+
+  [ 73.9%] Step  739000/1000000 | Sim time:  739.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40847.13 kJ/mol
+
+  [ 74.0%] Step  740000/1000000 | Sim time:  740.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39731.72 kJ/mol
+
+  [ 74.1%] Step  741000/1000000 | Sim time:  741.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40710.72 kJ/mol
+
+  [ 74.2%] Step  742000/1000000 | Sim time:  742.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39671.54 kJ/mol
+
+  [ 74.3%] Step  743000/1000000 | Sim time:  743.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40874.61 kJ/mol
+
+  [ 74.4%] Step  744000/1000000 | Sim time:  744.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 42125.51 kJ/mol
+
+  [ 74.5%] Step  745000/1000000 | Sim time:  745.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41594.72 kJ/mol
+
+  [ 74.6%] Step  746000/1000000 | Sim time:  746.0 ps | Speed:  214.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40906.69 kJ/mol
+
+  [ 74.7%] Step  747000/1000000 | Sim time:  747.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40239.15 kJ/mol
+
+  [ 74.8%] Step  748000/1000000 | Sim time:  748.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 39369.81 kJ/mol
+
+  [ 74.9%] Step  749000/1000000 | Sim time:  749.0 ps | Speed:  215.2 ns/day | ETA:   0.0 hr
+         Total Energy: 41112.13 kJ/mol
+
+  [ 75.0%] Step  750000/1000000 | Sim time:  750.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39403.15 kJ/mol
+
+  [ 75.1%] Step  751000/1000000 | Sim time:  751.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 39772.25 kJ/mol
+
+  [ 75.2%] Step  752000/1000000 | Sim time:  752.0 ps | Speed:  215.2 ns/day | ETA:   0.0 hr
+         Total Energy: 41187.44 kJ/mol
+
+  [ 75.3%] Step  753000/1000000 | Sim time:  753.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 41150.91 kJ/mol
+
+  [ 75.4%] Step  754000/1000000 | Sim time:  754.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39820.28 kJ/mol
+
+  [ 75.5%] Step  755000/1000000 | Sim time:  755.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40550.28 kJ/mol
+
+  [ 75.6%] Step  756000/1000000 | Sim time:  756.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39131.47 kJ/mol
+
+  [ 75.7%] Step  757000/1000000 | Sim time:  757.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40355.91 kJ/mol
+
+  [ 75.8%] Step  758000/1000000 | Sim time:  758.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40297.22 kJ/mol
+
+  [ 75.9%] Step  759000/1000000 | Sim time:  759.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40773.25 kJ/mol
+
+  [ 76.0%] Step  760000/1000000 | Sim time:  760.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 41260.99 kJ/mol
+
+  [ 76.1%] Step  761000/1000000 | Sim time:  761.0 ps | Speed:  214.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40950.22 kJ/mol
+
+  [ 76.2%] Step  762000/1000000 | Sim time:  762.0 ps | Speed:  215.1 ns/day | ETA:   0.0 hr
+         Total Energy: 39061.83 kJ/mol
+
+  [ 76.3%] Step  763000/1000000 | Sim time:  763.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39446.92 kJ/mol
+
+  [ 76.4%] Step  764000/1000000 | Sim time:  764.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 39678.96 kJ/mol
+
+  [ 76.5%] Step  765000/1000000 | Sim time:  765.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39528.60 kJ/mol
+
+  [ 76.6%] Step  766000/1000000 | Sim time:  766.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41164.06 kJ/mol
+
+  [ 76.7%] Step  767000/1000000 | Sim time:  767.0 ps | Speed:  215.0 ns/day | ETA:   0.0 hr
+         Total Energy: 39352.93 kJ/mol
+
+  [ 76.8%] Step  768000/1000000 | Sim time:  768.0 ps | Speed:  214.9 ns/day | ETA:   0.0 hr
+         Total Energy: 40461.36 kJ/mol
+
+  [ 76.9%] Step  769000/1000000 | Sim time:  769.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40569.07 kJ/mol
+
+  [ 77.0%] Step  770000/1000000 | Sim time:  770.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39812.99 kJ/mol
+
+  [ 77.1%] Step  771000/1000000 | Sim time:  771.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40416.23 kJ/mol
+
+  [ 77.2%] Step  772000/1000000 | Sim time:  772.0 ps | Speed:  215.0 ns/day | ETA:   0.0 hr
+         Total Energy: 41266.06 kJ/mol
+
+  [ 77.3%] Step  773000/1000000 | Sim time:  773.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40024.56 kJ/mol
+
+  [ 77.4%] Step  774000/1000000 | Sim time:  774.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40828.04 kJ/mol
+
+  [ 77.5%] Step  775000/1000000 | Sim time:  775.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40731.44 kJ/mol
+
+  [ 77.6%] Step  776000/1000000 | Sim time:  776.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39958.00 kJ/mol
+
+  [ 77.7%] Step  777000/1000000 | Sim time:  777.0 ps | Speed:  215.0 ns/day | ETA:   0.0 hr
+         Total Energy: 39199.97 kJ/mol
+
+  [ 77.8%] Step  778000/1000000 | Sim time:  778.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41189.67 kJ/mol
+
+  [ 77.9%] Step  779000/1000000 | Sim time:  779.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 42034.67 kJ/mol
+
+  [ 78.0%] Step  780000/1000000 | Sim time:  780.0 ps | Speed:  214.9 ns/day | ETA:   0.0 hr
+         Total Energy: 40473.31 kJ/mol
+
+  [ 78.1%] Step  781000/1000000 | Sim time:  781.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40394.84 kJ/mol
+
+  [ 78.2%] Step  782000/1000000 | Sim time:  782.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 38821.36 kJ/mol
+
+  [ 78.3%] Step  783000/1000000 | Sim time:  783.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40739.99 kJ/mol
+
+  [ 78.4%] Step  784000/1000000 | Sim time:  784.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40803.97 kJ/mol
+
+  [ 78.5%] Step  785000/1000000 | Sim time:  785.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40252.24 kJ/mol
+
+  [ 78.6%] Step  786000/1000000 | Sim time:  786.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 39772.58 kJ/mol
+
+  [ 78.7%] Step  787000/1000000 | Sim time:  787.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40562.90 kJ/mol
+
+  [ 78.8%] Step  788000/1000000 | Sim time:  788.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41700.09 kJ/mol
+
+  [ 78.9%] Step  789000/1000000 | Sim time:  789.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39422.76 kJ/mol
+
+  [ 79.0%] Step  790000/1000000 | Sim time:  790.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40741.63 kJ/mol
+
+  [ 79.1%] Step  791000/1000000 | Sim time:  791.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41847.61 kJ/mol
+
+  [ 79.2%] Step  792000/1000000 | Sim time:  792.0 ps | Speed:  202.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40846.10 kJ/mol
+
+  [ 79.3%] Step  793000/1000000 | Sim time:  793.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40751.94 kJ/mol
+
+  [ 79.4%] Step  794000/1000000 | Sim time:  794.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 38347.74 kJ/mol
+
+  [ 79.5%] Step  795000/1000000 | Sim time:  795.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39306.41 kJ/mol
+
+  [ 79.6%] Step  796000/1000000 | Sim time:  796.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40428.41 kJ/mol
+
+  [ 79.7%] Step  797000/1000000 | Sim time:  797.0 ps | Speed:  214.8 ns/day | ETA:   0.0 hr
+         Total Energy: 39136.56 kJ/mol
+
+  [ 79.8%] Step  798000/1000000 | Sim time:  798.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 41165.51 kJ/mol
+
+  [ 79.9%] Step  799000/1000000 | Sim time:  799.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40494.51 kJ/mol
+
+  [ 80.0%] Step  800000/1000000 | Sim time:  800.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40719.39 kJ/mol
+
+  [ 80.1%] Step  801000/1000000 | Sim time:  801.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40070.44 kJ/mol
+
+  [ 80.2%] Step  802000/1000000 | Sim time:  802.0 ps | Speed:  214.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41070.14 kJ/mol
+
+  [ 80.3%] Step  803000/1000000 | Sim time:  803.0 ps | Speed:  213.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40371.00 kJ/mol
+
+  [ 80.4%] Step  804000/1000000 | Sim time:  804.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39720.61 kJ/mol
+
+  [ 80.5%] Step  805000/1000000 | Sim time:  805.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39946.39 kJ/mol
+
+  [ 80.6%] Step  806000/1000000 | Sim time:  806.0 ps | Speed:  214.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40300.80 kJ/mol
+
+  [ 80.7%] Step  807000/1000000 | Sim time:  807.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39654.98 kJ/mol
+
+  [ 80.8%] Step  808000/1000000 | Sim time:  808.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 41269.99 kJ/mol
+
+  [ 80.9%] Step  809000/1000000 | Sim time:  809.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40214.60 kJ/mol
+
+  [ 81.0%] Step  810000/1000000 | Sim time:  810.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40603.79 kJ/mol
+
+  [ 81.1%] Step  811000/1000000 | Sim time:  811.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40225.33 kJ/mol
+
+  [ 81.2%] Step  812000/1000000 | Sim time:  812.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39809.53 kJ/mol
+
+  [ 81.3%] Step  813000/1000000 | Sim time:  813.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40404.15 kJ/mol
+
+  [ 81.4%] Step  814000/1000000 | Sim time:  814.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41530.06 kJ/mol
+
+  [ 81.5%] Step  815000/1000000 | Sim time:  815.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40126.50 kJ/mol
+
+  [ 81.6%] Step  816000/1000000 | Sim time:  816.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40358.40 kJ/mol
+
+  [ 81.7%] Step  817000/1000000 | Sim time:  817.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40180.89 kJ/mol
+
+  [ 81.8%] Step  818000/1000000 | Sim time:  818.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39973.87 kJ/mol
+
+  [ 81.9%] Step  819000/1000000 | Sim time:  819.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40064.68 kJ/mol
+
+  [ 82.0%] Step  820000/1000000 | Sim time:  820.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40539.82 kJ/mol
+
+  [ 82.1%] Step  821000/1000000 | Sim time:  821.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39977.97 kJ/mol
+
+  [ 82.2%] Step  822000/1000000 | Sim time:  822.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 41655.86 kJ/mol
+
+  [ 82.3%] Step  823000/1000000 | Sim time:  823.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39477.67 kJ/mol
+
+  [ 82.4%] Step  824000/1000000 | Sim time:  824.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39761.15 kJ/mol
+
+  [ 82.5%] Step  825000/1000000 | Sim time:  825.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40888.59 kJ/mol
+
+  [ 82.6%] Step  826000/1000000 | Sim time:  826.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41068.24 kJ/mol
+
+  [ 82.7%] Step  827000/1000000 | Sim time:  827.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 41434.29 kJ/mol
+
+  [ 82.8%] Step  828000/1000000 | Sim time:  828.0 ps | Speed:  214.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40175.26 kJ/mol
+
+  [ 82.9%] Step  829000/1000000 | Sim time:  829.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41241.37 kJ/mol
+
+  [ 83.0%] Step  830000/1000000 | Sim time:  830.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40079.41 kJ/mol
+
+  [ 83.1%] Step  831000/1000000 | Sim time:  831.0 ps | Speed:  216.0 ns/day | ETA:   0.0 hr
+         Total Energy: 40559.19 kJ/mol
+
+  [ 83.2%] Step  832000/1000000 | Sim time:  832.0 ps | Speed:  216.0 ns/day | ETA:   0.0 hr
+         Total Energy: 39514.37 kJ/mol
+
+  [ 83.3%] Step  833000/1000000 | Sim time:  833.0 ps | Speed:  215.0 ns/day | ETA:   0.0 hr
+         Total Energy: 40207.83 kJ/mol
+
+  [ 83.4%] Step  834000/1000000 | Sim time:  834.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40449.21 kJ/mol
+
+  [ 83.5%] Step  835000/1000000 | Sim time:  835.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39881.84 kJ/mol
+
+  [ 83.6%] Step  836000/1000000 | Sim time:  836.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39626.21 kJ/mol
+
+  [ 83.7%] Step  837000/1000000 | Sim time:  837.0 ps | Speed:  214.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40240.53 kJ/mol
+
+  [ 83.8%] Step  838000/1000000 | Sim time:  838.0 ps | Speed:  215.1 ns/day | ETA:   0.0 hr
+         Total Energy: 40772.86 kJ/mol
+
+  [ 83.9%] Step  839000/1000000 | Sim time:  839.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 41102.74 kJ/mol
+
+  [ 84.0%] Step  840000/1000000 | Sim time:  840.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40316.13 kJ/mol
+
+  [ 84.1%] Step  841000/1000000 | Sim time:  841.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 41005.61 kJ/mol
+
+  [ 84.2%] Step  842000/1000000 | Sim time:  842.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40019.54 kJ/mol
+
+  [ 84.3%] Step  843000/1000000 | Sim time:  843.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39823.88 kJ/mol
+
+  [ 84.4%] Step  844000/1000000 | Sim time:  844.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40853.67 kJ/mol
+
+  [ 84.5%] Step  845000/1000000 | Sim time:  845.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 40544.57 kJ/mol
+
+  [ 84.6%] Step  846000/1000000 | Sim time:  846.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 40586.50 kJ/mol
+
+  [ 84.7%] Step  847000/1000000 | Sim time:  847.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 40633.42 kJ/mol
+
+  [ 84.8%] Step  848000/1000000 | Sim time:  848.0 ps | Speed:  214.1 ns/day | ETA:   0.0 hr
+         Total Energy: 39926.11 kJ/mol
+
+  [ 84.9%] Step  849000/1000000 | Sim time:  849.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40879.98 kJ/mol
+
+  [ 85.0%] Step  850000/1000000 | Sim time:  850.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40706.94 kJ/mol
+
+  [ 85.1%] Step  851000/1000000 | Sim time:  851.0 ps | Speed:  216.1 ns/day | ETA:   0.0 hr
+         Total Energy: 40311.05 kJ/mol
+
+  [ 85.2%] Step  852000/1000000 | Sim time:  852.0 ps | Speed:  216.0 ns/day | ETA:   0.0 hr
+         Total Energy: 40721.89 kJ/mol
+
+  [ 85.3%] Step  853000/1000000 | Sim time:  853.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 39987.63 kJ/mol
+
+  [ 85.4%] Step  854000/1000000 | Sim time:  854.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40396.44 kJ/mol
+
+  [ 85.5%] Step  855000/1000000 | Sim time:  855.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 41221.03 kJ/mol
+
+  [ 85.6%] Step  856000/1000000 | Sim time:  856.0 ps | Speed:  205.9 ns/day | ETA:   0.0 hr
+         Total Energy: 39601.92 kJ/mol
+
+  [ 85.7%] Step  857000/1000000 | Sim time:  857.0 ps | Speed:  215.2 ns/day | ETA:   0.0 hr
+         Total Energy: 41565.35 kJ/mol
+
+  [ 85.8%] Step  858000/1000000 | Sim time:  858.0 ps | Speed:  211.9 ns/day | ETA:   0.0 hr
+         Total Energy: 40252.15 kJ/mol
+
+  [ 85.9%] Step  859000/1000000 | Sim time:  859.0 ps | Speed:  214.8 ns/day | ETA:   0.0 hr
+         Total Energy: 41097.79 kJ/mol
+
+  [ 86.0%] Step  860000/1000000 | Sim time:  860.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39420.82 kJ/mol
+
+  [ 86.1%] Step  861000/1000000 | Sim time:  861.0 ps | Speed:  214.8 ns/day | ETA:   0.0 hr
+         Total Energy: 41573.48 kJ/mol
+
+  [ 86.2%] Step  862000/1000000 | Sim time:  862.0 ps | Speed:  214.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40559.89 kJ/mol
+
+  [ 86.3%] Step  863000/1000000 | Sim time:  863.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40144.63 kJ/mol
+
+  [ 86.4%] Step  864000/1000000 | Sim time:  864.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 39989.86 kJ/mol
+
+  [ 86.5%] Step  865000/1000000 | Sim time:  865.0 ps | Speed:  214.9 ns/day | ETA:   0.0 hr
+         Total Energy: 40398.75 kJ/mol
+
+  [ 86.6%] Step  866000/1000000 | Sim time:  866.0 ps | Speed:  214.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40892.72 kJ/mol
+
+  [ 86.7%] Step  867000/1000000 | Sim time:  867.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 41782.10 kJ/mol
+
+  [ 86.8%] Step  868000/1000000 | Sim time:  868.0 ps | Speed:  209.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40867.61 kJ/mol
+
+  [ 86.9%] Step  869000/1000000 | Sim time:  869.0 ps | Speed:  216.0 ns/day | ETA:   0.0 hr
+         Total Energy: 40227.62 kJ/mol
+
+  [ 87.0%] Step  870000/1000000 | Sim time:  870.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39827.03 kJ/mol
+
+  [ 87.1%] Step  871000/1000000 | Sim time:  871.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40588.12 kJ/mol
+
+  [ 87.2%] Step  872000/1000000 | Sim time:  872.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40625.80 kJ/mol
+
+  [ 87.3%] Step  873000/1000000 | Sim time:  873.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39741.45 kJ/mol
+
+  [ 87.4%] Step  874000/1000000 | Sim time:  874.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40286.67 kJ/mol
+
+  [ 87.5%] Step  875000/1000000 | Sim time:  875.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40464.40 kJ/mol
+
+  [ 87.6%] Step  876000/1000000 | Sim time:  876.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40654.55 kJ/mol
+
+  [ 87.7%] Step  877000/1000000 | Sim time:  877.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 41286.40 kJ/mol
+
+  [ 87.8%] Step  878000/1000000 | Sim time:  878.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40019.37 kJ/mol
+
+  [ 87.9%] Step  879000/1000000 | Sim time:  879.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 41222.11 kJ/mol
+
+  [ 88.0%] Step  880000/1000000 | Sim time:  880.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40711.44 kJ/mol
+
+  [ 88.1%] Step  881000/1000000 | Sim time:  881.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 39968.99 kJ/mol
+
+  [ 88.2%] Step  882000/1000000 | Sim time:  882.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40102.38 kJ/mol
+
+  [ 88.3%] Step  883000/1000000 | Sim time:  883.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40224.16 kJ/mol
+
+  [ 88.4%] Step  884000/1000000 | Sim time:  884.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 39170.52 kJ/mol
+
+  [ 88.5%] Step  885000/1000000 | Sim time:  885.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39489.43 kJ/mol
+
+  [ 88.6%] Step  886000/1000000 | Sim time:  886.0 ps | Speed:  216.0 ns/day | ETA:   0.0 hr
+         Total Energy: 40543.47 kJ/mol
+
+  [ 88.7%] Step  887000/1000000 | Sim time:  887.0 ps | Speed:  214.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40898.87 kJ/mol
+
+  [ 88.8%] Step  888000/1000000 | Sim time:  888.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40430.12 kJ/mol
+
+  [ 88.9%] Step  889000/1000000 | Sim time:  889.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40007.80 kJ/mol
+
+  [ 89.0%] Step  890000/1000000 | Sim time:  890.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41439.70 kJ/mol
+
+  [ 89.1%] Step  891000/1000000 | Sim time:  891.0 ps | Speed:  214.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40539.58 kJ/mol
+
+  [ 89.2%] Step  892000/1000000 | Sim time:  892.0 ps | Speed:  216.0 ns/day | ETA:   0.0 hr
+         Total Energy: 40416.14 kJ/mol
+
+  [ 89.3%] Step  893000/1000000 | Sim time:  893.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40004.80 kJ/mol
+
+  [ 89.4%] Step  894000/1000000 | Sim time:  894.0 ps | Speed:  216.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40449.40 kJ/mol
+
+  [ 89.5%] Step  895000/1000000 | Sim time:  895.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40173.03 kJ/mol
+
+  [ 89.6%] Step  896000/1000000 | Sim time:  896.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 39955.39 kJ/mol
+
+  [ 89.7%] Step  897000/1000000 | Sim time:  897.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40688.86 kJ/mol
+
+  [ 89.8%] Step  898000/1000000 | Sim time:  898.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 39062.93 kJ/mol
+
+  [ 89.9%] Step  899000/1000000 | Sim time:  899.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 41362.55 kJ/mol
+
+  [ 90.0%] Step  900000/1000000 | Sim time:  900.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39909.13 kJ/mol
+
+  [ 90.1%] Step  901000/1000000 | Sim time:  901.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40090.94 kJ/mol
+
+  [ 90.2%] Step  902000/1000000 | Sim time:  902.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40434.94 kJ/mol
+
+  [ 90.3%] Step  903000/1000000 | Sim time:  903.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41483.85 kJ/mol
+
+  [ 90.4%] Step  904000/1000000 | Sim time:  904.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40333.91 kJ/mol
+
+  [ 90.5%] Step  905000/1000000 | Sim time:  905.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39509.81 kJ/mol
+
+  [ 90.6%] Step  906000/1000000 | Sim time:  906.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 38564.70 kJ/mol
+
+  [ 90.7%] Step  907000/1000000 | Sim time:  907.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40730.23 kJ/mol
+
+  [ 90.8%] Step  908000/1000000 | Sim time:  908.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 38966.97 kJ/mol
+
+  [ 90.9%] Step  909000/1000000 | Sim time:  909.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40510.11 kJ/mol
+
+  [ 91.0%] Step  910000/1000000 | Sim time:  910.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 39562.31 kJ/mol
+
+  [ 91.1%] Step  911000/1000000 | Sim time:  911.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40273.92 kJ/mol
+
+  [ 91.2%] Step  912000/1000000 | Sim time:  912.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39933.74 kJ/mol
+
+  [ 91.3%] Step  913000/1000000 | Sim time:  913.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39396.52 kJ/mol
+
+  [ 91.4%] Step  914000/1000000 | Sim time:  914.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 42526.06 kJ/mol
+
+  [ 91.5%] Step  915000/1000000 | Sim time:  915.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 42260.53 kJ/mol
+
+  [ 91.6%] Step  916000/1000000 | Sim time:  916.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41308.42 kJ/mol
+
+  [ 91.7%] Step  917000/1000000 | Sim time:  917.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40770.36 kJ/mol
+
+  [ 91.8%] Step  918000/1000000 | Sim time:  918.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39937.51 kJ/mol
+
+  [ 91.9%] Step  919000/1000000 | Sim time:  919.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40628.87 kJ/mol
+
+  [ 92.0%] Step  920000/1000000 | Sim time:  920.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 41132.86 kJ/mol
+
+  [ 92.1%] Step  921000/1000000 | Sim time:  921.0 ps | Speed:  214.3 ns/day | ETA:   0.0 hr
+         Total Energy: 41224.72 kJ/mol
+
+  [ 92.2%] Step  922000/1000000 | Sim time:  922.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40452.26 kJ/mol
+
+  [ 92.3%] Step  923000/1000000 | Sim time:  923.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40296.75 kJ/mol
+
+  [ 92.4%] Step  924000/1000000 | Sim time:  924.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39719.69 kJ/mol
+
+  [ 92.5%] Step  925000/1000000 | Sim time:  925.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40209.17 kJ/mol
+
+  [ 92.6%] Step  926000/1000000 | Sim time:  926.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40893.86 kJ/mol
+
+  [ 92.7%] Step  927000/1000000 | Sim time:  927.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 39809.94 kJ/mol
+
+  [ 92.8%] Step  928000/1000000 | Sim time:  928.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40452.34 kJ/mol
+
+  [ 92.9%] Step  929000/1000000 | Sim time:  929.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40010.84 kJ/mol
+
+  [ 93.0%] Step  930000/1000000 | Sim time:  930.0 ps | Speed:  214.8 ns/day | ETA:   0.0 hr
+         Total Energy: 41625.27 kJ/mol
+
+  [ 93.1%] Step  931000/1000000 | Sim time:  931.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40895.29 kJ/mol
+
+  [ 93.2%] Step  932000/1000000 | Sim time:  932.0 ps | Speed:  206.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40033.40 kJ/mol
+
+  [ 93.3%] Step  933000/1000000 | Sim time:  933.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39392.50 kJ/mol
+
+  [ 93.4%] Step  934000/1000000 | Sim time:  934.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 40703.74 kJ/mol
+
+  [ 93.5%] Step  935000/1000000 | Sim time:  935.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40602.80 kJ/mol
+
+  [ 93.6%] Step  936000/1000000 | Sim time:  936.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 41363.91 kJ/mol
+
+  [ 93.7%] Step  937000/1000000 | Sim time:  937.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41183.85 kJ/mol
+
+  [ 93.8%] Step  938000/1000000 | Sim time:  938.0 ps | Speed:  214.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39706.27 kJ/mol
+
+  [ 93.9%] Step  939000/1000000 | Sim time:  939.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40583.88 kJ/mol
+
+  [ 94.0%] Step  940000/1000000 | Sim time:  940.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41054.47 kJ/mol
+
+  [ 94.1%] Step  941000/1000000 | Sim time:  941.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40094.79 kJ/mol
+
+  [ 94.2%] Step  942000/1000000 | Sim time:  942.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39370.90 kJ/mol
+
+  [ 94.3%] Step  943000/1000000 | Sim time:  943.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40627.98 kJ/mol
+
+  [ 94.4%] Step  944000/1000000 | Sim time:  944.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40567.56 kJ/mol
+
+  [ 94.5%] Step  945000/1000000 | Sim time:  945.0 ps | Speed:  215.0 ns/day | ETA:   0.0 hr
+         Total Energy: 41393.45 kJ/mol
+
+  [ 94.6%] Step  946000/1000000 | Sim time:  946.0 ps | Speed:  214.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39362.66 kJ/mol
+
+  [ 94.7%] Step  947000/1000000 | Sim time:  947.0 ps | Speed:  215.1 ns/day | ETA:   0.0 hr
+         Total Energy: 40546.73 kJ/mol
+
+  [ 94.8%] Step  948000/1000000 | Sim time:  948.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 39597.67 kJ/mol
+
+  [ 94.9%] Step  949000/1000000 | Sim time:  949.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 39377.66 kJ/mol
+
+  [ 95.0%] Step  950000/1000000 | Sim time:  950.0 ps | Speed:  215.1 ns/day | ETA:   0.0 hr
+         Total Energy: 39928.25 kJ/mol
+
+  [ 95.1%] Step  951000/1000000 | Sim time:  951.0 ps | Speed:  214.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40721.33 kJ/mol
+
+  [ 95.2%] Step  952000/1000000 | Sim time:  952.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40660.43 kJ/mol
+
+  [ 95.3%] Step  953000/1000000 | Sim time:  953.0 ps | Speed:  216.0 ns/day | ETA:   0.0 hr
+         Total Energy: 40547.56 kJ/mol
+
+  [ 95.4%] Step  954000/1000000 | Sim time:  954.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40606.96 kJ/mol
+
+  [ 95.5%] Step  955000/1000000 | Sim time:  955.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40455.20 kJ/mol
+
+  [ 95.6%] Step  956000/1000000 | Sim time:  956.0 ps | Speed:  214.8 ns/day | ETA:   0.0 hr
+         Total Energy: 41084.07 kJ/mol
+
+  [ 95.7%] Step  957000/1000000 | Sim time:  957.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40398.28 kJ/mol
+
+  [ 95.8%] Step  958000/1000000 | Sim time:  958.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 39532.14 kJ/mol
+
+  [ 95.9%] Step  959000/1000000 | Sim time:  959.0 ps | Speed:  215.8 ns/day | ETA:   0.0 hr
+         Total Energy: 40981.81 kJ/mol
+
+  [ 96.0%] Step  960000/1000000 | Sim time:  960.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 39570.20 kJ/mol
+
+  [ 96.1%] Step  961000/1000000 | Sim time:  961.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40051.61 kJ/mol
+
+  [ 96.2%] Step  962000/1000000 | Sim time:  962.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 41843.27 kJ/mol
+
+  [ 96.3%] Step  963000/1000000 | Sim time:  963.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41592.78 kJ/mol
+
+  [ 96.4%] Step  964000/1000000 | Sim time:  964.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40574.72 kJ/mol
+
+  [ 96.5%] Step  965000/1000000 | Sim time:  965.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40891.59 kJ/mol
+
+  [ 96.6%] Step  966000/1000000 | Sim time:  966.0 ps | Speed:  214.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40160.30 kJ/mol
+
+  [ 96.7%] Step  967000/1000000 | Sim time:  967.0 ps | Speed:  214.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39727.40 kJ/mol
+
+  [ 96.8%] Step  968000/1000000 | Sim time:  968.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39500.13 kJ/mol
+
+  [ 96.9%] Step  969000/1000000 | Sim time:  969.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40557.76 kJ/mol
+
+  [ 97.0%] Step  970000/1000000 | Sim time:  970.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39930.15 kJ/mol
+
+  [ 97.1%] Step  971000/1000000 | Sim time:  971.0 ps | Speed:  215.2 ns/day | ETA:   0.0 hr
+         Total Energy: 39531.43 kJ/mol
+
+  [ 97.2%] Step  972000/1000000 | Sim time:  972.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 39644.12 kJ/mol
+
+  [ 97.3%] Step  973000/1000000 | Sim time:  973.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40315.34 kJ/mol
+
+  [ 97.4%] Step  974000/1000000 | Sim time:  974.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40026.57 kJ/mol
+
+  [ 97.5%] Step  975000/1000000 | Sim time:  975.0 ps | Speed:  214.2 ns/day | ETA:   0.0 hr
+         Total Energy: 40121.81 kJ/mol
+
+  [ 97.6%] Step  976000/1000000 | Sim time:  976.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 41404.77 kJ/mol
+
+  [ 97.7%] Step  977000/1000000 | Sim time:  977.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41322.67 kJ/mol
+
+  [ 97.8%] Step  978000/1000000 | Sim time:  978.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40508.95 kJ/mol
+
+  [ 97.9%] Step  979000/1000000 | Sim time:  979.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41563.64 kJ/mol
+
+  [ 98.0%] Step  980000/1000000 | Sim time:  980.0 ps | Speed:  215.4 ns/day | ETA:   0.0 hr
+         Total Energy: 40124.51 kJ/mol
+
+  [ 98.1%] Step  981000/1000000 | Sim time:  981.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40876.82 kJ/mol
+
+  [ 98.2%] Step  982000/1000000 | Sim time:  982.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 41073.49 kJ/mol
+
+  [ 98.3%] Step  983000/1000000 | Sim time:  983.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40334.00 kJ/mol
+
+  [ 98.4%] Step  984000/1000000 | Sim time:  984.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 38872.65 kJ/mol
+
+  [ 98.5%] Step  985000/1000000 | Sim time:  985.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41134.22 kJ/mol
+
+  [ 98.6%] Step  986000/1000000 | Sim time:  986.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40588.56 kJ/mol
+
+  [ 98.7%] Step  987000/1000000 | Sim time:  987.0 ps | Speed:  215.2 ns/day | ETA:   0.0 hr
+         Total Energy: 41418.91 kJ/mol
+
+  [ 98.8%] Step  988000/1000000 | Sim time:  988.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 40655.71 kJ/mol
+
+  [ 98.9%] Step  989000/1000000 | Sim time:  989.0 ps | Speed:  215.2 ns/day | ETA:   0.0 hr
+         Total Energy: 40268.00 kJ/mol
+
+  [ 99.0%] Step  990000/1000000 | Sim time:  990.0 ps | Speed:  215.5 ns/day | ETA:   0.0 hr
+         Total Energy: 39553.21 kJ/mol
+
+  [ 99.1%] Step  991000/1000000 | Sim time:  991.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 40477.93 kJ/mol
+
+  [ 99.2%] Step  992000/1000000 | Sim time:  992.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 41337.34 kJ/mol
+
+  [ 99.3%] Step  993000/1000000 | Sim time:  993.0 ps | Speed:  215.0 ns/day | ETA:   0.0 hr
+         Total Energy: 40249.97 kJ/mol
+
+  [ 99.4%] Step  994000/1000000 | Sim time:  994.0 ps | Speed:  215.3 ns/day | ETA:   0.0 hr
+         Total Energy: 39045.72 kJ/mol
+
+  [ 99.5%] Step  995000/1000000 | Sim time:  995.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 41022.19 kJ/mol
+
+  [ 99.6%] Step  996000/1000000 | Sim time:  996.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 40786.65 kJ/mol
+
+  [ 99.7%] Step  997000/1000000 | Sim time:  997.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 39396.88 kJ/mol
+
+  [ 99.8%] Step  998000/1000000 | Sim time:  998.0 ps | Speed:  215.6 ns/day | ETA:   0.0 hr
+         Total Energy: 40504.10 kJ/mol
+
+  [ 99.9%] Step  999000/1000000 | Sim time:  999.0 ps | Speed:  215.7 ns/day | ETA:   0.0 hr
+         Total Energy: 39783.77 kJ/mol
+
+  [100.0%] Step 1000000/1000000 | Sim time: 1000.0 ps | Speed:  215.9 ns/day | ETA:   0.0 hr
+         Total Energy: 40119.45 kJ/mol
+
+  Simulation complete! Total elapsed time: 0.11 hr (6.7 min)
+
+============================================================
+RPMD simulation completed successfully!
+============================================================
