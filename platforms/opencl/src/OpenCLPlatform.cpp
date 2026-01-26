@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -176,6 +176,66 @@ const string& OpenCLPlatform::getPropertyValue(const Context& context, const str
 }
 
 void OpenCLPlatform::setPropertyValue(Context& context, const string& property, const string& value) const {
+}
+
+vector<map<string, string> > OpenCLPlatform::getDevices(const map<string, string>& filters) const {
+    // Check for properties that might act as filters.
+
+    int platformIndex = -1;
+    if (filters.find(OpenCLPlatformIndex()) != filters.end())
+        stringstream(filters.at(OpenCLPlatformIndex())) >> platformIndex;
+    string platformName = (filters.find(OpenCLPlatformName()) == filters.end() ? "" : filters.at(OpenCLPlatformName()));
+    int deviceIndex = -1;
+    if (filters.find(OpenCLDeviceIndex()) != filters.end())
+        stringstream(filters.at(OpenCLDeviceIndex())) >> deviceIndex;
+    string deviceName = (filters.find(OpenCLDeviceName()) == filters.end() ? "" : filters.at(OpenCLDeviceName()));
+    bool needsDouble = false;
+    if (filters.find(OpenCLPrecision()) != filters.end()) {
+        string precision = filters.at(OpenCLPrecision());
+        transform(precision.begin(), precision.end(), precision.begin(), ::tolower);
+        needsDouble = (precision != "single");
+    }
+
+    // Loop over platforms.
+
+    vector<map<string, string> > results;
+    vector<cl::Platform> platforms;
+    cl::Platform::get(&platforms);
+    for (int i = 0; i < platforms.size(); i++) {
+        if (platformIndex != -1 && platformIndex != i)
+            continue;
+        if (platformName.size() > 0 && platformName != platforms[i].getInfo<CL_PLATFORM_NAME>())
+            continue;
+
+        // Loop over devices for the platform.
+
+        vector<cl::Device> devices;
+        try {
+            platforms[i].getDevices(CL_DEVICE_TYPE_GPU | CL_DEVICE_TYPE_CPU, &devices);
+        }
+        catch (...) {
+            // There are no devices available for this platform.
+            continue;
+        }
+        for (int j = 0; j < devices.size(); j++) {
+            if (deviceIndex != -1 && deviceIndex != j)
+                continue;
+            if (deviceName.size() > 0 && deviceName != devices[j].getInfo<CL_DEVICE_NAME>())
+                continue;
+            bool supportsDouble = (devices[j].getInfo<CL_DEVICE_EXTENSIONS>().find("cl_khr_fp64") != string::npos);
+            if (needsDouble && !supportsDouble)
+                continue;
+            stringstream platformIndexStr, deviceIndexStr;
+            platformIndexStr << i;
+            deviceIndexStr << j;
+            map<string, string> properties = {{OpenCLPlatformIndex(), platformIndexStr.str()},
+                                              {OpenCLPlatformName(), platforms[i].getInfo<CL_PLATFORM_NAME>()},
+                                              {OpenCLDeviceIndex(), deviceIndexStr.str()},
+                                              {OpenCLDeviceName(), devices[j].getInfo<CL_DEVICE_NAME>()}};
+            results.push_back(properties);
+        }
+    }
+    return results;
 }
 
 void OpenCLPlatform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {

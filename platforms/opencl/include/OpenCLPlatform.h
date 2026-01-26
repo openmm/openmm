@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -50,6 +50,7 @@ public:
     static bool isPlatformSupported();
     const std::string& getPropertyValue(const Context& context, const std::string& property) const;
     void setPropertyValue(Context& context, const std::string& property, const std::string& value) const;
+    std::vector<std::map<std::string, std::string> > getDevices(const std::map<std::string, std::string>& filters={}) const;
     void contextCreated(ContextImpl& context, const std::map<std::string, std::string>& properties) const;
     void linkedContextCreated(ContextImpl& context, ContextImpl& originalContext) const;
     void contextDestroyed(ContextImpl& context) const;

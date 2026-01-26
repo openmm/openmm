@@ -296,6 +296,24 @@ class TestSimulation(unittest.TestCase):
         simulation.minimizeEnergy(reporter=reporter)
         assert not reporter.error
 
+    def testSelectDevice(self):
+        """Test querying and selecting devices to run on."""
+        pdb = PDBFile('systems/alanine-dipeptide-implicit.pdb')
+        ff = ForceField('amber99sb.xml', 'tip3p.xml')
+        system = ff.createSystem(pdb.topology)
+        for i in range(Platform.getNumPlatforms()):
+            platform = Platform.getPlatform(i)
+            devices = platform.getDevices()
+            if platform.getName() in ['Reference', 'CPU']:
+                assert len(devices) == 0
+            else:
+                assert len(devices) > 0
+                for device in devices:
+                    integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+                    simulation = Simulation(pdb.topology, system, integrator, platform, device)
+                    for key, value in device.items():
+                        assert platform.getPropertyValue(simulation.context, key) == value
+
 
 if __name__ == '__main__':
     unittest.main()
