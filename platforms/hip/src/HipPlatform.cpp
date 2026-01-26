@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Portions copyright (c) 2020 Advanced Micro Devices, Inc.                   *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -74,6 +74,7 @@ HipPlatform::HipPlatform() {
     registerKernelFactory(UpdateStateDataKernel::Name(), factory);
     registerKernelFactory(ApplyConstraintsKernel::Name(), factory);
     registerKernelFactory(VirtualSitesKernel::Name(), factory);
+    registerKernelFactory(MinimizeKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomBondForceKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);

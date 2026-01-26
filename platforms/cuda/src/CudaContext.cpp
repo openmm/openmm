@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -294,6 +294,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     compilationDefines["ERF"] = useDoublePrecision ? "erf" : "erff";
     compilationDefines["ERFC"] = useDoublePrecision ? "erfc" : "erfcf";
     compilationDefines["FMA"] = useDoublePrecision ? "fma" : "fmaf";
+    compilationDefines["FABS"] = useDoublePrecision ? "fabs" : "fabsf";
 
     // Set defines for applying periodic boundary conditions.
 
