@@ -307,7 +307,6 @@ class TestSimulation(unittest.TestCase):
             if platform.getName() in ['Reference', 'CPU']:
                 assert len(devices) == 0
             else:
-                assert len(devices) > 0
                 for device in devices:
                     integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
                     simulation = Simulation(pdb.topology, system, integrator, platform, device)

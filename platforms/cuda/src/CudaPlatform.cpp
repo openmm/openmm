@@ -180,7 +180,7 @@ vector<map<string, string> > CudaPlatform::getDevices(const map<string, string>&
         if (deviceIndex != -1 && deviceIndex != i)
             continue;
         char name[1000];
-        CudaDevice_t device;
+        CUdevice device;
         CHECK_RESULT(cuDeviceGet(&device, i), "Error querying device");
         CHECK_RESULT(cuDeviceGetName(name, 1000, device), "Error querying device name");
         stringstream deviceNameStr;
