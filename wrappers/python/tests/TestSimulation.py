@@ -313,6 +313,9 @@ class TestSimulation(unittest.TestCase):
                     simulation = Simulation(pdb.topology, system, integrator, platform, device)
                     for key, value in device.items():
                         assert platform.getPropertyValue(simulation.context, key) == value
+            for j in range(len(devices)):
+                for k in range(j):
+                    assert devices[j] != devices[k]
 
 
 if __name__ == '__main__':
