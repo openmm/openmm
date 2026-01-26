@@ -1,57 +1,37 @@
-# OpenMM Cavity-Coupled MD Tests
+# OpenMM Tests
 
-Clean, organized test suite for cavity-coupled molecular dynamics simulations.
+Test suite for verifying OpenMM functionality and correctness.
 
 ## Directory Structure
 
 ```
 tests/
-├── dimer_system/          # Toy two-component dimer system
-│   ├── run_simulation.py  # Main simulation
-│   ├── analyze_spectrum.py # IR analysis with MESA
-│   ├── benchmark_speed.py  # Performance testing
-│   └── README.md
+├── dimer_system/              # Verification tests for dimer system
+│   └── test_cavity_coupling.py  # Test script to verify CavityForce
 │
-├── water_system/          # Flexible TIP4P-Ew water with cavity
-│   ├── run_simulation.py  # Cavity-coupled simulation
-│   ├── run_baseline.py    # Baseline (no cavity) for comparison
-│   ├── analyze_spectrum.py # Rabi splitting analysis
-│   ├── benchmark_speed.py  # Performance testing
-│   ├── tip4pew_flexible.xml # Force field parameters
-│   └── README.md
-│
-├── _archive/              # Legacy files and old outputs
-└── Test*.h, Test*.cpp     # C++ unit tests for OpenMM core
+├── _archive/                  # Legacy files and old outputs
+└── Test*.h, Test*.cpp         # C++ unit tests for OpenMM core
 ```
 
-## Quick Start
+## Running Tests
 
-### Dimer System (Fast, ~5 minutes)
+### Verification Tests
 ```bash
 cd dimer_system
-python run_simulation.py
-python analyze_spectrum.py cavity_diamer_dipole.npz
+python test_cavity_coupling.py
 ```
 
-### Water System (Slower, ~30 minutes for 100 ps)
-```bash
-cd water_system
+### C++ Unit Tests
+The C++ unit tests (Test*.h, Test*.cpp) are compiled and run as part of the OpenMM test suite.
 
-# Run baseline (no cavity)
-python run_baseline.py --molecules 1000 --prod 100
+## Simulation Scripts
 
-# Run with cavity coupling
-python run_simulation.py --lambda 0.010 --molecules 1000 --prod 100
+**Note:** Simulation scripts (run_simulation.py, analyze_spectrum.py, etc.) have been moved to `examples/cavity/` for clarity. This directory now contains only verification and unit tests.
 
-# Analyze and compare
-python analyze_spectrum.py *.npz --xlim 1400 1800
-```
-
-### Performance Benchmarking
-```bash
-cd water_system  # or dimer_system
-python benchmark_speed.py
-```
+For actual simulation examples, see:
+- `examples/cavity/dimer_system/` - Dimer system simulations
+- `examples/cavity/water_system/` - Water system simulations
+- `examples/cavity/protein_system/` - Protein system data
 
 ## System Requirements
 

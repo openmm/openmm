@@ -30,3 +30,26 @@ show how to use its C and Fortran bindings.  For more information, see
 You can also find:
 - [Extra utility scripts](extras/README.md) in `extras`
 - A suite of benchmarks for OpenMM in `benchmarks`
+
+### Cavity-Coupled MD Examples
+
+The `cavity/` directory contains examples of cavity-coupled molecular dynamics simulations:
+- `cavity/dimer_system/` - Simple two-component dimer system with cavity coupling
+- `cavity/water_system/` - Flexible TIP4P-Ew water with cavity coupling
+- `cavity/protein_system/` - Protein system data and examples
+
+These examples demonstrate:
+- Cavity-molecule coupling effects
+- IR spectrum analysis with MESA
+- Rabi splitting in molecular systems
+- Performance benchmarking
+
+See the README files in each subdirectory for detailed usage instructions.
+
+### ML Potential Examples
+
+The `ml/` directory contains examples using machine learning potentials:
+- `ml/cace-lr_water/` - CACE-LR model examples for water systems
+- `ml/uma_ice_rpmd/` - UMA model examples for ice RPMD simulations
+
+These examples demonstrate integration of ML potentials with OpenMM for enhanced accuracy in molecular dynamics simulations.
