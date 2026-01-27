@@ -55,6 +55,17 @@ public:
         // This force field doesn't update the state directly.
     }
     double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
+    /**
+     * Compute forces and energy for multiple copies at once (for RPMD batching).
+     * 
+     * @param context             the context
+     * @param allBeadPositions    positions for all beads [numBeads][numParticles]
+     * @param allBeadForces       output: forces for all beads [numBeads][numParticles]
+     * @return the total potential energy across all beads
+     */
+    double calcForcesAndEnergyBatched(ContextImpl& context,
+                                       const std::vector<std::vector<Vec3>>& allBeadPositions,
+                                       std::vector<std::vector<Vec3>>& allBeadForces);
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
     std::vector<std::pair<int, int> > getBondedParticles() const {

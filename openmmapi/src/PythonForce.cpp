@@ -57,6 +57,10 @@ void PythonForce::setUsesPeriodicBoundaryConditions(bool periodic) {
     usePeriodic = periodic;
 }
 
+bool PythonForce::supportsBatchedEvaluation() const {
+    return computation->supportsBatchedEvaluation();
+}
+
 const vector<char>& PythonForce::getPickledFunction() const {
     return pickled;
 }

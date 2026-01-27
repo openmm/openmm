@@ -5319,9 +5319,15 @@ void CommonCalcPythonForceKernel::executeOnWorkerThread(bool includeForces) {
         builder.setPeriodicBoxVectors(a, b, c);
     }
     State state = builder.getState();
+    
+    // CRITICAL: Set CUDA context BEFORE calling Python
+    // This ensures OpenMM's CUDA context is active when Python/PyTorch operations occur
+    // This is essential for CUDA context sharing between OpenMM and PyTorch
+    ContextSelector selector(cc);
     computation->compute(state, energy, forcesVec.data(), cc.getUseDoublePrecision());
+    
     if (includeForces) {
-        ContextSelector selector(cc);
+        // ContextSelector already active from above, no need to create another
         forcesArray.upload(forcesVec.data());
     }
 }
@@ -5345,4 +5351,50 @@ double CommonCalcPythonForceKernel::addForces(bool includeForces, bool includeEn
     // Return the energy.
     
     return energy;
+}
+
+double CommonCalcPythonForceKernel::executeBatch(const std::vector<ContextImpl*>& contexts, bool includeForces, bool includeEnergy) {
+    // Batched evaluation for RPMD: process all copies at once
+    int numCopies = contexts.size();
+    if (numCopies == 0)
+        return 0.0;
+    
+    // Build vector of States for all copies
+    std::vector<State> states;
+    states.reserve(numCopies);
+    
+    for (int i = 0; i < numCopies; i++) {
+        std::vector<Vec3> pos;
+        contexts[i]->getPositions(pos, usePeriodic || !cc.getNonbondedUtilities().getUsePeriodic());
+        
+        State::StateBuilder builder(contexts[i]->getTime(), contexts[i]->getStepCount());
+        builder.setPositions(pos);
+        builder.setParameters(contexts[i]->getParameters());
+        
+        if (usePeriodic) {
+            Vec3 a, b, c;
+            contexts[i]->getPeriodicBoxVectors(a, b, c);
+            builder.setPeriodicBoxVectors(a, b, c);
+        }
+        
+        states.push_back(builder.getState());
+    }
+    
+    // Allocate forces array for all copies
+    int numParticles = contextImpl.getSystem().getNumParticles();
+    std::vector<double> allForces(3 * numParticles * numCopies);
+    double totalEnergy = 0.0;
+    
+    // CRITICAL: Set CUDA context BEFORE calling Python (batched version)
+    // This ensures OpenMM's CUDA context is active when Python/PyTorch operations occur
+    ContextSelector selector(cc);
+    
+    // Call batched computation
+    computation->computeBatch(states, totalEnergy, allForces.data(), cc.getUseDoublePrecision());
+    
+    // NOTE: Forces are not actually added back in this basic implementation
+    // This needs to be handled by the calling code (RPMD kernel)
+    // For now, we just return the energy
+    
+    return totalEnergy;
 }

@@ -1,6 +1,21 @@
 __pycache__
 build
 build?
+build_*
+*.log
+
+# Cursor IDE
+.cursor/
+
+# Simulation output files
+*.npy
+*.npz
+*.mp4
+*.avi
+*.mov
+
+# Backup/stable directories
+fairchem-stable/
 
 # macOS
 .DS_Store

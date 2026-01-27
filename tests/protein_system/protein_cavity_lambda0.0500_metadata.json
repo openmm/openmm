@@ -1,0 +1,17 @@
+{
+  "lambda_coupling": 0.05,
+  "cavity_freq_cm": 3663.0,
+  "omega_c_au": 0.016689856135080394,
+  "dt_ps": 0.0005,
+  "temperature_K": 300.0,
+  "photon_mass_amu": 0.0005485800553846424,
+  "pdb_id": "3UTL",
+  "padding_nm": 1.0,
+  "ionic_strength_molar": 0.15,
+  "forcefield": "amber14/protein.ff14SB.xml + amber14/tip4pew.xml",
+  "water_model": "tip4pew",
+  "cavity_enabled": true,
+  "status": "running",
+  "step": 29000,
+  "total_steps": 2000000
+}
