@@ -58,6 +58,27 @@ public:
      * the value of forcesAreDouble.
      */
     virtual void compute(const State& state, double& energy, void* forces, bool forcesAreDouble) const = 0;
+    /**
+     * Check if this computation supports batched evaluation for multiple copies (e.g., RPMD beads).
+     * If this returns true, computeBatch() can be called instead of multiple compute() calls.
+     */
+    virtual bool supportsBatchedEvaluation() const {
+        return false;
+    }
+    /**
+     * Compute forces and energy for multiple copies at once (e.g., for RPMD).
+     * The states vector contains positions for all copies. Implementations should store
+     * the total potential energy and all particle forces into the output arrays.
+     * The forces argument points to an array of length 3*particles*numCopies.
+     * 
+     * @param states           vector of State objects, one per copy
+     * @param energy           output: total energy across all copies
+     * @param forces           output: forces for all copies (length 3*particles*numCopies)
+     * @param forcesAreDouble  whether forces array is double or float
+     */
+    virtual void computeBatch(const std::vector<State>& states, double& energy, void* forces, bool forcesAreDouble) const {
+        throw OpenMMException("computeBatch() not implemented for this force");
+    }
 };
 
 /**
@@ -162,6 +183,11 @@ public:
      * State passed to the computation function.
      */
     void setUsesPeriodicBoundaryConditions(bool periodic);
+    /**
+     * Check if this force supports batched evaluation for multiple copies (e.g., RPMD beads).
+     * Returns true if the underlying computation implements computeBatch().
+     */
+    bool supportsBatchedEvaluation() const;
 protected:
     ForceImpl* createImpl() const;
 private:

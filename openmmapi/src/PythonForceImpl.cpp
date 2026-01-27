@@ -56,6 +56,70 @@ double PythonForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeFo
     return 0.0;
 }
 
+double PythonForceImpl::calcForcesAndEnergyBatched(ContextImpl& context,
+                                                     const std::vector<std::vector<Vec3>>& allBeadPositions,
+                                                     std::vector<std::vector<Vec3>>& allBeadForces)
+{
+    if (allBeadPositions.empty())
+        return 0.0;
+    
+    int numBeads = allBeadPositions.size();
+    int numParticles = allBeadPositions[0].size();
+    
+    // Build vector of State objects for all beads
+    // Use vector of pointers to avoid State copy issues
+    std::vector<State> stateStorage;
+    std::vector<State> states;
+    stateStorage.reserve(numBeads);
+    states.reserve(numBeads);
+    
+    Vec3 boxVectors[3];
+    bool hasBox = false;
+    if (usePeriodic) {
+        context.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        hasBox = true;
+    }
+    
+    for (const auto& beadPos : allBeadPositions) {
+        State::StateBuilder builder(context.getTime(), context.getStepCount());
+        builder.setPositions(beadPos);
+        builder.setParameters(context.getParameters());
+        
+        if (hasBox) {
+            builder.setPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        }
+        
+        stateStorage.push_back(builder.getState());
+    }
+    
+    // Now copy references (should be safe since stateStorage won't be modified)
+    for (auto& state : stateStorage) {
+        states.push_back(state);
+    }
+    
+    // Allocate flat forces array
+    std::vector<double> forcesFlat(3 * numParticles * numBeads);
+    double totalEnergy = 0.0;
+    
+    // Call batched computation
+    computation.computeBatch(states, totalEnergy, forcesFlat.data(), true);
+    
+    // Unpack forces from flat array to vector of vectors
+    for (int b = 0; b < numBeads; b++) {
+        allBeadForces[b].resize(numParticles);
+        for (int p = 0; p < numParticles; p++) {
+            int idx = (b * numParticles + p) * 3;
+            allBeadForces[b][p] = Vec3(
+                forcesFlat[idx],
+                forcesFlat[idx+1],
+                forcesFlat[idx+2]
+            );
+        }
+    }
+    
+    return totalEnergy;
+}
+
 vector<string> PythonForceImpl::getKernelNames() {
     return {CalcCustomCPPForceKernel::Name()};
 }
