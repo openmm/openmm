@@ -1,12 +1,3 @@
-[submodule "cav-hoomd"]
-	path = cav-hoomd
-	url = https://github.com/muhammadhasyim/cav-hoomd.git
-[submodule "cavOTF"]
-	path = cavOTF
-	url = https://github.com/mandalgrouptamu/cavOTF.git
-[submodule "i-pi"]
-	path = i-pi
-	url = https://github.com/i-pi/i-pi.git
 [submodule "fairchem"]
 	path = fairchem
 	url = https://github.com/muhammadhasyim/fairchem.git

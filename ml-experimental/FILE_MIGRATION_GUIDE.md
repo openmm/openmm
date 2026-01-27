@@ -115,9 +115,6 @@ python test_uma_ice_rpmd.py
 
 ### Submodules (unchanged)
 - `fairchem/` submodule
-- `cav-hoomd/` submodule
-- `cavOTF/` submodule
-- `i-pi/` submodule
 - `cace/` submodule
 - `LES-BEC/` submodule
 
