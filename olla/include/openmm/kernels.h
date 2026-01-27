@@ -1786,6 +1786,14 @@ public:
      * Get the dipole self-energy component: (epsilon^2 / 2K) * d^2
      */
     virtual double getDipoleSelfEnergy() const = 0;
+    /**
+     * Get the cavity drive energy component: -f(t) * q
+     */
+    virtual double getCavityDriveEnergy() const = 0;
+    /**
+     * Get the direct laser energy component: -E_ext(t) * μ
+     */
+    virtual double getDirectLaserEnergy() const = 0;
 };
 
 /**

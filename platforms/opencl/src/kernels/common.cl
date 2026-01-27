@@ -24,6 +24,24 @@ __attribute__((overloadable)) unsigned long atom_add(volatile __global unsigned 
     return 0;
 }
 #endif
+// For OpenCL 1.x: provide fallback for float atomics using atomic_cmpxchg
+// Note: This is a workaround since OpenCL 1.x doesn't have native float atomics
+// OpenCL 2.0+ has native atomic_add for floats, but we provide this for compatibility
+__attribute__((overloadable)) float atom_add(volatile __global float* p, float val) {
+    union {
+        float f;
+        unsigned int i;
+    } oldVal, newVal, cmpVal;
+    oldVal.f = *p;
+    do {
+        newVal.f = oldVal.f + val;
+        cmpVal.i = atomic_cmpxchg((volatile __global unsigned int*)p, oldVal.i, newVal.i);
+        if (cmpVal.i == oldVal.i)
+            break;
+        oldVal.i = cmpVal.i;
+    } while (true);
+    return oldVal.f;
+}
 
 #define KERNEL __kernel
 #define DEVICE

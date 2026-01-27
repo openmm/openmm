@@ -236,6 +236,7 @@ ENDFOREACH(subdir)
 ###########################################################################
 
 set(PYTHON_SETUP_COMMAND build)
+set(CMAKE_BINARY_DIR "${CMAKE_BINARY_DIR}")
 configure_file(
     pysetup.cmake.in
     "${CMAKE_CURRENT_BINARY_DIR}/pysetupbuild.cmake"
@@ -306,6 +307,7 @@ else()
     # Install binary module to system location
     set(PYTHON_SETUP_COMMAND "install --root=\$ENV{DESTDIR}/")
 endif()
+set(CMAKE_BINARY_DIR "${CMAKE_BINARY_DIR}")
 configure_file(pysetup.cmake.in
     "${CMAKE_CURRENT_BINARY_DIR}/pysetupinstall.cmake" @ONLY)
 add_custom_target(PythonInstall

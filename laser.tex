@@ -1,0 +1,185 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{physics}
+\usepackage{hyperref}
+
+\title{Classical Single-Mode Cavity--Molecule Hamiltonians:\\
+Direct Laser Driving vs Cavity-Mediated Driving}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{General setup}
+
+We consider a molecular system with classical nuclear degrees of freedom
+\[
+\bm R=\{\bm r_i\}_{i=1}^N, \qquad
+\bm P=\{\bm p_i\}_{i=1}^N,
+\]
+with masses $m_i$ and an internal molecular potential $U(\bm R)$.
+The system is coupled to a \emph{single electromagnetic cavity mode}, represented
+classically as a harmonic oscillator with coordinate $q$ and momentum $p$:
+\begin{equation}
+H_{\text{cav}}(q,p)=\frac{p^2}{2}+\frac{\omega_c^2 q^2}{2},
+\end{equation}
+where $\omega_c$ is the cavity resonance frequency.
+
+The molecular dipole projected along the cavity polarization direction
+is denoted by the scalar function $\mu(\bm R)$.
+
+\paragraph{Light--matter coupling (redefined convention).}
+We adopt the linear interaction
+\begin{equation}
+H_{\text{int}}(\bm R,q)= -\lambda\,\omega_c\, q\,\mu(\bm R),
+\label{eq:Hint}
+\end{equation}
+where $\lambda$ is a dimensionless coupling constant under the convention
+that $q$ is proportional to the intracavity electric-field amplitude.
+
+\paragraph{Optional dipole self-energy.}
+A quadratic term consistent with the above scaling is
+\begin{equation}
+H_{\text{self}}(\bm R)=\frac{\lambda^2}{2}\,\mu(\bm R)^2.
+\label{eq:Hself}
+\end{equation}
+This term stabilizes the energy landscape at strong coupling and is often
+retained in length-gauge formulations; it may be omitted depending on the
+approximation used.
+
+\paragraph{Baseline Hamiltonian (no external driving).}
+\begin{equation}
+H_0=
+\sum_{i=1}^N \frac{\bm p_i^2}{2m_i}
++U(\bm R)
++\frac{p^2}{2}+\frac{\omega_c^2 q^2}{2}
+-\lambda\,\omega_c\, q\,\mu(\bm R)
++\frac{\lambda^2}{2}\mu(\bm R)^2.
+\label{eq:H0}
+\end{equation}
+
+\section{Case (1): External laser drives the molecules directly}
+
+In this scenario, the cavity mode is present but the external laser field
+couples \emph{directly} to the molecular dipole. The laser field is prescribed
+and does not respond to the molecular or cavity dynamics:
+\begin{equation}
+E_{\text{ext}}(t)=E_0\,s(t)\cos(\omega_L t+\phi),
+\end{equation}
+where $\omega_L$ is the laser frequency and $s(t)$ is a smooth envelope.
+
+The laser--molecule interaction is
+\begin{equation}
+H_{\text{mol--laser}}(t)= -\mu(\bm R)\,E_{\text{ext}}(t).
+\end{equation}
+
+The full Hamiltonian is
+\begin{equation}
+H^{(1)}(t)=H_0-\mu(\bm R)\,E_{\text{ext}}(t).
+\end{equation}
+
+\subsection*{Equations of motion (case 1)}
+
+\paragraph{Nuclear motion.}
+\begin{equation}
+\dot{\bm r}_i=\frac{\bm p_i}{m_i},
+\end{equation}
+\begin{align}
+\dot{\bm p}_i &=
+-\nabla_{\bm r_i}U(\bm R)
++\lambda\,\omega_c\, q\,\nabla_{\bm r_i}\mu(\bm R)
+-\lambda^2\,\mu(\bm R)\,\nabla_{\bm r_i}\mu(\bm R)
+\nonumber\\
+&\quad
++E_{\text{ext}}(t)\,\nabla_{\bm r_i}\mu(\bm R),
+\end{align}
+where the term proportional to $\lambda^2$ is omitted if $H_{\text{self}}$
+is not included.
+
+\paragraph{Cavity mode.}
+\begin{align}
+\dot q &= p,\\
+\dot p &= -\omega_c^2 q + \lambda\,\omega_c\,\mu(\bm R).
+\end{align}
+
+\paragraph{Physical note.}
+In this case, the laser field directly forces the molecular dipole at frequency
+$\omega_L$. The cavity does \emph{not} filter the laser spectrum: any frequency
+component present in $E_{\text{ext}}(t)$ acts directly on the nuclei.
+The cavity responds only indirectly through its coupling to $\mu(\bm R)$.
+
+\section{Case (2): External laser pumps the cavity mode only}
+
+Here the external laser is treated as an \emph{input field} that injects energy
+into the cavity through its boundaries (mirrors or waveguide).
+The laser does \emph{not} directly couple to the molecular dipole.
+
+The cavity drive is represented by a time-dependent generalized force:
+\begin{equation}
+H_{\text{cav--drive}}(t)= - f(t)\,q,
+\end{equation}
+with
+\begin{equation}
+f(t)=f_0\,s(t)\cos(\omega_d t+\phi),
+\end{equation}
+where $\omega_d$ is the external driving frequency.
+
+The full Hamiltonian is
+\begin{equation}
+H^{(2)}(t)=H_0 - f(t)\,q.
+\end{equation}
+
+\subsection*{Equations of motion (case 2)}
+
+\paragraph{Nuclear motion.}
+\begin{equation}
+\dot{\bm r}_i=\frac{\bm p_i}{m_i},
+\end{equation}
+\begin{equation}
+\dot{\bm p}_i=
+-\nabla_{\bm r_i}U(\bm R)
++\lambda\,\omega_c\, q\,\nabla_{\bm r_i}\mu(\bm R)
+-\lambda^2\,\mu(\bm R)\,\nabla_{\bm r_i}\mu(\bm R),
+\end{equation}
+again omitting the last term if $H_{\text{self}}$ is not included.
+
+\paragraph{Cavity mode.}
+\begin{align}
+\dot q &= p,\\
+\dot p &= -\omega_c^2 q + \lambda\,\omega_c\,\mu(\bm R) + f(t).
+\end{align}
+Equivalently,
+\begin{equation}
+\ddot q + \omega_c^2 q = \lambda\,\omega_c\,\mu(\bm R) + f(t).
+\end{equation}
+
+\paragraph{Physical note (filtered driving).}
+In this case, the cavity acts as a \emph{frequency filter}.
+Although the external drive oscillates at frequency $\omega_d$,
+the intracavity field $q(t)$ responds most strongly when
+$\omega_d \approx \omega_c$.
+Off-resonant frequency components are suppressed, and the molecule
+experiences a field shaped by the cavity response rather than the
+raw laser spectrum.
+This filtering, together with the dynamical back-action
+between $q(t)$ and $\mu(\bm R)$, is the defining feature of cavity-mediated
+driving.
+
+\section{Conceptual comparison}
+
+\begin{center}
+\begin{tabular}{lcc}
+\hline
+ & Direct molecular drive & Cavity-mediated drive \\
+\hline
+Laser frequency seen by molecule & $\omega_L$ (unfiltered) & $\omega_c$-filtered response \\
+Field degree of freedom & Prescribed & Dynamical ($q,p$) \\
+Back-action from molecule & None & Present \\
+Energy storage / memory & None & Yes (in cavity mode) \\
+\hline
+\end{tabular}
+\end{center}
+
+\end{document}

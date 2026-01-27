@@ -1373,6 +1373,8 @@ public:
     double getHarmonicEnergy() const { return harmonicEnergy; }
     double getCouplingEnergy() const { return couplingEnergy; }
     double getDipoleSelfEnergy() const { return dipoleSelfEnergy; }
+    double getCavityDriveEnergy() const { return cavityDriveEnergy; }
+    double getDirectLaserEnergy() const { return directLaserEnergy; }
     /**
      * Reorder the charges array when atoms are reordered.
      */
@@ -1400,6 +1402,23 @@ private:
     double harmonicEnergy;
     double couplingEnergy;
     double dipoleSelfEnergy;
+    double cavityDriveEnergy;
+    double directLaserEnergy;
+    // Laser parameters
+    bool cavityDriveEnabled;
+    double cavityDriveAmplitude;
+    double cavityDriveFrequency;
+    double cavityDrivePhase;
+    int cavityDriveEnvelopeType;
+    double cavityDriveEnvParam1;
+    double cavityDriveEnvParam2;
+    bool directLaserEnabled;
+    double directLaserAmplitude;
+    double directLaserFrequency;
+    double directLaserPhase;
+    int directLaserEnvelopeType;
+    double directLaserEnvParam1;
+    double directLaserEnvParam2;
     int stepCount;
 };
 

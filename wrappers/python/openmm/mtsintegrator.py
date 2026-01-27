@@ -30,7 +30,13 @@ from __future__ import absolute_import, division
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
-from openmm import CustomIntegrator
+# Import CustomIntegrator directly - it's available after openmm.openmm import in __init__.py
+# Using a try/except to handle import order gracefully
+try:
+    from openmm.openmm import CustomIntegrator
+except ImportError:
+    # Fallback: import from parent package (available after __init__.py completes)
+    from openmm import CustomIntegrator
 
 class MTSIntegrator(CustomIntegrator):
     """MTSIntegrator implements the rRESPA multiple time step integration algorithm.

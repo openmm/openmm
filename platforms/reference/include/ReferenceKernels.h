@@ -1873,7 +1873,12 @@ class ReferenceCalcCavityForceKernel : public CalcCavityForceKernel {
 public:
     ReferenceCalcCavityForceKernel(std::string name, const Platform& platform) : 
         CalcCavityForceKernel(name, platform),
-        harmonicEnergy(0.0), couplingEnergy(0.0), dipoleSelfEnergy(0.0) {
+        harmonicEnergy(0.0), couplingEnergy(0.0), dipoleSelfEnergy(0.0),
+        cavityDriveEnergy(0.0), directLaserEnergy(0.0),
+        cavityDriveEnabled(false), cavityDriveAmplitude(0.0), cavityDriveFrequency(0.0),
+        cavityDrivePhase(0.0), cavityDriveEnvelopeType(0), cavityDriveEnvParam1(0.0), cavityDriveEnvParam2(0.0),
+        directLaserEnabled(false), directLaserAmplitude(0.0), directLaserFrequency(0.0),
+        directLaserPhase(0.0), directLaserEnvelopeType(0), directLaserEnvParam1(0.0), directLaserEnvParam2(0.0) {
     }
     /**
      * Initialize the kernel.
@@ -1899,6 +1904,14 @@ public:
      * Get dipole self-energy component.
      */
     double getDipoleSelfEnergy() const { return dipoleSelfEnergy; }
+    /**
+     * Get cavity drive energy component.
+     */
+    double getCavityDriveEnergy() const { return cavityDriveEnergy; }
+    /**
+     * Get direct laser energy component.
+     */
+    double getDirectLaserEnergy() const { return directLaserEnergy; }
 private:
     int cavityParticleIndex;
     double omegac;
@@ -1909,7 +1922,28 @@ private:
     double harmonicEnergy;
     double couplingEnergy;
     double dipoleSelfEnergy;
+    double cavityDriveEnergy;
+    double directLaserEnergy;
+    // Laser parameters
+    bool cavityDriveEnabled;
+    double cavityDriveAmplitude;
+    double cavityDriveFrequency;
+    double cavityDrivePhase;
+    int cavityDriveEnvelopeType;
+    double cavityDriveEnvParam1;
+    double cavityDriveEnvParam2;
+    bool directLaserEnabled;
+    double directLaserAmplitude;
+    double directLaserFrequency;
+    double directLaserPhase;
+    int directLaserEnvelopeType;
+    double directLaserEnvParam1;
+    double directLaserEnvParam2;
     int stepCount;
+    // Helper functions for laser field computation
+    double computeEnvelope(double time_ps, int envelope_type, double env_param1, double env_param2) const;
+    double computeCavityDrive(double time_ps) const;
+    double computeDirectLaserField(double time_ps) const;
 };
 
 /**

@@ -38,7 +38,8 @@ using namespace OpenMM;
 using std::vector;
 
 CavityForceImpl::CavityForceImpl(const CavityForce& owner) : 
-        owner(owner), harmonicEnergy(0), couplingEnergy(0), dipoleSelfEnergy(0) {
+        owner(owner), harmonicEnergy(0), couplingEnergy(0), dipoleSelfEnergy(0),
+        cavityDriveEnergy(0), directLaserEnergy(0) {
 }
 
 void CavityForceImpl::initialize(ContextImpl& context) {
@@ -70,6 +71,8 @@ double CavityForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeFo
     harmonicEnergy = kernel.getAs<CalcCavityForceKernel>().getHarmonicEnergy();
     couplingEnergy = kernel.getAs<CalcCavityForceKernel>().getCouplingEnergy();
     dipoleSelfEnergy = kernel.getAs<CalcCavityForceKernel>().getDipoleSelfEnergy();
+    cavityDriveEnergy = kernel.getAs<CalcCavityForceKernel>().getCavityDriveEnergy();
+    directLaserEnergy = kernel.getAs<CalcCavityForceKernel>().getDirectLaserEnergy();
     
     return totalEnergy;
 }

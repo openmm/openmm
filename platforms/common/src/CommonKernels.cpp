@@ -4421,8 +4421,25 @@ void CommonCalcCavityForceKernel::initialize(const System& system, const CavityF
     // Create buffers
     dipoleBuffer.initialize<float>(cc, 4, "cavityDipole"); // x, y, z, unused
     int numBlocks = cc.getNumThreadBlocks();
-    energyBuffer.initialize<float>(cc, numBlocks * 3, "cavityEnergy"); // harmonic, coupling, dipole self
+    energyBuffer.initialize<float>(cc, numBlocks * 5, "cavityEnergy"); // harmonic, coupling, dipole self, cavity drive, direct laser
     posCellOffsetsBuffer.initialize<mm_int4>(cc, cc.getPaddedNumAtoms(), "cavityPosCellOffsets");
+    
+    // Store laser parameters
+    cavityDriveEnabled = force.getCavityDriveEnabled();
+    cavityDriveAmplitude = force.getCavityDriveAmplitude();
+    cavityDriveFrequency = force.getCavityDriveFrequency();
+    cavityDrivePhase = force.getCavityDrivePhase();
+    cavityDriveEnvelopeType = force.getCavityDriveEnvelopeType();
+    cavityDriveEnvParam1 = force.getCavityDriveEnvelopeParam1();
+    cavityDriveEnvParam2 = force.getCavityDriveEnvelopeParam2();
+    
+    directLaserEnabled = force.getDirectLaserCouplingEnabled();
+    directLaserAmplitude = force.getDirectLaserAmplitude();
+    directLaserFrequency = force.getDirectLaserFrequency();
+    directLaserPhase = force.getDirectLaserPhase();
+    directLaserEnvelopeType = force.getDirectLaserEnvelopeType();
+    directLaserEnvParam1 = force.getDirectLaserEnvelopeParam1();
+    directLaserEnvParam2 = force.getDirectLaserEnvelopeParam2();
     
     // Add reorder listener to update charges and offsets when atoms are reordered
     ReorderListener* listener = new ReorderListener(*this);
@@ -4465,6 +4482,22 @@ void CommonCalcCavityForceKernel::initialize(const System& system, const CavityF
     computeForceKernel->addArg(); // lambdaCoupling - set at runtime
     computeForceKernel->addArg(); // photonMass - set at runtime
     computeForceKernel->addArg(cc.getPaddedNumAtoms());
+    // Laser parameters
+    computeForceKernel->addArg(); // time_ps - set at runtime
+    computeForceKernel->addArg(); // f0
+    computeForceKernel->addArg(); // omega_d
+    computeForceKernel->addArg(); // phase_d
+    computeForceKernel->addArg(); // envelope_type_d
+    computeForceKernel->addArg(); // env_param1_d
+    computeForceKernel->addArg(); // env_param2_d
+    computeForceKernel->addArg(); // cavityDriveEnabled
+    computeForceKernel->addArg(); // E0
+    computeForceKernel->addArg(); // omega_L
+    computeForceKernel->addArg(); // phase_L
+    computeForceKernel->addArg(); // envelope_type_L
+    computeForceKernel->addArg(); // env_param1_L
+    computeForceKernel->addArg(); // env_param2_L
+    computeForceKernel->addArg(); // directLaserEnabled
 }
 
 double CommonCalcCavityForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -4503,15 +4536,42 @@ double CommonCalcCavityForceKernel::execute(ContextImpl& context, bool includeFo
     computeDipoleKernel->setArg(3, reorderedCavityIndex);
     computeDipoleKernel->execute(cc.getNumAtoms());
     
+    // Get current time in picoseconds
+    double time_ps = cc.getTime();
+    
     // Compute forces and energies
     // Arguments: posq, charges, forces, dipole, energy, posCellOffsets, boxX, boxY, boxZ, reorderedIdx, omegac, lambda, mass, paddedNum
-    computeForceKernel->setArg(6, mm_float4((float)boxVectors[0][0], (float)boxVectors[0][1], (float)boxVectors[0][2], 0.0f));
-    computeForceKernel->setArg(7, mm_float4((float)boxVectors[1][0], (float)boxVectors[1][1], (float)boxVectors[1][2], 0.0f));
-    computeForceKernel->setArg(8, mm_float4((float)boxVectors[2][0], (float)boxVectors[2][1], (float)boxVectors[2][2], 0.0f));
+    // Use appropriate precision for box vectors
+    if (cc.getUseDoublePrecision()) {
+        computeForceKernel->setArg(6, mm_double4(boxVectors[0][0], boxVectors[0][1], boxVectors[0][2], 0.0));
+        computeForceKernel->setArg(7, mm_double4(boxVectors[1][0], boxVectors[1][1], boxVectors[1][2], 0.0));
+        computeForceKernel->setArg(8, mm_double4(boxVectors[2][0], boxVectors[2][1], boxVectors[2][2], 0.0));
+    } else {
+        computeForceKernel->setArg(6, mm_float4((float)boxVectors[0][0], (float)boxVectors[0][1], (float)boxVectors[0][2], 0.0f));
+        computeForceKernel->setArg(7, mm_float4((float)boxVectors[1][0], (float)boxVectors[1][1], (float)boxVectors[1][2], 0.0f));
+        computeForceKernel->setArg(8, mm_float4((float)boxVectors[2][0], (float)boxVectors[2][1], (float)boxVectors[2][2], 0.0f));
+    }
     computeForceKernel->setArg(9, reorderedCavityIndex);
     computeForceKernel->setArg(10, (float) omegac);
     computeForceKernel->setArg(11, (float) currentLambda);
     computeForceKernel->setArg(12, (float) photonMass);
+    computeForceKernel->setArg(13, cc.getPaddedNumAtoms()); // paddedNumAtoms - must be set at runtime
+    // Laser parameters (starting from argument index 14)
+    computeForceKernel->setArg(14, (float)time_ps);
+    computeForceKernel->setArg(15, (float)cavityDriveAmplitude);
+    computeForceKernel->setArg(16, (float)cavityDriveFrequency);
+    computeForceKernel->setArg(17, (float)cavityDrivePhase);
+    computeForceKernel->setArg(18, (int)cavityDriveEnvelopeType);
+    computeForceKernel->setArg(19, (float)cavityDriveEnvParam1);
+    computeForceKernel->setArg(20, (float)cavityDriveEnvParam2);
+    computeForceKernel->setArg(21, (int)(cavityDriveEnabled ? 1 : 0));
+    computeForceKernel->setArg(22, (float)directLaserAmplitude);
+    computeForceKernel->setArg(23, (float)directLaserFrequency);
+    computeForceKernel->setArg(24, (float)directLaserPhase);
+    computeForceKernel->setArg(25, (int)directLaserEnvelopeType);
+    computeForceKernel->setArg(26, (float)directLaserEnvParam1);
+    computeForceKernel->setArg(27, (float)directLaserEnvParam2);
+    computeForceKernel->setArg(28, (int)(directLaserEnabled ? 1 : 0));
     computeForceKernel->execute(cc.getNumAtoms());
     
     // Download energy components
@@ -4522,16 +4582,20 @@ double CommonCalcCavityForceKernel::execute(ContextImpl& context, bool includeFo
         harmonicEnergy = 0.0;
         couplingEnergy = 0.0;
         dipoleSelfEnergy = 0.0;
+        cavityDriveEnergy = 0.0;
+        directLaserEnergy = 0.0;
         
         int numBlocks = cc.getNumThreadBlocks();
         for (int i = 0; i < numBlocks; i++) {
-            harmonicEnergy += energies[i * 3];
-            couplingEnergy += energies[i * 3 + 1];
-            dipoleSelfEnergy += energies[i * 3 + 2];
+            harmonicEnergy += energies[i * 5];
+            couplingEnergy += energies[i * 5 + 1];
+            dipoleSelfEnergy += energies[i * 5 + 2];
+            cavityDriveEnergy += energies[i * 5 + 3];
+            directLaserEnergy += energies[i * 5 + 4];
         }
     }
     
-    return harmonicEnergy + couplingEnergy + dipoleSelfEnergy;
+    return harmonicEnergy + couplingEnergy + dipoleSelfEnergy + cavityDriveEnergy + directLaserEnergy;
 }
 
 void CommonCalcCavityForceKernel::copyParametersToContext(ContextImpl& context, const CavityForce& force) {
@@ -4540,6 +4604,21 @@ void CommonCalcCavityForceKernel::copyParametersToContext(ContextImpl& context, 
     lambdaCoupling = force.getLambdaCoupling();
     photonMass = force.getPhotonMass();
     couplingSchedule = force.getLambdaCouplingSchedule();
+    // Update laser parameters
+    cavityDriveEnabled = force.getCavityDriveEnabled();
+    cavityDriveAmplitude = force.getCavityDriveAmplitude();
+    cavityDriveFrequency = force.getCavityDriveFrequency();
+    cavityDrivePhase = force.getCavityDrivePhase();
+    cavityDriveEnvelopeType = force.getCavityDriveEnvelopeType();
+    cavityDriveEnvParam1 = force.getCavityDriveEnvelopeParam1();
+    cavityDriveEnvParam2 = force.getCavityDriveEnvelopeParam2();
+    directLaserEnabled = force.getDirectLaserCouplingEnabled();
+    directLaserAmplitude = force.getDirectLaserAmplitude();
+    directLaserFrequency = force.getDirectLaserFrequency();
+    directLaserPhase = force.getDirectLaserPhase();
+    directLaserEnvelopeType = force.getDirectLaserEnvelopeType();
+    directLaserEnvParam1 = force.getDirectLaserEnvelopeParam1();
+    directLaserEnvParam2 = force.getDirectLaserEnvelopeParam2();
 }
 
 // ==================== CavityParticleDisplacer Kernel Implementation ====================

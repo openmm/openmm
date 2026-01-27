@@ -3398,6 +3398,23 @@ void ReferenceCalcCavityForceKernel::initialize(const System& system, const Cavi
     couplingSchedule = force.getLambdaCouplingSchedule();
     stepCount = 0;
     
+    // Store laser parameters
+    cavityDriveEnabled = force.getCavityDriveEnabled();
+    cavityDriveAmplitude = force.getCavityDriveAmplitude();
+    cavityDriveFrequency = force.getCavityDriveFrequency();
+    cavityDrivePhase = force.getCavityDrivePhase();
+    cavityDriveEnvelopeType = force.getCavityDriveEnvelopeType();
+    cavityDriveEnvParam1 = force.getCavityDriveEnvelopeParam1();
+    cavityDriveEnvParam2 = force.getCavityDriveEnvelopeParam2();
+    
+    directLaserEnabled = force.getDirectLaserCouplingEnabled();
+    directLaserAmplitude = force.getDirectLaserAmplitude();
+    directLaserFrequency = force.getDirectLaserFrequency();
+    directLaserPhase = force.getDirectLaserPhase();
+    directLaserEnvelopeType = force.getDirectLaserEnvelopeType();
+    directLaserEnvParam1 = force.getDirectLaserEnvelopeParam1();
+    directLaserEnvParam2 = force.getDirectLaserEnvelopeParam2();
+    
     // Store charges for all particles
     int numParticles = system.getNumParticles();
     charges.resize(numParticles, 0.0);
@@ -3473,7 +3490,27 @@ double ReferenceCalcCavityForceKernel::execute(ContextImpl& context, bool includ
     // Dipole self-energy: (epsilon^2 / 2K) * d_xy^2
     dipoleSelfEnergy = 0.5 * epsilon * epsilon / K * (dipoleXY[0]*dipoleXY[0] + dipoleXY[1]*dipoleXY[1]);
     
-    double totalEnergy = harmonicEnergy + couplingEnergy + dipoleSelfEnergy;
+    // Get current time in picoseconds
+    double time_ps = context.getTime();
+    
+    // Compute laser fields
+    double f_drive = 0.0;
+    if (cavityDriveEnabled) {
+        f_drive = computeCavityDrive(time_ps);
+    }
+    
+    double E_ext = 0.0;
+    if (directLaserEnabled) {
+        E_ext = computeDirectLaserField(time_ps);
+    }
+    
+    // Cavity drive energy: E_drive = -f(t) * q (Case 2)
+    cavityDriveEnergy = -f_drive * (qPhotonXY[0] + qPhotonXY[1]);
+    
+    // Direct laser energy: E_laser = -E_ext(t) * μ (Case 1)
+    directLaserEnergy = -E_ext * (dipoleXY[0] + dipoleXY[1]);
+    
+    double totalEnergy = harmonicEnergy + couplingEnergy + dipoleSelfEnergy + cavityDriveEnergy + directLaserEnergy;
     
     if (includeForces) {
         // Dq = q + (epsilon/K) * d (displaced cavity mode position)
@@ -3483,20 +3520,32 @@ double ReferenceCalcCavityForceKernel::execute(ContextImpl& context, bool includ
                 qPhoton[1] + epsilonOverK * dipole[1],
                 0.0);
         
-        // Force on molecular particles: F = -epsilon * q_i * Dq (only xy components)
+        // Force on molecular particles: F = -epsilon * q_i * Dq + E_ext * q (only xy components)
+        // The E_ext term is from direct laser-molecule coupling (Case 1)
         for (int i = 0; i < numParticles; i++) {
             if (i != cavityParticleIndex) {
                 double q = charges[i];
                 forceData[i][0] -= epsilon * q * Dq[0];
                 forceData[i][1] -= epsilon * q * Dq[1];
+                // Add direct laser-molecule coupling force: F = E_ext(t) * charge
+                if (directLaserEnabled) {
+                    forceData[i][0] += E_ext * q;
+                    forceData[i][1] += E_ext * q;
+                }
                 // No force in z direction
             }
         }
         
-        // Force on cavity particle: F = -K*q - epsilon*d_xy
+        // Force on cavity particle: F = -K*q - epsilon*d_xy + f(t)
+        // The +f(t) term is from cavity-mode driving (Case 2)
         forceData[cavityParticleIndex][0] -= K * qPhoton[0] + epsilon * dipoleXY[0];
         forceData[cavityParticleIndex][1] -= K * qPhoton[1] + epsilon * dipoleXY[1];
         forceData[cavityParticleIndex][2] -= K * qPhoton[2];
+        // Add cavity drive force: F = +f(t) (positive sign from H_drive = -f(t)*q)
+        if (cavityDriveEnabled) {
+            forceData[cavityParticleIndex][0] += f_drive;
+            forceData[cavityParticleIndex][1] += f_drive;
+        }
     }
     
     return totalEnergy;
@@ -3508,6 +3557,58 @@ void ReferenceCalcCavityForceKernel::copyParametersToContext(ContextImpl& contex
     lambdaCoupling = force.getLambdaCoupling();
     photonMass = force.getPhotonMass();
     couplingSchedule = force.getLambdaCouplingSchedule();
+    // Update laser parameters
+    cavityDriveEnabled = force.getCavityDriveEnabled();
+    cavityDriveAmplitude = force.getCavityDriveAmplitude();
+    cavityDriveFrequency = force.getCavityDriveFrequency();
+    cavityDrivePhase = force.getCavityDrivePhase();
+    cavityDriveEnvelopeType = force.getCavityDriveEnvelopeType();
+    cavityDriveEnvParam1 = force.getCavityDriveEnvelopeParam1();
+    cavityDriveEnvParam2 = force.getCavityDriveEnvelopeParam2();
+    directLaserEnabled = force.getDirectLaserCouplingEnabled();
+    directLaserAmplitude = force.getDirectLaserAmplitude();
+    directLaserFrequency = force.getDirectLaserFrequency();
+    directLaserPhase = force.getDirectLaserPhase();
+    directLaserEnvelopeType = force.getDirectLaserEnvelopeType();
+    directLaserEnvParam1 = force.getDirectLaserEnvelopeParam1();
+    directLaserEnvParam2 = force.getDirectLaserEnvelopeParam2();
+}
+
+// Helper functions for laser field computation
+double ReferenceCalcCavityForceKernel::computeEnvelope(double time_ps, int envelope_type, double env_param1, double env_param2) const {
+    const double PS_TO_AU = 4.134137333e4;  // picoseconds to atomic time units
+    
+    switch(envelope_type) {
+        case 0: // CONSTANT
+            return 1.0;
+        case 1: // GAUSSIAN
+            // s(t) = exp(-(t - μ)²/(2σ²))
+            return exp(-0.5 * pow((time_ps - env_param1) / env_param2, 2.0));
+        case 2: // SQUARE
+            // s(t) = 1 if t_start <= t <= t_stop, else 0
+            return (time_ps >= env_param1 && time_ps <= env_param2) ? 1.0 : 0.0;
+        case 3: // EXPONENTIAL
+            // s(t) = exp(-t/τ) for t >= 0
+            return (time_ps >= 0.0) ? exp(-time_ps / env_param1) : 0.0;
+        default:
+            return 1.0;
+    }
+}
+
+double ReferenceCalcCavityForceKernel::computeCavityDrive(double time_ps) const {
+    const double PS_TO_AU = 4.134137333e4;
+    double time_au = time_ps * PS_TO_AU;
+    double s_t = computeEnvelope(time_ps, cavityDriveEnvelopeType, cavityDriveEnvParam1, cavityDriveEnvParam2);
+    double cos_term = cos(cavityDriveFrequency * time_au + cavityDrivePhase);
+    return cavityDriveAmplitude * s_t * cos_term;
+}
+
+double ReferenceCalcCavityForceKernel::computeDirectLaserField(double time_ps) const {
+    const double PS_TO_AU = 4.134137333e4;
+    double time_au = time_ps * PS_TO_AU;
+    double s_t = computeEnvelope(time_ps, directLaserEnvelopeType, directLaserEnvParam1, directLaserEnvParam2);
+    double cos_term = cos(directLaserFrequency * time_au + directLaserPhase);
+    return directLaserAmplitude * s_t * cos_term;
 }
 
 // ==================== CavityParticleDisplacer Kernel Implementation ====================

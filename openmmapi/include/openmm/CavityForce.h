@@ -248,6 +248,56 @@ public:
      */
     double getTotalCavityEnergy(const Context& context) const;
     /**
+     * Case (2): Cavity-mode driving (input-output theory)
+     * Drive term: H_cav-drive = -f(t)*q, where f(t) = f_0 * s(t) * cos(ω_d*t + φ)
+     * The cavity acts as a frequency filter.
+     */
+    void setCavityDriveAmplitude(double f0);
+    double getCavityDriveAmplitude() const;
+    void setCavityDriveFrequency(double omega_d);
+    double getCavityDriveFrequency() const;
+    void setCavityDrivePhase(double phi);
+    double getCavityDrivePhase() const;
+    void setCavityDriveEnvelope(const std::string& type, double param1, double param2);
+    int getCavityDriveEnvelopeType() const;
+    double getCavityDriveEnvelopeParam1() const;
+    double getCavityDriveEnvelopeParam2() const;
+    void setCavityDriveEnabled(bool enable);
+    bool getCavityDriveEnabled() const;
+    /**
+     * Case (1): Direct molecule-laser coupling
+     * Interaction: H_mol-laser = -μ(R)*E_ext(t), where E_ext(t) = E_0 * s(t) * cos(ω_L*t + φ)
+     * The laser directly couples to molecular dipoles, bypassing the cavity.
+     */
+    void setDirectLaserAmplitude(double E0);
+    double getDirectLaserAmplitude() const;
+    void setDirectLaserFrequency(double omega_L);
+    double getDirectLaserFrequency() const;
+    void setDirectLaserPhase(double phi);
+    double getDirectLaserPhase() const;
+    void setDirectLaserEnvelope(const std::string& type, double param1, double param2);
+    int getDirectLaserEnvelopeType() const;
+    double getDirectLaserEnvelopeParam1() const;
+    double getDirectLaserEnvelopeParam2() const;
+    void setDirectLaserCouplingEnabled(bool enable);
+    bool getDirectLaserCouplingEnabled() const;
+    /**
+     * Get the cavity drive energy: E_drive = -f(t) * q
+     * This must be called after forces have been computed.
+     * 
+     * @param context  the Context to query
+     * @return the cavity drive energy in kJ/mol
+     */
+    double getCavityDriveEnergy(const Context& context) const;
+    /**
+     * Get the direct laser-molecule energy: E_laser = -E_ext(t) * μ
+     * This must be called after forces have been computed.
+     * 
+     * @param context  the Context to query
+     * @return the direct laser energy in kJ/mol
+     */
+    double getDirectLaserEnergy(const Context& context) const;
+    /**
      * Update the parameters in a Context to match those stored in this Force object.
      * 
      * @param context  the Context to update
@@ -271,6 +321,22 @@ private:
     int couplingOnStep;
     double couplingOnValue;
     std::vector<std::pair<int, double>> couplingSchedule;
+    // Case (2): Cavity-mode driving parameters
+    bool cavityDriveEnabled;
+    double cavityDriveAmplitude;  // f_0 in atomic units
+    double cavityDriveFrequency; // ω_d in atomic units
+    double cavityDrivePhase;     // φ
+    int cavityDriveEnvelopeType;  // 0=constant, 1=gaussian, 2=square, 3=exponential
+    double cavityDriveEnvParam1;
+    double cavityDriveEnvParam2;
+    // Case (1): Direct molecule-laser coupling parameters
+    bool directLaserEnabled;
+    double directLaserAmplitude;  // E_0 in atomic units
+    double directLaserFrequency; // ω_L in atomic units
+    double directLaserPhase;     // φ
+    int directLaserEnvelopeType;
+    double directLaserEnvParam1;
+    double directLaserEnvParam2;
 };
 
 } // namespace OpenMM

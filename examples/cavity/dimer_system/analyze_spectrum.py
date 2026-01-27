@@ -206,8 +206,8 @@ ax2.set_xlim(0, max_freq)
 ax2.set_ylim(bottom=0)
 
 # Add vertical lines for expected O-O and N-N peaks
-ax2.axvline(x=2200, color='blue', linestyle='--', alpha=0.5, linewidth=1.5, label='Expected O-O (~2200 cm⁻¹)')
-ax2.axvline(x=3290, color='green', linestyle='--', alpha=0.5, linewidth=1.5, label='Expected N-N (~3290 cm⁻¹)')
+ax2.axvline(x=1555, color='blue', linestyle='--', alpha=0.5, linewidth=1.5, label='Expected O-O (~1560 cm⁻¹)')
+ax2.axvline(x=2330, color='green', linestyle='--', alpha=0.5, linewidth=1.5, label='Expected N-N (~2233 cm⁻¹)')
 ax2.legend(fontsize=9, loc='upper right')
 
 # Add text box with simulation info
@@ -244,43 +244,17 @@ plt.savefig(f'{output_prefix}_full.png', dpi=300, bbox_inches='tight')
 print(f"   ✓ Saved: {output_prefix}_full.png")
 
 # Also save a high-resolution version of just the MESA spectrum
-fig2, ax = plt.subplots(figsize=(14, 6))
+fig2, ax = plt.subplots(figsize=(6, 6))
 ax.plot(freq_cm[idx_freq], spectrum_mem[idx_freq], 'r-', linewidth=2)
+# Add vertical lines for expected O-O and N-N peaks
+ax.axvline(x=1555, color='blue', linestyle='--', alpha=0.5, linewidth=1.5, label='A-A stretch (~1555 cm⁻¹)')
+ax.axvline(x=2330, color='green', linestyle='--', alpha=0.5, linewidth=1.5, label='B-B stretch (~2330 cm⁻¹)')
+ax.legend(fontsize=9, loc='upper right')
+ax.set_xlim([0, 3000])
+ax.set_ylim(bottom=0)
 ax.set_xlabel('Frequency (cm$^{-1}$)', fontsize=14)
 ax.set_ylabel('Power Spectral Density (arb. units)', fontsize=14)
-ax.set_title('IR Spectrum - Maximum Entropy Method (MESA)', 
+ax.set_title('IR Spectrum with ExternalLaser Driving at $\omega_d$ = 1555 cm⁻¹\nand Cavity Frequency $\omega_c$ = 1555 cm⁻¹', 
              fontsize=16, fontweight='bold')
-ax.grid(True, alpha=0.3)
-ax.set_xlim(0, max_freq)
-ax.set_ylim(bottom=0)
-plt.tight_layout()
 plt.savefig(f'{output_prefix}_hires.png', dpi=300, bbox_inches='tight')
 print(f"   ✓ Saved: {output_prefix}_hires.png")
-
-# 8. Save processed data
-print("\n8. Saving processed data...")
-np.savez(f'{output_prefix}_data.npz',
-         frequencies_cm=freq_cm[idx_freq],
-         spectrum=spectrum_mem[idx_freq],
-         autocorr_time=time_autocorr[:idx_max],
-         autocorr=autocorr[:idx_max],
-         dipole_window_time=time_window,
-         dipole_window=dipole_window,
-         mesa_order=M.P)
-print(f"   ✓ Saved: {output_prefix}_data.npz")
-
-print("\n" + "=" * 60)
-print("IR Spectrum Calculation Complete!")
-print("=" * 60)
-print("\nOutput files:")
-print("  1. cavity_ir_spectrum_mem.png - 3-panel plot:")
-print("     - Top: Autocorrelation function (0-10 ps)")
-print("     - Middle: IR spectrum via MESA (0-3000 cm⁻¹)")
-print("     - Bottom: Dipole trajectory (800-820 ps)")
-print("  2. cavity_ir_spectrum_mem_hires.png - High-res MESA spectrum")
-print("  3. ir_spectrum_mem_data.npz - Processed data")
-print("\nMethod: Maximum Entropy Spectral Analysis (MESA)")
-print("Reference: https://maximum-entropy-spectrum.readthedocs.io/en/latest/")
-print("\nTo view:")
-print("  xdg-open cavity_ir_spectrum_mem.png")
-print("=" * 60)

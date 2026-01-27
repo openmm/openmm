@@ -73,12 +73,26 @@ public:
     double getDipoleSelfEnergy() const {
         return dipoleSelfEnergy;
     }
+    /**
+     * Get the cavity drive energy component from the last force calculation.
+     */
+    double getCavityDriveEnergy() const {
+        return cavityDriveEnergy;
+    }
+    /**
+     * Get the direct laser energy component from the last force calculation.
+     */
+    double getDirectLaserEnergy() const {
+        return directLaserEnergy;
+    }
 private:
     const CavityForce& owner;
     Kernel kernel;
     double harmonicEnergy;
     double couplingEnergy;
     double dipoleSelfEnergy;
+    double cavityDriveEnergy;
+    double directLaserEnergy;
 };
 
 } // namespace OpenMM
