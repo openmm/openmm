@@ -23,11 +23,12 @@ import numpy as np
 import os
 from pathlib import Path
 import time
+from datetime import date
 
 try:
     from openmm import openmm
     from openmm import unit
-    from openmm.app import Simulation, StateDataReporter
+    from openmm.app import Simulation, StateDataReporter, ForceField, Topology, Element, CutoffPeriodic, PDBFile
     print("✓ OpenMM loaded successfully")
 except ImportError as e:
     print(f"Error importing OpenMM: {e}")
@@ -42,10 +43,102 @@ AMU_TO_KG = 1.66054e-27
 # Time conversion: 1 a.u. of time = 0.02418884254 ps
 AU_TIME_TO_PS = 0.02418884254  # 1 atomic time unit = 0.02418884254 ps
 
+# Reference density for constant-density scaling: N_ref dimers in cubic box of side L_ref Bohr
+DIAMER_REF_N = 250
+DIAMER_REF_L_BOHR = 40
+
+
+def box_size_nm_at_constant_density(num_molecules, N_ref=DIAMER_REF_N, L_ref_bohr=DIAMER_REF_L_BOHR):
+    """
+    Box edge length in nm so that number density is constant.
+
+    Reference: N_ref dimers in a cubic box of side L_ref_bohr Bohr. Then
+    L(N) = L_ref_bohr * (N / N_ref)^(1/3) Bohr, converted to nm.
+
+    Parameters
+    ----------
+    num_molecules : int
+        Number of dimers
+    N_ref : int
+        Reference number of dimers (default 250)
+    L_ref_bohr : float
+        Reference box length in Bohr (default 40)
+
+    Returns
+    -------
+    float
+        Box edge length in nm
+    """
+    L_bohr = L_ref_bohr * (num_molecules / N_ref) ** (1 / 3)
+    return L_bohr * BOHR_TO_NM
+
+
 def _system_xml_paths(num_molecules, fraction_OO, box_size_nm, seed):
     tag = f"diamer_{num_molecules}_OO{fraction_OO:.2f}_box{box_size_nm:.3f}_seed{seed}"
     base_dir = Path(__file__).parent
     return base_dir / f"{tag}.xml", base_dir / f"{tag}_positions.npz"
+
+
+def create_diamer_topology_and_positions(num_molecules=50, fraction_OO=0.8, box_size_nm=2.0, seed=42,
+                                         include_cavity=False):
+    """
+    Create topology and positions for O-O and N-N dimers (same layout as create_diamer_system_in_code).
+    For use with ForceField('diamer_forcefield.xml').createSystem(topology).
+    If include_cavity=True, append one residue "CAV" with one atom at (0,0,0) for LennardJonesForce compatibility.
+    Returns (topology, positions) with positions as list of Vec3 in nm.
+    """
+    np.random.seed(seed)
+    # Bond lengths in nm (same as create_diamer_system_in_code)
+    r0_OO_au = 2.281655158  # Bohr
+    r0_NN_au = 2.0743522177
+    r0_OO = r0_OO_au * BOHR_TO_NM
+    r0_NN = r0_NN_au * BOHR_TO_NM
+
+    topology = Topology()
+    chain = topology.addChain()
+    positions = []
+    num_OO = int(fraction_OO * num_molecules)
+    side = int(np.ceil(num_molecules**(1/3)))
+    spacing = box_size_nm / side
+
+    mol_idx = 0
+    for i in range(side):
+        for j in range(side):
+            for k in range(side):
+                if mol_idx >= num_molecules:
+                    break
+                is_OO = mol_idx < num_OO
+                x = (i + 0.5) * spacing
+                y = (j + 0.5) * spacing
+                z = (k + 0.5) * spacing
+                theta = np.random.rand() * 2 * np.pi
+                phi = np.arccos(2 * np.random.rand() - 1)
+                direction = np.array([
+                    np.sin(phi) * np.cos(theta),
+                    np.sin(phi) * np.sin(theta),
+                    np.cos(phi)
+                ])
+                r0 = r0_OO if is_OO else r0_NN
+                r1 = np.array([x, y, z]) - 0.5 * r0 * direction
+                r2 = np.array([x, y, z]) + 0.5 * r0 * direction
+                res_name = "OO" if is_OO else "NN"
+                elem = Element.getBySymbol("O") if is_OO else Element.getBySymbol("N")
+                residue = topology.addResidue(res_name, chain)
+                a1 = topology.addAtom("A", elem, residue)
+                a2 = topology.addAtom("B", elem, residue)
+                topology.addBond(a1, a2)
+                positions.append(openmm.Vec3(*r1) * unit.nanometer)
+                positions.append(openmm.Vec3(*r2) * unit.nanometer)
+                mol_idx += 1
+            if mol_idx >= num_molecules:
+                break
+        if mol_idx >= num_molecules:
+            break
+    if include_cavity:
+        residue_cav = topology.addResidue("CAV", chain)
+        topology.addAtom("Q", Element.getBySymbol("He"), residue_cav)
+        positions.append(openmm.Vec3(0, 0, 0) * unit.nanometer)
+    return topology, positions
 
 
 def create_diamer_system_in_code(num_molecules=50, fraction_OO=0.8, box_size_nm=2.0,
@@ -268,6 +361,73 @@ def create_diamer_system(num_molecules=50, fraction_OO=0.8, box_size_nm=2.0,
     return system, positions
 
 
+def create_diamer_system_from_forcefield(num_molecules=50, fraction_OO=0.8, box_size_nm=2.0,
+                                         seed=42, ff_dir=None, include_cavity=True):
+    """
+    Build dimer system from OpenMM ForceField XML (diamer_forcefield.xml).
+    N-O Kob-Andersen cross terms are defined in XML via LennardJonesForce/NBFixPair
+    (no in-code exceptions). If include_cavity=True, topology includes one CAV residue
+    at (0,0,0) so LennardJonesForce/CustomNonbondedForce get the right particle count.
+    Returns (system, positions, topology).
+    """
+    if ff_dir is None:
+        ff_dir = Path(__file__).parent
+    ff_path = ff_dir / "diamer_forcefield.xml"
+    if not ff_path.exists():
+        raise FileNotFoundError(f"ForceField XML not found: {ff_path}")
+    forcefield = ForceField(str(ff_path))
+    topology, positions = create_diamer_topology_and_positions(
+        num_molecules=num_molecules, fraction_OO=fraction_OO,
+        box_size_nm=box_size_nm, seed=seed, include_cavity=include_cavity
+    )
+    vectors = (
+        openmm.Vec3(box_size_nm, 0, 0) * unit.nanometer,
+        openmm.Vec3(0, box_size_nm, 0) * unit.nanometer,
+        openmm.Vec3(0, 0, box_size_nm) * unit.nanometer,
+    )
+    topology.setPeriodicBoxVectors(vectors)
+    system = forcefield.createSystem(
+        topology,
+        nonbondedMethod=CutoffPeriodic,
+        nonbondedCutoff=0.9 * unit.nanometer,
+    )
+    system.setDefaultPeriodicBoxVectors(
+        openmm.Vec3(box_size_nm, 0, 0),
+        openmm.Vec3(0, box_size_nm, 0),
+        openmm.Vec3(0, 0, box_size_nm),
+    )
+    num_OO = int(fraction_OO * num_molecules)
+    print(f"Created system with {system.getNumParticles()} particles ({num_molecules} molecules)")
+    print(f"  O-O dimers: {num_OO}")
+    print(f"  N-N dimers: {num_molecules - num_OO}")
+    print(f"  Box size: {box_size_nm} nm")
+    print(f"  N-O cross terms from XML (LennardJonesForce NBFixPair)")
+    if include_cavity:
+        cavity_index = 2 * num_molecules
+        # Cavity feels only CavityForce: no bonded/nonbonded with anybody.
+        # Exclude cavity from LennardJones; add same pairs as exceptions in NonbondedForce
+        # so OpenMM's "identical exceptions" requirement is satisfied.
+        nbf = None
+        ljf = None
+        for f in system.getForces():
+            if isinstance(f, openmm.NonbondedForce):
+                nbf = f
+            if isinstance(f, openmm.CustomNonbondedForce) and f.getName() == 'LennardJones':
+                ljf = f
+        for i in range(system.getNumParticles()):
+            if i == cavity_index:
+                continue
+            if ljf is not None:
+                ljf.addExclusion(cavity_index, i)
+            if nbf is not None:
+                nbf.addException(cavity_index, i, 0.0, 0.1, 0.0)  # no Coulomb, no LJ
+        if ljf is not None or nbf is not None:
+            print(f"  Cavity excluded from nonbonded (only feels CavityForce)")
+        print(f"  Cavity particle at index {cavity_index} (from topology)")
+        return system, positions, topology, cavity_index
+    return system, positions, topology
+
+
 def add_cavity_particle(system, positions, omegac, photon_mass=1.0):
     """
     Add a cavity photon particle to the system.
@@ -344,15 +504,17 @@ def compute_dipole_moment(state, charges, num_molecular_particles):
 
 def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
              dt=0.001, equilibration_time_ps=100.0, production_time_ps=900.0,
-             cavity_freq_cm=1560.0, disable_dipole_output=False):
+             cavity_freq_cm=1560.0, disable_dipole_output=False,
+             box_size_nm=2.5, fraction_OO=0.8, friction=0.01, minimize=True,
+             output_file=None, seed=42, report_interval_steps=1000,
+             pdb_file=None, pdb_interval_steps=1000):
     """Run the cavity diamer simulation test."""
     
     print("=" * 60)
     print("Cavity OpenMM Diamer Test")
     print("=" * 60)
     
-    # System parameters
-    box_size_nm = 2.5
+    # System parameters (box_size_nm, fraction_OO come from arguments)
     
     # Cavity parameters
     # Convert from cm⁻¹ to atomic units (Hartree)
@@ -368,27 +530,48 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     dipole_output_interval_ps = dt  # Output EVERY timestep (1 fs) for proper IR spectrum
     dipole_output_interval_steps = 1  # Every single step
     
+    g_collective = lambda_coupling * np.sqrt(num_molecules)
+    # Strong coupling + coarse dt can blow up the cavity mode (light particle, stiff coupling)
+    if g_collective > 0.5 and dt > 0.001:
+        print(f"\n  *** WARNING: g = {g_collective:.3g} with dt = {dt*1000:.0f} fs may be unstable. Use --dt 0.001 (1 fs) for strong coupling. ***")
     print(f"\nSimulation parameters:")
     print(f"  Temperature: {temperature_K} K")
     print(f"  Timestep: {dt} ps")
     print(f"  Cavity frequency: {cavity_freq_cm} cm⁻¹ ({omegac_au:.6f} Hartree)")
-    print(f"  Lambda coupling: {lambda_coupling}")
+    print(f"  Coupling: λ = {lambda_coupling:.6g} (g = λ√N = {g_collective:.6g})")
     print(f"  Equilibration: {equilibration_time_ps} ps ({equilibration_steps} steps)")
     print(f"  Production: {production_time_ps} ps ({production_steps} steps)")
     print(f"  Total time: {equilibration_time_ps + production_time_ps} ps")
     if not disable_dipole_output:
-        print(f"  Dipole output: Every timestep ({dt*1000:.1f} fs) for accurate IR spectrum")
+        print(f"  Dipole output: Every timestep ({dt*1000:.1f} fs) from t=0 for full run (equilibration + production)")
     else:
         print(f"  Dipole output: DISABLED (benchmark mode)")
+    print(f"  Console report interval: every {report_interval_steps} steps")
+    if pdb_file:
+        print(f"  PDB trajectory: {pdb_file} (every {pdb_interval_steps} steps)")
+    else:
+        print(f"  PDB trajectory: disabled")
     
-    # Create system
+    # Create system from ForceField XML (diamer_forcefield.xml); cavity in topology for LJ force compatibility
     print("\n--- Creating Diamer System ---")
-    system, positions = create_diamer_system(
+    result = create_diamer_system_from_forcefield(
         num_molecules=num_molecules,
-        fraction_OO=0.8,
+        fraction_OO=fraction_OO,
         box_size_nm=box_size_nm,
-        temperature_K=temperature_K
+        seed=seed,
+        include_cavity=True,
     )
+    if len(result) == 4:
+        system, positions, topology, cavity_index = result
+        num_molecular_particles = cavity_index
+        system.setParticleMass(cavity_index, photon_mass)
+        print("\n--- Cavity (from topology) ---")
+        print(f"  Cavity particle at index {cavity_index}, mass set to {photon_mass:.6f} amu")
+    else:
+        system, positions, topology = result
+        print("\n--- Adding Cavity Particle ---")
+        cavity_index = add_cavity_particle(system, positions, omegac_au, photon_mass)
+        num_molecular_particles = cavity_index
     
     # Store charges for dipole calculation
     charges = []
@@ -397,11 +580,6 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
             for i in range(system.getNumParticles()):
                 charge, sigma, epsilon = force.getParticleParameters(i)
                 charges.append(charge)
-    
-    # Add cavity particle
-    print("\n--- Adding Cavity Particle ---")
-    cavity_index = add_cavity_particle(system, positions, omegac_au, photon_mass)
-    num_molecular_particles = cavity_index  # All particles before cavity are molecular
     
     # Check if CavityForce is available
     print("\n--- Adding Cavity Force ---")
@@ -455,7 +633,6 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     
     # Create integrator - use Langevin for the cavity particle dynamics
     print("\n--- Creating Integrator ---")
-    friction = 0.01  # ps^-1 - very low friction to preserve vibrational dynamics
     integrator = openmm.LangevinMiddleIntegrator(
         temperature_K * unit.kelvin,
         friction / unit.picosecond,
@@ -475,13 +652,16 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     context = openmm.Context(system, integrator, platform)
     context.setPositions(positions)
     
-    # Minimize energy
-    print("\n--- Energy Minimization ---")
-    state = context.getState(getEnergy=True)
-    print(f"  Initial energy: {state.getPotentialEnergy()}")
-    openmm.LocalEnergyMinimizer.minimize(context, maxIterations=100)
-    state = context.getState(getEnergy=True)
-    print(f"  Final energy: {state.getPotentialEnergy()}")
+    # Minimize energy (optional)
+    if minimize:
+        print("\n--- Energy Minimization ---")
+        state = context.getState(getEnergy=True)
+        print(f"  Initial energy: {state.getPotentialEnergy()}")
+        openmm.LocalEnergyMinimizer.minimize(context, maxIterations=100)
+        state = context.getState(getEnergy=True)
+        print(f"  Final energy: {state.getPotentialEnergy()}")
+    else:
+        print("\n--- Skipping energy minimization (--no-minimize) ---")
     
     # Apply finite-Q displacement to cavity particle BEFORE starting dynamics
     if cavity_available:
@@ -530,8 +710,22 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     dipole_trajectory = []
     step_counter = 0  # Manual step counter
     
-    report_interval = 1000  # Report every 1 ps
+    report_interval = report_interval_steps
     num_reports = total_steps // report_interval
+    
+    # PDB output (molecular atoms only; exclude cavity)
+    pdb_handle = None
+    pdb_model_index = 0
+    if pdb_file:
+        pdb_handle = open(pdb_file, 'w')
+        # Minimal header (skip PDBFile.writeHeader to avoid Quantity formatting of box vectors)
+        try:
+            from openmm import Platform
+            _v = Platform.getOpenMMVersion()
+        except Exception:
+            _v = "unknown"
+        pdb_handle.write("REMARK   1 CREATED WITH OPENMM %s, %s\n" % (_v, str(date.today())))
+        pdb_handle.write("REMARK   2 Molecular atoms only (cavity particle omitted)\n")
     
     start_time = time.time()
     last_report_time = start_time
@@ -547,6 +741,13 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
                 dipole = compute_dipole_moment(state, charges, num_molecular_particles)
                 dipole_times.append(current_time)
                 dipole_trajectory.append(dipole)
+            # PDB frame output (molecular atoms only; PDBFile expects angstroms)
+            if pdb_handle and (step_counter % pdb_interval_steps) == 0:
+                _state = context.getState(getPositions=True)
+                _pos_all = _state.getPositions(asNumpy=True)
+                _pos_mol = _pos_all[:num_molecular_particles].value_in_unit(unit.angstroms)
+                PDBFile.writeModel(topology, _pos_mol, pdb_handle, modelIndex=pdb_model_index + 1)
+                pdb_model_index += 1
         
         # Report progress with timing
         current_wall_time = time.time()
@@ -558,14 +759,17 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         pe = state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
         positions_now = state.getPositions()
         cavity_pos = positions_now[cavity_index]
+        cx = cavity_pos[0].value_in_unit(unit.nanometer) if hasattr(cavity_pos[0], 'value_in_unit') else float(cavity_pos[0])
+        cy = cavity_pos[1].value_in_unit(unit.nanometer) if hasattr(cavity_pos[1], 'value_in_unit') else float(cavity_pos[1])
+        cz = cavity_pos[2].value_in_unit(unit.nanometer) if hasattr(cavity_pos[2], 'value_in_unit') else float(cavity_pos[2])
         
         sim_time_ps = step_counter * dt
         progress_pct = (step_counter / total_steps) * 100
         steps_per_sec = report_interval / elapsed_since_last
         
-        # Calculate ns/day (same as μs/day)
-        # steps_per_sec * dt (ps/step) * 86400 (sec/day) / 1000 (ps/ns) = ns/day
-        ns_per_day = steps_per_sec * dt * 86400.0 / 1000.0
+        # Simulation time per day: steps_per_sec * dt (ps/step) * 86400 (s/day) = ps/day
+        # 1 μs = 1000 ns = 1e6 ps, so μs/day = (ps/day) / 1e6
+        us_per_day = steps_per_sec * dt * 86400.0 / 1e6
         
         # Estimate time remaining
         steps_remaining = total_steps - step_counter
@@ -575,7 +779,7 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         
         print(f"  [{progress_pct:5.1f}%] Step {step_counter:7d}/{total_steps} | "
               f"Sim time: {sim_time_ps:6.1f} ps | "
-              f"Speed: {ns_per_day:6.1f} ns/day | "
+              f"Speed: {us_per_day:6.2f} μs/day | "
               f"ETA: {time_remaining_hr:5.1f} hr")
         
         # Get cavity energy if available
@@ -595,13 +799,13 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
                 pass  # Skip if not available
         
         print(f"         PE: {pe:8.2f} kJ/mol{cavity_energy_str}")
-        print(f"         Cavity: ({cavity_pos.x:7.4f}, {cavity_pos.y:7.4f}, {cavity_pos.z:7.4f}) nm")
+        print(f"         Cavity: ({cx:7.4f}, {cy:7.4f}, {cz:7.4f}) nm")
         print("")
         
         # Save NPZ file on the fly (streaming save)
         if not disable_dipole_output and len(dipole_times) > 0:
-            output_file = f"cavity_diamer_lambda{lambda_coupling:.4f}.npz"
-            np.savez(output_file,
+            _out = output_file or f"cavity_diamer_lambda{lambda_coupling:.4f}.npz"
+            np.savez(_out,
                      time_ps=np.array(dipole_times),
                      dipole_nm=np.array(dipole_trajectory),
                      metadata={
@@ -620,6 +824,12 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
                          'total_steps': total_steps
                      })
     
+    # Close PDB trajectory
+    if pdb_handle:
+        PDBFile.writeFooter(topology, pdb_handle)
+        pdb_handle.close()
+        print(f"  PDB trajectory written to {pdb_file} ({pdb_model_index} frames)")
+    
     total_elapsed = time.time() - start_time
     print(f"  Simulation complete! Total elapsed time: {total_elapsed/3600:.2f} hr ({total_elapsed/60:.1f} min)")
     
@@ -628,9 +838,8 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         print("\n--- Saving Dipole Trajectory ---")
         dipole_times_array = np.array(dipole_times)
         dipole_trajectory_array = np.array(dipole_trajectory)
-        
-        output_file = f"cavity_diamer_lambda{lambda_coupling:.4f}.npz"
-        np.savez(output_file,
+        _out = output_file or f"cavity_diamer_lambda{lambda_coupling:.4f}.npz"
+        np.savez(_out,
                  time_ps=dipole_times_array,
                  dipole_nm=dipole_trajectory_array,
                  metadata={
@@ -650,9 +859,12 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
                     'elapsed_time_s': total_elapsed
                  })
         
-        print(f"  Saved dipole trajectory to: {output_file}")
+        print(f"  Saved dipole trajectory to: {_out}")
         print(f"  Total data points: {len(dipole_times_array)}")
-        print(f"  Time range: {dipole_times_array[0]:.2f} - {dipole_times_array[-1]:.2f} ps")
+        if len(dipole_times_array) > 0:
+            print(f"  Time range: {dipole_times_array[0]:.2f} - {dipole_times_array[-1]:.2f} ps")
+        else:
+            print("  Time range: (no dipole data recorded)")
     else:
         print("\n--- Dipole output disabled (benchmark mode) ---")
     
@@ -662,25 +874,27 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     
     if not disable_dipole_output:
         print("\n--- IR Spectrum Calculation Instructions ---")
-        print("To calculate the IR spectrum from the dipole trajectory:")
-    print("1. Load the data:")
-    print("   data = np.load('cavity_diamer_dipole.npz')")
-    print("   time = data['time_ps']")
-    print("   dipole = data['dipole_nm']")
-    print("")
-    print("2. Cut off first 20 ps (as requested):")
-    print("   idx_cutoff = np.where(time >= 20.0)[0][0]")
-    print("   time_cut = time[idx_cutoff:]")
-    print("   dipole_cut = dipole[idx_cutoff:]")
-    print("")
-    print("3. Compute dipole autocorrelation function:")
-    print("   C(t) = <M(0) · M(t)> where M is dipole moment")
-    print("")
-    print("4. Fourier transform C(t) to get IR spectrum:")
-    print("   I(ω) ∝ FT[C(t)]")
-    print("")
-    print("Note: The first 100 ps is equilibration (coupling OFF),")
-    print("      the remaining 900 ps is production (coupling ON).")
+        print("The dipole trajectory includes equilibration and production (saved from t=0).")
+        print("To calculate the IR spectrum:")
+        print("1. Load the data (use your output filename or default cavity_diamer_lambda<λ>.npz):")
+        print("   data = np.load('cavity_diamer_lambda0.0010.npz', allow_pickle=True)")
+        print("   time = data['time_ps']")
+        print("   dipole = data['dipole_nm']")
+        print("   meta = data['metadata'].item() if 'metadata' in data else {}")
+        print("   equil_ps = meta.get('equilibration_ps', 100.0)")
+        print("")
+        print("2. Optionally use only production: trim the first equil_ps when computing spectra:")
+        print("   idx_cutoff = np.where(time >= equil_ps)[0][0]")
+        print("   time_cut = time[idx_cutoff:]")
+        print("   dipole_cut = dipole[idx_cutoff:]")
+        print("")
+        print("3. Compute dipole autocorrelation function:")
+        print("   C(t) = <M(0) · M(t)> where M is dipole moment")
+        print("")
+        print("4. Fourier transform C(t) to get IR spectrum:")
+        print("   I(ω) ∝ FT[C(t)]")
+        print("")
+        print("Note: metadata in the .npz contains 'equilibration_ps' and 'production_ps' for trimming.")
     print("=" * 60)
     
     return True
@@ -690,36 +904,112 @@ def main():
     """Main entry point with command-line argument parsing."""
     import argparse
     
-    parser = argparse.ArgumentParser(description='Dimer Cavity MD Simulation')
+    parser = argparse.ArgumentParser(
+        description='Cavity OpenMM Diamer Simulation (CavityForce + Bussi thermostat)',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Default parameters (250 dimers, 100 ps equil + 900 ps prod)
+  python run_simulation.py
+
+  # Short run for testing
+  python run_simulation.py --dimers 8 --equil 0.1 --prod 0.1
+
+  # Constant density (250 dimers in 40 Bohr box reference); box size computed from --dimers
+  python run_simulation.py --dimers 100 --constant-density
+
+  # Custom system and coupling (g = λ√N; λ = g/√N)
+  python run_simulation.py --dimers 100 --box-size 2.0 --fraction-OO 0.75 --g 0.0005
+
+  # Total time only (10% equil, 90% prod)
+  python run_simulation.py --time 200
+
+  # Skip minimization, custom output
+  python run_simulation.py --no-minimize --output my_dipole.npz
+        """,
+    )
+    # System parameters
     parser.add_argument('--dimers', type=int, default=250,
-                       help='Number of dimers (default: 250)')
-    parser.add_argument('--lambda', type=float, default=0.001, dest='lambda_coupling',
-                       help='Coupling strength (default: 0.001)')
-    parser.add_argument('--temp', type=float, default=100.0,
-                       help='Temperature in K (default: 100)')
+                        help='Number of dimers (default: 250)')
+    parser.add_argument('--constant-density', action='store_true', dest='constant_density',
+                        help='Scale box so density is constant: 250 dimers in 40 Bohr box (--box-size ignored)')
+    parser.add_argument('--box-size', type=float, default=2.5,
+                        help='Box edge length in nm (default: 2.5). Ignored if --constant-density.')
+    parser.add_argument('--fraction-OO', type=float, default=0.8, dest='fraction_OO',
+                        help='Fraction of O-O dimers vs N-N (default: 0.8)')
+    parser.add_argument('--seed', type=int, default=42,
+                        help='Random seed for initial positions (default: 42)')
+    # Time parameters
     parser.add_argument('--dt', type=float, default=0.001,
-                       help='Timestep in ps (default: 0.001 = 1 fs)')
+                        help='Timestep in ps (default: 0.001 = 1 fs). Use 1 fs or smaller for strong coupling (g > 0.5)')
+    parser.add_argument('--time', type=float, default=None,
+                        help='Total simulation time in ps; if set, uses 10%% equil + 90%% prod (overrides --equil/--prod)')
     parser.add_argument('--equil', type=float, default=100.0,
-                       help='Equilibration time in ps (default: 100)')
+                        help='Equilibration time in ps (default: 100)')
     parser.add_argument('--prod', type=float, default=900.0,
-                       help='Production time in ps (default: 900)')
+                        help='Production time in ps (default: 900)')
+    # Cavity parameters
     parser.add_argument('--cavity-freq', type=float, default=1560.0,
-                       help='Cavity frequency in cm⁻¹ (default: 1560 for O-O stretch)')
+                        help='Cavity frequency in cm⁻¹ (default: 1560 for O-O stretch)')
+    parser.add_argument('--g', type=float, default=0.0001,
+                        help='Coupling g = λ√N; code uses λ = g/√N (default: 0.0001)')
+    # Simulation control
+    parser.add_argument('--temp', type=float, default=100.0,
+                        help='Temperature in K (default: 100)')
+    parser.add_argument('--friction', type=float, default=0.01,
+                        help='Langevin friction in ps⁻¹ (default: 0.01)')
+    parser.add_argument('--no-minimize', action='store_true',
+                        help='Skip energy minimization')
     parser.add_argument('--no-dipole', action='store_true', dest='no_dipole',
-                       help='Disable dipole output for speed benchmark')
+                        help='Disable dipole output for speed benchmark')
+    parser.add_argument('--output', type=str, default=None,
+                        help='Output filename for dipole trajectory .npz (default: cavity_diamer_lambda<λ>.npz)')
+    # Console and PDB output
+    parser.add_argument('--report-interval', type=int, default=1000, dest='report_interval',
+                        help='Console progress report interval in steps (default: 1000)')
+    parser.add_argument('--pdb', type=str, default=None, dest='pdb_file',
+                        help='Write PDB trajectory to this file (molecular atoms only; disable if not set)')
+    parser.add_argument('--pdb-interval', type=int, default=1000, dest='pdb_interval',
+                        help='PDB frame write interval in steps (default: 1000)')
     
     args = parser.parse_args()
-    
+
+    # If --time is set, override equil and prod
+    equil_ps = args.equil
+    prod_ps = args.prod
+    if args.time is not None:
+        equil_ps = 0.1 * args.time
+        prod_ps = 0.9 * args.time
+
+    # Box size: constant-density scaling or explicit
+    if args.constant_density:
+        box_size_nm = box_size_nm_at_constant_density(args.dimers)
+        print(f"Constant density: {args.dimers} dimers → box {box_size_nm:.4f} nm (ref: {DIAMER_REF_N} in {DIAMER_REF_L_BOHR} Bohr)")
+    else:
+        box_size_nm = args.box_size
+
+    # Coupling: g = λ√N  =>  λ = g / √N (so g=1, N≈204 gives λ≈0.07)
+    lambda_coupling = args.g / np.sqrt(args.dimers)
+
     try:
         success = run_test(
             num_molecules=args.dimers,
-            lambda_coupling=args.lambda_coupling,
+            lambda_coupling=lambda_coupling,
             temperature_K=args.temp,
             dt=args.dt,
-            equilibration_time_ps=args.equil,
-            production_time_ps=args.prod,
+            equilibration_time_ps=equil_ps,
+            production_time_ps=prod_ps,
             cavity_freq_cm=args.cavity_freq,
-            disable_dipole_output=args.no_dipole
+            disable_dipole_output=args.no_dipole,
+            box_size_nm=box_size_nm,
+            fraction_OO=args.fraction_OO,
+            friction=args.friction,
+            minimize=not args.no_minimize,
+            output_file=args.output,
+            seed=args.seed,
+            report_interval_steps=args.report_interval,
+            pdb_file=args.pdb_file,
+            pdb_interval_steps=args.pdb_interval,
         )
         sys.exit(0 if success else 1)
     except Exception as e:

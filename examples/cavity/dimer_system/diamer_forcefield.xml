@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<ForceField>
+  <!--
+  Cavity Diamer Force Field (O-O and N-N diatomics)
+  ==================================================
+  Molecular Kob-Andersen-style dimers for cavity-QED tests.
+  Same parameters as create_diamer_system_in_code() in run_simulation.py.
+  Unit conversions: 1 Bohr = 0.0529177 nm, 1 Hartree = 2625.5 kJ/mol.
+  O-O: k_OO, r0_OO from HOOMD (omega_OO ~ 1560 cm^-1).
+  N-N: k_NN, r0_NN from HOOMD (omega_NN ~ 2325 cm^-1).
+  N-O cross terms: LennardJonesForce with NBFixPair (KA non-additive);
+  NonbondedForce is Coulomb-only (epsilon=0).
+  Cavity (diamer-CAV): non-physical particle, unwrapped positions; code adds
+  exclusions so cavity is excluded from LennardJonesForce (no LJ neighbor list).
+  -->
+  <AtomTypes>
+    <Type name="diamer-OA" class="OOA" element="O" mass="16.0"/>
+    <Type name="diamer-OB" class="OOB" element="O" mass="16.0"/>
+    <Type name="diamer-NA" class="NNA" element="N" mass="14.0"/>
+    <Type name="diamer-NB" class="NNB" element="N" mass="14.0"/>
+    <Type name="diamer-CAV" class="CAV" element="He" mass="0.00054858"/>
+  </AtomTypes>
+  <Residues>
+    <Residue name="CAV">
+      <Atom name="Q" type="diamer-CAV"/>
+    </Residue>
+    <Residue name="OO">
+      <Atom name="A" type="diamer-OA"/>
+      <Atom name="B" type="diamer-OB"/>
+      <Bond atomName1="A" atomName2="B"/>
+    </Residue>
+    <Residue name="NN">
+      <Atom name="A" type="diamer-NA"/>
+      <Atom name="B" type="diamer-NB"/>
+      <Bond atomName1="A" atomName2="B"/>
+    </Residue>
+  </Residues>
+  <HarmonicBondForce>
+    <!-- O-O: k_OO_au=0.73204 Ha/Bohr^2, r0_OO_au=2.281655158 Bohr -->
+    <Bond class1="OOA" class2="OOB" length="0.1207399431544966" k="686348.8577163016"/>
+    <!-- N-N: k_NN_au=1.4325 Ha/Bohr^2, r0_NN_au=2.0743522177 Bohr -->
+    <Bond class1="NNA" class2="NNB" length="0.10976994835058329" k="1343088.818477955"/>
+  </HarmonicBondForce>
+  <!-- Coulomb only; LJ is handled by LennardJonesForce below -->
+  <NonbondedForce coulomb14scale="0.0" lj14scale="0.0">
+    <Atom type="diamer-OA" charge="-0.3" sigma="0.3296998448441368" epsilon="0"/>
+    <Atom type="diamer-OB" charge="0.3" sigma="0.3296998448441368" epsilon="0"/>
+    <Atom type="diamer-NA" charge="-0.3" sigma="0.290135836267376" epsilon="0"/>
+    <Atom type="diamer-NB" charge="0.3" sigma="0.290135836267376" epsilon="0"/>
+    <Atom type="diamer-CAV" charge="0" sigma="0.1" epsilon="0"/>
+  </NonbondedForce>
+  <!-- Lennard-Jones with NBFixPair for Kob-Andersen O-N cross (sigma_NO, epsilon_NO) -->
+  <LennardJonesForce lj14scale="0.0" useDispersionCorrection="True">
+    <Atom type="diamer-OA" sigma="0.3296998448441368" epsilon="0.438069952255"/>
+    <Atom type="diamer-OB" sigma="0.3296998448441368" epsilon="0.438069952255"/>
+    <Atom type="diamer-NA" sigma="0.290135836267376" epsilon="0.219034963"/>
+    <Atom type="diamer-NB" sigma="0.290135836267376" epsilon="0.219034963"/>
+    <Atom type="diamer-CAV" sigma="0.1" epsilon="0"/>
+    <!-- KA cross: 4.9832074319 Bohr -> nm, 0.00025027802 Ha -> kJ/mol -->
+    <NBFixPair type1="diamer-OA" type2="diamer-NA" sigma="0.2636998448441368" epsilon="0.6571049283825"/>
+    <NBFixPair type1="diamer-OA" type2="diamer-NB" sigma="0.2636998448441368" epsilon="0.6571049283825"/>
+    <NBFixPair type1="diamer-OB" type2="diamer-NA" sigma="0.2636998448441368" epsilon="0.6571049283825"/>
+    <NBFixPair type1="diamer-OB" type2="diamer-NB" sigma="0.2636998448441368" epsilon="0.6571049283825"/>
+  </LennardJonesForce>
+</ForceField>
