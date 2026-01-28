@@ -114,8 +114,9 @@ def run_simulation(num_molecules=32, temperature_K=300.0,
     print("CACE-LR Water MD Simulation")
     print("=" * 80)
     
-    # Model path
-    model_path = "/media/extradrive/Trajectories/openmm/LES-BEC/water/fit/fit_version_1/best_model.pth"
+    # Model path (openmm root is 4 levels up from ml-experimental/ml/examples/cace-lr_water/)
+    openmm_root = Path(__file__).resolve().parents[4]
+    model_path = str(openmm_root / "cace" / "water" / "fit" / "fit_version_1" / "best_model.pth")
     if not os.path.exists(model_path):
         print(f"Error: Model not found at {model_path}")
         sys.exit(1)

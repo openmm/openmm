@@ -53,8 +53,9 @@ def check_system(num_molecules=32):
     else:
         print(f"\n✓ Density is reasonable for liquid water.")
     
-    # Create system and check PBC
-    model_path = "/media/extradrive/Trajectories/openmm/LES-BEC/water/fit/fit_version_1/best_model.pth"
+    # Create system and check PBC (openmm root is 2 levels up from tests/cace-lr_water/)
+    openmm_root = Path(__file__).resolve().parents[2]
+    model_path = str(openmm_root / "cace" / "water" / "fit" / "fit_version_1" / "best_model.pth")
     potential = MLPotential('cace-lr', model_path=model_path)
     system = potential.createSystem(topology)
     

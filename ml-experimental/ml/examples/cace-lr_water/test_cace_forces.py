@@ -12,8 +12,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'cace'))
 from cace.models.atomistic import NeuralNetworkPotential
 from cace.data.neighborhood import get_neighborhood
 
-# Load model
-model_path = '/media/extradrive/Trajectories/openmm/LES-BEC/water/fit/fit_version_1/best_model.pth'
+# Load model (openmm root is 4 levels up from ml-experimental/ml/examples/cace-lr_water/)
+openmm_root = Path(__file__).resolve().parents[4]
+model_path = str(openmm_root / "cace" / "water" / "fit" / "fit_version_1" / "best_model.pth")
 print(f"Loading CACE model from {model_path}...")
 device = torch.device('cpu')
 model = torch.load(model_path, map_location=device, weights_only=False)

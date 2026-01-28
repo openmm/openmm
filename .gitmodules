@@ -4,7 +4,4 @@
 	branch = les_branch
 [submodule "cace"]
 	path = cace
-	url = https://github.com/BingqingCheng/cace.git
-[submodule "LES-BEC"]
-	path = LES-BEC
-	url = https://github.com/BingqingCheng/LES-BEC.git
+	url = https://github.com/muhammadhasyim/cace.git

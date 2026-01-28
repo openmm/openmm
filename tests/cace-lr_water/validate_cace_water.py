@@ -8,18 +8,19 @@ import numpy as np
 import torch
 from ase.build import molecule
 from cace_dipole_calculator import CACEDipoleCalculator
-import os
+from pathlib import Path
 
 def validate_single_water():
     print("=" * 60)
     print("Validating CACE-LR Single Water Molecule")
     print("=" * 60)
-    
-    model_path = "/media/extradrive/Trajectories/openmm/LES-BEC/water/fit/fit_version_1/best_model.pth"
-    if not os.path.exists(model_path):
+    # openmm repo root is 2 levels up from this file (tests/cace-lr_water/)
+    openmm_root = Path(__file__).resolve().parents[2]
+    model_path = openmm_root / "cace" / "water" / "fit" / "fit_version_1" / "best_model.pth"
+    if not model_path.exists():
         print(f"Error: Model not found at {model_path}")
         return
-        
+    model_path = str(model_path)
     calc = CACEDipoleCalculator(model_path, device='cpu')
     
     # Create water molecule

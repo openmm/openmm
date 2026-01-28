@@ -117,7 +117,7 @@ from cace.modules import AngularComponent    # Angular decomposition
 ### Example: CACE-LR with LES
 
 ```python
-# Training example from LES-BEC/water/
+# Training example from cace/water/
 from cace.modules import (
     EwaldPotential,
     Polarization,
