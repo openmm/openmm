@@ -14,6 +14,23 @@ build_*
 *.avi
 *.mov
 
+# Cavity / dimer_system simulation outputs
+examples/cavity/dimer_system/_test_wrapped.gsd
+examples/cavity/dimer_system/cavity_ir_spectrum_*.png
+examples/cavity/dimer_system/fkt_*.txt
+examples/cavity/dimer_system/force_component_errors_per_particle.csv
+examples/cavity/dimer_system/force_component_summary_new.txt
+examples/cavity/dimer_system/force_debug-*.gsd
+examples/cavity/dimer_system/force_dump-*.gsd
+examples/cavity/dimer_system/forces_per_particle.txt
+examples/cavity/dimer_system/init-*.gsd
+examples/cavity/dimer_system/init-*.pdb
+examples/cavity/dimer_system/nohup.out
+examples/cavity/dimer_system/observables_replica_*.h5
+examples/cavity/dimer_system/test.pdb
+examples/cavity/dimer_system/tmp*.gsd
+init-*.gsd
+
 # Backup/stable directories
 fairchem-stable/
 *backup/
