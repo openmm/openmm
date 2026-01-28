@@ -507,7 +507,10 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
              cavity_freq_cm=1560.0, disable_dipole_output=False,
              box_size_nm=2.5, fraction_OO=0.8, friction=0.01, minimize=True,
              output_file=None, seed=42, report_interval_steps=1000,
-             pdb_file=None, pdb_interval_steps=1000):
+             pdb_file=None, pdb_interval_steps=1000,
+             enable_fkt=False, fkt_kmag=113.4, fkt_num_wavevectors=50,
+             fkt_reference_interval_ps=1.0, fkt_max_refs=10,
+             fkt_output_period_ps=1.0, fkt_output_prefix=None):
     """Run the cavity diamer simulation test."""
     
     print("=" * 60)
@@ -551,6 +554,14 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         print(f"  PDB trajectory: {pdb_file} (every {pdb_interval_steps} steps)")
     else:
         print(f"  PDB trajectory: disabled")
+    fkt_prefix_resolved = None
+    if enable_fkt:
+        fkt_prefix_resolved = (fkt_output_prefix if fkt_output_prefix is not None else
+                               (Path(output_file).with_suffix("").name if output_file else f"fkt_lambda{lambda_coupling:.4f}"))
+        print(f"  F(k,t): enabled, prefix={fkt_prefix_resolved}, k={fkt_kmag} nm⁻¹")
+        print(f"    reference interval (new file every): {fkt_reference_interval_ps} ps")
+        print(f"    max reference files (FIFO drop): {fkt_max_refs}")
+        print(f"    F(k,t) output period: {fkt_output_period_ps} ps")
     
     # Create system from ForceField XML (diamer_forcefield.xml); cavity in topology for LJ force compatibility
     print("\n--- Creating Diamer System ---")
@@ -730,6 +741,23 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     start_time = time.time()
     last_report_time = start_time
     
+    fkt_tracker = None
+    fkt_interval_steps = 1
+    if enable_fkt:
+        _here = Path(__file__).resolve().parent
+        if str(_here) not in sys.path:
+            sys.path.insert(0, str(_here))
+        from fkt_tracker import FKTTracker
+        fkt_tracker = FKTTracker(
+            kmag_nm_inv=fkt_kmag,
+            num_wavevectors=fkt_num_wavevectors,
+            reference_interval_ps=fkt_reference_interval_ps,
+            max_references=fkt_max_refs,
+            output_period_ps=fkt_output_period_ps,
+            output_prefix=fkt_prefix_resolved,
+        )
+        fkt_interval_steps = max(1, int(round(fkt_output_period_ps / dt)))
+    
     for i in range(num_reports):
         # Run and collect dipole data
         for step in range(report_interval):
@@ -748,6 +776,13 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
                 _pos_mol = _pos_all[:num_molecular_particles].value_in_unit(unit.angstroms)
                 PDBFile.writeModel(topology, _pos_mol, pdb_handle, modelIndex=pdb_model_index + 1)
                 pdb_model_index += 1
+            # F(k,t) intermediate scattering function (molecular positions only)
+            if enable_fkt and fkt_tracker is not None and (step_counter % fkt_interval_steps) == 0:
+                _st = context.getState(getPositions=True)
+                _pos_all = _st.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
+                pos_mol = _pos_all[:num_molecular_particles]
+                current_time_ps = step_counter * dt
+                fkt_tracker.update(current_time_ps, pos_mol)
         
         # Report progress with timing
         current_wall_time = time.time()
@@ -829,6 +864,9 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         PDBFile.writeFooter(topology, pdb_handle)
         pdb_handle.close()
         print(f"  PDB trajectory written to {pdb_file} ({pdb_model_index} frames)")
+    
+    if enable_fkt and fkt_tracker is not None:
+        fkt_tracker.finalize()
     
     total_elapsed = time.time() - start_time
     print(f"  Simulation complete! Total elapsed time: {total_elapsed/3600:.2f} hr ({total_elapsed/60:.1f} min)")
@@ -918,14 +956,17 @@ Examples:
   # Constant density (250 dimers in 40 Bohr box reference); box size computed from --dimers
   python run_simulation.py --dimers 100 --constant-density
 
-  # Custom system and coupling (g = λ√N; λ = g/√N)
-  python run_simulation.py --dimers 100 --box-size 2.0 --fraction-OO 0.75 --g 0.0005
+  # Custom system and coupling (--lambda sets λ in a.u.; else use --g for g=λ√N)
+  python run_simulation.py --dimers 100 --box-size 2.0 --fraction-OO 0.75 --lambda 0.0005
 
   # Total time only (10% equil, 90% prod)
   python run_simulation.py --time 200
 
   # Skip minimization, custom output
   python run_simulation.py --no-minimize --output my_dipole.npz
+
+  # F(k,t) ISF: new reference every 200 ps, keep up to 5, output every 1 ps
+  python run_simulation.py --enable-fkt --fkt-ref-interval-ps 200 --fkt-max-refs 5 --fkt-output-period-ps 1
         """,
     )
     # System parameters
@@ -933,8 +974,8 @@ Examples:
                         help='Number of dimers (default: 250)')
     parser.add_argument('--constant-density', action='store_true', dest='constant_density',
                         help='Scale box so density is constant: 250 dimers in 40 Bohr box (--box-size ignored)')
-    parser.add_argument('--box-size', type=float, default=2.5,
-                        help='Box edge length in nm (default: 2.5). Ignored if --constant-density.')
+    parser.add_argument('--box-size', type=float, default=DIAMER_REF_L_BOHR * BOHR_TO_NM,
+                        help='Box edge length in nm (default: 2.117 = 40 Bohr, cav-hoomd parity). Ignored if --constant-density.')
     parser.add_argument('--fraction-OO', type=float, default=0.8, dest='fraction_OO',
                         help='Fraction of O-O dimers vs N-N (default: 0.8)')
     parser.add_argument('--seed', type=int, default=42,
@@ -951,8 +992,10 @@ Examples:
     # Cavity parameters
     parser.add_argument('--cavity-freq', type=float, default=1560.0,
                         help='Cavity frequency in cm⁻¹ (default: 1560 for O-O stretch)')
-    parser.add_argument('--g', type=float, default=0.0001,
-                        help='Coupling g = λ√N; code uses λ = g/√N (default: 0.0001)')
+    parser.add_argument('--lambda', type=float, default=None, dest='lambda_au',
+                        help='Coupling λ in a.u.; overrides --g when set (e.g. 0.001 for cav-hoomd parity)')
+    parser.add_argument('--g', type=float, default=0.0158,
+                        help='Coupling g = λ√N when --lambda not set; λ = g/√N (default: 0.0158 ⇒ λ≈0.001 for N=250)')
     # Simulation control
     parser.add_argument('--temp', type=float, default=100.0,
                         help='Temperature in K (default: 100)')
@@ -971,6 +1014,21 @@ Examples:
                         help='Write PDB trajectory to this file (molecular atoms only; disable if not set)')
     parser.add_argument('--pdb-interval', type=int, default=1000, dest='pdb_interval',
                         help='PDB frame write interval in steps (default: 1000)')
+    # F(k,t) intermediate scattering function
+    parser.add_argument('--enable-fkt', action='store_true', dest='enable_fkt',
+                        help='Enable F(k,t) density correlation output')
+    parser.add_argument('--fkt-kmag', type=float, default=113.4, dest='fkt_kmag',
+                        help='F(k,t) k-magnitude in nm⁻¹ (default: 113.4 ~ 6.0 a.u.)')
+    parser.add_argument('--fkt-num-wavevectors', type=int, default=50, dest='fkt_num_wavevectors',
+                        help='Number of F(k,t) wavevectors (default: 50)')
+    parser.add_argument('--fkt-ref-interval-ps', type=float, default=1.0, dest='fkt_reference_interval_ps',
+                        help='F(k,t) interval between reference times t_w in ps. A new reference (and new F(k,t) file) is added every this many ps (default: 1.0)')
+    parser.add_argument('--fkt-max-refs', type=int, default=10, dest='fkt_max_refs',
+                        help='F(k,t) maximum number of reference states kept. One F(k,t) file per reference; when this many exist, the oldest is dropped and we stop writing to it. Total files created = ceil(runtime_ps / fkt-ref-interval-ps) (default: 10)')
+    parser.add_argument('--fkt-output-period-ps', type=float, default=1.0, dest='fkt_output_period_ps',
+                        help='F(k,t) output period in ps (default: 1.0)')
+    parser.add_argument('--fkt-output-prefix', type=str, default=None, dest='fkt_output_prefix',
+                        help='Prefix for F(k,t) files (default: from --output or fkt_lambda<λ>)')
     
     args = parser.parse_args()
 
@@ -988,8 +1046,8 @@ Examples:
     else:
         box_size_nm = args.box_size
 
-    # Coupling: g = λ√N  =>  λ = g / √N (so g=1, N≈204 gives λ≈0.07)
-    lambda_coupling = args.g / np.sqrt(args.dimers)
+    # Coupling: --lambda sets λ directly; else λ = g/√N
+    lambda_coupling = args.lambda_au if args.lambda_au is not None else (args.g / np.sqrt(args.dimers))
 
     try:
         success = run_test(
@@ -1010,6 +1068,13 @@ Examples:
             report_interval_steps=args.report_interval,
             pdb_file=args.pdb_file,
             pdb_interval_steps=args.pdb_interval,
+            enable_fkt=args.enable_fkt,
+            fkt_kmag=args.fkt_kmag,
+            fkt_num_wavevectors=args.fkt_num_wavevectors,
+            fkt_reference_interval_ps=args.fkt_reference_interval_ps,
+            fkt_max_refs=args.fkt_max_refs,
+            fkt_output_period_ps=args.fkt_output_period_ps,
+            fkt_output_prefix=args.fkt_output_prefix,
         )
         sys.exit(0 if success else 1)
     except Exception as e:

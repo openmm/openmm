@@ -38,8 +38,8 @@ except ImportError as e:
 BOHR_TO_NM = 0.0529177  # 1 Bohr = 0.0529177 nm
 HARTREE_TO_KJMOL = 2625.5  # 1 Hartree = 2625.5 kJ/mol
 AMU_TO_KG = 1.66054e-27
-# Time conversion: 1 a.u. of time = 0.02418884254 ps
-AU_TIME_TO_PS = 0.02418884254  # 1 atomic time unit = 0.02418884254 ps
+# Time conversion: 1 a.u. of time = ℏ/E_h = 2.418884254e-5 ps (do not use 0.02418884 - that is 1000× too large)
+AU_TIME_TO_PS = 2.418884254e-5  # 1 atomic time unit in ps
 
 def create_diamer_system(num_molecules=50, fraction_OO=0.8, box_size_nm=2.0, 
                          temperature_K=100.0, seed=42):

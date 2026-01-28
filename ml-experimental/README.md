@@ -84,6 +84,8 @@ system = potential.createSystem(topology)
 
 ### Installation
 
+#### Core OpenMM Features
+
 These features are built into OpenMM when compiled from the ml-experimental branch:
 
 ```bash
@@ -95,6 +97,27 @@ make -j8
 make install
 make PythonInstall
 ```
+
+#### ML Potentials (UMA/OpenMM-ML)
+
+For ML potential support, install OpenMM-ML with UMA models:
+
+```bash
+# 1. Install OpenMM and OpenMM-Torch
+conda install -c conda-forge openmm openmmtorch
+
+# 2. Install FAIRChem
+pip install fairchem-core
+
+# 3. Install OpenMM-ML from repository
+cd fairchem/openmm-ml
+pip install -e .
+
+# 4. Verify installation
+python -c "from openmmml import MLPotential; pot = MLPotential('uma-s-1p1'); print('✓ UMA models registered')"
+```
+
+**Note:** See [`ml/docs/README.md`](ml/docs/README.md) for detailed installation instructions, troubleshooting, and limitations.
 
 ### Running Examples
 

@@ -16,6 +16,9 @@ build_*
 
 # Backup/stable directories
 fairchem-stable/
+*backup/
+merge_backup/
+ml-experimental.backup/
 
 # macOS
 .DS_Store

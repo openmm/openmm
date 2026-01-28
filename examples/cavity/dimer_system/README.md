@@ -8,19 +8,20 @@ This directory contains simulations of a two-component diatomic dimer system (O-
 - O-O stretch: **1560 cm⁻¹** (most abundant, 80% of dimers)
 - N-N stretch: **2325 cm⁻¹** (less abundant, 20% of dimers)
 
-**Default simulation settings:**
+**Default simulation settings (cav-hoomd parity: 100 K, 40 Bohr box, 250 dimers):**
 - Number of dimers: 250 (200 O-O + 50 N-N)
+- Box: 2.117 nm (40 Bohr)
 - Temperature: 100 K
 - Timestep: 1.0 fs
-- Equilibration: 20 ps
-- Production: 100 ps
+- Equilibration: 100 ps
+- Production: 900 ps
 - Cavity frequency: 1560 cm⁻¹ (resonant with O-O stretch)
-- Coupling strength (λ): 0.001 a.u.
+- Coupling strength (λ): 0.001 a.u. (default g = λ√N ≈ 0.0158 for N=250)
 
 ## Scripts
 
 ### `run_simulation.py`
-Run the cavity-coupled dimer simulation with custom parameters.
+Run the cavity-coupled dimer simulation with custom parameters. Default box (40 Bohr), temperature (100 K), and coupling (λ=0.001) match the cav-hoomd "100 K, 40 Bohr, 250 dimers" regime; use `--lambda 0.001` or the default `--g` to compare with cav-hoomd `--coupling 1e-3`.
 
 ```bash
 # Basic run (default parameters)
@@ -35,13 +36,39 @@ python run_simulation.py --no-dipole --prod 10
 
 **Flags:**
 - `--dimers N`: Number of dimers (default: 250)
-- `--lambda λ`: Coupling strength in a.u. (default: 0.001)
+- `--lambda λ`: Coupling λ in a.u.; overrides `--g` when set (e.g. 0.001 for cav-hoomd parity)
+- `--g g`: Coupling g = λ√N when `--lambda` not set (default: 0.0158 ⇒ λ≈0.001 for N=250)
+- `--box-size L`: Box edge in nm (default: 2.117 = 40 Bohr). Use `--constant-density` to scale with N.
 - `--temp T`: Temperature in K (default: 100)
 - `--dt Δt`: Timestep in ps (default: 0.001 = 1 fs)
-- `--equil t`: Equilibration time in ps (default: 20)
-- `--prod t`: Production time in ps (default: 100)
+- `--equil t`: Equilibration time in ps (default: 100)
+- `--prod t`: Production time in ps (default: 900)
 - `--cavity-freq ω`: Cavity frequency in cm⁻¹ (default: 1560)
 - `--no-dipole`: Disable dipole output for speed benchmarking
+
+### Force comparison: OpenMM vs cav-hoomd (reference)
+
+To run OpenMM cavity and cav-hoomd **side by side** and compare per-particle forces (cav-hoomd is the reference; OpenMM must match within a chosen tolerance):
+
+1. **Shared configuration:** Use a GSD snapshot (e.g. from cav-hoomd `initlattice_equilibrium.py`) with the same N, box, and particle order.
+
+2. **OpenMM forces:** From this directory:
+   ```bash
+   python compare_openmm_cav_hoomd_forces.py init-0.gsd --lambda 0.001 --output-forces openmm_f.npz
+   ```
+   This builds the OpenMM system from the GSD (positions and box in Bohr → nm), adds the cavity force, and writes forces (N×3) in kJ/(mol·nm) to `openmm_f.npz`.
+
+3. **cav-hoomd forces:** In an environment where cav-hoomd is installed, run a force-dump that loads the same GSD, runs one step, and writes forces (N×3) in **Hartree/Bohr** to an NPZ (e.g. `hoomd_forces.npz`). The reference forces **must be in GSD particle (tag) order** so the comparison script can align them to OpenMM bond order. Use `dump_hoomd_forces_from_gsd.py` in this directory; it uses HOOMD's `cpu_local_snapshot` + `rtag` to write forces in GSD (tag) order. If you use another script, ensure it outputs tag order.
+
+4. **Compare:** Pass the cav-hoomd NPZ to the comparison script. All forces are converted to Hartree/Bohr for comparison; default tolerance is max |F_openmm − F_hoomd| ≤ 1e−5 Ha/Bohr.
+   ```bash
+   python compare_openmm_cav_hoomd_forces.py init-0.gsd --lambda 0.001 --hoomd-forces-npz hoomd_forces.npz [--tol 1e-5]
+   ```
+   Exit code 0 means OpenMM matches the reference within tolerance; exit code 1 means the test fails.
+
+**Scripts:**
+- `compare_openmm_cav_hoomd_forces.py`: Loads GSD, builds OpenMM system from it, computes forces; optionally compares to `--hoomd-forces-npz` and asserts tolerance. Use `--diagnose-order` to try alignment variants and see which minimizes error.
+- `dump_hoomd_forces_from_gsd.py`: Dumps cav-hoomd forces to NPZ in **GSD particle (tag) order** for use with the comparison script (requires cav-hoomd installed).
 
 ### `analyze_spectrum.py`
 Calculate and plot the IR spectrum using Maximum Entropy Spectral Analysis (MESA).

@@ -127,6 +127,39 @@ print(f"Final RMSD: {rmsds[-1]:.4f} nm")
 
 ## Troubleshooting
 
+### ModuleNotFoundError: No module named 'openmm'
+
+OpenMM is not installed in the **current Python/conda environment**. You are likely in `(base)` or a env without OpenMM.
+
+**Fix:** Install OpenMM and related packages, then run from that environment.
+
+**Option A – Conda (recommended):**
+```bash
+# Create a dedicated env with OpenMM
+conda create -n openmm-ml python=3.10 -y
+conda activate openmm-ml
+conda install -c conda-forge openmm openmmtorch
+pip install openmmml  # or: pip install -e /path/to/openmm-ml
+
+# Run from this env
+cd /media/extradrive/Trajectories/openmm/ml-experimental/ml/examples/uma_ice_rpmd
+python test_uma_ice_rpmd.py -h
+```
+
+**Option B – Install into current env:**
+```bash
+conda install -c conda-forge openmm openmmtorch
+# Then ensure openmmml is available (see below).
+```
+
+**Check which env has OpenMM:**
+```bash
+conda activate your_openmm_env   # e.g. the one you use for OpenMM work
+python -c "import openmm; print(openmm.__file__)"
+```
+
+Always run `python test_uma_ice_rpmd.py` from the **same** environment where OpenMM is installed.
+
 ### Import Error: openmmml
 ```bash
 cd /media/extradrive/Trajectories/openmm/fairchem/openmm-ml
