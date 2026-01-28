@@ -175,7 +175,8 @@ vector<map<string, string> > CudaPlatform::getDevices(const map<string, string>&
 
     vector<map<string, string> > results;
     int numDevices;
-    CHECK_RESULT(cuDeviceGetCount(&numDevices), "Error querying number of devices");
+    if (cuDeviceGetCount(&numDevices) != CUDA_SUCCESS)
+        numDevices = 0;
     for (int i = 0; i < numDevices; i++) {
         if (deviceIndex != -1 && deviceIndex != i)
             continue;

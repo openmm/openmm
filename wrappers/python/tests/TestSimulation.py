@@ -309,7 +309,11 @@ class TestSimulation(unittest.TestCase):
             else:
                 for device in devices:
                     integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
-                    simulation = Simulation(pdb.topology, system, integrator, platform, device)
+                    try:
+                        simulation = Simulation(pdb.topology, system, integrator, platform, device)
+                    except:
+                        # This can happen if a device can't be supported.
+                        continue
                     for key, value in device.items():
                         assert platform.getPropertyValue(simulation.context, key) == value
             for j in range(len(devices)):

@@ -175,7 +175,8 @@ vector<map<string, string> > HipPlatform::getDevices(const map<string, string>& 
 
     vector<map<string, string> > results;
     int numDevices;
-    CHECK_RESULT(hipGetDeviceCount(&numDevices), "Error querying number of devices");
+    if (hipGetDeviceCount(&numDevices) != hipSuccess)
+        numDevices = 0;
     for (int i = 0; i < numDevices; i++) {
         if (deviceIndex != -1 && deviceIndex != i)
             continue;
