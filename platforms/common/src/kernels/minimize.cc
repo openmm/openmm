@@ -40,13 +40,13 @@ DEVICE mixed reduceAdd(mixed value, LOCAL_ARG volatile mixed* temp) {
     temp[thread] = value;
     SYNC_THREADS;
     for (int step = 1; step < WARP_SIZE / 2; step <<= 1) {
-        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
+        if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
             temp[thread] += temp[thread + step];
         }
         SYNC_WARPS;
     }
     for (int step = WARP_SIZE / 2; step < LOCAL_SIZE; step <<= 1) {
-        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
+        if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
             temp[thread] += temp[thread + step];
         }
         SYNC_THREADS;
@@ -83,13 +83,13 @@ DEVICE mixed reduceMax(mixed value, LOCAL_ARG volatile mixed* temp) {
     temp[thread] = value;
     SYNC_THREADS;
     for (int step = 1; step < WARP_SIZE / 2; step <<= 1) {
-        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
+        if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
             temp[thread] = max(temp[thread], temp[thread + step]);
         }
         SYNC_WARPS;
     }
     for (int step = WARP_SIZE / 2; step < LOCAL_SIZE; step <<= 1) {
-        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
+        if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
             temp[thread] = max(temp[thread], temp[thread + step]);
         }
         SYNC_THREADS;
@@ -154,20 +154,23 @@ KERNEL void convertForces(
     const mixed scale = -1 / (mixed) 0x100000000;
 
     for (int i = GLOBAL_ID; i < NUM_PARTICLES; i += GLOBAL_SIZE) {
-        if(velm[i].w == 0) {
-            continue;
-        }
-
-        mm_long fx = forceBuffer[i];
-        mm_long fy = forceBuffer[i + NUM_PADDED];
-        mm_long fz = forceBuffer[i + 2 * NUM_PADDED];
-        if (fx < -limit || fx > limit || fy < -limit || fy > limit || fz < -limit || fz > limit) {
-            *returnFlag = 1;
-        }
         int offset = 3 * order[i];
-        grad[offset] = scale * fx;
-        grad[offset + 1] = scale * fy;
-        grad[offset + 2] = scale * fz;
+        if (velm[i].w == 0) {
+            grad[offset] = 0;
+            grad[offset + 1] = 0;
+            grad[offset + 2] = 0;
+        }
+        else {
+            mm_long fx = forceBuffer[i];
+            mm_long fy = forceBuffer[i + NUM_PADDED];
+            mm_long fz = forceBuffer[i + 2 * NUM_PADDED];
+            if (fx < -limit || fx > limit || fy < -limit || fy > limit || fz < -limit || fz > limit) {
+                *returnFlag = 1;
+            }
+            grad[offset] = scale * fx;
+            grad[offset + 1] = scale * fy;
+            grad[offset + 2] = scale * fz;
+        }
     }
 }
 

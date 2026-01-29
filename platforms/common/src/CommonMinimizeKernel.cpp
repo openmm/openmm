@@ -96,7 +96,7 @@ void CommonMinimizeKernel::execute(ContextImpl& context, double tolerance, int m
     forceGroups = integrator.getIntegrationForceGroups();
     constraintTol = integrator.getConstraintTolerance();
 
-    this->tolerance = tolerance;
+    this->tolerance = tolerance * sqrt((double) numParticles);
     this->maxIterations = maxIterations;
     this->reporter = reporter;
 
@@ -370,7 +370,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
 }
 
 bool CommonMinimizeKernel::lineSearch(ContextImpl& context, double& step) {
-    // Compute initial gradient in search direction
+    // Check state at starting point for line search.
 
     lineSearchDotKernel->execute(threadBlockSize, threadBlockSize);
     double dotStart = downloadReturnValue();
@@ -379,6 +379,8 @@ bool CommonMinimizeKernel::lineSearch(ContextImpl& context, double& step) {
     }
     double energyStart = energy;
     double stepScale;
+
+    // Take line search steps.
 
     for (int count = 0;;) {
         if (mixedIsDouble) {
@@ -396,7 +398,7 @@ bool CommonMinimizeKernel::lineSearch(ContextImpl& context, double& step) {
         }
         else {
             lineSearchDotKernel->execute(threadBlockSize, threadBlockSize);
-            double dot = downloadReturnFlag();
+            double dot = downloadReturnValue();
             if (dot < wolfeParam * dotStart) {
                 stepScale = stepScaleUp;
             }
@@ -404,11 +406,13 @@ bool CommonMinimizeKernel::lineSearch(ContextImpl& context, double& step) {
                 stepScale = stepScaleDown;
             }
             else {
+                // Strong Wolfe condition satisfied.
+
                 return true;
             }
         }
 
-        if (step < minStep || step > maxStep || maxLineSearchIterations <= count) {
+        if (step < minStep || step > maxStep || count >= maxLineSearchIterations) {
             return false;
         }
 
