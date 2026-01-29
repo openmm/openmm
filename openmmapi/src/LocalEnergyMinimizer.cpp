@@ -28,12 +28,11 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/kernels.h"
+#include "openmm/internal/ContextImpl.h"
 
 using namespace OpenMM;
 using namespace std;
 
 void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxIterations, MinimizationReporter* reporter) {
-    ContextImpl& contextImpl = context.getImpl();
-    context.getPlatform().createKernel(MinimizeKernel::Name(), contextImpl).getAs<MinimizeKernel>().execute(contextImpl, tolerance, maxIterations, reporter);
+    context.getImpl().minimize(tolerance, maxIterations, reporter);
 }

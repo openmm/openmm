@@ -312,6 +312,12 @@ public:
     MinimizeKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
     /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     */
+    virtual void initialize(const System& system) = 0;
+    /**
      * Perform local energy minimization.
      * 
      * @param context        the context with which to perform the minimization

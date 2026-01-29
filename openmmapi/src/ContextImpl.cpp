@@ -113,6 +113,7 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     kernelNames.push_back(UpdateStateDataKernel::Name());
     kernelNames.push_back(ApplyConstraintsKernel::Name());
     kernelNames.push_back(VirtualSitesKernel::Name());
+    kernelNames.push_back(MinimizeKernel::Name());
     for (int i = 0; i < system.getNumForces(); ++i) {
         forceImpls.push_back(system.getForce(i).createImpl());
         vector<string> forceKernels = forceImpls[forceImpls.size()-1]->getKernelNames();
@@ -173,6 +174,8 @@ void ContextImpl::initialize() {
     applyConstraintsKernel.getAs<ApplyConstraintsKernel>().initialize(system);
     virtualSitesKernel = platform->createKernel(VirtualSitesKernel::Name(), *this);
     virtualSitesKernel.getAs<VirtualSitesKernel>().initialize(system);
+    minimizeKernel = platform->createKernel(MinimizeKernel::Name(), *this);
+    minimizeKernel.getAs<MinimizeKernel>().initialize(system);
     Vec3 periodicBoxVectors[3];
     system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
     updateStateDataKernel.getAs<UpdateStateDataKernel>().setPeriodicBoxVectors(*this, periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
@@ -198,6 +201,7 @@ ContextImpl::~ContextImpl() {
     updateStateDataKernel = Kernel();
     applyConstraintsKernel = Kernel();
     virtualSitesKernel = Kernel();
+    minimizeKernel = Kernel();
     if (!integratorIsDeleted) {
         // The Context is being deleted before the Integrator, so call cleanup() on it now.
         
@@ -506,4 +510,8 @@ void ContextImpl::systemChanged() {
 
 Context* ContextImpl::createLinkedContext(const System& system, Integrator& integrator) {
     return new Context(system, integrator, *this);
+}
+
+void ContextImpl::minimize(double tolerance, int maxIterations, MinimizationReporter* reporter) {
+    minimizeKernel.getAs<MinimizeKernel>().execute(*this, tolerance, maxIterations, reporter);
 }

@@ -347,6 +347,9 @@ void ReferenceVirtualSitesKernel::computePositions(ContextImpl& context) {
     extractVirtualSites(context).computePositions(context.getSystem(), positions, extractBoxVectors(context));
 }
 
+void ReferenceMinimizeKernel::initialize(const System& system) {
+}
+
 void ReferenceMinimizeKernel::execute(ContextImpl& context, double tolerance, int maxIterations, MinimizationReporter* reporter) {
     ReferenceMinimize::minimize(context, tolerance, maxIterations, reporter);
 }
