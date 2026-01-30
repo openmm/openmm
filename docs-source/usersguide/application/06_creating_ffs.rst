@@ -1156,6 +1156,28 @@ the :code:`<Include>` tag) or the OpenMM data directory (the one containing
 built in force fields).
 
 
+Molecule Templates
+==================
+
+Although templates are normally matched to individual residues, it is also possible
+to write templates that are intended to be matched to entire molecules. This is a
+less common feature that is useful for force fields that parameterize, for example,
+an entire multi-residue peptide as a single unit.  It is especially useful in
+combination with template generators, which are discussed below.
+
+A force field first tries to assign atom types by matching each residue to a template.
+If it is unable to match some residues this way, it then tries merging all the
+residues in a molecule together and looks for a template that matches the complete
+molecule.
+
+When defining templates, you do not need to distinguish between residue and molecule
+templates.  They are all defined with the :code:`<Residue>` tag.  A molecule template
+can be recognized by the lack of any :code:`<ExternalBond>` tags, since a whole
+molecule by definition never has any external bonds.  When a molecule consists of
+only a single residue, there is of course no difference between a residue template
+and a molecule template.  The distinction only matters for multi-residue molecules.
+
+
 Using Multiple Files
 ********************
 

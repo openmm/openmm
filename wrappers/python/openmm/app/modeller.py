@@ -4,7 +4,7 @@ modeller.py: Provides tools for editing molecular models
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2012-2025 Stanford University and the Authors.
+Portions copyright (c) 2012-2026 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: 
 
@@ -47,7 +47,7 @@ import sys
 import xml.etree.ElementTree as etree
 from copy import deepcopy
 from math import ceil, floor, sqrt
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 class Modeller(object):
     """Modeller provides tools for editing molecular models, such as adding water or missing hydrogens.
@@ -1156,6 +1156,50 @@ class Modeller(object):
 
         templates = forcefield._matchAllResiduesToTemplates(ForceField._SystemData(self.topology), self.topology, residueTemplates, False, True, False)
 
+        # Identify extra points to add.  Record information about each one we will need when adding it.
+
+        ExtraPoint = namedtuple('ExtraPoint', ['matchedResidue', 'template', 'templateAtom', 'matchingAtoms', 'templateAtomPositions'])
+        extraPoints = defaultdict(list)
+        from openmm.app.topology import MergedResidue
+        for matchedResidue, template in templates.items():
+            if len(template.atoms) != len(list(matchedResidue.atoms())):
+                matches = compiled.matchResidueToTemplate(matchedResidue, template, bondedToAtom, ignoreExternalBonds, True)
+                atomsNoEP = [a for a in matchedResidue.atoms() if a.element is not None]
+                templateAtomsNoEP = [a for a in template.atoms if a.element is not None]
+                matchingAtoms = {}
+                for atom, match in zip(atomsNoEP, matches):
+                    templateAtomName = templateAtomsNoEP[match].name
+                    for templateAtom in template.atoms:
+                        if templateAtom.name == templateAtomName:
+                            matchingAtoms[templateAtom] = atom
+                templateAtomPositions = len(template.atoms)*[None]
+                for index, atom in enumerate(template.atoms):
+                    if atom in matchingAtoms:
+                        templateAtomPositions[index] = self.positions[matchingAtoms[atom].index].value_in_unit(nanometer)
+                for index, atom in enumerate(template.atoms):
+                    if atom.element is None:
+                        # This is an extra particle.  Figure out what residue it belongs to.
+                        residue = None
+                        if not isinstance(matchedResidue, MergedResidue):
+                            residue = matchedResidue
+                        else:
+                            if atom.type in drudeTypeMap:
+                                # It's a Drude particle.
+                                for atom2 in template.atoms:
+                                    if atom2.type in drudeTypeMap[atom.type]:
+                                        residue = matchingAtoms[atom2].residue
+                                        break
+                            if residue is None:
+                                for site in template.virtualSites:
+                                    if site.index == index:
+                                        # It's a virtual site.
+                                        residue = matchingAtoms[template.atoms[site.atoms[0]]].residue
+                                        break
+                            if residue is None:
+                                # Neither a virtual site nor a Drude particle???  Just guess at the residue.
+                                residue = matchedResidue.residues[0]
+                        extraPoints[residue].append(ExtraPoint(matchedResidue, template, atom, matchingAtoms, templateAtomPositions))
+
         # Create the new Topology.
 
         newTopology = Topology()
@@ -1170,8 +1214,7 @@ class Modeller(object):
                 newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
                 if residue in residueTemplates:
                     newResidueTemplates[newResidue] = residueTemplates[residue]
-                template = templates[residue.index]
-                if len(template.atoms) == len(list(residue.atoms())):
+                if residue not in extraPoints:
                     # Just copy the residue over.
 
                     for atom in residue.atoms():
@@ -1179,18 +1222,6 @@ class Modeller(object):
                         newAtoms[atom] = newAtom
                         newPositions.append(deepcopy(self.positions[atom.index]))
                 else:
-                    # Record the corresponding atoms.
-
-                    matches = compiled.matchResidueToTemplate(residue, template, bondedToAtom, ignoreExternalBonds, True)
-                    atomsNoEP = [a for a in residue.atoms() if a.element is not None]
-                    templateAtomsNoEP = [a for a in template.atoms if a.element is not None]
-                    matchingAtoms = {}
-                    for atom, match in zip(atomsNoEP, matches):
-                        templateAtomName = templateAtomsNoEP[match].name
-                        for templateAtom in template.atoms:
-                            if templateAtom.name == templateAtomName:
-                                matchingAtoms[templateAtom] = atom
-
                     # Add the regular atoms.
 
                     for atom in residue.atoms():
@@ -1200,61 +1231,61 @@ class Modeller(object):
 
                     # Add the extra points.
 
-                    templateAtomPositions = len(template.atoms)*[None]
-                    for index, atom in enumerate(template.atoms):
-                        if atom in matchingAtoms:
-                            templateAtomPositions[index] = self.positions[matchingAtoms[atom].index].value_in_unit(nanometer)
                     newExtraPoints = {}
-                    for index, atom in enumerate(template.atoms):
-                        if atom.element is None:
-                            newExtraPoints[atom] = newTopology.addAtom(atom.name, None, newResidue)
-                            position = None
-                            for site in template.virtualSites:
-                                if site.index == index:
-                                    # This is a virtual site.  Compute its position by the correct rule.
+                    for extraPoint in extraPoints[residue]:
+                        atom = extraPoint.templateAtom
+                        template = extraPoint.template
+                        templateAtomPositions = extraPoint.templateAtomPositions
+                        newExtraPoints[atom] = newTopology.addAtom(atom.name, None, newResidue)
+                        position = None
+                        for site in extraPoint.template.virtualSites:
+                            if template.atoms[site.index] == atom:
+                                # This is a virtual site.  Compute its position by the correct rule.
 
-                                    try:
-                                        if site.type == 'average2':
-                                            position = site.weights[0]*templateAtomPositions[site.atoms[0]] + site.weights[1]*templateAtomPositions[site.atoms[1]]
-                                        elif site.type == 'average3':
-                                            position = site.weights[0]*templateAtomPositions[site.atoms[0]] + site.weights[1]*templateAtomPositions[site.atoms[1]] + site.weights[2]*templateAtomPositions[site.atoms[2]]
-                                        elif site.type == 'outOfPlane':
-                                            v1 = templateAtomPositions[site.atoms[1]] - templateAtomPositions[site.atoms[0]]
-                                            v2 = templateAtomPositions[site.atoms[2]] - templateAtomPositions[site.atoms[0]]
-                                            cross = Vec3(v1[1]*v2[2]-v1[2]*v2[1], v1[2]*v2[0]-v1[0]*v2[2], v1[0]*v2[1]-v1[1]*v2[0])
-                                            position = templateAtomPositions[site.atoms[0]] + site.weights[0]*v1 + site.weights[1]*v2 + site.weights[2]*cross
-                                        elif site.type == 'localCoords':
-                                            origin = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.originWeights)])
-                                            xdir = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.xWeights)])
-                                            ydir = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.yWeights)])
-                                            zdir = Vec3(xdir[1]*ydir[2]-xdir[2]*ydir[1], xdir[2]*ydir[0]-xdir[0]*ydir[2], xdir[0]*ydir[1]-xdir[1]*ydir[0])
-                                            xdir /= norm(xdir)
-                                            zdir /= norm(zdir)
-                                            ydir = Vec3(zdir[1]*xdir[2]-zdir[2]*xdir[1], zdir[2]*xdir[0]-zdir[0]*xdir[2], zdir[0]*xdir[1]-zdir[1]*xdir[0])
-                                            position = origin + xdir*site.localPos[0] + ydir*site.localPos[1] + zdir*site.localPos[2]
-                                    except:
-                                        # This can happen if the virtual site depends on another virtual site whose position
-                                        # hasn't been set yet.  Ignore the error.  We'll put it at a random position (see below),
-                                        # which will get replaced with the correct position at the start of the simulation.
+                                try:
+                                    if site.type == 'average2':
+                                        position = site.weights[0]*templateAtomPositions[site.atoms[0]] + site.weights[1]*templateAtomPositions[site.atoms[1]]
+                                    elif site.type == 'average3':
+                                        position = site.weights[0]*templateAtomPositions[site.atoms[0]] + site.weights[1]*templateAtomPositions[site.atoms[1]] + site.weights[2]*templateAtomPositions[site.atoms[2]]
+                                    elif site.type == 'outOfPlane':
+                                        v1 = templateAtomPositions[site.atoms[1]] - templateAtomPositions[site.atoms[0]]
+                                        v2 = templateAtomPositions[site.atoms[2]] - templateAtomPositions[site.atoms[0]]
+                                        cross = Vec3(v1[1]*v2[2]-v1[2]*v2[1], v1[2]*v2[0]-v1[0]*v2[2], v1[0]*v2[1]-v1[1]*v2[0])
+                                        position = templateAtomPositions[site.atoms[0]] + site.weights[0]*v1 + site.weights[1]*v2 + site.weights[2]*cross
+                                    elif site.type == 'localCoords':
+                                        origin = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.originWeights)])
+                                        xdir = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.xWeights)])
+                                        ydir = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.yWeights)])
+                                        zdir = Vec3(xdir[1]*ydir[2]-xdir[2]*ydir[1], xdir[2]*ydir[0]-xdir[0]*ydir[2], xdir[0]*ydir[1]-xdir[1]*ydir[0])
+                                        xdir /= norm(xdir)
+                                        zdir /= norm(zdir)
+                                        ydir = Vec3(zdir[1]*xdir[2]-zdir[2]*xdir[1], zdir[2]*xdir[0]-zdir[0]*xdir[2], zdir[0]*xdir[1]-zdir[1]*xdir[0])
+                                        position = origin + xdir*site.localPos[0] + ydir*site.localPos[1] + zdir*site.localPos[2]
+                                except:
+                                    # This can happen if the virtual site depends on another virtual site whose position
+                                    # hasn't been set yet.  Ignore the error.  We'll put it at a random position (see below),
+                                    # which will get replaced with the correct position at the start of the simulation.
 
-                                        pass
-                            if position is None and atom.type in drudeTypeMap:
-                                # This is a Drude particle.  Put it on top of its parent atom.
+                                    pass
+                        if position is None and atom.type in drudeTypeMap:
+                            # This is a Drude particle.  Put it on top of its parent atom.
 
-                                for atom2, pos in zip(template.atoms, templateAtomPositions):
-                                    if atom2.type in drudeTypeMap[atom.type]:
-                                        position = deepcopy(pos)
-                            if position is None:
-                                # We couldn't figure out the correct position.  Put it at a random position near the center of the residue,
-                                # and we'll try to fix it later based on bonds.
+                            for atom2, pos in zip(template.atoms, templateAtomPositions):
+                                if atom2.type in drudeTypeMap[atom.type]:
+                                    position = deepcopy(pos)
+                        if position is None:
+                            # We couldn't figure out the correct position.  Put it at a random position near the center of the residue,
+                            # and we'll try to fix it later based on bonds.
 
-                                knownPositions = [x for x in templateAtomPositions if x is not None]
-                                position = Vec3(random.gauss(0, 1), random.gauss(0, 1), random.gauss(0, 1))+(unit.sum(knownPositions)/len(knownPositions))
-                                missingPositions.add(len(newPositions))
-                            newPositions.append(position*nanometer)
+                            knownPositions = [x for x in templateAtomPositions if x is not None]
+                            position = Vec3(random.gauss(0, 1), random.gauss(0, 1), random.gauss(0, 1))+(unit.sum(knownPositions)/len(knownPositions))
+                            missingPositions.add(len(newPositions))
+                        newPositions.append(position*nanometer)
 
                     # Add bonds involving the extra points.
 
+                    template = extraPoints[residue][0].template
+                    matchingAtoms = extraPoints[residue][0].matchingAtoms
                     for atom1, atom2 in template.bonds:
                         atom1 = template.atoms[atom1]
                         atom2 = template.atoms[atom2]

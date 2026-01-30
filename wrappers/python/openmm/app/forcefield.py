@@ -4,7 +4,7 @@ forcefield.py: Constructs OpenMM System objects based on a Topology and an XML f
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2012-2025 Stanford University and the Authors.
+Portions copyright (c) 2012-2026 Stanford University and the Authors.
 Authors: Peter Eastman, Mark Friedrichs
 Contributors: Evan Pretti
 
@@ -43,6 +43,7 @@ from difflib import SequenceMatcher
 import openmm as mm
 import openmm.unit as unit
 from . import element as elem
+from openmm.app.topology import MergedResidue
 from openmm.app.internal.singleton import Singleton
 from openmm.app.internal import compiled, amoebaforces
 from openmm.app.internal.argtracker import ArgTracker
@@ -641,13 +642,21 @@ class ForceField(object):
 
             # Record which atoms are bonded to each other atom
 
-            for i in range(len(self.bonds)):
-                bond = self.bonds[i]
+            for i, bond in enumerate(self.bonds):
                 self.bondedToAtom[bond.atom1].add(bond.atom2)
                 self.bondedToAtom[bond.atom2].add(bond.atom1)
                 self.atomBonds[bond.atom1].append(i)
                 self.atomBonds[bond.atom2].append(i)
             self.bondedToAtom = [sorted(b) for b in self.bondedToAtom]
+
+            # Record which residues are bonded to each other atom
+
+            bondedResidues = defaultdict(set)
+            for atom1, atom2 in topology.bonds():
+                if atom1.residue != atom2.residue:
+                    bondedResidues[atom1.residue].add(atom2.residue)
+                    bondedResidues[atom2.residue].add(atom1.residue)
+            self.bondedResidues = {x:list(y) for x, y in bondedResidues.items()}
 
         def addConstraint(self, system, atom1, atom2, distance):
             """Add a constraint to the system, avoiding duplicate constraints."""
@@ -1264,12 +1273,12 @@ class ForceField(object):
         # Find the template matching each residue and assign atom types.
 
         templateForResidue = self._matchAllResiduesToTemplates(data, topology, residueTemplates, ignoreExternalBonds)
-        for res in topology.residues():
+        for res, template in templateForResidue.items():
             if res.name == 'HOH':
                 # Determine whether this should be a rigid water.
 
                 if rigidWater is None:
-                    rigidResidue[res.index] = templateForResidue[res.index].rigidWater
+                    rigidResidue[res.index] = template.rigidWater
                 elif rigidWater:
                     rigidResidue[res.index] = True
 
@@ -1439,7 +1448,7 @@ class ForceField(object):
 
     def _matchAllResiduesToTemplates(self, data, topology, residueTemplates, ignoreExternalBonds, ignoreExtraParticles=False, recordParameters=True):
         """Return a list of which template matches each residue in the topology, and assign atom types."""
-        templateForResidue = [None]*topology.getNumResidues()
+        templateForResidue = {}
         unmatchedResidues = []
         for chain in topology.chains():
             for res in chain.residues():
@@ -1457,7 +1466,7 @@ class ForceField(object):
                 else:
                     if recordParameters:
                         data.recordMatchedAtomParameters(res, template, matches)
-                    templateForResidue[res.index] = template
+                    templateForResidue[res] = template
 
         # Try to apply patches to find matches for any unmatched residues.
 
@@ -1465,17 +1474,32 @@ class ForceField(object):
             unmatchedResidues = _applyPatchesToMatchResidues(self, data, unmatchedResidues, templateForResidue, data.bondedToAtom, ignoreExternalBonds, ignoreExtraParticles)
 
         # If we still haven't found a match for a residue, attempt to use residue template generators to create
-        # new templates (and potentially atom types/parameters).
+        # new templates (and potentially atom types/parameters).  Also try to match templates to the whole molecule.
 
-        for res in unmatchedResidues:
+        while len(unmatchedResidues) > 0:
+            res = unmatchedResidues[0]
+            matchedRes = res
+            mol = self._mergeMolecule(data, res)
             # A template might have been generated on an earlier iteration of this loop.
             [template, matches] = self._getResidueTemplateMatches(res, data.bondedToAtom, ignoreExternalBonds=ignoreExternalBonds, ignoreExtraParticles=ignoreExtraParticles)
+            if matches is None and mol is not None:
+                # Try matching to the whole molecule.
+                [template, matches] = self._getResidueTemplateMatches(mol, data.bondedToAtom, ignoreExternalBonds=ignoreExternalBonds, ignoreExtraParticles=ignoreExtraParticles)
+                if matches is not None:
+                    matchedRes = mol
+                    unmatchedResidues = [r for r in unmatchedResidues if r not in mol.residues]
             if matches is None:
                 # Try all generators.
                 for generator in self._templateGenerators:
                     if generator(self, res):
                         # This generator has registered a new residue template that should match.
                         [template, matches] = self._getResidueTemplateMatches(res, data.bondedToAtom, ignoreExternalBonds=ignoreExternalBonds, ignoreExtraParticles=ignoreExtraParticles)
+                        if matches is None and mol is not None:
+                            # Try matching to the whole molecule.
+                            [template, matches] = self._getResidueTemplateMatches(mol, data.bondedToAtom, ignoreExternalBonds=ignoreExternalBonds, ignoreExtraParticles=ignoreExtraParticles)
+                            if matches is not None:
+                                matchedRes = mol
+                                unmatchedResidues = [r for r in unmatchedResidues if r not in mol.residues]
                         if matches is None:
                             # Something went wrong because the generated template does not match the residue signature.
                             raise Exception('The residue handler %s indicated it had correctly parameterized residue %s, but the generated template did not match the residue signature.' % (generator.__class__.__name__, str(res)))
@@ -1485,10 +1509,37 @@ class ForceField(object):
             if matches is None:
                 raise ValueError('No template found for residue %d (%s).  %s  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#template' % (res.index, res.name, _findMatchErrors(self, res)))
             else:
+                if res in unmatchedResidues:
+                    unmatchedResidues.remove(res)
                 if recordParameters:
-                    data.recordMatchedAtomParameters(res, template, matches)
-                templateForResidue[res.index] = template
+                    data.recordMatchedAtomParameters(matchedRes, template, matches)
+                templateForResidue[matchedRes] = template
         return templateForResidue
+
+
+    def _mergeMolecule(self, data, residue):
+        """Starting from one residue, identify all others it is bonded to and create a MergedResidue for the whole molecule."""
+        if residue not in data.bondedResidues:
+            # This residue is not bonded to any other, so there is nothing to merge.
+            return None
+        visited = set()
+        molecule = set()
+        residueStack = [residue]
+        neighborStack = [0]
+        while len(residueStack) > 0:
+            currentRes = residueStack[-1]
+            bonded = data.bondedResidues[currentRes]
+            molecule.add(currentRes)
+            visited.add(currentRes)
+            while neighborStack[-1] < len(bonded) and bonded[neighborStack[-1]] in visited:
+                neighborStack[-1] +=1
+            if neighborStack[-1] < len(bonded):
+                residueStack.append(bonded[neighborStack[-1]])
+                neighborStack.append(0)
+            else:
+                residueStack.pop()
+                neighborStack.pop()
+        return MergedResidue(list(molecule))
 
 
 def _findBondsForExclusions(data, sys):
@@ -1643,7 +1694,7 @@ def _applyPatchesToMatchResidues(forcefield, data, residues, templateForResidue,
             unmatchedResidues.append(res)
         else:
             data.recordMatchedAtomParameters(res, template, matches)
-            templateForResidue[res.index] = template
+            templateForResidue[res] = template
     if len(unmatchedResidues) == 0:
         return []
 
