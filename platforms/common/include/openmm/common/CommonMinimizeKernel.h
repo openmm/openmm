@@ -106,6 +106,7 @@ private:
     ComputeKernel getConstraintEnergyForcesKernel;
     ComputeKernel getConstraintErrorKernel;
     ComputeKernel initializeDirKernel;
+    ComputeKernel reinitializeDirKernel;
     ComputeKernel gradNormKernel;
     ComputeKernel getDiffKernel;
     ComputeKernel getScaleKernel;

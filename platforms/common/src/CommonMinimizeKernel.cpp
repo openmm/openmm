@@ -216,6 +216,11 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     initializeDirKernel = program->createKernel("initializeDir");
     initializeDirKernel->addArg(grad);
     initializeDirKernel->addArg(dir);
+    initializeDirKernel->addArg(returnValue);
+
+    reinitializeDirKernel = program->createKernel("reinitializeDir");
+    reinitializeDirKernel->addArg(grad);
+    reinitializeDirKernel->addArg(dir);
 
     gradNormKernel = program->createKernel("gradNorm");
     gradNormKernel->addArg(grad);
@@ -293,13 +298,12 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
     // Evaluate the gradient at the starting point and get a starting step size.
 
     energy = evaluate(context);
-    initializeDirKernel->execute(numVariables);
     gradNormKernel->execute(threadBlockSize, threadBlockSize);
-    double norm = downloadReturnValue();
-    if (norm <= tolerance) {
+    if (downloadReturnValue() <= tolerance) {
         return;
     }
-    double step = 1.0 / norm;
+    initializeDirKernel->execute(numVariables);
+    double step = 1.0;
 
     for (int iteration = 1, end = 0;;) {
         // Try a line search (if it fails, revert to the position and gradient
@@ -319,8 +323,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
             return;
         }
         gradNormKernel->execute(threadBlockSize, threadBlockSize);
-        double norm = downloadReturnValue();
-        if (norm <= tolerance || (maxIterations && maxIterations < iteration + 1)) {
+        if (downloadReturnValue() <= tolerance || (maxIterations && maxIterations < iteration + 1)) {
             return;
         }
 
@@ -337,7 +340,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
             end -= numVectors;
         }
 
-        initializeDirKernel->execute(numVariables);
+        reinitializeDirKernel->execute(numVariables);
 
         int vectorIndex = end;
         for (int vector = 0; vector < limit; vector++) {

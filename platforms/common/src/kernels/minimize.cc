@@ -246,6 +246,18 @@ KERNEL void getConstraintError(
 
 KERNEL void initializeDir(
     GLOBAL const mixed* RESTRICT grad,
+    GLOBAL mixed* RESTRICT dir,
+    GLOBAL const mixed* RESTRICT returnValue
+) {
+    const real scale = -1 / returnValue[0];
+
+    for (int i = GLOBAL_ID; i < NUM_VARIABLES; i += GLOBAL_SIZE) {
+        dir[i] = scale * grad[i];
+    }
+}
+
+KERNEL void reinitializeDir(
+    GLOBAL const mixed* RESTRICT grad,
     GLOBAL mixed* RESTRICT dir
 ) {
     for (int i = GLOBAL_ID; i < NUM_VARIABLES; i += GLOBAL_SIZE) {
