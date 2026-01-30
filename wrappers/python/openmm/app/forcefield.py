@@ -325,6 +325,8 @@ class ForceField(object):
                             template.addExternalBondByName(bond.attrib['atomName'])
                         else:
                             template.addExternalBond(int(bond.attrib['from']))
+                    for constraint in residue.findall('Constraint'):
+                        template.addConstraintByName(constraint.attrib['atomName1'], constraint.attrib['atomName2'], float(constraint.attrib['distance']))
                     for patch in residue.findall('AllowPatch'):
                         patchName = patch.attrib['name']
                         if ':' in patchName:
@@ -700,6 +702,7 @@ class ForceField(object):
             self.virtualSites = []
             self.bonds = []
             self.externalBonds = []
+            self.constraints = []
             self.overrideLevel = 0
             self.rigidWater = True
             self.attributes = {}
@@ -741,6 +744,16 @@ class ForceField(object):
             atom = self.getAtomIndexByName(atom_name)
             self.addExternalBond(atom)
 
+        def addConstraint(self, atom1, atom2, distance):
+            """Add a constrained distance between two atoms in a template given their indices in the template."""
+            self.constraints.append((atom1, atom2, distance))
+
+        def addConstraintByName(self, atom1_name, atom2_name, distance):
+            """Add a constrained distance between two atoms in a template given their atom names."""
+            atom1 = self.getAtomIndexByName(atom1_name)
+            atom2 = self.getAtomIndexByName(atom2_name)
+            self.addConstraint(atom1, atom2, distance)
+
         def areParametersIdentical(self, template2, matchingAtoms, matchingAtoms2):
             """Get whether this template and another one both assign identical atom types and parameters to all atoms.
 
@@ -756,6 +769,8 @@ class ForceField(object):
             atoms1 = [self.atoms[m] for m in matchingAtoms]
             atoms2 = [template2.atoms[m] for m in matchingAtoms2]
             if any(a1.type != a2.type or a1.parameters != a2.parameters for a1,a2 in zip(atoms1, atoms2)):
+                return False
+            if set(self.constraints) != set(template2.constraints):
                 return False
             # Properly comparing virtual sites really needs a much more complicated analysis.  This simple check
             # could easily fail for templates containing vsites, even if they're actually identical.  Since we
@@ -1221,7 +1236,8 @@ class ForceField(object):
             The cutoff distance to use for nonbonded interactions
         constraints : object=None
             Specifies which bonds and angles should be implemented with constraints.
-            Allowed values are None, HBonds, AllBonds, or HAngles.
+            Allowed values are None, HBonds, AllBonds, or HAngles.  Regardless of this value,
+            any constraints that are explicitly specified by the force field will be added.
         rigidWater : boolean=None
             If true, water molecules will be fully rigid regardless of the value
             passed for the constraints argument.  If None (the default), it uses the
@@ -1381,11 +1397,27 @@ class ForceField(object):
                 atom1 = data.atoms[bond.atom1]
                 atom2 = data.atoms[bond.atom2]
                 bond.isConstrained = atom1.element is elem.hydrogen or atom2.element is elem.hydrogen
+        matchedTemplateForResidue = {}
+        for residue, template in templateForResidue.items():
+            if isinstance(residue, MergedResidue):
+                for res in residue.residues:
+                    matchedTemplateForResidue[res] = template
+            else:
+                matchedTemplateForResidue[residue] = template
         for bond in data.bonds:
             atom1 = data.atoms[bond.atom1]
             atom2 = data.atoms[bond.atom2]
             if rigidResidue[atom1.residue.index] and rigidResidue[atom2.residue.index]:
                 bond.isConstrained = True
+            else:
+                if atom1.residue not in matchedTemplateForResidue:
+                    # This can happen with multi-residue patches, which would need more complex logic to handle.
+                    continue
+                t1 = data.atomTemplateIndexes[atom1]
+                t2 = data.atomTemplateIndexes[atom2]
+                for constraint in template.constraints:
+                    if sorted((t1, t2)) == sorted((constraint[0], constraint[1])):
+                        bond.isConstrained = True
 
         # Identify angles that should be implemented with constraints
 
@@ -1437,6 +1469,28 @@ class ForceField(object):
         for force in self._forces:
             if 'postprocessSystem' in dir(force):
                 force.postprocessSystem(sys, data, args)
+
+        # Add constraints specified in templates.  We do this at the very end so they will override
+        # constraints from bonds or angles.
+
+        existingConstraints = {}
+        for i in range(sys.getNumConstraints()):
+            p1, p2, d = sys.getConstraintParameters(i)
+            existingConstraints[(min(p1, p2), max(p1, p2))] = i
+        for residue, template in templateForResidue.items():
+            for constraint in template.constraints:
+                atoms = list(residue.atoms())
+                atom1 = [a for a in atoms if data.atomTemplateIndexes[a] == constraint[0]]
+                atom2 = [a for a in atoms if data.atomTemplateIndexes[a] == constraint[1]]
+                if len(atom1) != 1 or len(atom2) != 1:
+                    raise ValueError('Failed to identify atoms for constraint')
+                a1 = atom1[0].index
+                a2 = atom2[0].index
+                key = (min(a1, a2), max(a1, a2))
+                if key in existingConstraints:
+                    sys.setConstraintParameters(existingConstraints[key], a1, a2, constraint[2])
+                else:
+                    existingConstraints[key] = sys.addConstraint(a1, a2, constraint[2])
 
         # Execute scripts found in the XML files.
 
@@ -1514,6 +1568,10 @@ class ForceField(object):
                 if recordParameters:
                     data.recordMatchedAtomParameters(matchedRes, template, matches)
                 templateForResidue[matchedRes] = template
+                if isinstance(matchedRes, MergedResidue):
+                    for res in matchedRes.residues:
+                        if res in templateForResidue:
+                            del templateForResidue[res]
         return templateForResidue
 
 
@@ -3600,21 +3658,6 @@ def getAtomPrint(data, atomIndex):
 
     return returnString
 
-
-def countConstraint(data):
-
-    bondCount = 0
-    angleCount = 0
-    for bond in data.bonds:
-        if bond.isConstrained:
-            bondCount += 1
-
-    angleCount = 0
-    for (angle, isConstrained) in zip(data.angles, data.isAngleConstrained):
-        if (isConstrained):
-            angleCount += 1
-
-    print("Constraints bond=%d angle=%d  total=%d" % (bondCount, angleCount, (bondCount+angleCount)))
 
 ## @private
 class AmoebaBondGenerator(object):

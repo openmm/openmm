@@ -151,6 +151,15 @@ contains the following tags:
   (Alternatively, the deprecated :code:`from` tag may indicate the atom by
   index instead of name.)
 
+The :code:`<Residue>` tag may also contain :code:`<Constraint>` tags to specify
+pairs of atoms whose distance should be constrained.  Each one should include the
+attibutes :code:`atomName1` and :code:`atomName2` with the names of the two connected
+atoms, and a :code:`distance` attribute with the distance between them in nanometers.
+:code:`<Constraint>` tags are only used for constraints that are required by the
+force field and should always be included.  The more common situation is that a bond
+can be either flexible or constrained based on the options the user specifies when
+calling :code:`createSystem()`.  Bonds of that sort should not have :code:`<Constraint>`
+tags.
 
 The :code:`<Residue>` tag may also contain :code:`<VirtualSite>` tags,
 as in the following example:
