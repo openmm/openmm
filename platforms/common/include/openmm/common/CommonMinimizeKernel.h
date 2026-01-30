@@ -67,8 +67,8 @@ private:
     void setup(ContextImpl& context);
     void lbfgs(ContextImpl& context);
     bool lineSearch(ContextImpl& context, double& step);
-    double evaluate(ContextImpl& context);
-    double evaluateCpu(ContextImpl& context);
+    double evaluate(ContextImpl& context, bool& overflow);
+    double evaluateCpu(ContextImpl& context, bool& overflow);
     bool report(ContextImpl& context, int iteration);
     int downloadReturnFlag();
     double downloadReturnValue();

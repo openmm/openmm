@@ -297,7 +297,11 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
 void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
     // Evaluate the gradient at the starting point and get a starting step size.
 
-    energy = evaluate(context);
+    bool overflow;
+    energy = evaluate(context, overflow);
+    if (overflow) {
+        throw OpenMMException("Energy or force at minimization starting point is infinite or NaN.");
+    }
     gradNormKernel->execute(threadBlockSize, threadBlockSize);
     if (downloadReturnValue() <= tolerance) {
         return;
@@ -393,10 +397,11 @@ bool CommonMinimizeKernel::lineSearch(ContextImpl& context, double& step) {
             lineSearchStepKernel->setArg(3, (float) step);
         }
         lineSearchStepKernel->execute(numVariables);
-        energy = evaluate(context);
+        bool overflow;
+        energy = evaluate(context, overflow);
         count++;
 
-        if (energy > energyStart + step * fTol * dotStart) {
+        if (overflow || energy > energyStart + step * fTol * dotStart) {
             stepScale = stepScaleDown;
         }
         else {
@@ -423,7 +428,8 @@ bool CommonMinimizeKernel::lineSearch(ContextImpl& context, double& step) {
     }
 }
 
-double CommonMinimizeKernel::evaluate(ContextImpl& context) {
+double CommonMinimizeKernel::evaluate(ContextImpl& context, bool& overflow) {
+    overflow = false;
     restorePosKernel->setArg(2, x);
     restorePosKernel->execute(numParticles);
     context.computeVirtualSites();
@@ -445,10 +451,16 @@ double CommonMinimizeKernel::evaluate(ContextImpl& context) {
 
     cc.clearBuffer(returnFlag);
     convertForcesKernel->execute(numParticles);
-    return downloadReturnFlag() ? evaluateCpu(context) : hostEnergy;
+    if (downloadReturnFlag()) {
+        hostEnergy = evaluateCpu(context, overflow);
+    }
+    if (!isfinite(hostEnergy)) {
+        overflow = true;
+    }
+    return hostEnergy;
 }
 
-double CommonMinimizeKernel::evaluateCpu(ContextImpl& context) {
+double CommonMinimizeKernel::evaluateCpu(ContextImpl& context, bool& overflow) {
     // Create a CPU context if one has not already been created.
 
     const System& system = context.getSystem();
@@ -508,6 +520,27 @@ double CommonMinimizeKernel::evaluateCpu(ContextImpl& context) {
             hostGrad[3 * indices.x] += kdr * delta[0];
             hostGrad[3 * indices.x + 1] += kdr * delta[1];
             hostGrad[3 * indices.x + 2] += kdr * delta[2];
+        }
+    }
+
+    // Check for overflow of the forces.  We need to check for this here and
+    // either back up the line search or abort, since the GPU platforms won't
+    // check for NaN positions, and the optimizer could get stuck otherwise.
+
+    if (mixedIsDouble) {
+        for (int i = 0; i < numVariables; i++) {
+            if (!isfinite(hostGrad[i])) {
+                overflow = true;
+                return hostEnergy;
+            }
+        }
+    }
+    else {
+        for (int i = 0; i < numVariables; i++) {
+            if (!isfinite((float) hostGrad[i])) {
+                overflow = true;
+                return hostEnergy;
+            }
         }
     }
 

@@ -1,5 +1,13 @@
 #define WARP_SIZE 32
 
+#ifdef USE_MIXED_PRECISION
+    #define SQRT_MIXED sqrt
+    #define FABS_MIXED fabs
+#else
+    #define SQRT_MIXED SQRT
+    #define FABS_MIXED FABS
+#endif
+
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
     #define WARP_SHUFFLE_DOWN(local, offset) __shfl_down_sync(0xffffffff, local, offset)
 #elif defined(USE_HIP)
@@ -197,7 +205,7 @@ KERNEL void getConstraintEnergyForces(
         int offset2 = 3 * order[indices.y];
         mixed3 delta = make_mixed3(x[offset2] - x[offset1], x[offset2 + 1] - x[offset1 + 1], x[offset2 + 2] - x[offset1 + 2]);
         mixed r2 = dot(delta, delta);
-        mixed r = SQRT(r2);
+        mixed r = SQRT_MIXED(r2);
         delta *= 1 / r;
         mixed dr = r - distance;
         mixed kdr = kRestraint * dr;
@@ -234,8 +242,8 @@ KERNEL void getConstraintError(
         int2 indices = constraintIndices[i];
         mixed distance = constraintDistances[i];
         mixed3 delta = make_mixed3(x[3 * indices.y] - x[3 * indices.x], x[3 * indices.y + 1] - x[3 * indices.x + 1], x[3 * indices.y + 2] - x[3 * indices.x + 2]);
-        mixed r = SQRT(dot(delta, delta));
-        maxError = max(maxError, FABS(r - distance) / distance);
+        mixed r = SQRT_MIXED(dot(delta, delta));
+        maxError = max(maxError, FABS_MIXED(r - distance) / distance);
     }
     maxError = reduceMax(maxError, temp);
 
@@ -280,7 +288,7 @@ KERNEL void gradNorm(
     norm = reduceAdd(norm, temp);
 
     if (LOCAL_ID == 0) {
-        returnValue[0] = SQRT(norm);
+        returnValue[0] = SQRT_MIXED(norm);
     }
 }
 
