@@ -1930,6 +1930,21 @@ self.scriptExecuted = True
       <Bond atomName1="ACE-C" atomName2="ALA-N" />
       <Bond atomName1="ALA-C" atomName2="NME-N" />
     </Residue>
+    <!-- A template that matches just the ACE with different parameters -->
+    <Residue name="ACE">
+      <Atom charge="0.1123" name="ACE-H1" type="HC" />
+      <Atom charge="-0.3662" name="ACE-CH3" type="CT" />
+      <Atom charge="-10.0" name="ACE-H2" type="HC" />
+      <Atom charge="0.1123" name="ACE-H3" type="HC" />
+      <Atom charge="10.0" name="ACE-C" type="C" />
+      <Atom charge="-0.5679" name="ACE-O" type="O" />
+      <Bond atomName1="ACE-H1" atomName2="ACE-CH3" />
+      <Bond atomName1="ACE-CH3" atomName2="ACE-H2" />
+      <Bond atomName1="ACE-CH3" atomName2="ACE-H3" />
+      <Bond atomName1="ACE-CH3" atomName2="ACE-C" />
+      <Bond atomName1="ACE-C" atomName2="ACE-O" />
+      <ExternalBond atomName="ACE-C" />
+    </Residue>
   </Residues>
   <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
     <UseAttributeFromResidue name="charge"/>

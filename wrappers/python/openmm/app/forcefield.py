@@ -1531,11 +1531,10 @@ class ForceField(object):
             bonded = data.bondedResidues[currentRes]
             molecule.add(currentRes)
             visited.add(currentRes)
-            neighbor = neighborStack[-1]
-            while neighbor < len(bonded) and bonded[neighbor] in visited:
-                neighbor +=1
-            if neighbor < len(bonded):
-                residueStack.append(bonded[neighbor])
+            while neighborStack[-1] < len(bonded) and bonded[neighborStack[-1]] in visited:
+                neighborStack[-1] +=1
+            if neighborStack[-1] < len(bonded):
+                residueStack.append(bonded[neighborStack[-1]])
                 neighborStack.append(0)
             else:
                 residueStack.pop()
