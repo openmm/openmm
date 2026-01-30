@@ -1,6 +1,8 @@
 #define WARP_SIZE 32
 
 #ifdef USE_MIXED_PRECISION
+    // When mixed is double precision, use double precision sqrt and fabs to
+    // avoid overflow.
     #define SQRT_MIXED sqrt
     #define FABS_MIXED fabs
 #else
@@ -287,8 +289,31 @@ KERNEL void gradNorm(
     }
     norm = reduceAdd(norm, temp);
 
+    if (isfinite(norm)) {
+        if (LOCAL_ID == 0) {
+            returnValue[0] = SQRT_MIXED(norm);
+        }
+        return;
+    }
+
+    // The square norm overflowed, so take a slow fallback path.
+
+    mixed gradScale = 1;
+    for (int i = LOCAL_ID; i < NUM_VARIABLES; i += LOCAL_SIZE) {
+        gradScale = max(gradScale, FABS_MIXED(grad[i]));
+    }
+    gradScale = reduceMax(gradScale, temp);
+    mixed gradScaleInv = 1 / gradScale;
+
+    mixed scaledNorm = 0;
+    for (int i = LOCAL_ID; i < NUM_VARIABLES; i += LOCAL_SIZE) {
+        mixed gradScaled = gradScaleInv * grad[i];
+        scaledNorm += gradScaled * gradScaled;
+    }
+    scaledNorm = reduceAdd(scaledNorm, temp);
+
     if (LOCAL_ID == 0) {
-        returnValue[0] = SQRT_MIXED(norm);
+        returnValue[0] = gradScale * SQRT_MIXED(scaledNorm);
     }
 }
 
@@ -334,9 +359,36 @@ KERNEL void getScale(
     xGrad = reduceAdd(xGrad, temp);
     gradGrad = reduceAdd(gradGrad, temp);
 
+    if (isfinite(gradGrad)) {
+        if (LOCAL_ID == 0) {
+            scale[end] = xGrad;
+            returnValue[0] = xGrad / gradGrad;
+        }
+        return;
+    }
+
+    // The square norm overflowed, so take a slow fallback path.
+
+    mixed gradScale = 1;
+    for (int i = LOCAL_ID; i < NUM_VARIABLES; i += LOCAL_SIZE) {
+        gradScale = max(gradScale, FABS_MIXED(gradDiff[endOffset + i]));
+    }
+    gradScale = reduceMax(gradScale, temp);
+    mixed gradScaleInv = 1 / gradScale;
+
+    mixed xGradScaled = 0;
+    mixed gradGradScaled = 0;
+    for (int i = LOCAL_ID; i < NUM_VARIABLES; i += LOCAL_SIZE) {
+        mixed gradDiffScaled = gradScaleInv * gradDiff[endOffset + i];
+        xGradScaled += xDiff[endOffset + i] * gradDiffScaled;
+        gradGradScaled += gradDiffScaled * gradDiffScaled;
+    }
+    xGradScaled = reduceAdd(xGradScaled, temp);
+    gradGradScaled = reduceAdd(gradGradScaled, temp);
+
     if (LOCAL_ID == 0) {
         scale[end] = xGrad;
-        returnValue[0] = gradGrad;
+        returnValue[0] = xGradScaled / (gradScale * gradGradScaled);
     }
 }
 
@@ -420,11 +472,13 @@ KERNEL void updateDirBeta(
 
 KERNEL void scaleDir(
     GLOBAL mixed* dir,
-    GLOBAL const mixed* RESTRICT scale,
-    GLOBAL const mixed* RESTRICT returnValue,
-    const int vectorIndex
+    GLOBAL const mixed* RESTRICT returnValue
 ) {
-    const mixed vectorScale = scale[vectorIndex] / returnValue[0];
+    // This scale was calculated in getScaleKernel and stashed in returnValue;
+    // reinitializeDirKernel, getAlphaKernel, and updateDirAlphaKernel must not
+    // clobber its value.
+
+    const mixed vectorScale = returnValue[0];
 
     for (int i = GLOBAL_ID; i < NUM_VARIABLES; i += GLOBAL_SIZE) {
         dir[i] *= vectorScale;

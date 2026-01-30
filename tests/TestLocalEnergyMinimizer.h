@@ -206,15 +206,15 @@ void testLargeForces() {
     system.addForce(nonbonded);
     for (int i = 0; i < numParticles; i++) {
         system.addParticle(1.0);
-        nonbonded->addParticle(1.0, 0.2, 1.0);
+        nonbonded->addParticle(0.1, 0.2, 1.0);
     }
     vector<Vec3> positions(numParticles);
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     for (int i = 0; i < numParticles; i++)
-        positions[i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*1e-10;
+        positions[i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt))*1e-2;
 
-    // Minimize it and verify that it didn't blow up.                                                                               
+    // Minimize it and verify that it didn't blow up.
 
     VerletIntegrator integrator(0.01);
     Context context(system, integrator, platform);
@@ -226,7 +226,7 @@ void testLargeForces() {
         Vec3 r = state.getPositions()[i];
         maxdist = max(maxdist, sqrt(r.dot(r)));
     }
-    ASSERT(maxdist > 0.1);
+    ASSERT(maxdist > 1.0);
     ASSERT(maxdist < 10.0);
 }
 

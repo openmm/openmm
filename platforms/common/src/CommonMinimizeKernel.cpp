@@ -271,9 +271,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
 
     scaleDirKernel = program->createKernel("scaleDir");
     scaleDirKernel->addArg(dir);
-    scaleDirKernel->addArg(scale);
     scaleDirKernel->addArg(returnValue);
-    scaleDirKernel->addArg(); // vectorIndex
 
     lineSearchStepKernel = program->createKernel("lineSearchStep");
     lineSearchStepKernel->addArg(x);
@@ -333,10 +331,9 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
 
         // Do L-BFGS update of search direction.
 
-        int endScale = end;
-        getDiffKernel->setArg(6, endScale);
+        getDiffKernel->setArg(6, end);
         getDiffKernel->execute(numVariables);
-        getScaleKernel->setArg(4, endScale);
+        getScaleKernel->setArg(4, end);
         getScaleKernel->execute(threadBlockSize, threadBlockSize);
 
         int limit = min(numVectors, iteration++);
@@ -358,7 +355,6 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
             updateDirAlphaKernel->execute(numVariables);
         }
 
-        scaleDirKernel->setArg(3, endScale);
         scaleDirKernel->execute(numVariables);
 
         for (int vector = 0; vector < limit; vector++) {
