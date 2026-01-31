@@ -8,8 +8,8 @@
  * See https://openmm.org/development.                                        *
  *                                                                            *
  * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
- * Authors: Peter Eastman                                                     *
- * Contributors: Evan Pretti                                                  *
+ * Authors: Evan Pretti                                                       *
+ * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
  * copy of this software and associated documentation files (the "Software"), *
