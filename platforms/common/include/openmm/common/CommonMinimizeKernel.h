@@ -84,7 +84,7 @@ private:
     std::vector<double> hostConstraintDistances;
 
     bool isSetup, mixedIsDouble;
-    int elementSize, threadBlockSize;
+    int elementSize, threadBlockSize, numVariableBlocks, numConstraintBlocks;
 
     int forceGroups;
     double constraintTol;
@@ -98,25 +98,26 @@ private:
     ComputeArray constraintIndices, constraintDistances;
     ComputeArray xInit, x, xPrev, grad, gradPrev, dir;
     ComputeArray alpha, scale, xDiff, gradDiff;
-    ComputeArray returnFlag, returnValue;
+    ComputeArray reduceBuffer, returnFlag, returnValue;
 
     ComputeKernel recordInitialPosKernel;
     ComputeKernel restorePosKernel;
     ComputeKernel convertForcesKernel;
-    ComputeKernel getConstraintEnergyForcesKernel;
+    ComputeKernel getConstraintEnergyForcesKernel, reduceConstraintEnergyKernel;
     ComputeKernel getConstraintErrorKernel;
     ComputeKernel initializeDirKernel;
-    ComputeKernel reinitializeDirKernel;
-    ComputeKernel gradNormKernel;
+    ComputeKernel gradNormPart1Kernel, gradNormPart2Kernel;
     ComputeKernel getDiffKernel;
-    ComputeKernel getScaleKernel;
-    ComputeKernel getAlphaKernel;
-    ComputeKernel getBetaKernel;
+    ComputeKernel getScalePart1Kernel, getScalePart2Kernel;
+    ComputeKernel reinitializeDirKernel;
+    ComputeKernel reduceAlphaKernel;
     ComputeKernel updateDirAlphaKernel;
-    ComputeKernel updateDirBetaKernel;
     ComputeKernel scaleDirKernel;
+    ComputeKernel reduceBetaKernel;
+    ComputeKernel updateDirBetaKernel;
+    ComputeKernel updateDirFinalKernel;
     ComputeKernel lineSearchStepKernel;
-    ComputeKernel lineSearchDotKernel;
+    ComputeKernel lineSearchDotPart1Kernel, lineSearchDotPart2Kernel;
 
     Context* cpuContext;
     VerletIntegrator cpuIntegrator;
