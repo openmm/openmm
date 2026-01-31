@@ -406,7 +406,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
         }
 
         scaleDirKernel->setArg(5, vectorIndex);
-        scaleDirKernel->execute(numVariables);
+        scaleDirKernel->execute(numVariables, threadBlockSize);
 
         for (int vector = 0; vector < limit; vector++) {
             reduceBetaKernel->setArg(3, vectorIndex);
