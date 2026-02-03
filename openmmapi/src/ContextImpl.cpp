@@ -52,7 +52,7 @@ const static char CHECKPOINT_MAGIC_BYTES[] = "OpenMM Binary Checkpoint\n";
 
 
 ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties, ContextImpl* originalContext) :
-        owner(owner), system(system), integrator(integrator), hasInitializedForces(false), hasSetPositions(false), integratorIsDeleted(false),
+        owner(owner), system(system), integrator(integrator), hasInitializedForces(false), hasSetPositions(false), integratorIsDeleted(false), hasMinimizeKernel(false),
         lastForceGroups(-1), platform(platform), platformData(NULL) {
     int numParticles = system.getNumParticles();
     if (numParticles == 0)
@@ -174,8 +174,6 @@ void ContextImpl::initialize() {
     applyConstraintsKernel.getAs<ApplyConstraintsKernel>().initialize(system);
     virtualSitesKernel = platform->createKernel(VirtualSitesKernel::Name(), *this);
     virtualSitesKernel.getAs<VirtualSitesKernel>().initialize(system);
-    minimizeKernel = platform->createKernel(MinimizeKernel::Name(), *this);
-    minimizeKernel.getAs<MinimizeKernel>().initialize(system);
     Vec3 periodicBoxVectors[3];
     system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
     updateStateDataKernel.getAs<UpdateStateDataKernel>().setPeriodicBoxVectors(*this, periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
@@ -513,5 +511,10 @@ Context* ContextImpl::createLinkedContext(const System& system, Integrator& inte
 }
 
 void ContextImpl::minimize(double tolerance, int maxIterations, MinimizationReporter* reporter) {
+    if (!hasMinimizeKernel) {
+        minimizeKernel = platform->createKernel(MinimizeKernel::Name(), *this);
+        minimizeKernel.getAs<MinimizeKernel>().initialize(system);
+        hasMinimizeKernel = true;
+    }
     minimizeKernel.getAs<MinimizeKernel>().execute(*this, tolerance, maxIterations, reporter);
 }
