@@ -108,7 +108,7 @@ private:
     ComputeKernel initializeDirKernel;
     ComputeKernel gradNormPart1Kernel, gradNormPart2Kernel;
     ComputeKernel getDiffKernel;
-    ComputeKernel getScalePart1Kernel, getScalePart2Kernel;
+    ComputeKernel getScaleKernel;
     ComputeKernel reinitializeDirKernel;
     ComputeKernel reduceAlphaKernel;
     ComputeKernel updateDirAlphaKernel;

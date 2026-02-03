@@ -250,26 +250,20 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     getDiffKernel->addArg(gradPrev);
     getDiffKernel->addArg(xDiff);
     getDiffKernel->addArg(gradDiff);
+    getDiffKernel->addArg(reduceBuffer);
     getDiffKernel->addArg(numVariables);
+    getDiffKernel->addArg(numVariableBlocks);
     getDiffKernel->addArg(); // end
 
-    getScalePart1Kernel = program->createKernel("getScalePart1");
-    getScalePart1Kernel->addArg(xDiff);
-    getScalePart1Kernel->addArg(gradDiff);
-    getScalePart1Kernel->addArg(reduceBuffer);
-    getScalePart1Kernel->addArg(numVariables);
-    getScalePart1Kernel->addArg(numVariableBlocks);
-    getScalePart1Kernel->addArg(); // end
-
-    getScalePart2Kernel = program->createKernel("getScalePart2");
-    getScalePart2Kernel->addArg(xDiff);
-    getScalePart2Kernel->addArg(gradDiff);
-    getScalePart2Kernel->addArg(scale);
-    getScalePart2Kernel->addArg(reduceBuffer);
-    getScalePart2Kernel->addArg(returnValue);
-    getScalePart2Kernel->addArg(numVariables);
-    getScalePart2Kernel->addArg(numVariableBlocks);
-    getScalePart2Kernel->addArg(); // end
+    getScaleKernel = program->createKernel("getScale");
+    getScaleKernel->addArg(xDiff);
+    getScaleKernel->addArg(gradDiff);
+    getScaleKernel->addArg(scale);
+    getScaleKernel->addArg(reduceBuffer);
+    getScaleKernel->addArg(returnValue);
+    getScaleKernel->addArg(numVariables);
+    getScaleKernel->addArg(numVariableBlocks);
+    getScaleKernel->addArg(); // end
 
     reinitializeDirKernel = program->createKernel("reinitializeDir");
     reinitializeDirKernel->addArg(grad);
@@ -396,12 +390,10 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
 
         // Do L-BFGS update of search direction.
 
-        getDiffKernel->setArg(7, end);
-        getDiffKernel->execute(numVariables);
-        getScalePart1Kernel->setArg(5, end);
-        getScalePart1Kernel->execute(numVariables, threadBlockSize);
-        getScalePart2Kernel->setArg(7, end);
-        getScalePart2Kernel->execute(threadBlockSize, threadBlockSize);
+        getDiffKernel->setArg(9, end);
+        getDiffKernel->execute(numVariables, threadBlockSize);
+        getScaleKernel->setArg(7, end);
+        getScaleKernel->execute(threadBlockSize, threadBlockSize);
 
         int limit = min(numVectors, iteration++);
         if (++end >= numVectors) {

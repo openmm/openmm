@@ -363,23 +363,6 @@ KERNEL void getDiff(
     GLOBAL const mixed* RESTRICT gradPrev,
     GLOBAL mixed* RESTRICT xDiff,
     GLOBAL mixed* RESTRICT gradDiff,
-    const int numVariables,
-    const int end
-) {
-    const int endOffset = numVariables * end;
-
-    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
-        xDiff[endOffset + i] = x[i] - xPrev[i];
-    }
-
-    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
-        gradDiff[endOffset + i] = grad[i] - gradPrev[i];
-    }
-}
-
-KERNEL void getScalePart1(
-    GLOBAL const mixed* RESTRICT xDiff,
-    GLOBAL const mixed* RESTRICT gradDiff,
     GLOBAL mixed* RESTRICT reduceBuffer,
     const int numVariables,
     const int numVariableBlocks,
@@ -392,6 +375,8 @@ KERNEL void getScalePart1(
     mixed xGrad = 0;
     mixed gradGrad = 0;
     for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
+        xDiff[endOffset + i] = x[i] - xPrev[i];
+        gradDiff[endOffset + i] = grad[i] - gradPrev[i];
         xGrad += xDiff[endOffset + i] * gradDiff[endOffset + i];
         gradGrad += gradDiff[endOffset + i] * gradDiff[endOffset + i];
     }
@@ -404,7 +389,7 @@ KERNEL void getScalePart1(
     }
 }
 
-KERNEL void getScalePart2(
+KERNEL void getScale(
     GLOBAL const mixed* RESTRICT xDiff,
     GLOBAL const mixed* RESTRICT gradDiff,
     GLOBAL mixed* RESTRICT scale,
