@@ -112,12 +112,13 @@ KERNEL void recordInitialPos(
     GLOBAL const real4* RESTRICT posq,
     GLOBAL const int* RESTRICT order,
     GLOBAL mixed* RESTRICT xInit,
-    GLOBAL mixed* RESTRICT x
+    GLOBAL mixed* RESTRICT x,
+    const int numParticles
 #ifdef USE_MIXED_PRECISION
     , GLOBAL const real4* RESTRICT posqCorrection
 #endif
 ) {
-    for (int i = GLOBAL_ID; i < NUM_PARTICLES; i += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < numParticles; i += GLOBAL_SIZE) {
         int offset = 3 * order[i];
 #ifdef USE_MIXED_PRECISION
         real4 pos1 = posq[i];
@@ -135,12 +136,13 @@ KERNEL void recordInitialPos(
 KERNEL void restorePos(
     GLOBAL real4* RESTRICT posq,
     GLOBAL const int* RESTRICT order,
-    GLOBAL const mixed* RESTRICT x
+    GLOBAL const mixed* RESTRICT x,
+    const int numParticles
 #ifdef USE_MIXED_PRECISION
     , GLOBAL real4* RESTRICT posqCorrection
 #endif
 ) {
-    for (int i = GLOBAL_ID; i < NUM_PARTICLES; i += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < numParticles; i += GLOBAL_SIZE) {
         int offset = 3 * order[i];
         posq[i].x = x[offset];
         posq[i].y = x[offset + 1];
@@ -158,12 +160,14 @@ KERNEL void convertForces(
     GLOBAL const mm_long* RESTRICT forceBuffer,
     GLOBAL const int* RESTRICT order,
     GLOBAL mixed* RESTRICT grad,
-    GLOBAL int* RESTRICT returnFlag
+    GLOBAL int* RESTRICT returnFlag,
+    const int numParticles,
+    const int numPadded
 ) {
     const mm_long limit = 0x4000000000000000;
     const mixed scale = -1 / (mixed) 0x100000000;
 
-    for (int i = GLOBAL_ID; i < NUM_PARTICLES; i += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < numParticles; i += GLOBAL_SIZE) {
         int offset = 3 * order[i];
         if (velm[i].w == 0) {
             grad[offset] = 0;
@@ -172,8 +176,8 @@ KERNEL void convertForces(
         }
         else {
             mm_long fx = forceBuffer[i];
-            mm_long fy = forceBuffer[i + NUM_PADDED];
-            mm_long fz = forceBuffer[i + 2 * NUM_PADDED];
+            mm_long fy = forceBuffer[i + numPadded];
+            mm_long fz = forceBuffer[i + 2 * numPadded];
             if (fx < -limit || fx > limit || fy < -limit || fy > limit || fz < -limit || fz > limit) {
                 *returnFlag = 1;
             }
@@ -191,6 +195,8 @@ KERNEL void getConstraintEnergyForces(
     GLOBAL const mixed* RESTRICT constraintDistances,
     GLOBAL const mixed* RESTRICT x,
     GLOBAL mixed* RESTRICT reduceBuffer,
+    const int numPadded,
+    const int numConstraints,
     const mixed kRestraint
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
@@ -198,7 +204,7 @@ KERNEL void getConstraintEnergyForces(
     const mixed scale = 0x100000000;
 
     mixed energy = 0;
-    for (int i = GLOBAL_ID; i < NUM_CONSTRAINTS; i += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < numConstraints; i += GLOBAL_SIZE) {
         int2 indices = constraintIndices[i];
         mixed distance = constraintDistances[i];
         int offset1 = 3 * order[indices.x];
@@ -214,11 +220,11 @@ KERNEL void getConstraintEnergyForces(
         mm_long fy = (mm_long) (kdr * scale * delta.y);
         mm_long fz = (mm_long) (kdr * scale * delta.z);
         ATOMIC_ADD(&forceBuffer[indices.x], (mm_ulong) fx);
-        ATOMIC_ADD(&forceBuffer[indices.x + NUM_PADDED], (mm_ulong) fy);
-        ATOMIC_ADD(&forceBuffer[indices.x + 2 * NUM_PADDED], (mm_ulong) fz);
+        ATOMIC_ADD(&forceBuffer[indices.x + numPadded], (mm_ulong) fy);
+        ATOMIC_ADD(&forceBuffer[indices.x + 2 * numPadded], (mm_ulong) fz);
         ATOMIC_ADD(&forceBuffer[indices.y], (mm_ulong) -fx);
-        ATOMIC_ADD(&forceBuffer[indices.y + NUM_PADDED], (mm_ulong) -fy);
-        ATOMIC_ADD(&forceBuffer[indices.y + 2 * NUM_PADDED], (mm_ulong) -fz);
+        ATOMIC_ADD(&forceBuffer[indices.y + numPadded], (mm_ulong) -fy);
+        ATOMIC_ADD(&forceBuffer[indices.y + 2 * numPadded], (mm_ulong) -fz);
     }
     energy = reduceAdd(energy, temp);
 
@@ -229,14 +235,15 @@ KERNEL void getConstraintEnergyForces(
 
 KERNEL void reduceConstraintEnergy(
     GLOBAL const mixed* RESTRICT reduceBuffer,
-    GLOBAL mixed* RESTRICT returnValue
+    GLOBAL mixed* RESTRICT returnValue,
+    const int numConstraintBlocks
 ) {
     // This kernel is expected to be executed in a single thread block.
 
     LOCAL volatile mixed temp[TEMP_SIZE];
 
     mixed energy = 0;
-    for (int i = LOCAL_ID; i < NUM_CONSTRAINT_BLOCKS; i += LOCAL_SIZE) {
+    for (int i = LOCAL_ID; i < numConstraintBlocks; i += LOCAL_SIZE) {
         energy += reduceBuffer[i];
     }
     energy = reduceAdd(energy, temp);
@@ -250,14 +257,15 @@ KERNEL void getConstraintError(
     GLOBAL const int2* RESTRICT constraintIndices,
     GLOBAL const mixed* RESTRICT constraintDistances,
     GLOBAL const mixed* RESTRICT x,
-    GLOBAL mixed* RESTRICT returnValue
+    GLOBAL mixed* RESTRICT returnValue,
+    const int numConstraints
 ) {
     // This kernel is expected to be executed in a single thread block.
 
     LOCAL volatile mixed temp[TEMP_SIZE];
 
     mixed maxError = 0;
-    for (int i = LOCAL_ID; i < NUM_CONSTRAINTS; i += LOCAL_SIZE) {
+    for (int i = LOCAL_ID; i < numConstraints; i += LOCAL_SIZE) {
         int2 indices = constraintIndices[i];
         mixed distance = constraintDistances[i];
         mixed3 delta = make_mixed3(x[3 * indices.y] - x[3 * indices.x], x[3 * indices.y + 1] - x[3 * indices.x + 1], x[3 * indices.y + 2] - x[3 * indices.x + 2]);
@@ -274,23 +282,25 @@ KERNEL void getConstraintError(
 KERNEL void initializeDir(
     GLOBAL const mixed* RESTRICT grad,
     GLOBAL mixed* RESTRICT dir,
-    GLOBAL const mixed* RESTRICT returnValue
+    GLOBAL const mixed* RESTRICT returnValue,
+    const int numVariables
 ) {
     const real scale = -1 / returnValue[0];
 
-    for (int i = GLOBAL_ID; i < NUM_VARIABLES; i += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
         dir[i] = scale * grad[i];
     }
 }
 
 KERNEL void gradNormPart1(
     GLOBAL const mixed* RESTRICT grad,
-    GLOBAL mixed* RESTRICT reduceBuffer
+    GLOBAL mixed* RESTRICT reduceBuffer,
+    const int numVariables
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
     mixed norm = 0;
-    for (int i = GLOBAL_ID; i < NUM_VARIABLES; i += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
         norm += grad[i] * grad[i];
     }
     norm = reduceAdd(norm, temp);
@@ -304,14 +314,16 @@ KERNEL void gradNormPart1(
 KERNEL void gradNormPart2(
     GLOBAL const mixed* RESTRICT grad,
     GLOBAL const mixed* RESTRICT reduceBuffer,
-    GLOBAL mixed* RESTRICT returnValue
+    GLOBAL mixed* RESTRICT returnValue,
+    const int numVariables,
+    const int numVariableBlocks
 ) {
     // This kernel is expected to be executed in a single thread block.
 
     LOCAL volatile mixed temp[TEMP_SIZE];
 
     mixed norm = 0;
-    for (int i = LOCAL_ID; i < NUM_VARIABLE_BLOCKS; i += LOCAL_SIZE) {
+    for (int i = LOCAL_ID; i < numVariableBlocks; i += LOCAL_SIZE) {
         norm += reduceBuffer[i];
     }
     norm = reduceAdd(norm, temp);
@@ -326,14 +338,14 @@ KERNEL void gradNormPart2(
     // The square norm overflowed, so take a slow fallback path.
 
     mixed gradScale = 1;
-    for (int i = LOCAL_ID; i < NUM_VARIABLES; i += LOCAL_SIZE) {
+    for (int i = LOCAL_ID; i < numVariables; i += LOCAL_SIZE) {
         gradScale = max(gradScale, FABS_MIXED(grad[i]));
     }
     gradScale = reduceMax(gradScale, temp);
     mixed gradScaleInv = 1 / gradScale;
 
     mixed scaledNorm = 0;
-    for (int i = LOCAL_ID; i < NUM_VARIABLES; i += LOCAL_SIZE) {
+    for (int i = LOCAL_ID; i < numVariables; i += LOCAL_SIZE) {
         mixed gradScaled = gradScaleInv * grad[i];
         scaledNorm += gradScaled * gradScaled;
     }
@@ -351,15 +363,16 @@ KERNEL void getDiff(
     GLOBAL const mixed* RESTRICT gradPrev,
     GLOBAL mixed* RESTRICT xDiff,
     GLOBAL mixed* RESTRICT gradDiff,
+    const int numVariables,
     const int end
 ) {
-    const int endOffset = NUM_VARIABLES * end;
+    const int endOffset = numVariables * end;
 
-    for (int i = GLOBAL_ID; i < NUM_VARIABLES; i += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
         xDiff[endOffset + i] = x[i] - xPrev[i];
     }
 
-    for (int i = GLOBAL_ID; i < NUM_VARIABLES; i += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
         gradDiff[endOffset + i] = grad[i] - gradPrev[i];
     }
 }
@@ -368,15 +381,17 @@ KERNEL void getScalePart1(
     GLOBAL const mixed* RESTRICT xDiff,
     GLOBAL const mixed* RESTRICT gradDiff,
     GLOBAL mixed* RESTRICT reduceBuffer,
+    const int numVariables,
+    const int numVariableBlocks,
     const int end
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
-    const int endOffset = NUM_VARIABLES * end;
+    const int endOffset = numVariables * end;
 
     mixed xGrad = 0;
     mixed gradGrad = 0;
-    for (int i = GLOBAL_ID; i < NUM_VARIABLES; i += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
         xGrad += xDiff[endOffset + i] * gradDiff[endOffset + i];
         gradGrad += gradDiff[endOffset + i] * gradDiff[endOffset + i];
     }
@@ -385,7 +400,7 @@ KERNEL void getScalePart1(
 
     if (LOCAL_ID == 0) {
         reduceBuffer[GROUP_ID] = xGrad;
-        reduceBuffer[GROUP_ID + NUM_VARIABLE_BLOCKS] = gradGrad;
+        reduceBuffer[GROUP_ID + numVariableBlocks] = gradGrad;
     }
 }
 
@@ -395,19 +410,21 @@ KERNEL void getScalePart2(
     GLOBAL mixed* RESTRICT scale,
     GLOBAL mixed* RESTRICT reduceBuffer,
     GLOBAL mixed* RESTRICT returnValue,
+    const int numVariables,
+    const int numVariableBlocks,
     const int end
 ) {
     // This kernel is expected to be executed in a single thread block.
 
     LOCAL volatile mixed temp[TEMP_SIZE];
 
-    const int endOffset = NUM_VARIABLES * end;
+    const int endOffset = numVariables * end;
 
     mixed xGrad = 0;
     mixed gradGrad = 0;
-    for (int i = LOCAL_ID; i < NUM_VARIABLE_BLOCKS; i += LOCAL_SIZE) {
+    for (int i = LOCAL_ID; i < numVariableBlocks; i += LOCAL_SIZE) {
         xGrad += reduceBuffer[i];
-        gradGrad += reduceBuffer[i + NUM_VARIABLE_BLOCKS];
+        gradGrad += reduceBuffer[i + numVariableBlocks];
     }
     xGrad = reduceAdd(xGrad, temp);
     gradGrad = reduceAdd(gradGrad, temp);
@@ -423,7 +440,7 @@ KERNEL void getScalePart2(
     // The square norm overflowed, so take a slow fallback path.
 
     mixed gradScale = 1;
-    for (int i = LOCAL_ID; i < NUM_VARIABLES; i += LOCAL_SIZE) {
+    for (int i = LOCAL_ID; i < numVariables; i += LOCAL_SIZE) {
         gradScale = max(gradScale, FABS_MIXED(gradDiff[endOffset + i]));
     }
     gradScale = reduceMax(gradScale, temp);
@@ -431,7 +448,7 @@ KERNEL void getScalePart2(
 
     mixed xGradScaled = 0;
     mixed gradGradScaled = 0;
-    for (int i = LOCAL_ID; i < NUM_VARIABLES; i += LOCAL_SIZE) {
+    for (int i = LOCAL_ID; i < numVariables; i += LOCAL_SIZE) {
         mixed gradDiffScaled = gradScaleInv * gradDiff[endOffset + i];
         xGradScaled += xDiff[endOffset + i] * gradDiffScaled;
         gradGradScaled += gradDiffScaled * gradDiffScaled;
@@ -450,14 +467,15 @@ KERNEL void reinitializeDir(
     GLOBAL mixed* RESTRICT dir,
     GLOBAL const mixed* RESTRICT xDiff,
     GLOBAL mixed* RESTRICT reduceBuffer,
+    const int numVariables,
     const int vectorIndex
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
-    const int indexOffset = NUM_VARIABLES * vectorIndex;
+    const int indexOffset = numVariables * vectorIndex;
 
     mixed vectorAlpha = 0;
-    for (int i = GLOBAL_ID; i < NUM_VARIABLES; i += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
         dir[i] = -grad[i];
         vectorAlpha -= grad[i] * xDiff[indexOffset + i];
     }
@@ -472,6 +490,7 @@ KERNEL void reduceAlpha(
     GLOBAL mixed* RESTRICT alpha,
     GLOBAL const mixed* RESTRICT scale,
     GLOBAL const mixed* RESTRICT reduceBuffer,
+    const int numVariableBlocks,
     const int vectorIndex
 ) {
     // This kernel is expected to be executed in a single thread block.
@@ -479,7 +498,7 @@ KERNEL void reduceAlpha(
     LOCAL volatile mixed temp[TEMP_SIZE];
 
     mixed vectorAlpha = 0;
-    for (int i = LOCAL_ID; i < NUM_VARIABLE_BLOCKS; i += LOCAL_SIZE) {
+    for (int i = LOCAL_ID; i < numVariableBlocks; i += LOCAL_SIZE) {
         vectorAlpha += reduceBuffer[i];
     }
     vectorAlpha = reduceAdd(vectorAlpha, temp);
@@ -495,17 +514,18 @@ KERNEL void updateDirAlpha(
     GLOBAL const mixed* RESTRICT xDiff,
     GLOBAL const mixed* RESTRICT gradDiff,
     GLOBAL mixed* RESTRICT reduceBuffer,
+    const int numVariables,
     const int vectorIndex1
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
     const int vectorIndex2 = (vectorIndex1 ? vectorIndex1 : NUM_VECTORS) - 1;
-    const int indexOffset1 = NUM_VARIABLES * vectorIndex1;
-    const int indexOffset2 = NUM_VARIABLES * vectorIndex2;
+    const int indexOffset1 = numVariables * vectorIndex1;
+    const int indexOffset2 = numVariables * vectorIndex2;
     const mixed vectorScale = alpha[vectorIndex1];
 
     mixed vectorAlpha = 0;
-    for (int i = GLOBAL_ID; i < NUM_VARIABLES; i += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
         dir[i] -= vectorScale * gradDiff[indexOffset1 + i];
         vectorAlpha += dir[i] * xDiff[indexOffset2 + i];
     }
@@ -522,16 +542,17 @@ KERNEL void scaleDir(
     GLOBAL const mixed* RESTRICT gradDiff,
     GLOBAL mixed* RESTRICT reduceBuffer,
     GLOBAL const mixed* RESTRICT returnValue,
+    const int numVariables,
     const int vectorIndex
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
-    const int indexOffset = NUM_VARIABLES * vectorIndex;
+    const int indexOffset = numVariables * vectorIndex;
     const mixed innerScale = alpha[vectorIndex];
     const mixed outerScale = returnValue[0];
 
     mixed vectorBeta = 0;
-    for (int i = GLOBAL_ID; i < NUM_VARIABLES; i += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
         dir[i] = (dir[i] - innerScale * gradDiff[indexOffset + i]) * outerScale;
         vectorBeta += dir[i] * gradDiff[indexOffset + i];
     }
@@ -546,6 +567,7 @@ KERNEL void reduceBeta(
     GLOBAL const mixed* RESTRICT scale,
     GLOBAL const mixed* RESTRICT reduceBuffer,
     GLOBAL mixed* RESTRICT returnValue,
+    const int numVariableBlocks,
     const int vectorIndex
 ) {
     // This kernel is expected to be executed in a single thread block.
@@ -553,7 +575,7 @@ KERNEL void reduceBeta(
     LOCAL volatile mixed temp[TEMP_SIZE];
 
     mixed vectorBeta = 0;
-    for (int i = LOCAL_ID; i < NUM_VARIABLE_BLOCKS; i += LOCAL_SIZE) {
+    for (int i = LOCAL_ID; i < numVariableBlocks; i += LOCAL_SIZE) {
         vectorBeta += reduceBuffer[i];
     }
     vectorBeta = reduceAdd(vectorBeta, temp);
@@ -570,17 +592,18 @@ KERNEL void updateDirBeta(
     GLOBAL const mixed* RESTRICT gradDiff,
     GLOBAL mixed* RESTRICT reduceBuffer,
     GLOBAL const mixed* RESTRICT returnValue,
+    const int numVariables,
     const int vectorIndex1
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
     const int vectorIndex2 = vectorIndex1 == NUM_VECTORS - 1 ? 0 : vectorIndex1 + 1;
-    const int indexOffset1 = NUM_VARIABLES * vectorIndex1;
-    const int indexOffset2 = NUM_VARIABLES * vectorIndex2;
+    const int indexOffset1 = numVariables * vectorIndex1;
+    const int indexOffset2 = numVariables * vectorIndex2;
     const mixed vectorScale = alpha[vectorIndex1] - returnValue[0];
 
     mixed vectorBeta = 0;
-    for (int i = GLOBAL_ID; i < NUM_VARIABLES; i += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
         dir[i] += vectorScale * xDiff[indexOffset1 + i];
         vectorBeta += dir[i] * gradDiff[indexOffset2 + i];
     }
@@ -596,14 +619,15 @@ KERNEL void updateDirFinal(
     GLOBAL const mixed* RESTRICT alpha,
     GLOBAL const mixed* RESTRICT xDiff,
     GLOBAL const mixed* RESTRICT returnValue,
+    const int numVariables,
     const int vectorIndex
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
-    const int indexOffset = NUM_VARIABLES * vectorIndex;
+    const int indexOffset = numVariables * vectorIndex;
     const mixed vectorScale = alpha[vectorIndex] - returnValue[0];
 
-    for (int i = GLOBAL_ID; i < NUM_VARIABLES; i += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
         dir[i] += vectorScale * xDiff[indexOffset + i];
     }
 }
@@ -612,9 +636,10 @@ KERNEL void lineSearchStep(
     GLOBAL mixed* RESTRICT x,
     GLOBAL const mixed* RESTRICT xPrev,
     GLOBAL const mixed* RESTRICT dir,
+    const int numVariables,
     const mixed step
 ) {
-    for (int i = GLOBAL_ID; i < NUM_VARIABLES; i += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
         x[i] = xPrev[i] + step * dir[i];
     }
 }
@@ -622,12 +647,13 @@ KERNEL void lineSearchStep(
 KERNEL void lineSearchDotPart1(
     GLOBAL const mixed* RESTRICT grad,
     GLOBAL const mixed* RESTRICT dir,
-    GLOBAL mixed* RESTRICT reduceBuffer
+    GLOBAL mixed* RESTRICT reduceBuffer,
+    const int numVariables
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
     mixed result = 0;
-    for (int i = GLOBAL_ID; i < NUM_VARIABLES; i += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
         result += grad[i] * dir[i];
     }
     result = reduceAdd(result, temp);
@@ -639,14 +665,15 @@ KERNEL void lineSearchDotPart1(
 
 KERNEL void lineSearchDotPart2(
     GLOBAL const mixed* RESTRICT reduceBuffer,
-    GLOBAL mixed* RESTRICT returnValue
+    GLOBAL mixed* RESTRICT returnValue,
+    const int numVariableBlocks
 ) {
     // This kernel is expected to be executed in a single thread block.
 
     LOCAL volatile mixed temp[TEMP_SIZE];
 
     mixed result = 0;
-    for (int i = LOCAL_ID; i < NUM_VARIABLE_BLOCKS; i += LOCAL_SIZE) {
+    for (int i = LOCAL_ID; i < numVariableBlocks; i += LOCAL_SIZE) {
         result += reduceBuffer[i];
     }
     result = reduceAdd(result, temp);

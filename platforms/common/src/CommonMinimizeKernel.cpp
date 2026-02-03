@@ -168,12 +168,6 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
 
     map<string, string> defines;
     defines["THREAD_BLOCK_SIZE"] = cc.intToString(threadBlockSize);
-    defines["NUM_CONSTRAINT_BLOCKS"] = cc.intToString(numConstraintBlocks);
-    defines["NUM_CONSTRAINTS"] = cc.intToString(numConstraints);
-    defines["NUM_PADDED"] = cc.intToString(cc.getPaddedNumAtoms());
-    defines["NUM_PARTICLES"] = cc.intToString(numParticles);
-    defines["NUM_VARIABLE_BLOCKS"] = cc.intToString(numVariableBlocks);
-    defines["NUM_VARIABLES"] = cc.intToString(numVariables);
     defines["NUM_VECTORS"] = cc.intToString(numVectors);
 
     ComputeProgram program = cc.compileProgram(CommonKernelSources::minimize, defines);
@@ -183,6 +177,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     recordInitialPosKernel->addArg(cc.getAtomIndexArray());
     recordInitialPosKernel->addArg(xInit);
     recordInitialPosKernel->addArg(x);
+    recordInitialPosKernel->addArg(numParticles);
     if (cc.getUseMixedPrecision()) {
         recordInitialPosKernel->addArg(cc.getPosqCorrection());
     }
@@ -191,6 +186,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     restorePosKernel->addArg(cc.getPosq());
     restorePosKernel->addArg(cc.getAtomIndexArray());
     restorePosKernel->addArg(); // x (could also be launched with xInit)
+    restorePosKernel->addArg(numParticles);
     if (cc.getUseMixedPrecision()) {
         restorePosKernel->addArg(cc.getPosqCorrection());
     }
@@ -201,6 +197,8 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     convertForcesKernel->addArg(cc.getAtomIndexArray());
     convertForcesKernel->addArg(grad);
     convertForcesKernel->addArg(returnFlag);
+    convertForcesKernel->addArg(numParticles);
+    convertForcesKernel->addArg(cc.getPaddedNumAtoms());
 
     if (numConstraints) {
         getConstraintEnergyForcesKernel = program->createKernel("getConstraintEnergyForces");
@@ -210,32 +208,40 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
         getConstraintEnergyForcesKernel->addArg(constraintDistances);
         getConstraintEnergyForcesKernel->addArg(x);
         getConstraintEnergyForcesKernel->addArg(reduceBuffer);
+        getConstraintEnergyForcesKernel->addArg(cc.getPaddedNumAtoms());
+        getConstraintEnergyForcesKernel->addArg(numConstraints);
         getConstraintEnergyForcesKernel->addArg(); // kRestraint
 
         reduceConstraintEnergyKernel = program->createKernel("reduceConstraintEnergy");
         reduceConstraintEnergyKernel->addArg(reduceBuffer);
         reduceConstraintEnergyKernel->addArg(returnValue);
+        reduceConstraintEnergyKernel->addArg(numConstraintBlocks);
 
         getConstraintErrorKernel = program->createKernel("getConstraintError");
         getConstraintErrorKernel->addArg(constraintIndices);
         getConstraintErrorKernel->addArg(constraintDistances);
         getConstraintErrorKernel->addArg(x);
         getConstraintErrorKernel->addArg(returnValue);
+        getConstraintErrorKernel->addArg(numConstraints);
     }
 
     initializeDirKernel = program->createKernel("initializeDir");
     initializeDirKernel->addArg(grad);
     initializeDirKernel->addArg(dir);
     initializeDirKernel->addArg(returnValue);
+    initializeDirKernel->addArg(numVariables);
 
     gradNormPart1Kernel = program->createKernel("gradNormPart1");
     gradNormPart1Kernel->addArg(grad);
     gradNormPart1Kernel->addArg(reduceBuffer);
+    gradNormPart1Kernel->addArg(numVariables);
 
     gradNormPart2Kernel = program->createKernel("gradNormPart2");
     gradNormPart2Kernel->addArg(grad);
     gradNormPart2Kernel->addArg(reduceBuffer);
     gradNormPart2Kernel->addArg(returnValue);
+    gradNormPart2Kernel->addArg(numVariables);
+    gradNormPart2Kernel->addArg(numVariableBlocks);
 
     getDiffKernel = program->createKernel("getDiff");
     getDiffKernel->addArg(x);
@@ -244,12 +250,15 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     getDiffKernel->addArg(gradPrev);
     getDiffKernel->addArg(xDiff);
     getDiffKernel->addArg(gradDiff);
+    getDiffKernel->addArg(numVariables);
     getDiffKernel->addArg(); // end
 
     getScalePart1Kernel = program->createKernel("getScalePart1");
     getScalePart1Kernel->addArg(xDiff);
     getScalePart1Kernel->addArg(gradDiff);
     getScalePart1Kernel->addArg(reduceBuffer);
+    getScalePart1Kernel->addArg(numVariables);
+    getScalePart1Kernel->addArg(numVariableBlocks);
     getScalePart1Kernel->addArg(); // end
 
     getScalePart2Kernel = program->createKernel("getScalePart2");
@@ -258,6 +267,8 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     getScalePart2Kernel->addArg(scale);
     getScalePart2Kernel->addArg(reduceBuffer);
     getScalePart2Kernel->addArg(returnValue);
+    getScalePart2Kernel->addArg(numVariables);
+    getScalePart2Kernel->addArg(numVariableBlocks);
     getScalePart2Kernel->addArg(); // end
 
     reinitializeDirKernel = program->createKernel("reinitializeDir");
@@ -265,12 +276,14 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     reinitializeDirKernel->addArg(dir);
     reinitializeDirKernel->addArg(xDiff);
     reinitializeDirKernel->addArg(reduceBuffer);
+    reinitializeDirKernel->addArg(numVariables);
     reinitializeDirKernel->addArg(); // vectorIndex
 
     reduceAlphaKernel = program->createKernel("reduceAlpha");
     reduceAlphaKernel->addArg(alpha);
     reduceAlphaKernel->addArg(scale);
     reduceAlphaKernel->addArg(reduceBuffer);
+    reduceAlphaKernel->addArg(numVariableBlocks);
     reduceAlphaKernel->addArg(); // vectorIndex
 
     updateDirAlphaKernel = program->createKernel("updateDirAlpha");
@@ -279,6 +292,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     updateDirAlphaKernel->addArg(xDiff);
     updateDirAlphaKernel->addArg(gradDiff);
     updateDirAlphaKernel->addArg(reduceBuffer);
+    updateDirAlphaKernel->addArg(numVariables);
     updateDirAlphaKernel->addArg(); // vectorIndex
 
     scaleDirKernel = program->createKernel("scaleDir");
@@ -287,12 +301,14 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     scaleDirKernel->addArg(gradDiff);
     scaleDirKernel->addArg(reduceBuffer);
     scaleDirKernel->addArg(returnValue);
+    scaleDirKernel->addArg(numVariables);
     scaleDirKernel->addArg(); // vectorIndex
 
     reduceBetaKernel = program->createKernel("reduceBeta");
     reduceBetaKernel->addArg(scale);
     reduceBetaKernel->addArg(reduceBuffer);
     reduceBetaKernel->addArg(returnValue);
+    reduceBetaKernel->addArg(numVariableBlocks);
     reduceBetaKernel->addArg(); // vectorIndex
 
     updateDirBetaKernel = program->createKernel("updateDirBeta");
@@ -302,6 +318,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     updateDirBetaKernel->addArg(gradDiff);
     updateDirBetaKernel->addArg(reduceBuffer);
     updateDirBetaKernel->addArg(returnValue);
+    updateDirBetaKernel->addArg(numVariables);
     updateDirBetaKernel->addArg(); // vectorIndex
 
     updateDirFinalKernel = program->createKernel("updateDirFinal");
@@ -309,22 +326,26 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     updateDirFinalKernel->addArg(alpha);
     updateDirFinalKernel->addArg(xDiff);
     updateDirFinalKernel->addArg(returnValue);
+    updateDirFinalKernel->addArg(numVariables);
     updateDirFinalKernel->addArg(); // vectorIndex
 
     lineSearchStepKernel = program->createKernel("lineSearchStep");
     lineSearchStepKernel->addArg(x);
     lineSearchStepKernel->addArg(xPrev);
     lineSearchStepKernel->addArg(dir);
+    lineSearchStepKernel->addArg(numVariables);
     lineSearchStepKernel->addArg(); // step
 
     lineSearchDotPart1Kernel = program->createKernel("lineSearchDotPart1");
     lineSearchDotPart1Kernel->addArg(grad);
     lineSearchDotPart1Kernel->addArg(dir);
     lineSearchDotPart1Kernel->addArg(reduceBuffer);
+    lineSearchDotPart1Kernel->addArg(numVariables);
 
     lineSearchDotPart2Kernel = program->createKernel("lineSearchDotPart2");
     lineSearchDotPart2Kernel->addArg(reduceBuffer);
     lineSearchDotPart2Kernel->addArg(returnValue);
+    lineSearchDotPart2Kernel->addArg(numVariableBlocks);
 
     // Upload constraint data.
 
@@ -375,11 +396,11 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
 
         // Do L-BFGS update of search direction.
 
-        getDiffKernel->setArg(6, end);
+        getDiffKernel->setArg(7, end);
         getDiffKernel->execute(numVariables);
-        getScalePart1Kernel->setArg(3, end);
+        getScalePart1Kernel->setArg(5, end);
         getScalePart1Kernel->execute(numVariables, threadBlockSize);
-        getScalePart2Kernel->setArg(5, end);
+        getScalePart2Kernel->setArg(7, end);
         getScalePart2Kernel->execute(threadBlockSize, threadBlockSize);
 
         int limit = min(numVectors, iteration++);
@@ -388,7 +409,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
         }
 
         int vectorIndex = (end ? end : numVectors) - 1;
-        reinitializeDirKernel->setArg(4, vectorIndex);
+        reinitializeDirKernel->setArg(5, vectorIndex);
         reinitializeDirKernel->execute(numVariables, threadBlockSize);
 
         for (int vector = 0; vector < limit; vector++) {
@@ -396,24 +417,24 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
                 vectorIndex += numVectors;
             }
 
-            reduceAlphaKernel->setArg(3, vectorIndex);
+            reduceAlphaKernel->setArg(4, vectorIndex);
             reduceAlphaKernel->execute(threadBlockSize, threadBlockSize);
 
             if (vector < limit - 1) {
-                updateDirAlphaKernel->setArg(5, vectorIndex);
+                updateDirAlphaKernel->setArg(6, vectorIndex);
                 updateDirAlphaKernel->execute(numVariables, threadBlockSize);
             }
         }
 
-        scaleDirKernel->setArg(5, vectorIndex);
+        scaleDirKernel->setArg(6, vectorIndex);
         scaleDirKernel->execute(numVariables, threadBlockSize);
 
         for (int vector = 0; vector < limit; vector++) {
-            reduceBetaKernel->setArg(3, vectorIndex);
+            reduceBetaKernel->setArg(4, vectorIndex);
             reduceBetaKernel->execute(threadBlockSize, threadBlockSize);
 
             if (vector < limit - 1) {
-                updateDirBetaKernel->setArg(6, vectorIndex);
+                updateDirBetaKernel->setArg(7, vectorIndex);
                 updateDirBetaKernel->execute(numVariables, threadBlockSize);
 
                 if (++vectorIndex >= numVectors) {
@@ -422,7 +443,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
             }
         }
 
-        updateDirFinalKernel->setArg(4, vectorIndex);
+        updateDirFinalKernel->setArg(5, vectorIndex);
         updateDirFinalKernel->execute(numVariables);
 
         step = 1.0;
@@ -445,10 +466,10 @@ bool CommonMinimizeKernel::lineSearch(ContextImpl& context, double& step) {
 
     for (int count = 0;;) {
         if (mixedIsDouble) {
-            lineSearchStepKernel->setArg(3, step);
+            lineSearchStepKernel->setArg(4, step);
         }
         else {
-            lineSearchStepKernel->setArg(3, (float) step);
+            lineSearchStepKernel->setArg(4, (float) step);
         }
         lineSearchStepKernel->execute(numVariables);
         bool overflow;
@@ -492,10 +513,10 @@ double CommonMinimizeKernel::evaluate(ContextImpl& context, bool& overflow) {
 
     if (numConstraints) {
         if (mixedIsDouble) {
-            getConstraintEnergyForcesKernel->setArg(6, kRestraint);
+            getConstraintEnergyForcesKernel->setArg(8, kRestraint);
         }
         else {
-            getConstraintEnergyForcesKernel->setArg(6, (float) kRestraint);
+            getConstraintEnergyForcesKernel->setArg(8, (float) kRestraint);
         }
         getConstraintEnergyForcesKernel->execute(numConstraints, threadBlockSize);
         reduceConstraintEnergyKernel->execute(threadBlockSize, threadBlockSize);
