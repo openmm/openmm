@@ -173,6 +173,7 @@ vector<map<string, string> > CudaPlatform::getDevices(const map<string, string>&
 
     // Loop over devices.
 
+    CudaContext::ensureCudaInitialized();
     vector<map<string, string> > results;
     int numDevices;
     if (cuDeviceGetCount(&numDevices) != CUDA_SUCCESS)

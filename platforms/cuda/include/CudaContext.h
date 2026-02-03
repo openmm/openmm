@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -578,6 +578,12 @@ public:
      * Get the flags that should be used when creating CUevent objects.
      */
     unsigned int getEventFlags();
+    /**
+     * Ensure that CUDA has been initialized.  This usually does not need to be called directly, because
+     * it is called automatically when a CudaContext is created.  You can call it if you want to be sure
+     * CUDA has been initialized without creating a CudaContext.
+     */
+    static void ensureCudaInitialized();
 private:
     /**
      * Compute a sorted list of device indices in decreasing order of desirability
