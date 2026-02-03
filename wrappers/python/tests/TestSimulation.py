@@ -305,7 +305,7 @@ class TestSimulation(unittest.TestCase):
             platform = Platform.getPlatform(i)
             devices = platform.getDevices()
             if platform.getName() in ['Reference', 'CPU']:
-                assert len(devices) == 0
+                assert len(devices) == 1
             else:
                 for device in devices:
                     integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)

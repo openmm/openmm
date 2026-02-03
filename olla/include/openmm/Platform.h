@@ -139,8 +139,8 @@ public:
      * all precision modes.  If you specify double precision, only devices that support double
      * precision will be returned.
      *
-     * Some Platforms do not offer a choice of devices.  In those cases, this method returns an
-     * empty list.
+     * Some Platforms do not offer a choice of devices.  In those cases, this method returns a
+     * single entry that contains no properties.
      */
     virtual std::vector<std::map<std::string, std::string> > getDevices(const std::map<std::string, std::string>& filters={}) const;
     /**

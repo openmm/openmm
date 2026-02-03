@@ -110,7 +110,7 @@ void Platform::setPropertyDefaultValue(const string& property, const string& val
 }
 
 vector<map<string, string> > Platform::getDevices(const map<string, string>& filters) const {
-    return {};
+    return {{}};
 }
 
 void Platform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
