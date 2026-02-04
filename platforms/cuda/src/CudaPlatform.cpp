@@ -164,6 +164,15 @@ void CudaPlatform::setPropertyValue(Context& context, const string& property, co
 }
 
 vector<map<string, string> > CudaPlatform::getDevices(const map<string, string>& filters) const {
+    try {
+        CudaContext::ensureCudaInitialized();
+    }
+    catch (...) {
+        // CUDA couldn't be initialized, so report no devices.
+
+        return {};
+    }
+
     // Check for properties that might act as filters.
 
     int deviceIndex = -1;
@@ -173,7 +182,6 @@ vector<map<string, string> > CudaPlatform::getDevices(const map<string, string>&
 
     // Loop over devices.
 
-    CudaContext::ensureCudaInitialized();
     vector<map<string, string> > results;
     int numDevices;
     if (cuDeviceGetCount(&numDevices) != CUDA_SUCCESS)
