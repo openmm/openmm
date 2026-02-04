@@ -66,12 +66,13 @@ private:
 
     void setup(ContextImpl& context);
     void lbfgs(ContextImpl& context);
-    bool lineSearch(ContextImpl& context, double& step);
+    bool lineSearch(ContextImpl& context);
     double evaluate(ContextImpl& context, bool& overflow);
     double evaluateCpu(ContextImpl& context, bool& overflow);
     bool report(ContextImpl& context, int iteration);
     int downloadReturnFlag();
     double downloadReturnValue();
+    double downloadLineSearchDot();
 
     ComputeContext& cc;
 
@@ -98,15 +99,17 @@ private:
     ComputeArray constraintIndices, constraintDistances;
     ComputeArray xInit, x, xPrev, grad, gradPrev, dir;
     ComputeArray alpha, scale, xDiff, gradDiff;
-    ComputeArray reduceBuffer, returnFlag, returnValue;
+    ComputeArray reduceBuffer, returnFlag, returnValue, lineSearchDot;
 
     ComputeKernel recordInitialPosKernel;
     ComputeKernel restorePosKernel;
     ComputeKernel convertForcesKernel;
-    ComputeKernel getConstraintEnergyForcesKernel, reduceConstraintEnergyKernel;
+    ComputeKernel getConstraintEnergyForcesKernel;
+    ComputeKernel reduceConstraintEnergyKernel;
     ComputeKernel getConstraintErrorKernel;
     ComputeKernel initializeDirKernel;
-    ComputeKernel gradNormPart1Kernel, gradNormPart2Kernel;
+    ComputeKernel gradNormPart1Kernel;
+    ComputeKernel gradNormPart2Kernel;
     ComputeKernel getDiffKernel;
     ComputeKernel getScaleKernel;
     ComputeKernel reinitializeDirKernel;
@@ -114,8 +117,9 @@ private:
     ComputeKernel scaleDirKernel;
     ComputeKernel updateDirBetaKernel;
     ComputeKernel updateDirFinalKernel;
+    ComputeKernel lineSearchSetupKernel;
     ComputeKernel lineSearchStepKernel;
-    ComputeKernel lineSearchDotPart1Kernel, lineSearchDotPart2Kernel;
+    ComputeKernel lineSearchDotKernel;
 
     Context* cpuContext;
     VerletIntegrator cpuIntegrator;

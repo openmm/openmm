@@ -181,6 +181,7 @@ KERNEL void convertForces(
     GLOBAL const int* RESTRICT order,
     GLOBAL mixed* RESTRICT grad,
     GLOBAL int* RESTRICT returnFlag,
+    GLOBAL mixed* RESTRICT lineSearchDot,
     const int numParticles,
     const int numPadded
 ) {
@@ -205,6 +206,10 @@ KERNEL void convertForces(
             grad[offset + 1] = scale * fy;
             grad[offset + 2] = scale * fz;
         }
+    }
+
+    if (GLOBAL_ID == 0) {
+        *lineSearchDot = 0;
     }
 }
 
@@ -603,6 +608,27 @@ KERNEL void updateDirFinal(
     }
 }
 
+KERNEL void lineSearchSetup(
+    GLOBAL const mixed* RESTRICT x,
+    GLOBAL mixed* RESTRICT xPrev,
+    GLOBAL const mixed* RESTRICT grad,
+    GLOBAL mixed* RESTRICT gradPrev,
+    GLOBAL mixed* RESTRICT lineSearchDot,
+    const int numVariables
+) {
+    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
+        xPrev[i] = x[i];
+    }
+
+    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
+        gradPrev[i] = grad[i];
+    }
+
+    if (GLOBAL_ID == 0) {
+        *lineSearchDot = 0;
+    }
+}
+
 KERNEL void lineSearchStep(
     GLOBAL mixed* RESTRICT x,
     GLOBAL const mixed* RESTRICT xPrev,
@@ -615,10 +641,10 @@ KERNEL void lineSearchStep(
     }
 }
 
-KERNEL void lineSearchDotPart1(
+KERNEL void lineSearchDot(
     GLOBAL const mixed* RESTRICT grad,
     GLOBAL const mixed* RESTRICT dir,
-    GLOBAL mixed* RESTRICT reduceBuffer,
+    GLOBAL mixed* RESTRICT lineSearchDot,
     const int numVariables
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
@@ -630,26 +656,6 @@ KERNEL void lineSearchDotPart1(
     result = reduceAdd(result, temp);
 
     if (LOCAL_ID == 0) {
-        reduceBuffer[GROUP_ID] = result;
-    }
-}
-
-KERNEL void lineSearchDotPart2(
-    GLOBAL const mixed* RESTRICT reduceBuffer,
-    GLOBAL mixed* RESTRICT returnValue,
-    const int numVariableBlocks
-) {
-    // This kernel is expected to be executed in a single thread block.
-
-    LOCAL volatile mixed temp[TEMP_SIZE];
-
-    mixed result = 0;
-    for (int i = LOCAL_ID; i < numVariableBlocks; i += LOCAL_SIZE) {
-        result += reduceBuffer[i];
-    }
-    result = reduceAdd(result, temp);
-
-    if (LOCAL_ID == 0) {
-        returnValue[0] = result;
+        atomicAddMixed(lineSearchDot, result);
     }
 }

@@ -163,6 +163,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     reduceBuffer.initialize(cc, max(2 * numVariableBlocks, numConstraintBlocks), elementSize, "reduceBuffer");
     returnFlag.initialize<int>(cc, 1, "returnFlag");
     returnValue.initialize(cc, 1, elementSize, "returnValue");
+    lineSearchDot.initialize(cc, 1, elementSize, "lineSearchDot");
 
     // Compile kernels and set arguments.
 
@@ -197,6 +198,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     convertForcesKernel->addArg(cc.getAtomIndexArray());
     convertForcesKernel->addArg(grad);
     convertForcesKernel->addArg(returnFlag);
+    convertForcesKernel->addArg(lineSearchDot);
     convertForcesKernel->addArg(numParticles);
     convertForcesKernel->addArg(cc.getPaddedNumAtoms());
 
@@ -311,6 +313,14 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     updateDirFinalKernel->addArg(); // vectorIndex
     updateDirFinalKernel->addArg(); // vectorIndexAlpha
 
+    lineSearchSetupKernel = program->createKernel("lineSearchSetup");
+    lineSearchSetupKernel->addArg(x);
+    lineSearchSetupKernel->addArg(xPrev);
+    lineSearchSetupKernel->addArg(grad);
+    lineSearchSetupKernel->addArg(gradPrev);
+    lineSearchSetupKernel->addArg(lineSearchDot);
+    lineSearchSetupKernel->addArg(numVariables);
+
     lineSearchStepKernel = program->createKernel("lineSearchStep");
     lineSearchStepKernel->addArg(x);
     lineSearchStepKernel->addArg(xPrev);
@@ -318,16 +328,11 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     lineSearchStepKernel->addArg(numVariables);
     lineSearchStepKernel->addArg(); // step
 
-    lineSearchDotPart1Kernel = program->createKernel("lineSearchDotPart1");
-    lineSearchDotPart1Kernel->addArg(grad);
-    lineSearchDotPart1Kernel->addArg(dir);
-    lineSearchDotPart1Kernel->addArg(reduceBuffer);
-    lineSearchDotPart1Kernel->addArg(numVariables);
-
-    lineSearchDotPart2Kernel = program->createKernel("lineSearchDotPart2");
-    lineSearchDotPart2Kernel->addArg(reduceBuffer);
-    lineSearchDotPart2Kernel->addArg(returnValue);
-    lineSearchDotPart2Kernel->addArg(numVariableBlocks);
+    lineSearchDotKernel = program->createKernel("lineSearchDot");
+    lineSearchDotKernel->addArg(grad);
+    lineSearchDotKernel->addArg(dir);
+    lineSearchDotKernel->addArg(lineSearchDot);
+    lineSearchDotKernel->addArg(numVariables);
 
     // Upload constraint data.
 
@@ -351,15 +356,13 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
         return;
     }
     initializeDirKernel->execute(numVariables);
-    double step = 1.0;
 
     for (int iteration = 1, end = 0;;) {
         // Try a line search (if it fails, revert to the position and gradient
         // at the start of the search and abort the optimization).
 
-        x.copyTo(xPrev);
-        grad.copyTo(gradPrev);
-        if (!lineSearch(context, step)) {
+        lineSearchSetupKernel->execute(numVariables);
+        if (!lineSearch(context)) {
             xPrev.copyTo(x);
             gradPrev.copyTo(grad);
             return;
@@ -423,21 +426,19 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
         // and we need to read the output of scaleDirKernel directly from alpha[numVectors]
         updateDirFinalKernel->setArg(5, limit > 1 ? vectorIndex : numVectors);
         updateDirFinalKernel->execute(numVariables);
-
-        step = 1.0;
     }
 }
 
-bool CommonMinimizeKernel::lineSearch(ContextImpl& context, double& step) {
+bool CommonMinimizeKernel::lineSearch(ContextImpl& context) {
     // Check state at starting point for line search.
 
-    lineSearchDotPart1Kernel->execute(numVariables, threadBlockSize);
-    lineSearchDotPart2Kernel->execute(threadBlockSize, threadBlockSize);
-    double dotStart = downloadReturnValue();
+    lineSearchDotKernel->execute(numVariables);
+    double dotStart = downloadLineSearchDot();
     if (dotStart > 0) {
         return false;
     }
     double energyStart = energy;
+    double step = 1.0;
     double stepScale;
 
     // Take line search steps.
@@ -458,9 +459,8 @@ bool CommonMinimizeKernel::lineSearch(ContextImpl& context, double& step) {
             stepScale = stepScaleDown;
         }
         else {
-            lineSearchDotPart1Kernel->execute(numVariables, threadBlockSize);
-            lineSearchDotPart2Kernel->execute(threadBlockSize, threadBlockSize);
-            double dot = downloadReturnValue();
+            lineSearchDotKernel->execute(numVariables);
+            double dot = downloadLineSearchDot();
             if (dot < wolfeParam * dotStart) {
                 stepScale = stepScaleUp;
             }
@@ -645,5 +645,18 @@ double CommonMinimizeKernel::downloadReturnValue() {
         float hostReturnValue;
         returnValue.download(&hostReturnValue);
         return (double) hostReturnValue;
+    }
+}
+
+double CommonMinimizeKernel::downloadLineSearchDot() {
+    if (mixedIsDouble) {
+        double hostLineSearchDot;
+        lineSearchDot.download(&hostLineSearchDot);
+        return hostLineSearchDot;
+    }
+    else {
+        float hostLineSearchDot;
+        lineSearchDot.download(&hostLineSearchDot);
+        return (double) hostLineSearchDot;
     }
 }
