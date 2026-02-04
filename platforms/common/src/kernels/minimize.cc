@@ -108,6 +108,26 @@ DEVICE mixed reduceMax(mixed value, LOCAL_ARG volatile mixed* temp) {
     return temp[0];
 }
 
+DEVICE void atomicAddMixed(GLOBAL mixed* RESTRICT target, const mixed value) {
+#if defined(__CUDA_ARCH__) || defined(USE_HIP)
+    atomicAdd(target, value);
+#elif defined(USE_MIXED_PRECISION) || defined(USE_DOUBLE_PRECISION)
+    unsigned long old = as_ulong(*target);
+    unsigned long check;
+    do {
+        check = old;
+        old = atom_cmpxchg((GLOBAL unsigned long*)target, check, as_ulong(value + as_double(check)));
+    } while(check != old);
+#else
+    unsigned int old = as_uint(*target);
+    unsigned int check;
+    do {
+        check = old;
+        old = atomic_cmpxchg((GLOBAL unsigned int*)target, check, as_uint(value + as_float(check)));
+    } while(check != old);
+#endif
+}
+
 KERNEL void recordInitialPos(
     GLOBAL const real4* RESTRICT posq,
     GLOBAL const int* RESTRICT order,
@@ -390,10 +410,11 @@ KERNEL void getDiff(
 }
 
 KERNEL void getScale(
+    GLOBAL mixed* RESTRICT alpha,
+    GLOBAL mixed* RESTRICT scale,
     GLOBAL const mixed* RESTRICT xDiff,
     GLOBAL const mixed* RESTRICT gradDiff,
-    GLOBAL mixed* RESTRICT scale,
-    GLOBAL mixed* RESTRICT reduceBuffer,
+    GLOBAL const mixed* RESTRICT reduceBuffer,
     GLOBAL mixed* RESTRICT returnValue,
     const int numVariables,
     const int numVariableBlocks,
@@ -413,6 +434,12 @@ KERNEL void getScale(
     }
     xGrad = reduceAdd(xGrad, temp);
     gradGrad = reduceAdd(gradGrad, temp);
+
+    // Clear all values of alpha (plus the extra slot at alpha[NUM_VECTORS])
+    // to prepare them for use in reductions by subsequent kernels.
+    for (int i = LOCAL_ID; i <= NUM_VECTORS; i += LOCAL_SIZE) {
+        alpha[i] = 0;
+    }
 
     if (isfinite(gradGrad)) {
         if (LOCAL_ID == 0) {
@@ -450,8 +477,9 @@ KERNEL void getScale(
 KERNEL void reinitializeDir(
     GLOBAL const mixed* RESTRICT grad,
     GLOBAL mixed* RESTRICT dir,
+    GLOBAL mixed* RESTRICT alpha,
+    GLOBAL mixed* RESTRICT scale,
     GLOBAL const mixed* RESTRICT xDiff,
-    GLOBAL mixed* RESTRICT reduceBuffer,
     const int numVariables,
     const int vectorIndex
 ) {
@@ -467,38 +495,16 @@ KERNEL void reinitializeDir(
     vectorAlpha = reduceAdd(vectorAlpha, temp);
 
     if (LOCAL_ID == 0) {
-        reduceBuffer[GROUP_ID] = vectorAlpha;
-    }
-}
-
-KERNEL void reduceAlpha(
-    GLOBAL mixed* RESTRICT alpha,
-    GLOBAL const mixed* RESTRICT scale,
-    GLOBAL const mixed* RESTRICT reduceBuffer,
-    const int numVariableBlocks,
-    const int vectorIndex
-) {
-    // This kernel is expected to be executed in a single thread block.
-
-    LOCAL volatile mixed temp[TEMP_SIZE];
-
-    mixed vectorAlpha = 0;
-    for (int i = LOCAL_ID; i < numVariableBlocks; i += LOCAL_SIZE) {
-        vectorAlpha += reduceBuffer[i];
-    }
-    vectorAlpha = reduceAdd(vectorAlpha, temp);
-
-    if (LOCAL_ID == 0) {
-        alpha[vectorIndex] = vectorAlpha / scale[vectorIndex];
+        atomicAddMixed(&alpha[vectorIndex], vectorAlpha / scale[vectorIndex]);
     }
 }
 
 KERNEL void updateDirAlpha(
     GLOBAL mixed* dir,
-    GLOBAL const mixed* RESTRICT alpha,
+    GLOBAL mixed* RESTRICT alpha,
+    GLOBAL const mixed* RESTRICT scale,
     GLOBAL const mixed* RESTRICT xDiff,
     GLOBAL const mixed* RESTRICT gradDiff,
-    GLOBAL mixed* RESTRICT reduceBuffer,
     const int numVariables,
     const int vectorIndex1
 ) {
@@ -517,15 +523,15 @@ KERNEL void updateDirAlpha(
     vectorAlpha = reduceAdd(vectorAlpha, temp);
 
     if (LOCAL_ID == 0) {
-        reduceBuffer[GROUP_ID] = vectorAlpha;
+        atomicAddMixed(&alpha[vectorIndex2], vectorAlpha / scale[vectorIndex2]);
     }
 }
 
 KERNEL void scaleDir(
     GLOBAL mixed* dir,
-    GLOBAL const mixed* RESTRICT alpha,
+    GLOBAL mixed* RESTRICT alpha,
+    GLOBAL mixed* RESTRICT scale,
     GLOBAL const mixed* RESTRICT gradDiff,
-    GLOBAL mixed* RESTRICT reduceBuffer,
     GLOBAL const mixed* RESTRICT returnValue,
     const int numVariables,
     const int vectorIndex
@@ -544,48 +550,28 @@ KERNEL void scaleDir(
     vectorBeta = reduceAdd(vectorBeta, temp);
 
     if (LOCAL_ID == 0) {
-        reduceBuffer[GROUP_ID] = vectorBeta;
-    }
-}
-
-KERNEL void reduceBeta(
-    GLOBAL const mixed* RESTRICT scale,
-    GLOBAL const mixed* RESTRICT reduceBuffer,
-    GLOBAL mixed* RESTRICT returnValue,
-    const int numVariableBlocks,
-    const int vectorIndex
-) {
-    // This kernel is expected to be executed in a single thread block.
-
-    LOCAL volatile mixed temp[TEMP_SIZE];
-
-    mixed vectorBeta = 0;
-    for (int i = LOCAL_ID; i < numVariableBlocks; i += LOCAL_SIZE) {
-        vectorBeta += reduceBuffer[i];
-    }
-    vectorBeta = reduceAdd(vectorBeta, temp);
-
-    if (LOCAL_ID == 0) {
-        returnValue[0] = vectorBeta / scale[vectorIndex];
+        // Store the result in an extra slot alpha[NUM_VECTORS] instead of using
+        // alpha[vectorIndex] since other blocks might still need to read it.
+        atomicAddMixed(&alpha[NUM_VECTORS], (GLOBAL_ID == 0 ? innerScale : 0) - vectorBeta / scale[vectorIndex]);
     }
 }
 
 KERNEL void updateDirBeta(
     GLOBAL mixed* dir,
-    GLOBAL const mixed* RESTRICT alpha,
+    GLOBAL mixed* RESTRICT alpha,
+    GLOBAL const mixed* RESTRICT scale,
     GLOBAL const mixed* RESTRICT xDiff,
     GLOBAL const mixed* RESTRICT gradDiff,
-    GLOBAL mixed* RESTRICT reduceBuffer,
-    GLOBAL const mixed* RESTRICT returnValue,
     const int numVariables,
-    const int vectorIndex1
+    const int vectorIndex1,
+    const int vectorIndexAlpha
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
     const int vectorIndex2 = vectorIndex1 == NUM_VECTORS - 1 ? 0 : vectorIndex1 + 1;
     const int indexOffset1 = numVariables * vectorIndex1;
     const int indexOffset2 = numVariables * vectorIndex2;
-    const mixed vectorScale = alpha[vectorIndex1] - returnValue[0];
+    const mixed vectorScale = alpha[vectorIndexAlpha];
 
     mixed vectorBeta = 0;
     for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
@@ -595,7 +581,7 @@ KERNEL void updateDirBeta(
     vectorBeta = reduceAdd(vectorBeta, temp);
 
     if (LOCAL_ID == 0) {
-        reduceBuffer[GROUP_ID] = vectorBeta;
+        atomicAddMixed(&alpha[vectorIndex2], -vectorBeta / scale[vectorIndex2]);
     }
 }
 
@@ -603,14 +589,14 @@ KERNEL void updateDirFinal(
     GLOBAL mixed* dir,
     GLOBAL const mixed* RESTRICT alpha,
     GLOBAL const mixed* RESTRICT xDiff,
-    GLOBAL const mixed* RESTRICT returnValue,
     const int numVariables,
-    const int vectorIndex
+    const int vectorIndex,
+    const int vectorIndexAlpha
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
     const int indexOffset = numVariables * vectorIndex;
-    const mixed vectorScale = alpha[vectorIndex] - returnValue[0];
+    const mixed vectorScale = alpha[vectorIndexAlpha];
 
     for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
         dir[i] += vectorScale * xDiff[indexOffset + i];

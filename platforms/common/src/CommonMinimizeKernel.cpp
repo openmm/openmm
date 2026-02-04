@@ -156,7 +156,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     grad.initialize(cc, numVariables, elementSize, "grad");
     gradPrev.initialize(cc, numVariables, elementSize, "gradPrev");
     dir.initialize(cc, numVariables, elementSize, "dir");
-    alpha.initialize(cc, numVectors, elementSize, "alpha");
+    alpha.initialize(cc, numVectors + 1, elementSize, "alpha");
     scale.initialize(cc, numVectors, elementSize, "scale");
     xDiff.initialize(cc, numVectors * numVariables, elementSize, "xDiff");
     gradDiff.initialize(cc, numVectors * numVariables, elementSize, "gradDiff");
@@ -256,9 +256,10 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     getDiffKernel->addArg(); // end
 
     getScaleKernel = program->createKernel("getScale");
+    getScaleKernel->addArg(alpha);
+    getScaleKernel->addArg(scale);
     getScaleKernel->addArg(xDiff);
     getScaleKernel->addArg(gradDiff);
-    getScaleKernel->addArg(scale);
     getScaleKernel->addArg(reduceBuffer);
     getScaleKernel->addArg(returnValue);
     getScaleKernel->addArg(numVariables);
@@ -268,60 +269,47 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     reinitializeDirKernel = program->createKernel("reinitializeDir");
     reinitializeDirKernel->addArg(grad);
     reinitializeDirKernel->addArg(dir);
+    reinitializeDirKernel->addArg(alpha);
+    reinitializeDirKernel->addArg(scale);
     reinitializeDirKernel->addArg(xDiff);
-    reinitializeDirKernel->addArg(reduceBuffer);
     reinitializeDirKernel->addArg(numVariables);
     reinitializeDirKernel->addArg(); // vectorIndex
-
-    reduceAlphaKernel = program->createKernel("reduceAlpha");
-    reduceAlphaKernel->addArg(alpha);
-    reduceAlphaKernel->addArg(scale);
-    reduceAlphaKernel->addArg(reduceBuffer);
-    reduceAlphaKernel->addArg(numVariableBlocks);
-    reduceAlphaKernel->addArg(); // vectorIndex
 
     updateDirAlphaKernel = program->createKernel("updateDirAlpha");
     updateDirAlphaKernel->addArg(dir);
     updateDirAlphaKernel->addArg(alpha);
+    updateDirAlphaKernel->addArg(scale);
     updateDirAlphaKernel->addArg(xDiff);
     updateDirAlphaKernel->addArg(gradDiff);
-    updateDirAlphaKernel->addArg(reduceBuffer);
     updateDirAlphaKernel->addArg(numVariables);
     updateDirAlphaKernel->addArg(); // vectorIndex
 
     scaleDirKernel = program->createKernel("scaleDir");
     scaleDirKernel->addArg(dir);
     scaleDirKernel->addArg(alpha);
+    scaleDirKernel->addArg(scale);
     scaleDirKernel->addArg(gradDiff);
-    scaleDirKernel->addArg(reduceBuffer);
     scaleDirKernel->addArg(returnValue);
     scaleDirKernel->addArg(numVariables);
     scaleDirKernel->addArg(); // vectorIndex
 
-    reduceBetaKernel = program->createKernel("reduceBeta");
-    reduceBetaKernel->addArg(scale);
-    reduceBetaKernel->addArg(reduceBuffer);
-    reduceBetaKernel->addArg(returnValue);
-    reduceBetaKernel->addArg(numVariableBlocks);
-    reduceBetaKernel->addArg(); // vectorIndex
-
     updateDirBetaKernel = program->createKernel("updateDirBeta");
     updateDirBetaKernel->addArg(dir);
     updateDirBetaKernel->addArg(alpha);
+    updateDirBetaKernel->addArg(scale);
     updateDirBetaKernel->addArg(xDiff);
     updateDirBetaKernel->addArg(gradDiff);
-    updateDirBetaKernel->addArg(reduceBuffer);
-    updateDirBetaKernel->addArg(returnValue);
     updateDirBetaKernel->addArg(numVariables);
     updateDirBetaKernel->addArg(); // vectorIndex
+    updateDirBetaKernel->addArg(); // vectorIndexAlpha
 
     updateDirFinalKernel = program->createKernel("updateDirFinal");
     updateDirFinalKernel->addArg(dir);
     updateDirFinalKernel->addArg(alpha);
     updateDirFinalKernel->addArg(xDiff);
-    updateDirFinalKernel->addArg(returnValue);
     updateDirFinalKernel->addArg(numVariables);
     updateDirFinalKernel->addArg(); // vectorIndex
+    updateDirFinalKernel->addArg(); // vectorIndexAlpha
 
     lineSearchStepKernel = program->createKernel("lineSearchStep");
     lineSearchStepKernel->addArg(x);
@@ -392,7 +380,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
 
         getDiffKernel->setArg(9, end);
         getDiffKernel->execute(numVariables, threadBlockSize);
-        getScaleKernel->setArg(7, end);
+        getScaleKernel->setArg(8, end);
         getScaleKernel->execute(threadBlockSize, threadBlockSize);
 
         int limit = min(numVectors, iteration++);
@@ -401,41 +389,39 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
         }
 
         int vectorIndex = (end ? end : numVectors) - 1;
-        reinitializeDirKernel->setArg(5, vectorIndex);
-        reinitializeDirKernel->execute(numVariables, threadBlockSize);
+        reinitializeDirKernel->setArg(6, vectorIndex);
+        reinitializeDirKernel->execute(numVariables);
 
         for (int vector = 0; vector < limit; vector++) {
             if (vector && --vectorIndex < 0) {
                 vectorIndex += numVectors;
             }
 
-            reduceAlphaKernel->setArg(4, vectorIndex);
-            reduceAlphaKernel->execute(threadBlockSize, threadBlockSize);
-
             if (vector < limit - 1) {
                 updateDirAlphaKernel->setArg(6, vectorIndex);
-                updateDirAlphaKernel->execute(numVariables, threadBlockSize);
+                updateDirAlphaKernel->execute(numVariables);
             }
         }
 
         scaleDirKernel->setArg(6, vectorIndex);
-        scaleDirKernel->execute(numVariables, threadBlockSize);
+        scaleDirKernel->execute(numVariables);
 
-        for (int vector = 0; vector < limit; vector++) {
-            reduceBetaKernel->setArg(4, vectorIndex);
-            reduceBetaKernel->execute(threadBlockSize, threadBlockSize);
+        for (int vector = 0; vector < limit - 1; vector++) {
+            updateDirBetaKernel->setArg(6, vectorIndex);
+            // scaleDirKernel puts its first result in alpha[numVectors], so for the
+            // first vector, load the result from here instead of alpha[vectorIndex]
+            updateDirBetaKernel->setArg(7, vector ? vectorIndex : numVectors);
+            updateDirBetaKernel->execute(numVariables);
 
-            if (vector < limit - 1) {
-                updateDirBetaKernel->setArg(7, vectorIndex);
-                updateDirBetaKernel->execute(numVariables, threadBlockSize);
-
-                if (++vectorIndex >= numVectors) {
-                    vectorIndex -= numVectors;
-                }
+            if (++vectorIndex >= numVectors) {
+                vectorIndex -= numVectors;
             }
         }
 
-        updateDirFinalKernel->setArg(5, vectorIndex);
+        updateDirFinalKernel->setArg(4, vectorIndex);
+        // If this is the first iteration, limit is 1, we did not go through the loop above,
+        // and we need to read the output of scaleDirKernel directly from alpha[numVectors]
+        updateDirFinalKernel->setArg(5, limit > 1 ? vectorIndex : numVectors);
         updateDirFinalKernel->execute(numVariables);
 
         step = 1.0;

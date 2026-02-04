@@ -110,10 +110,8 @@ private:
     ComputeKernel getDiffKernel;
     ComputeKernel getScaleKernel;
     ComputeKernel reinitializeDirKernel;
-    ComputeKernel reduceAlphaKernel;
     ComputeKernel updateDirAlphaKernel;
     ComputeKernel scaleDirKernel;
-    ComputeKernel reduceBetaKernel;
     ComputeKernel updateDirBetaKernel;
     ComputeKernel updateDirFinalKernel;
     ComputeKernel lineSearchStepKernel;
