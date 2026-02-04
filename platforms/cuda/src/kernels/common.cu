@@ -18,6 +18,7 @@
 #define SYNC_THREADS __syncthreads();
 #define MEM_FENCE __threadfence_block();
 #define ATOMIC_ADD(dest, value) atomicAdd(dest, value)
+#define NAN nanf("")
 
 typedef long long mm_long;
 typedef unsigned long long mm_ulong;

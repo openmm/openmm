@@ -157,6 +157,7 @@ KERNEL void restorePos(
     GLOBAL real4* RESTRICT posq,
     GLOBAL const int* RESTRICT order,
     GLOBAL const mixed* RESTRICT x,
+    GLOBAL mixed* RESTRICT returnValue,
     const int numParticles
 #ifdef USE_MIXED_PRECISION
     , GLOBAL real4* RESTRICT posqCorrection
@@ -173,6 +174,10 @@ KERNEL void restorePos(
         posqCorrection[i].z = x[offset + 2] - (real) x[offset + 2];
 #endif
     }
+
+    if (GLOBAL_ID == 0) {
+        *returnValue = 0;
+    }
 }
 
 KERNEL void convertForces(
@@ -180,13 +185,14 @@ KERNEL void convertForces(
     GLOBAL const mm_long* RESTRICT forceBuffer,
     GLOBAL const int* RESTRICT order,
     GLOBAL mixed* RESTRICT grad,
-    GLOBAL int* RESTRICT returnFlag,
+    GLOBAL mixed* RESTRICT returnValue,
     GLOBAL mixed* RESTRICT lineSearchDot,
     const int numParticles,
     const int numPadded
 ) {
     const mm_long limit = 0x4000000000000000;
     const mixed scale = -1 / (mixed) 0x100000000;
+    const mixed nanValue = NAN;
 
     for (int i = GLOBAL_ID; i < numParticles; i += GLOBAL_SIZE) {
         int offset = 3 * order[i];
@@ -200,7 +206,7 @@ KERNEL void convertForces(
             mm_long fy = forceBuffer[i + numPadded];
             mm_long fz = forceBuffer[i + 2 * numPadded];
             if (fx < -limit || fx > limit || fy < -limit || fy > limit || fz < -limit || fz > limit) {
-                *returnFlag = 1;
+                *returnValue = nanValue;
             }
             grad[offset] = scale * fx;
             grad[offset + 1] = scale * fy;
@@ -219,7 +225,7 @@ KERNEL void getConstraintEnergyForces(
     GLOBAL const int2* RESTRICT constraintIndices,
     GLOBAL const mixed* RESTRICT constraintDistances,
     GLOBAL const mixed* RESTRICT x,
-    GLOBAL mixed* RESTRICT reduceBuffer,
+    GLOBAL mixed* RESTRICT returnValue,
     const int numPadded,
     const int numConstraints,
     const mixed kRestraint
@@ -254,27 +260,7 @@ KERNEL void getConstraintEnergyForces(
     energy = reduceAdd(energy, temp);
 
     if (LOCAL_ID == 0) {
-        reduceBuffer[GROUP_ID] = energy;
-    }
-}
-
-KERNEL void reduceConstraintEnergy(
-    GLOBAL const mixed* RESTRICT reduceBuffer,
-    GLOBAL mixed* RESTRICT returnValue,
-    const int numConstraintBlocks
-) {
-    // This kernel is expected to be executed in a single thread block.
-
-    LOCAL volatile mixed temp[TEMP_SIZE];
-
-    mixed energy = 0;
-    for (int i = LOCAL_ID; i < numConstraintBlocks; i += LOCAL_SIZE) {
-        energy += reduceBuffer[i];
-    }
-    energy = reduceAdd(energy, temp);
-
-    if (LOCAL_ID == 0) {
-        returnValue[0] = energy;
+        atomicAddMixed(returnValue, energy);
     }
 }
 
@@ -307,10 +293,10 @@ KERNEL void getConstraintError(
 KERNEL void initializeDir(
     GLOBAL const mixed* RESTRICT grad,
     GLOBAL mixed* RESTRICT dir,
-    GLOBAL const mixed* RESTRICT returnValue,
+    GLOBAL const mixed* RESTRICT gradNorm,
     const int numVariables
 ) {
-    const real scale = -1 / returnValue[0];
+    const real scale = -1 / gradNorm[0];
 
     for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
         dir[i] = scale * grad[i];
@@ -339,7 +325,7 @@ KERNEL void gradNormPart1(
 KERNEL void gradNormPart2(
     GLOBAL const mixed* RESTRICT grad,
     GLOBAL const mixed* RESTRICT reduceBuffer,
-    GLOBAL mixed* RESTRICT returnValue,
+    GLOBAL mixed* RESTRICT gradNorm,
     const int numVariables,
     const int numVariableBlocks
 ) {
@@ -355,7 +341,7 @@ KERNEL void gradNormPart2(
 
     if (isfinite(norm)) {
         if (LOCAL_ID == 0) {
-            returnValue[0] = SQRT_MIXED(norm);
+            gradNorm[0] = SQRT_MIXED(norm);
         }
         return;
     }
@@ -377,7 +363,7 @@ KERNEL void gradNormPart2(
     scaledNorm = reduceAdd(scaledNorm, temp);
 
     if (LOCAL_ID == 0) {
-        returnValue[0] = gradScale * SQRT_MIXED(scaledNorm);
+        gradNorm[0] = gradScale * SQRT_MIXED(scaledNorm);
     }
 }
 

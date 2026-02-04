@@ -163,6 +163,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     reduceBuffer.initialize(cc, max(2 * numVariableBlocks, numConstraintBlocks), elementSize, "reduceBuffer");
     returnFlag.initialize<int>(cc, 1, "returnFlag");
     returnValue.initialize(cc, 1, elementSize, "returnValue");
+    gradNorm.initialize(cc, 1, elementSize, "gradNorm");
     lineSearchDot.initialize(cc, 1, elementSize, "lineSearchDot");
 
     // Compile kernels and set arguments.
@@ -187,6 +188,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     restorePosKernel->addArg(cc.getPosq());
     restorePosKernel->addArg(cc.getAtomIndexArray());
     restorePosKernel->addArg(); // x (could also be launched with xInit)
+    restorePosKernel->addArg(returnValue);
     restorePosKernel->addArg(numParticles);
     if (cc.getUseMixedPrecision()) {
         restorePosKernel->addArg(cc.getPosqCorrection());
@@ -197,7 +199,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     convertForcesKernel->addArg(cc.getLongForceBuffer());
     convertForcesKernel->addArg(cc.getAtomIndexArray());
     convertForcesKernel->addArg(grad);
-    convertForcesKernel->addArg(returnFlag);
+    convertForcesKernel->addArg(returnValue);
     convertForcesKernel->addArg(lineSearchDot);
     convertForcesKernel->addArg(numParticles);
     convertForcesKernel->addArg(cc.getPaddedNumAtoms());
@@ -209,15 +211,10 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
         getConstraintEnergyForcesKernel->addArg(constraintIndices);
         getConstraintEnergyForcesKernel->addArg(constraintDistances);
         getConstraintEnergyForcesKernel->addArg(x);
-        getConstraintEnergyForcesKernel->addArg(reduceBuffer);
+        getConstraintEnergyForcesKernel->addArg(returnValue);
         getConstraintEnergyForcesKernel->addArg(cc.getPaddedNumAtoms());
         getConstraintEnergyForcesKernel->addArg(numConstraints);
         getConstraintEnergyForcesKernel->addArg(); // kRestraint
-
-        reduceConstraintEnergyKernel = program->createKernel("reduceConstraintEnergy");
-        reduceConstraintEnergyKernel->addArg(reduceBuffer);
-        reduceConstraintEnergyKernel->addArg(returnValue);
-        reduceConstraintEnergyKernel->addArg(numConstraintBlocks);
 
         getConstraintErrorKernel = program->createKernel("getConstraintError");
         getConstraintErrorKernel->addArg(constraintIndices);
@@ -230,7 +227,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     initializeDirKernel = program->createKernel("initializeDir");
     initializeDirKernel->addArg(grad);
     initializeDirKernel->addArg(dir);
-    initializeDirKernel->addArg(returnValue);
+    initializeDirKernel->addArg(gradNorm);
     initializeDirKernel->addArg(numVariables);
 
     gradNormPart1Kernel = program->createKernel("gradNormPart1");
@@ -241,7 +238,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     gradNormPart2Kernel = program->createKernel("gradNormPart2");
     gradNormPart2Kernel->addArg(grad);
     gradNormPart2Kernel->addArg(reduceBuffer);
-    gradNormPart2Kernel->addArg(returnValue);
+    gradNormPart2Kernel->addArg(gradNorm);
     gradNormPart2Kernel->addArg(numVariables);
     gradNormPart2Kernel->addArg(numVariableBlocks);
 
@@ -352,7 +349,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
     }
     gradNormPart1Kernel->execute(numVariables, threadBlockSize);
     gradNormPart2Kernel->execute(threadBlockSize, threadBlockSize);
-    if (downloadReturnValue() <= tolerance) {
+    if (downloadGradNorm() <= tolerance) {
         return;
     }
     initializeDirKernel->execute(numVariables);
@@ -370,12 +367,12 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
 
         // Check for convergence or exceeding the maximum number of steps.
 
-        if (reporter != NULL && report(context, iteration)) {
+        if ((reporter != NULL && report(context, iteration)) || (maxIterations && maxIterations < iteration + 1)) {
             return;
         }
         gradNormPart1Kernel->execute(numVariables, threadBlockSize);
         gradNormPart2Kernel->execute(threadBlockSize, threadBlockSize);
-        if (downloadReturnValue() <= tolerance || (maxIterations && maxIterations < iteration + 1)) {
+        if (downloadGradNorm() <= tolerance) {
             return;
         }
 
@@ -496,17 +493,15 @@ double CommonMinimizeKernel::evaluate(ContextImpl& context, bool& overflow) {
         else {
             getConstraintEnergyForcesKernel->setArg(8, (float) kRestraint);
         }
-        getConstraintEnergyForcesKernel->execute(numConstraints, threadBlockSize);
-        reduceConstraintEnergyKernel->execute(threadBlockSize, threadBlockSize);
-        hostEnergy += downloadReturnValue();
+        getConstraintEnergyForcesKernel->execute(numConstraints);
     }
 
     // Copy forces into the gradient buffer; if they are too large, we will
     // fall back to downloading positions and computing forces on the CPU.
 
-    cc.clearBuffer(returnFlag);
     convertForcesKernel->execute(numParticles);
-    if (downloadReturnFlag()) {
+    hostEnergy += downloadReturnValue();
+    if (!isfinite(hostEnergy)) {
         hostEnergy = evaluateCpu(context, overflow);
     }
     if (!isfinite(hostEnergy)) {
@@ -645,6 +640,19 @@ double CommonMinimizeKernel::downloadReturnValue() {
         float hostReturnValue;
         returnValue.download(&hostReturnValue);
         return (double) hostReturnValue;
+    }
+}
+
+double CommonMinimizeKernel::downloadGradNorm() {
+    if (mixedIsDouble) {
+        double hostGradNorm;
+        gradNorm.download(&hostGradNorm);
+        return hostGradNorm;
+    }
+    else {
+        float hostGradNorm;
+        gradNorm.download(&hostGradNorm);
+        return (double) hostGradNorm;
     }
 }
 

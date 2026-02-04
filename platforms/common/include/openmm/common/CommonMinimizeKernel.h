@@ -72,6 +72,7 @@ private:
     bool report(ContextImpl& context, int iteration);
     int downloadReturnFlag();
     double downloadReturnValue();
+    double downloadGradNorm();
     double downloadLineSearchDot();
 
     ComputeContext& cc;
@@ -99,13 +100,12 @@ private:
     ComputeArray constraintIndices, constraintDistances;
     ComputeArray xInit, x, xPrev, grad, gradPrev, dir;
     ComputeArray alpha, scale, xDiff, gradDiff;
-    ComputeArray reduceBuffer, returnFlag, returnValue, lineSearchDot;
+    ComputeArray reduceBuffer, returnFlag, returnValue, gradNorm, lineSearchDot;
 
     ComputeKernel recordInitialPosKernel;
     ComputeKernel restorePosKernel;
     ComputeKernel convertForcesKernel;
     ComputeKernel getConstraintEnergyForcesKernel;
-    ComputeKernel reduceConstraintEnergyKernel;
     ComputeKernel getConstraintErrorKernel;
     ComputeKernel initializeDirKernel;
     ComputeKernel gradNormPart1Kernel;
