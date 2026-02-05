@@ -70,9 +70,12 @@ private:
     double evaluateCpu(ContextImpl& context);
     bool report(ContextImpl& context, int iteration);
     void downloadReturnFlagStart();
+    void downloadReturnValueStart();
     int downloadReturnFlagFinish();
-    double downloadReturnValue();
-    double downloadGradNorm();
+    double downloadReturnValueFinish();
+    double downloadReturnValueSync();
+    double downloadGradNormSync();
+    void runLineSearchKernels();
 
     ComputeContext& cc;
 
@@ -86,7 +89,7 @@ private:
 
     bool isSetup, mixedIsDouble;
     int elementSize, threadBlockSize, numVariableBlocks, numConstraintBlocks;
-    int* pinnedReturnFlag;
+    void* pinnedMemory;
 
     int forceGroups;
     double constraintTol;
@@ -100,7 +103,7 @@ private:
     ComputeArray constraintIndices, constraintDistances;
     ComputeArray xInit, x, xPrev, grad, gradPrev, dir;
     ComputeArray alpha, scale, xDiff, gradDiff;
-    ComputeArray reduceBuffer, returnFlag, returnValue, gradNorm, lineSearchData;
+    ComputeArray reduceBuffer, returnFlag, returnValue, gradNorm, lineSearchData, lineSearchDataBackup;
 
     ComputeKernel recordInitialPosKernel;
     ComputeKernel restorePosKernel;

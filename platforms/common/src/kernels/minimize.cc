@@ -31,7 +31,7 @@
     #define TEMP_SIZE THREAD_BLOCK_SIZE
 #endif
 
-DEVICE void resetLineSearchData(GLOBAL volatile mixed* lineSearchData) {
+DEVICE void resetLineSearchData(GLOBAL mixed* RESTRICT lineSearchData) {
     if (GLOBAL_ID == 0) {
         lineSearchData[LS_DOT_START] = 0;
         lineSearchData[LS_STEP] = 1;
@@ -712,21 +712,12 @@ KERNEL void lineSearchStep(
     GLOBAL mixed* RESTRICT reduceBuffer,
     GLOBAL int* RESTRICT returnFlag,
     GLOBAL mixed* RESTRICT lineSearchData,
+    GLOBAL mixed* RESTRICT lineSearchDataBackup,
     const int numVariables
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
     if (*returnFlag == LS_FAIL) {
-        // The line search failed.  Put back the old coordinates and quit.
-
-        for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
-            x[i] = xPrev[i];
-        }
-
-        for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
-            grad[i] = gradPrev[i];
-        }
-
         return;
     }
 
@@ -765,7 +756,13 @@ KERNEL void lineSearchStep(
     }
 
     if (GLOBAL_ID == 0) {
-        lineSearchData[LS_DOT] = 0;
+        // Back up the line search data in case we need to restore it after
+        // reevaluating energy and forces on the CPU, and reset LS_DOT.
+
+        lineSearchDataBackup[LS_DOT_START] = lineSearchData[LS_DOT_START];
+        lineSearchDataBackup[LS_DOT] = lineSearchData[LS_DOT] = 0;
+        lineSearchDataBackup[LS_ENERGY] = lineSearchData[LS_ENERGY];
+        lineSearchDataBackup[LS_STEP] = lineSearchData[LS_STEP];
     }
 }
 
@@ -774,14 +771,20 @@ KERNEL void lineSearchDot(
     GLOBAL const mixed* RESTRICT dir,
     GLOBAL mixed* RESTRICT lineSearchData,
     GLOBAL int* RESTRICT returnFlag,
+    GLOBAL const mixed* RESTRICT returnValue,
     const int numVariables,
-    const mixed energy
+    mixed energy
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
     if (*returnFlag == LS_FAIL) {
         return;
     }
+
+    // Any restraint energy in returnValue hasn't been downloaded yet to be
+    // passed back up in the energy parameter, so add it in here.
+
+    energy += *returnValue;
 
     // The energy may be such that we don't need to do a dot product and can
     // immediately decide to scale the step, so mark this case with LS_SUCCEED.

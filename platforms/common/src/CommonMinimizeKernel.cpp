@@ -87,7 +87,7 @@ void CommonMinimizeKernel::execute(ContextImpl& context, double tolerance, int m
         threadBlockSize = cc.getMaxThreadBlockSize();
         numVariableBlocks = (numVariables + threadBlockSize - 1) / threadBlockSize;
         numConstraintBlocks = (numConstraints + threadBlockSize - 1) / threadBlockSize;
-        pinnedReturnFlag = (int*) cc.getPinnedBuffer();
+        pinnedMemory = cc.getPinnedBuffer();
 
         // Initialize all device-side arrays and compile kernels.
 
@@ -126,7 +126,7 @@ void CommonMinimizeKernel::execute(ContextImpl& context, double tolerance, int m
         }
 
         getConstraintErrorKernel->execute(threadBlockSize, threadBlockSize);
-        double maxError = downloadReturnValue();
+        double maxError = downloadReturnValueSync();
         if (maxError <= workingConstraintTol) {
             // All constraints are satisfied.
             break;
@@ -172,7 +172,8 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     returnFlag.initialize<int>(cc, 1, "returnFlag");
     returnValue.initialize(cc, 1, elementSize, "returnValue");
     gradNorm.initialize(cc, 1, elementSize, "gradNorm");
-    lineSearchData.initialize<int>(cc, 4, "lineSearchData");
+    lineSearchData.initialize(cc, 4, elementSize, "lineSearchData");
+    lineSearchDataBackup.initialize(cc, 4, elementSize, "lineSearchDataBackup");
 
     // Compile kernels and set arguments.
 
@@ -354,6 +355,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     lineSearchStepKernel->addArg(reduceBuffer);
     lineSearchStepKernel->addArg(returnFlag);
     lineSearchStepKernel->addArg(lineSearchData);
+    lineSearchStepKernel->addArg(lineSearchDataBackup);
     lineSearchStepKernel->addArg(numVariables);
 
     lineSearchDotKernel = program->createKernel("lineSearchDot");
@@ -361,6 +363,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     lineSearchDotKernel->addArg(dir);
     lineSearchDotKernel->addArg(lineSearchData);
     lineSearchDotKernel->addArg(returnFlag);
+    lineSearchDotKernel->addArg(returnValue);
     lineSearchDotKernel->addArg(numVariables);
     lineSearchDotKernel->addArg(); // energy
 
@@ -384,7 +387,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
     // Evaluate the energy and gradient at the starting point.
 
     evaluateGpu(context);
-    energy += downloadReturnValue();
+    energy += downloadReturnValueSync();
     if (!isfinite(energy)) {
         energy = evaluateCpu(context);
     }
@@ -396,7 +399,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
 
     gradNormPart1Kernel->execute(numVariables, threadBlockSize);
     gradNormPart2Kernel->execute(threadBlockSize, threadBlockSize);
-    if (downloadGradNorm() <= tolerance) {
+    if (downloadGradNormSync() <= tolerance) {
         return;
     }
 
@@ -423,28 +426,50 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
                     break; // Line search success
                 }
                 else if (hostReturnFlag == 0 || count >= maxLineSearchIterations) {
+                    xPrev.copyTo(x);
+                    gradPrev.copyTo(grad);
                     return; // Line search failure
                 }
             }
 
-            // Evaluate the energy and gradient at the new search point.
+            // Evaluate the energy and gradient at the new search point, then
+            // decide if and how to continue the line search.
 
             evaluateGpu(context);
-            energy += downloadReturnValue();
+            downloadReturnValueStart();
+            runLineSearchKernels();
+
+            energy += downloadReturnValueFinish();
             if (!isfinite(energy)) {
+                // Overflow on the GPU: try the CPU.
+
                 energy = evaluateCpu(context);
+
+                // We ran the line search kernels with an invalid gradient, so
+                // we need to reset the state to before they ran and retry.
+
+                lineSearchDataBackup.copyTo(lineSearchData);
+
+                int hostReturnFlag = 2; // Continue the line search
+                returnFlag.upload(&hostReturnFlag);
+
+                // lineSearchDot will try to read any restraint energy from
+                // returnValue, but it will be NaN from the failed GPU run, so
+                // reset it to 0 (since the restraint energy from the CPU run
+                // is included in the return value that will get uploaded).
+
+                if (mixedIsDouble) {
+                    double hostEnergy = 0;
+                    returnValue.upload(&hostEnergy);
+                }
+                else {
+                    float hostEnergy = 0;
+                    returnValue.upload(&hostEnergy);
+                }
+
+                runLineSearchKernels();
             }
 
-            // Decide if and how to continue the line search.
-
-            if (mixedIsDouble) {
-                lineSearchDotKernel->setArg(5, energy);
-            }
-            else {
-                lineSearchDotKernel->setArg(5, (float) energy);
-            }
-            lineSearchDotKernel->execute(numVariables);
-            lineSearchContinueKernel->execute(1);
 
             downloadReturnFlagStart();
         }
@@ -661,17 +686,36 @@ void CommonMinimizeKernel::downloadReturnFlagStart() {
     downloadStartEvent->enqueue();
     cc.setCurrentQueue(downloadQueue);
     downloadStartEvent->queueWait(downloadQueue);
-    returnFlag.download(pinnedReturnFlag, false);
+    returnFlag.download(pinnedMemory, false);
+    downloadFinishEvent->enqueue();
+    cc.restoreDefaultQueue();
+}
+
+void CommonMinimizeKernel::downloadReturnValueStart() {
+    downloadStartEvent->enqueue();
+    cc.setCurrentQueue(downloadQueue);
+    downloadStartEvent->queueWait(downloadQueue);
+    returnValue.download(pinnedMemory, false);
     downloadFinishEvent->enqueue();
     cc.restoreDefaultQueue();
 }
 
 int CommonMinimizeKernel::downloadReturnFlagFinish() {
     downloadFinishEvent->wait();
-    return *pinnedReturnFlag;
+    return *(int*) pinnedMemory;
 }
 
-double CommonMinimizeKernel::downloadReturnValue() {
+double CommonMinimizeKernel::downloadReturnValueFinish() {
+    downloadFinishEvent->wait();
+    if (mixedIsDouble) {
+        return *(double*) pinnedMemory;
+    }
+    else {
+        return (double) *(float*) pinnedMemory;
+    }
+}
+
+double CommonMinimizeKernel::downloadReturnValueSync() {
     if (mixedIsDouble) {
         double hostReturnValue;
         returnValue.download(&hostReturnValue);
@@ -684,7 +728,7 @@ double CommonMinimizeKernel::downloadReturnValue() {
     }
 }
 
-double CommonMinimizeKernel::downloadGradNorm() {
+double CommonMinimizeKernel::downloadGradNormSync() {
     if (mixedIsDouble) {
         double hostGradNorm;
         gradNorm.download(&hostGradNorm);
@@ -695,4 +739,15 @@ double CommonMinimizeKernel::downloadGradNorm() {
         gradNorm.download(&hostGradNorm);
         return (double) hostGradNorm;
     }
+}
+
+void CommonMinimizeKernel::runLineSearchKernels() {
+    if (mixedIsDouble) {
+        lineSearchDotKernel->setArg(6, energy);
+    }
+    else {
+        lineSearchDotKernel->setArg(6, (float) energy);
+    }
+    lineSearchDotKernel->execute(numVariables);
+    lineSearchContinueKernel->execute(1);
 }
