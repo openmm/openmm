@@ -116,7 +116,7 @@ void CommonMinimizeKernel::execute(ContextImpl& context, double tolerance, int m
 
     recordInitialPosKernel->execute(numParticles);
 
-    double prevMaxError = prevMaxErrorInit;
+    double prevMaxError1 = prevMaxErrorInit, prevMaxError2 = prevMaxErrorInit;
     while (true) {
         lbfgs(context);
 
@@ -133,11 +133,12 @@ void CommonMinimizeKernel::execute(ContextImpl& context, double tolerance, int m
         }
         restorePosKernel->setArg(2, xInit);
         restorePosKernel->execute(numParticles);
-        if (maxError >= prevMaxError) {
+        if (maxError >= prevMaxError2) {
             // Further tightening the springs doesn't seem to be helping, so just give up.
             break;
         }
-        prevMaxError = maxError;
+        prevMaxError2 = prevMaxError1;
+        prevMaxError1 = maxError;
         kRestraint *= kRestraintScaleUp;
         if (maxError > constraintTolScale * workingConstraintTol) {
             // We've gotten far enough from a valid state that we might have

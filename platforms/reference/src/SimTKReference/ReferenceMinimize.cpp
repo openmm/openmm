@@ -189,7 +189,7 @@ void ReferenceMinimize::minimize(ContextImpl& context, double tolerance, int max
 
         // Repeatedly minimize, steadily increasing the strength of the springs until all constraints are satisfied.
 
-        double prevMaxError = 1e10;
+        double prevMaxError1 = 1e10, prevMaxError2 = 1e10;
         MinimizerData data(context, k, reporter);
         while (true) {
             // Perform the minimization.
@@ -217,9 +217,10 @@ void ReferenceMinimize::minimize(ContextImpl& context, double tolerance, int max
             if (maxError <= workingConstraintTol)
                 break; // All constraints are satisfied.
             context.setPositions(initialPos);
-            if (maxError >= prevMaxError)
+            if (maxError >= prevMaxError2)
                 break; // Further tightening the springs doesn't seem to be helping, so just give up.
-            prevMaxError = maxError;
+            prevMaxError2 = prevMaxError1;
+            prevMaxError1 = maxError;
             data.k *= 10;
             if (maxError > 100*workingConstraintTol) {
                 // We've gotten far enough from a valid state that we might have trouble getting
