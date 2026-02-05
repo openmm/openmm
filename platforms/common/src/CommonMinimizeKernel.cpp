@@ -87,6 +87,7 @@ void CommonMinimizeKernel::execute(ContextImpl& context, double tolerance, int m
         threadBlockSize = cc.getMaxThreadBlockSize();
         numVariableBlocks = (numVariables + threadBlockSize - 1) / threadBlockSize;
         numConstraintBlocks = (numConstraints + threadBlockSize - 1) / threadBlockSize;
+        pinnedReturnFlag = (int*) cc.getPinnedBuffer();
 
         // Initialize all device-side arrays and compile kernels.
 
@@ -171,13 +172,19 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     returnFlag.initialize<int>(cc, 1, "returnFlag");
     returnValue.initialize(cc, 1, elementSize, "returnValue");
     gradNorm.initialize(cc, 1, elementSize, "gradNorm");
-    lineSearchDot.initialize(cc, 1, elementSize, "lineSearchDot");
+    lineSearchData.initialize<int>(cc, 4, "lineSearchData");
 
     // Compile kernels and set arguments.
 
     map<string, string> defines;
     defines["THREAD_BLOCK_SIZE"] = cc.intToString(threadBlockSize);
     defines["NUM_VECTORS"] = cc.intToString(numVectors);
+    defines["LBFGS_FTOL"] = cc.doubleToString(fTol);
+    defines["LBFGS_WOLFE"] = cc.doubleToString(wolfeParam);
+    defines["LBFGS_SCALE_DOWN"] = cc.doubleToString(stepScaleDown);
+    defines["LBFGS_SCALE_UP"] = cc.doubleToString(stepScaleUp);
+    defines["LBFGS_MIN_STEP"] = cc.doubleToString(minStep);
+    defines["LBFGS_MAX_STEP"] = cc.doubleToString(maxStep);
 
     ComputeProgram program = cc.compileProgram(CommonKernelSources::minimize, defines);
 
@@ -207,7 +214,6 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     convertForcesKernel->addArg(cc.getAtomIndexArray());
     convertForcesKernel->addArg(grad);
     convertForcesKernel->addArg(returnValue);
-    convertForcesKernel->addArg(lineSearchDot);
     convertForcesKernel->addArg(numParticles);
     convertForcesKernel->addArg(cc.getPaddedNumAtoms());
 
@@ -235,6 +241,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     initializeDirKernel->addArg(grad);
     initializeDirKernel->addArg(dir);
     initializeDirKernel->addArg(gradNorm);
+    initializeDirKernel->addArg(lineSearchData);
     initializeDirKernel->addArg(numVariables);
 
     gradNormPart1Kernel = program->createKernel("gradNormPart1");
@@ -322,6 +329,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     updateDirFinalKernel->addArg(alpha);
     updateDirFinalKernel->addArg(xDiff);
     updateDirFinalKernel->addArg(returnFlag);
+    updateDirFinalKernel->addArg(lineSearchData);
     updateDirFinalKernel->addArg(numVariables);
     updateDirFinalKernel->addArg(); // vectorIndex
     updateDirFinalKernel->addArg(); // vectorIndexAlpha
@@ -331,21 +339,34 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     lineSearchSetupKernel->addArg(xPrev);
     lineSearchSetupKernel->addArg(grad);
     lineSearchSetupKernel->addArg(gradPrev);
-    lineSearchSetupKernel->addArg(lineSearchDot);
+    lineSearchSetupKernel->addArg(dir);
+    lineSearchSetupKernel->addArg(returnFlag);
+    lineSearchSetupKernel->addArg(lineSearchData);
     lineSearchSetupKernel->addArg(numVariables);
+    lineSearchSetupKernel->addArg(); // energyStart
 
     lineSearchStepKernel = program->createKernel("lineSearchStep");
     lineSearchStepKernel->addArg(x);
     lineSearchStepKernel->addArg(xPrev);
+    lineSearchStepKernel->addArg(grad);
+    lineSearchStepKernel->addArg(gradPrev);
     lineSearchStepKernel->addArg(dir);
+    lineSearchStepKernel->addArg(reduceBuffer);
+    lineSearchStepKernel->addArg(returnFlag);
+    lineSearchStepKernel->addArg(lineSearchData);
     lineSearchStepKernel->addArg(numVariables);
-    lineSearchStepKernel->addArg(); // step
 
     lineSearchDotKernel = program->createKernel("lineSearchDot");
     lineSearchDotKernel->addArg(grad);
     lineSearchDotKernel->addArg(dir);
-    lineSearchDotKernel->addArg(lineSearchDot);
+    lineSearchDotKernel->addArg(lineSearchData);
+    lineSearchDotKernel->addArg(returnFlag);
     lineSearchDotKernel->addArg(numVariables);
+    lineSearchDotKernel->addArg(); // energy
+
+    lineSearchContinueKernel = program->createKernel("lineSearchContinue");
+    lineSearchContinueKernel->addArg(returnFlag);
+    lineSearchContinueKernel->addArg(lineSearchData);
 
     downloadStartEvent = cc.createEvent();
     downloadFinishEvent = cc.createEvent();
@@ -360,30 +381,72 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
 }
 
 void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
-    // Evaluate the gradient at the starting point and get a starting step size.
+    // Evaluate the energy and gradient at the starting point.
 
-    bool overflow;
-    energy = evaluate(context, overflow);
-    if (overflow) {
+    evaluateGpu(context);
+    energy += downloadReturnValue();
+    if (!isfinite(energy)) {
+        energy = evaluateCpu(context);
+    }
+    if (!isfinite(energy)) {
         throw OpenMMException("Energy or force at minimization starting point is infinite or NaN.");
     }
+
+    // Check to see if the starting point is already a minimum.
+
     gradNormPart1Kernel->execute(numVariables, threadBlockSize);
     gradNormPart2Kernel->execute(threadBlockSize, threadBlockSize);
     if (downloadGradNorm() <= tolerance) {
         return;
     }
+
     initializeDirKernel->execute(numVariables);
-
-    int* convergedPinned = (int*) cc.getPinnedBuffer();
     for (int iteration = 1, end = 0;;) {
-        // Try a line search (if it fails, revert to the position and gradient
-        // at the start of the search and abort the optimization).
+        // Prepare for a line search.
 
+        if (mixedIsDouble) {
+            lineSearchSetupKernel->setArg(8, energy);
+        }
+        else {
+            lineSearchSetupKernel->setArg(8, (float) energy);
+        }
         lineSearchSetupKernel->execute(numVariables);
-        if (!lineSearch(context)) {
-            xPrev.copyTo(x);
-            gradPrev.copyTo(grad);
-            return;
+
+        // Take line search steps.
+
+        for (int count = 0;; count++) {
+            lineSearchStepKernel->execute(numVariables, threadBlockSize);
+
+            if (count) {
+                int hostReturnFlag = downloadReturnFlagFinish();
+                if (hostReturnFlag == 1) {
+                    break; // Line search success
+                }
+                else if (hostReturnFlag == 0 || count >= maxLineSearchIterations) {
+                    return; // Line search failure
+                }
+            }
+
+            // Evaluate the energy and gradient at the new search point.
+
+            evaluateGpu(context);
+            energy += downloadReturnValue();
+            if (!isfinite(energy)) {
+                energy = evaluateCpu(context);
+            }
+
+            // Decide if and how to continue the line search.
+
+            if (mixedIsDouble) {
+                lineSearchDotKernel->setArg(5, energy);
+            }
+            else {
+                lineSearchDotKernel->setArg(5, (float) energy);
+            }
+            lineSearchDotKernel->execute(numVariables);
+            lineSearchContinueKernel->execute(1);
+
+            downloadReturnFlagStart();
         }
 
         // Check for convergence or exceeding the maximum number of steps.
@@ -391,20 +454,16 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
         if ((reporter != NULL && report(context, iteration)) || (maxIterations && maxIterations < iteration + 1)) {
             return;
         }
-        gradNormPart1Kernel->execute(numVariables, threadBlockSize);
+
+        // Do L-BFGS update of search direction.  Note that the equivalent of
+        // gradNormPart1Kernel has already been executed in lineSearchStepKernel
+        // if it was detected that the line search succeeded.
+
         gradNormPart2Kernel->execute(threadBlockSize, threadBlockSize);
-
-        // Do L-BFGS update of search direction.
-
         getDiffKernel->setArg(12, end);
         getDiffKernel->execute(numVariables, threadBlockSize);
 
-        downloadStartEvent->enqueue();
-        cc.setCurrentQueue(downloadQueue);
-        downloadStartEvent->queueWait(downloadQueue);
-        returnFlag.download(convergedPinned, false);
-        downloadFinishEvent->enqueue();
-        cc.restoreDefaultQueue();
+        downloadReturnFlagStart();
 
         getScaleKernel->setArg(9, end);
         getScaleKernel->execute(threadBlockSize, threadBlockSize);
@@ -433,9 +492,10 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
         scaleDirKernel->execute(numVariables);
 
         for (int vector = 0; vector < limit - 1; vector++) {
-            updateDirBetaKernel->setArg(7, vectorIndex);
             // scaleDirKernel puts its first result in alpha[numVectors], so for the
             // first vector, load the result from here instead of alpha[vectorIndex]
+
+            updateDirBetaKernel->setArg(7, vectorIndex);
             updateDirBetaKernel->setArg(8, vector ? vectorIndex : numVectors);
             updateDirBetaKernel->execute(numVariables);
 
@@ -444,79 +504,30 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
             }
         }
 
-        updateDirFinalKernel->setArg(5, vectorIndex);
         // If this is the first iteration, limit is 1, we did not go through the loop above,
         // and we need to read the output of scaleDirKernel directly from alpha[numVectors]
-        updateDirFinalKernel->setArg(6, limit > 1 ? vectorIndex : numVectors);
+
+        updateDirFinalKernel->setArg(6, vectorIndex);
+        updateDirFinalKernel->setArg(7, limit > 1 ? vectorIndex : numVectors);
         updateDirFinalKernel->execute(numVariables);
 
-        downloadFinishEvent->wait();
-        if (*convergedPinned) {
+        if (downloadReturnFlagFinish()) {
             return;
         }
     }
 }
 
-bool CommonMinimizeKernel::lineSearch(ContextImpl& context) {
-    // Check state at starting point for line search.
+void CommonMinimizeKernel::evaluateGpu(ContextImpl& context) {
+    // Put the current positions in posq and compute virtual site positions.
 
-    lineSearchDotKernel->execute(numVariables);
-    double dotStart = downloadLineSearchDot();
-    if (dotStart > 0) {
-        return false;
-    }
-    double energyStart = energy;
-    double step = 1.0;
-    double stepScale;
-
-    // Take line search steps.
-
-    for (int count = 0;;) {
-        if (mixedIsDouble) {
-            lineSearchStepKernel->setArg(4, step);
-        }
-        else {
-            lineSearchStepKernel->setArg(4, (float) step);
-        }
-        lineSearchStepKernel->execute(numVariables);
-        bool overflow;
-        energy = evaluate(context, overflow);
-        count++;
-
-        if (overflow || energy > energyStart + step * fTol * dotStart) {
-            stepScale = stepScaleDown;
-        }
-        else {
-            lineSearchDotKernel->execute(numVariables);
-            double dot = downloadLineSearchDot();
-            if (dot < wolfeParam * dotStart) {
-                stepScale = stepScaleUp;
-            }
-            else if (dot > -wolfeParam * dotStart) {
-                stepScale = stepScaleDown;
-            }
-            else {
-                // Strong Wolfe condition satisfied.
-
-                return true;
-            }
-        }
-
-        if (step < minStep || step > maxStep || count >= maxLineSearchIterations) {
-            return false;
-        }
-
-        step *= stepScale;
-    }
-}
-
-double CommonMinimizeKernel::evaluate(ContextImpl& context, bool& overflow) {
-    overflow = false;
     restorePosKernel->setArg(2, x);
     restorePosKernel->execute(numParticles);
     context.computeVirtualSites();
-    double hostEnergy = context.calcForcesAndEnergy(true, true, forceGroups);
 
+    // Evaluate the forces and energy for the desired interactions as well as
+    // harmonic restraints to emulate the constraints.
+
+    energy = context.calcForcesAndEnergy(true, true, forceGroups);
     if (numConstraints) {
         if (mixedIsDouble) {
             getConstraintEnergyForcesKernel->setArg(8, kRestraint);
@@ -527,21 +538,14 @@ double CommonMinimizeKernel::evaluate(ContextImpl& context, bool& overflow) {
         getConstraintEnergyForcesKernel->execute(numConstraints);
     }
 
-    // Copy forces into the gradient buffer; if they are too large, we will
-    // fall back to downloading positions and computing forces on the CPU.
+    // Convert the forces from fixed to floating point format.  If they are too
+    // large, the energy in returnValue will be set to NaN to signal that the
+    // results are invalid and we must fall back to computing forces on the CPU.
 
     convertForcesKernel->execute(numParticles);
-    hostEnergy += downloadReturnValue();
-    if (!isfinite(hostEnergy)) {
-        hostEnergy = evaluateCpu(context, overflow);
-    }
-    if (!isfinite(hostEnergy)) {
-        overflow = true;
-    }
-    return hostEnergy;
 }
 
-double CommonMinimizeKernel::evaluateCpu(ContextImpl& context, bool& overflow) {
+double CommonMinimizeKernel::evaluateCpu(ContextImpl& context) {
     // Create a CPU context if one has not already been created.
 
     const System& system = context.getSystem();
@@ -611,16 +615,14 @@ double CommonMinimizeKernel::evaluateCpu(ContextImpl& context, bool& overflow) {
     if (mixedIsDouble) {
         for (int i = 0; i < numVariables; i++) {
             if (!isfinite(hostGrad[i])) {
-                overflow = true;
-                return hostEnergy;
+                return NAN;
             }
         }
     }
     else {
         for (int i = 0; i < numVariables; i++) {
             if (!isfinite((float) hostGrad[i])) {
-                overflow = true;
-                return hostEnergy;
+                return NAN;
             }
         }
     }
@@ -655,10 +657,18 @@ bool CommonMinimizeKernel::report(ContextImpl& context, int iteration) {
     return reporter->report(iteration - 1, hostX, hostGrad, args);
 }
 
-int CommonMinimizeKernel::downloadReturnFlag() {
-    int hostReturnFlag;
-    returnFlag.download(&hostReturnFlag);
-    return hostReturnFlag;
+void CommonMinimizeKernel::downloadReturnFlagStart() {
+    downloadStartEvent->enqueue();
+    cc.setCurrentQueue(downloadQueue);
+    downloadStartEvent->queueWait(downloadQueue);
+    returnFlag.download(pinnedReturnFlag, false);
+    downloadFinishEvent->enqueue();
+    cc.restoreDefaultQueue();
+}
+
+int CommonMinimizeKernel::downloadReturnFlagFinish() {
+    downloadFinishEvent->wait();
+    return *pinnedReturnFlag;
 }
 
 double CommonMinimizeKernel::downloadReturnValue() {
@@ -684,18 +694,5 @@ double CommonMinimizeKernel::downloadGradNorm() {
         float hostGradNorm;
         gradNorm.download(&hostGradNorm);
         return (double) hostGradNorm;
-    }
-}
-
-double CommonMinimizeKernel::downloadLineSearchDot() {
-    if (mixedIsDouble) {
-        double hostLineSearchDot;
-        lineSearchDot.download(&hostLineSearchDot);
-        return hostLineSearchDot;
-    }
-    else {
-        float hostLineSearchDot;
-        lineSearchDot.download(&hostLineSearchDot);
-        return (double) hostLineSearchDot;
     }
 }

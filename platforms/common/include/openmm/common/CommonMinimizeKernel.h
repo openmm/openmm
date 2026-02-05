@@ -66,14 +66,13 @@ private:
 
     void setup(ContextImpl& context);
     void lbfgs(ContextImpl& context);
-    bool lineSearch(ContextImpl& context);
-    double evaluate(ContextImpl& context, bool& overflow);
-    double evaluateCpu(ContextImpl& context, bool& overflow);
+    void evaluateGpu(ContextImpl& context);
+    double evaluateCpu(ContextImpl& context);
     bool report(ContextImpl& context, int iteration);
-    int downloadReturnFlag();
+    void downloadReturnFlagStart();
+    int downloadReturnFlagFinish();
     double downloadReturnValue();
     double downloadGradNorm();
-    double downloadLineSearchDot();
 
     ComputeContext& cc;
 
@@ -87,6 +86,7 @@ private:
 
     bool isSetup, mixedIsDouble;
     int elementSize, threadBlockSize, numVariableBlocks, numConstraintBlocks;
+    int* pinnedReturnFlag;
 
     int forceGroups;
     double constraintTol;
@@ -100,7 +100,7 @@ private:
     ComputeArray constraintIndices, constraintDistances;
     ComputeArray xInit, x, xPrev, grad, gradPrev, dir;
     ComputeArray alpha, scale, xDiff, gradDiff;
-    ComputeArray reduceBuffer, returnFlag, returnValue, gradNorm, lineSearchDot;
+    ComputeArray reduceBuffer, returnFlag, returnValue, gradNorm, lineSearchData;
 
     ComputeKernel recordInitialPosKernel;
     ComputeKernel restorePosKernel;
@@ -120,6 +120,7 @@ private:
     ComputeKernel lineSearchSetupKernel;
     ComputeKernel lineSearchStepKernel;
     ComputeKernel lineSearchDotKernel;
+    ComputeKernel lineSearchContinueKernel;
 
     ComputeEvent downloadStartEvent;
     ComputeEvent downloadFinishEvent;
