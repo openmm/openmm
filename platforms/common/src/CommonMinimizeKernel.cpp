@@ -102,6 +102,13 @@ void CommonMinimizeKernel::execute(ContextImpl& context, double tolerance, int m
     this->maxIterations = maxIterations;
     this->reporter = reporter;
 
+    if (mixedIsDouble) {
+        getDiffKernel->setArg(11, this->tolerance);
+    }
+    else {
+        getDiffKernel->setArg(11, (float) this->tolerance);
+    }
+
     double workingConstraintTol = max(minConstraintTol, constraintTol);
     kRestraint = kRestraintScale / workingConstraintTol;
     context.applyConstraints(workingConstraintTol);
@@ -250,8 +257,11 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     getDiffKernel->addArg(xDiff);
     getDiffKernel->addArg(gradDiff);
     getDiffKernel->addArg(reduceBuffer);
+    getDiffKernel->addArg(returnFlag);
+    getDiffKernel->addArg(gradNorm);
     getDiffKernel->addArg(numVariables);
     getDiffKernel->addArg(numVariableBlocks);
+    getDiffKernel->addArg(); // tolerance
     getDiffKernel->addArg(); // end
 
     getScaleKernel = program->createKernel("getScale");
@@ -260,6 +270,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     getScaleKernel->addArg(xDiff);
     getScaleKernel->addArg(gradDiff);
     getScaleKernel->addArg(reduceBuffer);
+    getScaleKernel->addArg(returnFlag);
     getScaleKernel->addArg(returnValue);
     getScaleKernel->addArg(numVariables);
     getScaleKernel->addArg(numVariableBlocks);
@@ -271,6 +282,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     reinitializeDirKernel->addArg(alpha);
     reinitializeDirKernel->addArg(scale);
     reinitializeDirKernel->addArg(xDiff);
+    reinitializeDirKernel->addArg(returnFlag);
     reinitializeDirKernel->addArg(numVariables);
     reinitializeDirKernel->addArg(); // vectorIndex
 
@@ -280,6 +292,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     updateDirAlphaKernel->addArg(scale);
     updateDirAlphaKernel->addArg(xDiff);
     updateDirAlphaKernel->addArg(gradDiff);
+    updateDirAlphaKernel->addArg(returnFlag);
     updateDirAlphaKernel->addArg(numVariables);
     updateDirAlphaKernel->addArg(); // vectorIndex
 
@@ -288,6 +301,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     scaleDirKernel->addArg(alpha);
     scaleDirKernel->addArg(scale);
     scaleDirKernel->addArg(gradDiff);
+    scaleDirKernel->addArg(returnFlag);
     scaleDirKernel->addArg(returnValue);
     scaleDirKernel->addArg(numVariables);
     scaleDirKernel->addArg(); // vectorIndex
@@ -298,6 +312,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     updateDirBetaKernel->addArg(scale);
     updateDirBetaKernel->addArg(xDiff);
     updateDirBetaKernel->addArg(gradDiff);
+    updateDirBetaKernel->addArg(returnFlag);
     updateDirBetaKernel->addArg(numVariables);
     updateDirBetaKernel->addArg(); // vectorIndex
     updateDirBetaKernel->addArg(); // vectorIndexAlpha
@@ -306,6 +321,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     updateDirFinalKernel->addArg(dir);
     updateDirFinalKernel->addArg(alpha);
     updateDirFinalKernel->addArg(xDiff);
+    updateDirFinalKernel->addArg(returnFlag);
     updateDirFinalKernel->addArg(numVariables);
     updateDirFinalKernel->addArg(); // vectorIndex
     updateDirFinalKernel->addArg(); // vectorIndexAlpha
@@ -331,6 +347,10 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     lineSearchDotKernel->addArg(lineSearchDot);
     lineSearchDotKernel->addArg(numVariables);
 
+    downloadStartEvent = cc.createEvent();
+    downloadFinishEvent = cc.createEvent();
+    downloadQueue = cc.createQueue();
+
     // Upload constraint data.
 
     if (numConstraints) {
@@ -354,6 +374,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
     }
     initializeDirKernel->execute(numVariables);
 
+    int* convergedPinned = (int*) cc.getPinnedBuffer();
     for (int iteration = 1, end = 0;;) {
         // Try a line search (if it fails, revert to the position and gradient
         // at the start of the search and abort the optimization).
@@ -372,15 +393,20 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
         }
         gradNormPart1Kernel->execute(numVariables, threadBlockSize);
         gradNormPart2Kernel->execute(threadBlockSize, threadBlockSize);
-        if (downloadGradNorm() <= tolerance) {
-            return;
-        }
 
         // Do L-BFGS update of search direction.
 
-        getDiffKernel->setArg(9, end);
+        getDiffKernel->setArg(12, end);
         getDiffKernel->execute(numVariables, threadBlockSize);
-        getScaleKernel->setArg(8, end);
+
+        downloadStartEvent->enqueue();
+        cc.setCurrentQueue(downloadQueue);
+        downloadStartEvent->queueWait(downloadQueue);
+        returnFlag.download(convergedPinned, false);
+        downloadFinishEvent->enqueue();
+        cc.restoreDefaultQueue();
+
+        getScaleKernel->setArg(9, end);
         getScaleKernel->execute(threadBlockSize, threadBlockSize);
 
         int limit = min(numVectors, iteration++);
@@ -389,7 +415,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
         }
 
         int vectorIndex = (end ? end : numVectors) - 1;
-        reinitializeDirKernel->setArg(6, vectorIndex);
+        reinitializeDirKernel->setArg(7, vectorIndex);
         reinitializeDirKernel->execute(numVariables);
 
         for (int vector = 0; vector < limit; vector++) {
@@ -398,19 +424,19 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
             }
 
             if (vector < limit - 1) {
-                updateDirAlphaKernel->setArg(6, vectorIndex);
+                updateDirAlphaKernel->setArg(7, vectorIndex);
                 updateDirAlphaKernel->execute(numVariables);
             }
         }
 
-        scaleDirKernel->setArg(6, vectorIndex);
+        scaleDirKernel->setArg(7, vectorIndex);
         scaleDirKernel->execute(numVariables);
 
         for (int vector = 0; vector < limit - 1; vector++) {
-            updateDirBetaKernel->setArg(6, vectorIndex);
+            updateDirBetaKernel->setArg(7, vectorIndex);
             // scaleDirKernel puts its first result in alpha[numVectors], so for the
             // first vector, load the result from here instead of alpha[vectorIndex]
-            updateDirBetaKernel->setArg(7, vector ? vectorIndex : numVectors);
+            updateDirBetaKernel->setArg(8, vector ? vectorIndex : numVectors);
             updateDirBetaKernel->execute(numVariables);
 
             if (++vectorIndex >= numVectors) {
@@ -418,11 +444,16 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
             }
         }
 
-        updateDirFinalKernel->setArg(4, vectorIndex);
+        updateDirFinalKernel->setArg(5, vectorIndex);
         // If this is the first iteration, limit is 1, we did not go through the loop above,
         // and we need to read the output of scaleDirKernel directly from alpha[numVectors]
-        updateDirFinalKernel->setArg(5, limit > 1 ? vectorIndex : numVectors);
+        updateDirFinalKernel->setArg(6, limit > 1 ? vectorIndex : numVectors);
         updateDirFinalKernel->execute(numVariables);
+
+        downloadFinishEvent->wait();
+        if (*convergedPinned) {
+            return;
+        }
     }
 }
 

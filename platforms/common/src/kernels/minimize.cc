@@ -375,11 +375,26 @@ KERNEL void getDiff(
     GLOBAL mixed* RESTRICT xDiff,
     GLOBAL mixed* RESTRICT gradDiff,
     GLOBAL mixed* RESTRICT reduceBuffer,
+    GLOBAL int* RESTRICT returnFlag,
+    GLOBAL mixed* RESTRICT gradNorm,
     const int numVariables,
     const int numVariableBlocks,
+    const mixed tolerance,
     const int end
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
+
+    if (*gradNorm <= tolerance) {
+        if (GLOBAL_ID == 0) {
+            *returnFlag = 1;
+        }
+        return;
+    }
+    else {
+        if (GLOBAL_ID == 0) {
+            *returnFlag = 0;
+        }
+    }
 
     const int endOffset = numVariables * end;
 
@@ -406,6 +421,7 @@ KERNEL void getScale(
     GLOBAL const mixed* RESTRICT xDiff,
     GLOBAL const mixed* RESTRICT gradDiff,
     GLOBAL const mixed* RESTRICT reduceBuffer,
+    GLOBAL const int* RESTRICT returnFlag,
     GLOBAL mixed* RESTRICT returnValue,
     const int numVariables,
     const int numVariableBlocks,
@@ -414,6 +430,10 @@ KERNEL void getScale(
     // This kernel is expected to be executed in a single thread block.
 
     LOCAL volatile mixed temp[TEMP_SIZE];
+
+    if (*returnFlag) {
+        return;
+    }
 
     const int endOffset = numVariables * end;
 
@@ -471,10 +491,15 @@ KERNEL void reinitializeDir(
     GLOBAL mixed* RESTRICT alpha,
     GLOBAL mixed* RESTRICT scale,
     GLOBAL const mixed* RESTRICT xDiff,
+    GLOBAL const int* RESTRICT returnFlag,
     const int numVariables,
     const int vectorIndex
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
+
+    if (*returnFlag) {
+        return;
+    }
 
     const int indexOffset = numVariables * vectorIndex;
 
@@ -496,10 +521,15 @@ KERNEL void updateDirAlpha(
     GLOBAL const mixed* RESTRICT scale,
     GLOBAL const mixed* RESTRICT xDiff,
     GLOBAL const mixed* RESTRICT gradDiff,
+    GLOBAL const int* RESTRICT returnFlag,
     const int numVariables,
     const int vectorIndex1
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
+
+    if (*returnFlag) {
+        return;
+    }
 
     const int vectorIndex2 = (vectorIndex1 ? vectorIndex1 : NUM_VECTORS) - 1;
     const int indexOffset1 = numVariables * vectorIndex1;
@@ -523,11 +553,16 @@ KERNEL void scaleDir(
     GLOBAL mixed* RESTRICT alpha,
     GLOBAL mixed* RESTRICT scale,
     GLOBAL const mixed* RESTRICT gradDiff,
+    GLOBAL const int* RESTRICT returnFlag,
     GLOBAL const mixed* RESTRICT returnValue,
     const int numVariables,
     const int vectorIndex
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
+
+    if (*returnFlag) {
+        return;
+    }
 
     const int indexOffset = numVariables * vectorIndex;
     const mixed innerScale = alpha[vectorIndex];
@@ -553,11 +588,16 @@ KERNEL void updateDirBeta(
     GLOBAL const mixed* RESTRICT scale,
     GLOBAL const mixed* RESTRICT xDiff,
     GLOBAL const mixed* RESTRICT gradDiff,
+    GLOBAL const int* RESTRICT returnFlag,
     const int numVariables,
     const int vectorIndex1,
     const int vectorIndexAlpha
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
+
+    if (*returnFlag) {
+        return;
+    }
 
     const int vectorIndex2 = vectorIndex1 == NUM_VECTORS - 1 ? 0 : vectorIndex1 + 1;
     const int indexOffset1 = numVariables * vectorIndex1;
@@ -580,11 +620,16 @@ KERNEL void updateDirFinal(
     GLOBAL mixed* dir,
     GLOBAL const mixed* RESTRICT alpha,
     GLOBAL const mixed* RESTRICT xDiff,
+    GLOBAL const int* RESTRICT returnFlag,
     const int numVariables,
     const int vectorIndex,
     const int vectorIndexAlpha
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
+
+    if (*returnFlag) {
+        return;
+    }
 
     const int indexOffset = numVariables * vectorIndex;
     const mixed vectorScale = alpha[vectorIndexAlpha];

@@ -121,6 +121,10 @@ private:
     ComputeKernel lineSearchStepKernel;
     ComputeKernel lineSearchDotKernel;
 
+    ComputeEvent downloadStartEvent;
+    ComputeEvent downloadFinishEvent;
+    ComputeQueue downloadQueue;
+
     Context* cpuContext;
     VerletIntegrator cpuIntegrator;
 };
