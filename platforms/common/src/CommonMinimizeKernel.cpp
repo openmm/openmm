@@ -83,6 +83,9 @@ void CommonMinimizeKernel::execute(ContextImpl& context, double tolerance, int m
         // Load system and integrator information.
 
         mixedIsDouble = cc.getUseMixedPrecision() || cc.getUseDoublePrecision();
+        if (mixedIsDouble && !cc.getSupports64BitGlobalAtomics()) {
+            throw OpenMMException("Double precision is not supported on devices that do not support 64 bit atomic operations");
+        }
         elementSize = mixedIsDouble ? sizeof(double) : sizeof(float);
         threadBlockSize = cc.getMaxThreadBlockSize();
         numVariableBlocks = (numVariables + threadBlockSize - 1) / threadBlockSize;
@@ -389,7 +392,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
 
     evaluateGpu(context);
     energy += downloadReturnValueSync();
-    if (!isfinite(energy)) {
+    if (!isfinite(energy) || energy >= std::numeric_limits<float>::max()) {
         energy = evaluateCpu(context);
     }
     if (!isfinite(energy)) {
@@ -441,7 +444,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
             runLineSearchKernels();
 
             energy += downloadReturnValueFinish();
-            if (!isfinite(energy)) {
+            if (!isfinite(energy) || energy >= std::numeric_limits<float>::max()) {
                 // Overflow on the GPU: try the CPU.
 
                 energy = evaluateCpu(context);
@@ -455,18 +458,11 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
                 returnFlag.upload(&hostReturnFlag);
 
                 // lineSearchDot will try to read any restraint energy from
-                // returnValue, but it will be NaN from the failed GPU run, so
-                // reset it to 0 (since the restraint energy from the CPU run
+                // returnValue, but it will be FLT_MAX from the failed GPU run,
+                // so reset it to 0 (since the restraint energy from the CPU run
                 // is included in the return value that will get uploaded).
 
-                if (mixedIsDouble) {
-                    double hostEnergy = 0;
-                    returnValue.upload(&hostEnergy);
-                }
-                else {
-                    float hostEnergy = 0;
-                    returnValue.upload(&hostEnergy);
-                }
+                cc.clearBuffer(returnValue);
 
                 runLineSearchKernels();
             }

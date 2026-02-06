@@ -126,21 +126,37 @@ DEVICE mixed reduceMax(mixed value, LOCAL_ARG volatile mixed* temp) {
 
 DEVICE void atomicAddMixed(GLOBAL mixed* RESTRICT target, const mixed value) {
 #if defined(__CUDA_ARCH__) || defined(USE_HIP)
+
+    // Do atomic addition of floating-point values directly
     atomicAdd(target, value);
-#elif defined(USE_MIXED_PRECISION) || defined(USE_DOUBLE_PRECISION)
+
+#elif defined(__OPENCL_VERSION__)
+    #if defined(USE_MIXED_PRECISION) || defined(USE_DOUBLE_PRECISION)
+
+    // Do 64-bit atomic compare/exchange (requires cl_khr_int64_base_atomics;
+    // this will be checked on the host before trying to compile this kernel)
+
     unsigned long old = as_ulong(*target);
     unsigned long check;
     do {
         check = old;
         old = atom_cmpxchg((GLOBAL unsigned long*)target, check, as_ulong(value + as_double(check)));
     } while(check != old);
-#else
+
+    #else
+
+    // Do 32-bit atomic compare/exchange
+
     unsigned int old = as_uint(*target);
     unsigned int check;
     do {
         check = old;
         old = atomic_cmpxchg((GLOBAL unsigned int*)target, check, as_uint(value + as_float(check)));
     } while(check != old);
+
+    #endif
+#else
+    #error "Internal error: atomicAddMixed is missing an implementation for this platform"
 #endif
 }
 
@@ -209,7 +225,6 @@ KERNEL void convertForces(
 ) {
     const mm_long limit = 0x4000000000000000;
     const mixed scale = -1 / (mixed) 0x100000000;
-    const mixed nanValue = NAN;
 
     for (int i = GLOBAL_ID; i < numParticles; i += GLOBAL_SIZE) {
         int offset = 3 * order[i];
@@ -223,7 +238,7 @@ KERNEL void convertForces(
             mm_long fy = forceBuffer[i + numPadded];
             mm_long fz = forceBuffer[i + 2 * numPadded];
             if (fx < -limit || fx > limit || fy < -limit || fy > limit || fz < -limit || fz > limit) {
-                *returnValue = nanValue;
+                *returnValue = FLT_MAX;
             }
             grad[offset] = scale * fx;
             grad[offset + 1] = scale * fy;
@@ -469,6 +484,7 @@ KERNEL void getScale(
 
     // Clear all values of alpha (plus the extra slot at alpha[NUM_VECTORS])
     // to prepare them for use in reductions by subsequent kernels.
+
     for (int i = LOCAL_ID; i <= NUM_VECTORS; i += LOCAL_SIZE) {
         alpha[i] = 0;
     }
@@ -790,7 +806,7 @@ KERNEL void lineSearchDot(
     // immediately decide to scale the step, so mark this case with LS_SUCCEED.
     // This will be checked in the following kernel.
 
-    if (!isfinite(energy) || energy > lineSearchData[LS_ENERGY] + lineSearchData[LS_STEP] * LBFGS_FTOL * lineSearchData[LS_DOT_START]) {
+    if (!isfinite(energy) || energy >= FLT_MAX || energy > lineSearchData[LS_ENERGY] + lineSearchData[LS_STEP] * LBFGS_FTOL * lineSearchData[LS_DOT_START]) {
         if (GLOBAL_ID == 0) {
             *returnFlag = LS_SUCCEED;
         }

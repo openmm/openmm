@@ -19,7 +19,7 @@
 #define SYNC_WARPS {__builtin_amdgcn_wave_barrier(); __builtin_amdgcn_fence(__ATOMIC_ACQ_REL, "wavefront");}
 #define MEM_FENCE __threadfence_block();
 #define ATOMIC_ADD(dest, value) atomicAdd(dest, value)
-#define NAN nanf("")
+#define FLT_MAX 0x1.fffffep127f
 
 typedef long long mm_long;
 typedef unsigned long long mm_ulong;
