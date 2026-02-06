@@ -336,50 +336,15 @@ KERNEL void initializeDir(
     resetLineSearchData(lineSearchData);
 }
 
-KERNEL void gradNormPart1(
+KERNEL void gradNorm(
     GLOBAL const mixed* RESTRICT grad,
-    GLOBAL mixed* RESTRICT reduceBuffer,
+    GLOBAL mixed* RESTRICT gradNorm,
     const int numVariables
 ) {
-    LOCAL volatile mixed temp[TEMP_SIZE];
-
-    mixed norm = 0;
-    for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
-        norm += grad[i] * grad[i];
-    }
-    norm = reduceAdd(norm, temp);
-
-    if (LOCAL_ID == 0) {
-        reduceBuffer[GROUP_ID] = norm;
-    }
-}
-
-
-KERNEL void gradNormPart2(
-    GLOBAL const mixed* RESTRICT grad,
-    GLOBAL const mixed* RESTRICT reduceBuffer,
-    GLOBAL mixed* RESTRICT gradNorm,
-    const int numVariables,
-    const int numVariableBlocks
-) {
     // This kernel is expected to be executed in a single thread block.
+    // This is a slow path for when the gradient could overflow.
 
     LOCAL volatile mixed temp[TEMP_SIZE];
-
-    mixed norm = 0;
-    for (int i = LOCAL_ID; i < numVariableBlocks; i += LOCAL_SIZE) {
-        norm += reduceBuffer[i];
-    }
-    norm = reduceAdd(norm, temp);
-
-    if (isfinite(norm)) {
-        if (LOCAL_ID == 0) {
-            gradNorm[0] = SQRT_MIXED(norm);
-        }
-        return;
-    }
-
-    // The square norm overflowed, so take a slow fallback path.
 
     mixed gradScale = 1;
     for (int i = LOCAL_ID; i < numVariables; i += LOCAL_SIZE) {
@@ -413,23 +378,30 @@ KERNEL void getDiff(
     const int numVariables,
     const int numVariableBlocks,
     const mixed tolerance,
-    const int end
+    const int end,
+    const int largeGrad
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
     // If the convergence condition is satisfied, update returnFlag.  After this
     // kernel has run, it is safe to start downloading returnFlag.
 
-    if (*gradNorm <= tolerance) {
-        if (GLOBAL_ID == 0) {
-            *returnFlag = 1;
-        }
-        return;
+    bool converged;
+    if (largeGrad) {
+        // The slow path for overflow was run: gradNorm is the norm.
+        converged = (*gradNorm <= tolerance);
     }
     else {
-        if (GLOBAL_ID == 0) {
-            *returnFlag = 0;
-        }
+        // The fast path using atomics was run: gradNorm is the square norm.
+        converged = (*gradNorm <= tolerance * tolerance);
+    }
+
+    if (GLOBAL_ID == 0) {
+        *returnFlag = (int) converged;
+    }
+
+    if (converged) {
+        return;
     }
 
     const int endOffset = numVariables * end;
@@ -689,6 +661,7 @@ KERNEL void lineSearchSetup(
     GLOBAL mixed* RESTRICT gradPrev,
     GLOBAL const mixed* RESTRICT dir,
     GLOBAL int* RESTRICT returnFlag,
+    GLOBAL mixed* RESTRICT gradNorm,
     GLOBAL mixed* RESTRICT lineSearchData,
     const int numVariables,
     const mixed energyStart
@@ -715,6 +688,7 @@ KERNEL void lineSearchSetup(
 
     if (GLOBAL_ID == 0) {
         *returnFlag = LS_CONTINUE;
+        gradNorm[0] = 0;
         lineSearchData[LS_ENERGY] = energyStart;
     }
 }
@@ -725,8 +699,8 @@ KERNEL void lineSearchStep(
     GLOBAL mixed* RESTRICT grad,
     GLOBAL const mixed* RESTRICT gradPrev,
     GLOBAL const mixed* RESTRICT dir,
-    GLOBAL mixed* RESTRICT reduceBuffer,
     GLOBAL int* RESTRICT returnFlag,
+    GLOBAL mixed* RESTRICT gradNorm,
     GLOBAL mixed* RESTRICT lineSearchData,
     GLOBAL mixed* RESTRICT lineSearchDataBackup,
     const int numVariables
@@ -739,7 +713,9 @@ KERNEL void lineSearchStep(
 
     if (*returnFlag == LS_SUCCEED) {
         // The strong Wolfe condition was satisfied on the last iteration.
-        // Instead of taking another step, start evaluating the gradient.
+        // Instead of taking another step, start evaluating the gradient.  If
+        // we evaluated on the CPU, it might overflow, but we will throw out
+        // this result and recompute it in that case.
 
         mixed norm = 0;
         for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
@@ -748,7 +724,7 @@ KERNEL void lineSearchStep(
         norm = reduceAdd(norm, temp);
 
         if (LOCAL_ID == 0) {
-            reduceBuffer[GROUP_ID] = norm;
+            atomicAddMixed(gradNorm, norm);
         }
 
         return;
@@ -806,7 +782,7 @@ KERNEL void lineSearchDot(
     // immediately decide to scale the step, so mark this case with LS_SUCCEED.
     // This will be checked in the following kernel.
 
-    if (!isfinite(energy) || energy >= FLT_MAX || energy > lineSearchData[LS_ENERGY] + lineSearchData[LS_STEP] * LBFGS_FTOL * lineSearchData[LS_DOT_START]) {
+    if (!(FABS_MIXED(energy) < FLT_MAX) || energy > lineSearchData[LS_ENERGY] + lineSearchData[LS_STEP] * LBFGS_FTOL * lineSearchData[LS_DOT_START]) {
         if (GLOBAL_ID == 0) {
             *returnFlag = LS_SUCCEED;
         }
@@ -826,6 +802,7 @@ KERNEL void lineSearchDot(
 
 KERNEL void lineSearchContinue(
     GLOBAL int* RESTRICT returnFlag,
+    GLOBAL mixed* RESTRICT gradNorm,
     GLOBAL mixed* RESTRICT lineSearchData
 ) {
     // This kernel should run a single thread and just lets us update the step
@@ -834,6 +811,8 @@ KERNEL void lineSearchContinue(
     if (GLOBAL_ID != 0 || *returnFlag == LS_FAIL) {
         return;
     }
+
+    gradNorm[0] = 0;
 
     // If the last kernel set LS_SUCCEED, the energy was out of range and we
     // should scale the step back and go around again.

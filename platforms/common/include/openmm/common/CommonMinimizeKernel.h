@@ -99,6 +99,7 @@ private:
     MinimizationReporter* reporter;
 
     double kRestraint, energy;
+    bool largeGrad;
 
     ComputeArray constraintIndices, constraintDistances;
     ComputeArray xInit, x, xPrev, grad, gradPrev, dir;
@@ -111,8 +112,7 @@ private:
     ComputeKernel getConstraintEnergyForcesKernel;
     ComputeKernel getConstraintErrorKernel;
     ComputeKernel initializeDirKernel;
-    ComputeKernel gradNormPart1Kernel;
-    ComputeKernel gradNormPart2Kernel;
+    ComputeKernel gradNormKernel;
     ComputeKernel getDiffKernel;
     ComputeKernel getScaleKernel;
     ComputeKernel reinitializeDirKernel;

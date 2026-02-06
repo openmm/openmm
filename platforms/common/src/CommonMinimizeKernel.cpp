@@ -249,17 +249,10 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     initializeDirKernel->addArg(lineSearchData);
     initializeDirKernel->addArg(numVariables);
 
-    gradNormPart1Kernel = program->createKernel("gradNormPart1");
-    gradNormPart1Kernel->addArg(grad);
-    gradNormPart1Kernel->addArg(reduceBuffer);
-    gradNormPart1Kernel->addArg(numVariables);
-
-    gradNormPart2Kernel = program->createKernel("gradNormPart2");
-    gradNormPart2Kernel->addArg(grad);
-    gradNormPart2Kernel->addArg(reduceBuffer);
-    gradNormPart2Kernel->addArg(gradNorm);
-    gradNormPart2Kernel->addArg(numVariables);
-    gradNormPart2Kernel->addArg(numVariableBlocks);
+    gradNormKernel = program->createKernel("gradNorm");
+    gradNormKernel->addArg(grad);
+    gradNormKernel->addArg(gradNorm);
+    gradNormKernel->addArg(numVariables);
 
     getDiffKernel = program->createKernel("getDiff");
     getDiffKernel->addArg(x);
@@ -275,6 +268,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     getDiffKernel->addArg(numVariableBlocks);
     getDiffKernel->addArg(); // tolerance
     getDiffKernel->addArg(); // end
+    getDiffKernel->addArg(); // largeGrad
 
     getScaleKernel = program->createKernel("getScale");
     getScaleKernel->addArg(alpha);
@@ -346,6 +340,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     lineSearchSetupKernel->addArg(gradPrev);
     lineSearchSetupKernel->addArg(dir);
     lineSearchSetupKernel->addArg(returnFlag);
+    lineSearchSetupKernel->addArg(gradNorm);
     lineSearchSetupKernel->addArg(lineSearchData);
     lineSearchSetupKernel->addArg(numVariables);
     lineSearchSetupKernel->addArg(); // energyStart
@@ -356,8 +351,8 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     lineSearchStepKernel->addArg(grad);
     lineSearchStepKernel->addArg(gradPrev);
     lineSearchStepKernel->addArg(dir);
-    lineSearchStepKernel->addArg(reduceBuffer);
     lineSearchStepKernel->addArg(returnFlag);
+    lineSearchStepKernel->addArg(gradNorm);
     lineSearchStepKernel->addArg(lineSearchData);
     lineSearchStepKernel->addArg(lineSearchDataBackup);
     lineSearchStepKernel->addArg(numVariables);
@@ -373,6 +368,7 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
 
     lineSearchContinueKernel = program->createKernel("lineSearchContinue");
     lineSearchContinueKernel->addArg(returnFlag);
+    lineSearchContinueKernel->addArg(gradNorm);
     lineSearchContinueKernel->addArg(lineSearchData);
 
     downloadStartEvent = cc.createEvent();
@@ -392,17 +388,17 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
 
     evaluateGpu(context);
     energy += downloadReturnValueSync();
-    if (!isfinite(energy) || energy >= std::numeric_limits<float>::max()) {
+    if (!(fabs(energy) < std::numeric_limits<float>::max())) {
         energy = evaluateCpu(context);
     }
     if (!isfinite(energy)) {
         throw OpenMMException("Energy or force at minimization starting point is infinite or NaN.");
     }
 
-    // Check to see if the starting point is already a minimum.
+    // Check to see if the starting point is already a minimum.  Since we are at
+    // the start of the run, just use the fallback single-thread-block kernel.
 
-    gradNormPart1Kernel->execute(numVariables, threadBlockSize);
-    gradNormPart2Kernel->execute(threadBlockSize, threadBlockSize);
+    gradNormKernel->execute(threadBlockSize, threadBlockSize);
     if (downloadGradNormSync() <= tolerance) {
         return;
     }
@@ -412,17 +408,17 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
         // Prepare for a line search.
 
         if (mixedIsDouble) {
-            lineSearchSetupKernel->setArg(8, energy);
+            lineSearchSetupKernel->setArg(9, energy);
         }
         else {
-            lineSearchSetupKernel->setArg(8, (float) energy);
+            lineSearchSetupKernel->setArg(9, (float) energy);
         }
         lineSearchSetupKernel->execute(numVariables);
 
         // Take line search steps.
 
         for (int count = 0;; count++) {
-            lineSearchStepKernel->execute(numVariables, threadBlockSize);
+            lineSearchStepKernel->execute(numVariables);
 
             if (count) {
                 int hostReturnFlag = downloadReturnFlagFinish();
@@ -444,7 +440,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
             runLineSearchKernels();
 
             energy += downloadReturnValueFinish();
-            if (!isfinite(energy) || energy >= std::numeric_limits<float>::max()) {
+            if (!(fabs(energy) < std::numeric_limits<float>::max())) {
                 // Overflow on the GPU: try the CPU.
 
                 energy = evaluateCpu(context);
@@ -477,12 +473,13 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
             return;
         }
 
-        // Do L-BFGS update of search direction.  Note that the equivalent of
-        // gradNormPart1Kernel has already been executed in lineSearchStepKernel
-        // if it was detected that the line search succeeded.
+        // Do L-BFGS update of search direction.
 
-        gradNormPart2Kernel->execute(threadBlockSize, threadBlockSize);
+        if (largeGrad) {
+            gradNormKernel->execute(threadBlockSize, threadBlockSize);
+        }
         getDiffKernel->setArg(12, end);
+        getDiffKernel->setArg(13, (int) largeGrad);
         getDiffKernel->execute(numVariables, threadBlockSize);
 
         downloadReturnFlagStart();
@@ -540,6 +537,8 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
 }
 
 void CommonMinimizeKernel::evaluateGpu(ContextImpl& context) {
+    largeGrad = false;
+
     // Put the current positions in posq and compute virtual site positions.
 
     restorePosKernel->setArg(2, x);
@@ -568,6 +567,8 @@ void CommonMinimizeKernel::evaluateGpu(ContextImpl& context) {
 }
 
 double CommonMinimizeKernel::evaluateCpu(ContextImpl& context) {
+    largeGrad = true;
+
     // Create a CPU context if one has not already been created.
 
     const System& system = context.getSystem();
@@ -740,10 +741,11 @@ double CommonMinimizeKernel::downloadGradNormSync() {
 
 void CommonMinimizeKernel::runLineSearchKernels() {
     if (mixedIsDouble) {
-        lineSearchDotKernel->setArg(6, energy);
+        lineSearchDotKernel->setArg(6, isfinite(energy) ? energy : (double) std::numeric_limits<float>::max());
     }
     else {
-        lineSearchDotKernel->setArg(6, (float) energy);
+        float hostEnergy = (float) energy;
+        lineSearchDotKernel->setArg(6, isfinite(hostEnergy) ? hostEnergy : std::numeric_limits<float>::max());
     }
     lineSearchDotKernel->execute(numVariables);
     lineSearchContinueKernel->execute(1);
