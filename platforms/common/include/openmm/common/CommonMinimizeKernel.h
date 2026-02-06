@@ -88,7 +88,7 @@ private:
     std::vector<double> hostConstraintDistances;
 
     bool isSetup, mixedIsDouble;
-    int elementSize, threadBlockSize, numVariableBlocks, numConstraintBlocks;
+    int elementSize, threadBlockSize;
     void* pinnedMemory;
 
     int forceGroups;
@@ -104,7 +104,7 @@ private:
     ComputeArray constraintIndices, constraintDistances;
     ComputeArray xInit, x, xPrev, grad, gradPrev, dir;
     ComputeArray alpha, scale, xDiff, gradDiff;
-    ComputeArray reduceBuffer, returnFlag, returnValue, gradNorm, lineSearchData, lineSearchDataBackup;
+    ComputeArray returnFlag, returnValue, gradNorm, lineSearchData, lineSearchDataBackup;
 
     ComputeKernel recordInitialPosKernel;
     ComputeKernel restorePosKernel;

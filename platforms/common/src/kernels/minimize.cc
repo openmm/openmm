@@ -314,7 +314,7 @@ KERNEL void getConstraintError(
     maxError = reduceMax(maxError, temp);
 
     if (LOCAL_ID == 0) {
-        returnValue[0] = maxError;
+        *returnValue = maxError;
     }
 }
 
@@ -325,7 +325,7 @@ KERNEL void initializeDir(
     GLOBAL mixed* RESTRICT lineSearchData,
     const int numVariables
 ) {
-    const real scale = -1 / gradNorm[0];
+    const real scale = -1 / *gradNorm;
 
     for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
         dir[i] = scale * grad[i];
@@ -361,7 +361,7 @@ KERNEL void gradNorm(
     scaledNorm = reduceAdd(scaledNorm, temp);
 
     if (LOCAL_ID == 0) {
-        gradNorm[0] = gradScale * SQRT_MIXED(scaledNorm);
+        *gradNorm = gradScale * SQRT_MIXED(scaledNorm);
     }
 }
 
@@ -370,13 +370,13 @@ KERNEL void getDiff(
     GLOBAL const mixed* RESTRICT xPrev,
     GLOBAL const mixed* RESTRICT grad,
     GLOBAL const mixed* RESTRICT gradPrev,
+    GLOBAL mixed* RESTRICT scale,
     GLOBAL mixed* RESTRICT xDiff,
     GLOBAL mixed* RESTRICT gradDiff,
-    GLOBAL mixed* RESTRICT reduceBuffer,
     GLOBAL int* RESTRICT returnFlag,
+    GLOBAL mixed* RESTRICT returnValue,
     GLOBAL const mixed* RESTRICT gradNorm,
     const int numVariables,
-    const int numVariableBlocks,
     const mixed tolerance,
     const int end,
     const int largeGrad
@@ -406,20 +406,17 @@ KERNEL void getDiff(
 
     const int endOffset = numVariables * end;
 
-    mixed xGrad = 0;
-    mixed gradGrad = 0;
     for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
         xDiff[endOffset + i] = x[i] - xPrev[i];
         gradDiff[endOffset + i] = grad[i] - gradPrev[i];
-        xGrad += xDiff[endOffset + i] * gradDiff[endOffset + i];
-        gradGrad += gradDiff[endOffset + i] * gradDiff[endOffset + i];
     }
-    xGrad = reduceAdd(xGrad, temp);
-    gradGrad = reduceAdd(gradGrad, temp);
 
-    if (LOCAL_ID == 0) {
-        reduceBuffer[GROUP_ID] = xGrad;
-        reduceBuffer[GROUP_ID + numVariableBlocks] = gradGrad;
+    if (GLOBAL_ID == 0 && !largeGrad) {
+        // The next kernel will use atomics to do its reduction, so clear the
+        // destination variables first.
+
+        scale[end] = 0;
+        *returnValue = 0;
     }
 }
 
@@ -428,14 +425,14 @@ KERNEL void getScale(
     GLOBAL mixed* RESTRICT scale,
     GLOBAL const mixed* RESTRICT xDiff,
     GLOBAL const mixed* RESTRICT gradDiff,
-    GLOBAL const mixed* RESTRICT reduceBuffer,
     GLOBAL const int* RESTRICT returnFlag,
     GLOBAL mixed* RESTRICT returnValue,
     const int numVariables,
-    const int numVariableBlocks,
-    const int end
+    const int end,
+    const int largeGrad
 ) {
-    // This kernel is expected to be executed in a single thread block.
+    // This kernel is expected to be executed in a single thread block if
+    // largeGrad is non-zero (if we are using the fallback for large values).
 
     LOCAL volatile mixed temp[TEMP_SIZE];
 
@@ -445,52 +442,51 @@ KERNEL void getScale(
 
     const int endOffset = numVariables * end;
 
-    mixed xGrad = 0;
-    mixed gradGrad = 0;
-    for (int i = LOCAL_ID; i < numVariableBlocks; i += LOCAL_SIZE) {
-        xGrad += reduceBuffer[i];
-        gradGrad += reduceBuffer[i + numVariableBlocks];
+    if (largeGrad) {
+
+        mixed gradScale = 1;
+        for (int i = LOCAL_ID; i < numVariables; i += LOCAL_SIZE) {
+            gradScale = max(gradScale, FABS_MIXED(gradDiff[endOffset + i]));
+        }
+        gradScale = reduceMax(gradScale, temp);
+        mixed gradScaleInv = 1 / gradScale;
+
+        mixed xGradScaled = 0;
+        mixed gradGradScaled = 0;
+        for (int i = LOCAL_ID; i < numVariables; i += LOCAL_SIZE) {
+            mixed gradDiffScaled = gradScaleInv * gradDiff[endOffset + i];
+            xGradScaled += xDiff[endOffset + i] * gradDiffScaled;
+            gradGradScaled += gradDiffScaled * gradDiffScaled;
+        }
+        xGradScaled = reduceAdd(xGradScaled, temp);
+        gradGradScaled = reduceAdd(gradGradScaled, temp);
+
+        if (LOCAL_ID == 0) {
+            scale[end] = xGradScaled * gradScale;
+            *returnValue = xGradScaled * gradScaleInv / gradGradScaled;
+        }
     }
-    xGrad = reduceAdd(xGrad, temp);
-    gradGrad = reduceAdd(gradGrad, temp);
+    else {
+        mixed xGrad = 0;
+        mixed gradGrad = 0;
+        for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
+            xGrad += xDiff[endOffset + i] * gradDiff[endOffset + i];
+            gradGrad += gradDiff[endOffset + i] * gradDiff[endOffset + i];
+        }
+        xGrad = reduceAdd(xGrad, temp);
+        gradGrad = reduceAdd(gradGrad, temp);
+
+        if (LOCAL_ID == 0) {
+            atomicAddMixed(&scale[end], xGrad);
+            atomicAddMixed(returnValue, gradGrad);
+        }
+    }
 
     // Clear all values of alpha (plus the extra slot at alpha[NUM_VECTORS])
     // to prepare them for use in reductions by subsequent kernels.
 
     for (int i = LOCAL_ID; i <= NUM_VECTORS; i += LOCAL_SIZE) {
         alpha[i] = 0;
-    }
-
-    if (isfinite(gradGrad)) {
-        if (LOCAL_ID == 0) {
-            scale[end] = xGrad;
-            returnValue[0] = xGrad / gradGrad;
-        }
-        return;
-    }
-
-    // The square norm overflowed, so take a slow fallback path.
-
-    mixed gradScale = 1;
-    for (int i = LOCAL_ID; i < numVariables; i += LOCAL_SIZE) {
-        gradScale = max(gradScale, FABS_MIXED(gradDiff[endOffset + i]));
-    }
-    gradScale = reduceMax(gradScale, temp);
-    mixed gradScaleInv = 1 / gradScale;
-
-    mixed xGradScaled = 0;
-    mixed gradGradScaled = 0;
-    for (int i = LOCAL_ID; i < numVariables; i += LOCAL_SIZE) {
-        mixed gradDiffScaled = gradScaleInv * gradDiff[endOffset + i];
-        xGradScaled += xDiff[endOffset + i] * gradDiffScaled;
-        gradGradScaled += gradDiffScaled * gradDiffScaled;
-    }
-    xGradScaled = reduceAdd(xGradScaled, temp);
-    gradGradScaled = reduceAdd(gradGradScaled, temp);
-
-    if (LOCAL_ID == 0) {
-        scale[end] = xGrad;
-        returnValue[0] = xGradScaled / (gradScale * gradGradScaled);
     }
 }
 
@@ -501,13 +497,22 @@ KERNEL void reinitializeDir(
     GLOBAL const mixed* RESTRICT scale,
     GLOBAL const mixed* RESTRICT xDiff,
     GLOBAL const int* RESTRICT returnFlag,
+    GLOBAL mixed* RESTRICT returnValue,
     const int numVariables,
-    const int vectorIndex
+    const int vectorIndex,
+    const int largeGrad
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
     if (*returnFlag) {
         return;
+    }
+
+    if (GLOBAL_ID == 0 && !largeGrad) {
+        // The last kernel used atomics to do its reduction.  returnValue has
+        // gradGrad, so finish up by replacing it with xGrad / gradGrad.
+
+        *returnValue = scale[vectorIndex] / *returnValue;
     }
 
     const int indexOffset = numVariables * vectorIndex;
@@ -575,7 +580,7 @@ KERNEL void scaleDir(
 
     const int indexOffset = numVariables * vectorIndex;
     const mixed innerScale = alpha[vectorIndex];
-    const mixed outerScale = returnValue[0];
+    const mixed outerScale = *returnValue;
 
     mixed vectorBeta = 0;
     for (int i = GLOBAL_ID; i < numVariables; i += GLOBAL_SIZE) {
@@ -688,7 +693,7 @@ KERNEL void lineSearchSetup(
 
     if (GLOBAL_ID == 0) {
         *returnFlag = LS_CONTINUE;
-        gradNorm[0] = 0;
+        *gradNorm = 0;
         lineSearchData[LS_ENERGY] = energyStart;
     }
 }
@@ -812,7 +817,7 @@ KERNEL void lineSearchContinue(
         return;
     }
 
-    gradNorm[0] = 0;
+    *gradNorm = 0;
 
     // If the last kernel set LS_SUCCEED, the energy was out of range and we
     // should scale the step back and go around again.

@@ -88,8 +88,6 @@ void CommonMinimizeKernel::execute(ContextImpl& context, double tolerance, int m
         }
         elementSize = mixedIsDouble ? sizeof(double) : sizeof(float);
         threadBlockSize = cc.getMaxThreadBlockSize();
-        numVariableBlocks = (numVariables + threadBlockSize - 1) / threadBlockSize;
-        numConstraintBlocks = (numConstraints + threadBlockSize - 1) / threadBlockSize;
         pinnedMemory = cc.getPinnedBuffer();
 
         // Initialize all device-side arrays and compile kernels.
@@ -172,7 +170,6 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     scale.initialize(cc, numVectors, elementSize, "scale");
     xDiff.initialize(cc, numVectors * numVariables, elementSize, "xDiff");
     gradDiff.initialize(cc, numVectors * numVariables, elementSize, "gradDiff");
-    reduceBuffer.initialize(cc, max(2 * numVariableBlocks, numConstraintBlocks), elementSize, "reduceBuffer");
     returnFlag.initialize<int>(cc, 1, "returnFlag");
     returnValue.initialize(cc, 1, elementSize, "returnValue");
     gradNorm.initialize(cc, 1, elementSize, "gradNorm");
@@ -259,13 +256,13 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     getDiffKernel->addArg(xPrev);
     getDiffKernel->addArg(grad);
     getDiffKernel->addArg(gradPrev);
+    getDiffKernel->addArg(scale);
     getDiffKernel->addArg(xDiff);
     getDiffKernel->addArg(gradDiff);
-    getDiffKernel->addArg(reduceBuffer);
     getDiffKernel->addArg(returnFlag);
+    getDiffKernel->addArg(returnValue);
     getDiffKernel->addArg(gradNorm);
     getDiffKernel->addArg(numVariables);
-    getDiffKernel->addArg(numVariableBlocks);
     getDiffKernel->addArg(); // tolerance
     getDiffKernel->addArg(); // end
     getDiffKernel->addArg(); // largeGrad
@@ -275,12 +272,11 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     getScaleKernel->addArg(scale);
     getScaleKernel->addArg(xDiff);
     getScaleKernel->addArg(gradDiff);
-    getScaleKernel->addArg(reduceBuffer);
     getScaleKernel->addArg(returnFlag);
     getScaleKernel->addArg(returnValue);
     getScaleKernel->addArg(numVariables);
-    getScaleKernel->addArg(numVariableBlocks);
     getScaleKernel->addArg(); // end
+    getScaleKernel->addArg(); // largeGrad
 
     reinitializeDirKernel = program->createKernel("reinitializeDir");
     reinitializeDirKernel->addArg(grad);
@@ -289,8 +285,10 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     reinitializeDirKernel->addArg(scale);
     reinitializeDirKernel->addArg(xDiff);
     reinitializeDirKernel->addArg(returnFlag);
+    reinitializeDirKernel->addArg(returnValue);
     reinitializeDirKernel->addArg(numVariables);
     reinitializeDirKernel->addArg(); // vectorIndex
+    reinitializeDirKernel->addArg(); // largeGrad
 
     updateDirAlphaKernel = program->createKernel("updateDirAlpha");
     updateDirAlphaKernel->addArg(dir);
@@ -480,20 +478,27 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
         }
         getDiffKernel->setArg(12, end);
         getDiffKernel->setArg(13, (int) largeGrad);
-        getDiffKernel->execute(numVariables, threadBlockSize);
+        getDiffKernel->execute(numVariables);
 
         downloadReturnFlagStart();
 
-        getScaleKernel->setArg(9, end);
-        getScaleKernel->execute(threadBlockSize, threadBlockSize);
+        getScaleKernel->setArg(7, end);
+        getScaleKernel->setArg(8, (int) largeGrad);
+        if (largeGrad) {
+            getScaleKernel->execute(threadBlockSize, threadBlockSize);
+        }
+        else {
+            getScaleKernel->execute(numVariables);
+        }
 
         int limit = min(numVectors, iteration++);
+        int vectorIndex = end;
         if (++end >= numVectors) {
             end -= numVectors;
         }
 
-        int vectorIndex = (end ? end : numVectors) - 1;
-        reinitializeDirKernel->setArg(7, vectorIndex);
+        reinitializeDirKernel->setArg(8, vectorIndex);
+        reinitializeDirKernel->setArg(9, (int) largeGrad);
         reinitializeDirKernel->execute(numVariables);
 
         for (int vector = 0; vector < limit; vector++) {
