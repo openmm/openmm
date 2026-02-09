@@ -928,6 +928,14 @@ class ForceField(object):
                 for atom in self.addedExternalBonds:
                     newTemplate.addExternalBondByName(atom.name)
 
+                # Build the list of constraints.
+
+                for atom1, atom2, distance in template.constraints:
+                    a1 = template.atoms[atom1]
+                    a2 = template.atoms[atom2]
+                    if a1 in atomMap and a2 in atomMap:
+                        newTemplate.addConstraint(atomMap[a1], atomMap[a2], distance)
+
                 # Add new virtual sites.
 
                 indexMap = dict((i, newAtomIndex[atom.name]) for i, atom in enumerate(self.addedAtoms[index]+self.changedAtoms[index]))
