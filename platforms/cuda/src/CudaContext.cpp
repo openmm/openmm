@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -88,10 +88,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), useBlockingSync(useBlockingSync) {
     int cudaDriverVersion;
     cuDriverGetVersion(&cudaDriverVersion);
-    if (!hasInitializedCuda) {
-        CHECK_RESULT2(cuInit(0), "Error initializing CUDA");
-        hasInitializedCuda = true;
-    }
+    ensureCudaInitialized();
     if (precision == "single") {
         useDoublePrecision = false;
         useMixedPrecision = false;
@@ -881,4 +878,11 @@ unsigned int CudaContext::getEventFlags() {
     if (useBlockingSync)
         flags += CU_EVENT_BLOCKING_SYNC;
     return flags;
+}
+
+void CudaContext::ensureCudaInitialized() {
+    if (!hasInitializedCuda) {
+        CHECK_RESULT2(cuInit(0), "Error initializing CUDA");
+        hasInitializedCuda = true;
+    }
 }
