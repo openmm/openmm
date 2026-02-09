@@ -205,6 +205,63 @@ class TestForceField(unittest.TestCase):
         # Make sure flexibleConstraints yields just as many angles as no constraints
         self.assertEqual(af2.getNumAngles(), af3.getNumAngles())
 
+    def testTemplateConstraints(self):
+        """Test constraints defined by a residue template."""
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="C" class="C" element="C" mass="12.01078"/>
+  <Type name="O" class="O" element="O" mass="15.99943"/>
+  <Type name="H" class="H" element="H" mass="1.007947"/>
+  <Type name="Na+" class="Na+" element="Na" mass="22.99"/>
+  <Type name="Cl-" class="Cl-" element="Cl" mass="35.45"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="MEOH">
+   <Atom name="CB" type="C"/>
+   <Atom name="OG" type="O"/>
+   <Atom name="HG" type="H"/>
+   <Atom name="HB1" type="H"/>
+   <Atom name="HB2" type="H"/>
+   <Atom name="HB3" type="H"/>
+   <Bond atomName1="CB" atomName2="OG"/>
+   <Bond atomName1="CB" atomName2="HB1"/>
+   <Bond atomName1="CB" atomName2="HB2"/>
+   <Bond atomName1="CB" atomName2="HB3"/>
+   <Bond atomName1="OG" atomName2="HG"/>
+   <Constraint atomName1="CB" atomName2="OG" distance="1.987"/>
+   <Constraint atomName1="OG" atomName2="HG" distance="1.123"/>
+  </Residue>
+  <Residue name="NA">
+    <Atom name="NA" type="Na+"/>
+  </Residue>
+  <Residue name="CL">
+    <Atom name="CL" type="Cl-"/>
+  </Residue>
+ </Residues>
+ <HarmonicBondForce>
+  <Bond class1="C" class2="O" k="100.0" length="2.0"/>
+  <Bond class1="C" class2="H" k="100.0" length="1.0"/>
+  <Bond class1="O" class2="H" k="100.0" length="1.1"/>
+ </HarmonicBondForce>
+</ForceField>"""
+        ff = ForceField(StringIO(xml))
+        pdb = PDBFile('systems/methanol_ions.pdb')
+        expected = {None:2, HBonds:5, AllBonds:5}
+        for constraints in [None, HBonds, AllBonds]:
+            system = ff.createSystem(pdb.topology, constraints=constraints)
+            self.assertEqual(expected[constraints], system.getNumConstraints())
+            lengths = {}
+            for i in range(system.getNumConstraints()):
+                p1, p2, length = system.getConstraintParameters(i)
+                lengths[(min(p1, p2), max(p1, p2))] = length.value_in_unit(nanometer)
+            self.assertEqual(1.987, lengths[(0, 1)])
+            self.assertEqual(1.123, lengths[(1, 2)])
+            if constraints is not None:
+                self.assertEqual(1.0, lengths[(0, 3)])
+                self.assertEqual(1.0, lengths[(0, 4)])
+                self.assertEqual(1.0, lengths[(0, 5)])
+
     def test_ImplicitSolvent(self):
         """Test the four types of implicit solvents using the implicitSolvent
         parameter.
