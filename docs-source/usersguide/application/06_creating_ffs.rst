@@ -249,7 +249,7 @@ contain any of the following tags:
    template should be removed.  It specifies the names of the two bonded atoms.
  * An :code:`<AddExternalBond>` tag indicates that a new external bond should be
    added to the template.  It specifies the name of the bonded atom.
- * A :code:`<RemoveExternalBond>` tag indicates that an external bond aleady
+ * A :code:`<RemoveExternalBond>` tag indicates that an external bond already
    present in the template should be removed.  It specifies the name of the
    bonded atom.
 
