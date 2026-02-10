@@ -565,7 +565,7 @@ void CommonMinimizeKernel::evaluateGpu(ContextImpl& context) {
     }
 
     // Convert the forces from fixed to floating point format.  If they are too
-    // large, the energy in returnValue will be set to NaN to signal that the
+    // large, the energy in returnValue will be set to FLT_MAX to signal that the
     // results are invalid and we must fall back to computing forces on the CPU.
 
     convertForcesKernel->execute(numParticles);
