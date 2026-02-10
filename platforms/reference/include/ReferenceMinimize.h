@@ -1,3 +1,6 @@
+#ifndef OPENMM_REFERENCEMINIMIZE_H_
+#define OPENMM_REFERENCEMINIMIZE_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -5,7 +8,7 @@
  * See https://openmm.org/development.                                        *
  *                                                                            *
  * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
- * Authors: Peter Eastman                                                     *
+ * Authors: Evan Pretti                                                       *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -27,12 +30,16 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/LocalEnergyMinimizer.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/LocalEnergyMinimizer.h"
 
-using namespace OpenMM;
-using namespace std;
+namespace OpenMM {
 
-void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxIterations, MinimizationReporter* reporter) {
-    context.getImpl().minimize(tolerance, maxIterations, reporter);
-}
+class ReferenceMinimize {
+public:
+    static void minimize(ContextImpl& context, double tolerance, int maxIterations, MinimizationReporter* reporter);
+};
+
+} // namespace OpenMM
+
+#endif // OPENMM_REFERENCEMINIMIZE_H_

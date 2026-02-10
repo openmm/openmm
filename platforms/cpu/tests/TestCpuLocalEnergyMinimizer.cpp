@@ -4,8 +4,8 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (c) 2026 Stanford University and the Authors.           *
+ * Authors: Evan Pretti                                                       *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -27,12 +27,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/internal/ContextImpl.h"
+#include "CpuTests.h"
+#include "TestLocalEnergyMinimizer.h"
 
-using namespace OpenMM;
-using namespace std;
-
-void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxIterations, MinimizationReporter* reporter) {
-    context.getImpl().minimize(tolerance, maxIterations, reporter);
+void runPlatformTests() {
 }
