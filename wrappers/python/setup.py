@@ -156,6 +156,10 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                                           "openmm.app" : ['data/*.xml', 'data/*.pdb', 'data/amber14/*.xml', 'data/amber19/*.xml', 'data/charmm36/*.xml', 'data/charmm36_2024/*.xml', 'data/implicit/*.xml'],
                                           "openmm.app.internal" : []}
     setupKeywords["install_requires"]  = ["numpy"]
+    setupKeywords["extras_require"]    = {"cuda12": [f"OpenMM-CUDA-12=={setupKeywords['version']}; platform_system != \"Darwin\""],
+                                          "cuda13": [f"OpenMM-CUDA-13=={setupKeywords['version']}; platform_system != \"Darwin\""],
+                                          "hip6": [f"OpenMM-HIP-6=={setupKeywords['version']}; platform_system != \"Darwin\" and platform_machine == \"x86_64\""],
+                                          "hip7": [f"OpenMM-HIP-7=={setupKeywords['version']}; platform_system != \"Darwin\" and platform_machine == \"x86_64\""]}
     setupKeywords["platforms"]         = ["Linux", "Mac OS X", "Windows"]
     setupKeywords["description"]       = \
     "Python wrapper for OpenMM (a C++ MD package)"
