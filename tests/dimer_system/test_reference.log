@@ -1,6 +1,0 @@
-usage: run_simulation_reference.py [-h] [--dimers DIMERS]
-                                   [--lambda LAMBDA_COUPLING] [--temp TEMP]
-                                   [--dt DT] [--equil EQUIL] [--prod PROD]
-                                   [--cavity-freq CAVITY_FREQ] [--no-dipole]
-run_simulation_reference.py: error: unrecognized arguments: --no-equilibration
-✓ OpenMM loaded successfully

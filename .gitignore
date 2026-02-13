@@ -31,6 +31,35 @@ examples/cavity/dimer_system/test.pdb
 examples/cavity/dimer_system/tmp*.gsd
 init-*.gsd
 
+# Test and example outputs (do not include in GitHub repo)
+tests/_archive/
+tests/dimer_system/*.npz
+tests/dimer_system/*.log
+tests/protein_system/movie_frames/
+tests/protein_system/movie_frames_with_plot/
+tests/protein_system/protein_cavity_*.npz
+tests/protein_system/protein_cavity_*_metadata.json
+tests/protein_system/protein_cavity_*_stream.npy
+tests/protein_system/protein_ir_spectrum_*
+tests/protein_system/protein_cavity_*.pdb
+tests/cace-lr_water/*.npz
+tests/cace-lr_water/*.png
+tests/cace-lr_water/*.log
+tests/cace-lr_water/*.pdb
+tests/cavity_ir_spectrum*
+tests/bond_vibration_test.png
+examples/cavity/dimer_system/*.npz
+examples/cavity/dimer_system/*_data.npz
+examples/cavity/dimer_system/cavity_ir_spectrum_*.png
+examples/cavity/dimer_system/cavity_position_spectrum*.png
+examples/cavity/dimer_system/cavity_diamer_*.npz
+examples/cavity/dimer_system/*.log
+examples/cavity/dimer_system/force_component_*.png
+examples/cavity/dimer_system/force_component_summary.txt
+
+# Equilibrium/benchmark data and outputs (entire folder excluded from repo)
+equilibrium_fkt_100K/
+
 # Backup/stable directories
 fairchem-stable/
 *backup/
