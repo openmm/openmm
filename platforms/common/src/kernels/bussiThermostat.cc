@@ -45,3 +45,16 @@ KERNEL void applyBussiThermostat(int numParticles, GLOBAL mixed4* RESTRICT velm,
         velm[idx] = v;
     }
 }
+
+/**
+ * Scale position deltas by alpha (when Bussi is applied after Verlet part1).
+ */
+KERNEL void scaleBussiPosDelta(int numAtoms, GLOBAL mixed4* RESTRICT posDelta, float alpha) {
+    for (int i = GLOBAL_ID; i < numAtoms; i += GLOBAL_SIZE) {
+        mixed4 d = posDelta[i];
+        d.x *= alpha;
+        d.y *= alpha;
+        d.z *= alpha;
+        posDelta[i] = d;
+    }
+}

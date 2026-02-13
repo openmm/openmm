@@ -112,6 +112,7 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
     registerKernelFactory(ApplyBussiThermostatKernel::Name(), factory);
     registerKernelFactory(CalcCavityForceKernel::Name(), factory);
+    registerKernelFactory(CalcMultiModeCavityForceKernel::Name(), factory);
     registerKernelFactory(ApplyCavityDisplacementKernel::Name(), factory);
     registerKernelFactory(ApplyMonteCarloBarostatKernel::Name(), factory);
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);

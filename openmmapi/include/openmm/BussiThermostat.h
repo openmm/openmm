@@ -56,9 +56,14 @@ namespace OpenMM {
  * where c = exp(-dt/tau), K is the current kinetic energy, K_target is the target
  * kinetic energy, and R_i are independent normal random variates.
  * 
+ * The rescaling factor alpha may be positive or negative (signed alpha per
+ * Bussi et al. 2009 Eq. A8) for correct canonical sampling. When used with
+ * VerletIntegrator, the thermostat is applied after the first half-kick
+ * (HOOMD-style order). Zero kinetic energy in the thermostatted group throws.
+ *
  * The thermostat tracks the cumulative energy transferred to/from the reservoir,
  * which is useful for computing work and heat in non-equilibrium simulations.
- * 
+ *
  * References:
  *   Bussi, Donadio, and Parrinello, J. Chem. Phys. 126, 014101 (2007)
  *   Bussi, Zykova-Timan, and Parrinello, J. Chem. Phys. 130, 074101 (2009)

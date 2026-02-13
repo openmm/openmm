@@ -226,6 +226,26 @@ public:
      */
     void computeShiftedVelocities(double timeShift, std::vector<Vec3>& velocities);
     /**
+     * Step phase used by Verlet integrator to signal when Bussi thermostat is called
+     * (e.g. after first half-kick). Other integrators leave phase NONE.
+     */
+    enum StepPhase {
+        STEP_PHASE_NONE = 0,
+        STEP_PHASE_AFTER_VERLET_PART1 = 1
+    };
+    /**
+     * Get the current step phase.
+     */
+    StepPhase getStepPhase() const {
+        return stepPhase;
+    }
+    /**
+     * Set the step phase (used by VerletIntegrator when calling updateContextState between part1 and part2).
+     */
+    void setStepPhase(StepPhase phase) {
+        stepPhase = phase;
+    }
+    /**
      * This should be called at the start of each time step.  It calls updateContextState() on each
      * ForceImpl in the system, allowing them to modify the values of state variables.
      * 
@@ -309,6 +329,7 @@ private:
     Platform* platform;
     Kernel initializeForcesKernel, updateStateDataKernel, applyConstraintsKernel, virtualSitesKernel;
     void* platformData;
+    StepPhase stepPhase;
 };
 
 } // namespace OpenMM

@@ -67,9 +67,13 @@ double VerletIntegrator::computeKineticEnergy() {
 void VerletIntegrator::step(int steps) {
     if (context == NULL)
         throw OpenMMException("This Integrator is not bound to a context!");
+    IntegrateVerletStepKernel& verletKernel = kernel.getAs<IntegrateVerletStepKernel>();
     for (int i = 0; i < steps; ++i) {
-        context->updateContextState();
         context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
-        kernel.getAs<IntegrateVerletStepKernel>().execute(*context, *this);
+        verletKernel.executePart1(*context, *this);
+        context->setStepPhase(ContextImpl::STEP_PHASE_AFTER_VERLET_PART1);
+        context->updateContextState();
+        context->setStepPhase(ContextImpl::STEP_PHASE_NONE);
+        verletKernel.executePart2(*context, *this);
     }
 }

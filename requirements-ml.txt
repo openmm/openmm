@@ -1,0 +1,15 @@
+# ML potential runtime dependencies for OpenMM-ML
+#
+# These are NOT required for core OpenMM -- only needed when using ML potentials.
+# The openmmml package uses lazy imports so missing backends simply won't be available.
+#
+# Install with:  pip install -r requirements-ml.txt
+
+# UMA models (fairchem-core from the LES branch fork)
+fairchem-core @ git+https://github.com/muhammadhasyim/fairchem.git@les_branch#subdirectory=packages/fairchem-core
+
+# CACE models
+cace @ git+https://github.com/muhammadhasyim/cace.git
+
+# PyTorch (required by all ML potentials)
+torch>=2.4

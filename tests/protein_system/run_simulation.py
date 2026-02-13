@@ -358,6 +358,7 @@ def run_simulation(
     enable_cavity=True,
     stream_to_disk=False,
     write_pdb_snapshot=True,
+    dipole_interval=1,
 ):
     """Run the protein cavity MD simulation with streaming output."""
     print("=" * 80)
@@ -366,6 +367,11 @@ def run_simulation(
 
     omegac_au = wavenumber_to_hartree(cavity_freq_cm)
     photon_mass_amu = 1.0 / AMU_TO_AU
+
+    # Compute effective dipole sampling rate for diagnostics
+    sample_dt_ps = dt_ps * dipole_interval
+    sample_freq_ps = 1.0 / sample_dt_ps  # ps^-1
+    nyquist_cm = sample_freq_ps * 1e12 / (2.0 * 3e10)  # cm^-1
 
     print("\nSimulation Parameters:")
     print(f"  PDB: {pdb_id if pdb_path is None else Path(pdb_path).name}")
@@ -377,6 +383,8 @@ def run_simulation(
     print(f"  Production: {production_ps} ps")
     print(f"  Solvent padding: {padding_nm:.2f} nm")
     print(f"  Ionic strength: {ionic_strength_molar:.3f} M")
+    print(f"  Dipole interval: every {dipole_interval} steps ({sample_dt_ps:.4f} ps)")
+    print(f"  Nyquist frequency: {nyquist_cm:.0f} cm^-1")
 
     equilibration_steps = int(equilibration_ps / dt_ps)
     production_steps = int(production_ps / dt_ps)
@@ -412,13 +420,24 @@ def run_simulation(
     setup_thermostats(system, temperature_K, real_indices=real_indices, tau_bussi_ps=1.0)
 
     print("\n--- Creating Integrator ---")
-    friction = 0.5  # ps^-1
-    integrator = openmm.LangevinMiddleIntegrator(
-        temperature_K * unit.kelvin,
-        friction / unit.picosecond,
-        dt_ps * unit.picosecond,
+    # Use VerletIntegrator when BussiThermostat is active to avoid
+    # conflicting random number seeds between two stochastic thermostats.
+    # Bussi handles thermostatting; Verlet handles time integration.
+    has_bussi = any(
+        isinstance(f, openmm.BussiThermostat) for f in
+        [system.getForce(i) for i in range(system.getNumForces())]
     )
-    print(f"  LangevinMiddleIntegrator: friction = {friction} ps^-1, dt = {dt_ps} ps")
+    if has_bussi:
+        integrator = openmm.VerletIntegrator(dt_ps * unit.picosecond)
+        print(f"  VerletIntegrator: dt = {dt_ps} ps (thermostat: Bussi)")
+    else:
+        friction = 0.5  # ps^-1
+        integrator = openmm.LangevinMiddleIntegrator(
+            temperature_K * unit.kelvin,
+            friction / unit.picosecond,
+            dt_ps * unit.picosecond,
+        )
+        print(f"  LangevinMiddleIntegrator: friction = {friction} ps^-1, dt = {dt_ps} ps")
 
     print("\n--- Creating Simulation Context ---")
     platform = openmm.Platform.getPlatformByName("CUDA")
@@ -444,6 +463,10 @@ def run_simulation(
     pdb_file = f"{output_prefix}_lambda{lambda_coupling:.4f}.pdb"
     metadata_file = f"{output_prefix}_lambda{lambda_coupling:.4f}_metadata.json"
 
+    # Number of dipole data points in production
+    n_dipole_points = production_steps // dipole_interval
+    report_interval = 1000  # steps between progress reports
+
     if stream_to_disk and not disable_dipole_output:
         stream_path = f"{output_prefix}_lambda{lambda_coupling:.4f}_stream.npy"
         stream_dtype = np.dtype(
@@ -457,27 +480,65 @@ def run_simulation(
             stream_path,
             mode="w+",
             dtype=stream_dtype,
-            shape=(production_steps,),
+            shape=(n_dipole_points,),
         )
         prod_index = 0
         print("  Streaming dipole to disk (single memmap):")
         print(f"    stream: {stream_path}")
+        print(f"    max data points: {n_dipole_points}")
 
     print("\n--- Running Simulation ---")
     print(f"  Total steps: {total_steps}")
     print(f"  Equilibration: {equilibration_steps} steps ({equilibration_ps} ps)")
     print(f"  Production: {production_steps} steps ({production_ps} ps)")
     print(f"  Output file: {output_file}")
-    print("  Streaming updates every 1 ps (1000 steps)")
+    print(f"  Progress reports every {report_interval} steps")
 
     start_time = time.time()
     last_report_time = start_time
     last_report_step = 0
 
-    for step in range(total_steps):
-        integrator.step(1)
+    # --- Equilibration phase: run in large batches ---
+    print(f"\n  Phase 1: Equilibration ({equilibration_steps} steps)...")
+    equil_done = 0
+    while equil_done < equilibration_steps:
+        batch = min(report_interval, equilibration_steps - equil_done)
+        integrator.step(batch)
+        equil_done += batch
 
-        if not disable_dipole_output and step >= equilibration_steps:
+        step = equil_done - 1  # 0-indexed current step
+        pct = 100 * equil_done / total_steps
+        current_time = time.time()
+        dt_report = current_time - last_report_time
+        steps_since_last = equil_done - last_report_step
+        inst_rate = steps_since_last / max(dt_report, 1e-8)
+        ns_per_day = (inst_rate * dt_ps * 86400) / 1000
+        eta = (total_steps - equil_done) / max(inst_rate, 1e-8)
+        last_report_time = current_time
+        last_report_step = equil_done
+
+        state = context.getState(getEnergy=True, getPositions=True)
+        pe = state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
+        dipole_now = compute_dipole(state, charges, real_indices)
+        sim_time_ps = equil_done * dt_ps
+        print(
+            f"[{pct:5.1f}%] EQUIL | t={sim_time_ps:7.1f} ps | PE: {pe:10.1f} kJ/mol | "
+            f"d_xy: ({dipole_now[0]:6.2f}, {dipole_now[1]:6.2f}) e·nm | "
+            f"Speed: {ns_per_day:5.2f} ns/day | ETA: {eta/60:5.1f}m",
+            flush=True,
+        )
+
+    # --- Production phase: step in dipole_interval batches, record dipole ---
+    print(f"\n  Phase 2: Production ({production_steps} steps, recording every {dipole_interval} steps)...")
+    prod_done = 0
+    last_report_prod = 0
+    while prod_done < production_steps:
+        # Take dipole_interval steps at once
+        integrator.step(dipole_interval)
+        prod_done += dipole_interval
+
+        # Record dipole
+        if not disable_dipole_output:
             state = context.getState(getPositions=True)
             pos = state.getPositions(asNumpy=True)
             dipole = compute_dipole(state, charges, real_indices)
@@ -487,49 +548,45 @@ def run_simulation(
                 q_cav = np.zeros(3)
 
             if stream_to_disk:
-                stream_mm[prod_index]["time_ps"] = (step - equilibration_steps) * dt_ps
+                stream_mm[prod_index]["time_ps"] = prod_done * dt_ps
                 stream_mm[prod_index]["dipole_nm"] = dipole
                 stream_mm[prod_index]["cavity_nm"] = q_cav
                 prod_index += 1
             else:
-                dipole_times.append((step - equilibration_steps) * dt_ps)
+                dipole_times.append(prod_done * dt_ps)
                 dipole_values.append(dipole.copy())
                 cavity_values.append(q_cav.copy())
 
-        if (step + 1) % 1000 == 0 or (step + 1) == total_steps:
-            phase = "EQUIL" if step < equilibration_steps else "PROD"
-            pct = 100 * (step + 1) / total_steps
+        # Progress report
+        if prod_done - last_report_prod >= report_interval or prod_done >= production_steps:
+            last_report_prod = prod_done
+            total_done = equilibration_steps + prod_done
+            pct = 100 * total_done / total_steps
             current_time = time.time()
-            elapsed = current_time - start_time
-            
-            # Instantaneous speed (since last report)
             dt_report = current_time - last_report_time
-            steps_since_last = (step + 1) - last_report_step
+            steps_since_last = total_done - last_report_step
             inst_rate = steps_since_last / max(dt_report, 1e-8)
             ns_per_day = (inst_rate * dt_ps * 86400) / 1000
-            
-            # ETA based on instantaneous rate
-            eta = (total_steps - step - 1) / max(inst_rate, 1e-8)
-            
-            # Update tracking for next report
+            eta = (total_steps - total_done) / max(inst_rate, 1e-8)
             last_report_time = current_time
-            last_report_step = step + 1
+            last_report_step = total_done
 
             state = context.getState(getEnergy=True, getPositions=True)
             pe = state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
             pos = state.getPositions(asNumpy=True)
             if cavity_index is not None:
-                q_cav = pos[cavity_index].value_in_unit(unit.nanometer)
+                q_cav_report = pos[cavity_index].value_in_unit(unit.nanometer)
             else:
-                q_cav = np.zeros(3)
+                q_cav_report = np.zeros(3)
             dipole_now = compute_dipole(state, charges, real_indices)
 
-            if not disable_dipole_output and phase == "PROD":
+            if not disable_dipole_output:
                 metadata = {
                     "lambda_coupling": lambda_coupling,
                     "cavity_freq_cm": cavity_freq_cm,
                     "omega_c_au": omegac_au,
                     "dt_ps": dt_ps,
+                    "dipole_dt_ps": sample_dt_ps,
                     "temperature_K": temperature_K,
                     "photon_mass_amu": photon_mass_amu,
                     "pdb_id": pdb_id,
@@ -538,8 +595,9 @@ def run_simulation(
                     "forcefield": "amber14/protein.ff14SB.xml + amber14/tip4pew.xml",
                     "water_model": "tip4pew",
                     "cavity_enabled": enable_cavity,
+                    "dipole_interval": dipole_interval,
                     "status": "running",
-                    "step": step + 1,
+                    "step": total_done,
                     "total_steps": total_steps,
                 }
                 if stream_to_disk:
@@ -554,16 +612,19 @@ def run_simulation(
                         metadata=metadata,
                     )
                 if write_pdb_snapshot and not pdb_written:
+                    # Trim positions to topology atoms (exclude cavity particle)
+                    n_topo = topology.getNumAtoms()
+                    pdb_pos = pos[:n_topo]
                     with open(pdb_file, "w") as handle:
-                        app.PDBFile.writeFile(topology, pos, handle)
+                        app.PDBFile.writeFile(topology, pdb_pos, handle)
                     pdb_written = True
                     print(f"         Wrote PDB snapshot: {pdb_file}")
 
-            sim_time_ps = (step + 1) * dt_ps
+            sim_time_ps = total_done * dt_ps
             print(
-                f"[{pct:5.1f}%] {phase} | t={sim_time_ps:7.1f} ps | PE: {pe:10.1f} kJ/mol | "
+                f"[{pct:5.1f}%] PROD | t={sim_time_ps:7.1f} ps | PE: {pe:10.1f} kJ/mol | "
                 f"d_xy: ({dipole_now[0]:6.2f}, {dipole_now[1]:6.2f}) e·nm | "
-                f"q_cav: ({q_cav[0]:6.3f}, {q_cav[1]:6.3f}) nm | "
+                f"q_cav: ({q_cav_report[0]:6.3f}, {q_cav_report[1]:6.3f}) nm | "
                 f"Speed: {ns_per_day:5.2f} ns/day | ETA: {eta/60:5.1f}m",
                 flush=True,
             )
@@ -571,7 +632,7 @@ def run_simulation(
     elapsed = time.time() - start_time
     print("\n--- Simulation Complete ---")
     print(f"  Total time: {elapsed/60:.1f} min ({elapsed/3600:.2f} hr)")
-    print(f"  Performance: {(step + 1) / elapsed:.1f} steps/s")
+    print(f"  Performance: {total_steps / elapsed:.1f} steps/s")
 
     if not disable_dipole_output:
         metadata = {
@@ -579,6 +640,7 @@ def run_simulation(
             "cavity_freq_cm": cavity_freq_cm,
             "omega_c_au": omegac_au,
             "dt_ps": dt_ps,
+            "dipole_dt_ps": sample_dt_ps,
             "temperature_K": temperature_K,
             "photon_mass_amu": photon_mass_amu,
             "pdb_id": pdb_id,
@@ -587,6 +649,7 @@ def run_simulation(
             "forcefield": "amber14/protein.ff14SB.xml + amber14/tip4pew.xml",
             "water_model": "tip4pew",
             "cavity_enabled": enable_cavity,
+            "dipole_interval": dipole_interval,
             "status": "complete",
             "step": total_steps,
             "total_steps": total_steps,
@@ -620,8 +683,10 @@ def run_simulation(
         if write_pdb_snapshot and not pdb_written:
             state = context.getState(getPositions=True)
             pos = state.getPositions(asNumpy=True)
+            n_topo = topology.getNumAtoms()
+            pdb_pos = pos[:n_topo]
             with open(pdb_file, "w") as handle:
-                app.PDBFile.writeFile(topology, pos, handle)
+                app.PDBFile.writeFile(topology, pdb_pos, handle)
             print(f"  Wrote PDB snapshot: {pdb_file}")
         if stream_to_disk and prod_index > 0:
             print(f"  Production time: {stream_mm[prod_index - 1]['time_ps']:.1f} ps")
@@ -676,6 +741,10 @@ def main():
                         help="Stream dipole/cavity to disk instead of growing arrays")
     parser.add_argument("--no-pdb", action="store_true",
                         help="Disable PDB snapshot output")
+    parser.add_argument("--dipole-interval", type=int, default=1, dest="dipole_interval",
+                        help="Record dipole every N steps (default: 1). "
+                             "Higher values speed up production. "
+                             "E.g., 4 with dt=0.5fs gives 2fs sampling (Nyquist ~8333 cm^-1).")
 
     args = parser.parse_args()
 
@@ -704,6 +773,7 @@ def main():
         enable_cavity=not args.no_cavity,
         stream_to_disk=args.stream_to_disk,
         write_pdb_snapshot=not args.no_pdb,
+        dipole_interval=args.dipole_interval,
     )
 
 

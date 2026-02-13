@@ -61,8 +61,8 @@ class ReferenceVerletDynamics : public ReferenceDynamics {
 
       /**---------------------------------------------------------------------------------------
       
-         Update
-      
+         Update (full step)
+
          @param system              the System to be integrated
          @param atomCoordinates     atom coordinates
          @param velocities          velocities
@@ -75,6 +75,41 @@ class ReferenceVerletDynamics : public ReferenceDynamics {
      
       void update(const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
                   std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double tolerance, const Vec3* boxVectors);
+
+      /**---------------------------------------------------------------------------------------
+      
+         Update part 1: half-kick and position delta (for use with Bussi between part1 and part2)
+
+         @param system              the System to be integrated
+         @param atomCoordinates     atom coordinates (unchanged)
+         @param velocities          velocities (updated: half-kick)
+         @param forces              forces
+         @param masses              atom masses
+         @param posDelta            on exit: position deltas (v*dt) for position update in part2
+
+         --------------------------------------------------------------------------------------- */
+
+      void updatePart1(const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
+                       std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces,
+                       std::vector<double>& masses, std::vector<OpenMM::Vec3>& posDelta);
+
+      /**---------------------------------------------------------------------------------------
+      
+         Update part 2: constraints, position update, velocity from delta
+
+         @param system              the System to be integrated
+         @param atomCoordinates     atom coordinates (updated)
+         @param velocities          velocities (updated from posDelta/dt)
+         @param posDelta            position deltas (possibly rescaled by Bussi)
+         @param masses              atom masses
+         @param tolerance           the constraint tolerance
+         @param boxVectors          the current periodic box vectors
+
+         --------------------------------------------------------------------------------------- */
+
+      void updatePart2(const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
+                       std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& posDelta,
+                       std::vector<double>& masses, double tolerance, const Vec3* boxVectors);
       
 };
 

@@ -94,6 +94,16 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
       void update(const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
                   std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double maxStepSize, double tolerance, const Vec3* boxVectors);
 
+      /** Part1: select step size, half-kick, fill posDelta (for Bussi between part1 and part2). */
+      void updatePart1(const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
+                       std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces,
+                       std::vector<double>& masses, double maxStepSize, std::vector<OpenMM::Vec3>& posDelta);
+
+      /** Part2: constraints, position update, velocity from posDelta, virtual sites. */
+      void updatePart2(const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
+                       std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& posDelta,
+                       std::vector<double>& masses, double tolerance, const Vec3* boxVectors);
+
 };
 
 } // namespace OpenMM

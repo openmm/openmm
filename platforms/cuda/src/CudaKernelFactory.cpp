@@ -159,6 +159,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CommonApplyBussiThermostatKernel(name, platform, cu);
     if (name == CalcCavityForceKernel::Name())
         return new CommonCalcCavityForceKernel(name, platform, cu);
+    if (name == CalcMultiModeCavityForceKernel::Name())
+        return new CommonCalcMultiModeCavityForceKernel(name, platform, cu);
     if (name == ApplyCavityDisplacementKernel::Name())
         return new CommonApplyCavityDisplacementKernel(name, platform, cu);
     if (name == IntegrateNoseHooverStepKernel::Name())

@@ -38,27 +38,10 @@
 #include "openmm/PythonForce.h"
 #include "openmm/CMMotionRemover.h"
 #include "SimTKOpenMMRealType.h"
-#include <fstream>
-#include <chrono>
-#include <random>
-#include <sstream>
+#include "SimTKOpenMMUtilities.h"
 
 using namespace OpenMM;
 using namespace std;
-
-static void appendDebugLog(const char* location, const char* message, const std::string& data, const char* hypothesisId, const char* runId) {
-    std::ofstream out("/media/extradrive/Trajectories/openmm/.cursor/debug.log", std::ios::app);
-    if (!out)
-        return;
-    const long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch()).count();
-    out << "{\"sessionId\":\"debug-session\",\"runId\":\"" << runId
-        << "\",\"hypothesisId\":\"" << hypothesisId
-        << "\",\"location\":\"" << location
-        << "\",\"message\":\"" << message
-        << "\",\"data\":" << data
-        << ",\"timestamp\":" << timestamp << "}\n";
-}
 
 
 /**
@@ -160,25 +143,15 @@ void CommonIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
         }
         
         // Allocate buffer for classical KE computation (for Bussi thermostat)
+        // Must match kernel's mixed type to avoid type mismatch on download
         int numClassicalWorkGroups = (numClassicalParticles + workgroupSize - 1) / workgroupSize;
-        classicalKE.initialize<double>(cc, std::max(1, numClassicalWorkGroups), "classicalKE");
+        if (useDoublePrecision)
+            classicalKE.initialize<double>(cc, std::max(1, numClassicalWorkGroups), "classicalKE");
+        else
+            classicalKE.initialize<float>(cc, std::max(1, numClassicalWorkGroups), "classicalKE");
     }
     isQuantum.initialize<int>(cc, paddedParticles, "isQuantum");
     isQuantum.upload(isQuantumFlags);
-
-    // #region agent log
-    {
-        std::ostringstream data;
-        data << "{\"numCopies\":" << numCopies
-             << ",\"numParticles\":" << numParticles
-             << ",\"numQuantumParticles\":" << numQuantumParticles
-             << ",\"numClassicalParticles\":" << numClassicalParticles
-             << ",\"hybridMode\":" << (hybridMode ? 1 : 0)
-             << ",\"storageLayout\":\"uniform\""
-             << "}";
-        appendDebugLog("CommonRpmdKernels.cpp:initialize", "uniform storage", data.str(), "uniform-v1", "run1");
-    }
-    // #endregion
     
     cc.getIntegrationUtilities().initRandomNumberGenerator((unsigned int) integrator.getRandomNumberSeed());
     
@@ -267,7 +240,7 @@ void CommonIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
         velocitiesKernelHybrid = program->createKernel("advanceVelocitiesHybrid");
         
         // Sync kernel to keep classical beads identical
-        ComputeKernel syncClassicalBeadsKernel = program->createKernel("syncClassicalBeads");
+        syncClassicalBeadsKernel = program->createKernel("syncClassicalBeads");
         
         // Classical thermostat kernels
         applyClassicalThermostatKernel = program->createKernel("applyClassicalThermostat");
@@ -276,8 +249,12 @@ void CommonIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     }
     
     // Allocate buffer for centroid kinetic energy reduction
+    // Must match kernel's mixed type to avoid type mismatch on download
     int numWorkGroups = (numParticles + workgroupSize - 1) / workgroupSize;
-    centroidKE.initialize<double>(cc, numWorkGroups, "centroidKE");
+    if (useDoublePrecision)
+        centroidKE.initialize<double>(cc, numWorkGroups, "centroidKE");
+    else
+        centroidKE.initialize<float>(cc, numWorkGroups, "centroidKE");
     
     // Create kernels for doing contractions.
     
@@ -365,6 +342,11 @@ void CommonIntegrateRPMDStepKernel::initializeKernels(ContextImpl& context) {
         velocitiesKernelHybrid->addArg(isQuantum);
         velocitiesKernelHybrid->addArg(); // dt
         
+        // Sync kernel - copies bead 0 to beads 1..N-1 for classical particles
+        syncClassicalBeadsKernel->addArg(positions);
+        syncClassicalBeadsKernel->addArg(velocities);
+        syncClassicalBeadsKernel->addArg(isQuantum);
+        
         // Classical thermostat (Langevin) - uses isQuantum to skip quantum particles
         applyClassicalThermostatKernel->addArg(velocities);
         applyClassicalThermostatKernel->addArg(cc.getIntegrationUtilities().getRandom());
@@ -393,18 +375,6 @@ void CommonIntegrateRPMDStepKernel::initializeKernels(ContextImpl& context) {
         forceContractionKernels[copies]->addArg(forces);
         forceContractionKernels[copies]->addArg(contractedForces);
     }
-
-    // #region agent log
-    {
-        std::ostringstream data;
-        data << "{\"positionsSize\":" << positions.getSize()
-             << ",\"velocitiesSize\":" << velocities.getSize()
-             << ",\"forcesSize\":" << forces.getSize()
-             << ",\"centroidKESize\":" << centroidKE.getSize()
-             << ",\"groupsByCopies\":" << groupsByCopies.size() << "}";
-        appendDebugLog("CommonRpmdKernels.cpp:initializeKernels", "kernel args set", data.str(), "H4", "pre-fix");
-    }
-    // #endregion
 }
 
 void CommonIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegrator& integrator, bool forcesAreValid) {
@@ -415,19 +385,6 @@ void CommonIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
     RPMDIntegrator::ThermostatType thermostatType = integrator.getThermostatType();
     bool applyThermostat = integrator.getApplyThermostat() && (thermostatType != RPMDIntegrator::NoneThermo);
     bool hybridMode = (numClassicalParticles > 0);
-
-    // #region agent log
-    {
-        std::ostringstream data;
-        data << "{\"thermostatType\":" << static_cast<int>(thermostatType)
-             << ",\"applyThermostat\":" << (applyThermostat ? 1 : 0)
-             << ",\"hybridMode\":" << (hybridMode ? 1 : 0)
-             << ",\"numQuantumParticles\":" << numQuantumParticles
-             << ",\"numClassicalParticles\":" << numClassicalParticles
-             << ",\"hasInitializedKernels\":" << (hasInitializedKernels ? 1 : 0) << "}";
-        appendDebugLog("CommonRpmdKernels.cpp:execute", "exec start", data.str(), "hybrid-v1", "run1");
-    }
-    // #endregion
     
     // Compute forces on all particles (all beads)
     if (!forcesAreValid)
@@ -496,11 +453,19 @@ void CommonIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
         // INTEGRATION (hybrid kernel handles both quantum and classical)
         stepKernelHybrid->execute(numParticles*numCopies, workgroupSize);
         
+        // SYNC CLASSICAL BEADS: copy bead 0 positions/velocities to beads 1..N-1
+        // This ensures force computation sees consistent positions for classical particles
+        syncClassicalBeadsKernel->execute(numParticles);
+        
         // FORCE COMPUTATION
         computeForces(context);
         
         // VELOCITY UPDATE (SECOND HALF-STEP)
         velocitiesKernelHybrid->execute(numParticles*numCopies, workgroupSize);
+        
+        // SYNC CLASSICAL VELOCITIES: copy bead 0 velocities to beads 1..N-1
+        // This keeps classical beads consistent after the velocity update
+        syncClassicalBeadsKernel->execute(numParticles);
         
         // THERMOSTAT (SECOND HALF)
         if (applyThermostat) {
@@ -745,12 +710,18 @@ void CommonIntegrateRPMDStepKernel::applyBussiCentroidThermostat(const System& s
     
     // Step 2: Download kinetic energy and compute scaling factor on CPU
     int numWorkGroups = (numParticles + workgroupSize - 1) / workgroupSize;
-    vector<double> keData(numWorkGroups);
-    centroidKE.download(keData);
-    
     double totalKE = 0.0;
-    for (int i = 0; i < numWorkGroups; i++)
-        totalKE += keData[i];
+    if (useDoublePrecision) {
+        vector<double> keData(numWorkGroups);
+        centroidKE.download(keData);
+        for (int i = 0; i < numWorkGroups; i++)
+            totalKE += keData[i];
+    } else {
+        vector<float> keData(numWorkGroups);
+        centroidKE.download(keData);
+        for (int i = 0; i < numWorkGroups; i++)
+            totalKE += (double) keData[i];
+    }
     
     // Count degrees of freedom
     int ndof = 0;
@@ -759,56 +730,117 @@ void CommonIntegrateRPMDStepKernel::applyBussiCentroidThermostat(const System& s
             ndof += 3;
     }
 
-    // #region agent log
-    {
-        std::ostringstream data;
-        data << "{\"numParticles\":" << numParticles
-             << ",\"workgroupSize\":" << workgroupSize
-             << ",\"numWorkGroups\":" << numWorkGroups
-             << ",\"centroidKESize\":" << centroidKE.getSize()
-             << ",\"totalKE\":" << totalKE
-             << ",\"ndof\":" << ndof
-             << ",\"useDoublePrecision\":" << (useDoublePrecision ? 1 : 0) << "}";
-        appendDebugLog("CommonRpmdKernels.cpp:applyBussiCentroidThermostat", "centroid KE", data.str(), "H1", "pre-fix");
-    }
-    // #endregion
-
-    if (totalKE <= 0.0 || ndof == 0)
+    if (ndof == 0)
         return;
     
     // Calculate Bussi rescaling factor using Gaussian random numbers
     double K_target = 0.5 * ndof * kT;
     
-    // Generate Gaussian random numbers on CPU using standard library
-    static thread_local std::mt19937 rng;
-    static thread_local std::normal_distribution<double> normal(0.0, 1.0);
-    
-    double R1 = normal(rng);
+    // Use OpenMM's standard RNG (same as Reference platform, properly seeded)
+    double R1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
     double R_gamma = 0.0;
     for (int i = 0; i < ndof - 1; i++) {
-        double rnd = normal(rng);
+        double rnd = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
         R_gamma += rnd * rnd;
     }
     
-    double ratio = K_target / totalKE;
-    double alpha2 = c1 + ratio * (1.0 - c1) * (R1 * R1 + R_gamma)
-                    + 2.0 * R1 * sqrt(ratio * c1 * (1.0 - c1));
+    // Use the DIRECT Bussi formula to compute K_new (handles K=0 correctly)
+    // Bussi et al., J. Chem. Phys. 126, 014101 (2007), Appendix Eq. A7
+    // K_new = K + (1-c1)*(K_target*S/ndof - K) + 2*R1*sqrt(K*K_target/ndof*(1-c1)*c1)
+    double S = R1 * R1 + R_gamma;
+    double K_new = totalKE + (1.0 - c1) * (K_target * S / ndof - totalKE)
+                   + 2.0 * R1 * sqrt(totalKE * K_target / ndof * (1.0 - c1) * c1);
     
-    if (alpha2 <= 0.0)
-        return;
+    if (K_new <= 0.0)
+        return;  // Invalid new KE (extremely rare), skip
     
-    double alpha = sqrt(alpha2);
-    if (R1 + sqrt(2.0 * totalKE / K_target * c1 / (1.0 - c1)) < 0.0)
-        alpha = -alpha;
-    
-    // Step 3: Apply scaling on GPU
-    // velocities already set in initializeKernels(), only need to update alpha
-    if (useDoublePrecision)
-        applyBussiScalingKernel->setArg(1, alpha);
-    else
-        applyBussiScalingKernel->setArg(1, (float) alpha);
-    
-    applyBussiScalingKernel->execute(numParticles);
+    if (totalKE > 0.0) {
+        // Normal case: rescale centroid velocities by alpha = sqrt(K_new/K_old)
+        double alpha = sqrt(K_new / totalKE);
+        
+        // Apply scaling on GPU
+        if (useDoublePrecision)
+            applyBussiScalingKernel->setArg(1, alpha);
+        else
+            applyBussiScalingKernel->setArg(1, (float) alpha);
+        
+        applyBussiScalingKernel->execute(numParticles);
+    } else {
+        // Cold start: centroid KE is zero, cannot rescale on GPU.
+        // Initialize centroid velocities from Maxwell-Boltzmann on CPU, scale to K_new,
+        // then upload the modified velocities back to GPU.
+        int paddedAtoms = cc.getPaddedNumAtoms();
+        
+        if (useDoublePrecision) {
+            vector<mm_double4> allVelm(numCopies * paddedAtoms);
+            velocities.download(allVelm);
+            
+            vector<Vec3> randVel(numParticles, Vec3(0.0, 0.0, 0.0));
+            double K_rand = 0.0;
+            for (int i = 0; i < numParticles; i++) {
+                double invMass = allVelm[i].w;
+                if (invMass == 0.0) continue;
+                double mass = 1.0 / invMass;
+                double sigma = sqrt(kT / mass);
+                randVel[i] = Vec3(sigma * SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
+                                  sigma * SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
+                                  sigma * SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+                K_rand += 0.5 * mass * (randVel[i][0]*randVel[i][0] + randVel[i][1]*randVel[i][1] + randVel[i][2]*randVel[i][2]);
+            }
+            
+            if (K_rand > 0.0) {
+                double scaleFactor = sqrt(K_new / K_rand);
+                for (int i = 0; i < numParticles; i++) {
+                    double invMass = allVelm[i].w;
+                    if (invMass == 0.0) continue;
+                    double dvx = randVel[i][0] * scaleFactor;
+                    double dvy = randVel[i][1] * scaleFactor;
+                    double dvz = randVel[i][2] * scaleFactor;
+                    for (int copy = 0; copy < numCopies; copy++) {
+                        int idx = copy * paddedAtoms + i;
+                        allVelm[idx].x += dvx;
+                        allVelm[idx].y += dvy;
+                        allVelm[idx].z += dvz;
+                    }
+                }
+                velocities.upload(allVelm);
+            }
+        } else {
+            vector<mm_float4> allVelm(numCopies * paddedAtoms);
+            velocities.download(allVelm);
+            
+            vector<Vec3> randVel(numParticles, Vec3(0.0, 0.0, 0.0));
+            double K_rand = 0.0;
+            for (int i = 0; i < numParticles; i++) {
+                double invMass = (double) allVelm[i].w;
+                if (invMass == 0.0) continue;
+                double mass = 1.0 / invMass;
+                double sigma = sqrt(kT / mass);
+                randVel[i] = Vec3(sigma * SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
+                                  sigma * SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
+                                  sigma * SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+                K_rand += 0.5 * mass * (randVel[i][0]*randVel[i][0] + randVel[i][1]*randVel[i][1] + randVel[i][2]*randVel[i][2]);
+            }
+            
+            if (K_rand > 0.0) {
+                double scaleFactor = sqrt(K_new / K_rand);
+                for (int i = 0; i < numParticles; i++) {
+                    double invMass = (double) allVelm[i].w;
+                    if (invMass == 0.0) continue;
+                    float dvx = (float)(randVel[i][0] * scaleFactor);
+                    float dvy = (float)(randVel[i][1] * scaleFactor);
+                    float dvz = (float)(randVel[i][2] * scaleFactor);
+                    for (int copy = 0; copy < numCopies; copy++) {
+                        int idx = copy * paddedAtoms + i;
+                        allVelm[idx].x += dvx;
+                        allVelm[idx].y += dvy;
+                        allVelm[idx].z += dvz;
+                    }
+                }
+                velocities.upload(allVelm);
+            }
+        }
+    }
 }
 
 void CommonIntegrateRPMDStepKernel::applyBussiClassicalThermostat(const System& system, const RPMDIntegrator& integrator, double halfdt) {
@@ -827,51 +859,59 @@ void CommonIntegrateRPMDStepKernel::applyBussiClassicalThermostat(const System& 
     computeClassicalKEKernel->execute(numParticles, workgroupSize);
     
     // Step 2: Download kinetic energy and compute scaling factor on CPU
-    vector<double> keData(numWorkGroups);
-    classicalKE.download(keData);
-    
     double totalKE = 0.0;
-    for (int i = 0; i < numWorkGroups; i++)
-        totalKE += keData[i];
+    if (useDoublePrecision) {
+        vector<double> keData(numWorkGroups);
+        classicalKE.download(keData);
+        for (int i = 0; i < numWorkGroups; i++)
+            totalKE += keData[i];
+    } else {
+        vector<float> keData(numWorkGroups);
+        classicalKE.download(keData);
+        for (int i = 0; i < numWorkGroups; i++)
+            totalKE += (double) keData[i];
+    }
     
     // Count degrees of freedom for classical particles
     int ndof = numClassicalParticles * 3;  // Classical particles always have 3 DOF each
     
-    if (totalKE <= 0.0 || ndof == 0)
+    if (ndof == 0)
         return;
     
     // Calculate Bussi rescaling factor using Gaussian random numbers
     double K_target = 0.5 * ndof * kT;
     
-    // Generate Gaussian random numbers on CPU
-    static thread_local std::mt19937 rng;
-    static thread_local std::normal_distribution<double> normal(0.0, 1.0);
-    
-    double R1 = normal(rng);
+    // Use OpenMM's standard RNG (same as Reference platform, properly seeded)
+    double R1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
     double R_gamma = 0.0;
     for (int i = 0; i < ndof - 1; i++) {
-        double rnd = normal(rng);
+        double rnd = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
         R_gamma += rnd * rnd;
     }
     
-    double ratio = K_target / totalKE;
-    double alpha2 = c1 + ratio * (1.0 - c1) * (R1 * R1 + R_gamma)
-                    + 2.0 * R1 * sqrt(ratio * c1 * (1.0 - c1));
+    // Use the DIRECT Bussi formula to compute K_new (handles K=0 correctly)
+    // K_new = K + (1-c1)*(K_target*S/ndof - K) + 2*R1*sqrt(K*K_target/ndof*(1-c1)*c1)
+    double S = R1 * R1 + R_gamma;
+    double K_new = totalKE + (1.0 - c1) * (K_target * S / ndof - totalKE)
+                   + 2.0 * R1 * sqrt(totalKE * K_target / ndof * (1.0 - c1) * c1);
     
-    if (alpha2 <= 0.0)
-        return;
+    if (K_new <= 0.0)
+        return;  // Invalid new KE (extremely rare), skip
     
-    double alpha = sqrt(alpha2);
-    if (R1 + sqrt(2.0 * totalKE / K_target * c1 / (1.0 - c1)) < 0.0)
-        alpha = -alpha;
-    
-    // Step 3: Apply scaling on GPU (uses isQuantum to identify classical particles)
-    if (useDoublePrecision)
-        applyBussiClassicalScalingKernel->setArg(2, alpha);
-    else
-        applyBussiClassicalScalingKernel->setArg(2, (float) alpha);
-    
-    applyBussiClassicalScalingKernel->execute(numParticles);
+    if (totalKE > 0.0) {
+        // Normal case: rescale classical velocities by alpha = sqrt(K_new/K_old)
+        double alpha = sqrt(K_new / totalKE);
+        
+        // Apply scaling on GPU (uses isQuantum to identify classical particles)
+        if (useDoublePrecision)
+            applyBussiClassicalScalingKernel->setArg(2, alpha);
+        else
+            applyBussiClassicalScalingKernel->setArg(2, (float) alpha);
+        
+        applyBussiClassicalScalingKernel->execute(numParticles);
+    }
+    // Note: if totalKE == 0 (cold start), classical particles will be initialized
+    // by the Langevin classical thermostat or remain at zero until forces inject energy
 }
 
 void CommonIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& pos) {

@@ -2,6 +2,19 @@
 
 This directory contains simulations of a two-component diatomic dimer system (O-O and N-N dimers) coupled to an optical cavity.
 
+## Install (OpenMM from this repo)
+
+To run `run_simulation.py` you need OpenMM built and installed from this repository (with CavityForce and Bussi thermostat). From the repo root:
+
+```bash
+# Optional: use a conda env
+conda activate base
+# Full build + install (OpenMM, optional Fairchem/openmm-ml); see scripts/README_INSTALL_BASE.md
+bash scripts/install_openmm_fairchem_base.sh
+```
+
+If you only need OpenMM (no Fairchem): configure and build OpenMM, then `make install` and install the Python package from `build/python` (e.g. `pip install build/python`). The script uses CUDA when available and falls back to Reference (CPU) otherwise.
+
 ## System Parameters
 
 **Molecular frequencies:**
@@ -32,6 +45,11 @@ python run_simulation.py --dimers 500 --lambda 0.005 --cavity-freq 2325 --prod 2
 
 # Speed benchmark (no dipole output)
 python run_simulation.py --no-dipole --prod 10
+
+# F(k,t) + PDB, constant density, no cavity coupling (g=0), no dipole output
+python run_simulation.py --dimers 250 --g 0.0 --temp 100.0 --dt 0.001 --equil 200 --prod 3000 \
+  --cavity-freq 1555 --report-interval 10000 --pdb-interval 10000 --enable-fkt \
+  --fkt-output-period-ps 1.0 --fkt-ref-interval-ps 100.0 --constant-density --no-dipole --pdb ./test.pdb
 ```
 
 **Flags:**

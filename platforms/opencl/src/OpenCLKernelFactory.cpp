@@ -157,6 +157,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new CommonApplyBussiThermostatKernel(name, platform, cl);
     if (name == CalcCavityForceKernel::Name())
         return new CommonCalcCavityForceKernel(name, platform, cl);
+    if (name == CalcMultiModeCavityForceKernel::Name())
+        return new CommonCalcMultiModeCavityForceKernel(name, platform, cl);
     if (name == ApplyCavityDisplacementKernel::Name())
         return new CommonApplyCavityDisplacementKernel(name, platform, cl);
     if (name == IntegrateNoseHooverStepKernel::Name())

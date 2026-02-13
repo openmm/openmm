@@ -122,6 +122,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceApplyBussiThermostatKernel(name, platform);
     if (name == CalcCavityForceKernel::Name())
         return new ReferenceCalcCavityForceKernel(name, platform);
+    if (name == CalcMultiModeCavityForceKernel::Name())
+        return new ReferenceCalcMultiModeCavityForceKernel(name, platform);
     if (name == ApplyCavityDisplacementKernel::Name())
         return new ReferenceApplyCavityDisplacementKernel(name, platform);
     if (name == ApplyMonteCarloBarostatKernel::Name())

@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=61", "wheel", "numpy", "Cython"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "OpenMM"
+version = "dynamic"
+description = "Python wrapper for OpenMM (a C++ MD package)"
+readme = "README.txt"
+license = { text = "BSD-3-Clause" }
+requires-python = ">=3.7"
+dependencies = ["numpy"]

@@ -89,10 +89,15 @@ void VariableVerletIntegrator::step(int steps) {
 
 void VariableVerletIntegrator::stepTo(double time) {
     if (context == NULL)
-        throw OpenMMException("This Integrator is not bound to a context!");  
+        throw OpenMMException("This Integrator is not bound to a context!");
+    IntegrateVariableVerletStepKernel& verletKernel = kernel.getAs<IntegrateVariableVerletStepKernel>();
     while (time > context->getTime()) {
-        context->updateContextState();
         context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
-        setStepSize(kernel.getAs<IntegrateVariableVerletStepKernel>().execute(*context, *this, time));
+        double dt = verletKernel.executePart1(*context, *this, time);
+        setStepSize(dt);
+        context->setStepPhase(ContextImpl::STEP_PHASE_AFTER_VERLET_PART1);
+        context->updateContextState();
+        context->setStepPhase(ContextImpl::STEP_PHASE_NONE);
+        verletKernel.executePart2(*context, *this);
     }
 }

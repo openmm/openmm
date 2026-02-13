@@ -34,6 +34,8 @@
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/BussiThermostat.h"
 #include "openmm/CavityForce.h"
+#include "openmm/MultiModeCavityForce.h"
+#include "openmm/MultiModeCavityDisplacer.h"
 #include "openmm/CavityParticleDisplacer.h"
 #include "openmm/CMAPTorsionForce.h"
 #include "openmm/CMMotionRemover.h"

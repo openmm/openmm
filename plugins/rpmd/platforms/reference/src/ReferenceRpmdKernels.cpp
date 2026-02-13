@@ -328,32 +328,14 @@ void ReferenceIntegrateRPMDStepKernel::applyBussiCentroidThermostat(const System
         ndof += 3;
     }
     
-    // #region agent log
-    {
-        std::ostringstream data;
-        data << "{\"numCopies\":" << numCopies
-             << ",\"numParticles\":" << numParticles
-             << ",\"centroidKE\":" << centroidKE
-             << ",\"ndof\":" << ndof
-             << ",\"c1\":" << c1 << "}";
-        appendDebugLog("ReferenceRpmdKernels.cpp:applyBussiCentroidThermostat", "centroid KE", data.str(), "H3", "pre-fix");
-    }
-    // #endregion
-
-    if (centroidKE <= 0.0 || ndof == 0)
-        return;  // Cannot rescale if no kinetic energy
+    if (ndof == 0)
+        return;
     
-    // Step 2: Calculate target kinetic energy and rescaling factor
-    // K_target = (ndof/2) * kT
+    // Step 2: Calculate target kinetic energy
     double K_target = 0.5 * ndof * kT;
     
-    // The Bussi algorithm:
-    // alpha^2 = c1 + (K_target/K)(1 - c1)(R1^2 + R_gamma) + 2*R1*sqrt(K_target/K * c1 * (1-c1))
-    // where R1 is a normal random number and R_gamma is a sum of (ndof-1) squared normal random numbers
-    
+    // Generate random numbers for Bussi formula
     double R1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-    
-    // R_gamma is sum of (ndof-1) squared normal random numbers
     double R_gamma = 0.0;
     if (ndof > 1) {
         for (int i = 0; i < ndof - 1; i++) {
@@ -362,30 +344,56 @@ void ReferenceIntegrateRPMDStepKernel::applyBussiCentroidThermostat(const System
         }
     }
     
-    double ratio = K_target / centroidKE;
-    double alpha2 = c1 + ratio * (1.0 - c1) * (R1 * R1 + R_gamma) 
-                    + 2.0 * R1 * sqrt(ratio * c1 * (1.0 - c1));
+    // Use the DIRECT Bussi formula to compute K_new (handles K=0 correctly)
+    // Bussi et al., J. Chem. Phys. 126, 014101 (2007), Appendix Eq. A7
+    // K_new = K + (1-c1)*(K_target*S/ndof - K) + 2*R1*sqrt(K*K_target/ndof*(1-c1)*c1)
+    // where S = R1^2 + R_gamma (sum of ndof squared Gaussians)
+    double S = R1 * R1 + R_gamma;
+    double K_new = centroidKE + (1.0 - c1) * (K_target * S / ndof - centroidKE)
+                   + 2.0 * R1 * sqrt(centroidKE * K_target / ndof * (1.0 - c1) * c1);
     
-    if (alpha2 <= 0.0)
-        return;  // Invalid rescaling factor, skip
-        
-    double alpha = sqrt(alpha2);
+    if (K_new <= 0.0)
+        return;  // Invalid new KE (extremely rare), skip
     
-    // Determine the sign of alpha based on R1
-    if (R1 + sqrt(2.0 * centroidKE / K_target * c1 / (1.0 - c1)) < 0.0)
-        alpha = -alpha;
-    
-    // Step 3: Rescale ONLY the centroid component of velocities
-    // To change centroid by factor alpha while keeping internal modes (deviations from centroid) unchanged:
-    // new_vel[k] = (old_vel[k] - old_centroid) + alpha * old_centroid
-    //            = old_vel[k] + (alpha - 1) * old_centroid
-    double deltaAlpha = alpha - 1.0;
-    for (int particle = 0; particle < numParticles; particle++) {
-        if (system.getParticleMass(particle) == 0.0)
-            continue;
-        Vec3 deltaCentroid = centroidVel[particle] * deltaAlpha;
-        for (int copy = 0; copy < numCopies; copy++) {
-            velocities[copy][particle] += deltaCentroid;
+    // Step 3: Apply the thermostat to centroid velocities
+    if (centroidKE > 0.0) {
+        // Normal case: rescale centroid velocities by alpha = sqrt(K_new/K_old)
+        double alpha = sqrt(K_new / centroidKE);
+        double deltaAlpha = alpha - 1.0;
+        for (int particle = 0; particle < numParticles; particle++) {
+            if (system.getParticleMass(particle) == 0.0)
+                continue;
+            Vec3 deltaCentroid = centroidVel[particle] * deltaAlpha;
+            for (int copy = 0; copy < numCopies; copy++) {
+                velocities[copy][particle] += deltaCentroid;
+            }
+        }
+    } else {
+        // Cold start: centroid KE is zero, cannot rescale.
+        // Initialize centroid velocities from Maxwell-Boltzmann and scale to K_new.
+        double K_rand = 0.0;
+        vector<Vec3> randVel(numParticles, Vec3(0.0, 0.0, 0.0));
+        for (int particle = 0; particle < numParticles; particle++) {
+            double mass = system.getParticleMass(particle);
+            if (mass == 0.0)
+                continue;
+            double sigma = sqrt(kT / mass);
+            randVel[particle] = Vec3(
+                sigma * SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
+                sigma * SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
+                sigma * SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+            K_rand += 0.5 * mass * randVel[particle].dot(randVel[particle]);
+        }
+        if (K_rand > 0.0) {
+            double scaleFactor = sqrt(K_new / K_rand);
+            for (int particle = 0; particle < numParticles; particle++) {
+                if (system.getParticleMass(particle) == 0.0)
+                    continue;
+                Vec3 scaledVel = randVel[particle] * scaleFactor;
+                for (int copy = 0; copy < numCopies; copy++) {
+                    velocities[copy][particle] += scaledVel;
+                }
+            }
         }
     }
 }

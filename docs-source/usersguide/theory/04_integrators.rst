@@ -24,6 +24,16 @@ where :math:`\mathbf{v}_i` is the velocity of particle *i*\ , :math:`\mathbf{r}_
 its position, :math:`\mathbf{f}_i` is the force acting on it, :math:`m_i` is its
 mass, and :math:`\Delta t` is the time step.
 
+When used with :class:`BussiThermostat`, the Verlet integrator applies the
+thermostat **after** the first half-kick (i.e., to the half-step velocities
+:math:`\mathbf{v}_i(t+\Delta t/2)`), then uses the rescaled velocities for the
+position update.  This order matches HOOMD-style velocity Verlet and ensures
+correct canonical sampling.  The Bussi thermostat uses a **signed** rescaling
+factor :math:`\alpha` per Bussi et al. 2009 Eq. (A8) :cite:`Bussi2009` for
+improved canonical sampling.  If the thermostatted group has zero kinetic
+energy when the thermostat is applied, an exception is thrown (thermostat
+requires non-zero initial momenta).
+
 Because the positions are always half a time step later than the velocities,
 care must be used when calculating the energy of the system.  In particular, the
 potential energy and kinetic energy in a State correspond to different times,

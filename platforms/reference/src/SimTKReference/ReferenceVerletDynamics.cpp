@@ -117,3 +117,51 @@ void ReferenceVerletDynamics::update(const OpenMM::System& system, vector<Vec3>&
    getVirtualSites().computePositions(system, atomCoordinates, boxVectors);
    incrementTimeStep();
 }
+
+void ReferenceVerletDynamics::updatePart1(const OpenMM::System& system, vector<Vec3>& atomCoordinates,
+                                          vector<Vec3>& velocities, vector<Vec3>& forces,
+                                          vector<double>& masses, vector<Vec3>& posDelta) {
+   int numberOfAtoms = system.getNumParticles();
+   if (getTimeStep() == 0) {
+      for (int ii = 0; ii < numberOfAtoms; ii++) {
+         if (masses[ii] == 0.0)
+             inverseMasses[ii] = 0.0;
+         else
+             inverseMasses[ii] = 1.0/masses[ii];
+      }
+   }
+   posDelta.resize(numberOfAtoms);
+   const double halfDt = 0.5 * getDeltaT();
+   for (int i = 0; i < numberOfAtoms; ++i) {
+       if (masses[i] != 0.0)
+           for (int j = 0; j < 3; ++j) {
+               velocities[i][j] += inverseMasses[i]*forces[i][j]*halfDt;
+               posDelta[i][j] = velocities[i][j]*getDeltaT();
+           }
+       else
+           posDelta[i] = Vec3(0, 0, 0);
+   }
+}
+
+void ReferenceVerletDynamics::updatePart2(const OpenMM::System& system, vector<Vec3>& atomCoordinates,
+                                         vector<Vec3>& velocities, vector<Vec3>& posDelta,
+                                         vector<double>& masses, double tolerance, const Vec3* boxVectors) {
+   int numberOfAtoms = system.getNumParticles();
+   xPrime.resize(numberOfAtoms);
+   for (int i = 0; i < numberOfAtoms; ++i)
+       for (int j = 0; j < 3; ++j)
+           xPrime[i][j] = atomCoordinates[i][j] + posDelta[i][j];
+   ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
+   if (referenceConstraintAlgorithm)
+      referenceConstraintAlgorithm->apply(atomCoordinates, xPrime, inverseMasses, tolerance);
+   double velocityScale = 1.0 / getDeltaT();
+   for (int i = 0; i < numberOfAtoms; ++i) {
+       if (masses[i] != 0.0)
+           for (int j = 0; j < 3; ++j) {
+               velocities[i][j] = velocityScale*(xPrime[i][j] - atomCoordinates[i][j]);
+               atomCoordinates[i][j] = xPrime[i][j];
+           }
+   }
+   getVirtualSites().computePositions(system, atomCoordinates, boxVectors);
+   incrementTimeStep();
+}

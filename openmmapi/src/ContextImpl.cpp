@@ -53,7 +53,7 @@ const static char CHECKPOINT_MAGIC_BYTES[] = "OpenMM Binary Checkpoint\n";
 
 ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties, ContextImpl* originalContext) :
         owner(owner), system(system), integrator(integrator), hasInitializedForces(false), hasSetPositions(false), integratorIsDeleted(false),
-        lastForceGroups(-1), platform(platform), platformData(NULL) {
+        lastForceGroups(-1), platform(platform), platformData(NULL), stepPhase(STEP_PHASE_NONE) {
     int numParticles = system.getNumParticles();
     if (numParticles == 0)
         throw OpenMMException("Cannot create a Context for a System with no particles");

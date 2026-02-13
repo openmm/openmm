@@ -2647,8 +2647,6 @@ void ReferenceIntegrateVerletStepKernel::execute(ContextImpl& context, const Ver
     vector<Vec3>& velData = extractVelocities(context);
     vector<Vec3>& forceData = extractForces(context);
     if (dynamics == 0 || stepSize != prevStepSize) {
-        // Recreate the computation objects with the new parameters.
-        
         if (dynamics)
             delete dynamics;
         dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), stepSize);
@@ -2658,6 +2656,31 @@ void ReferenceIntegrateVerletStepKernel::execute(ContextImpl& context, const Ver
     }
     dynamics->update(context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), extractBoxVectors(context));
     data.time += stepSize;
+    data.stepCount++;
+}
+
+void ReferenceIntegrateVerletStepKernel::executePart1(ContextImpl& context, const VerletIntegrator& integrator) {
+    double stepSize = integrator.getStepSize();
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& velData = extractVelocities(context);
+    vector<Vec3>& forceData = extractForces(context);
+    if (dynamics == 0 || stepSize != prevStepSize) {
+        if (dynamics)
+            delete dynamics;
+        dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), stepSize);
+        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        dynamics->setVirtualSites(extractVirtualSites(context));
+        prevStepSize = stepSize;
+    }
+    dynamics->updatePart1(context.getSystem(), posData, velData, forceData, masses, data.verletPosDelta);
+}
+
+void ReferenceIntegrateVerletStepKernel::executePart2(ContextImpl& context, const VerletIntegrator& integrator) {
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& velData = extractVelocities(context);
+    dynamics->updatePart2(context.getSystem(), posData, velData, data.verletPosDelta, masses,
+                         integrator.getConstraintTolerance(), extractBoxVectors(context));
+    data.time += integrator.getStepSize();
     data.stepCount++;
 }
 
@@ -3083,8 +3106,6 @@ double ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context,
     vector<Vec3>& velData = extractVelocities(context);
     vector<Vec3>& forceData = extractForces(context);
     if (dynamics == 0 || errorTol != prevErrorTol) {
-        // Recreate the computation objects with the new parameters.
-
         if (dynamics)
             delete dynamics;
         dynamics = new ReferenceVariableVerletDynamics(context.getSystem().getNumParticles(), errorTol);
@@ -3098,9 +3119,41 @@ double ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context,
     dynamics->update(context.getSystem(), posData, velData, forceData, masses, maxStepSize, integrator.getConstraintTolerance(), extractBoxVectors(context));
     data.time += dynamics->getDeltaT();
     if (dynamics->getDeltaT() == maxStepSize)
-        data.time = maxTime; // Avoid round-off error
+        data.time = maxTime;
     data.stepCount++;
     return dynamics->getDeltaT();
+}
+
+double ReferenceIntegrateVariableVerletStepKernel::executePart1(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
+    double errorTol = integrator.getErrorTolerance();
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& velData = extractVelocities(context);
+    vector<Vec3>& forceData = extractForces(context);
+    if (dynamics == 0 || errorTol != prevErrorTol) {
+        if (dynamics)
+            delete dynamics;
+        dynamics = new ReferenceVariableVerletDynamics(context.getSystem().getNumParticles(), errorTol);
+        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        dynamics->setVirtualSites(extractVirtualSites(context));
+        prevErrorTol = errorTol;
+    }
+    double maxStepSize = maxTime - data.time;
+    if (integrator.getMaximumStepSize() > 0)
+        maxStepSize = min(integrator.getMaximumStepSize(), maxStepSize);
+    lastMaxStepSize = maxStepSize;
+    dynamics->updatePart1(context.getSystem(), posData, velData, forceData, masses, maxStepSize, data.verletPosDelta);
+    return dynamics->getDeltaT();
+}
+
+void ReferenceIntegrateVariableVerletStepKernel::executePart2(ContextImpl& context, const VariableVerletIntegrator& integrator) {
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& velData = extractVelocities(context);
+    dynamics->updatePart2(context.getSystem(), posData, velData, data.verletPosDelta, masses,
+                          integrator.getConstraintTolerance(), extractBoxVectors(context));
+    data.time += dynamics->getDeltaT();
+    if (dynamics->getDeltaT() == lastMaxStepSize)
+        data.time = data.time - dynamics->getDeltaT() + lastMaxStepSize;
+    data.stepCount++;
 }
 
 double ReferenceIntegrateVariableVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator) {
@@ -3333,7 +3386,7 @@ void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
             dof += 3;
     
     if (dof <= 0 || kineticEnergy <= 0)
-        return;
+        throw OpenMMException("Bussi thermostat requires non-zero initial momenta.");
     
     // Compute the rescaling factor using Bussi's algorithm
     // c = exp(-dt/tau)
@@ -3353,7 +3406,6 @@ void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
     }
     
     // Compute alpha^2 (rescaling factor squared) using Bussi formula
-    // alpha^2 = c + (1-c) * (K_target / K) * (sum_Ri^2 / dof) + 2 * sqrt(c * (1-c) * K_target / (dof * K)) * R1
     double ratio = targetKE / (dof * kineticEnergy);
     double alphaSquared = c + (1 - c) * ratio * sumRiSquared 
                          + 2.0 * R1 * sqrt(c * (1 - c) * ratio);
@@ -3362,7 +3414,10 @@ void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
     if (alphaSquared < 0)
         alphaSquared = 0;
     
-    double alpha = sqrt(alphaSquared);
+    double alphaMagnitude = sqrt(alphaSquared);
+    // Signed alpha per Bussi et al. 2009 Eq. (A8): sign[alpha] = sign[R1 + sqrt(c*dof*K/((1-c)*K_bar))]
+    double signTerm = R1 + sqrt(c * dof * kineticEnergy / ((1.0 - c) * targetKE));
+    double alpha = (signTerm >= 0.0) ? alphaMagnitude : -alphaMagnitude;
     
     // Track reservoir energy: delta_E = K * (1 - alpha^2)
     double deltaE = kineticEnergy * (1.0 - alphaSquared);
@@ -3374,6 +3429,16 @@ void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
         velData[idx][0] *= alpha;
         velData[idx][1] *= alpha;
         velData[idx][2] *= alpha;
+    }
+
+    // When called after Verlet part1 (HOOMD order), also scale position deltas
+    if (context.getStepPhase() == ContextImpl::STEP_PHASE_AFTER_VERLET_PART1) {
+        ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+        for (size_t i = 0; i < data->verletPosDelta.size(); ++i) {
+            data->verletPosDelta[i][0] *= alpha;
+            data->verletPosDelta[i][1] *= alpha;
+            data->verletPosDelta[i][2] *= alpha;
+        }
     }
 }
 
@@ -3665,6 +3730,161 @@ void ReferenceApplyCavityDisplacementKernel::execute(ContextImpl& context, doubl
     posData[cavityParticleIndex][0] = factor * dipole[0];
     posData[cavityParticleIndex][1] = factor * dipole[1];
     posData[cavityParticleIndex][2] = originalZ;
+}
+
+// ==================== MultiModeCavityForce Reference Kernel Implementation ====================
+
+void ReferenceCalcMultiModeCavityForceKernel::initialize(const System& system, const MultiModeCavityForce& force) {
+    numModes = force.getNumModes();
+    omega1 = force.getOmega1();
+    lambda1 = force.getLambda1();
+    photonMass = force.getPhotonMass();
+    cavityLength = force.getCavityLength();
+    moleculeZ = force.getMoleculeZ();
+    
+    cavityParticleIndices.resize(numModes);
+    spatialProfiles.resize(numModes);
+    for (int i = 0; i < numModes; i++) {
+        cavityParticleIndices[i] = force.getCavityParticleIndex(i);
+        spatialProfiles[i] = force.getSpatialProfiles()[i];
+    }
+    
+    // Store charges for all particles
+    int numParticles = system.getNumParticles();
+    charges.resize(numParticles, 0.0);
+    for (int i = 0; i < system.getNumForces(); i++) {
+        const Force& f = system.getForce(i);
+        const NonbondedForce* nonbonded = dynamic_cast<const NonbondedForce*>(&f);
+        if (nonbonded != NULL) {
+            for (int j = 0; j < numParticles; j++) {
+                double charge, sigma, epsilon;
+                nonbonded->getParticleParameters(j, charge, sigma, epsilon);
+                charges[j] = charge;
+            }
+            break;
+        }
+    }
+    
+    // Precompute DSE prefactor in OpenMM units
+    // eps_n [OpenMM] = lambda_n * omega_n * 937679.0  (the conversion factor)
+    // K_n [OpenMM] = photonMass * OMEGAC_AU_TO_K_CONVERSION * omega_n^2
+    // eps_n^2/K_n = lambda_n^2 * omega_n^2 * 937679.0^2 / (photonMass * 1.7109e9 * omega_n^2)
+    //            = lambda_n^2 * 937679.0^2 / (photonMass * 1.7109e9)
+    //            = n * lambda1^2 * 937679.0^2 / (photonMass * 1.7109e9)
+    dsePrefactor = 0.0;
+    double convFactor = 937679.0 * 937679.0 / (photonMass * OMEGAC_AU_TO_K_CONVERSION);
+    for (int m = 0; m < numModes; m++) {
+        int n = m + 1;
+        double fn = spatialProfiles[m];
+        dsePrefactor += n * lambda1 * lambda1 * fn * fn;
+    }
+    dsePrefactor *= 0.5 * convFactor;
+}
+
+double ReferenceCalcMultiModeCavityForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
+    int numParticles = posData.size();
+    
+    // Compute molecular dipole moment (excluding all cavity particles)
+    Vec3 dipole(0.0, 0.0, 0.0);
+    for (int i = 0; i < numParticles; i++) {
+        bool isCavity = false;
+        for (int m = 0; m < numModes; m++) {
+            if (i == cavityParticleIndices[m]) {
+                isCavity = true;
+                break;
+            }
+        }
+        if (!isCavity) {
+            double q = charges[i];
+            dipole[0] += q * posData[i][0];
+            dipole[1] += q * posData[i][1];
+        }
+    }
+    
+    // Compute energy components and per-mode quantities
+    harmonicEnergy = 0.0;
+    couplingEnergy = 0.0;
+    
+    for (int m = 0; m < numModes; m++) {
+        int n = m + 1;
+        double omega_n = n * omega1;
+        double lambda_n = std::sqrt((double)n) * lambda1;
+        double fn = spatialProfiles[m];
+        
+        // Unit conversions (same as single-mode)
+        double K_n = photonMass * OMEGAC_AU_TO_K_CONVERSION * omega_n * omega_n;
+        double eps_n = lambda_n * omega_n * 937679.0;
+        double epsf_n = eps_n * fn;
+        
+        Vec3 qPhoton = posData[cavityParticleIndices[m]];
+        
+        // Harmonic energy: (1/2) * K_n * q_n^2
+        harmonicEnergy += 0.5 * K_n * (qPhoton[0]*qPhoton[0] + qPhoton[1]*qPhoton[1] + qPhoton[2]*qPhoton[2]);
+        
+        // Coupling energy: eps_n * f_n * q_n . d (x,y only)
+        couplingEnergy += epsf_n * (qPhoton[0]*dipole[0] + qPhoton[1]*dipole[1]);
+        
+        if (includeForces) {
+            // Displaced cavity position: Dq_n = q_n + (eps_n*f_n/K_n) * d
+            double epsfOverK_n = epsf_n / K_n;
+            double DqX = qPhoton[0] + epsfOverK_n * dipole[0];
+            double DqY = qPhoton[1] + epsfOverK_n * dipole[1];
+            
+            // Force on molecular particles from this mode
+            for (int i = 0; i < numParticles; i++) {
+                bool isCavity = false;
+                for (int mm = 0; mm < numModes; mm++) {
+                    if (i == cavityParticleIndices[mm]) {
+                        isCavity = true;
+                        break;
+                    }
+                }
+                if (!isCavity) {
+                    double q = charges[i];
+                    forceData[i][0] -= epsf_n * q * DqX;
+                    forceData[i][1] -= epsf_n * q * DqY;
+                }
+            }
+            
+            // Force on cavity particle n: F_n = -K_n*q_n - eps_n*f_n*d
+            forceData[cavityParticleIndices[m]][0] -= K_n * qPhoton[0] + epsf_n * dipole[0];
+            forceData[cavityParticleIndices[m]][1] -= K_n * qPhoton[1] + epsf_n * dipole[1];
+            forceData[cavityParticleIndices[m]][2] -= K_n * qPhoton[2];
+        }
+    }
+    
+    // Dipole self-energy: dsePrefactor * (d_x^2 + d_y^2)
+    dipoleSelfEnergy = dsePrefactor * (dipole[0]*dipole[0] + dipole[1]*dipole[1]);
+    
+    // Note: The DSE force on molecular particles is already included via the
+    // displaced coordinate formulation (DqX, DqY) used in the mode loop above.
+    // The mode loop computes: F_ix -= epsf_n * q_i * (q_nx + epsf_n/K_n * d_x)
+    // Summing the second term over modes gives: -sum_n[(epsf_n)^2/K_n] * q_i * d_x
+    //   = -2*dsePrefactor * q_i * d_x, which is exactly -dE_DSE/dr_ix.
+    
+    return harmonicEnergy + couplingEnergy + dipoleSelfEnergy;
+}
+
+void ReferenceCalcMultiModeCavityForceKernel::copyParametersToContext(ContextImpl& context, const MultiModeCavityForce& force) {
+    omega1 = force.getOmega1();
+    lambda1 = force.getLambda1();
+    photonMass = force.getPhotonMass();
+    numModes = force.getNumModes();
+    for (int i = 0; i < numModes; i++) {
+        spatialProfiles[i] = force.getSpatialProfiles()[i];
+        cavityParticleIndices[i] = force.getCavityParticleIndex(i);
+    }
+    // Recompute DSE prefactor
+    double convFactor = 937679.0 * 937679.0 / (photonMass * OMEGAC_AU_TO_K_CONVERSION);
+    dsePrefactor = 0.0;
+    for (int m = 0; m < numModes; m++) {
+        int n = m + 1;
+        double fn = spatialProfiles[m];
+        dsePrefactor += n * lambda1 * lambda1 * fn * fn;
+    }
+    dsePrefactor *= 0.5 * convFactor;
 }
 
 ReferenceApplyMonteCarloBarostatKernel::~ReferenceApplyMonteCarloBarostatKernel() {

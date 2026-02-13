@@ -153,8 +153,12 @@ else:
 lambda_coupling = metadata.get("lambda_coupling", 0.001)
 cavity_freq_cm = metadata.get("cavity_freq_cm", 3663.0)
 temperature_K = metadata.get("temperature_K", 300.0)
+dipole_dt_ps_meta = metadata.get("dipole_dt_ps", None)
+dipole_interval = metadata.get("dipole_interval", 1)
 if not metadata:
     print("   ⚠ Warning: Metadata missing, using defaults")
+if dipole_dt_ps_meta is not None:
+    print(f"   Dipole sampling interval: {dipole_dt_ps_meta:.4f} ps (every {dipole_interval} MD steps)")
 
 output_prefix = f"protein_ir_spectrum_lambda{lambda_coupling:.4f}"
 
@@ -256,27 +260,12 @@ print("   ✓ Applied ω² factor for IR absorption intensity")
 print(f"   Frequency range: 0 - {freq_cm[-1]:.1f} cm^-1")
 print(f"   Nyquist frequency: {freq_cm[-1]:.1f} cm^-1")
 
-# 6. Extract representative window for dipole plot
-print("\n6. Extracting dipole trajectory for representative window...")
-total_time_available = time[-1] - time[0]
-window_size = min(20.0, total_time_available * 0.2)
-window_start = max(time[0], time[-1] - window_size)
-window_end = time[-1]
-
-print(f"   Total time available: {total_time_available:.1f} ps")
-print(f"   Using window: {window_start:.1f} - {window_end:.1f} ps")
-
-idx_window = np.where((time >= window_start) & (time <= window_end))[0]
-time_window = time[idx_window]
-dipole_window = dipole[idx_window]
-
+# 6. Use full production time range for dipole plot
+print("\n6. Using full dipole trajectory for fluctuation plot...")
+time_window = time
+dipole_window = dipole
 print(f"   Window points: {len(time_window)}")
-if len(time_window) > 0:
-    print(f"   Window range: {time_window[0]:.2f} - {time_window[-1]:.2f} ps")
-else:
-    print("   ⚠ Warning: No data in window, using all available data")
-    time_window = time
-    dipole_window = dipole
+print(f"   Time range: {time_window[0]:.2f} - {time_window[-1]:.2f} ps")
 
 # 7. Plots
 print("\n7. Creating plots...")

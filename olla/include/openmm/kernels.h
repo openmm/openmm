@@ -34,6 +34,7 @@
 #include "openmm/BussiThermostat.h"
 #include "openmm/CavityForce.h"
 #include "openmm/CavityParticleDisplacer.h"
+#include "openmm/MultiModeCavityForce.h"
 #include "openmm/LangevinMiddleIntegrator.h"
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CMAPTorsionForce.h"
@@ -1254,12 +1255,28 @@ public:
      */
     virtual void initialize(const System& system, const VerletIntegrator& integrator) = 0;
     /**
-     * Execute the kernel.
+     * Execute the kernel (full step: part1 + constraints + part2).
      * 
      * @param context    the context in which to execute this kernel
      * @param integrator the VerletIntegrator this kernel is being used for
      */
     virtual void execute(ContextImpl& context, const VerletIntegrator& integrator) = 0;
+    /**
+     * Execute the first part of Verlet (half-kick + position delta).
+     * Used when Bussi thermostat is applied between part1 and part2.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     */
+    virtual void executePart1(ContextImpl& context, const VerletIntegrator& integrator) = 0;
+    /**
+     * Execute the second part of Verlet (position update + velocity from delta).
+     * Call after updateContextState() and constraints when using split step.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     */
+    virtual void executePart2(ContextImpl& context, const VerletIntegrator& integrator) = 0;
     /**
      * Compute the kinetic energy.
      * 
@@ -1480,7 +1497,7 @@ public:
      */
     virtual void initialize(const System& system, const VariableVerletIntegrator& integrator) = 0;
     /**
-     * Execute the kernel.
+     * Execute the kernel (full step).
      *
      * @param context    the context in which to execute this kernel
      * @param integrator the VariableVerletIntegrator this kernel is being used for
@@ -1489,8 +1506,25 @@ public:
      */
     virtual double execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) = 0;
     /**
+     * Execute part1 (select step size, half-kick + position delta).
+     * Used when Bussi thermostat is applied between part1 and part2.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableVerletIntegrator this kernel is being used for
+     * @param maxTime    the maximum time for this step
+     * @return the selected step size
+     */
+    virtual double executePart1(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) = 0;
+    /**
+     * Execute part2 (constraints, position update + velocity, virtual sites, time/step update).
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableVerletIntegrator this kernel is being used for
+     */
+    virtual void executePart2(ContextImpl& context, const VariableVerletIntegrator& integrator) = 0;
+    /**
      * Compute the kinetic energy.
-     * 
+     *
      * @param context    the context in which to execute this kernel
      * @param integrator the VariableVerletIntegrator this kernel is being used for
      */
@@ -1821,6 +1855,56 @@ public:
      * @param lambdaCoupling the coupling value to use for displacement calculation
      */
     virtual void execute(ContextImpl& context, double lambdaCoupling) = 0;
+};
+
+/**
+ * This kernel is invoked by MultiModeCavityForce to calculate the multi-mode
+ * cavity-molecule interaction forces and energy for a Fabry-Perot cavity with
+ * N longitudinal modes. It computes the molecular dipole ONCE and then evaluates
+ * contributions from all modes in a single kernel pass.
+ */
+class CalcMultiModeCavityForceKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CalcMultiModeCavityForce";
+    }
+    CalcMultiModeCavityForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system  the System this kernel will be applied to
+     * @param force   the MultiModeCavityForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const MultiModeCavityForce& force) = 0;
+    /**
+     * Execute the kernel to calculate forces and energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if energy should be calculated
+     * @return the total potential energy due to the multi-mode cavity force
+     */
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Copy changed parameters to a context.
+     *
+     * @param context  the context to copy parameters to
+     * @param force    the MultiModeCavityForce to copy parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const MultiModeCavityForce& force) = 0;
+    /**
+     * Get the total harmonic energy summed over all modes: sum_n (1/2)*K_n*q_n^2
+     */
+    virtual double getHarmonicEnergy() const = 0;
+    /**
+     * Get the total coupling energy summed over all modes: sum_n eps_n*f_n*q_n.d
+     */
+    virtual double getCouplingEnergy() const = 0;
+    /**
+     * Get the dipole self-energy: (1/2)*sum_n(eps_n^2/K_n*f_n^2)*d^2
+     */
+    virtual double getDipoleSelfEnergy() const = 0;
 };
 
 /**

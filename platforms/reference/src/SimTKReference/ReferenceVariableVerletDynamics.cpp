@@ -153,4 +153,68 @@ void ReferenceVariableVerletDynamics::update(const OpenMM::System& system, vecto
    incrementTimeStep();
 }
 
+void ReferenceVariableVerletDynamics::updatePart1(const OpenMM::System& system, vector<Vec3>& atomCoordinates,
+                                                 vector<Vec3>& velocities, vector<Vec3>& forces,
+                                                 vector<double>& masses, double maxStepSize, vector<Vec3>& posDelta) {
+    int numberOfAtoms = system.getNumParticles();
+    if (getTimeStep() == 0) {
+        for (int ii = 0; ii < numberOfAtoms; ii++) {
+            if (masses[ii] == 0.0)
+                inverseMasses[ii] = 0.0;
+            else
+                inverseMasses[ii] = 1.0/masses[ii];
+        }
+    }
+    double error = 0.0;
+    for (int i = 0; i < numberOfAtoms; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            double xerror = inverseMasses[i]*forces[i][j];
+            error += xerror*xerror;
+        }
+    }
+    error = sqrt(error/(numberOfAtoms*3));
+    double newStepSize = sqrt(getAccuracy()/error);
+    if (getDeltaT() > 0.0f)
+        newStepSize = std::min(newStepSize, getDeltaT()*2.0f);
+    if (newStepSize > getDeltaT() && newStepSize < 1.2f*getDeltaT())
+        newStepSize = getDeltaT();
+    if (newStepSize > maxStepSize)
+        newStepSize = maxStepSize;
+    double oldDt = getDeltaT();
+    setDeltaT(newStepSize);
+    double vstep = 0.5*(getDeltaT() + oldDt);
+    posDelta.resize(numberOfAtoms);
+    for (int i = 0; i < numberOfAtoms; ++i) {
+        if (masses[i] != 0.0)
+            for (int j = 0; j < 3; ++j) {
+                velocities[i][j] += inverseMasses[i]*forces[i][j]*vstep;
+                posDelta[i][j] = velocities[i][j]*getDeltaT();
+            }
+        else
+            posDelta[i] = Vec3(0, 0, 0);
+    }
+}
+
+void ReferenceVariableVerletDynamics::updatePart2(const OpenMM::System& system, vector<Vec3>& atomCoordinates,
+                                                  vector<Vec3>& velocities, vector<Vec3>& posDelta,
+                                                  vector<double>& masses, double tolerance, const Vec3* boxVectors) {
+    int numberOfAtoms = system.getNumParticles();
+    xPrime.resize(numberOfAtoms);
+    for (int i = 0; i < numberOfAtoms; ++i)
+        for (int j = 0; j < 3; ++j)
+            xPrime[i][j] = atomCoordinates[i][j] + posDelta[i][j];
+    ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
+    if (referenceConstraintAlgorithm)
+        referenceConstraintAlgorithm->apply(atomCoordinates, xPrime, inverseMasses, tolerance);
+    double velocityScale = 1.0 / getDeltaT();
+    for (int i = 0; i < numberOfAtoms; ++i) {
+        if (masses[i] != 0.0)
+            for (int j = 0; j < 3; ++j) {
+                velocities[i][j] = velocityScale*(xPrime[i][j] - atomCoordinates[i][j]);
+                atomCoordinates[i][j] = xPrime[i][j];
+            }
+    }
+    getVirtualSites().computePositions(system, atomCoordinates, boxVectors);
+    incrementTimeStep();
+}
 

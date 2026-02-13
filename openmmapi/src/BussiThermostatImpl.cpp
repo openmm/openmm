@@ -82,6 +82,10 @@ void BussiThermostatImpl::updateContextState(ContextImpl& context, bool& forcesI
     // Only apply the thermostat at the specified frequency
     if (stepCount % owner.getFrequency() == 0) {
         kernel.getAs<ApplyBussiThermostatKernel>().execute(context);
+        context.setParameter(BussiThermostat::ReservoirEnergyTranslational(),
+            kernel.getAs<ApplyBussiThermostatKernel>().getReservoirEnergyTranslational(context));
+        context.setParameter(BussiThermostat::ReservoirEnergyRotational(),
+            kernel.getAs<ApplyBussiThermostatKernel>().getReservoirEnergyRotational(context));
     }
     stepCount++;
 }

@@ -75,6 +75,8 @@ public:
     ReferenceConstraints* constraints;
     ReferenceVirtualSites* virtualSites;
     std::map<std::string, double>* energyParameterDerivatives;
+    /** Position deltas from Verlet part1 (for Bussi to scale when phase is AFTER_VERLET_PART1). */
+    std::vector<Vec3> verletPosDelta;
 };
 } // namespace OpenMM
 

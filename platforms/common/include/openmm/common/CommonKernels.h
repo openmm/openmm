@@ -920,17 +920,19 @@ public:
      */
     void initialize(const System& system, const VerletIntegrator& integrator);
     /**
-     * Execute the kernel.
-     *
-     * @param context    the context in which to execute this kernel
-     * @param integrator the VerletIntegrator this kernel is being used for
+     * Execute the kernel (full step).
      */
     void execute(ContextImpl& context, const VerletIntegrator& integrator);
     /**
+     * Execute part1 (half-kick + position delta).
+     */
+    void executePart1(ContextImpl& context, const VerletIntegrator& integrator);
+    /**
+     * Execute part2 (position update + velocity from delta).
+     */
+    void executePart2(ContextImpl& context, const VerletIntegrator& integrator);
+    /**
      * Compute the kinetic energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the VerletIntegrator this kernel is being used for
      */
     double computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator);
 private:
@@ -1036,6 +1038,22 @@ public:
      * @return the size of the step that was taken
      */
     double execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
+    /**
+     * Execute part 1 (select step size, half-kick + posDelta).
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableVerletIntegrator this kernel is being used for
+     * @param maxTime    the maximum time beyond which the simulation should not be advanced
+     * @return the selected step size
+     */
+    double executePart1(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
+    /**
+     * Execute part 2 (constraints, position update + velocity, virtual sites, time/step).
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableVerletIntegrator this kernel is being used for
+     */
+    void executePart2(ContextImpl& context, const VariableVerletIntegrator& integrator);
     /**
      * Compute the kinetic energy.
      * 
@@ -1354,6 +1372,7 @@ private:
     ComputeArray reservoirEnergyBuffer;
     ComputeKernel rescaleKernel;
     ComputeKernel sumKineticEnergyKernel;
+    ComputeKernel scalePosDeltaKernel;
     double reservoirEnergyTranslational;
     double reservoirEnergyRotational;
 };
@@ -1442,6 +1461,53 @@ private:
     ComputeKernel clearDipoleKernel;
     ComputeKernel computeDipoleKernel;
     ComputeKernel displacementKernel;
+};
+
+/**
+ * This kernel is invoked by MultiModeCavityForce to calculate the multi-mode
+ * Fabry-Perot cavity-molecule interaction forces and energy.
+ */
+class CommonCalcMultiModeCavityForceKernel : public CalcMultiModeCavityForceKernel {
+public:
+    CommonCalcMultiModeCavityForceKernel(std::string name, const Platform& platform, ComputeContext& cc) :
+        CalcMultiModeCavityForceKernel(name, platform), cc(cc),
+        harmonicEnergy(0.0), couplingEnergy(0.0), dipoleSelfEnergy(0.0) {
+    }
+    void initialize(const System& system, const MultiModeCavityForce& force);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    void copyParametersToContext(ContextImpl& context, const MultiModeCavityForce& force);
+    double getHarmonicEnergy() const { return harmonicEnergy; }
+    double getCouplingEnergy() const { return couplingEnergy; }
+    double getDipoleSelfEnergy() const { return dipoleSelfEnergy; }
+    /**
+     * Reorder the charges and cavity indices arrays when atoms are reordered.
+     */
+    void reorderData();
+private:
+    class ReorderListener;
+    ComputeContext& cc;
+    int numModes;
+    double omega1;
+    double lambda1;
+    double photonMass;
+    double cavityLength;
+    double moleculeZ;
+    double dsePrefactor;
+    std::vector<int> originalCavityIndices;
+    std::vector<float> originalCharges;
+    std::vector<double> spatialProfiles;
+    ComputeArray chargesArray;
+    ComputeArray dipoleBuffer;
+    ComputeArray energyBuffer;
+    ComputeArray modeParamsBuffer;       // float4 per mode: (K_n, eps_n, f_n, cavIdx)
+    ComputeArray cavityIndicesBuffer;    // int per mode: reordered cavity index
+    ComputeArray posCellOffsetsBuffer;
+    ComputeKernel clearBuffersKernel;
+    ComputeKernel computeDipoleKernel;
+    ComputeKernel computeForcesKernel;
+    double harmonicEnergy;
+    double couplingEnergy;
+    double dipoleSelfEnergy;
 };
 
 /**

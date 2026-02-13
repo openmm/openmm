@@ -477,8 +477,11 @@ void testPileGThermostat() {
         system.addParticle(mass);
     
     // Create RPMD integrator with PILE_G thermostat
-    RPMDIntegrator integ(numCopies, temperature, 1.0, 0.001);
+    // Use friction=10.0 for internal modes (PILE) and centroidFriction=10.0
+    // for centroid (Bussi). Higher friction ensures faster equilibration for the test.
+    RPMDIntegrator integ(numCopies, temperature, 10.0, 0.001);
     integ.setThermostatType(RPMDIntegrator::PileG);
+    integ.setCentroidFriction(10.0);
     ASSERT(integ.getThermostatType() == RPMDIntegrator::PileG);
     ASSERT(integ.getApplyThermostat() == true);
     
@@ -492,8 +495,8 @@ void testPileGThermostat() {
         integ.setPositions(i, positions);
     }
     
-    // Equilibrate
-    integ.step(1000);
+    // Equilibrate - with friction=10.0, relaxation time ~0.05 ps, so 2000 steps = 2 ps >> 0.05 ps
+    integ.step(2000);
     
     // Collect kinetic energy statistics
     const int numSteps = 1000;

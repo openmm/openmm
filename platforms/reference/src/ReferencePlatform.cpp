@@ -85,6 +85,7 @@ ReferencePlatform::ReferencePlatform() {
     registerKernelFactory(ApplyMonteCarloBarostatKernel::Name(), factory);
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
     registerKernelFactory(CalcCavityForceKernel::Name(), factory);
+    registerKernelFactory(CalcMultiModeCavityForceKernel::Name(), factory);
     registerKernelFactory(ApplyCavityDisplacementKernel::Name(), factory);
 }
 

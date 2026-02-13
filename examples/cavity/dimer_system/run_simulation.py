@@ -16,6 +16,13 @@ The system uses:
 - Coulomb interactions
 - Cavity coupling with Bussi thermostat for molecules
 - Langevin dynamics for the cavity photon
+
+F(k,t) and T=0: F(k,t) uses wrapped molecular positions (cav-hoomd parity). At nearly
+0 K the structure is effectively frozen, so F(k,t) stays close to its initial value.
+With setVelocitiesToTemperature(0), the first Verlet step still adds velocity from
+forces, so the system is not strictly frozen unless using a special protocol (e.g.
+minimizer only). With a thermostat at very low T, motion is small and F(k,t) does
+not decorrelate from coordinate drift.
 """
 
 import sys
@@ -28,12 +35,18 @@ from datetime import date
 try:
     from openmm import openmm
     from openmm import unit
-    from openmm.app import Simulation, StateDataReporter, ForceField, Topology, Element, CutoffPeriodic, PDBFile
+    from openmm.app import Simulation, StateDataReporter, ForceField, Topology, Element, PME, PDBFile
     print("✓ OpenMM loaded successfully")
 except ImportError as e:
     print(f"Error importing OpenMM: {e}")
     print("Make sure OpenMM is installed and the Python path is correct.")
     sys.exit(1)
+
+try:
+    import gsd.hoomd
+    HAS_GSD = True
+except ImportError:
+    HAS_GSD = False
 
 # Physical constants for unit conversion
 # We'll work in OpenMM native units (nm, kJ/mol, ps)
@@ -71,6 +84,201 @@ def box_size_nm_at_constant_density(num_molecules, N_ref=DIAMER_REF_N, L_ref_boh
     """
     L_bohr = L_ref_bohr * (num_molecules / N_ref) ** (1 / 3)
     return L_bohr * BOHR_TO_NM
+
+
+def _wrap_positions_into_box(pos_nm, box_nm):
+    """
+    Wrap positions into primary image [0, L) per dimension (orthorhombic).
+    Handles GSD in [0,L) or [-L/2, L/2) convention so OpenMM sees consistent primary image.
+    """
+    pos = np.asarray(pos_nm, dtype=np.float64)
+    box = np.asarray(box_nm, dtype=np.float64)
+    if box.ndim == 1:
+        box = box[:3]
+    # pos - floor(pos / L) * L gives [0, L); handles negative (e.g. [-L/2, L/2))
+    for d in range(3):
+        Ld = box[d]
+        if Ld <= 0:
+            raise ValueError(f"Box length L[{d}] = {Ld} must be positive")
+        pos[:, d] = pos[:, d] - np.floor(pos[:, d] / Ld) * Ld
+    return pos
+
+
+def _load_gsd_config(path, frame_index):
+    """
+    Load GSD snapshot into a config dict: positions, box (Bohr), bonds_group, bonds_typeid, n_mol, has_cavity.
+    Used when building OpenMM system from GSD so topology order matches the file.
+    """
+    if not HAS_GSD:
+        raise ImportError("gsd.hoomd is required; install with: pip install gsd")
+    path = Path(path)
+    with gsd.hoomd.open(path, "r") as f:
+        nframes = len(f)
+        if frame_index < 0:
+            frame_index = nframes + frame_index
+        snap = f[frame_index]
+    box = np.array(snap.configuration.box[:3], dtype=np.float64)
+    pos = np.array(snap.particles.position, dtype=np.float64)
+    bonds_group = np.array(snap.bonds.group, dtype=np.intp)
+    bonds_typeid = np.array(snap.bonds.typeid, dtype=np.intp)
+    n_mol = len(bonds_group)
+    n_mol_particles = 2 * n_mol
+    has_cavity = snap.particles.N == n_mol_particles + 1
+    if snap.particles.N != n_mol_particles and not has_cavity:
+        raise ValueError(
+            f"GSD has {snap.particles.N} particles, expected {n_mol_particles} or {n_mol_particles}+1 (with cavity)"
+        )
+    return {
+        "positions_bohr": pos,
+        "box_bohr": box,
+        "bonds_group": bonds_group,
+        "bonds_typeid": bonds_typeid,
+        "n_mol": n_mol,
+        "has_cavity": has_cavity,
+    }
+
+
+def _unwrap_molecules_bohr(pos_bohr, box_bohr, bonds_group):
+    """
+    Unwrap positions (Bohr) so bonded atoms are close; then shift so min in [0, L).
+    OpenMM HarmonicBondForce uses direct distance; bonded pairs must not span the box.
+    Positions may extend past L; do NOT wrap after this (wrapping would break bond lengths).
+    """
+    pos = np.asarray(pos_bohr, dtype=np.float64).copy()
+    box = np.asarray(box_bohr[:3], dtype=np.float64)
+    bonds = np.asarray(bonds_group, dtype=np.intp)
+    for b in range(len(bonds)):
+        i, j = int(bonds[b][0]), int(bonds[b][1])
+        dr = pos[j] - pos[i]
+        shift = np.round(dr / box) * box
+        pos[j] -= shift
+    min_pos = np.amin(pos, axis=0)
+    pos -= np.floor(min_pos / box) * box
+    return pos
+
+
+def _build_system_from_gsd(gsd_path, frame_index, gsd_in_nm, no_cavity, ff_dir):
+    """
+    Build OpenMM system from GSD so particle order and types match the file (avoids blow-up from order mismatch).
+    Returns (system, positions, topology, cavity_index or None, num_molecules, box_size_nm).
+    Uses PME and 1.0 nm cutoff to match create_diamer_system_from_forcefield.
+    """
+    if ff_dir is None:
+        ff_dir = Path(__file__).parent
+    ff_path = ff_dir / "diamer_forcefield.xml"
+    if not ff_path.exists():
+        raise FileNotFoundError(f"ForceField XML not found: {ff_path}")
+    cfg = _load_gsd_config(gsd_path, frame_index)
+    n_mol = cfg["n_mol"]
+    has_cavity = cfg["has_cavity"] and not no_cavity
+    bonds_group = cfg["bonds_group"]
+    bonds_typeid = cfg["bonds_typeid"]
+    box_bohr = np.asarray(cfg["box_bohr"][:3], dtype=np.float64)
+    scale = 1.0 if gsd_in_nm else BOHR_TO_NM
+    box_nm = box_bohr * scale
+    pos_bohr = _unwrap_molecules_bohr(cfg["positions_bohr"], box_bohr, bonds_group)
+    pos_nm = pos_bohr * scale
+    # Do NOT wrap after unwrap: HarmonicBondForce uses direct distance; wrapping would put
+    # bonded atoms on opposite box sides and blow up bond energy (Phase 4 fix).
+
+    topology = Topology()
+    chain = topology.addChain()
+    positions_list = []
+    for b in range(n_mol):
+        i, j = int(bonds_group[b][0]), int(bonds_group[b][1])
+        is_oo = int(bonds_typeid[b]) == 0
+        res_name = "OO" if is_oo else "NN"
+        elem = Element.getBySymbol("O") if is_oo else Element.getBySymbol("N")
+        res = topology.addResidue(res_name, chain)
+        a1 = topology.addAtom("A", elem, res)
+        a2 = topology.addAtom("B", elem, res)
+        topology.addBond(a1, a2)
+        positions_list.append(openmm.Vec3(float(pos_nm[i, 0]), float(pos_nm[i, 1]), float(pos_nm[i, 2])) * unit.nanometer)
+        positions_list.append(openmm.Vec3(float(pos_nm[j, 0]), float(pos_nm[j, 1]), float(pos_nm[j, 2])) * unit.nanometer)
+    cavity_index = None
+    if has_cavity:
+        cav_res = topology.addResidue("CAV", chain)
+        topology.addAtom("Q", Element.getBySymbol("He"), cav_res)
+        cavity_index = 2 * n_mol
+        positions_list.append(openmm.Vec3(float(pos_nm[-1, 0]), float(pos_nm[-1, 1]), float(pos_nm[-1, 2])) * unit.nanometer)
+
+    topology.setPeriodicBoxVectors((
+        openmm.Vec3(box_nm[0], 0, 0) * unit.nanometer,
+        openmm.Vec3(0, box_nm[1], 0) * unit.nanometer,
+        openmm.Vec3(0, 0, box_nm[2]) * unit.nanometer,
+    ))
+    forcefield = ForceField(str(ff_path))
+    system = forcefield.createSystem(
+        topology,
+        nonbondedMethod=PME,
+        nonbondedCutoff=1.0 * unit.nanometer,
+    )
+    system.setDefaultPeriodicBoxVectors(
+        openmm.Vec3(box_nm[0], 0, 0),
+        openmm.Vec3(0, box_nm[1], 0),
+        openmm.Vec3(0, 0, box_nm[2]),
+    )
+    if cavity_index is not None:
+        nbf = None
+        ljf = None
+        for f in system.getForces():
+            if isinstance(f, openmm.NonbondedForce):
+                nbf = f
+            if isinstance(f, openmm.CustomNonbondedForce) and f.getName() == "LennardJones":
+                ljf = f
+        for i in range(system.getNumParticles()):
+            if i == cavity_index:
+                continue
+            if ljf is not None:
+                ljf.addExclusion(cavity_index, i)
+            if nbf is not None:
+                nbf.addException(cavity_index, i, 0.0, 0.1, 0.0)
+    return system, positions_list, topology, cavity_index, n_mol, float(box_nm[0])
+
+
+def _load_positions_and_box_from_gsd(path, frame_index, gsd_in_nm=False, bohr_to_nm=BOHR_TO_NM):
+    """
+    Load positions and box from a GSD file (cav-hoomd or HOOMD format).
+
+    Units:
+      - If gsd_in_nm is False (default): assumes GSD is in atomic units (Bohr);
+        multiplies positions and box by bohr_to_nm to get nm.
+      - If gsd_in_nm is True: assumes GSD is already in nm (no conversion).
+
+    Positions are always wrapped into [0, L) per dimension so OpenMM's primary
+    image is consistent (handles GSD in [0,L) or [-L/2, L/2) convention).
+
+    Returns (positions_list, box_nm) where positions_list is list of
+    openmm.Vec3 * unit.nanometer, box_nm is (Lx, Ly, Lz) in nm.
+    """
+    if not HAS_GSD:
+        raise ImportError("gsd.hoomd is required for --initial-gsd; install with: pip install gsd")
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(f"Initial GSD not found: {path}")
+    with gsd.hoomd.open(path, "r") as f:
+        nframes = len(f)
+        if frame_index < 0:
+            frame_index = nframes + frame_index
+        if frame_index < 0 or frame_index >= nframes:
+            raise ValueError(f"Frame index {frame_index} out of range for GSD with {nframes} frames")
+        frame = f[frame_index]
+    pos = np.array(frame.particles.position, dtype=np.float64)
+    box_raw = np.array(frame.configuration.box[:3], dtype=np.float64)
+
+    if gsd_in_nm:
+        pos_nm = np.asarray(pos, dtype=np.float64)
+        box_nm = np.asarray(box_raw, dtype=np.float64)
+    else:
+        # GSD from cav-hoomd / initlattice is in Bohr
+        pos_nm = pos * bohr_to_nm
+        box_nm = box_raw * bohr_to_nm
+
+    # Wrap into [0, L) so OpenMM primary image is consistent
+    pos_nm = _wrap_positions_into_box(pos_nm, box_nm)
+
+    positions_list = [openmm.Vec3(float(x), float(y), float(z)) * unit.nanometer for x, y, z in pos_nm]
+    return positions_list, box_nm, box_raw
 
 
 def _system_xml_paths(num_molecules, fraction_OO, box_size_nm, seed):
@@ -221,8 +429,9 @@ def create_diamer_system_in_code(num_molecules=50, fraction_OO=0.8, box_size_nm=
     # Create forces
     bond_force = openmm.HarmonicBondForce()
     nonbonded_force = openmm.NonbondedForce()
-    nonbonded_force.setNonbondedMethod(openmm.NonbondedForce.CutoffPeriodic)
-    nonbonded_force.setCutoffDistance(0.9)  # nm
+    # PME + 1.0 nm cutoff matches cav-hoomd PPPM; validated in debug_force_components.py
+    nonbonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
+    nonbonded_force.setCutoffDistance(1.0)  # nm
     
     # Generate molecules on a lattice
     num_OO = int(fraction_OO * num_molecules)
@@ -386,10 +595,11 @@ def create_diamer_system_from_forcefield(num_molecules=50, fraction_OO=0.8, box_
         openmm.Vec3(0, 0, box_size_nm) * unit.nanometer,
     )
     topology.setPeriodicBoxVectors(vectors)
+    # PME + 1.0 nm cutoff matches cav-hoomd PPPM; validated in debug_force_components.py
     system = forcefield.createSystem(
         topology,
-        nonbondedMethod=CutoffPeriodic,
-        nonbondedCutoff=0.9 * unit.nanometer,
+        nonbondedMethod=PME,
+        nonbondedCutoff=1.0 * unit.nanometer,
     )
     system.setDefaultPeriodicBoxVectors(
         openmm.Vec3(box_size_nm, 0, 0),
@@ -502,6 +712,38 @@ def compute_dipole_moment(state, charges, num_molecular_particles):
     return dipole
 
 
+def _topology_subset(topology, num_atoms):
+    """
+    Return a new Topology containing only the first num_atoms atoms.
+    Used for PDB output when cavity is in the full topology but we write molecular atoms only.
+    """
+    from openmm.app import Topology
+    new_top = Topology()
+    new_top.setPeriodicBoxVectors(topology.getPeriodicBoxVectors())
+    count = 0
+    for chain in topology.chains():
+        if count >= num_atoms:
+            break
+        new_chain = new_top.addChain(getattr(chain, "id", None))
+        for residue in chain.residues():
+            if count >= num_atoms:
+                break
+            new_res = new_top.addResidue(
+                residue.name, new_chain,
+                getattr(residue, "id", None),
+                getattr(residue, "insertionCode", "") or "",
+            )
+            for atom in residue.atoms():
+                if count >= num_atoms:
+                    break
+                new_top.addAtom(
+                    atom.name, atom.element, new_res,
+                    getattr(atom, "id", None),
+                )
+                count += 1
+    return new_top
+
+
 def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
              dt=0.001, equilibration_time_ps=100.0, production_time_ps=900.0,
              cavity_freq_cm=1560.0, disable_dipole_output=False,
@@ -510,12 +752,42 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
              pdb_file=None, pdb_interval_steps=1000,
              enable_fkt=False, fkt_kmag=113.4, fkt_num_wavevectors=50,
              fkt_reference_interval_ps=1.0, fkt_max_refs=10,
-             fkt_output_period_ps=1.0, fkt_output_prefix=None):
-    """Run the cavity diamer simulation test."""
+             fkt_output_period_ps=1.0, fkt_output_prefix=None,
+             nve=False, bussi_tau_ps=5.0,
+             initial_gsd=None, initial_gsd_frame=-1, gsd_in_nm=False, no_cavity=False):
+    """Run the cavity diamer simulation test.
+    If nve=True: NVE (microcanonical) with Verlet; initial velocities thermalized at temperature_K.
+    If nve=False: Verlet + Bussi (molecules only), cav-hoomd parity; default Bussi tau 5.0 ps.
+    If no_cavity=True: 500 particles only (bare glassy system), no cavity particle or CavityForce.
+    """
     
     print("=" * 60)
     print("Cavity OpenMM Diamer Test")
     print("=" * 60)
+
+    # Load initial structure from GSD if requested (same initial conditions as cav-hoomd).
+    # When initial_gsd is set we build the OpenMM system FROM the GSD topology so particle order
+    # and types (O-O vs N-N) match the file; otherwise positions-by-index would mismatch and blow up.
+    build_from_gsd = bool(initial_gsd)
+    gsd_positions = None
+    gsd_box_nm = None
+    if build_from_gsd:
+        if not HAS_GSD:
+            raise ImportError("gsd.hoomd is required for --initial-gsd; install with: pip install gsd")
+        ff_dir = Path(__file__).parent
+        system, positions, topology, cavity_index, num_molecules, box_size_nm = _build_system_from_gsd(
+            initial_gsd, initial_gsd_frame, gsd_in_nm, no_cavity, ff_dir
+        )
+        n_sys = system.getNumParticles()
+        print(f"\n--- Initial structure from GSD ---")
+        print(f"  File: {initial_gsd}, frame: {initial_gsd_frame}")
+        print(f"  Box from GSD: {box_size_nm:.4f} nm (cubic)")
+        print(f"  Positions: {n_sys} particles (topology from GSD; order matches file); energy minimization will be skipped")
+        if box_size_nm < 0.3:
+            print(f"  *** WARNING: Box {box_size_nm:.4f} nm is very small. If GSD is in nm (not Bohr), use --gsd-in-nm. ***")
+        elif box_size_nm > 50.0:
+            print(f"  *** WARNING: Box {box_size_nm:.4f} nm is very large. If GSD is in Bohr, do not use --gsd-in-nm. ***")
+        minimize = False
     
     # System parameters (box_size_nm, fraction_OO come from arguments)
     
@@ -545,6 +817,8 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     print(f"  Equilibration: {equilibration_time_ps} ps ({equilibration_steps} steps)")
     print(f"  Production: {production_time_ps} ps ({production_steps} steps)")
     print(f"  Total time: {equilibration_time_ps + production_time_ps} ps")
+    if nve:
+        print(f"  Mode: NVE (microcanonical); initial velocities thermalized at T = {temperature_K} K")
     if not disable_dipole_output:
         print(f"  Dipole output: Every timestep ({dt*1000:.1f} fs) from t=0 for full run (equilibration + production)")
     else:
@@ -559,30 +833,89 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         fkt_prefix_resolved = (fkt_output_prefix if fkt_output_prefix is not None else
                                (Path(output_file).with_suffix("").name if output_file else f"fkt_lambda{lambda_coupling:.4f}"))
         print(f"  F(k,t): enabled, prefix={fkt_prefix_resolved}, k={fkt_kmag} nm⁻¹")
+        print(f"    wrapped molecular positions (cav-hoomd parity; correct at 0 K)")
         print(f"    reference interval (new file every): {fkt_reference_interval_ps} ps")
         print(f"    max reference files (FIFO drop): {fkt_max_refs}")
         print(f"    F(k,t) output period: {fkt_output_period_ps} ps")
     
-    # Create system from ForceField XML (diamer_forcefield.xml); cavity in topology for LJ force compatibility
-    print("\n--- Creating Diamer System ---")
-    result = create_diamer_system_from_forcefield(
-        num_molecules=num_molecules,
-        fraction_OO=fraction_OO,
-        box_size_nm=box_size_nm,
-        seed=seed,
-        include_cavity=True,
-    )
-    if len(result) == 4:
-        system, positions, topology, cavity_index = result
-        num_molecular_particles = cavity_index
-        system.setParticleMass(cavity_index, photon_mass)
-        print("\n--- Cavity (from topology) ---")
-        print(f"  Cavity particle at index {cavity_index}, mass set to {photon_mass:.6f} amu")
+    # Create system: from GSD (topology matches file) or from forcefield (fixed order).
+    if build_from_gsd:
+        # system, positions, topology, cavity_index, num_molecules, box_size_nm already set above
+        cavity_available = cavity_index is not None
+        num_molecular_particles = cavity_index if cavity_index is not None else system.getNumParticles()
+        print("\n--- Creating Diamer System ---")
+        print(f"Created system with {system.getNumParticles()} particles ({num_molecules} molecules)")
+        print(f"  Box size: {box_size_nm:.4f} nm")
+        print(f"  Topology from GSD (particle order matches file)")
+        if cavity_available:
+            if lambda_coupling == 0:
+                system.setParticleMass(cavity_index, 1e6)
+                print(f"  Cavity particle at index {cavity_index}, mass set to 1e6 amu (fixed for g=0)")
+            else:
+                system.setParticleMass(cavity_index, photon_mass)
+                print(f"  Cavity particle at index {cavity_index}, mass set to {photon_mass:.6f} amu")
+        else:
+            print("  No cavity (bare glassy system, 500 particles)")
     else:
-        system, positions, topology = result
-        print("\n--- Adding Cavity Particle ---")
-        cavity_index = add_cavity_particle(system, positions, omegac_au, photon_mass)
-        num_molecular_particles = cavity_index
+        print("\n--- Creating Diamer System ---")
+        include_cavity = not no_cavity
+        result = create_diamer_system_from_forcefield(
+            num_molecules=num_molecules,
+            fraction_OO=fraction_OO,
+            box_size_nm=box_size_nm,
+            seed=seed,
+            include_cavity=include_cavity,
+        )
+        cavity_available = False
+        cavity_index = None
+        if len(result) == 4:
+            system, positions, topology, cavity_index = result
+            num_molecular_particles = cavity_index
+            cavity_available = True
+            if lambda_coupling == 0:
+                system.setParticleMass(cavity_index, 1e6)
+                print("\n--- Cavity (from topology) ---")
+                print(f"  Cavity particle at index {cavity_index}, mass set to 1e6 amu (fixed for g=0)")
+            else:
+                system.setParticleMass(cavity_index, photon_mass)
+                print("\n--- Cavity (from topology) ---")
+                print(f"  Cavity particle at index {cavity_index}, mass set to {photon_mass:.6f} amu")
+        else:
+            system, positions, topology = result
+            num_molecular_particles = system.getNumParticles()
+            if not no_cavity:
+                print("\n--- Adding Cavity Particle ---")
+                cavity_index = add_cavity_particle(system, positions, omegac_au, photon_mass)
+                num_molecular_particles = cavity_index
+                cavity_available = True
+                if lambda_coupling == 0:
+                    system.setParticleMass(cavity_index, 1e6)
+                    print(f"  Cavity mass set to 1e6 amu (fixed for g=0)")
+            else:
+                print("  No cavity (bare glassy system, 500 particles)")
+
+        if gsd_positions is not None:
+            n_sys = system.getNumParticles()
+            if len(gsd_positions) > n_sys:
+                gsd_positions = gsd_positions[:n_sys]
+                print(f"  Using first {n_sys} particles from GSD (no-cavity mode)")
+            if len(gsd_positions) != n_sys:
+                raise ValueError(
+                    f"GSD has {len(gsd_positions)} particles but system has {n_sys}; "
+                    "need at least system.getNumParticles() (500 for no-cavity, 501 with cavity)"
+                )
+            positions = gsd_positions
+            topology.setPeriodicBoxVectors((
+                openmm.Vec3(gsd_box_nm[0], 0, 0) * unit.nanometer,
+                openmm.Vec3(0, gsd_box_nm[1], 0) * unit.nanometer,
+                openmm.Vec3(0, 0, gsd_box_nm[2]) * unit.nanometer,
+            ))
+            system.setDefaultPeriodicBoxVectors(
+                openmm.Vec3(gsd_box_nm[0], 0, 0),
+                openmm.Vec3(0, gsd_box_nm[1], 0),
+                openmm.Vec3(0, 0, gsd_box_nm[2]),
+            )
+            print("  Replaced positions and box with GSD values")
     
     # Store charges for dipole calculation
     charges = []
@@ -592,76 +925,86 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
                 charge, sigma, epsilon = force.getParticleParameters(i)
                 charges.append(charge)
     
-    # Check if CavityForce is available
-    print("\n--- Adding Cavity Force ---")
-    try:
-        # Create CavityForce with target lambda from t=0 (omegac in atomic units)
-        cavity_force = openmm.CavityForce(cavity_index, omegac_au, lambda_coupling, photon_mass)
-        system.addForce(cavity_force)
-        print(f"  CavityForce added successfully")
-        print(f"  Omega_c: {omegac_au:.6f} a.u.")
-        print(f"  Photon mass: {photon_mass:.6f} amu = {photon_mass * 1822.888:.1f} a.u.")
-        # Calculate expected spring constant (with correct unit conversion)
-        AMU_TO_AU = 1822.888  # 1 amu = 1822.888 electron masses
-        photon_mass_au = photon_mass * AMU_TO_AU
-        K_au = photon_mass_au * omegac_au**2  # In atomic units
-        K_openmm = K_au * HARTREE_TO_KJMOL / (BOHR_TO_NM**2)
-        print(f"  Expected spring constant K: {K_openmm:.0f} kJ/(mol·nm^2)")
-        print(f"  Lambda coupling: {lambda_coupling} (ACTIVE from t=0)")
-        
-        # Create CavityParticleDisplacer for finite-Q displacement
-        displacer = openmm.CavityParticleDisplacer(cavity_index, omegac_au, photon_mass)
-        displacer.setSwitchOnLambda(lambda_coupling)  # Use target lambda
-        system.addForce(displacer)
-        print(f"  CavityParticleDisplacer added (finite-Q mode)")
-        
-        cavity_available = True
-    except AttributeError as e:
-        print(f"  CavityForce not available: {e}")
-        print("  Skipping cavity coupling test")
-        cavity_available = False
+    # Add CavityForce only when cavity is present (not --no-cavity)
+    cavity_force = None
+    if cavity_available:
+        print("\n--- Adding Cavity Force ---")
+        try:
+            # Create CavityForce with target lambda from t=0 (omegac in atomic units)
+            cavity_force = openmm.CavityForce(cavity_index, omegac_au, lambda_coupling, photon_mass)
+            system.addForce(cavity_force)
+            print(f"  CavityForce added successfully")
+            print(f"  Omega_c: {omegac_au:.6f} a.u.")
+            print(f"  Photon mass: {photon_mass:.6f} amu = {photon_mass * 1822.888:.1f} a.u.")
+            AMU_TO_AU = 1822.888
+            photon_mass_au = photon_mass * AMU_TO_AU
+            K_au = photon_mass_au * omegac_au**2
+            K_openmm = K_au * HARTREE_TO_KJMOL / (BOHR_TO_NM**2)
+            print(f"  Expected spring constant K: {K_openmm:.0f} kJ/(mol·nm^2)")
+            print(f"  Lambda coupling: {lambda_coupling} (ACTIVE from t=0)")
+            displacer = openmm.CavityParticleDisplacer(cavity_index, omegac_au, photon_mass)
+            displacer.setSwitchOnLambda(lambda_coupling)
+            system.addForce(displacer)
+            print(f"  CavityParticleDisplacer added (finite-Q mode)")
+        except AttributeError as e:
+            print(f"  CavityForce not available: {e}")
+            print("  Skipping cavity coupling test")
+            cavity_available = False
+            cavity_force = None
+    else:
+        print("\n--- Cavity Force ---")
+        print("  Skipped (--no-cavity: bare glassy system)")
     
-    # Check if BussiThermostat is available
-    print("\n--- Adding Bussi Thermostat ---")
-    try:
-        # Create BussiThermostat for molecules only (not the cavity particle)
-        tau = 0.1  # ps
-        bussi = openmm.BussiThermostat(temperature_K, tau)
-        bussi.setApplyToAllParticles(False)
-        
-        # Add all molecular particles (not the cavity)
-        for i in range(system.getNumParticles() - 1):  # Exclude cavity particle
-            bussi.addParticle(i)
-        
-        system.addForce(bussi)
-        print(f"  BussiThermostat added for {bussi.getNumParticles()} particles")
-        print(f"  Temperature: {temperature_K} K")
-        print(f"  Tau: {tau} ps")
-        bussi_available = True
-    except AttributeError as e:
-        print(f"  BussiThermostat not available: {e}")
-        bussi_available = False
-    
-    # Create integrator - use Langevin for the cavity particle dynamics
+    # Thermostat: Bussi only when not NVE (cav-hoomd parity: molecules = ConstantVolume + Bussi)
+    bussi_available = False
+    if not nve:
+        print("\n--- Adding Bussi Thermostat ---")
+        try:
+            bussi = openmm.BussiThermostat(temperature_K, bussi_tau_ps)
+            bussi.setApplyToAllParticles(False)
+            for i in range(num_molecular_particles):
+                bussi.addParticle(i)
+            system.addForce(bussi)
+            print(f"  BussiThermostat added for {bussi.getNumParticles()} particles")
+            print(f"  Temperature: {temperature_K} K")
+            print(f"  Tau: {bussi_tau_ps} ps (cav-hoomd parity)")
+            bussi_available = True
+        except AttributeError as e:
+            print(f"  BussiThermostat not available: {e}")
+
+    # Integrator: Verlet only (NVE) or Verlet + Bussi (no Langevin; molecules get Bussi only)
     print("\n--- Creating Integrator ---")
-    integrator = openmm.LangevinMiddleIntegrator(
-        temperature_K * unit.kelvin,
-        friction / unit.picosecond,
-        dt * unit.picosecond
-    )
-    print(f"  LangevinMiddleIntegrator created")
-    print(f"  Friction: {friction} ps^-1 (low to preserve vibrations)")
-    print(f"  Note: Bussi thermostat handles molecular thermalization")
+    if nve:
+        integrator = openmm.VerletIntegrator(dt * unit.picosecond)
+        print(f"  VerletIntegrator created (NVE; no thermostat)")
+        print(f"  Initial velocities will be set to T = {temperature_K} K")
+    else:
+        integrator = openmm.VerletIntegrator(dt * unit.picosecond)
+        print(f"  VerletIntegrator created")
+        print(f"  Verlet + Bussi (molecules only); Bussi tau {bussi_tau_ps} ps (cav-hoomd parity)")
     
-    # Create simulation - try CUDA first, fall back to Reference
+    # Create simulation - try CUDA first, fall back to Reference (CPU)
     print("\n--- Creating Simulation ---")
-    # Always use CUDA platform
-    platform = openmm.Platform.getPlatformByName('CUDA')
-    print(f"  Using CUDA platform (GPU acceleration)")
+    try:
+        platform = openmm.Platform.getPlatformByName('CUDA')
+        print(f"  Using CUDA platform (GPU acceleration)")
+    except Exception:
+        platform = openmm.Platform.getPlatformByName('Reference')
+        print(f"  Using Reference platform (CPU; CUDA not available)")
     
     # Create context
     context = openmm.Context(system, integrator, platform)
     context.setPositions(positions)
+
+    # Phase 1 debug: log initial PE/KE when built from GSD (pinpoint when blow-up occurs)
+    if build_from_gsd:
+        state = context.getState(getEnergy=True)
+        pe = state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
+        ke = state.getKineticEnergy().value_in_unit(unit.kilojoule_per_mole)
+        print("\n--- [DEBUG] Initial state (after setPositions) ---")
+        print(f"  PE: {pe:.6g} kJ/mol  KE: {ke:.6g} kJ/mol")
+        if abs(pe) > 1e15:
+            print("  *** Initial PE is huge; problem is likely initial configuration or force field. ***")
     
     # Minimize energy (optional)
     if minimize:
@@ -704,8 +1047,24 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         print(f"  Cavity position after:  ({x_nm:.6f}, {y_nm:.6f}, {z_nm:.6f}) nm")
         print(f"  Displacement: {displacement_magnitude} nm along x-axis")
     
-    # Set velocities
+    # Set velocities (thermalize at target T; in NVE this is the only thermalization)
     context.setVelocitiesToTemperature(temperature_K * unit.kelvin)
+    # Cavity particle has negligible mass (0.000549 amu); thermalizing it at 100 K gives it a huge
+    # v_rms = sqrt(kT/m) that makes the stiff cavity spring numerically unstable with 1 fs dt.
+    # Start the cavity from rest so the initial configuration (e.g. from GSD) is not destroyed.
+    if cavity_available:
+        state = context.getState(getVelocities=True)
+        vels = list(state.getVelocities())
+        vels[cavity_index] = openmm.Vec3(0, 0, 0) * (unit.nanometer / unit.picosecond)
+        context.setVelocities(vels)
+
+    # Phase 1 debug: log PE/KE after thermalization when built from GSD
+    if build_from_gsd:
+        state = context.getState(getEnergy=True)
+        pe = state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
+        ke = state.getKineticEnergy().value_in_unit(unit.kilojoule_per_mole)
+        print("\n--- [DEBUG] After thermalization (before first step) ---")
+        print(f"  PE: {pe:.6g} kJ/mol  KE: {ke:.6g} kJ/mol")
     
     # Calculate total steps
     total_steps = equilibration_steps + production_steps
@@ -727,8 +1086,10 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     # PDB output (molecular atoms only; exclude cavity)
     pdb_handle = None
     pdb_model_index = 0
+    topology_molecular = None  # topology with num_molecular_particles atoms for PDB
     if pdb_file:
         pdb_handle = open(pdb_file, 'w')
+        topology_molecular = _topology_subset(topology, num_molecular_particles)
         # Minimal header (skip PDBFile.writeHeader to avoid Quantity formatting of box vectors)
         try:
             from openmm import Platform
@@ -757,12 +1118,22 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
             output_prefix=fkt_prefix_resolved,
         )
         fkt_interval_steps = max(1, int(round(fkt_output_period_ps / dt)))
+        # F(k,t) uses wrapped positions (cav-hoomd parity; correct at 0 K, no unwrapping drift)
     
+    first_step_pe_ke_logged = False
     for i in range(num_reports):
         # Run and collect dipole data
         for step in range(report_interval):
             integrator.step(1)
             step_counter += 1
+            # Phase 1 debug: log PE/KE once after first step when built from GSD
+            if build_from_gsd and not first_step_pe_ke_logged and step_counter >= 1:
+                state = context.getState(getEnergy=True)
+                pe = state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
+                ke = state.getKineticEnergy().value_in_unit(unit.kilojoule_per_mole)
+                print("\n--- [DEBUG] After first integrator step ---")
+                print(f"  PE: {pe:.6g} kJ/mol  KE: {ke:.6g} kJ/mol  (step_counter={step_counter})")
+                first_step_pe_ke_logged = True
             if not disable_dipole_output and (step_counter % dipole_output_interval_steps) == 0:
                 state = context.getState(getPositions=True)
                 current_time = step_counter * dt
@@ -770,17 +1141,20 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
                 dipole_times.append(current_time)
                 dipole_trajectory.append(dipole)
             # PDB frame output (molecular atoms only; PDBFile expects angstroms)
-            if pdb_handle and (step_counter % pdb_interval_steps) == 0:
+            if pdb_handle and topology_molecular is not None and (step_counter % pdb_interval_steps) == 0:
                 _state = context.getState(getPositions=True)
                 _pos_all = _state.getPositions(asNumpy=True)
                 _pos_mol = _pos_all[:num_molecular_particles].value_in_unit(unit.angstroms)
-                PDBFile.writeModel(topology, _pos_mol, pdb_handle, modelIndex=pdb_model_index + 1)
+                PDBFile.writeModel(topology_molecular, _pos_mol, pdb_handle, modelIndex=pdb_model_index + 1)
                 pdb_model_index += 1
-            # F(k,t) intermediate scattering function (molecular positions only)
+            # F(k,t): use wrapped molecular positions (enforcePeriodicBox=True ensures
+            # particles are in the primary image, matching HOOMD's snap.particles.position).
+            # Without this flag, OpenMM returns unwrapped positions where boundary crossings
+            # add spurious phase shifts exp(i k·n L) that decorrelate ρ_k artificially.
             if enable_fkt and fkt_tracker is not None and (step_counter % fkt_interval_steps) == 0:
-                _st = context.getState(getPositions=True)
+                _st = context.getState(getPositions=True, enforcePeriodicBox=True)
                 _pos_all = _st.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
-                pos_mol = _pos_all[:num_molecular_particles]
+                pos_mol = np.asarray(_pos_all[:num_molecular_particles], dtype=np.float64)
                 current_time_ps = step_counter * dt
                 fkt_tracker.update(current_time_ps, pos_mol)
         
@@ -792,11 +1166,17 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         
         state = context.getState(getEnergy=True, getPositions=True)
         pe = state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
+        ke = state.getKineticEnergy().value_in_unit(unit.kilojoule_per_mole)
+        n_dof = 3 * system.getNumParticles() - system.getNumConstraints()
+        k_B_kJ = 0.008314462618  # kJ/(mol·K)
+        T_kin = (2.0 * ke / (n_dof * k_B_kJ)) if n_dof > 0 else 0.0
         positions_now = state.getPositions()
-        cavity_pos = positions_now[cavity_index]
-        cx = cavity_pos[0].value_in_unit(unit.nanometer) if hasattr(cavity_pos[0], 'value_in_unit') else float(cavity_pos[0])
-        cy = cavity_pos[1].value_in_unit(unit.nanometer) if hasattr(cavity_pos[1], 'value_in_unit') else float(cavity_pos[1])
-        cz = cavity_pos[2].value_in_unit(unit.nanometer) if hasattr(cavity_pos[2], 'value_in_unit') else float(cavity_pos[2])
+        cx = cy = cz = 0.0
+        if cavity_available and cavity_index is not None:
+            cavity_pos = positions_now[cavity_index]
+            cx = cavity_pos[0].value_in_unit(unit.nanometer) if hasattr(cavity_pos[0], 'value_in_unit') else float(cavity_pos[0])
+            cy = cavity_pos[1].value_in_unit(unit.nanometer) if hasattr(cavity_pos[1], 'value_in_unit') else float(cavity_pos[1])
+            cz = cavity_pos[2].value_in_unit(unit.nanometer) if hasattr(cavity_pos[2], 'value_in_unit') else float(cavity_pos[2])
         
         sim_time_ps = step_counter * dt
         progress_pct = (step_counter / total_steps) * 100
@@ -819,7 +1199,7 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         
         # Get cavity energy if available
         cavity_energy_str = ""
-        if cavity_available:
+        if cavity_available and cavity_force is not None:
             try:
                 harmonic_e = cavity_force.getHarmonicEnergy(context)
                 coupling_e = cavity_force.getCouplingEnergy(context)
@@ -833,8 +1213,9 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
             except Exception as e:
                 pass  # Skip if not available
         
-        print(f"         PE: {pe:8.2f} kJ/mol{cavity_energy_str}")
-        print(f"         Cavity: ({cx:7.4f}, {cy:7.4f}, {cz:7.4f}) nm")
+        print(f"         PE: {pe:8.2f} kJ/mol | T_kin: {T_kin:6.1f} K{cavity_energy_str}")
+        if cavity_available:
+            print(f"         Cavity: ({cx:7.4f}, {cy:7.4f}, {cz:7.4f}) nm")
         print("")
         
         # Save NPZ file on the fly (streaming save)
@@ -853,7 +1234,7 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
                          'output_interval_ps': dipole_output_interval_ps,
                          'lambda_coupling': lambda_coupling,
                          'omegac_au': omegac_au,
-                         'cavity_index': cavity_index,
+                         'cavity_index': cavity_index if cavity_available else None,
                          'status': 'running',
                          'step': step_counter,
                          'total_steps': total_steps
@@ -861,7 +1242,7 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     
     # Close PDB trajectory
     if pdb_handle:
-        PDBFile.writeFooter(topology, pdb_handle)
+        PDBFile.writeFooter(topology_molecular if topology_molecular is not None else topology, pdb_handle)
         pdb_handle.close()
         print(f"  PDB trajectory written to {pdb_file} ({pdb_model_index} frames)")
     
@@ -890,7 +1271,7 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
                     'output_interval_ps': dipole_output_interval_ps,
                     'lambda_coupling': lambda_coupling,
                     'omegac_au': omegac_au,
-                    'cavity_index': cavity_index,
+                    'cavity_index': cavity_index if cavity_available else None,
                     'status': 'complete',
                     'step': total_steps,
                     'total_steps': total_steps,
@@ -967,6 +1348,9 @@ Examples:
 
   # F(k,t) ISF: new reference every 200 ps, keep up to 5, output every 1 ps
   python run_simulation.py --enable-fkt --fkt-ref-interval-ps 200 --fkt-max-refs 5 --fkt-output-period-ps 1
+
+  # NVE: no thermostat; initial velocities thermalized at --temp, then constant energy
+  python run_simulation.py --nve --dimers 50 --equil 0 --prod 100
         """,
     )
     # System parameters
@@ -1005,6 +1389,10 @@ Examples:
                         help='Skip energy minimization')
     parser.add_argument('--no-dipole', action='store_true', dest='no_dipole',
                         help='Disable dipole output for speed benchmark')
+    parser.add_argument('--nve', action='store_true',
+                        help='NVE (microcanonical): Verlet integrator, no thermostat; initial velocities thermalized at --temp')
+    parser.add_argument('--bussi-tau', type=float, default=5.0, dest='bussi_tau',
+                        help='Bussi thermostat time constant in ps when not --nve (default: 5.0, cav-hoomd parity)')
     parser.add_argument('--output', type=str, default=None,
                         help='Output filename for dipole trajectory .npz (default: cavity_diamer_lambda<λ>.npz)')
     # Console and PDB output
@@ -1029,6 +1417,14 @@ Examples:
                         help='F(k,t) output period in ps (default: 1.0)')
     parser.add_argument('--fkt-output-prefix', type=str, default=None, dest='fkt_output_prefix',
                         help='Prefix for F(k,t) files (default: from --output or fkt_lambda<λ>)')
+    parser.add_argument('--initial-gsd', type=str, default=None, dest='initial_gsd',
+                        help='Load initial positions and box from this GSD file (Bohr->nm); skip minimization')
+    parser.add_argument('--initial-gsd-frame', type=int, default=-1, dest='initial_gsd_frame',
+                        help='Frame index to read from --initial-gsd (default: -1, last frame)')
+    parser.add_argument('--gsd-in-nm', action='store_true', dest='gsd_in_nm',
+                        help='GSD positions and box are already in nm (do not convert from Bohr). Use if init-0.gsd was written in nm.')
+    parser.add_argument('--no-cavity', action='store_true', dest='no_cavity',
+                        help='Run bare glassy system only (500 particles, no cavity); matches cav-hoomd --no-cavity')
     
     args = parser.parse_args()
 
@@ -1075,6 +1471,12 @@ Examples:
             fkt_max_refs=args.fkt_max_refs,
             fkt_output_period_ps=args.fkt_output_period_ps,
             fkt_output_prefix=args.fkt_output_prefix,
+            nve=args.nve,
+            bussi_tau_ps=args.bussi_tau,
+            initial_gsd=args.initial_gsd,
+            initial_gsd_frame=args.initial_gsd_frame,
+            gsd_in_nm=args.gsd_in_nm,
+            no_cavity=args.no_cavity,
         )
         sys.exit(0 if success else 1)
     except Exception as e:

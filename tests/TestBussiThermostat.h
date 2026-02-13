@@ -31,11 +31,14 @@
 #include "openmm/BussiThermostat.h"
 #include "openmm/Context.h"
 #include "openmm/NonbondedForce.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
+#include <cmath>
 #include <iostream>
+#include <string>
 #include <vector>
 #include <set>
 
@@ -173,9 +176,8 @@ void testBussiReservoirEnergy() {
     // Since we started below target temp, thermostat should have added energy
     // (reservoir energy should be negative, meaning energy flowed from reservoir to system)
     double reservoirEnergy = context.getParameter(BussiThermostat::ReservoirEnergyTranslational());
-    // Reservoir should have lost energy (negative value) since we heated up
-    // We're just checking that it's non-zero
-    ASSERT(reservoirEnergy != 0.0);
+    // Reservoir energy should be non-zero (thermostat exchanged energy with bath)
+    ASSERT(std::abs(reservoirEnergy) > 1e-6);
 }
 
 /**
@@ -225,6 +227,70 @@ void testBussiRandomSeed() {
     }
 }
 
+/**
+ * Test that Bussi thermostat throws when kinetic energy is zero (HOOMD-compatible behavior).
+ */
+void testBussiZeroKineticEnergyThrows() {
+    // One particle, no net force (isolated), so after Verlet part1 velocity stays zero
+    const int numParticles = 1;
+    System system;
+    system.addParticle(1.0);
+    NonbondedForce* nbf = new NonbondedForce();
+    nbf->addParticle(0.0, 0.3, 1.0);
+    system.addForce(nbf);
+    BussiThermostat* thermostat = new BussiThermostat(300.0, 1.0);
+    system.addForce(thermostat);
+    VerletIntegrator integrator(0.002);
+    Context context(system, integrator, platform);
+    context.setPositions(std::vector<Vec3>(numParticles, Vec3(0, 0, 0)));
+    context.setVelocities(std::vector<Vec3>(numParticles, Vec3(0, 0, 0)));
+    bool threw = false;
+    try {
+        integrator.step(1);
+    } catch (const OpenMMException& e) {
+        std::string msg(e.what());
+        if (msg.find("non-zero initial momenta") != std::string::npos)
+            threw = true;
+    }
+    ASSERT(threw);
+}
+
+/**
+ * Test that step order (Bussi after half-kick) produces reasonable temperature.
+ */
+void testBussiStepOrderTemperature() {
+    const int numParticles = 8;
+    const double temp = 200.0;
+    const double tau = 0.5;
+    const int numSteps = 3000;
+    System system;
+    VerletIntegrator integrator(0.002);
+    NonbondedForce* forceField = new NonbondedForce();
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(10.0);
+        forceField->addParticle((i % 2 == 0 ? 0.5 : -0.5), 0.3, 1.0);
+    }
+    system.addForce(forceField);
+    BussiThermostat* thermostat = new BussiThermostat(temp, tau);
+    system.addForce(thermostat);
+    Context context(system, integrator, platform);
+    std::vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        positions[i] = Vec3((i % 2) * 1.0, (i % 4 < 2 ? 1 : -1) * 1.0, (i < 4 ? 1 : -1) * 1.0);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(temp);
+    integrator.step(2000);
+    double ke = 0.0;
+    for (int i = 0; i < numSteps; ++i) {
+        State state = context.getState(State::Energy);
+        ke += state.getKineticEnergy();
+        integrator.step(5);
+    }
+    ke /= numSteps;
+    double expected = 0.5 * numParticles * 3 * BOLTZ * temp;
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.15);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -234,6 +300,8 @@ int main(int argc, char* argv[]) {
         testBussiParticleSubset();
         testBussiReservoirEnergy();
         testBussiRandomSeed();
+        testBussiZeroKineticEnergyThrows();
+        testBussiStepOrderTemperature();
         runPlatformTests();
     }
     catch(const exception& e) {

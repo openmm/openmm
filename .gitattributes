@@ -1,0 +1,3 @@
+# Exclude development-only directories from release tarballs (git archive)
+cav-hoomd/          export-ignore
+equilibrium_fkt_100K/ export-ignore

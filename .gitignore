@@ -47,8 +47,16 @@ tests/cace-lr_water/*.png
 tests/cace-lr_water/*.log
 tests/cace-lr_water/*.pdb
 tests/cavity_ir_spectrum*
+tests/rabi_*
 tests/bond_vibration_test.png
 examples/cavity/dimer_system/*.npz
+examples/cavity/dimer_system/btest.csv
+examples/cavity/dimer_system/test.csv
+examples/cavity/dimer_system/*.gsd
+examples/cavity/dimer_system/force_components_raw.txt
+examples/cavity/dimer_system/force_component_summary_r0r.txt
+examples/cavity/dimer_system/no_cavity/
+examples/cavity/dimer_system/minimal_dimer_benchmark/
 examples/cavity/dimer_system/*_data.npz
 examples/cavity/dimer_system/cavity_ir_spectrum_*.png
 examples/cavity/dimer_system/cavity_position_spectrum*.png
@@ -59,6 +67,10 @@ examples/cavity/dimer_system/force_component_summary.txt
 
 # Equilibrium/benchmark data and outputs (entire folder excluded from repo)
 equilibrium_fkt_100K/
+
+# Dev-only / reference (not for repo or release)
+cav-hoomd/
+arXiv-2505.08762v1/
 
 # Backup/stable directories
 fairchem-stable/

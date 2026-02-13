@@ -131,18 +131,11 @@ private:
     ComputeKernel computeCentroidKEKernel, applyBussiScalingKernel;
     std::map<int, ComputeKernel> positionContractionKernels;
     std::map<int, ComputeKernel> forceContractionKernels;
-    // Hybrid mode support: quantum vs classical particles with SPARSE STORAGE
-    // Memory layout: [quantum particles × numCopies] [classical particles × 1]
-    // This saves memory: classical particles only need 1 copy, not numCopies
+    // Hybrid mode support: quantum vs classical particles (uniform memory layout)
+    // All particles stored with all beads; classical beads synced to stay identical
     int numQuantumParticles, numClassicalParticles;
     bool hybridMode;  // True if any classical particles exist
-    
-    // Index mapping arrays for sparse storage
     ComputeArray isQuantum;         // Per-particle: 1=quantum, 0=classical
-    ComputeArray particleOrder;     // Reordered particle indices: [quantum...][classical...]
-    ComputeArray storageOffset;     // Per-particle: base offset in storage arrays
-    
-    // Inverse mapping: original particle index -> position in particleOrder
     std::vector<int> quantumParticleIndices;   // Original indices of quantum particles
     std::vector<int> classicalParticleIndices; // Original indices of classical particles
     
@@ -151,11 +144,10 @@ private:
     ComputeKernel pileKernelHybrid;  // PILE thermostat for quantum particles only
     ComputeKernel stepKernelHybrid;  // Integration step (quantum: FFT, classical: Verlet)
     ComputeKernel velocitiesKernelHybrid;  // Velocity update for all particles
+    ComputeKernel syncClassicalBeadsKernel;  // Sync bead 0 to beads 1..N-1 for classical particles
     ComputeKernel applyClassicalThermostatKernel;  // Langevin for classical particles
     ComputeKernel computeClassicalKEKernel;  // KE reduction for Bussi thermostat
     ComputeKernel applyBussiClassicalScalingKernel;  // Bussi velocity scaling
-    ComputeKernel copyToContextHybridKernel;    // Copy to context with sparse storage
-    ComputeKernel copyFromContextHybridKernel;  // Copy from context with sparse storage
 };
 
 } // namespace OpenMM

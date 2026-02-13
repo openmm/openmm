@@ -402,14 +402,17 @@ def run_rpmd_simulation(num_molecules=250, num_beads=8, lambda_coupling=0.001,
     integrator.setThermostatType(openmm.RPMDIntegrator.PileG)
     integrator.setCentroidFriction(centroid_friction / unit.picosecond)
     
+    # Mark cavity particle as classical (excluded from RPMD ring polymer dynamics)
+    # Type 0 = quantum (default for all particles), Type 1 = classical
+    integrator.setParticleType(cavity_index, 1)
+    integrator.setClassicalThermostat(openmm.RPMDIntegrator.LangevinClassical)
+    
     print(f"  RPMDIntegrator created")
     print(f"  Thermostat: PILE_G (Bussi centroid + Langevin internal)")
     print(f"  Centroid friction (Bussi): {centroid_friction} ps^-1")
     print(f"  Internal mode friction (PILE): {friction} ps^-1")
     print(f"  Number of beads: {num_beads}")
-
-
-
+    print(f"  Cavity particle (index {cavity_index}): CLASSICAL (excluded from RPMD)")
 
     
     # Create simulation with CUDA platform

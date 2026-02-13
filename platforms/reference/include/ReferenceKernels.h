@@ -1341,17 +1341,19 @@ public:
      */
     void initialize(const System& system, const VerletIntegrator& integrator);
     /**
-     * Execute the kernel.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the VerletIntegrator this kernel is being used for
+     * Execute the kernel (full step).
      */
     void execute(ContextImpl& context, const VerletIntegrator& integrator);
     /**
+     * Execute part1 (half-kick + position delta).
+     */
+    void executePart1(ContextImpl& context, const VerletIntegrator& integrator);
+    /**
+     * Execute part2 (position update + velocity from delta).
+     */
+    void executePart2(ContextImpl& context, const VerletIntegrator& integrator);
+    /**
      * Compute the kinetic energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the VerletIntegrator this kernel is being used for
      */
     double computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator);
 private:
@@ -1579,7 +1581,7 @@ private:
 class ReferenceIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
 public:
     ReferenceIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateVariableVerletStepKernel(name, platform),
-        data(data), dynamics(0) {
+        data(data), dynamics(0), lastMaxStepSize(0) {
     }
     ~ReferenceIntegrateVariableVerletStepKernel();
     /**
@@ -1598,18 +1600,15 @@ public:
      * @return the size of the step that was taken
      */
     double execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
-    /**
-     * Compute the kinetic energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the VariableVerletIntegrator this kernel is being used for
-     */
+    double executePart1(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
+    void executePart2(ContextImpl& context, const VariableVerletIntegrator& integrator);
     double computeKineticEnergy(ContextImpl& context, const VariableVerletIntegrator& integrator);
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceVariableVerletDynamics* dynamics;
     std::vector<double> masses;
     double prevErrorTol;
+    double lastMaxStepSize;
 };
 
 /**
@@ -1967,6 +1966,38 @@ private:
     double omegac;
     double photonMass;
     std::vector<double> charges;
+};
+
+/**
+ * This kernel is invoked by MultiModeCavityForce to calculate the multi-mode
+ * Fabry-Perot cavity-molecule interaction forces and energy.
+ */
+class ReferenceCalcMultiModeCavityForceKernel : public CalcMultiModeCavityForceKernel {
+public:
+    ReferenceCalcMultiModeCavityForceKernel(std::string name, const Platform& platform) :
+        CalcMultiModeCavityForceKernel(name, platform),
+        harmonicEnergy(0.0), couplingEnergy(0.0), dipoleSelfEnergy(0.0) {
+    }
+    void initialize(const System& system, const MultiModeCavityForce& force);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    void copyParametersToContext(ContextImpl& context, const MultiModeCavityForce& force);
+    double getHarmonicEnergy() const { return harmonicEnergy; }
+    double getCouplingEnergy() const { return couplingEnergy; }
+    double getDipoleSelfEnergy() const { return dipoleSelfEnergy; }
+private:
+    int numModes;
+    double omega1;
+    double lambda1;
+    double photonMass;
+    double cavityLength;
+    double moleculeZ;
+    double dsePrefactor;
+    std::vector<int> cavityParticleIndices;
+    std::vector<double> spatialProfiles;
+    std::vector<double> charges;
+    double harmonicEnergy;
+    double couplingEnergy;
+    double dipoleSelfEnergy;
 };
 
 /**
