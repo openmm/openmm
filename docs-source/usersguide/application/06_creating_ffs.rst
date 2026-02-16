@@ -210,9 +210,7 @@ one in the middle of a chain.  A force field could of course define multiple
 templates for each amino acid (standard, N-terminal, C-terminal, and monomer),
 but since the modifications are the same for nearly all amino acids, it is simpler
 to include only the "standard" templates, along with a set of patches which are used to
-create templates matching terminal residues.  Note that parameters of existing templates
-cannot be changed through patches.  Any parameters (such as :code:`charge`\ ) specified in a patch apply only to
-the new templates.
+create templates matching terminal residues.
 
 Here is an example of a patch definition:
 
@@ -277,9 +275,7 @@ is done with an :code:`<ApplyToResidue>` tag:
      ...
     </Patch>
 
-A multi-residue patch can be used to create new templates that define bonds
-between specific residues, and allows the atom types in one residue to depend on the
-identity of the other residue it is bonded to.  To create a multi-residue patch,
+A patch can be applied to multiple templates at once.  To create a multi-residue patch,
 added a :code:`residues` attribute to the :code:`<Patch>` tag specifying how many
 residues that patch covers.  Then whenever you refer to an atom, prefix its name
 with the index of the residue it belongs to:
