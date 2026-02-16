@@ -202,13 +202,15 @@ of the site position in the local coordinate system), and :code:`wo1`\ ,
 <Patches>
 =========
 
-A "patch" is a set of rules for modifying a residue template (or possibly multiple
-templates at once).  For example a terminal amino acid is slightly different from
+A "patch" is a set of rules for creating new residue templates from existing ones.
+These new templates should match a different set of residues contained in the topology;
+therefore a patch must specify a change in atoms and bonds.
+For example a terminal amino acid contains slightly different atoms than
 one in the middle of a chain.  A force field could of course define multiple
 templates for each amino acid (standard, N-terminal, C-terminal, and monomer),
 but since the modifications are the same for nearly all amino acids, it is simpler
-to include only the "standard" templates, along with a set of patches for
-modifying terminal residues.
+to include only the "standard" templates, along with a set of patches which are used to
+create templates matching terminal residues.
 
 Here is an example of a patch definition:
 
@@ -245,7 +247,7 @@ contain any of the following tags:
    template should be removed.  It specifies the names of the two bonded atoms.
  * An :code:`<AddExternalBond>` tag indicates that a new external bond should be
    added to the template.  It specifies the name of the bonded atom.
- * A :code:`<RemoveExternalBond>` tag indicates that an external bond aleady
+ * A :code:`<RemoveExternalBond>` tag indicates that an external bond already
    present in the template should be removed.  It specifies the name of the
    bonded atom.
 
@@ -273,7 +275,7 @@ is done with an :code:`<ApplyToResidue>` tag:
      ...
     </Patch>
 
-A patch can alter multiple templates at once.  This is useful for creating bonds
+A patch can be applied to multiple templates at once.  This is useful for creating bonds
 between molecules, and allows the atom types in one residue to depend on the
 identity of the other residue it is bonded to.  To create a multi-residue patch,
 added a :code:`residues` attribute to the :code:`<Patch>` tag specifying how many
