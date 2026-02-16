@@ -291,6 +291,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     compilationDefines["ERF"] = useDoublePrecision ? "erf" : "erff";
     compilationDefines["ERFC"] = useDoublePrecision ? "erfc" : "erfcf";
     compilationDefines["FMA"] = useDoublePrecision ? "fma" : "fmaf";
+    compilationDefines["FABS"] = useDoublePrecision ? "fabs" : "fabsf";
 
     // Set defines for applying periodic boundary conditions.
 

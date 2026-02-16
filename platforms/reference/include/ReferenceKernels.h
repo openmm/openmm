@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -287,6 +287,30 @@ public:
      * @param context    the context in which to execute this kernel
      */
     void computePositions(ContextImpl& context);
+};
+
+/**
+ * This kernel performs local energy minimization.
+ */
+class ReferenceMinimizeKernel : public MinimizeKernel {
+public:
+    ReferenceMinimizeKernel(std::string name, const Platform& platform) : MinimizeKernel(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     */
+    void initialize(const System& system);
+    /**
+     * Perform local energy minimization.
+     * 
+     * @param context        the context with which to perform the minimization
+     * @param tolerance      limiting root-mean-square value of all force components in kJ/mol/nm for convergence
+     * @param maxIterations  the maximum number of iterations to perform, or 0 to continue until convergence
+     * @param reporter       an optional reporter to invoke after each iteration of minimization
+     */
+    void execute(ContextImpl& context, double tolerance, int maxIterations, MinimizationReporter* reporter);
 };
 
 /**

@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -52,7 +52,7 @@ const static char CHECKPOINT_MAGIC_BYTES[] = "OpenMM Binary Checkpoint\n";
 
 
 ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties, ContextImpl* originalContext) :
-        owner(owner), system(system), integrator(integrator), hasInitializedForces(false), hasSetPositions(false), integratorIsDeleted(false),
+        owner(owner), system(system), integrator(integrator), hasInitializedForces(false), hasSetPositions(false), integratorIsDeleted(false), hasMinimizeKernel(false),
         lastForceGroups(-1), platform(platform), platformData(NULL) {
     int numParticles = system.getNumParticles();
     if (numParticles == 0)
@@ -113,6 +113,7 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     kernelNames.push_back(UpdateStateDataKernel::Name());
     kernelNames.push_back(ApplyConstraintsKernel::Name());
     kernelNames.push_back(VirtualSitesKernel::Name());
+    kernelNames.push_back(MinimizeKernel::Name());
     for (int i = 0; i < system.getNumForces(); ++i) {
         forceImpls.push_back(system.getForce(i).createImpl());
         vector<string> forceKernels = forceImpls[forceImpls.size()-1]->getKernelNames();
@@ -198,6 +199,7 @@ ContextImpl::~ContextImpl() {
     updateStateDataKernel = Kernel();
     applyConstraintsKernel = Kernel();
     virtualSitesKernel = Kernel();
+    minimizeKernel = Kernel();
     if (!integratorIsDeleted) {
         // The Context is being deleted before the Integrator, so call cleanup() on it now.
         
@@ -506,4 +508,13 @@ void ContextImpl::systemChanged() {
 
 Context* ContextImpl::createLinkedContext(const System& system, Integrator& integrator) {
     return new Context(system, integrator, *this);
+}
+
+void ContextImpl::minimize(double tolerance, int maxIterations, MinimizationReporter* reporter) {
+    if (!hasMinimizeKernel) {
+        minimizeKernel = platform->createKernel(MinimizeKernel::Name(), *this);
+        minimizeKernel.getAs<MinimizeKernel>().initialize(system);
+        hasMinimizeKernel = true;
+    }
+    minimizeKernel.getAs<MinimizeKernel>().execute(*this, tolerance, maxIterations, reporter);
 }

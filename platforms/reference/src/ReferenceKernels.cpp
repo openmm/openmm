@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -56,6 +56,7 @@
 #include "ReferenceLCPOIxn.h"
 #include "ReferenceLJCoulomb14.h"
 #include "ReferenceLJCoulombIxn.h"
+#include "ReferenceMinimize.h"
 #include "ReferenceMonteCarloBarostat.h"
 #include "ReferenceNoseHooverChain.h"
 #include "ReferenceNoseHooverDynamics.h"
@@ -344,6 +345,13 @@ void ReferenceVirtualSitesKernel::initialize(const System& system) {
 void ReferenceVirtualSitesKernel::computePositions(ContextImpl& context) {
     vector<Vec3>& positions = extractPositions(context);
     extractVirtualSites(context).computePositions(context.getSystem(), positions, extractBoxVectors(context));
+}
+
+void ReferenceMinimizeKernel::initialize(const System& system) {
+}
+
+void ReferenceMinimizeKernel::execute(ContextImpl& context, double tolerance, int maxIterations, MinimizationReporter* reporter) {
+    ReferenceMinimize::minimize(context, tolerance, maxIterations, reporter);
 }
 
 void ReferenceCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {

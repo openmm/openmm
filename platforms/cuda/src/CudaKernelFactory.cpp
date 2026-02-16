@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,6 +35,7 @@
 #include "openmm/common/CommonIntegrateCustomStepKernel.h"
 #include "openmm/common/CommonIntegrateNoseHooverStepKernel.h"
 #include "openmm/common/CommonIntegrateQTBStepKernel.h"
+#include "openmm/common/CommonMinimizeKernel.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
@@ -83,6 +84,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CommonApplyConstraintsKernel(name, platform, cu);
     if (name == VirtualSitesKernel::Name())
         return new CommonVirtualSitesKernel(name, platform, cu);
+    if (name == MinimizeKernel::Name())
+        return new CommonMinimizeKernel(name, platform, cu);
     if (name == CalcHarmonicBondForceKernel::Name())
         return new CommonCalcHarmonicBondForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomBondForceKernel::Name())
