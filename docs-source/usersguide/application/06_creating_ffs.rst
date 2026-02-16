@@ -203,7 +203,7 @@ of the site position in the local coordinate system), and :code:`wo1`\ ,
 =========
 
 A "patch" is a set of rules for creating new residue templates from existing ones.
-These new templates should match a different set of residues contained in the topology,
+These new templates should match a different set of residues contained in the topology;
 therefore a patch must specify a change in atoms and bonds.
 For example a terminal amino acid contains slightly different atoms than
 one in the middle of a chain.  A force field could of course define multiple
@@ -275,7 +275,9 @@ is done with an :code:`<ApplyToResidue>` tag:
      ...
     </Patch>
 
-A patch can be applied to multiple templates at once.  To create a multi-residue patch,
+A patch can be applied to multiple templates at once.  This is useful for creating bonds
+between molecules, and allows the atom types in one residue to depend on the
+identity of the other residue it is bonded to.  To create a multi-residue patch,
 added a :code:`residues` attribute to the :code:`<Patch>` tag specifying how many
 residues that patch covers.  Then whenever you refer to an atom, prefix its name
 with the index of the residue it belongs to:
