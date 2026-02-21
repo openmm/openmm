@@ -1,0 +1,85 @@
+<ForceField>
+  <Info>
+    <!-- Li/Merz ion parameters of monovalent ions for SPC/E water model (12-6 normal usage set) -->
+    <DateGenerated>2022-09-11T06:28:33.589814</DateGenerated>
+    <Source Source="parm/frcmod.ions1lm_126_spce" md5hash="2926fce0babc64832f4dcdb0b6ef4f4b" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">parm/frcmod.ions1lm_126_spce</Source>
+    <Source Source="lib/atomic_ions.lib" md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">lib/atomic_ions.lib</Source>
+  </Info>
+  <AtomTypes>
+    <Type class="ions1lm_126_spce-Li+" element="Li" mass="6.94" name="ions1lm_126_spce-Li+"/>
+    <Type class="ions1lm_126_spce-Na+" element="Na" mass="22.99" name="ions1lm_126_spce-Na+"/>
+    <Type class="ions1lm_126_spce-K+" element="K" mass="39.10" name="ions1lm_126_spce-K+"/>
+    <Type class="ions1lm_126_spce-Rb+" element="Rb" mass="85.47" name="ions1lm_126_spce-Rb+"/>
+    <Type class="ions1lm_126_spce-Cs+" element="Cs" mass="132.91" name="ions1lm_126_spce-Cs+"/>
+    <Type class="ions1lm_126_spce-Tl+" element="Tl" mass="204.38" name="ions1lm_126_spce-Tl+"/>
+    <Type class="ions1lm_126_spce-Cu+" element="Cu" mass="63.55" name="ions1lm_126_spce-Cu+"/>
+    <Type class="ions1lm_126_spce-Ag+" element="Ag" mass="107.87" name="ions1lm_126_spce-Ag+"/>
+    <Type class="ions1lm_126_spce-NH4+" element="NH" mass="18.04" name="ions1lm_126_spce-NH4+"/>
+    <Type class="ions1lm_126_spce-H3O+" element="HO" mass="19.02" name="ions1lm_126_spce-H3O+"/>
+    <Type class="ions1lm_126_spce-F-" element="F" mass="19.00" name="ions1lm_126_spce-F-"/>
+    <Type class="ions1lm_126_spce-Cl-" element="Cl" mass="35.45" name="ions1lm_126_spce-Cl-"/>
+    <Type class="ions1lm_126_spce-Br-" element="Br" mass="79.90" name="ions1lm_126_spce-Br-"/>
+    <Type class="ions1lm_126_spce-I-" element="I" mass="126.9" name="ions1lm_126_spce-I-"/>
+  </AtomTypes>
+  <Residues>
+    <Residue name="AG">
+      <Atom charge="1.0" name="AG" type="ions1lm_126_spce-Ag+"/>
+    </Residue>
+    <Residue name="BR">
+      <Atom charge="-1.0" name="BR" type="ions1lm_126_spce-Br-"/>
+    </Residue>
+    <Residue name="CL">
+      <Atom charge="-1.0" name="CL" type="ions1lm_126_spce-Cl-"/>
+    </Residue>
+    <Residue name="CS">
+      <Atom charge="1.0" name="CS" type="ions1lm_126_spce-Cs+"/>
+    </Residue>
+    <Residue name="CU1">
+      <Atom charge="1.0" name="CU1" type="ions1lm_126_spce-Cu+"/>
+    </Residue>
+    <Residue name="F">
+      <Atom charge="-1.0" name="F" type="ions1lm_126_spce-F-"/>
+    </Residue>
+    <Residue name="O">
+      <Atom charge="1.0" name="O" type="ions1lm_126_spce-H3O+"/>
+    </Residue>
+    <Residue name="I">
+      <Atom charge="-1.0" name="I" type="ions1lm_126_spce-I-"/>
+    </Residue>
+    <Residue name="K">
+      <Atom charge="1.0" name="K" type="ions1lm_126_spce-K+"/>
+    </Residue>
+    <Residue name="LI">
+      <Atom charge="1.0" name="LI" type="ions1lm_126_spce-Li+"/>
+    </Residue>
+    <Residue name="NA">
+      <Atom charge="1.0" name="NA" type="ions1lm_126_spce-Na+"/>
+    </Residue>
+    <Residue name="N">
+      <Atom charge="1.0" name="N" type="ions1lm_126_spce-NH4+"/>
+    </Residue>
+    <Residue name="RB">
+      <Atom charge="1.0" name="RB" type="ions1lm_126_spce-Rb+"/>
+    </Residue>
+    <Residue name="TL">
+      <Atom charge="1.0" name="TL" type="ions1lm_126_spce-Tl+"/>
+    </Residue>
+  </Residues>
+  <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+    <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="0.01146796744" sigma="0.22415011748410937" type="ions1lm_126_spce-Li+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.11041584368" sigma="0.25907334723521064" type="ions1lm_126_spce-Na+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.5310938643199999" sigma="0.2998765085260382" type="ions1lm_126_spce-K+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.8646299178400001" sigma="0.31929810058149766" type="ions1lm_126_spce-Rb+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="1.45072702272" sigma="0.34798503930561653" type="ions1lm_126_spce-Cs+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.49127201672000004" sigma="0.29720381237161714" type="ions1lm_126_spce-Tl+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.00403312496" sigma="0.2123902544046569" type="ions1lm_126_spce-Cu+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.0299963512" sigma="0.23697905902533029" type="ions1lm_126_spce-Ag+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.7058165328" sigma="0.31056729314372233" type="ions1lm_126_spce-NH4+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.02891428512" sigma="0.23644451979444603" type="ions1lm_126_spce-H3O+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.95724882464" sigma="0.32410895365945547" type="ions1lm_126_spce-F-"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="2.69311574024" sigma="0.41123884829358065" type="ions1lm_126_spce-Cl-"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="3.11439437408" sigma="0.4401039667613277" type="ions1lm_126_spce-Br-"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="3.63493397288" sigma="0.49355788984974797" type="ions1lm_126_spce-I-"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2015, 11, 1645 -->
+  </NonbondedForce>
+</ForceField>

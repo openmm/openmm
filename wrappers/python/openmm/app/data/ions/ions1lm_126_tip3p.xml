@@ -1,0 +1,85 @@
+<ForceField>
+  <Info>
+    <!-- Li/Merz ion parameters of monovalent ions for TIP3P water model (12-6 normal usage set) -->
+    <DateGenerated>2022-09-11T06:28:33.606634</DateGenerated>
+    <Source Source="parm/frcmod.ions1lm_126_tip3p" md5hash="2620dffe70b36cdf9fa0427eeed2474c" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">parm/frcmod.ions1lm_126_tip3p</Source>
+    <Source Source="lib/atomic_ions.lib" md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">lib/atomic_ions.lib</Source>
+  </Info>
+  <AtomTypes>
+    <Type class="ions1lm_126_tip3p-Li+" element="Li" mass="6.94" name="ions1lm_126_tip3p-Li+"/>
+    <Type class="ions1lm_126_tip3p-Na+" element="Na" mass="22.99" name="ions1lm_126_tip3p-Na+"/>
+    <Type class="ions1lm_126_tip3p-K+" element="K" mass="39.10" name="ions1lm_126_tip3p-K+"/>
+    <Type class="ions1lm_126_tip3p-Rb+" element="Rb" mass="85.47" name="ions1lm_126_tip3p-Rb+"/>
+    <Type class="ions1lm_126_tip3p-Cs+" element="Cs" mass="132.91" name="ions1lm_126_tip3p-Cs+"/>
+    <Type class="ions1lm_126_tip3p-Tl+" element="Tl" mass="204.38" name="ions1lm_126_tip3p-Tl+"/>
+    <Type class="ions1lm_126_tip3p-Cu+" element="Cu" mass="63.55" name="ions1lm_126_tip3p-Cu+"/>
+    <Type class="ions1lm_126_tip3p-Ag+" element="Ag" mass="107.87" name="ions1lm_126_tip3p-Ag+"/>
+    <Type class="ions1lm_126_tip3p-NH4+" element="NH" mass="18.04" name="ions1lm_126_tip3p-NH4+"/>
+    <Type class="ions1lm_126_tip3p-H3O+" element="HO" mass="19.02" name="ions1lm_126_tip3p-H3O+"/>
+    <Type class="ions1lm_126_tip3p-F-" element="F" mass="19.00" name="ions1lm_126_tip3p-F-"/>
+    <Type class="ions1lm_126_tip3p-Cl-" element="Cl" mass="35.45" name="ions1lm_126_tip3p-Cl-"/>
+    <Type class="ions1lm_126_tip3p-Br-" element="Br" mass="79.90" name="ions1lm_126_tip3p-Br-"/>
+    <Type class="ions1lm_126_tip3p-I-" element="I" mass="126.9" name="ions1lm_126_tip3p-I-"/>
+  </AtomTypes>
+  <Residues>
+    <Residue name="AG">
+      <Atom charge="1.0" name="AG" type="ions1lm_126_tip3p-Ag+"/>
+    </Residue>
+    <Residue name="BR">
+      <Atom charge="-1.0" name="BR" type="ions1lm_126_tip3p-Br-"/>
+    </Residue>
+    <Residue name="CL">
+      <Atom charge="-1.0" name="CL" type="ions1lm_126_tip3p-Cl-"/>
+    </Residue>
+    <Residue name="CS">
+      <Atom charge="1.0" name="CS" type="ions1lm_126_tip3p-Cs+"/>
+    </Residue>
+    <Residue name="CU1">
+      <Atom charge="1.0" name="CU1" type="ions1lm_126_tip3p-Cu+"/>
+    </Residue>
+    <Residue name="F">
+      <Atom charge="-1.0" name="F" type="ions1lm_126_tip3p-F-"/>
+    </Residue>
+    <Residue name="O">
+      <Atom charge="1.0" name="O" type="ions1lm_126_tip3p-H3O+"/>
+    </Residue>
+    <Residue name="I">
+      <Atom charge="-1.0" name="I" type="ions1lm_126_tip3p-I-"/>
+    </Residue>
+    <Residue name="K">
+      <Atom charge="1.0" name="K" type="ions1lm_126_tip3p-K+"/>
+    </Residue>
+    <Residue name="LI">
+      <Atom charge="1.0" name="LI" type="ions1lm_126_tip3p-Li+"/>
+    </Residue>
+    <Residue name="NA">
+      <Atom charge="1.0" name="NA" type="ions1lm_126_tip3p-Na+"/>
+    </Residue>
+    <Residue name="N">
+      <Atom charge="1.0" name="N" type="ions1lm_126_tip3p-NH4+"/>
+    </Residue>
+    <Residue name="RB">
+      <Atom charge="1.0" name="RB" type="ions1lm_126_tip3p-Rb+"/>
+    </Residue>
+    <Residue name="TL">
+      <Atom charge="1.0" name="TL" type="ions1lm_126_tip3p-Tl+"/>
+    </Residue>
+  </Residues>
+  <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+    <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="0.0130567996" sigma="0.22575373517676198" type="ions1lm_126_tip3p-Li+"/><!--     HFE set for TIP3P water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.13269530895999998" sigma="0.2628151218514001" type="ions1lm_126_tip3p-Na+"/><!--     HFE set for TIP3P water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.6330957258400001" sigma="0.30629097929664867" type="ions1lm_126_tip3p-K+"/><!--     HFE set for TIP3P water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="1.01002663744" sigma="0.3267816498138765" type="ions1lm_126_tip3p-Rb+"/><!--     HFE set for TIP3P water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="1.58378972872" sigma="0.35422133033259895" type="ions1lm_126_tip3p-Cs+"/><!--     HFE set for TIP3P water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.58667223752" sigma="0.3034401033985996" type="ions1lm_126_tip3p-Tl+"/><!--     HFE set for TIP3P water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.004698632" sigma="0.2139938720973095" type="ions1lm_126_tip3p-Cu+"/><!--     HFE set for TIP3P water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.03424315304" sigma="0.238939036205239" type="ions1lm_126_tip3p-Ag+"/><!--     HFE set for TIP3P water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.82125221416" sigma="0.3169817639143327" type="ions1lm_126_tip3p-NH4+"/><!--     HFE set for TIP3P water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.03264699888" sigma="0.23822631723072674" type="ions1lm_126_tip3p-H3O+"/><!--     HFE set for TIP3P water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.8345094692" sigma="0.317694482888845" type="ions1lm_126_tip3p-F-"/><!--     HFE set for TIP3P water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="2.5226631784799998" sigma="0.40126078265040876" type="ions1lm_126_tip3p-Cl-"/><!--     HFE set for TIP3P water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="3.0154481295999997" sigma="0.43262041752894875" type="ions1lm_126_tip3p-Br-"/><!--     HFE set for TIP3P water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="3.5738969440800004" sigma="0.4853616216428569" type="ions1lm_126_tip3p-I-"/><!--     HFE set for TIP3P water from Li et al., JCTC, 2015, 11, 1645 -->
+  </NonbondedForce>
+</ForceField>
