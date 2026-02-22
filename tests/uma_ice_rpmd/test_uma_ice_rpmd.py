@@ -20,12 +20,21 @@ Usage:
 """
 
 import sys
+import os
+
+# Set plugin dir before openmm import: when openmm_library_path points to build/,
+# build/plugins has subdirs (amoeba, rpmd...) not .so files. Use installed plugins.
+if os.getenv('OPENMM_PLUGIN_DIR') is None:
+    _plugins = os.path.join(os.path.expanduser('~'), 'miniconda3', 'lib', 'plugins')
+    if os.path.isdir(_plugins):
+        os.environ['OPENMM_PLUGIN_DIR'] = _plugins
+
 import numpy as np
 import time
 from pathlib import Path
 
 from openmm import app, unit, Vec3
-from openmm import RPMDIntegrator, Context, Platform, MonteCarloBarostat
+from openmm import RPMDIntegrator, Context, Platform, RPMDMonteCarloBarostat
 from openmmml import MLPotential
 
 print("✓ All required packages loaded successfully")
@@ -244,13 +253,12 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     
     # Add barostat if NPT
     if pressure_bar > 0:
-        barostat = MonteCarloBarostat(
+        barostat = RPMDMonteCarloBarostat(
             pressure_bar * unit.bar,
-            temperature_K * unit.kelvin,
             25  # Attempt every 25 steps
         )
         system.addForce(barostat)
-        print(f"  Added MonteCarloBarostat (NPT ensemble)")
+        print(f"  Added RPMDMonteCarloBarostat (NPT ensemble)")
         print(f"  Pressure: {pressure_bar} bar")
     else:
         print(f"  Running NVT (no barostat)")
@@ -407,8 +415,23 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     pdb_file_handle.write("CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1\n" % (
         box_size_angstrom, box_size_angstrom, box_size_angstrom, 90.0, 90.0, 90.0))
     
-    for step in range(1, total_steps + 1):
-        integrator.step(1)
+    # Cache masses for temperature calculation
+    masses = [system.getParticleMass(j).value_in_unit(unit.dalton) for j in range(n_atoms)]
+    
+    # Pre-allocate velocity buffer for reporting
+    all_bead_velocities_buffer = np.zeros((num_beads, n_atoms, 3), dtype=np.float64)
+    
+    step = 0
+    while step < total_steps:
+        # Calculate next checkpoint
+        next_report = ((step // report_interval_steps) + 1) * report_interval_steps
+        next_pdb = ((step // pdb_interval_steps) + 1) * pdb_interval_steps if step >= equilibration_steps else total_steps
+        next_stop = min(next_report, next_pdb, total_steps)
+        chunk = next_stop - step
+        
+        # Run chunked steps
+        integrator.step(chunk)
+        step = next_stop
         step_counter = step
         
         # Switch to production phase
@@ -431,17 +454,13 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
             # Calculate physical temperature from centroid kinetic energy
             # Physical T = (2 * KE_centroid) / (3 * N_atoms * k_B)
             centroid_ke = 0.0
-            masses = [system.getParticleMass(j).value_in_unit(unit.dalton) for j in range(n_atoms)]
             
-            # Get velocities for all beads
-            all_bead_velocities = []
+            # Get velocities for all beads (write into pre-allocated buffer)
             for b in range(num_beads):
-                # Use getState to retrieve velocities for each bead
                 state_b = integrator.getState(b, getVelocities=True)
-                all_bead_velocities.append(state_b.getVelocities(asNumpy=True).value_in_unit(unit.nanometer/unit.picosecond))
+                all_bead_velocities_buffer[b] = state_b.getVelocities(asNumpy=True).value_in_unit(unit.nanometer/unit.picosecond)
             
-            all_bead_velocities = np.array(all_bead_velocities) # (num_beads, n_atoms, 3)
-            centroid_velocities = np.mean(all_bead_velocities, axis=0) # (n_atoms, 3)
+            centroid_velocities = np.mean(all_bead_velocities_buffer, axis=0)
             
             # KE = 0.5 * sum(m * v^2)
             # v is in nm/ps, m is in dalton (g/mol)

@@ -122,6 +122,20 @@ public:
     virtual void popAsCurrent() {
     }
     /**
+     * Push the primary context before calling external libraries (e.g. PyTorch).
+     * On CUDA, this synchronizes OpenMM's work and pushes the primary context
+     * so that runtime-API libraries operate correctly. No-op on other platforms.
+     */
+    virtual void pushPrimaryContextForExternalCall() {
+    }
+    /**
+     * Pop the primary context after external library calls return.
+     * On CUDA, this synchronizes external work and pops the primary context
+     * to restore OpenMM's driver-API context. No-op on other platforms.
+     */
+    virtual void popPrimaryContextAfterExternalCall() {
+    }
+    /**
      * Get the number of contexts being used for the current simulation.
      * This is relevant when a simulation is parallelized across multiple devices.  In that case,
      * one ComputeContext is created for each device.

@@ -4292,10 +4292,14 @@ void CommonApplyBussiThermostatKernel::initialize(const System& system, const Bu
     particleIndicesArray.initialize<int>(cc, numParticles, "bussiParticleIndices");
     particleIndicesArray.upload(particleIndices);
     
-    // Create array for masses
+    // Create array for masses and count DOF (only particles with mass > 0)
     vector<float> masses(numParticles);
-    for (int i = 0; i < numParticles; i++)
+    numDof = 0;
+    for (int i = 0; i < numParticles; i++) {
         masses[i] = (float) system.getParticleMass(particleIndices[i]);
+        if (masses[i] > 0)
+            numDof += 3;
+    }
     massesArray.initialize<float>(cc, numParticles, "bussiMasses");
     massesArray.upload(masses);
     
@@ -4310,6 +4314,7 @@ void CommonApplyBussiThermostatKernel::initialize(const System& system, const Bu
     defines["NUM_PARTICLES"] = cc.intToString(numParticles);
     ComputeProgram program = cc.compileProgram(CommonKernelSources::bussiThermostat, defines);
     sumKineticEnergyKernel = program->createKernel("sumBussiKineticEnergy");
+    sumKineticEnergyPreKickKernel = program->createKernel("sumBussiKineticEnergyPreKick");
     rescaleKernel = program->createKernel("applyBussiThermostat");
     scalePosDeltaKernel = program->createKernel("scaleBussiPosDelta");
     
@@ -4320,13 +4325,23 @@ void CommonApplyBussiThermostatKernel::initialize(const System& system, const Bu
     sumKineticEnergyKernel->addArg(massesArray);
     sumKineticEnergyKernel->addArg(kineticEnergyBuffer);
     
+    sumKineticEnergyPreKickKernel->addArg(numParticles);
+    sumKineticEnergyPreKickKernel->addArg(cc.getVelm());
+    sumKineticEnergyPreKickKernel->addArg(particleIndicesArray);
+    sumKineticEnergyPreKickKernel->addArg(massesArray);
+    sumKineticEnergyPreKickKernel->addArg(kineticEnergyBuffer);
+    sumKineticEnergyPreKickKernel->addArg(cc.getLongForceBuffer());
+    sumKineticEnergyPreKickKernel->addArg(cc.getPaddedNumAtoms());
+    sumKineticEnergyPreKickKernel->addArg(); // halfDt - set at runtime
+
     rescaleKernel->addArg(numParticles);
     rescaleKernel->addArg(cc.getVelm());
     rescaleKernel->addArg(particleIndicesArray);
     rescaleKernel->addArg(); // alpha (rescaling factor) - set at runtime
 
-    scalePosDeltaKernel->addArg(cc.getNumAtoms());
+    scalePosDeltaKernel->addArg(numParticles);
     scalePosDeltaKernel->addArg(cc.getIntegrationUtilities().getPosDelta());
+    scalePosDeltaKernel->addArg(particleIndicesArray);
     scalePosDeltaKernel->addArg(); // alpha - set at runtime
 }
 
@@ -4338,8 +4353,20 @@ void CommonApplyBussiThermostatKernel::execute(ContextImpl& context) {
     double tau = context.getParameter(BussiThermostat::Tau());
     double dt = context.getIntegrator().getStepSize();
     
-    // First, compute kinetic energy on GPU
-    sumKineticEnergyKernel->execute(numParticles);
+    // Compute kinetic energy on GPU.
+    // When running after Verlet Part1, use the pre-kick kernel to reconstruct
+    // on-step velocities v(t) = v(t+dt/2) - F(t)*dt/(2m), matching cav-hoomd's
+    // TwoStepConstantVolume which computes alpha from KE(v(t)).
+    if (context.getStepPhase() == ContextImpl::STEP_PHASE_AFTER_VERLET_PART1) {
+        bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
+        if (useDouble)
+            sumKineticEnergyPreKickKernel->setArg(7, 0.5*dt);
+        else
+            sumKineticEnergyPreKickKernel->setArg(7, (float)(0.5*dt));
+        sumKineticEnergyPreKickKernel->execute(numParticles);
+    } else {
+        sumKineticEnergyKernel->execute(numParticles);
+    }
     
     // Download kinetic energy (this is a synchronization point)
     vector<float> keBuffer(kineticEnergyBuffer.getSize());
@@ -4349,26 +4376,44 @@ void CommonApplyBussiThermostatKernel::execute(ContextImpl& context) {
     for (float ke : keBuffer)
         kineticEnergy += ke;
     
-    // Compute DOF (3 per particle)
-    int dof = 3 * numParticles;
+    int dof = numDof;
     
     if (dof <= 0 || kineticEnergy <= 0)
         throw OpenMMException("Bussi thermostat requires non-zero initial momenta.");
     
-    // Compute rescaling factor using Bussi's algorithm
+    // Compute rescaling factor using Bussi's algorithm (Bussi et al. 2007, J. Chem. Phys. 126, 014101)
+    // Matches cav-hoomd's BussiThermostat::compute_rescale_factor in Thermostat.h
     double c = exp(-dt / tau);
     double targetKE = 0.5 * dof * BOLTZ * temperature;
     
-    // Generate random numbers on CPU for now (more accurate for such critical calculations)
     double R1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-    double sumRiSquared = 0.0;
-    for (int i = 1; i < dof; i++) {
-        double Ri = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-        sumRiSquared += Ri * Ri;
+    
+    // Sample chi^2(dof-1) via Gamma distribution: chi^2(k) = 2*Gamma(k/2, 1)
+    // Marsaglia-Tsang method for Gamma(a, 1) with a = (dof-1)/2 >= 1
+    double rGamma = 0.0;
+    if (dof > 1) {
+        double a = (dof - 1.0) / 2.0;
+        double d = a - 1.0/3.0;
+        double cc_mt = 1.0 / sqrt(9.0 * d);
+        while (true) {
+            double x, v;
+            do {
+                x = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                v = 1.0 + cc_mt * x;
+            } while (v <= 0.0);
+            v = v * v * v;
+            double u = SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber();
+            if (u < 1.0 - 0.0331 * (x*x) * (x*x))
+                { rGamma = d * v; break; }
+            if (log(u) < 0.5*x*x + d*(1.0 - v + log(v)))
+                { rGamma = d * v; break; }
+        }
+        rGamma *= 2.0;  // chi^2(dof-1) = 2 * Gamma((dof-1)/2, 1)
     }
     
     double ratio = targetKE / (dof * kineticEnergy);
-    double alphaSquared = c + (1 - c) * ratio * sumRiSquared 
+    // Correct formula includes R1^2 in the chi-squared component (non-central chi-squared decomposition)
+    double alphaSquared = c + (1 - c) * ratio * (rGamma + R1 * R1)
                          + 2.0 * R1 * sqrt(c * (1 - c) * ratio);
     
     if (alphaSquared < 0)
@@ -4387,10 +4432,10 @@ void CommonApplyBussiThermostatKernel::execute(ContextImpl& context) {
     rescaleKernel->setArg(3, (float) alpha);
     rescaleKernel->execute(numParticles);
 
-    // When called after Verlet part1 (HOOMD order), also scale position deltas
+    // When called after Verlet part1 (HOOMD order), scale position deltas for thermostatted particles only
     if (context.getStepPhase() == ContextImpl::STEP_PHASE_AFTER_VERLET_PART1) {
-        scalePosDeltaKernel->setArg(2, (float) alpha);
-        scalePosDeltaKernel->execute(cc.getNumAtoms());
+        scalePosDeltaKernel->setArg(3, (float) alpha);
+        scalePosDeltaKernel->execute(numParticles);
     }
 }
 
@@ -4501,7 +4546,11 @@ void CommonCalcCavityForceKernel::initialize(const System& system, const CavityF
     computeDipoleKernel->addArg(cc.getPosq());
     computeDipoleKernel->addArg(chargesArray);
     computeDipoleKernel->addArg(dipoleBuffer);
-    computeDipoleKernel->addArg();  // reorderedCavityIndex - set at runtime
+    computeDipoleKernel->addArg(posCellOffsetsBuffer);
+    computeDipoleKernel->addArg(); // periodicBoxVecX - set at runtime
+    computeDipoleKernel->addArg(); // periodicBoxVecY - set at runtime
+    computeDipoleKernel->addArg(); // periodicBoxVecZ - set at runtime
+    computeDipoleKernel->addArg(); // reorderedCavityIndex - set at runtime
     
     // Force kernel uses posCellOffsets to unwrap cavity position on GPU
     computeForceKernel->addArg(cc.getPosq());
@@ -4565,11 +4614,24 @@ double CommonCalcCavityForceKernel::execute(ContextImpl& context, bool includeFo
     Vec3 boxVectors[3];
     context.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     
+    // Upload current posCellOffsets so dipole and force kernels use unwrapped positions
+    const vector<mm_int4>& offsets = cc.getPosCellOffsets();
+    posCellOffsetsBuffer.upload(offsets);
+    
     // Clear dipole buffer on GPU (much faster than CPU upload)
     clearDipoleKernel->execute(1);
     
-    // Compute dipole moment (pass reordered cavity index to exclude cavity from dipole)
-    computeDipoleKernel->setArg(3, reorderedCavityIndex);
+    // Compute dipole moment from UNWRAPPED positions (pass box vectors and reordered cavity index)
+    if (cc.getUseDoublePrecision()) {
+        computeDipoleKernel->setArg(4, mm_double4(boxVectors[0][0], boxVectors[0][1], boxVectors[0][2], 0.0));
+        computeDipoleKernel->setArg(5, mm_double4(boxVectors[1][0], boxVectors[1][1], boxVectors[1][2], 0.0));
+        computeDipoleKernel->setArg(6, mm_double4(boxVectors[2][0], boxVectors[2][1], boxVectors[2][2], 0.0));
+    } else {
+        computeDipoleKernel->setArg(4, mm_float4((float)boxVectors[0][0], (float)boxVectors[0][1], (float)boxVectors[0][2], 0.0f));
+        computeDipoleKernel->setArg(5, mm_float4((float)boxVectors[1][0], (float)boxVectors[1][1], (float)boxVectors[1][2], 0.0f));
+        computeDipoleKernel->setArg(6, mm_float4((float)boxVectors[2][0], (float)boxVectors[2][1], (float)boxVectors[2][2], 0.0f));
+    }
+    computeDipoleKernel->setArg(7, reorderedCavityIndex);
     computeDipoleKernel->execute(cc.getNumAtoms());
     
     // Get current time in picoseconds
@@ -4725,7 +4787,7 @@ void CommonApplyCavityDisplacementKernel::execute(ContextImpl& context, double l
     //   epsilon = lambda * omega * CONV
     //   K = photonMass_au * omega^2 * CONV
     //   epsilon/K = lambda / (photonMass_au * omega) = lambda / (photonMass * 1822.888 * omega)
-    const double AMU_TO_AU = 1822.888;  // 1 amu = 1822.888 electron masses
+    const double AMU_TO_AU = 1822.888486209;
     double photonMass_au = photonMass * AMU_TO_AU;
     float factor = (float) (-lambdaCoupling / (photonMass_au * omegac));
     displacementKernel->setArg(3, factor);
@@ -4768,10 +4830,10 @@ void CommonCalcMultiModeCavityForceKernel::reorderData() {
     }
     cavityIndicesBuffer.upload(reorderedCavityIndices);
     
-    // Unit conversion constants
-    const double HARTREE_TO_KJMOL = 2625.5;
-    const double BOHR_TO_NM = 0.0529177;
-    const double AMU_TO_AU = 1822.888;
+    // Unit conversion constants (NIST 2018 CODATA)
+    const double HARTREE_TO_KJMOL = 2625.4996394799;
+    const double BOHR_TO_NM = 0.052917721067;
+    const double AMU_TO_AU = 1822.888486209;
     const double CONVERSION_FACTOR = HARTREE_TO_KJMOL / (BOHR_TO_NM * BOHR_TO_NM);
     double photonMass_au = photonMass * AMU_TO_AU;
     
@@ -4835,10 +4897,10 @@ void CommonCalcMultiModeCavityForceKernel::initialize(const System& system, cons
     cavityIndicesBuffer.initialize<int>(cc, numModes, "multiModeCavityIndices");
     posCellOffsetsBuffer.initialize<mm_int4>(cc, cc.getPaddedNumAtoms(), "multiModePosCellOffsets");
     
-    // Precompute DSE prefactor in OpenMM units
-    const double HARTREE_TO_KJMOL = 2625.5;
-    const double BOHR_TO_NM = 0.0529177;
-    const double AMU_TO_AU = 1822.888;
+    // Precompute DSE prefactor in OpenMM units (NIST 2018 CODATA)
+    const double HARTREE_TO_KJMOL = 2625.4996394799;
+    const double BOHR_TO_NM = 0.052917721067;
+    const double AMU_TO_AU = 1822.888486209;
     const double CONVERSION_FACTOR = HARTREE_TO_KJMOL / (BOHR_TO_NM * BOHR_TO_NM);
     double photonMass_au = photonMass * AMU_TO_AU;
     
@@ -4881,6 +4943,10 @@ void CommonCalcMultiModeCavityForceKernel::initialize(const System& system, cons
     computeDipoleKernel->addArg(chargesArray);
     computeDipoleKernel->addArg(dipoleBuffer);
     computeDipoleKernel->addArg(cavityIndicesBuffer);
+    computeDipoleKernel->addArg(posCellOffsetsBuffer);
+    computeDipoleKernel->addArg(); // periodicBoxVecX - set at runtime
+    computeDipoleKernel->addArg(); // periodicBoxVecY - set at runtime
+    computeDipoleKernel->addArg(); // periodicBoxVecZ - set at runtime
     
     computeForcesKernel->addArg(cc.getPosq());
     computeForcesKernel->addArg(chargesArray);
@@ -4904,10 +4970,23 @@ double CommonCalcMultiModeCavityForceKernel::execute(ContextImpl& context, bool 
     Vec3 boxVectors[3];
     context.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     
+    // Upload current posCellOffsets so dipole and force kernels use unwrapped positions
+    const vector<mm_int4>& offsets = cc.getPosCellOffsets();
+    posCellOffsetsBuffer.upload(offsets);
+    
     // Clear buffers on GPU
     clearBuffersKernel->execute(1);
     
-    // Compute dipole moment (excludes all cavity particles)
+    // Compute dipole moment from UNWRAPPED positions (excludes all cavity particles)
+    if (cc.getUseDoublePrecision()) {
+        computeDipoleKernel->setArg(5, mm_double4(boxVectors[0][0], boxVectors[0][1], boxVectors[0][2], 0.0));
+        computeDipoleKernel->setArg(6, mm_double4(boxVectors[1][0], boxVectors[1][1], boxVectors[1][2], 0.0));
+        computeDipoleKernel->setArg(7, mm_double4(boxVectors[2][0], boxVectors[2][1], boxVectors[2][2], 0.0));
+    } else {
+        computeDipoleKernel->setArg(5, mm_float4((float)boxVectors[0][0], (float)boxVectors[0][1], (float)boxVectors[0][2], 0.0f));
+        computeDipoleKernel->setArg(6, mm_float4((float)boxVectors[1][0], (float)boxVectors[1][1], (float)boxVectors[1][2], 0.0f));
+        computeDipoleKernel->setArg(7, mm_float4((float)boxVectors[2][0], (float)boxVectors[2][1], (float)boxVectors[2][2], 0.0f));
+    }
     computeDipoleKernel->execute(cc.getNumAtoms());
     
     // Compute forces and energies
@@ -4946,10 +5025,10 @@ void CommonCalcMultiModeCavityForceKernel::copyParametersToContext(ContextImpl& 
         originalCavityIndices[i] = force.getCavityParticleIndex(i);
     }
     
-    // Recompute DSE prefactor
-    const double HARTREE_TO_KJMOL = 2625.5;
-    const double BOHR_TO_NM = 0.0529177;
-    const double AMU_TO_AU = 1822.888;
+    // Recompute DSE prefactor (NIST 2018 CODATA)
+    const double HARTREE_TO_KJMOL = 2625.4996394799;
+    const double BOHR_TO_NM = 0.052917721067;
+    const double AMU_TO_AU = 1822.888486209;
     const double CONVERSION_FACTOR = HARTREE_TO_KJMOL / (BOHR_TO_NM * BOHR_TO_NM);
     double photonMass_au = photonMass * AMU_TO_AU;
     dsePrefactor = 0.0;
@@ -5588,11 +5667,10 @@ void CommonCalcPythonForceKernel::executeOnWorkerThread(bool includeForces) {
     }
     State state = builder.getState();
     
-    // CRITICAL: Set CUDA context BEFORE calling Python
-    // This ensures OpenMM's CUDA context is active when Python/PyTorch operations occur
-    // This is essential for CUDA context sharing between OpenMM and PyTorch
     ContextSelector selector(cc);
+    cc.pushPrimaryContextForExternalCall();
     computation->compute(state, energy, forcesVec.data(), cc.getUseDoublePrecision());
+    cc.popPrimaryContextAfterExternalCall();
     
     if (includeForces) {
         // ContextSelector already active from above, no need to create another
@@ -5653,12 +5731,10 @@ double CommonCalcPythonForceKernel::executeBatch(const std::vector<ContextImpl*>
     std::vector<double> allForces(3 * numParticles * numCopies);
     double totalEnergy = 0.0;
     
-    // CRITICAL: Set CUDA context BEFORE calling Python (batched version)
-    // This ensures OpenMM's CUDA context is active when Python/PyTorch operations occur
     ContextSelector selector(cc);
-    
-    // Call batched computation
+    cc.pushPrimaryContextForExternalCall();
     computation->computeBatch(states, totalEnergy, allForces.data(), cc.getUseDoublePrecision());
+    cc.popPrimaryContextAfterExternalCall();
     
     // NOTE: Forces are not actually added back in this basic implementation
     // This needs to be handled by the calling code (RPMD kernel)

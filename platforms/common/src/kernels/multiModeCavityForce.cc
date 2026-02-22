@@ -40,21 +40,21 @@ KERNEL void clearMultiModeBuffers(GLOBAL float* RESTRICT dipole,
 
 /**
  * Compute the molecular dipole moment, excluding ALL cavity particles.
- *
- * The cavity particle indices are stored in cavityIndices[0..NUM_MODES-1].
- * We use a simple check against a bitmask or loop to skip them.
+ * Uses UNWRAPPED positions (posq corrected by posCellOffsets) so that the
+ * dipole is continuous across periodic boundaries -- matching cav-hoomd.
  */
 KERNEL void computeMultiModeDipole(GLOBAL const real4* RESTRICT posq,
         GLOBAL const float* RESTRICT charges,
         GLOBAL float* RESTRICT dipole,
-        GLOBAL const int* RESTRICT cavityIndices) {
+        GLOBAL const int* RESTRICT cavityIndices,
+        GLOBAL const int4* RESTRICT posCellOffsets,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     LOCAL float localDipoleX[WORK_GROUP_SIZE];
     LOCAL float localDipoleY[WORK_GROUP_SIZE];
     int localId = LOCAL_ID;
 
     float dx = 0.0f, dy = 0.0f;
     for (int i = GLOBAL_ID; i < NUM_ATOMS; i += GLOBAL_SIZE) {
-        // Check if this particle is a cavity particle
         bool isCavity = false;
         for (int m = 0; m < NUM_MODES; m++) {
             if (i == cavityIndices[m]) {
@@ -64,9 +64,12 @@ KERNEL void computeMultiModeDipole(GLOBAL const real4* RESTRICT posq,
         }
         if (!isCavity) {
             real4 pos = posq[i];
+            int4 offset = posCellOffsets[i];
+            float ux = pos.x - offset.x * periodicBoxVecX.x - offset.y * periodicBoxVecY.x - offset.z * periodicBoxVecZ.x;
+            float uy = pos.y - offset.x * periodicBoxVecX.y - offset.y * periodicBoxVecY.y - offset.z * periodicBoxVecZ.y;
             float q = charges[i];
-            dx += q * pos.x;
-            dy += q * pos.y;
+            dx += q * ux;
+            dy += q * uy;
         }
     }
 

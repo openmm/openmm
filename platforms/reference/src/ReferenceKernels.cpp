@@ -3368,14 +3368,31 @@ void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
     
     vector<Vec3>& velData = extractVelocities(context);
     
-    // Compute current kinetic energy for the particle subset
+    // Compute current kinetic energy for the particle subset.
+    // When running after Verlet Part1, reconstruct on-step velocities
+    // v(t) = v(t+dt/2) - F(t)*dt/(2m) to match cav-hoomd's integration order.
+    bool afterVerletPart1 = (context.getStepPhase() == ContextImpl::STEP_PHASE_AFTER_VERLET_PART1);
+    vector<Vec3>* forceData = nullptr;
+    if (afterVerletPart1)
+        forceData = &extractForces(context);
+    
     double kineticEnergy = 0.0;
     for (size_t i = 0; i < particleIndices.size(); ++i) {
         int idx = particleIndices[i];
         double m = masses[i];
         if (m > 0) {
-            Vec3& v = velData[idx];
-            kineticEnergy += 0.5 * m * (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+            double vx, vy, vz;
+            if (afterVerletPart1) {
+                double halfDtOverM = 0.5 * dt / m;
+                vx = velData[idx][0] - (*forceData)[idx][0] * halfDtOverM;
+                vy = velData[idx][1] - (*forceData)[idx][1] * halfDtOverM;
+                vz = velData[idx][2] - (*forceData)[idx][2] * halfDtOverM;
+            } else {
+                vx = velData[idx][0];
+                vy = velData[idx][1];
+                vz = velData[idx][2];
+            }
+            kineticEnergy += 0.5 * m * (vx*vx + vy*vy + vz*vz);
         }
     }
     
@@ -3388,26 +3405,39 @@ void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
     if (dof <= 0 || kineticEnergy <= 0)
         throw OpenMMException("Bussi thermostat requires non-zero initial momenta.");
     
-    // Compute the rescaling factor using Bussi's algorithm
-    // c = exp(-dt/tau)
+    // Compute rescaling factor using Bussi's algorithm (Bussi et al. 2007, J. Chem. Phys. 126, 014101)
+    // Matches cav-hoomd's BussiThermostat::compute_rescale_factor in Thermostat.h
     double c = exp(-dt / tau);
-    
-    // Target kinetic energy: K_target = (dof/2) * kB * T
-    // In OpenMM units: kB = BOLTZ (kJ/mol/K), T in K
     double targetKE = 0.5 * dof * BOLTZ * temperature;
     
-    // Generate random numbers
-    // R1 ~ N(0,1), and sum of (dof-1) squared normals is chi2(dof-1)
     double R1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-    double sumRiSquared = 0.0;
-    for (int i = 1; i < dof; ++i) {
-        double Ri = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-        sumRiSquared += Ri * Ri;
+    
+    // Sample chi^2(dof-1) via Gamma distribution: chi^2(k) = 2*Gamma(k/2, 1)
+    // Marsaglia-Tsang method for Gamma(a, 1) with a = (dof-1)/2 >= 1
+    double rGamma = 0.0;
+    if (dof > 1) {
+        double a = (dof - 1.0) / 2.0;
+        double d = a - 1.0/3.0;
+        double cc_mt = 1.0 / sqrt(9.0 * d);
+        while (true) {
+            double x, v;
+            do {
+                x = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                v = 1.0 + cc_mt * x;
+            } while (v <= 0.0);
+            v = v * v * v;
+            double u = SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber();
+            if (u < 1.0 - 0.0331 * (x*x) * (x*x))
+                { rGamma = d * v; break; }
+            if (log(u) < 0.5*x*x + d*(1.0 - v + log(v)))
+                { rGamma = d * v; break; }
+        }
+        rGamma *= 2.0;  // chi^2(dof-1) = 2 * Gamma((dof-1)/2, 1)
     }
     
-    // Compute alpha^2 (rescaling factor squared) using Bussi formula
+    // Correct formula includes R1^2 in the chi-squared component (non-central chi-squared decomposition)
     double ratio = targetKE / (dof * kineticEnergy);
-    double alphaSquared = c + (1 - c) * ratio * sumRiSquared 
+    double alphaSquared = c + (1 - c) * ratio * (rGamma + R1 * R1)
                          + 2.0 * R1 * sqrt(c * (1 - c) * ratio);
     
     // Ensure alpha^2 is positive
@@ -3431,29 +3461,30 @@ void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
         velData[idx][2] *= alpha;
     }
 
-    // When called after Verlet part1 (HOOMD order), also scale position deltas
+    // When called after Verlet part1 (HOOMD order), scale position deltas for thermostatted particles only
     if (context.getStepPhase() == ContextImpl::STEP_PHASE_AFTER_VERLET_PART1) {
         ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-        for (size_t i = 0; i < data->verletPosDelta.size(); ++i) {
-            data->verletPosDelta[i][0] *= alpha;
-            data->verletPosDelta[i][1] *= alpha;
-            data->verletPosDelta[i][2] *= alpha;
+        for (size_t i = 0; i < particleIndices.size(); ++i) {
+            int idx = particleIndices[i];
+            data->verletPosDelta[idx][0] *= alpha;
+            data->verletPosDelta[idx][1] *= alpha;
+            data->verletPosDelta[idx][2] *= alpha;
         }
     }
 }
 
 // ==================== CavityForce Kernel Implementation ====================
 
-// Unit conversion constants for cavity force
+// Unit conversion constants for cavity force (NIST 2018 CODATA values)
 // omegac is given in Hartree (atomic units where ℏ=1)
 // OpenMM uses: mass in amu, length in nm, energy in kJ/mol
-// 
-// Spring constant K = m × ω² needs conversion:
-//   1 Hartree = 4.3597447e-18 J = ℏω, so ω = E/ℏ = 4.1363e16 rad/s per Hartree
-//   K [kJ/(mol·nm²)] = m [amu] × 1e-24 [kg/amu × mol⁻¹ × nm⁻²] × ω² [rad²/s²]
-//   Combined factor: (4.1363e16)² × 1e-24 × 1000/NA = 1.7109e9
-static const double OMEGAC_AU_TO_K_CONVERSION = 1.7109e9;  // (Hartree)² → (kJ/(mol·nm²))/amu
-static const double OMEGAC_AU_TO_EPSILON_CONVERSION = 1.3083e5;  // Hartree → sqrt(kJ/(mol·nm²·e²))
+//
+// K [kJ/(mol·nm²)] = m_amu * AMU_TO_AU * omegac² * CONVERSION_FACTOR
+// epsilon [kJ/(mol·nm²·e)] = lambda * omegac * CONVERSION_FACTOR
+static const double HARTREE_TO_KJMOL_CAVITY = 2625.4996394799;
+static const double BOHR_TO_NM_CAVITY = 0.052917721067;
+static const double AMU_TO_AU_CAVITY = 1822.888486209;
+static const double CONVERSION_FACTOR_CAVITY = HARTREE_TO_KJMOL_CAVITY / (BOHR_TO_NM_CAVITY * BOHR_TO_NM_CAVITY);
 
 void ReferenceCalcCavityForceKernel::initialize(const System& system, const CavityForce& force) {
     cavityParticleIndex = force.getCavityParticleIndex();
@@ -3539,11 +3570,10 @@ double ReferenceCalcCavityForceKernel::execute(ContextImpl& context, bool includ
     Vec3 dipoleXY(dipole[0], dipole[1], 0.0);
     
     // Compute spring constant and effective coupling with proper unit conversion
-    // omegac is in Hartree (atomic units), need to convert to OpenMM units
-    // K [kJ/(mol·nm²)] = m [amu] × CONVERSION × ω² [Hartree²]
-    // ε [kJ/(mol·e·nm²)] = λ × ω [Hartree] × 2625.5 / 0.0529177²
-    double K = photonMass * OMEGAC_AU_TO_K_CONVERSION * omegac * omegac;
-    double epsilon = currentLambda * omegac * 937679.0;  // Hartree → kJ/(mol·e·nm²)
+    // Same derivation as GPU platform for exact consistency
+    double photonMass_au = photonMass * AMU_TO_AU_CAVITY;
+    double K = photonMass_au * omegac * omegac * CONVERSION_FACTOR_CAVITY;
+    double epsilon = currentLambda * omegac * CONVERSION_FACTOR_CAVITY;
     
     // Compute energy components
     // Harmonic: (1/2) * K * q^2
@@ -3766,13 +3796,10 @@ void ReferenceCalcMultiModeCavityForceKernel::initialize(const System& system, c
     }
     
     // Precompute DSE prefactor in OpenMM units
-    // eps_n [OpenMM] = lambda_n * omega_n * 937679.0  (the conversion factor)
-    // K_n [OpenMM] = photonMass * OMEGAC_AU_TO_K_CONVERSION * omega_n^2
-    // eps_n^2/K_n = lambda_n^2 * omega_n^2 * 937679.0^2 / (photonMass * 1.7109e9 * omega_n^2)
-    //            = lambda_n^2 * 937679.0^2 / (photonMass * 1.7109e9)
-    //            = n * lambda1^2 * 937679.0^2 / (photonMass * 1.7109e9)
+    // eps_n^2/K_n = lambda_n^2 * CONV / photonMass_au = n * lambda1^2 * CONV / photonMass_au
     dsePrefactor = 0.0;
-    double convFactor = 937679.0 * 937679.0 / (photonMass * OMEGAC_AU_TO_K_CONVERSION);
+    double photonMass_au_init = photonMass * AMU_TO_AU_CAVITY;
+    double convFactor = CONVERSION_FACTOR_CAVITY / photonMass_au_init;
     for (int m = 0; m < numModes; m++) {
         int n = m + 1;
         double fn = spatialProfiles[m];
@@ -3813,9 +3840,10 @@ double ReferenceCalcMultiModeCavityForceKernel::execute(ContextImpl& context, bo
         double lambda_n = std::sqrt((double)n) * lambda1;
         double fn = spatialProfiles[m];
         
-        // Unit conversions (same as single-mode)
-        double K_n = photonMass * OMEGAC_AU_TO_K_CONVERSION * omega_n * omega_n;
-        double eps_n = lambda_n * omega_n * 937679.0;
+        // Unit conversions (same as single-mode, using NIST constants)
+        double photonMass_au_exec = photonMass * AMU_TO_AU_CAVITY;
+        double K_n = photonMass_au_exec * omega_n * omega_n * CONVERSION_FACTOR_CAVITY;
+        double eps_n = lambda_n * omega_n * CONVERSION_FACTOR_CAVITY;
         double epsf_n = eps_n * fn;
         
         Vec3 qPhoton = posData[cavityParticleIndices[m]];
@@ -3876,8 +3904,9 @@ void ReferenceCalcMultiModeCavityForceKernel::copyParametersToContext(ContextImp
         spatialProfiles[i] = force.getSpatialProfiles()[i];
         cavityParticleIndices[i] = force.getCavityParticleIndex(i);
     }
-    // Recompute DSE prefactor
-    double convFactor = 937679.0 * 937679.0 / (photonMass * OMEGAC_AU_TO_K_CONVERSION);
+    // Recompute DSE prefactor (NIST 2018 CODATA)
+    double photonMass_au_copy = photonMass * AMU_TO_AU_CAVITY;
+    double convFactor = CONVERSION_FACTOR_CAVITY / photonMass_au_copy;
     dsePrefactor = 0.0;
     for (int m = 0; m < numModes; m++) {
         int n = m + 1;

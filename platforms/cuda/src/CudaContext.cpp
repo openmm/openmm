@@ -193,6 +193,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     computeCapability = major+0.1*minor;
 
     contextIsValid = true;
+    CHECK_RESULT2(cuDevicePrimaryCtxRetain(&primaryContext, device), "Error retaining primary context for external library interop");
     ContextSelector selector(*this);
     CHECK_RESULT(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_SHARED));
     if (contextIndex > 0 && originalContext == NULL) {
@@ -390,6 +391,8 @@ CudaContext::~CudaContext() {
     if (contextIsValid && !isLinkedContext)
         cuProfilerStop();
     popAsCurrent();
+    if (contextIsValid)
+        cuDevicePrimaryCtxRelease(device);
     string errorMessage = "Error deleting Context";
     if (contextIsValid && !isLinkedContext)
         cuCtxDestroy(context);
@@ -465,6 +468,21 @@ void CudaContext::popAsCurrent() {
     CUcontext popped;
     if (contextIsValid)
         cuCtxPopCurrent(&popped);
+}
+
+void CudaContext::pushPrimaryContextForExternalCall() {
+    if (contextIsValid) {
+        CHECK_RESULT2(cuCtxSynchronize(), "Error synchronizing OpenMM work before external call");
+        CHECK_RESULT2(cuCtxPushCurrent(primaryContext), "Error pushing primary context for external call");
+    }
+}
+
+void CudaContext::popPrimaryContextAfterExternalCall() {
+    if (contextIsValid) {
+        CHECK_RESULT2(cuCtxSynchronize(), "Error synchronizing external work after callback");
+        CUcontext popped;
+        CHECK_RESULT2(cuCtxPopCurrent(&popped), "Error popping primary context after external call");
+    }
 }
 
 CUmodule CudaContext::createModule(const string source, const char* optimizationFlags) {

@@ -503,14 +503,14 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     step_counter = 0  # Manual step counter
     
     report_interval = 1000  # Report every 1 ps
-    num_reports = total_steps // report_interval
+    num_reports = -(-total_steps // report_interval)  # ceiling division so no steps are dropped
     
     start_time = time.time()
     last_report_time = start_time
     
     for i in range(num_reports):
-        # Run and collect dipole data
-        for step in range(report_interval):
+        steps_this_block = min(report_interval, total_steps - step_counter)
+        for step in range(steps_this_block):
             integrator.step(1)
             step_counter += 1
             if not disable_dipole_output and (step_counter % dipole_output_interval_steps) == 0:
@@ -533,7 +533,7 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         
         sim_time_ps = step_counter * dt
         progress_pct = (step_counter / total_steps) * 100
-        steps_per_sec = report_interval / elapsed_since_last
+        steps_per_sec = steps_this_block / elapsed_since_last
         
         # Calculate ns/day (same as μs/day)
         # steps_per_sec * dt (ps/step) * 86400 (sec/day) / 1000 (ps/ns) = ns/day

@@ -472,6 +472,16 @@ void HipContext::popAsCurrent() {
     }
 }
 
+void HipContext::pushPrimaryContextForExternalCall() {
+    if (contextIsValid)
+        hipDeviceSynchronize();
+}
+
+void HipContext::popPrimaryContextAfterExternalCall() {
+    if (contextIsValid)
+        hipDeviceSynchronize();
+}
+
 string HipContext::getTempFileName() const {
     stringstream tempFileName;
     tempFileName << tempDir;

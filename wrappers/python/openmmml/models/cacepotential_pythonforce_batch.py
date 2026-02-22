@@ -10,11 +10,10 @@ from openmmml.mlpotential import MLPotential, MLPotentialImpl, MLPotentialImplFa
 from typing import Iterable, Optional
 import numpy as np
 import torch
-
-# CACE imports for true tensor batching
-from cace.data import AtomicData
-from cace.tools.torch_geometric import Batch
 from ase import Atoms
+
+# CACE imports are done lazily inside addForces/compute_* so that openmmml
+# can be imported without the cace package when using only UMA or other models.
 
 # Debug controls
 DEBUG_LOGS = False
@@ -282,6 +281,8 @@ class CACEPotentialBatchedImpl(MLPotentialImpl):
             This enables single model forward pass for all beads simultaneously.
             """
             try:
+                from cace.data import AtomicData
+                from cace.tools.torch_geometric import Batch
                 if DEBUG_LOGS and not cache.get("warned_batch", False):
                     print(f"✓ CACE batched function called with TRUE tensor batching (n_beads={len(all_states)})", flush=True)
                     cache["warned_batch"] = True

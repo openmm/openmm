@@ -230,6 +230,7 @@ void CommonIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     applyBussiScalingKernel = program->createKernel("applyBussiScaling");
     copyToContextKernel = program->createKernel("copyDataToContext");
     copyFromContextKernel = program->createKernel("copyDataFromContext");
+    addForcesFromContextKernel = program->createKernel("addForcesFromContext");
     translateKernel = program->createKernel("applyCellTranslations");
     
     // Create hybrid mode kernels (uniform layout with sync)
@@ -309,6 +310,10 @@ void CommonIntegrateRPMDStepKernel::initializeKernels(ContextImpl& context) {
     copyFromContextKernel->addArg();
     copyFromContextKernel->addArg(cc.getAtomIndexArray());
     copyFromContextKernel->addArg();
+    addForcesFromContextKernel->addArg(cc.getLongForceBuffer());
+    addForcesFromContextKernel->addArg();
+    addForcesFromContextKernel->addArg(cc.getAtomIndexArray());
+    addForcesFromContextKernel->addArg();
     
     // Initialize Bussi thermostat kernels
     computeCentroidKEKernel->addArg(velocities);
@@ -591,8 +596,9 @@ void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
             beadForces.resize(numParticles);
         }
         
-        // Call batched force evaluation (single Python call for all beads!)
+        cc.pushPrimaryContextForExternalCall();
         double energy = pyImpl.calcForcesAndEnergyBatched(context, allBeadPositions, allBeadForces);
+        cc.popPrimaryContextAfterExternalCall();
         
         // 3. Upload all forces back to GPU in one shot
         uploadAllForcesToGPU(allBeadForces);
@@ -607,20 +613,19 @@ void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
                         continue;
                     }
                     
-                    // Non-batched force: use original sequential path
+                    // Non-batched force: compute and ADD to existing forces (don't overwrite UMA forces)
                     // printf("DEBUG: Force %d (type %s) using sequential path\n", i, typeid(system.getForce(i)).name());
                     int forceGroupFlag = 1 << system.getForce(i).getForceGroup();
                     copyToContextKernel->setArg(2, positions);
-                    copyFromContextKernel->setArg(1, forces);
-                    copyFromContextKernel->setArg(5, positions);
+                    addForcesFromContextKernel->setArg(1, forces);
                     for (int bead = 0; bead < numCopies; bead++) {
                         copyToContextKernel->setArg(5, bead);
                         copyToContextKernel->execute(cc.getNumAtoms());
                         context.computeVirtualSites();
                         context.updateContextState();
                         context.calcForcesAndEnergy(true, false, forceGroupFlag);
-                        copyFromContextKernel->setArg(7, bead);
-                        copyFromContextKernel->execute(cc.getNumAtoms());
+                        addForcesFromContextKernel->setArg(2, bead);
+                        addForcesFromContextKernel->execute(cc.getNumAtoms());
                     }
                 }
             }
@@ -733,30 +738,47 @@ void CommonIntegrateRPMDStepKernel::applyBussiCentroidThermostat(const System& s
     if (ndof == 0)
         return;
     
-    // Calculate Bussi rescaling factor using Gaussian random numbers
     double K_target = 0.5 * ndof * kT;
     
-    // Use OpenMM's standard RNG (same as Reference platform, properly seeded)
-    double R1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-    double R_gamma = 0.0;
-    for (int i = 0; i < ndof - 1; i++) {
-        double rnd = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-        R_gamma += rnd * rnd;
-    }
-    
-    // Use the DIRECT Bussi formula to compute K_new (handles K=0 correctly)
-    // Bussi et al., J. Chem. Phys. 126, 014101 (2007), Appendix Eq. A7
-    // K_new = K + (1-c1)*(K_target*S/ndof - K) + 2*R1*sqrt(K*K_target/ndof*(1-c1)*c1)
-    double S = R1 * R1 + R_gamma;
-    double K_new = totalKE + (1.0 - c1) * (K_target * S / ndof - totalKE)
-                   + 2.0 * R1 * sqrt(totalKE * K_target / ndof * (1.0 - c1) * c1);
-    
-    if (K_new <= 0.0)
-        return;  // Invalid new KE (extremely rare), skip
-    
     if (totalKE > 0.0) {
-        // Normal case: rescale centroid velocities by alpha = sqrt(K_new/K_old)
-        double alpha = sqrt(K_new / totalKE);
+        // Bussi rescaling factor (Bussi et al. 2007, J. Chem. Phys. 126, 014101)
+        // Uses Marsaglia-Tsang Gamma sampling for chi^2(ndof-1), matching standalone thermostat
+        double R1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+        
+        // Sample chi^2(ndof-1) via Gamma distribution: chi^2(k) = 2*Gamma(k/2, 1)
+        // Marsaglia-Tsang method for Gamma(a, 1) with a = (ndof-1)/2 >= 1
+        double rGamma = 0.0;
+        if (ndof > 1) {
+            double a = (ndof - 1.0) / 2.0;
+            double d = a - 1.0/3.0;
+            double cc_mt = 1.0 / sqrt(9.0 * d);
+            while (true) {
+                double x, v;
+                do {
+                    x = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                    v = 1.0 + cc_mt * x;
+                } while (v <= 0.0);
+                v = v * v * v;
+                double u = SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber();
+                if (u < 1.0 - 0.0331 * (x*x) * (x*x))
+                    { rGamma = d * v; break; }
+                if (log(u) < 0.5*x*x + d*(1.0 - v + log(v)))
+                    { rGamma = d * v; break; }
+            }
+            rGamma *= 2.0;  // chi^2(ndof-1) = 2 * Gamma((ndof-1)/2, 1)
+        }
+        
+        double ratio = K_target / (ndof * totalKE);
+        double alphaSquared = c1 + (1.0 - c1) * ratio * (rGamma + R1 * R1)
+                             + 2.0 * R1 * sqrt(c1 * (1.0 - c1) * ratio);
+        
+        if (alphaSquared < 0)
+            alphaSquared = 0;
+        
+        double alphaMagnitude = sqrt(alphaSquared);
+        // Signed alpha per Bussi et al. 2009 Eq. (A8)
+        double signTerm = R1 + sqrt(c1 * ndof * totalKE / ((1.0 - c1) * K_target));
+        double alpha = (signTerm >= 0.0) ? alphaMagnitude : -alphaMagnitude;
         
         // Apply scaling on GPU
         if (useDoublePrecision)
@@ -875,43 +897,57 @@ void CommonIntegrateRPMDStepKernel::applyBussiClassicalThermostat(const System& 
     // Count degrees of freedom for classical particles
     int ndof = numClassicalParticles * 3;  // Classical particles always have 3 DOF each
     
-    if (ndof == 0)
+    if (ndof == 0 || totalKE <= 0.0)
         return;
     
-    // Calculate Bussi rescaling factor using Gaussian random numbers
+    // Bussi rescaling factor (Bussi et al. 2007, J. Chem. Phys. 126, 014101)
+    // Uses Marsaglia-Tsang Gamma sampling for chi^2(ndof-1), matching standalone thermostat
     double K_target = 0.5 * ndof * kT;
     
-    // Use OpenMM's standard RNG (same as Reference platform, properly seeded)
     double R1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-    double R_gamma = 0.0;
-    for (int i = 0; i < ndof - 1; i++) {
-        double rnd = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-        R_gamma += rnd * rnd;
+    
+    // Sample chi^2(ndof-1) via Gamma distribution: chi^2(k) = 2*Gamma(k/2, 1)
+    // Marsaglia-Tsang method for Gamma(a, 1) with a = (ndof-1)/2 >= 1
+    double rGamma = 0.0;
+    if (ndof > 1) {
+        double a = (ndof - 1.0) / 2.0;
+        double d = a - 1.0/3.0;
+        double cc_mt = 1.0 / sqrt(9.0 * d);
+        while (true) {
+            double x, v;
+            do {
+                x = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                v = 1.0 + cc_mt * x;
+            } while (v <= 0.0);
+            v = v * v * v;
+            double u = SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber();
+            if (u < 1.0 - 0.0331 * (x*x) * (x*x))
+                { rGamma = d * v; break; }
+            if (log(u) < 0.5*x*x + d*(1.0 - v + log(v)))
+                { rGamma = d * v; break; }
+        }
+        rGamma *= 2.0;  // chi^2(ndof-1) = 2 * Gamma((ndof-1)/2, 1)
     }
     
-    // Use the DIRECT Bussi formula to compute K_new (handles K=0 correctly)
-    // K_new = K + (1-c1)*(K_target*S/ndof - K) + 2*R1*sqrt(K*K_target/ndof*(1-c1)*c1)
-    double S = R1 * R1 + R_gamma;
-    double K_new = totalKE + (1.0 - c1) * (K_target * S / ndof - totalKE)
-                   + 2.0 * R1 * sqrt(totalKE * K_target / ndof * (1.0 - c1) * c1);
+    double ratio = K_target / (ndof * totalKE);
+    double alphaSquared = c1 + (1.0 - c1) * ratio * (rGamma + R1 * R1)
+                         + 2.0 * R1 * sqrt(c1 * (1.0 - c1) * ratio);
     
-    if (K_new <= 0.0)
-        return;  // Invalid new KE (extremely rare), skip
+    if (alphaSquared < 0)
+        alphaSquared = 0;
     
-    if (totalKE > 0.0) {
-        // Normal case: rescale classical velocities by alpha = sqrt(K_new/K_old)
-        double alpha = sqrt(K_new / totalKE);
-        
-        // Apply scaling on GPU (uses isQuantum to identify classical particles)
-        if (useDoublePrecision)
-            applyBussiClassicalScalingKernel->setArg(2, alpha);
-        else
-            applyBussiClassicalScalingKernel->setArg(2, (float) alpha);
-        
-        applyBussiClassicalScalingKernel->execute(numParticles);
-    }
-    // Note: if totalKE == 0 (cold start), classical particles will be initialized
-    // by the Langevin classical thermostat or remain at zero until forces inject energy
+    double alphaMagnitude = sqrt(alphaSquared);
+    // Signed alpha per Bussi et al. 2009 Eq. (A8)
+    double signTerm = R1 + sqrt(c1 * ndof * totalKE / ((1.0 - c1) * K_target));
+    double alpha = (signTerm >= 0.0) ? alphaMagnitude : -alphaMagnitude;
+    
+    // Apply scaling on GPU (uses isQuantum to identify classical particles)
+    if (useDoublePrecision)
+        applyBussiClassicalScalingKernel->setArg(2, alpha);
+    else
+        applyBussiClassicalScalingKernel->setArg(2, (float) alpha);
+    
+    applyBussiClassicalScalingKernel->execute(numParticles);
 }
 
 void CommonIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& pos) {

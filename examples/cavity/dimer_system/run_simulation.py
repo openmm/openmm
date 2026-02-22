@@ -60,6 +60,10 @@ AU_TIME_TO_PS = 0.02418884254  # 1 atomic time unit = 0.02418884254 ps
 DIAMER_REF_N = 250
 DIAMER_REF_L_BOHR = 40
 
+# Nonbonded cutoff matching cav-hoomd: rcut = 15 Bohr for both LJ and PPPM real-space
+DIAMER_RCUT_BOHR = 15
+DIAMER_RCUT_NM = DIAMER_RCUT_BOHR * BOHR_TO_NM  # 0.7938 nm
+
 
 def box_size_nm_at_constant_density(num_molecules, N_ref=DIAMER_REF_N, L_ref_bohr=DIAMER_REF_L_BOHR):
     """
@@ -157,11 +161,12 @@ def _unwrap_molecules_bohr(pos_bohr, box_bohr, bonds_group):
     return pos
 
 
-def _build_system_from_gsd(gsd_path, frame_index, gsd_in_nm, no_cavity, ff_dir):
+def _build_system_from_gsd(gsd_path, frame_index, gsd_in_nm, no_cavity, ff_dir,
+                           cutoff_nm=DIAMER_RCUT_NM):
     """
     Build OpenMM system from GSD so particle order and types match the file (avoids blow-up from order mismatch).
     Returns (system, positions, topology, cavity_index or None, num_molecules, box_size_nm).
-    Uses PME and 1.0 nm cutoff to match create_diamer_system_from_forcefield.
+    Uses PME with cutoff_nm (default 15 Bohr = 0.794 nm, cav-hoomd parity).
     """
     if ff_dir is None:
         ff_dir = Path(__file__).parent
@@ -176,10 +181,11 @@ def _build_system_from_gsd(gsd_path, frame_index, gsd_in_nm, no_cavity, ff_dir):
     box_bohr = np.asarray(cfg["box_bohr"][:3], dtype=np.float64)
     scale = 1.0 if gsd_in_nm else BOHR_TO_NM
     box_nm = box_bohr * scale
-    pos_bohr = _unwrap_molecules_bohr(cfg["positions_bohr"], box_bohr, bonds_group)
-    pos_nm = pos_bohr * scale
-    # Do NOT wrap after unwrap: HarmonicBondForce uses direct distance; wrapping would put
-    # bonded atoms on opposite box sides and blow up bond energy (Phase 4 fix).
+    # Use raw GSD positions directly (same convention as cav-hoomd: [-L/2, L/2]).
+    # HarmonicBondForce.setUsesPeriodicBoundaryConditions(True) handles bonds that
+    # span the boundary, so _unwrap_molecules_bohr() is not needed. Using raw positions
+    # ensures the cavity dipole matches cav-hoomd from t=0.
+    pos_nm = cfg["positions_bohr"] * scale
 
     topology = Topology()
     chain = topology.addChain()
@@ -211,13 +217,20 @@ def _build_system_from_gsd(gsd_path, frame_index, gsd_in_nm, no_cavity, ff_dir):
     system = forcefield.createSystem(
         topology,
         nonbondedMethod=PME,
-        nonbondedCutoff=1.0 * unit.nanometer,
+        nonbondedCutoff=cutoff_nm * unit.nanometer,
     )
     system.setDefaultPeriodicBoxVectors(
         openmm.Vec3(box_nm[0], 0, 0),
         openmm.Vec3(0, box_nm[1], 0),
         openmm.Vec3(0, 0, box_nm[2]),
     )
+    # Enable PBC on HarmonicBondForce so bonds that span the periodic boundary
+    # are computed using minimum-image convention (same as cav-hoomd). This lets us
+    # use raw GSD positions without unwrapping.
+    for f in system.getForces():
+        if isinstance(f, openmm.HarmonicBondForce):
+            f.setUsesPeriodicBoundaryConditions(True)
+
     if cavity_index is not None:
         nbf = None
         ljf = None
@@ -429,9 +442,8 @@ def create_diamer_system_in_code(num_molecules=50, fraction_OO=0.8, box_size_nm=
     # Create forces
     bond_force = openmm.HarmonicBondForce()
     nonbonded_force = openmm.NonbondedForce()
-    # PME + 1.0 nm cutoff matches cav-hoomd PPPM; validated in debug_force_components.py
     nonbonded_force.setNonbondedMethod(openmm.NonbondedForce.PME)
-    nonbonded_force.setCutoffDistance(1.0)  # nm
+    nonbonded_force.setCutoffDistance(DIAMER_RCUT_NM)  # 15 Bohr, cav-hoomd parity
     
     # Generate molecules on a lattice
     num_OO = int(fraction_OO * num_molecules)
@@ -595,11 +607,10 @@ def create_diamer_system_from_forcefield(num_molecules=50, fraction_OO=0.8, box_
         openmm.Vec3(0, 0, box_size_nm) * unit.nanometer,
     )
     topology.setPeriodicBoxVectors(vectors)
-    # PME + 1.0 nm cutoff matches cav-hoomd PPPM; validated in debug_force_components.py
     system = forcefield.createSystem(
         topology,
         nonbondedMethod=PME,
-        nonbondedCutoff=1.0 * unit.nanometer,
+        nonbondedCutoff=DIAMER_RCUT_NM * unit.nanometer,
     )
     system.setDefaultPeriodicBoxVectors(
         openmm.Vec3(box_size_nm, 0, 0),
@@ -754,11 +765,13 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
              fkt_reference_interval_ps=1.0, fkt_max_refs=10,
              fkt_output_period_ps=1.0, fkt_output_prefix=None,
              nve=False, bussi_tau_ps=5.0,
-             initial_gsd=None, initial_gsd_frame=-1, gsd_in_nm=False, no_cavity=False):
+             initial_gsd=None, initial_gsd_frame=-1, gsd_in_nm=False, no_cavity=False,
+             cutoff_nm=DIAMER_RCUT_NM):
     """Run the cavity diamer simulation test.
     If nve=True: NVE (microcanonical) with Verlet; initial velocities thermalized at temperature_K.
     If nve=False: Verlet + Bussi (molecules only), cav-hoomd parity; default Bussi tau 5.0 ps.
     If no_cavity=True: 500 particles only (bare glassy system), no cavity particle or CavityForce.
+    cutoff_nm: LJ + PME real-space cutoff (default 15 Bohr = 0.794 nm, cav-hoomd parity).
     """
     
     print("=" * 60)
@@ -776,7 +789,8 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
             raise ImportError("gsd.hoomd is required for --initial-gsd; install with: pip install gsd")
         ff_dir = Path(__file__).parent
         system, positions, topology, cavity_index, num_molecules, box_size_nm = _build_system_from_gsd(
-            initial_gsd, initial_gsd_frame, gsd_in_nm, no_cavity, ff_dir
+            initial_gsd, initial_gsd_frame, gsd_in_nm, no_cavity, ff_dir,
+            cutoff_nm=cutoff_nm
         )
         n_sys = system.getNumParticles()
         print(f"\n--- Initial structure from GSD ---")
@@ -1069,10 +1083,12 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     # Calculate total steps
     total_steps = equilibration_steps + production_steps
     
-    # Run full simulation (no separate equilibration/production phases)
-    print("\n--- Running Full Simulation (Coupling ON from t=0) ---")
-    print(f"  Running {total_steps} steps (1 ns)...")
-    print(f"  Progress updates every 1 ps (1,000 steps)")
+    print("\n--- Running Simulation ---")
+    print(f"  Equilibration: {equilibration_time_ps} ps ({equilibration_steps} steps)")
+    print(f"  Production:    {production_time_ps} ps ({production_steps} steps)")
+    print(f"  Total:         {equilibration_time_ps + production_time_ps} ps ({total_steps} steps)")
+    if enable_fkt:
+        print(f"  F(k,t) tracking starts after equilibration (production t=0)")
     print("")
     
     # Prepare dipole trajectory storage
@@ -1081,7 +1097,7 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     step_counter = 0  # Manual step counter
     
     report_interval = report_interval_steps
-    num_reports = total_steps // report_interval
+    num_reports = -(-total_steps // report_interval)  # ceiling division so no steps are dropped
     
     # PDB output (molecular atoms only; exclude cavity)
     pdb_handle = None
@@ -1122,8 +1138,8 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     
     first_step_pe_ke_logged = False
     for i in range(num_reports):
-        # Run and collect dipole data
-        for step in range(report_interval):
+        steps_this_block = min(report_interval, total_steps - step_counter)
+        for step in range(steps_this_block):
             integrator.step(1)
             step_counter += 1
             # Phase 1 debug: log PE/KE once after first step when built from GSD
@@ -1151,12 +1167,17 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
             # particles are in the primary image, matching HOOMD's snap.particles.position).
             # Without this flag, OpenMM returns unwrapped positions where boundary crossings
             # add spurious phase shifts exp(i k·n L) that decorrelate ρ_k artificially.
+            # Skip during equilibration: freshly randomised velocities need ~10 tau_Bussi
+            # to reach the correct position-velocity correlations; collecting F(k,t) during
+            # this transient biases ref 0 and contaminates the grand average.
             if enable_fkt and fkt_tracker is not None and (step_counter % fkt_interval_steps) == 0:
-                _st = context.getState(getPositions=True, enforcePeriodicBox=True)
-                _pos_all = _st.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
-                pos_mol = np.asarray(_pos_all[:num_molecular_particles], dtype=np.float64)
                 current_time_ps = step_counter * dt
-                fkt_tracker.update(current_time_ps, pos_mol)
+                if current_time_ps >= equilibration_time_ps:
+                    _st = context.getState(getPositions=True, enforcePeriodicBox=True)
+                    _pos_all = _st.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
+                    pos_mol = np.asarray(_pos_all[:num_molecular_particles], dtype=np.float64)
+                    fkt_time_ps = current_time_ps - equilibration_time_ps
+                    fkt_tracker.update(fkt_time_ps, pos_mol)
         
         # Report progress with timing
         current_wall_time = time.time()
@@ -1180,7 +1201,7 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         
         sim_time_ps = step_counter * dt
         progress_pct = (step_counter / total_steps) * 100
-        steps_per_sec = report_interval / elapsed_since_last
+        steps_per_sec = steps_this_block / elapsed_since_last
         
         # Simulation time per day: steps_per_sec * dt (ps/step) * 86400 (s/day) = ps/day
         # 1 μs = 1000 ns = 1e6 ps, so μs/day = (ps/day) / 1e6
@@ -1425,6 +1446,8 @@ Examples:
                         help='GSD positions and box are already in nm (do not convert from Bohr). Use if init-0.gsd was written in nm.')
     parser.add_argument('--no-cavity', action='store_true', dest='no_cavity',
                         help='Run bare glassy system only (500 particles, no cavity); matches cav-hoomd --no-cavity')
+    parser.add_argument('--cutoff', type=float, default=DIAMER_RCUT_NM, dest='cutoff_nm',
+                        help=f'LJ + PME real-space cutoff in nm (default: {DIAMER_RCUT_NM:.4f} = 15 Bohr, cav-hoomd parity)')
     
     args = parser.parse_args()
 
@@ -1477,6 +1500,7 @@ Examples:
             initial_gsd_frame=args.initial_gsd_frame,
             gsd_in_nm=args.gsd_in_nm,
             no_cavity=args.no_cavity,
+            cutoff_nm=args.cutoff_nm,
         )
         sys.exit(0 if success else 1)
     except Exception as e:

@@ -62,13 +62,16 @@ def main():
         print(f"GSD not found: {gsd_path}", file=sys.stderr)
         sys.exit(1)
 
+    # CavityMDSimulation always runs 1 step during setup to initialize computes.
+    # Use infinitesimal dt so that 1-step position change is negligible and forces
+    # are effectively at the initial GSD config (same as OpenMM).
     base_kwargs = dict(
         job_dir=str(gsd_path.parent),
         replica=0,
         freq=args.frequency,
         lambda_coupling=args.lambda_au,
         incavity=True,
-        runtime_ps=0.002,
+        runtime_ps=0.0,
         input_gsd=str(gsd_path),
         frame=args.frame,
         name="force_dump",
@@ -77,7 +80,7 @@ def main():
         molecular_thermostat="none",
         cavity_thermostat="none",
         finite_q=False,
-        dt_fs=1.0,
+        dt_fs=1e-9,
         device="CPU",
         log_level="WARNING",
     )

@@ -108,6 +108,18 @@ public:
      */
     void popAsCurrent();
     /**
+     * Push the CUDA primary context before calling external libraries (e.g. PyTorch).
+     * Synchronizes OpenMM's work, then pushes the primary context so PyTorch
+     * (which uses the CUDA runtime API) operates on the correct context.
+     */
+    void pushPrimaryContextForExternalCall() override;
+    /**
+     * Pop the CUDA primary context after external library calls return.
+     * Synchronizes external work, then pops the primary context to restore
+     * OpenMM's driver API context.
+     */
+    void popPrimaryContextAfterExternalCall() override;
+    /**
      * Get the CUdevice associated with this object.
      */
     CUdevice getDevice() {
@@ -599,6 +611,7 @@ private:
     std::string defaultOptimizationOptions;
     std::map<std::string, std::string> compilationDefines;
     CUcontext context;
+    CUcontext primaryContext;
     CUdevice device;
     CUfunction clearBufferKernel;
     CUfunction clearTwoBuffersKernel;

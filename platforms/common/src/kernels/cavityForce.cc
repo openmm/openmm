@@ -121,10 +121,13 @@ KERNEL void clearDipoleBuffer(GLOBAL float* RESTRICT dipole) {
 
 /**
  * Compute the molecular dipole moment (excluding cavity particle).
- * Uses atomic additions to accumulate the dipole.
+ * Uses UNWRAPPED positions (posq corrected by posCellOffsets) so that the
+ * dipole is continuous across periodic boundaries -- matching cav-hoomd.
  */
 KERNEL void computeCavityDipole(GLOBAL const real4* RESTRICT posq, GLOBAL const float* RESTRICT charges,
-        GLOBAL float* RESTRICT dipole, int cavityParticleIndex) {
+        GLOBAL float* RESTRICT dipole, GLOBAL const int4* RESTRICT posCellOffsets,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        int cavityParticleIndex) {
     LOCAL float localDipoleX[WORK_GROUP_SIZE];
     LOCAL float localDipoleY[WORK_GROUP_SIZE];
     LOCAL float localDipoleZ[WORK_GROUP_SIZE];
@@ -134,10 +137,14 @@ KERNEL void computeCavityDipole(GLOBAL const real4* RESTRICT posq, GLOBAL const 
     for (int i = GLOBAL_ID; i < NUM_ATOMS; i += GLOBAL_SIZE) {
         if (i != cavityParticleIndex) {
             real4 pos = posq[i];
+            int4 offset = posCellOffsets[i];
+            float ux = pos.x - offset.x * periodicBoxVecX.x - offset.y * periodicBoxVecY.x - offset.z * periodicBoxVecZ.x;
+            float uy = pos.y - offset.x * periodicBoxVecX.y - offset.y * periodicBoxVecY.y - offset.z * periodicBoxVecZ.y;
+            float uz = pos.z - offset.x * periodicBoxVecX.z - offset.y * periodicBoxVecY.z - offset.z * periodicBoxVecZ.z;
             float q = charges[i];
-            dx += q * pos.x;
-            dy += q * pos.y;
-            dz += q * pos.z;
+            dx += q * ux;
+            dy += q * uy;
+            dz += q * uz;
         }
     }
     
@@ -196,10 +203,10 @@ KERNEL void computeCavityForces(GLOBAL const real4* RESTRICT posq, GLOBAL const 
         float f0, float omega_d, float phase_d, int envelope_type_d, float env_param1_d, float env_param2_d, int cavityDriveEnabled,
         float E0, float omega_L, float phase_L, int envelope_type_L, float env_param1_L, float env_param2_L, int directLaserEnabled) {
     
-    // Unit conversion constants
-    const float HARTREE_TO_KJMOL = 2625.5f;
-    const float BOHR_TO_NM = 0.0529177f;
-    const float AMU_TO_AU = 1822.888f;  // 1 amu = 1822.888 electron masses (atomic units)
+    // Unit conversion constants (NIST 2018 CODATA, matching Reference platform)
+    const float HARTREE_TO_KJMOL = 2625.4996f;
+    const float BOHR_TO_NM = 0.052917721f;
+    const float AMU_TO_AU = 1822.8885f;
     const float CONVERSION_FACTOR = HARTREE_TO_KJMOL / (BOHR_TO_NM * BOHR_TO_NM);
     
     // Read dipole from global memory (should be called after computeCavityDipole)

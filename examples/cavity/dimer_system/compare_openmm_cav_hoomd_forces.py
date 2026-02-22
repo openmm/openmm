@@ -47,6 +47,8 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 BOHR_TO_NM = 0.0529177
 # Force: 1 kJ/(mol·nm) = (1/2625.5) Hartree / (1/0.0529177) Bohr = 0.0529177/2625.5 Ha/Bohr
 KJMOL_NM_TO_HARTREE_BOHR = BOHR_TO_NM / 2625.5
+# Nonbonded cutoff matching cav-hoomd: rcut = 15 Bohr
+DIAMER_RCUT_NM = 15 * BOHR_TO_NM  # 0.7938 nm
 
 
 def load_gsd_config(gsd_path: Path, frame: int = 0) -> dict:
@@ -116,8 +118,15 @@ def unwrap_molecules(cfg: dict) -> np.ndarray:
     return pos
 
 
-def write_gsd_with_positions(gsd_path: Path, frame: int, positions_bohr: np.ndarray, out_path: Path) -> None:
-    """Write a single-frame GSD with same topology as gsd_path[frame] but positions = positions_bohr (in Bohr)."""
+def write_gsd_with_positions(
+    gsd_path: Path,
+    frame: int,
+    positions_bohr: np.ndarray,
+    out_path: Path,
+    image: np.ndarray | None = None,
+) -> None:
+    """Write a single-frame GSD with same topology as gsd_path[frame] but positions = positions_bohr (in Bohr).
+    If image is provided, it is written as particle image flags (int32, shape (N,3))."""
     with gsd.hoomd.open(gsd_path, "r") as f:
         snap = f[frame]
     N = int(snap.particles.N)
@@ -127,6 +136,8 @@ def write_gsd_with_positions(gsd_path: Path, frame: int, positions_bohr: np.ndar
     out_frame.configuration.box = np.array(snap.configuration.box, dtype=np.float32)
     out_frame.particles.N = N
     out_frame.particles.position = np.asarray(positions_bohr, dtype=np.float32)
+    if image is not None:
+        out_frame.particles.image = np.asarray(image, dtype=np.int32)
     out_frame.particles.types = list(snap.particles.types)
     out_frame.particles.typeid = np.array(snap.particles.typeid, dtype=np.uint32)
     if hasattr(snap.particles, "charge"):
@@ -174,7 +185,7 @@ def build_openmm_system_and_context_from_gsd(
     """
     from openmm import openmm
     from openmm import unit
-    from openmm.app import ForceField, Topology, Element, CutoffPeriodic
+    from openmm.app import ForceField, Topology, Element, PME
 
     if ff_dir is None:
         ff_dir = _SCRIPT_DIR
@@ -188,9 +199,10 @@ def build_openmm_system_and_context_from_gsd(
     bonds_group = cfg["bonds_group"]
     bonds_typeid = cfg["bonds_typeid"]
     box_bohr = np.asarray(cfg["box_bohr"][:3], dtype=np.float64)
-    pos_unwrapped = unwrap_molecules(cfg)
+    pos_bohr = np.asarray(cfg["positions_bohr"], dtype=np.float64)
 
-    # Topology in GSD bond order: residue per bond, atoms A/B with Element and bonds (for ForceField matching)
+    # Use raw GSD positions (same convention as cav-hoomd: [-L/2, L/2]).
+    # HarmonicBondForce with PBC handles bonds spanning the boundary.
     topology = Topology()
     chain = topology.addChain()
     positions_nm = []
@@ -203,12 +215,12 @@ def build_openmm_system_and_context_from_gsd(
         a1 = topology.addAtom("A", elem, res)
         a2 = topology.addAtom("B", elem, res)
         topology.addBond(a1, a2)
-        positions_nm.append(pos_unwrapped[i] * BOHR_TO_NM)
-        positions_nm.append(pos_unwrapped[j] * BOHR_TO_NM)
+        positions_nm.append(pos_bohr[i] * BOHR_TO_NM)
+        positions_nm.append(pos_bohr[j] * BOHR_TO_NM)
     if has_cavity:
         cav_res = topology.addResidue("CAV", chain)
-        topology.addAtom("Q", Element.getBySymbol("He"), cav_res)  # XML expects CAV residue with atom Q
-        positions_nm.append(pos_unwrapped[-1] * BOHR_TO_NM)
+        topology.addAtom("Q", Element.getBySymbol("He"), cav_res)
+        positions_nm.append(pos_bohr[-1] * BOHR_TO_NM)
 
     box_nm = float(box_bohr[0]) * BOHR_TO_NM
     vectors = (
@@ -220,14 +232,19 @@ def build_openmm_system_and_context_from_gsd(
     forcefield = ForceField(str(ff_path))
     system = forcefield.createSystem(
         topology,
-        nonbondedMethod=CutoffPeriodic,
-        nonbondedCutoff=0.9 * unit.nanometer,
+        nonbondedMethod=PME,
+        nonbondedCutoff=DIAMER_RCUT_NM * unit.nanometer,
     )
     system.setDefaultPeriodicBoxVectors(
         openmm.Vec3(box_nm, 0, 0),
         openmm.Vec3(0, box_nm, 0),
         openmm.Vec3(0, 0, box_nm),
     )
+
+    # Enable PBC on HarmonicBondForce so bonds spanning the boundary use minimum image
+    for f in system.getForces():
+        if isinstance(f, openmm.HarmonicBondForce):
+            f.setUsesPeriodicBoundaryConditions(True)
 
     cavity_index = 2 * n_mol
     if has_cavity:
@@ -255,7 +272,10 @@ def build_openmm_system_and_context_from_gsd(
 
     positions = [openmm.Vec3(x, y, z) * unit.nanometer for (x, y, z) in positions_nm]
     integrator = openmm.LangevinMiddleIntegrator(100 * unit.kelvin, 0.01 / unit.picosecond, 0.001 * unit.picosecond)
-    platform = openmm.Platform.getPlatformByName("CPU")
+    try:
+        platform = openmm.Platform.getPlatformByName("CUDA")
+    except Exception:
+        platform = openmm.Platform.getPlatformByName("Reference")
     context = openmm.Context(system, integrator, platform)
     context.setPositions(positions)
 
@@ -317,13 +337,16 @@ def run_cav_hoomd_forces_inprocess(
         return None, "hoomd.cavitymd not importable (cav-hoomd plugin not installed)"
 
     gsd_str = str(gsd_path.resolve())
+    # CavityMDSimulation always runs 1 step during setup (sim.run(1)) to initialize computes.
+    # Use infinitesimal dt so that 1-step position change is negligible (~1e-11 Bohr) and
+    # forces are effectively at the initial GSD config (same as OpenMM).
     base_kwargs = dict(
         job_dir=str(gsd_path.parent),
         replica=0,
         freq=cavity_freq_cm,
         lambda_coupling=lambda_au,
         incavity=True,
-        runtime_ps=0.0,  # 0 steps so forces are at initial GSD config (same as OpenMM)
+        runtime_ps=0.0,
         input_gsd=gsd_str,
         frame=frame,
         name="force_dump",
@@ -332,7 +355,7 @@ def run_cav_hoomd_forces_inprocess(
         molecular_thermostat="none",
         cavity_thermostat="none",
         finite_q=False,
-        dt_fs=1.0,
+        dt_fs=1e-9,  # infinitesimal: 1 setup step causes negligible position change
         device="CPU",
         log_level="WARNING",
     )
@@ -448,6 +471,15 @@ def main():
             traceback.print_exc()
         sys.exit(1)
 
+    # Unwrap molecules so bonded atoms are close, then override OpenMM positions.
+    # This ensures the cavity dipole is computed from consistent unwrapped positions.
+    from openmm import unit as _unit
+    cfg = load_gsd_config(gsd_path, frame=args.frame)
+    pos_unwrapped = unwrap_molecules(cfg)
+    gsd_idx = openmm_to_gsd_indices(cfg)
+    pos_unwrapped_openmm_order = pos_unwrapped[gsd_idx] * BOHR_TO_NM
+    context.setPositions(pos_unwrapped_openmm_order * _unit.nanometer)
+
     F_openmm = get_openmm_forces_fn()
     del context
 
@@ -456,26 +488,14 @@ def main():
         if not args.quiet:
             print(f"Wrote OpenMM forces to {args.output_forces}")
 
-    # Load config for alignment and for building unwrapped GSD when running HOOMD.
-    cfg = load_gsd_config(gsd_path, frame=args.frame)
-    # OpenMM uses unwrap_molecules() so bond forces are correct. Run HOOMD on the same
-    # unwrapped configuration so bond forces match at ~1e-5 Ha/Bohr (same level as LJ).
-    tmp_gsd_path = None
-    need_hoomd_run = (
-        args.hoomd_forces_npz is None
-        or not Path(args.hoomd_forces_npz).exists()
-    )
-    if need_hoomd_run:
-        pos_unwrapped = unwrap_molecules(cfg)
-        box_bohr = np.asarray(cfg["box_bohr"][:3], dtype=np.float64)
-        pos_hoomd = pos_unwrapped - box_bohr / 2.0  # center; unwrap can extend past L
-        pos_hoomd = pos_hoomd - np.round(pos_hoomd / box_bohr) * box_bohr  # wrap into [-L/2, L/2)
-        with tempfile.NamedTemporaryFile(suffix=".gsd", delete=False) as tmp:
-            tmp_gsd_path = Path(tmp.name)
-        write_gsd_with_positions(gsd_path, args.frame, pos_hoomd, tmp_gsd_path)
-        gsd_for_hoomd = tmp_gsd_path
-    else:
-        gsd_for_hoomd = gsd_path
+    # Write a temp GSD for HOOMD with wrapped positions + image flags so that
+    # unwrapped = pos + image * box. Both codes now see identical dipole.
+    box_bohr = np.asarray(cfg["box_bohr"][:3], dtype=np.float64)
+    image = np.round(pos_unwrapped / box_bohr).astype(np.int32)
+    pos_hoomd = pos_unwrapped - image * box_bohr  # [-L/2, L/2) for HOOMD
+    tmp_gsd_path = _SCRIPT_DIR / "_compare_temp.gsd"
+    write_gsd_with_positions(gsd_path, args.frame, pos_hoomd, tmp_gsd_path, image=image)
+    gsd_for_hoomd = tmp_gsd_path
 
     try:
         # Get cav-hoomd reference forces: run in-process by default, or load/save via --hoomd-forces-npz

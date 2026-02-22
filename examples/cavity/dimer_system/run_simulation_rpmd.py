@@ -491,14 +491,14 @@ def run_rpmd_simulation(num_molecules=250, num_beads=8, lambda_coupling=0.001,
     step_counter = 0
     
     report_interval = 1000  # Report every 1 ps
-    num_reports = total_steps // report_interval
+    num_reports = -(-total_steps // report_interval)  # ceiling division so no steps are dropped
     
     start_time = time.time()
     last_report_time = start_time
     
     for i in range(num_reports):
-        # Run and collect centroid dipole data
-        for step in range(report_interval):
+        steps_this_block = min(report_interval, total_steps - step_counter)
+        for step in range(steps_this_block):
             integrator.step(1)
             step_counter += 1
             if not disable_dipole_output and (step_counter % dipole_output_interval_steps) == 0:
@@ -521,7 +521,7 @@ def run_rpmd_simulation(num_molecules=250, num_beads=8, lambda_coupling=0.001,
         
         sim_time_ps = step_counter * dt
         progress_pct = (step_counter / total_steps) * 100
-        steps_per_sec = report_interval / elapsed_since_last
+        steps_per_sec = steps_this_block / elapsed_since_last
         ns_per_day = steps_per_sec * dt * 86400.0 / 1000.0
         
         steps_remaining = total_steps - step_counter

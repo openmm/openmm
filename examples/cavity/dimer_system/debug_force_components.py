@@ -153,7 +153,10 @@ def _build_openmm_system_with_force_groups(
 
     positions = [openmm.Vec3(x, y, z) * unit.nanometer for (x, y, z) in positions_nm]
     integrator = openmm.LangevinMiddleIntegrator(100 * unit.kelvin, 0.01 / unit.picosecond, 0.001 * unit.picosecond)
-    platform = openmm.Platform.getPlatformByName("CPU")
+    try:
+        platform = openmm.Platform.getPlatformByName("CUDA")
+    except Exception:
+        platform = openmm.Platform.getPlatformByName("Reference")
     context = openmm.Context(system, integrator, platform)
     context.setPositions(positions)
     return context, cfg
@@ -206,6 +209,9 @@ def _run_cav_hoomd_and_get_per_component_forces(
     gsd_str = str(gsd_path.resolve())
     # runtime_ps=0 → 0 steps so forces are at initial GSD config (matches run_cav_hoomd_forces_inprocess
     # and OpenMM). Previously used 1 step; that made F_hoomd differ from optimization's reference.
+    # CavityMDSimulation always runs 1 step during setup (sim.run(1)) to initialize computes.
+    # Use infinitesimal dt so that 1-step position change is negligible (~1e-11 Bohr) and
+    # forces are effectively at the initial GSD config (same as OpenMM).
     base_kwargs = dict(
         job_dir=str(gsd_path.parent),
         replica=0,
@@ -221,7 +227,7 @@ def _run_cav_hoomd_and_get_per_component_forces(
         molecular_thermostat="none",
         cavity_thermostat="none",
         finite_q=False,
-        dt_fs=1.0,
+        dt_fs=1e-9,  # infinitesimal: 1 setup step causes negligible position change
         device="CPU",
         log_level="WARNING",
     )
@@ -788,14 +794,15 @@ def main() -> None:
         if not args.quiet:
             print("Running cav-hoomd for per-component forces...")
         # OpenMM uses unwrap_molecules() so bond forces are correct. Run HOOMD on the same
-        # configuration. HOOMD expects positions in [-L/2, L/2); write temp GSD in that convention
-        # so cav-hoomd does not raise "Not all particles were found inside the given box".
+        # configuration. HOOMD expects positions in [-L/2, L/2) with image flags so that
+        # unwrapped = position + image * box. Cavity dipole M = sum q_i * r_i requires
+        # unwrapped positions; without image flags HOOMD would use wrapped pos → wrong dipole.
         box_bohr = np.asarray(cfg["box_bohr"][:3], dtype=np.float64)
-        pos_hoomd = wrap_positions_into_box(pos_unwrapped, box_bohr)  # [0, L)
-        pos_hoomd = pos_hoomd - box_bohr / 2.0  # [-L/2, L/2) for HOOMD
+        image = np.round(pos_unwrapped / box_bohr).astype(np.int32)
+        pos_hoomd = pos_unwrapped - image * box_bohr  # [-L/2, L/2) for HOOMD
         tmp_gsd_path = _SCRIPT_DIR / "_force_debug_temp.gsd"
         try:
-            write_gsd_with_positions(gsd_path, args.frame, pos_hoomd, tmp_gsd_path)
+            write_gsd_with_positions(gsd_path, args.frame, pos_hoomd, tmp_gsd_path, image=image)
             gsd_for_hoomd = tmp_gsd_path
             hoomd_components, bond_raw, pos_hoomd_actual, err = _run_cav_hoomd_and_get_per_component_forces(
                 gsd_for_hoomd, args.lambda_coupling, args.cavity_freq, frame=0
@@ -1056,7 +1063,7 @@ def main() -> None:
         f.write("# These match OpenMM diamer_forcefield.xml (Ha/Bohr^2, Bohr). cav-hoomd assumes Hartree/a.u.\n")
         f.write("# The per-particle bond array we read (cpu_local_force_arrays on the Harmonic force object)\n")
         f.write("# is filled by HOOMD-blue's MD backend, not by cav-hoomd. Cav-hoomd src has CavityForceCompute,\n")
-        f.write("# DipoleResponseForceCompute, etc. — no bond force. To fix layout/scale: inspect HOOMD-blue\n")
+        f.write("# DipoleResponseForceCompute, etc. - no bond force. To fix layout/scale: inspect HOOMD-blue\n")
         f.write("# source for md.bond.Harmonic / BondForceCompute: how it writes to the force array and index order.\n")
         f.write("\n")
 

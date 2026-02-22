@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "OpenMM"
-version = "dynamic"
+version = "8.4.0"
 description = "Python wrapper for OpenMM (a C++ MD package)"
 readme = "README.txt"
 license = { text = "BSD-3-Clause" }

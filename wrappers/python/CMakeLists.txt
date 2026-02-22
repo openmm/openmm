@@ -46,7 +46,7 @@ file(WRITE "${OPENMM_PYTHON_STAGING_DIR}/openmm/version.py" "git_revision = '${r
 #     set(temp2 "${temp2}\n${f}")
 # endforeach()
 
-set(SUBDIRS src openmm simtk tests)
+set(SUBDIRS src openmm simtk openmmml tests)
 foreach(SUBDIR ${SUBDIRS})
     file(GLOB_RECURSE STAGING_INPUT_FILES1 RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*README.txt"

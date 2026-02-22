@@ -127,7 +127,7 @@ private:
     ComputeArray contractedForces;
     ComputeArray contractedPositions;
     ComputeArray centroidKE;
-    ComputeKernel pileKernel, stepKernel, velocitiesKernel, copyToContextKernel, copyFromContextKernel, translateKernel;
+    ComputeKernel pileKernel, stepKernel, velocitiesKernel, copyToContextKernel, copyFromContextKernel, addForcesFromContextKernel, translateKernel;
     ComputeKernel computeCentroidKEKernel, applyBussiScalingKernel;
     std::map<int, ComputeKernel> positionContractionKernels;
     std::map<int, ComputeKernel> forceContractionKernels;

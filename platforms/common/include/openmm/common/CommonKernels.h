@@ -1366,12 +1366,14 @@ private:
     ComputeContext& cc;
     int randomSeed;
     int numParticles;
+    int numDof;
     ComputeArray particleIndicesArray;
     ComputeArray massesArray;
     ComputeArray kineticEnergyBuffer;
     ComputeArray reservoirEnergyBuffer;
     ComputeKernel rescaleKernel;
     ComputeKernel sumKineticEnergyKernel;
+    ComputeKernel sumKineticEnergyPreKickKernel;
     ComputeKernel scalePosDeltaKernel;
     double reservoirEnergyTranslational;
     double reservoirEnergyRotational;

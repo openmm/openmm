@@ -109,6 +109,8 @@ public:
      * valid, this returns without doing anything.
      */
     void popAsCurrent();
+    void pushPrimaryContextForExternalCall() override;
+    void popPrimaryContextAfterExternalCall() override;
     /**
      * Get the hipDevice_t associated with this object.
      */

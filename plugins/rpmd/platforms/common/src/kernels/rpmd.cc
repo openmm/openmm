@@ -323,6 +323,20 @@ KERNEL void copyDataFromContext(GLOBAL mm_long* srcForce, GLOBAL mm_long* dstFor
 }
 
 /**
+ * Add forces from the context to the integrator's force arrays (for batched RPMD path).
+ * Unlike copyDataFromContext, this adds to existing forces instead of overwriting.
+ */
+KERNEL void addForcesFromContext(GLOBAL mm_long* srcForce, GLOBAL mm_long* dstForce, GLOBAL int* order, int copy) {
+    const int base = copy*PADDED_NUM_ATOMS;
+    for (int particle = GLOBAL_ID; particle < NUM_ATOMS; particle += GLOBAL_SIZE) {
+        int index = order[particle];
+        dstForce[base*3+index] += srcForce[particle];
+        dstForce[base*3+index+PADDED_NUM_ATOMS] += srcForce[particle+PADDED_NUM_ATOMS];
+        dstForce[base*3+index+PADDED_NUM_ATOMS*2] += srcForce[particle+PADDED_NUM_ATOMS*2];
+    }
+}
+
+/**
  * Atom positions in one copy have been modified.  Apply the same offsets to all the other copies.
  */
 KERNEL void applyCellTranslations(GLOBAL mixed4* posq, GLOBAL real4* movedPos, GLOBAL int* order, int movedCopy) {
@@ -345,9 +359,10 @@ KERNEL void applyCellTranslations(GLOBAL mixed4* posq, GLOBAL real4* movedPos, G
 // All particles stored with all beads, but classical particles have coupled beads.
 
 /**
- * Synchronize classical particle beads: copy bead 0 to all other beads.
- * This ensures classical particles have identical positions/velocities across all beads.
- * Called after integration to maintain bead coupling for classical particles.
+ * Synchronize classical particle beads: average velocities and copy position from bead 0.
+ * Classical particles should have identical positions across all beads, and velocities
+ * should be synchronized by averaging (centroid velocity).
+ * Called after velocity updates to maintain proper classical dynamics.
  */
 KERNEL void syncClassicalBeads(
     GLOBAL mixed4* posq,
@@ -360,14 +375,33 @@ KERNEL void syncClassicalBeads(
         if (isQuantum[particle] != 0)
             continue;
         
-        // For classical particles, copy bead 0 to all other beads
-        mixed4 pos0 = posq[particle];  // Bead 0 position
-        mixed4 vel0 = velm[particle];  // Bead 0 velocity
+        // For classical particles:
+        // 1. Positions should all be identical (use bead 0)
+        // 2. Velocities should be averaged to get centroid velocity
         
-        for (int copy = 1; copy < NUM_COPIES; copy++) {
+        mixed4 pos0 = posq[particle];  // Bead 0 position
+        
+        // Compute average velocity across all beads
+        mixed3 vel_avg = make_mixed3(0, 0, 0);
+        mixed invMass = 0;
+        for (int copy = 0; copy < NUM_COPIES; copy++) {
+            int idx = particle + copy * PADDED_NUM_ATOMS;
+            mixed4 vel_bead = velm[idx];
+            vel_avg.x += vel_bead.x;
+            vel_avg.y += vel_bead.y;
+            vel_avg.z += vel_bead.z;
+            if (copy == 0)
+                invMass = vel_bead.w;
+        }
+        vel_avg.x /= NUM_COPIES;
+        vel_avg.y /= NUM_COPIES;
+        vel_avg.z /= NUM_COPIES;
+        
+        // Set all beads to the same position and averaged velocity
+        for (int copy = 0; copy < NUM_COPIES; copy++) {
             int idx = particle + copy * PADDED_NUM_ATOMS;
             posq[idx] = pos0;
-            velm[idx] = vel0;
+            velm[idx] = make_mixed4(vel_avg.x, vel_avg.y, vel_avg.z, invMass);
         }
     }
 }
@@ -537,15 +571,33 @@ KERNEL void integrateStepHybrid(
             }
         }
         else {
-            // CLASSICAL PARTICLE: Simple position update on bead 0 only
-            // Other beads will be synced by syncClassicalBeads kernel
+            // CLASSICAL PARTICLE: Use centroid-averaged velocity for position update
+            // All beads must be updated with the same position (centroid position)
             
-            if (indexInBlock == 0 && particleVelm.w != 0) {
-                // r(t+dt) = r(t) + v(t+dt/2) * dt
-                particlePosq.x += particleVelm.x * dt;
-                particlePosq.y += particleVelm.y * dt;
-                particlePosq.z += particleVelm.z * dt;
-                posq[particle] = particlePosq;
+            // Store velocity in shared memory for averaging
+            vreal[indexInBlock] = make_mixed3(particleVelm.x, particleVelm.y, particleVelm.z);
+            SYNC_THREADS;
+            
+            // Compute centroid velocity (average across all beads)
+            if (particleVelm.w != 0) {
+                mixed3 vel_centroid = make_mixed3(0, 0, 0);
+                for (int k = 0; k < NUM_COPIES; k++) {
+                    vel_centroid.x += vreal[k].x;
+                    vel_centroid.y += vreal[k].y;
+                    vel_centroid.z += vreal[k].z;
+                }
+                vel_centroid.x /= NUM_COPIES;
+                vel_centroid.y /= NUM_COPIES;
+                vel_centroid.z /= NUM_COPIES;
+                
+                // Update position using centroid velocity: r_c(t+dt) = r_c(t) + v_c(t+dt/2) * dt
+                // Only bead 0 needs position update; sync will copy to all beads
+                if (indexInBlock == 0) {
+                    particlePosq.x += vel_centroid.x * dt;
+                    particlePosq.y += vel_centroid.y * dt;
+                    particlePosq.z += vel_centroid.z * dt;
+                    posq[particle] = particlePosq;
+                }
             }
         }
         SYNC_THREADS;
@@ -567,10 +619,8 @@ KERNEL void advanceVelocitiesHybrid(
     const mixed forceScale = 1/(mixed) 0x100000000;
 
     for (int particle = (GLOBAL_ID)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
-        // For classical particles, only update bead 0
-        if (isQuantum[particle] == 0 && indexInBlock != 0)
-            continue;
-            
+        // Update all beads for all particles (quantum and classical)
+        // Classical particles will have different forces on each bead (from centroid-dependent potential)
         int index = particle+indexInBlock*PADDED_NUM_ATOMS;
         int forceIndex = particle+indexInBlock*PADDED_NUM_ATOMS*3;
         mixed4 particleVelm = velm[index];
