@@ -766,7 +766,7 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
              fkt_output_period_ps=1.0, fkt_output_prefix=None,
              nve=False, bussi_tau_ps=5.0,
              initial_gsd=None, initial_gsd_frame=-1, gsd_in_nm=False, no_cavity=False,
-             cutoff_nm=DIAMER_RCUT_NM):
+             cutoff_nm=DIAMER_RCUT_NM, switch_time_ps=None):
     """Run the cavity diamer simulation test.
     If nve=True: NVE (microcanonical) with Verlet; initial velocities thermalized at temperature_K.
     If nve=False: Verlet + Bussi (molecules only), cav-hoomd parity; default Bussi tau 5.0 ps.
@@ -944,8 +944,13 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     if cavity_available:
         print("\n--- Adding Cavity Force ---")
         try:
-            # Create CavityForce with target lambda from t=0 (omegac in atomic units)
-            cavity_force = openmm.CavityForce(cavity_index, omegac_au, lambda_coupling, photon_mass)
+            delayed = switch_time_ps is not None and switch_time_ps > 0
+            if delayed:
+                switch_step = int(switch_time_ps / dt)
+                cavity_force = openmm.CavityForce(cavity_index, omegac_au, 0.0, photon_mass)
+                cavity_force.setCouplingOnStep(switch_step, lambda_coupling)
+            else:
+                cavity_force = openmm.CavityForce(cavity_index, omegac_au, lambda_coupling, photon_mass)
             system.addForce(cavity_force)
             print(f"  CavityForce added successfully")
             print(f"  Omega_c: {omegac_au:.6f} a.u.")
@@ -955,9 +960,14 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
             K_au = photon_mass_au * omegac_au**2
             K_openmm = K_au * HARTREE_TO_KJMOL / (BOHR_TO_NM**2)
             print(f"  Expected spring constant K: {K_openmm:.0f} kJ/(mol·nm^2)")
-            print(f"  Lambda coupling: {lambda_coupling} (ACTIVE from t=0)")
+            if delayed:
+                print(f"  Lambda coupling: {lambda_coupling} (DELAYED, activates at step {switch_step} = {switch_time_ps} ps)")
+            else:
+                print(f"  Lambda coupling: {lambda_coupling} (ACTIVE from t=0)")
             displacer = openmm.CavityParticleDisplacer(cavity_index, omegac_au, photon_mass)
             displacer.setSwitchOnLambda(lambda_coupling)
+            if delayed:
+                displacer.setSwitchOnStep(switch_step)
             system.addForce(displacer)
             print(f"  CavityParticleDisplacer added (finite-Q mode)")
         except AttributeError as e:
@@ -1435,6 +1445,9 @@ Examples:
                         help='Run bare glassy system only (500 particles, no cavity); matches cav-hoomd --no-cavity')
     parser.add_argument('--cutoff', type=float, default=DIAMER_RCUT_NM, dest='cutoff_nm',
                         help=f'LJ + PME real-space cutoff in nm (default: {DIAMER_RCUT_NM:.4f} = 15 Bohr, cav-hoomd parity)')
+    parser.add_argument('--switch-time', type=float, default=None, dest='switch_time_ps',
+                        help='Time in ps when cavity coupling activates (default: on from t=0). '
+                             'Before this time lambda=0; at this step lambda jumps to target value.')
     
     args = parser.parse_args()
 
@@ -1487,6 +1500,7 @@ Examples:
             initial_gsd_frame=args.initial_gsd_frame,
             gsd_in_nm=args.gsd_in_nm,
             no_cavity=args.no_cavity,
+            switch_time_ps=args.switch_time_ps,
             cutoff_nm=args.cutoff_nm,
         )
         sys.exit(0 if success else 1)
