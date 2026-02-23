@@ -150,12 +150,54 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                                           "openmm.app.internal.charmm",
                                           "openmm.app.internal.pdbx",
                                           "openmm.app.internal.pdbx.reader",
-                                          "openmm.app.internal.pdbx.writer"]
+                                          "openmm.app.internal.pdbx.writer",
+                                          "openmmml",
+                                          "openmmml.models"]
     setupKeywords["data_files"]        = []
     setupKeywords["package_data"]      = {"openmm" : [],
                                           "openmm.app" : ['data/*.xml', 'data/*.pdb', 'data/amber14/*.xml', 'data/amber19/*.xml', 'data/charmm36/*.xml', 'data/charmm36_2024/*.xml', 'data/implicit/*.xml'],
                                           "openmm.app.internal" : []}
     setupKeywords["install_requires"]  = ["numpy"]
+    setupKeywords["entry_points"]      = {
+        'openmmml.potentials': [
+            # Upstream models
+            'aimnet2 = openmmml.models.aimnet2potential:AIMNet2PotentialImplFactory',
+            'ani1ccx = openmmml.models.anipotential:ANIPotentialImplFactory',
+            'ani2x = openmmml.models.anipotential:ANIPotentialImplFactory',
+            'mace = openmmml.models.macepotential:MACEPotentialImplFactory',
+            'mace-off23-small = openmmml.models.macepotential:MACEPotentialImplFactory',
+            'mace-off23-medium = openmmml.models.macepotential:MACEPotentialImplFactory',
+            'mace-off23-large = openmmml.models.macepotential:MACEPotentialImplFactory',
+            'mace-off24-medium = openmmml.models.macepotential:MACEPotentialImplFactory',
+            'mace-mpa-0-medium = openmmml.models.macepotential:MACEPotentialImplFactory',
+            'mace-omat-0-small = openmmml.models.macepotential:MACEPotentialImplFactory',
+            'mace-omat-0-medium = openmmml.models.macepotential:MACEPotentialImplFactory',
+            'nequip = openmmml.models.nequippotential:NequIPPotentialImplFactory',
+            'deepmd = openmmml.models.deepmdpotential:DeepmdPotentialImplFactory',
+            'torchmdnet = openmmml.models.torchmdnetpotential:TorchMDNetPotentialImplFactory',
+            'aceff-1.0 = openmmml.models.torchmdnetpotential:TorchMDNetPotentialImplFactory',
+            'aceff-1.1 = openmmml.models.torchmdnetpotential:TorchMDNetPotentialImplFactory',
+            'aceff-2.0 = openmmml.models.torchmdnetpotential:TorchMDNetPotentialImplFactory',
+            # UMA TorchScript (deprecated)
+            'uma-s-1 = openmmml.models.umapotential:UMAPotentialImplFactory',
+            'uma-s-1p1 = openmmml.models.umapotential:UMAPotentialImplFactory',
+            'uma-m-1p1 = openmmml.models.umapotential:UMAPotentialImplFactory',
+            'esen-md-direct-all-omol = openmmml.models.umapotential:UMAPotentialImplFactory',
+            'esen-sm-conserving-all-omol = openmmml.models.umapotential:UMAPotentialImplFactory',
+            'esen-sm-direct-all-omol = openmmml.models.umapotential:UMAPotentialImplFactory',
+            'esen-sm-conserving-all-oc25 = openmmml.models.umapotential:UMAPotentialImplFactory',
+            'esen-md-direct-all-oc25 = openmmml.models.umapotential:UMAPotentialImplFactory',
+            # UMA PythonForce single (deprecated)
+            'uma-s-1-pythonforce = openmmml.models.umapotential_pythonforce:UMAPotentialPythonForceImplFactory',
+            'uma-s-1p1-pythonforce = openmmml.models.umapotential_pythonforce:UMAPotentialPythonForceImplFactory',
+            'uma-m-1p1-pythonforce = openmmml.models.umapotential_pythonforce:UMAPotentialPythonForceImplFactory',
+            'esen-md-direct-all-omol-pythonforce = openmmml.models.umapotential_pythonforce:UMAPotentialPythonForceImplFactory',
+            'esen-sm-conserving-all-omol-pythonforce = openmmml.models.umapotential_pythonforce:UMAPotentialPythonForceImplFactory',
+            'esen-sm-direct-all-omol-pythonforce = openmmml.models.umapotential_pythonforce:UMAPotentialPythonForceImplFactory',
+            'esen-sm-conserving-all-oc25-pythonforce = openmmml.models.umapotential_pythonforce:UMAPotentialPythonForceImplFactory',
+            'esen-md-direct-all-oc25-pythonforce = openmmml.models.umapotential_pythonforce:UMAPotentialPythonForceImplFactory',
+        ]
+    }
     setupKeywords["platforms"]         = ["Linux", "Mac OS X", "Windows"]
     setupKeywords["description"]       = \
     "Python wrapper for OpenMM (a C++ MD package)"
