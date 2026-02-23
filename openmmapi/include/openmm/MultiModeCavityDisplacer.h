@@ -53,8 +53,7 @@ namespace OpenMM {
  *
  * This simplifies to:
  *   q_n_eq_xy = -(lambda_n / (photonMass_au * omega_n)) * f_n * d_xy
- *             = -(sqrt(n) * lambda1 / (photonMass_au * n * omega1)) * f_n * d_xy
- *             = -(lambda1 / (sqrt(n) * photonMass_au * omega1)) * f_n * d_xy
+ *             = -(lambda1 / (photonMass_au * n * omega1)) * f_n * d_xy
  *
  * Usage from Python:
  *   displacer = MultiModeCavityDisplacer(numModes, omega1, lambda1, cavityLength, moleculeZ, photonMass)

@@ -25,6 +25,7 @@ minimizer only). With a thermostat at very low T, motion is small and F(k,t) doe
 not decorrelate from coordinate drift.
 """
 
+import math
 import sys
 import numpy as np
 import os
@@ -64,6 +65,41 @@ DIAMER_REF_L_BOHR = 40
 # Nonbonded cutoff matching cav-hoomd: rcut = 15 Bohr for both LJ and PPPM real-space
 DIAMER_RCUT_BOHR = 15
 DIAMER_RCUT_NM = DIAMER_RCUT_BOHR * BOHR_TO_NM  # 0.7938 nm
+
+
+def _create_hybrid_bussi_langevin_integrator(dt, temperature_K, bussi_tau_ps, cavity_index,
+                                             cavity_langevin_tau_ps, num_particles):
+    """Create CustomIntegrator: Bussi on molecules, Langevin on cavity.
+
+    Requires BussiThermostat to be applied to molecules only (exclude cavity).
+    After Context creation, call setPerDofVariableByName("mask", mask_values)
+    with Vec3(1,1,1) for cavity particle and Vec3(0,0,0) for others.
+
+    Units: dt (ps), kT (kJ/mol), m (amu) — OpenMM standard; Langevin step uses
+    v = a*v + b*sqrt(kT/m)*gaussian with a=exp(-γ*dt), b=sqrt(1-a²).
+    """
+    gamma_ps = 1.0 / cavity_langevin_tau_ps  # γ in ps⁻¹
+    a = math.exp(-gamma_ps * dt)
+    b = math.sqrt(1.0 - a * a)
+    kT = (unit.MOLAR_GAS_CONSTANT_R * temperature_K * unit.kelvin).value_in_unit(
+        unit.kilojoules_per_mole
+    )
+    integrator = openmm.CustomIntegrator(dt * unit.picosecond)
+    integrator.addGlobalVariable("a", a)
+    integrator.addGlobalVariable("b", b)
+    integrator.addGlobalVariable("kT", kT)
+    integrator.addPerDofVariable("mask", 0.0)
+    integrator.addPerDofVariable("x0", 0.0)
+    integrator.addUpdateContextState()
+    integrator.addComputePerDof("v", "v + 0.5*dt*f/m")
+    integrator.addComputePerDof("x0", "x")
+    integrator.addComputePerDof("x", "x + dt*v")
+    integrator.addConstrainPositions()
+    integrator.addComputePerDof("v", "(x-x0)/dt")
+    integrator.addComputePerDof("v", "v + 0.5*dt*f/m")
+    integrator.addConstrainVelocities()
+    integrator.addComputePerDof("v", "select(mask, a*v + b*sqrt(kT/m)*gaussian, v)")
+    return integrator
 
 
 def box_size_nm_at_constant_density(num_molecules, N_ref=DIAMER_REF_N, L_ref_bohr=DIAMER_REF_L_BOHR):
@@ -107,6 +143,40 @@ def _wrap_positions_into_box(pos_nm, box_nm):
             raise ValueError(f"Box length L[{d}] = {Ld} must be positive")
         pos[:, d] = pos[:, d] - np.floor(pos[:, d] / Ld) * Ld
     return pos
+
+
+def _unwrap_cavity_xy(prev_qx, prev_qy, qx, qy, L_nm):
+    """
+    Unwrap cavity (qx, qy) so trajectory is continuous across PBC.
+    If the jump from (prev_qx, prev_qy) to (qx, qy) exceeds L/2, add/subtract L.
+    For first frame, prev_qx/prev_qy can be None -> return (qx, qy) unchanged.
+    """
+    if prev_qx is None:
+        return qx, qy
+    L = float(L_nm)
+    h = L / 2
+    dx = qx - prev_qx
+    dy = qy - prev_qy
+    if dx > h:
+        qx -= L
+    elif dx < -h:
+        qx += L
+    if dy > h:
+        qy -= L
+    elif dy < -h:
+        qy += L
+    return qx, qy
+
+
+def _wrap_cavity_to_primary(qx, qy, L_nm):
+    """
+    Wrap cavity (qx, qy) to primary image [-L/2, L/2) per dimension.
+    Used for frame 0 so it serves as a consistent anchor for subsequent unwrapping.
+    """
+    L = float(L_nm)
+    qx_w = qx - round(qx / L) * L
+    qy_w = qy - round(qy / L) * L
+    return qx_w, qy_w
 
 
 def _wrap_positions_centered(pos_nm, box_nm):
@@ -184,12 +254,13 @@ def _unwrap_molecules_bohr(pos_bohr, box_bohr, bonds_group):
 
 
 def _build_system_from_gsd(gsd_path, frame_index, gsd_in_nm, no_cavity, ff_dir,
-                           cutoff_nm=DIAMER_RCUT_NM):
+                           cutoff_nm=DIAMER_RCUT_NM, add_cavity=False):
     """
     Build OpenMM system from GSD so particle order and types match the file (avoids blow-up from order mismatch).
     Returns (system, positions, velocities_list, topology, cavity_index or None, num_molecules, box_size_nm).
     velocities_list is in nm/ps, same order as positions_list, or None if GSD has no velocities.
     Uses PME with cutoff_nm (default 15 Bohr = 0.794 nm, cav-hoomd parity).
+    When add_cavity=True and GSD has 500 particles (no cavity), adds a new cavity particle at origin.
     """
     if ff_dir is None:
         ff_dir = Path(__file__).parent
@@ -198,7 +269,7 @@ def _build_system_from_gsd(gsd_path, frame_index, gsd_in_nm, no_cavity, ff_dir,
         raise FileNotFoundError(f"ForceField XML not found: {ff_path}")
     cfg = _load_gsd_config(gsd_path, frame_index)
     n_mol = cfg["n_mol"]
-    has_cavity = cfg["has_cavity"] and not no_cavity
+    has_cavity = (cfg["has_cavity"] or add_cavity) and not no_cavity
     bonds_group = cfg["bonds_group"]
     bonds_typeid = cfg["bonds_typeid"]
     box_bohr = np.asarray(cfg["box_bohr"][:3], dtype=np.float64)
@@ -236,10 +307,17 @@ def _build_system_from_gsd(gsd_path, frame_index, gsd_in_nm, no_cavity, ff_dir,
         cav_res = topology.addResidue("CAV", chain)
         topology.addAtom("Q", Element.getBySymbol("He"), cav_res)
         cavity_index = 2 * n_mol
-        positions_list.append(openmm.Vec3(float(pos_nm[-1, 0]), float(pos_nm[-1, 1]), float(pos_nm[-1, 2])) * unit.nanometer)
+        if cfg["has_cavity"]:
+            positions_list.append(openmm.Vec3(float(pos_nm[-1, 0]), float(pos_nm[-1, 1]), float(pos_nm[-1, 2])) * unit.nanometer)
+        else:
+            # add_cavity: place at origin; will be moved to equilibrium later if --cavity-init-equilibrium
+            positions_list.append(openmm.Vec3(0.0, 0.0, 0.0) * unit.nanometer)
         if vel_raw is not None:
             cav_idx = 2 * n_mol
-            velocities_list.append(openmm.Vec3(float(vel_raw[cav_idx, 0] * vel_scale), float(vel_raw[cav_idx, 1] * vel_scale), float(vel_raw[cav_idx, 2] * vel_scale)) * (unit.nanometer / unit.picosecond))
+            if cfg["has_cavity"] and cav_idx < vel_raw.shape[0]:
+                velocities_list.append(openmm.Vec3(float(vel_raw[cav_idx, 0] * vel_scale), float(vel_raw[cav_idx, 1] * vel_scale), float(vel_raw[cav_idx, 2] * vel_scale)) * (unit.nanometer / unit.picosecond))
+            else:
+                velocities_list.append(openmm.Vec3(0.0, 0.0, 0.0) * (unit.nanometer / unit.picosecond))
 
     velocities_list = velocities_list if velocities_list else None
 
@@ -733,6 +811,26 @@ def add_cavity_particle(system, positions, omegac, photon_mass=1.0):
     return cavity_index
 
 
+def _cavity_equilibrium_position(positions_nm, charges, cavity_index, lambda_coupling, omegac_au, photon_mass):
+    """
+    Compute cavity equilibrium position q_eq = -(lambda/omega_c) * dipole.
+
+    Per Hamiltonian H_EM = sum [ p^2/2 + (omega_c^2/2)(q + lambda*mu/omega_c)^2 ], the
+    equilibrium has NO photon mass (cavity mode has unit mass in a.u.).
+    positions_nm: (N,3) in nm; charges: length N; only molecular particles contribute.
+    Returns q_eq as (3,) in nm, z=0 (xy-mode).
+    """
+    dipole = np.zeros(3)
+    for i in range(cavity_index):
+        dipole += charges[i] * positions_nm[i]
+    # factor = -(lambda/omega_c): multiply by photon_mass_au to cancel erroneous mass in denominator
+    photon_mass_au = photon_mass * 1822.888
+    factor = -lambda_coupling * photon_mass_au * 937679.0 / (photon_mass * 1.7109e9 * omegac_au)
+    q_eq = factor * dipole
+    q_eq[2] = 0.0  # z preserved (xy-mode)
+    return q_eq
+
+
 def compute_dipole_moment(state, charges, num_molecular_particles):
     """
     Compute the total molecular dipole moment.
@@ -813,14 +911,17 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
              enable_fkt=False, fkt_kmag=113.4, fkt_num_wavevectors=50,
              fkt_reference_interval_ps=1.0, fkt_max_refs=10,
              fkt_output_period_ps=1.0, fkt_output_prefix=None,
-             nve=False, bussi_tau_ps=5.0,
+             nve=False, bussi_tau_ps=5.0, cavity_langevin_tau_ps=5.0,
              initial_gsd=None, initial_gsd_frame=-1, gsd_in_nm=False, no_cavity=False,
+             add_cavity=False, cavity_init_equilibrium=True,
              restart_velocities=False, cutoff_nm=DIAMER_RCUT_NM,
              equil_only=False, save_checkpoint=None, prod_from_checkpoint=False, checkpoint=None):
     """Run the cavity diamer simulation test.
     If nve=True: NVE (microcanonical) with Verlet; initial velocities thermalized at temperature_K.
     If nve=False: Verlet + Bussi (molecules only), cav-hoomd parity; default Bussi tau 5.0 ps.
     If no_cavity=True: 500 particles only (bare glassy system), no cavity particle or CavityForce.
+    add_cavity=True: when GSD has 500 particles, add a new cavity particle (enables coupling from bare GSD).
+    cavity_init_equilibrium=True: place cavity at dipole-coupled equilibrium q_eq; if False, use fixed 0.01 nm displacement.
     cutoff_nm: LJ + PME real-space cutoff (default 15 Bohr = 0.794 nm, cav-hoomd parity).
     Two-phase protocol (cav-hoomd parity): equil_only+save_checkpoint runs equil and exits;
     prod_from_checkpoint+checkpoint loads checkpoint and runs prod only (no re-thermalization).
@@ -849,7 +950,7 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         ff_dir = Path(__file__).parent
         system, positions, velocities_from_gsd, topology, cavity_index, num_molecules, box_size_nm = _build_system_from_gsd(
             initial_gsd, initial_gsd_frame, gsd_in_nm, no_cavity, ff_dir,
-            cutoff_nm=cutoff_nm
+            cutoff_nm=cutoff_nm, add_cavity=add_cavity
         )
         n_sys = system.getNumParticles()
         print(f"\n--- Initial structure from GSD ---")
@@ -857,9 +958,9 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         print(f"  Box from GSD: {box_size_nm:.4f} nm (cubic)")
         print(f"  Positions: {n_sys} particles (topology from GSD; order matches file); energy minimization will be skipped")
         if box_size_nm < 0.3:
-            print(f"  *** WARNING: Box {box_size_nm:.4f} nm is very small. If GSD is in nm (not Bohr), use --gsd-in-nm. ***")
+            print(f"  WARNING: Box {box_size_nm:.4f} nm is very small. If GSD is in nm (not Bohr), use --gsd-in-nm.")
         elif box_size_nm > 50.0:
-            print(f"  *** WARNING: Box {box_size_nm:.4f} nm is very large. If GSD is in Bohr, do not use --gsd-in-nm. ***")
+            print(f"  WARNING: Box {box_size_nm:.4f} nm is very large. If GSD is in Bohr, do not use --gsd-in-nm.")
         minimize = False
     
     # System parameters (box_size_nm, fraction_OO come from arguments)
@@ -882,7 +983,13 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     g_collective = lambda_coupling * np.sqrt(num_molecules)
     # Strong coupling + coarse dt can blow up the cavity mode (light particle, stiff coupling)
     if g_collective > 0.5 and dt > 0.001:
-        print(f"\n  *** WARNING: g = {g_collective:.3g} with dt = {dt*1000:.0f} fs may be unstable. Use --dt 0.001 (1 fs) for strong coupling. ***")
+        print(f"\n  WARNING: g = {g_collective:.3g} with dt = {dt*1000:.0f} fs may be unstable. Use --dt 0.001 (1 fs) for strong coupling.")
+    # dt·ω stability: stiff cavity mode with Verlet+Langevin can blow up (empirical threshold)
+    if lambda_coupling != 0 and dt > 0.001:
+        omegac_rad_ps = omegac_au * 4.134e16 * 1e-12  # Hartree -> rad/s -> rad/ps
+        dt_omega = dt * omegac_rad_ps
+        if dt_omega > 0.5:
+            print(f"\n  WARNING: dt·ω = {dt_omega:.2f} (dt={dt*1000:.0f} fs, ω={omegac_rad_ps:.0f} rad/ps) may cause cavity blow-up. Use --dt 0.001 (1 fs) for stability.")
     print(f"\nSimulation parameters:")
     print(f"  Temperature: {temperature_K} K")
     print(f"  Timestep: {dt} ps")
@@ -1029,33 +1136,52 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         print("\n--- Cavity Force ---")
         print("  Skipped (--no-cavity: bare glassy system)")
     
-    # Thermostat: Bussi only when not NVE (cav-hoomd parity: molecules = ConstantVolume + Bussi)
+    # Thermostat: Bussi for molecules only when not NVE (cav-hoomd parity).
+    # Cavity uses Langevin when present; exclude cavity from Bussi in that case.
+    use_cavity_langevin = cavity_available and cavity_index is not None and not nve
     bussi_available = False
+    # Shared RNG seed for Bussi + CustomIntegrator (Langevin) when both used; avoids OpenMM conflict
+    rng_seed = seed if seed != 0 else 42
+
     if not nve:
         print("\n--- Adding Bussi Thermostat ---")
         try:
             bussi = openmm.BussiThermostat(temperature_K, bussi_tau_ps)
+            bussi.setRandomNumberSeed(rng_seed)
             bussi.setApplyToAllParticles(False)
             for i in range(num_molecular_particles):
                 bussi.addParticle(i)
+            if not use_cavity_langevin and cavity_available and cavity_index is not None:
+                bussi.addParticle(cavity_index)
             system.addForce(bussi)
-            print(f"  BussiThermostat added for {bussi.getNumParticles()} particles")
+            cav_str = " + cavity" if (cavity_available and cavity_index is not None and not use_cavity_langevin) else ""
+            print(f"  BussiThermostat added for {bussi.getNumParticles()} particles (molecules{cav_str})")
             print(f"  Temperature: {temperature_K} K")
             print(f"  Tau: {bussi_tau_ps} ps (cav-hoomd parity)")
+            if use_cavity_langevin:
+                print(f"  Cavity excluded from Bussi (will use Langevin, γ = 1/{cavity_langevin_tau_ps} ps⁻¹)")
             bussi_available = True
         except AttributeError as e:
             print(f"  BussiThermostat not available: {e}")
 
-    # Integrator: Verlet only (NVE) or Verlet + Bussi (no Langevin; molecules get Bussi only)
+    # Integrator: Verlet only (NVE), or Verlet+Bussi (molecules) with optional cavity Langevin
     print("\n--- Creating Integrator ---")
     if nve:
         integrator = openmm.VerletIntegrator(dt * unit.picosecond)
         print(f"  VerletIntegrator created (NVE; no thermostat)")
         print(f"  Initial velocities will be set to T = {temperature_K} K")
+    elif use_cavity_langevin:
+        integrator = _create_hybrid_bussi_langevin_integrator(
+            dt, temperature_K, bussi_tau_ps, cavity_index,
+            cavity_langevin_tau_ps, system.getNumParticles()
+        )
+        integrator.setRandomNumberSeed(rng_seed)
+        print(f"  Hybrid CustomIntegrator created: Bussi (molecules, τ={bussi_tau_ps} ps) + Langevin (cavity, γ=1/{cavity_langevin_tau_ps} ps⁻¹)")
     else:
         integrator = openmm.VerletIntegrator(dt * unit.picosecond)
         print(f"  VerletIntegrator created")
-        print(f"  Verlet + Bussi (molecules only); Bussi tau {bussi_tau_ps} ps (cav-hoomd parity)")
+        cav_str = " + cavity" if cavity_available and cavity_index is not None else ""
+        print(f"  Verlet + Bussi (molecules{cav_str}); Bussi tau {bussi_tau_ps} ps (cav-hoomd parity)")
     
     # Create simulation - try CUDA first, fall back to Reference (CPU)
     print("\n--- Creating Simulation ---")
@@ -1068,6 +1194,13 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     
     # Create context
     context = openmm.Context(system, integrator, platform)
+    
+    if use_cavity_langevin:
+        num_particles = system.getNumParticles()
+        mask_values = [openmm.Vec3(0, 0, 0)] * num_particles
+        mask_values[cavity_index] = openmm.Vec3(1, 1, 1)
+        integrator.setPerDofVariableByName("mask", mask_values)
+        print(f"  Cavity Langevin mask set for particle {cavity_index}")
     
     if prod_from_checkpoint:
         # Load equilibrated state from checkpoint (no re-thermalization; cav-hoomd parity)
@@ -1082,16 +1215,12 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     else:
         context.setPositions(positions)
 
-    # Phase 1 debug: log initial PE/KE when built from GSD (pinpoint when blow-up occurs)
     if build_from_gsd and not prod_from_checkpoint:
         state = context.getState(getEnergy=True)
         pe = state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
-        ke = state.getKineticEnergy().value_in_unit(unit.kilojoule_per_mole)
-        print("\n--- [DEBUG] Initial state (after setPositions) ---")
-        print(f"  PE: {pe:.6g} kJ/mol  KE: {ke:.6g} kJ/mol")
         if abs(pe) > 1e15:
-            print("  *** Initial PE is huge; problem is likely initial configuration or force field. ***")
-    
+            print("  WARNING: Initial PE is huge; problem is likely initial configuration or force field.")
+
     # Minimize energy (optional) - skip when loading from checkpoint
     if minimize and not prod_from_checkpoint:
         print("\n--- Energy Minimization ---")
@@ -1103,35 +1232,41 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     else:
         print("\n--- Skipping energy minimization (--no-minimize) ---")
     
-    # Apply finite-Q displacement to cavity particle BEFORE starting dynamics (skip when loading checkpoint)
+    # Place cavity at equilibrium or fixed displacement BEFORE starting dynamics (skip when loading checkpoint)
     if cavity_available and not prod_from_checkpoint:
-        print("\n--- Applying Finite-Q Displacement ---")
         state = context.getState(getPositions=True)
         positions_with_units = state.getPositions()
-        
-        # Get cavity particle position and extract numeric values
-        cavity_pos = positions_with_units[cavity_index]
-        x_nm = cavity_pos[0].value_in_unit(unit.nanometer)
-        y_nm = cavity_pos[1].value_in_unit(unit.nanometer)
-        z_nm = cavity_pos[2].value_in_unit(unit.nanometer)
-        print(f"  Cavity position before: ({x_nm:.6f}, {y_nm:.6f}, {z_nm:.6f}) nm")
-        
-        # Calculate displacement magnitude (typical value ~0.01 nm)
-        # This gives the cavity mode an initial excitation
-        displacement_magnitude = 0.01  # nm
-        
-        # Modify positions
+        pos_nm = np.array([[p[0].value_in_unit(unit.nanometer), p[1].value_in_unit(unit.nanometer), p[2].value_in_unit(unit.nanometer)] for p in positions_with_units])
+
+        if cavity_init_equilibrium and lambda_coupling != 0:
+            print("\n--- Cavity: Placing at Equilibrium (Minimum) Position ---")
+            charges = []
+            for f in system.getForces():
+                if isinstance(f, openmm.NonbondedForce):
+                    charges = [f.getParticleParameters(i)[0].value_in_unit(unit.elementary_charge) for i in range(system.getNumParticles())]
+                    break
+            q_eq = _cavity_equilibrium_position(pos_nm, charges, cavity_index, lambda_coupling, omegac_au, photon_mass)
+            # Add thermal fluctuations (HOOMD parity: sigma = sqrt(kT/omega^2) in a.u., m=1)
+            KB_HARTREE_PER_K = 3.167e-6
+            sigma_bohr = np.sqrt(KB_HARTREE_PER_K * temperature_K / (omegac_au**2))
+            sigma_nm = sigma_bohr * BOHR_TO_NM
+            q_eq[0] += np.random.normal(0, sigma_nm)
+            q_eq[1] += np.random.normal(0, sigma_nm)
+            new_cavity_pos = openmm.Vec3(float(q_eq[0]), float(q_eq[1]), 0.0) * unit.nanometer
+            print(f"  Molecular dipole → q_eq = ({q_eq[0]:.6f}, {q_eq[1]:.6f}, 0) nm (with thermal sigma={sigma_nm:.4g} nm)")
+        else:
+            print("\n--- Cavity: Fixed Displacement (0.01 nm along x) ---")
+            new_cavity_pos = openmm.Vec3(0.01, 0.0, 0.0) * unit.nanometer
+
         positions_list = list(positions_with_units)
-        positions_list[cavity_index] = [displacement_magnitude, 0.0, 0.0] * unit.nanometer
-        
+        positions_list[cavity_index] = new_cavity_pos
         context.setPositions(positions_list)
         state = context.getState(getPositions=True)
         cavity_pos = state.getPositions()[cavity_index]
         x_nm = cavity_pos[0].value_in_unit(unit.nanometer)
         y_nm = cavity_pos[1].value_in_unit(unit.nanometer)
         z_nm = cavity_pos[2].value_in_unit(unit.nanometer)
-        print(f"  Cavity position after:  ({x_nm:.6f}, {y_nm:.6f}, {z_nm:.6f}) nm")
-        print(f"  Displacement: {displacement_magnitude} nm along x-axis")
+        print(f"  Cavity position: ({x_nm:.6f}, {y_nm:.6f}, {z_nm:.6f}) nm")
     
     # Set velocities: use from GSD when available (unless --restart-velocities for cav-hoomd parity)
     # Skip when prod_from_checkpoint (checkpoint has velocities)
@@ -1159,23 +1294,9 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
             print(f"\n--- Velocities generated (Maxwell-Boltzmann at {temperature_K} K) ---")
             print(f"  COM velocity removed: was ({v_com[0]:.6f}, {v_com[1]:.6f}, {v_com[2]:.6f}) nm/ps")
 
-    # Cavity particle has negligible mass (0.000549 amu); thermalizing it at 100 K gives it a huge
-    # v_rms = sqrt(kT/m) that makes the stiff cavity spring numerically unstable with 1 fs dt.
-    # Start the cavity from rest so the initial configuration (e.g. from GSD) is not destroyed.
-    if cavity_available and not prod_from_checkpoint:
-        state = context.getState(getVelocities=True)
-        vels = list(state.getVelocities())
-        vels[cavity_index] = openmm.Vec3(0, 0, 0) * (unit.nanometer / unit.picosecond)
-        context.setVelocities(vels)
+    # Cavity thermalized with molecules (HOOMD parity). Bussi thermostat on cavity damps
+    # coherent oscillations. With dt=2 fs, cavity thermal velocity is stable.
 
-    # Phase 1 debug: log PE/KE after thermalization when built from GSD
-    if build_from_gsd and not prod_from_checkpoint:
-        state = context.getState(getEnergy=True)
-        pe = state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
-        ke = state.getKineticEnergy().value_in_unit(unit.kilojoule_per_mole)
-        print("\n--- [DEBUG] After thermalization (before first step) ---")
-        print(f"  PE: {pe:.6g} kJ/mol  KE: {ke:.6g} kJ/mol")
-    
     # Calculate total steps: equil_only runs only equil; prod_from_checkpoint runs only prod
     if equil_only:
         total_steps = equilibration_steps
@@ -1230,6 +1351,7 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     fkt_tracker = None
     fkt_interval_steps = 1
     fkt_initialized = False
+    cavity_traj = []
     if enable_fkt:
         _here = Path(__file__).resolve().parent
         if str(_here) not in sys.path:
@@ -1245,20 +1367,11 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         )
         fkt_interval_steps = max(1, int(round(fkt_output_period_ps / dt)))
     
-    first_step_pe_ke_logged = False
     for i in range(num_reports):
         steps_this_block = min(report_interval, total_steps - step_counter)
         for step in range(steps_this_block):
             integrator.step(1)
             step_counter += 1
-            # Phase 1 debug: log PE/KE once after first step when built from GSD
-            if build_from_gsd and not first_step_pe_ke_logged and step_counter >= 1:
-                state = context.getState(getEnergy=True)
-                pe = state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
-                ke = state.getKineticEnergy().value_in_unit(unit.kilojoule_per_mole)
-                print("\n--- [DEBUG] After first integrator step ---")
-                print(f"  PE: {pe:.6g} kJ/mol  KE: {ke:.6g} kJ/mol  (step_counter={step_counter})")
-                first_step_pe_ke_logged = True
             if not disable_dipole_output and (step_counter % dipole_output_interval_steps) == 0:
                 state = context.getState(getPositions=True)
                 current_time = step_counter * dt
@@ -1277,7 +1390,7 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
             if enable_fkt and fkt_tracker is not None and step_counter >= _equil_steps_for_fkt:
                 prod_step = step_counter - _equil_steps_for_fkt
                 if not fkt_initialized:
-                    _st0 = context.getState(getPositions=True)
+                    _st0 = context.getState(getPositions=True, enforcePeriodicBox=False)
                     _pos0 = _st0.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
                     pos_mol0 = np.asarray(_pos0[:num_molecular_particles], dtype=np.float64).copy()
                     a0, b0, c0 = _st0.getPeriodicBoxVectors()
@@ -1287,14 +1400,29 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
                     pos_mol0 = _wrap_positions_centered(pos_mol0, box_nm0)
                     fkt_tracker.update(0.0, pos_mol0)
                     fkt_initialized = True
+                    if cavity_available and cavity_index is not None:
+                        qx = float(_pos0[cavity_index][0])
+                        qy = float(_pos0[cavity_index][1])
+                        L_cav0 = float(box_nm0[0])
+                        qx, qy = _wrap_cavity_to_primary(qx, qy, L_cav0)
+                        cavity_traj.append((0.0, qx, qy))
                 elif (prod_step % fkt_interval_steps) == 0:
-                    _st = context.getState(getPositions=True)
+                    _st = context.getState(getPositions=True, enforcePeriodicBox=False)
                     _pos_all = _st.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
                     pos_mol = np.asarray(_pos_all[:num_molecular_particles], dtype=np.float64).copy()
                     a, b, c = _st.getPeriodicBoxVectors()
                     box_nm = np.array([_to_nm_fkt(a[0]), _to_nm_fkt(b[1]), _to_nm_fkt(c[2])])
                     pos_mol = _wrap_positions_centered(pos_mol, box_nm)
                     fkt_tracker.update(prod_step * dt, pos_mol)
+                    if cavity_available and cavity_index is not None:
+                        qx_raw = float(_pos_all[cavity_index][0])
+                        qy_raw = float(_pos_all[cavity_index][1])
+                        prev = cavity_traj[-1] if cavity_traj else None
+                        prev_qx = prev[1] if prev else None
+                        prev_qy = prev[2] if prev else None
+                        L_cav = float(box_nm[0])
+                        qx, qy = _unwrap_cavity_xy(prev_qx, prev_qy, qx_raw, qy_raw, L_cav)
+                        cavity_traj.append((prod_step * dt, qx, qy))
         
         # Report progress with timing
         current_wall_time = time.time()
@@ -1399,6 +1527,24 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     
     if enable_fkt and fkt_tracker is not None:
         fkt_tracker.finalize()
+    if enable_fkt and cavity_traj and fkt_prefix_resolved is not None:
+        cav_path = Path(str(fkt_prefix_resolved) + "_cavity_traj.txt")
+        # Runtime blow-up detection: |q_wrapped| > L/4 indicates cavity instability
+        L_nm = float(box_size_nm) if box_size_nm is not None else 3.17
+        blowup_frames = []
+        for t, qx, qy in cavity_traj:
+            qx_w = qx - round(qx / L_nm) * L_nm
+            qy_w = qy - round(qy / L_nm) * L_nm
+            if np.sqrt(qx_w**2 + qy_w**2) > L_nm / 4:
+                blowup_frames.append((t, qx_w, qy_w))
+        if blowup_frames:
+            n_blowup = len(blowup_frames)
+            t0, qx0, qy0 = blowup_frames[0]
+            print(f"\n  WARNING: Cavity blow-up detected ({n_blowup} frames with |q| > L/4). First at t={t0:.1f} ps, |q|={np.sqrt(qx0**2+qy0**2):.3f} nm. Consider --dt 0.001 or --cavity-langevin-tau 1.0.", file=sys.stderr)
+        with open(cav_path, "w") as f:
+            f.write("# time_ps\tqx_nm\tqy_nm (cavity position, xy dipole coupling)\n")
+            for t, qx, qy in cavity_traj:
+                f.write(f"{t:.6g}\t{qx:.8g}\t{qy:.8g}\n")
     
     total_elapsed = time.time() - start_time
     print(f"  Simulation complete! Total elapsed time: {total_elapsed/3600:.2f} hr ({total_elapsed/60:.1f} min)")
@@ -1548,6 +1694,8 @@ Examples:
                         help='NVE (microcanonical): Verlet integrator, no thermostat; initial velocities thermalized at --temp')
     parser.add_argument('--bussi-tau', type=float, default=5.0, dest='bussi_tau',
                         help='Bussi thermostat time constant in ps when not --nve (default: 5.0, cav-hoomd parity)')
+    parser.add_argument('--cavity-langevin-tau', type=float, default=5.0, dest='cavity_langevin_tau',
+                        help='Cavity Langevin time constant τ in ps; γ = 1/τ (default: 5.0, HOOMD parity)')
     parser.add_argument('--output', type=str, default=None,
                         help='Output filename for dipole trajectory .npz (default: cavity_diamer_lambda<λ>.npz)')
     # Console and PDB output
@@ -1582,6 +1730,12 @@ Examples:
                         help='Ignore GSD velocities; thermalize at target T (cav-hoomd parity when it uses --restart-velocities)')
     parser.add_argument('--no-cavity', action='store_true', dest='no_cavity',
                         help='Run bare glassy system only (500 particles, no cavity); matches cav-hoomd --no-cavity')
+    parser.add_argument('--add-cavity', action='store_true', dest='add_cavity',
+                        help='When GSD has 500 particles, add a new cavity particle at equilibrium (enables coupling from bare GSD)')
+    parser.add_argument('--cavity-init-equilibrium', action='store_true', dest='cavity_init_equilibrium', default=True,
+                        help='Place cavity at dipole-coupled equilibrium q_eq (default: True)')
+    parser.add_argument('--cavity-init-displacement', action='store_false', dest='cavity_init_equilibrium',
+                        help='Use fixed 0.01 nm displacement instead of equilibrium')
     parser.add_argument('--cutoff', type=float, default=DIAMER_RCUT_NM, dest='cutoff_nm',
                         help=f'LJ + PME real-space cutoff in nm (default: {DIAMER_RCUT_NM:.4f} = 15 Bohr, cav-hoomd parity)')
     # Two-phase protocol (cav-hoomd parity): equil and prod as separate runs
@@ -1643,11 +1797,14 @@ Examples:
             fkt_output_prefix=args.fkt_output_prefix,
             nve=args.nve,
             bussi_tau_ps=args.bussi_tau,
+            cavity_langevin_tau_ps=args.cavity_langevin_tau,
             initial_gsd=args.initial_gsd,
             initial_gsd_frame=args.initial_gsd_frame,
             gsd_in_nm=args.gsd_in_nm,
             restart_velocities=args.restart_velocities,
             no_cavity=args.no_cavity,
+            add_cavity=args.add_cavity,
+            cavity_init_equilibrium=args.cavity_init_equilibrium,
             cutoff_nm=args.cutoff_nm,
             equil_only=args.equil_only,
             save_checkpoint=args.save_checkpoint,

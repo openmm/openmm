@@ -129,14 +129,14 @@ print(f"{'=' * 80}")
 efficiency_8 = (baseline * 8) / results[8]['avg_ms'] / 8 * 100
 
 if efficiency_8 > 80:
-    print("✅ EXCELLENT: Near-perfect parallel scaling (>80% efficiency)")
+    print("EXCELLENT: Near-perfect parallel scaling (>80% efficiency)")
 elif efficiency_8 > 50:
-    print("✅ GOOD: Strong parallel scaling (50-80% efficiency)")
+    print("GOOD: Strong parallel scaling (50-80% efficiency)")
     print("   This is typical for GPU batch processing with GNNs")
 elif efficiency_8 > 25:
-    print("⚠️  MODERATE: Some parallelization but with overhead (25-50%)")
+    print("MODERATE: Some parallelization but with overhead (25-50%)")
 else:
-    print("❌ POOR: Mostly sequential processing (<25% efficiency)")
+    print("POOR: Mostly sequential processing (<25% efficiency)")
 
 print(f"\nParallel efficiency at 8 beads: {efficiency_8:.1f}%")
 print(f"\nIf sequential (no batching): 8 beads would take {baseline * 8:.1f} ms")

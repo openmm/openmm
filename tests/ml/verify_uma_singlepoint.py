@@ -84,7 +84,7 @@ def openmm_calculation(topology, positions, model_name='uma-s-1p1'):
         }
         
     except Exception as e:
-        print(f"\n✗ OpenMM calculation failed: {e}")
+        print(f"\n OpenMM calculation failed: {e}")
         import traceback
         traceback.print_exc()
         return {'success': False, 'error': str(e)}
@@ -149,7 +149,7 @@ def fairchem_calculation(positions, model_name='uma-s-1p1'):
         }
         
     except Exception as e:
-        print(f"\n✗ FAIRChem calculation failed: {e}")
+        print(f"\n FAIRChem calculation failed: {e}")
         import traceback
         traceback.print_exc()
         return {'success': False, 'error': str(e)}
@@ -161,11 +161,11 @@ def compare_results(openmm_result, fairchem_result):
     print("="*70)
     
     if not openmm_result['success']:
-        print("✗ OpenMM calculation failed, cannot compare")
+        print(" OpenMM calculation failed, cannot compare")
         return False
     
     if not fairchem_result['success']:
-        print("✗ FAIRChem calculation failed, cannot compare")
+        print(" FAIRChem calculation failed, cannot compare")
         return False
     
     # Energy comparison
@@ -201,17 +201,17 @@ def compare_results(openmm_result, fairchem_result):
     force_pass = force_rel_diff < force_threshold
     
     print(f"\nValidation Results:")
-    print(f"  Energy: {'✓ PASS' if energy_pass else '✗ FAIL'} (threshold: {energy_threshold}%)")
-    print(f"  Forces: {'✓ PASS' if force_pass else '✗ FAIL'} (threshold: {force_threshold}%)")
+    print(f"  Energy: {'PASS' if energy_pass else ' FAIL'} (threshold: {energy_threshold}%)")
+    print(f"  Forces: {'PASS' if force_pass else ' FAIL'} (threshold: {force_threshold}%)")
     
     if energy_pass and force_pass:
         print(f"\n{'='*70}")
-        print("✓ ALL VALIDATIONS PASSED")
+        print("ALL VALIDATIONS PASSED")
         print(f"{'='*70}")
         return True
     else:
         print(f"\n{'='*70}")
-        print("✗ VALIDATION FAILED")
+        print(" VALIDATION FAILED")
         print(f"{'='*70}")
         if not energy_pass:
             print(f"Energy difference ({energy_rel_diff:.4f}%) exceeds threshold ({energy_threshold}%)")

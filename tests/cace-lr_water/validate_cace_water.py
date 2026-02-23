@@ -47,9 +47,9 @@ def validate_single_water():
     print(f"  (Expected for TIP3P: ~2.3 Debye, Gas phase: ~1.85 Debye)")
     
     if np.abs(charges.sum()) < 0.05 and dipole_mag_debye > 1.0:
-        print("\n✓ SUCCESS: Charges and dipole look reasonable")
+        print("\nSUCCESS: Charges and dipole look reasonable")
     else:
-        print("\n✗ FAILED: Charges or dipole outside expected range")
+        print("\nFAILED: Charges or dipole outside expected range")
 
 if __name__ == "__main__":
     validate_single_water()

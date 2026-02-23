@@ -16,72 +16,10 @@
 # Create molecular-0.gsd first: python initlattice_equilibrium.py --job-dir . --replica 0 --nmol 250 --temperature 100 --seed 42
 
 """
-Advanced Cavity Molecular Dynamics Experiment Runner
-
-This script provides a comprehensive framework for running cavity MD simulations
-using the CavityMDSimulation class from the hoomd.cavitymd plugin. It supports
-various thermostat combinations and advanced analysis features.
-
-FEATURES:
-- Uses the plugin's CavityMDSimulation class directly (no code duplication)
-- Multiple thermostat combinations (Bussi, Langevin)
-- Advanced analysis trackers (energy, F(k,t), cavity modes)
-- Adaptive or fixed timestep control
-- GPU and CPU support
-- Comprehensive logging and output control
-- SLURM array job support and local multi-replica execution
-- Smart cavity particle handling (auto-detects existing cavity particles)
-
-BASIC USAGE:
-   # Run a single experiment with cavity coupling
-   python run_cav_hoomd_advanced.py --molecular-bath bussi --cavity-bath langevin --coupling 1e-3 --runtime 1000
-   
-   # Run without cavity (molecular-only simulation)
-   python run_cav_hoomd_advanced.py --molecular-bath bussi --no-cavity --runtime 1000
-   
-   # Run multiple replicas locally
-   python run_cav_hoomd_advanced.py --molecular-bath bussi --cavity-bath langevin --coupling 1e-3 --replicas 1-5 --runtime 500
-   
-   # Run with finite-q cavity mode
-   python run_cav_hoomd_advanced.py --molecular-bath bussi --cavity-bath langevin --finite-q --coupling 1e-3 --runtime 1000
-
-   # Run with time-varying coupling (step function)
-   python run_cav_hoomd_advanced.py --molecular-bath bussi --cavity-bath langevin --coupling 1e-3 --switch-time 100 --runtime 1000
-   
-   # Run with exponential decay after switching
-   python run_cav_hoomd_advanced.py --molecular-bath bussi --cavity-bath langevin --coupling 1e-3 --switch-time 100 --decay-time-constant 50 --runtime 1000
-
-CAVITY PARTICLE HANDLING:
-   The script automatically detects whether cavity particles already exist in your GSD file:
-   - If cavity particles exist: Uses them (validates count and properties)
-   - If no cavity particles exist: Adds new ones automatically (when cavity coupling enabled)
-   - Clear error messages if configuration is invalid
-
-THERMOSTAT OPTIONS:
-- --molecular-bath: bussi, langevin, none (thermostat for molecular particles)
-- --cavity-bath: bussi, langevin, none (thermostat for cavity particle)
-- --finite-q: Enable finite-q cavity mode (default: q=0 mode)
-
-REPLICA EXECUTION:
-- Local execution: --replicas 1-5 or --replicas 1,2,3,4,5
-- SLURM array jobs: Automatically detects SLURM_ARRAY_TASK_ID
-
-ADVANCED FEATURES:
-- --enable-energy-tracker: Detailed energy component tracking
-- --enable-fkt: F(k,t) density correlation functions
-- --fixed-timestep: Use fixed timestep instead of adaptive
-- --device GPU: Run on GPU instead of CPU
-- --seed: Control random seed for reproducibility
-- --zero-momentum: Periodic momentum zeroing to prevent center-of-mass drift
-- --switch-time: Time-varying coupling activation
-- --decay-time-constant: Exponential decay of coupling after switching
-
-OUTPUT CONTROL:
-- Separate output periods for different observables (energy, F(k,t), trajectories, console)
-- Organized directory structure
-- Comprehensive logging with timestamps
-
-See --help for all available options.
+Cavity MD runner using hoomd.cavitymd.CavityMDSimulation.
+Runs cavity or molecular-only simulations with Bussi/Langevin thermostats,
+energy tracking, F(k,t), and SLURM/local replica support.
+See --help for options.
 """
 
 import sys
@@ -144,7 +82,7 @@ def run_single_experiment(molecular_thermo, cavity_thermo, finite_q,
         print(f"Running experiment:")
         print(f"  Cavity coupling: {'Enabled' if incavity else 'Disabled'}")
         if incavity:
-            print(f"  *** COUPLING STRENGTH: {coupling:.6e} a.u. ***")  # Enhanced prominence
+            print(f"  Coupling strength: {coupling:.6e} a.u.")
             if switch_time_ps is not None:
                 print(f"  Switch time: {switch_time_ps} ps")
                 if decay_time_constant_ps is not None:
@@ -301,7 +239,7 @@ def main():
     
     # Energy tracking
     parser.add_argument('--enable-energy-tracker', action='store_true', 
-                       help='Enable comprehensive energy tracking')
+                       help='Enable energy component tracking')
     
     # Output control options - separate periods for different observables
     parser.add_argument('--energy-output-period-ps', type=float, default=0.1, 
@@ -385,13 +323,12 @@ def main():
     cavity_thermo = args.cavity_bath if incavity else 'none'
     finite_q = args.finite_q
     
-    # ENHANCED: Add coupling constant to main header
-    print(f"\n*** COUPLING CONSTANT: {args.coupling:.6e} a.u. ***")
+    print(f"\nCoupling constant: {args.coupling:.6e} a.u.")
     
     print(f"\nSimulation Configuration:")
     print(f"  Cavity coupling: {'Enabled' if incavity else 'Disabled'}")
     if incavity:
-        print(f"    Coupling strength: {args.coupling:.6e} a.u.")  # Enhanced format
+        print(f"    Coupling strength: {args.coupling:.6e} a.u.")
         print(f"    Frequency: {args.frequency} cm⁻¹")
         print(f"    Finite-q mode: {finite_q}")
         print(f"    Cavity thermostat: {cavity_thermo}")

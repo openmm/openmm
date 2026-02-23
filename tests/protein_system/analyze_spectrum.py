@@ -143,7 +143,7 @@ if len(sys.argv) < 2:
 else:
     input_file = sys.argv[1]
 
-# 1. Load the data
+# Load the data
 print(f"\n1. Loading dipole trajectory data from: {input_file}")
 if input_file.endswith("_stream.npy"):
     time, dipole, metadata = _load_stream_npy(input_file)
@@ -166,7 +166,7 @@ print(f"   Total data points: {len(time)}")
 print(f"   Time range: {time[0]:.2f} - {time[-1]:.2f} ps")
 print(f"   Dipole shape: {dipole.shape}")
 
-# 2. Cut off equilibration (first 20 ps or 10% of data)
+# Cut off equilibration (first 20 ps or 10% of data)
 print("\n2. Removing equilibration period...")
 total_time = time[-1] - time[0]
 cutoff_time = min(20.0, total_time * 0.1)
@@ -191,7 +191,7 @@ if len(time_cut) < 100:
     print("   Need at least 100 points. Please run simulation longer.")
     sys.exit(1)
 
-# 3. Compute dipole with mean subtracted
+# Compute dipole with mean subtracted
 print("\n3. Computing dipole with mean subtracted (δM = M - <M>)...")
 dipole_mean = np.mean(dipole_cut, axis=0)
 dipole_centered = dipole_cut - dipole_mean
@@ -199,7 +199,7 @@ dipole_centered = dipole_cut - dipole_mean
 print(f"   Mean dipole: ({dipole_mean[0]:.4f}, {dipole_mean[1]:.4f}, {dipole_mean[2]:.4f}) e·nm")
 print(f"   RMS dipole fluctuation: {np.sqrt(np.mean(np.sum(dipole_centered**2, axis=1))):.4f} e·nm")
 
-# 4. Autocorrelation (x,y only)
+# Autocorrelation (x,y only)
 print("\n4. Calculating dipole autocorrelation function (DACF)...")
 print("   Computing <δM(0)·δM(t)> using x,y components")
 
@@ -218,7 +218,7 @@ time_autocorr = np.arange(len(autocorr)) * dt_ps
 print(f"   Autocorrelation length: {len(autocorr)} points")
 print(f"   Time step: {dt_ps:.4f} ps")
 
-# 5. Compute IR spectrum using Welch's method on centered dipole
+# Compute IR spectrum using Welch's method on centered dipole
 print("\n5. Computing IR spectrum using Welch's method...")
 print("   Welch's method provides better spectral resolution than FFT of DACF")
 
@@ -256,18 +256,18 @@ power_spectrum_fft = np.real(autocorr_fft)
 omega_fft = 2 * np.pi * freq_hz_fft
 spectrum_fft = power_spectrum_fft * (omega_fft**2)
 
-print("   ✓ Applied ω² factor for IR absorption intensity")
+print("   Applied ω² factor for IR absorption intensity")
 print(f"   Frequency range: 0 - {freq_cm[-1]:.1f} cm^-1")
 print(f"   Nyquist frequency: {freq_cm[-1]:.1f} cm^-1")
 
-# 6. Use full production time range for dipole plot
+# Use full production time range for dipole plot
 print("\n6. Using full dipole trajectory for fluctuation plot...")
 time_window = time
 dipole_window = dipole
 print(f"   Window points: {len(time_window)}")
 print(f"   Time range: {time_window[0]:.2f} - {time_window[-1]:.2f} ps")
 
-# 7. Plots
+# Plots
 print("\n7. Creating plots...")
 fig, axes = plt.subplots(3, 1, figsize=(6, 6))
 
@@ -340,7 +340,7 @@ ax3.tick_params(axis='both', labelsize=7)
 
 plt.tight_layout()
 plt.savefig(f"{output_prefix}_full.png", dpi=300, bbox_inches="tight")
-print(f"   ✓ Saved: {output_prefix}_full.png")
+print(f"   Saved: {output_prefix}_full.png")
 
 fig2, ax = plt.subplots(figsize=(6, 3))
 ax.plot(freq_cm[idx_freq], spectrum_welch[idx_freq], "r-", linewidth=1)
@@ -356,9 +356,9 @@ ax.legend(fontsize=8)
 ax.tick_params(axis='both', labelsize=8)
 plt.tight_layout()
 plt.savefig(f"{output_prefix}_hires.png", dpi=300, bbox_inches="tight")
-print(f"   ✓ Saved: {output_prefix}_hires.png")
+print(f"   Saved: {output_prefix}_hires.png")
 
-# 8. Save processed data
+# Save processed data
 print("\n8. Saving processed data...")
 np.savez(
     f"{output_prefix}_data.npz",
@@ -372,7 +372,7 @@ np.savez(
     dipole_window=dipole_window,
     welch_nperseg=nperseg,
 )
-print(f"   ✓ Saved: {output_prefix}_data.npz")
+print(f"   Saved: {output_prefix}_data.npz")
 
 print("\n" + "=" * 60)
 print("Protein IR Spectrum Calculation Complete!")

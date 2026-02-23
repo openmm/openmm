@@ -58,7 +58,7 @@ def compute_ir_spectrum(npz_file, cutoff_ps=0.0, max_freq_cm=6000, output_prefix
     dipole_centered = dipole_total - dipole_mean
     
     # Use scipy's correlate for better autocorrelation
-    # This gives us the full autocorrelation function
+    # Full autocorrelation
     autocorr_full = signal.correlate(dipole_centered, dipole_centered, mode='full', method='fft')
     autocorr = autocorr_full[len(autocorr_full)//2:]
     autocorr = autocorr[:n_points]
@@ -148,11 +148,11 @@ def compute_ir_spectrum(npz_file, cutoff_ps=0.0, max_freq_cm=6000, output_prefix
         
     plt.tight_layout()
     plt.savefig(f"{output_prefix}_spectrum.png", dpi=300)
-    print(f"\n✓ Saved spectrum plot: {output_prefix}_spectrum.png")
+    print(f"\nSaved spectrum plot: {output_prefix}_spectrum.png")
     
     # Save spectrum data
     np.savez(f"{output_prefix}_spectrum.npz", freqs_cm=freqs_cm, intensity=intensity)
-    print(f"✓ Saved spectrum data: {output_prefix}_spectrum.npz")
+    print(f"Saved spectrum data: {output_prefix}_spectrum.npz")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

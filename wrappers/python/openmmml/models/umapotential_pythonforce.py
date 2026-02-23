@@ -45,14 +45,7 @@ class UMAPotentialPythonForceImpl(MLPotentialImpl):
     - RPMD compatible
     - Immediate deployment
     
-    Optimizations applied:
-    - AtomicData object reused across steps (only positions updated)
-    - Tensors kept on GPU device
-    - Minimal CPU<->GPU data transfer
-    
-    Usage:
-    >>> potential = MLPotential('uma-s-1p1-pythonforce')
-    >>> system = potential.createSystem(topology, task_name='omol', charge=0, spin=1)
+    Reuses AtomicData across steps, keeps tensors on GPU, minimal transfers.
     """
 
     def __init__(self, name: str) -> None:
@@ -163,7 +156,7 @@ class UMAPotentialPythonForceImpl(MLPotentialImpl):
         )
         atomic_data_template = atomic_data_template.to(device)
         
-        # CRITICAL FIX: Ensure dataset is a list, not a string
+        # dataset must be list, not path string
         # The DatasetEmbedding.forward() iterates over dataset, which fails if it's a string
         if hasattr(atomic_data_template, 'dataset'):
             if isinstance(atomic_data_template.dataset, str):
@@ -180,7 +173,7 @@ class UMAPotentialPythonForceImpl(MLPotentialImpl):
         torch_device = torch.device(device)
         if torch_device.type == 'cuda':
             # Pre-allocate pinned memory buffer on CPU for forces
-            # This buffer stays on CPU but uses pinned (page-locked) memory
+            # Pinned CPU buffer
             # which allows faster transfers from GPU
             pinned_buffer = torch.empty((n_atoms, 3), dtype=torch.float32, pin_memory=True)
         else:
@@ -265,7 +258,7 @@ class UMAPotentialPythonForceImpl(MLPotentialImpl):
                 # If we have all 8 beads, do batched prediction
                 if len(cache['bead_positions']) == NUM_BEADS:
                     # Run 8 predictions efficiently by reusing AtomicData template
-                    # This avoids complex batching issues while still being faster
+                    # Avoids batching complexity while staying fast
                     all_pos_angstrom = np.stack(cache['bead_positions']) * 10.0
                     
                     energies_list = []
@@ -359,27 +352,6 @@ class UMAPotentialPythonForceImpl(MLPotentialImpl):
                 return (energy_kj * unit.kilojoules_per_mole, 
                         forces_kj_nm * unit.kilojoules_per_mole / unit.nanometer)
             except Exception as e:
-                # #region agent log
-                import traceback
-                try:
-                    with open('/media/extradrive/Trajectories/openmm/.cursor/debug.log', 'a') as f:
-                        log_data = {
-                            "sessionId": "debug-session",
-                            "runId": "post-fix-v2",
-                            "hypothesisId": "H8",
-                            "location": "umapotential_pythonforce.py:compute_uma_forces",
-                            "message": "UMA force callback EXCEPTION",
-                            "data": {
-                                "exception_type": str(type(e)),
-                                "exception_message": str(e),
-                                "traceback": traceback.format_exc()
-                            },
-                            "timestamp": int(time_module.time() * 1000)
-                        }
-                        f.write(json.dumps(log_data) + '\n')
-                except:
-                    pass
-                # #endregion
                 raise
         
         # Create PythonForce with the computation function
@@ -390,4 +362,4 @@ class UMAPotentialPythonForceImpl(MLPotentialImpl):
         # Add to system
         system.addForce(force)
         
-        print(f"✓ UMA force added using PythonForce (model: {self.model_name}, task: {task_name}, device: {device})")
+        print(f"UMA force added using PythonForce (model: {self.model_name}, task: {task_name}, device: {device})")

@@ -41,13 +41,13 @@ def test_esen_charges():
         try:
             # Load predictor
             predictor = pretrained_mlip.get_predict_unit(model_name, device='cuda')
-            print(f"  ✓ Model loaded")
+            print(f"  Model loaded")
             
             # Create calculator for omol task
             if "omol" in predictor.dataset_to_tasks:
                 calc = FAIRChemCalculator(predictor, task_name="omol")
             else:
-                print(f"  ✗ Model does not support 'omol' task")
+                print(f"  Model does not support 'omol' task")
                 continue
             
             # Attach calculator
@@ -57,14 +57,14 @@ def test_esen_charges():
             energy = water.get_potential_energy()
             forces = water.get_forces()
             
-            print(f"  ✓ Energy: {energy:.4f} eV")
-            print(f"  ✓ Forces shape: {forces.shape}")
+            print(f"  Energy: {energy:.4f} eV")
+            print(f"  Forces shape: {forces.shape}")
             
             # Check if model has charge prediction
             head = predictor.model.heads[0] if hasattr(predictor.model, 'heads') else predictor.model
             
             if hasattr(head, 'get_charges'):
-                print(f"  ✓ Model has get_charges() method")
+                print(f"  Model has get_charges() method")
                 
                 # We need to call the model directly to get charges
                 # Convert atoms to AtomicData
@@ -93,7 +93,7 @@ def test_esen_charges():
                         )
                         
                         charges = charge_dict["charges"].cpu().numpy()
-                        print(f"  ✓ Extracted charges (shape: {charges.shape}):")
+                        print(f"  Extracted charges (shape: {charges.shape}):")
                         
                         # Flatten charges
                         if len(charges.shape) == 3:
@@ -112,7 +112,7 @@ def test_esen_charges():
                         dipole = np.sum(charges_flat[:, None] * positions_nm, axis=0)
                         dipole_magnitude = np.linalg.norm(dipole)
                         
-                        print(f"  ✓ Dipole moment:")
+                        print(f"  Dipole moment:")
                         print(f"    μ = [{dipole[0]:+.4f}, {dipole[1]:+.4f}, {dipole[2]:+.4f}] e·nm")
                         print(f"    |μ| = {dipole_magnitude:.4f} e·nm")
                         print(f"    |μ| = {dipole_magnitude * 4.803:.4f} Debye")
@@ -121,17 +121,17 @@ def test_esen_charges():
                         return True, model_name, charges_flat
                         
                     except Exception as e:
-                        print(f"  ✗ Error calling get_charges(): {e}")
+                        print(f"  Error calling get_charges(): {e}")
                         import traceback
                         traceback.print_exc()
                         
             else:
-                print(f"  ✗ Model does not have get_charges() method")
+                print(f"  Model does not have get_charges() method")
                 print(f"    Head type: {type(head)}")
                 print(f"    Head methods: {[m for m in dir(head) if not m.startswith('_')][:10]}")
                 
         except Exception as e:
-            print(f"  ✗ Error: {e}")
+            print(f"  Error: {e}")
             continue
     
     print("\n" + "=" * 60)
@@ -142,9 +142,9 @@ if __name__ == "__main__":
     success, model_name, charges = test_esen_charges()
     if success:
         print(f"\n{'='*60}")
-        print(f"✓ SUCCESS! Use model: {model_name}")
+        print(f"SUCCESS! Use model: {model_name}")
         print('='*60)
     else:
         print(f"\n{'='*60}")
-        print("✗ FAILED - No models with charge prediction found")
+        print("FAILED - No models with charge prediction found")
         print('='*60)

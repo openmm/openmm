@@ -4,7 +4,7 @@ Test suite for MultiModeCavityForce.
 
 Verifies:
 1. Mode frequency scaling: omega_n = n * omega_1
-2. Coupling strength scaling: lambda_n = sqrt(n) * lambda_1
+2. Coupling strength scaling: lambda_n = lambda_1 (constant)
 3. Spatial profile: even modes at cavity center are dark
 4. N=1 multi-mode matches single-mode CavityForce exactly
 5. Total energy matches N separate single-mode CavityForce objects
@@ -96,7 +96,7 @@ def build_test_system(num_modes, omega1_au=0.007, lambda1=0.05,
         for m in range(num_modes):
             n = m + 1
             omega_n = n * omega1_au
-            lambda_n = math.sqrt(n) * lambda1
+            lambda_n = lambda1
             fn = math.sin(n * math.pi * molecule_z_nm / cavity_length_nm)
             # Effective lambda for single-mode = lambda_n * fn
             # (spatial profile is baked into the effective coupling)
@@ -116,7 +116,7 @@ def build_test_system(num_modes, omega1_au=0.007, lambda1=0.05,
 # Test 1: Mode scaling verification (API-level)
 # ============================================================================
 def test_mode_scaling():
-    """Verify omega_n = n*omega_1 and lambda_n = sqrt(n)*lambda_1."""
+    """Verify omega_n = n*omega_1 and lambda_n = lambda_1 (constant)."""
     print("\n" + "=" * 60)
     print("Test 1: Mode Frequency and Coupling Scaling")
     print("=" * 60)
@@ -140,7 +140,7 @@ def test_mode_scaling():
         fn = force.getSpatialProfile(n)
 
         expected_omega = n * omega1
-        expected_lambda = math.sqrt(n) * lambda1
+        expected_lambda = lambda1
         expected_fn = math.sin(n * math.pi * molecule_z / cavity_length)
 
         ok_omega = abs(omega_n - expected_omega) < 1e-12
@@ -352,7 +352,7 @@ def test_multimode_vs_analytical():
     for m in range(num_modes):
         n = m + 1
         omega_n = n * omega1
-        lambda_n = math.sqrt(n) * lambda1
+        lambda_n = lambda1
         fn = math.sin(n * math.pi * molecule_z / cavity_length)
         K_n = photon_mass * OMEGAC_AU_TO_K * omega_n * omega_n
         eps_n = lambda_n * omega_n * EPS_CONV

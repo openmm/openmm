@@ -10,7 +10,7 @@ import os
 try:
     import openmm
     import openmm.unit as unit
-    print("✓ Using system OpenMM")
+    print("Using system OpenMM")
 except ImportError:
     # Try build directory
     build_python = os.path.join(os.path.dirname(__file__), 'build', 'python')
@@ -19,9 +19,9 @@ except ImportError:
         try:
             import openmm
             import openmm.unit as unit
-            print("✓ Using build OpenMM")
+            print("Using build OpenMM")
         except ImportError as e:
-            print(f"❌ Could not import OpenMM: {e}")
+            print(f"Could not import OpenMM: {e}")
             print("\nNote: Python bindings may need to be installed properly.")
             print("The C++ implementation is complete and all tests pass.")
             sys.exit(0)
@@ -61,10 +61,10 @@ try:
     cavity_force.setCavityDriveEnvelope("gaussian", 25.0, 10.0)  # Peak at 25 ps, width 10 ps
     cavity_force.setCavityDriveEnabled(True)
     
-    print(f"✓ Set cavity drive amplitude: {cavity_force.getCavityDriveAmplitude()}")
-    print(f"✓ Set cavity drive frequency: {cavity_force.getCavityDriveFrequency()}")
-    print(f"✓ Set envelope type: {cavity_force.getCavityDriveEnvelopeType()}")
-    print(f"✓ Cavity drive enabled: {cavity_force.getCavityDriveEnabled()}")
+    print(f"Set cavity drive amplitude: {cavity_force.getCavityDriveAmplitude()}")
+    print(f"Set cavity drive frequency: {cavity_force.getCavityDriveFrequency()}")
+    print(f"Set envelope type: {cavity_force.getCavityDriveEnvelopeType()}")
+    print(f"Cavity drive enabled: {cavity_force.getCavityDriveEnabled()}")
     
     system.addForce(cavity_force)
     
@@ -82,9 +82,9 @@ try:
     cavity_force.setDirectLaserEnvelope("square", 0.0, 50.0)  # Square pulse from 0 to 50 ps
     cavity_force.setDirectLaserCouplingEnabled(False)  # Disable for this test
     
-    print(f"✓ Set direct laser amplitude: {cavity_force.getDirectLaserAmplitude()}")
-    print(f"✓ Set direct laser frequency: {cavity_force.getDirectLaserFrequency()}")
-    print(f"✓ Direct laser enabled: {cavity_force.getDirectLaserCouplingEnabled()}")
+    print(f"Set direct laser amplitude: {cavity_force.getDirectLaserAmplitude()}")
+    print(f"Set direct laser frequency: {cavity_force.getDirectLaserFrequency()}")
+    print(f"Direct laser enabled: {cavity_force.getDirectLaserCouplingEnabled()}")
     
     # Create integrator and context
     integrator = openmm.VerletIntegrator(0.001 * unit.picoseconds)
@@ -123,16 +123,16 @@ try:
             print(f"  Cavity drive energy: {cavity_drive_e:.6f} kJ/mol")
     
     print("\n" + "="*60)
-    print("✅ SUCCESS: Laser driving implementation works correctly!")
+    print("SUCCESS: Laser driving implementation works correctly!")
     print("="*60)
     print("\nSummary:")
-    print("  ✓ All laser parameter setters/getters work")
-    print("  ✓ Cavity drive energy is computed")
-    print("  ✓ Simulation runs without errors")
-    print("  ✓ Energy components are tracked correctly")
+    print("  All laser parameter setters/getters work")
+    print("  Cavity drive energy is computed")
+    print("  Simulation runs without errors")
+    print("  Energy components are tracked correctly")
     
 except Exception as e:
-    print(f"\n❌ Error: {e}")
+    print(f"\nError: {e}")
     import traceback
     traceback.print_exc()
     sys.exit(1)

@@ -102,7 +102,7 @@ class CACEDipoleCalculator:
         
         if charge_key is None:
             # Fallback: check if atomwise module has output_key
-            # This is model structure dependent
+            # Model structure dependent
             print("  Warning: No charge key found in output. Available keys:", list(output.keys()))
             return np.zeros(3), np.zeros(n_atoms)
             

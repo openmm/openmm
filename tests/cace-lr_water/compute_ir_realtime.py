@@ -128,7 +128,7 @@ def compute_ir_spectrum_realtime(dipole_file, output_prefix="realtime_ir",
     freqs_cm = freqs_hz / (2.998e10)  # Convert Hz to cm^-1
     
     # IR intensity is proportional to ω² * |FT[ACF]|
-    # This matches the water_system implementation
+    # Matches water_system
     omega = 2 * np.pi * freqs_hz
     ir_intensity = omega**2 * np.abs(fft_result)
     
@@ -214,8 +214,8 @@ def compute_ir_spectrum_realtime(dipole_file, output_prefix="realtime_ir",
     plt.tight_layout()
     plot_file = f"{output_prefix}_spectrum.png"
     plt.savefig(plot_file, dpi=150, bbox_inches='tight')
-    print(f"\n✓ Spectrum saved: {plot_file}")
-    print(f"✓ Data saved: {spectrum_file}")
+    print(f"\nSpectrum saved: {plot_file}")
+    print(f"Data saved: {spectrum_file}")
     
     return freqs_plot, intensity_plot
 

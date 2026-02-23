@@ -85,7 +85,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
             # Note: torch.compile() optimization attempted but causes compilation issues  
             # with UMA's rotation layers. Keeping eager mode for stability.
             
-            print(f"✓ PyTorch optimizations enabled:")
+            print(f"PyTorch optimizations enabled:")
             print(f"  - cudnn.benchmark: {torch.backends.cudnn.benchmark}")
             print(f"  - TF32 (matmul): {torch.backends.cuda.matmul.allow_tf32}")
             print(f"  - TF32 (cudnn): {torch.backends.cudnn.allow_tf32}")
@@ -101,7 +101,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                 raise ValueError(f"Multiple tasks available: {valid_datasets}. Specify task_name.")
         
         # Store the valid dataset name for the model
-        valid_dataset_name = task_name  # This is the correct dataset ID the model expects
+        valid_dataset_name = task_name  # Dataset ID model expects
 
         # Extract atomic symbols from topology
         symbols = []
@@ -162,10 +162,9 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
         def compute_uma_forces_single(state):
             """Compute forces for a single copy - use shared CUDA context with OpenMM."""
             try:
-                # CRITICAL DEBUG: Log single-copy calls (rate-limited)
                 if DEBUG_LOGS and not cache.get("warned_single", False):
                     print(
-                        "⚠️ SINGLE-COPY FUNCTION CALLED (likely from getState/reporters). "
+                        "Single-copy function called (likely from getState/reporters). "
                         "Batch path is still used for RPMD force evaluation.",
                         flush=True,
                     )
@@ -189,7 +188,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                 data = AtomicData.from_ase(atoms_ase, task_name=task_name, r_edges=False, r_data_keys=['spin', 'charge'])
 
                 
-                # CRITICAL: Set cell BEFORE moving to GPU (matches batch path behavior)
+                # Set cell before moving to GPU (matches batch path)
                 # Now using shared CUDA context, so tensors should work correctly
                 with torch.no_grad():
                     if isPeriodic:
@@ -200,8 +199,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                                 cell_np = np.ascontiguousarray(box.value_in_unit(unit.nanometer) * 10.0)
                                 
                                                 
-                                # CRITICAL: Create cell tensor directly on GPU using PyTorch's allocation
-                                # This ensures it's allocated in PyTorch's CUDA context, not OpenMM's
+                                # Allocate cell in PyTorch CUDA context (not OpenMM's)
                                 # Create empty tensor on GPU first (PyTorch allocates in its own context)
                                 cell_gpu = torch.empty((1, 3, 3), dtype=torch.float32, device=device)
                                 # Copy data from numpy (CPU) to GPU tensor
@@ -220,7 +218,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                     data_device = data.to(device)
                     
                         
-                    # CRITICAL: dataset must be a LIST (FAIRChem iterates over it)
+                    # dataset must be list (FAIRChem iterates over it)
                     data_device.dataset = [valid_dataset_name]
                     
                         
@@ -263,12 +261,10 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
         def compute_uma_forces_batch(states, _from_single=False):
             """Compute forces for all RPMD beads using TRUE tensor batching."""
             try:
-                # CRITICAL DEBUG: Log that batch function is being called
                 import time
                 batch_start = time.time()
                 if DEBUG_LOGS:
-                    print(f"🚀 BATCH FUNCTION CALLED! num_beads={len(states)} _from_single={_from_single}", flush=True)
-                    print(f"   Using TRUE tensor batching (independent systems)", flush=True)
+                    print(f"Batch function called: num_beads={len(states)} _from_single={_from_single}", flush=True)
                 
                 num_copies = len(states)
                 
@@ -414,7 +410,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                 
                 batch_time = time.time() - batch_start
                 if DEBUG_LOGS:
-                    print(f"✅ BATCH COMPLETED in {batch_time:.3f}s for {num_copies} beads ({batch_time/num_copies*1000:.1f} ms/bead)", flush=True)
+                    print(f"BATCH COMPLETED in {batch_time:.3f}s for {num_copies} beads ({batch_time/num_copies*1000:.1f} ms/bead)", flush=True)
                     print(f"   Breakdown: prep={t_prep*1000:.1f}ms, inference={t_inference*1000:.1f}ms", flush=True)
                     print(f"   Speedup vs sequential: {num_copies * 41.4 / (t_inference*1000):.2f}x (ideal: {num_copies}x)", flush=True)
                 
@@ -431,7 +427,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
         force.setUsesPeriodicBoundaryConditions(isPeriodic)
         system.addForce(force)
 
-        print(f"✓ UMA force added with batched RPMD support (model: {self.model_name}, task: {task_name}, device: {device})")
+        print(f"UMA force added with batched RPMD support (model: {self.model_name}, task: {task_name}, device: {device})")
 
 
 # No need to register at module level - MLPotential will auto-register from entry points

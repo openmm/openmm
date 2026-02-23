@@ -1,20 +1,8 @@
 #!/usr/bin/env python3
 """
-Cavity OpenMM Dimer RPMD Simulation - IR Spectrum Calculation
-==============================================================
-
-This script runs Ring Polymer Molecular Dynamics (RPMD) simulations of O-O and N-N dimers
-coupled to a cavity photon, computing the IR spectrum from centroid dipole moments.
-
-Features:
-- RPMD with user-specified number of beads for quantum nuclear effects
-- PILE_G thermostat: Bussi for centroid + Langevin for internal modes
-- Cavity coupling with lambda parameter
-- IR spectrum from centroid dipole moment autocorrelation
-- GPU-accelerated with CUDA
-
-Usage:
-    python run_simulation_rpmd.py --dimers 250 --beads 8 --lambda 0.0700
+RPMD simulation of O-O and N-N dimers in a cavity. Uses PILE_G (Bussi centroid +
+Langevin beads), computes IR spectrum from centroid dipole autocorrelation.
+Run: python run_simulation_rpmd.py --dimers 250 --beads 8 --lambda 0.0700
 """
 
 import sys
@@ -26,7 +14,7 @@ import time
 try:
     from openmm import openmm
     from openmm import unit
-    print("✓ OpenMM loaded successfully")
+    print("OpenMM loaded successfully")
 except ImportError as e:
     print(f"Error importing OpenMM: {e}")
     print("Make sure OpenMM is installed and the Python path is correct.")

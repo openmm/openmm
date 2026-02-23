@@ -294,9 +294,9 @@ class CACEPotentialImpl(MLPotentialImpl):
         force.setForceGroup(forceGroup)
         # Always set PBC=True if we detected any hint of periodicity
         # The callback will check the actual state and handle it dynamically
-        # This is safe because box vectors may be set after createSystem()
+        # Box vectors may be set after createSystem()
         force.setUsesPeriodicBoundaryConditions(isPeriodic)
         system.addForce(force)
         
         pbc_status = "enabled" if isPeriodic else "will check dynamically from state"
-        print(f"✓ CACE force added using PythonForce (device: {device}, PBC: {pbc_status})")
+        print(f"CACE force added using PythonForce (device: {device}, PBC: {pbc_status})")

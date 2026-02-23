@@ -34,7 +34,8 @@
 using namespace OpenMM;
 
 BussiThermostat::BussiThermostat(double defaultTemperature, double defaultTau) :
-        defaultTemp(defaultTemperature), defaultTau(defaultTau), applyToAll(true), frequency(1) {
+        defaultTemp(defaultTemperature), defaultTau(defaultTau), applyToAll(true),
+        subtractCMMotion(false), frequency(1) {
     setRandomNumberSeed(0);
 }
 

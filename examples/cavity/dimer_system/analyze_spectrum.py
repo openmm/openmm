@@ -34,7 +34,7 @@ if len(sys.argv) < 2:
 else:
     input_file = sys.argv[1]
 
-# 1. Load the data
+# Load the data
 print(f"\n1. Loading dipole trajectory data from: {input_file}")
 data = np.load(input_file, allow_pickle=True)
 time = data['time_ps']
@@ -54,7 +54,7 @@ print(f"   Total data points: {len(time)}")
 print(f"   Time range: {time[0]:.2f} - {time[-1]:.2f} ps")
 print(f"   Dipole shape: {dipole.shape}")
 
-# 2. Cut off equilibration (first 20 ps or 10% of data, whichever is smaller)
+# Cut off equilibration (first 20 ps or 10% of data, whichever is smaller)
 print("\n2. Removing equilibration period...")
 total_time = time[-1] - time[0]
 cutoff_time = min(20.0, total_time * 0.1)  # 20 ps or 10% of total time
@@ -79,7 +79,7 @@ if len(time_cut) < 100:
     print(f"   Need at least 100 points. Please run simulation longer.")
     sys.exit(1)
 
-# 3. Compute dipole with mean subtracted (δM = M - <M>)
+# Compute dipole with mean subtracted (δM = M - <M>)
 print("\n3. Computing dipole with mean subtracted (δM = M - <M>)...")
 dipole_mean = np.mean(dipole_cut, axis=0)
 dipole_centered = dipole_cut - dipole_mean
@@ -87,7 +87,7 @@ dipole_centered = dipole_cut - dipole_mean
 print(f"   Mean dipole: ({dipole_mean[0]:.4f}, {dipole_mean[1]:.4f}, {dipole_mean[2]:.4f}) e·nm")
 print(f"   RMS dipole fluctuation: {np.sqrt(np.mean(np.sum(dipole_centered**2, axis=1))):.4f} e·nm")
 
-# 4. Calculate autocorrelation for each component
+# Calculate autocorrelation for each component
 print("\n4. Calculating dipole autocorrelation function (DACF)...")
 print("   Computing <δM(0)·δM(t)> = <δMx(0)·δMx(t)> + <δMy(0)·δMy(t)> (x,y only)")
 
@@ -105,7 +105,7 @@ time_autocorr = np.arange(len(autocorr)) * dt_ps
 print(f"   Autocorrelation length: {len(autocorr)} points")
 print(f"   Time step: {dt_ps:.4f} ps")
 
-# 5. Compute spectrum using Maximum Entropy Method (MESA)
+# Compute spectrum using Maximum Entropy Method (MESA)
 print("\n5. Computing IR spectrum using Maximum Entropy Method (MESA)...")
 print("   Reference: https://maximum-entropy-spectrum.readthedocs.io/en/latest/")
 print("   Using FULL 1 fs resolution - NO SUBSAMPLING!")
@@ -137,16 +137,16 @@ freq_cm = freq_hz / (3e10)  # Convert Hz to cm^-1
 # Evaluate spectrum
 spectrum_mem = M.spectrum(dt_seconds, freq_hz)
 
-# CRITICAL: Multiply by ω² for IR absorption intensity!
+# Multiply by ω² for IR intensity
 # I(ω) ∝ ω² × S(ω) where S(ω) is the power spectrum
 omega = 2 * np.pi * freq_hz  # Angular frequency in rad/s
 spectrum_mem = spectrum_mem * (omega**2)
 
-print(f"   ✓ Applied ω² factor for IR absorption intensity")
+print(f"   Applied ω² factor for IR absorption intensity")
 print(f"   Frequency range: 0 - {freq_cm[-1]:.1f} cm^-1")
 print(f"   Nyquist frequency: {freq_cm[-1]:.1f} cm^-1 (full 1 fs resolution!)")
 
-# 6. Extract dipole trajectory for a representative window
+# Extract dipole trajectory for a representative window
 print("\n6. Extracting dipole trajectory for representative window...")
 # Use last 20% of data or 20 ps window, whichever is smaller
 total_time_available = time[-1] - time[0]
@@ -169,8 +169,8 @@ else:
     time_window = time
     dipole_window = dipole
 
-# 7. Create comprehensive plot with 3 rows
-print("\n7. Creating comprehensive plot...")
+# Create plot with 3 rows
+print("\n7. Creating plot...")
 
 fig, axes = plt.subplots(3, 1, figsize=(14, 14))
 
@@ -241,7 +241,7 @@ ax3.axhline(y=0, color='k', linestyle='-', alpha=0.2, linewidth=0.5)
 
 plt.tight_layout()
 plt.savefig(f'{output_prefix}_full.png', dpi=300, bbox_inches='tight')
-print(f"   ✓ Saved: {output_prefix}_full.png")
+print(f"   Saved: {output_prefix}_full.png")
 
 # Also save a high-resolution version of just the MESA spectrum
 fig2, ax = plt.subplots(figsize=(6, 6))
@@ -257,4 +257,4 @@ ax.set_ylabel('Power Spectral Density (arb. units)', fontsize=14)
 ax.set_title('IR Spectrum with ExternalLaser Driving at $\omega_d$ = 1555 cm⁻¹\nand Cavity Frequency $\omega_c$ = 1555 cm⁻¹', 
              fontsize=16, fontweight='bold')
 plt.savefig(f'{output_prefix}_hires.png', dpi=300, bbox_inches='tight')
-print(f"   ✓ Saved: {output_prefix}_hires.png")
+print(f"   Saved: {output_prefix}_hires.png")

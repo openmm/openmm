@@ -23,7 +23,7 @@ try:
     from openmm import unit
     from openmm import app
     from pdbfixer import PDBFixer
-    print("✓ OpenMM and PDBFixer loaded successfully")
+    print("OpenMM and PDBFixer loaded successfully")
 except ImportError as exc:
     print(f"Error importing required packages: {exc}")
     print("Install openmm, pdbfixer, and openmmforcefields.")

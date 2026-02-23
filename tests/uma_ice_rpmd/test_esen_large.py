@@ -107,7 +107,7 @@ def test_larger_system(model_name, num_molecules=50, num_beads=16):
         energies = pred['energy'].cpu().numpy()
         forces = pred['forces'].cpu().numpy()
         
-        print(f"\n✓ SUCCESS!")
+        print(f"\nSUCCESS!")
         print(f"  Energy shape: {energies.shape}")
         print(f"  Forces shape: {forces.shape}")
         print(f"  Mean energy: {np.mean(energies):.2f} eV")
@@ -115,7 +115,7 @@ def test_larger_system(model_name, num_molecules=50, num_beads=16):
         return True
         
     except Exception as e:
-        print(f"\n✗ FAILED: {type(e).__name__}: {str(e)}")
+        print(f"\nFAILED: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
         return False

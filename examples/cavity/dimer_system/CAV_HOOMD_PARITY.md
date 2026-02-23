@@ -40,6 +40,34 @@ python run_cav_hoomd_advanced.py --no-cavity --temperature 100 --runtime 3200 \
 
 Cav-hoomd writes F(k,t) files under `no_cavity/`. Compare those F(k,t) curves (and relaxation time) to OpenMM’s `fkt_lambda0.0000_fkt_ref_*.txt` to see whether dynamics or the F(k,t) implementation explains the difference.
 
+## Known accepted differences
+
+### Long-range electrostatics: PME (OpenMM) vs PPPM (cav-hoomd)
+
+OpenMM uses Particle Mesh Ewald (PME) for long-range Coulomb interactions, while
+cav-hoomd uses Particle–Particle Particle–Mesh (PPPM, resolution=[32,32,32],
+order=6, alpha=0.0). Both approximate the Ewald sum but use different
+interpolation schemes (B-spline vs cardinal B-spline). This produces a per-
+particle force error of approximately 0.25% relative to the exact Ewald result.
+
+This difference is inherent to the two codes: OpenMM does not offer PPPM, and
+HOOMD does not offer PME. The error is small enough for production use and does
+not affect equilibrium thermodynamic averages.
+
+**Tuning guidance for minimal discrepancy:**
+- OpenMM PME error tolerance: `ewaldErrorTolerance=0.0005` (current)
+- cav-hoomd PPPM: `resolution=[32,32,32]`, `order=6`
+- Increasing OpenMM's PME grid density (via `pmeGridSpacing`) or lowering the
+  error tolerance will not eliminate the algorithmic difference, only reduce
+  OpenMM's internal error.
+
+### RNG streams
+
+HOOMD uses a counter-based Philox RNG seeded by `(RNGIdentifier, timestep, seed)`.
+OpenMM uses `SimTKOpenMMUtilities`. Even with identical seeds, individual
+trajectories will diverge stochastically. Statistical averages (temperature,
+F(k,t), etc.) should converge to the same values within sampling error.
+
 ## Parameter mapping (OpenMM → cav-hoomd)
 
 | OpenMM                                   | cav-hoomd                                          |

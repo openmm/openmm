@@ -111,10 +111,10 @@ print(f"  E ≈ {expected_coupling:.6f} (atomic units)")
 
 print("\n" + "="*60)
 if abs(coupling_e) < 0.01:
-    print("❌ FAIL: Coupling energy is zero!")
+    print("FAIL: Coupling energy is zero!")
     print("   CavityForce is NOT reading charges from NonbondedForce")
 else:
-    print("✓ PASS: Coupling energy is non-zero")
+    print("PASS: Coupling energy is non-zero")
     print("   CavityForce IS reading charges from NonbondedForce")
 print("="*60)
 

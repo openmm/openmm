@@ -36,7 +36,7 @@ try:
     from openmm import openmm
     from openmm import unit
     from openmm.app import Simulation, StateDataReporter, ForceField, Topology, Element, PME, PDBFile
-    print("✓ OpenMM loaded successfully")
+    print("OpenMM loaded successfully")
 except ImportError as e:
     print(f"Error importing OpenMM: {e}")
     print("Make sure OpenMM is installed and the Python path is correct.")
@@ -798,9 +798,9 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         print(f"  Box from GSD: {box_size_nm:.4f} nm (cubic)")
         print(f"  Positions: {n_sys} particles (topology from GSD; order matches file); energy minimization will be skipped")
         if box_size_nm < 0.3:
-            print(f"  *** WARNING: Box {box_size_nm:.4f} nm is very small. If GSD is in nm (not Bohr), use --gsd-in-nm. ***")
+            print(f"  WARNING: Box {box_size_nm:.4f} nm is very small. If GSD is in nm (not Bohr), use --gsd-in-nm.")
         elif box_size_nm > 50.0:
-            print(f"  *** WARNING: Box {box_size_nm:.4f} nm is very large. If GSD is in Bohr, do not use --gsd-in-nm. ***")
+            print(f"  WARNING: Box {box_size_nm:.4f} nm is very large. If GSD is in Bohr, do not use --gsd-in-nm.")
         minimize = False
     
     # System parameters (box_size_nm, fraction_OO come from arguments)
@@ -822,7 +822,7 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     g_collective = lambda_coupling * np.sqrt(num_molecules)
     # Strong coupling + coarse dt can blow up the cavity mode (light particle, stiff coupling)
     if g_collective > 0.5 and dt > 0.001:
-        print(f"\n  *** WARNING: g = {g_collective:.3g} with dt = {dt*1000:.0f} fs may be unstable. Use --dt 0.001 (1 fs) for strong coupling. ***")
+        print(f"\n  WARNING: g = {g_collective:.3g} with dt = {dt*1000:.0f} fs may be unstable. Use --dt 0.001 (1 fs) for strong coupling.")
     print(f"\nSimulation parameters:")
     print(f"  Temperature: {temperature_K} K")
     print(f"  Timestep: {dt} ps")
@@ -978,10 +978,17 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
             bussi.setApplyToAllParticles(False)
             for i in range(num_molecular_particles):
                 bussi.addParticle(i)
+            # HOOMD subtracts 3 COM DOF when the thermostat covers all particles
+            # with a single momentum-conserving method. This applies in the
+            # no-cavity case where Bussi covers the entire system.
+            if not cavity_available:
+                bussi.setSubtractCMMotion(True)
             system.addForce(bussi)
+            dof = 3 * num_molecular_particles - (3 if not cavity_available else 0)
             print(f"  BussiThermostat added for {bussi.getNumParticles()} particles")
             print(f"  Temperature: {temperature_K} K")
             print(f"  Tau: {bussi_tau_ps} ps (cav-hoomd parity)")
+            print(f"  DOF: {dof} (subtractCMMotion={not cavity_available})")
             bussi_available = True
         except AttributeError as e:
             print(f"  BussiThermostat not available: {e}")
@@ -1010,16 +1017,12 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     context = openmm.Context(system, integrator, platform)
     context.setPositions(positions)
 
-    # Phase 1 debug: log initial PE/KE when built from GSD (pinpoint when blow-up occurs)
     if build_from_gsd:
         state = context.getState(getEnergy=True)
         pe = state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
-        ke = state.getKineticEnergy().value_in_unit(unit.kilojoule_per_mole)
-        print("\n--- [DEBUG] Initial state (after setPositions) ---")
-        print(f"  PE: {pe:.6g} kJ/mol  KE: {ke:.6g} kJ/mol")
         if abs(pe) > 1e15:
-            print("  *** Initial PE is huge; problem is likely initial configuration or force field. ***")
-    
+            print("  WARNING: Initial PE is huge; problem is likely initial configuration or force field.")
+
     # Minimize energy (optional)
     if minimize:
         print("\n--- Energy Minimization ---")
@@ -1031,55 +1034,48 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     else:
         print("\n--- Skipping energy minimization (--no-minimize) ---")
     
-    # Apply finite-Q displacement to cavity particle BEFORE starting dynamics
+    # Initialize cavity position matching cav-hoomd's create_cavity_particle():
+    #   q=0 mode, lambda != 0: thermal fluctuation pos ~ Normal(0, sigma) with
+    #     sigma = sqrt(kB*T / omega_c^2) in Bohr, then convert to nm.
+    #   lambda == 0: pos = (0, 0, 0) exactly.
     if cavity_available:
-        print("\n--- Applying Finite-Q Displacement ---")
+        print("\n--- Cavity Position Initialization (cav-hoomd parity) ---")
         state = context.getState(getPositions=True)
         positions_with_units = state.getPositions()
-        
-        # Get cavity particle position and extract numeric values
+
         cavity_pos = positions_with_units[cavity_index]
         x_nm = cavity_pos[0].value_in_unit(unit.nanometer)
         y_nm = cavity_pos[1].value_in_unit(unit.nanometer)
         z_nm = cavity_pos[2].value_in_unit(unit.nanometer)
         print(f"  Cavity position before: ({x_nm:.6f}, {y_nm:.6f}, {z_nm:.6f}) nm")
-        
-        # Calculate displacement magnitude (typical value ~0.01 nm)
-        # This gives the cavity mode an initial excitation
-        displacement_magnitude = 0.01  # nm
-        
-        # Modify positions
+
+        KB_HARTREE_PER_K = 3.167e-6
+        if lambda_coupling != 0:
+            sigma_bohr = np.sqrt(KB_HARTREE_PER_K * temperature_K / omegac_au**2)
+            sigma_nm = sigma_bohr * BOHR_TO_NM
+            newpos_nm = np.random.normal(0.0, sigma_nm, size=3)
+            print(f"  Thermal sigma: {sigma_bohr:.6f} Bohr = {sigma_nm:.6f} nm")
+        else:
+            newpos_nm = np.array([0.0, 0.0, 0.0])
+            print(f"  Lambda=0: cavity at origin (no thermal fluctuations)")
+
         positions_list = list(positions_with_units)
-        positions_list[cavity_index] = [displacement_magnitude, 0.0, 0.0] * unit.nanometer
-        
+        positions_list[cavity_index] = openmm.Vec3(*newpos_nm) * unit.nanometer
         context.setPositions(positions_list)
+
         state = context.getState(getPositions=True)
         cavity_pos = state.getPositions()[cavity_index]
         x_nm = cavity_pos[0].value_in_unit(unit.nanometer)
         y_nm = cavity_pos[1].value_in_unit(unit.nanometer)
         z_nm = cavity_pos[2].value_in_unit(unit.nanometer)
         print(f"  Cavity position after:  ({x_nm:.6f}, {y_nm:.6f}, {z_nm:.6f}) nm")
-        print(f"  Displacement: {displacement_magnitude} nm along x-axis")
     
-    # Set velocities (thermalize at target T; in NVE this is the only thermalization)
+    # Set velocities (thermalize at target T; in NVE this is the only thermalization).
+    # setVelocitiesToTemperature draws Maxwell-Boltzmann velocities for ALL particles
+    # (including cavity). cav-hoomd thermalizes the cavity particle with the same
+    # distribution: v ~ Normal(0, sqrt(kT/m)) per component (mass = 1 a.u.).
     context.setVelocitiesToTemperature(temperature_K * unit.kelvin)
-    # Cavity particle has negligible mass (0.000549 amu); thermalizing it at 100 K gives it a huge
-    # v_rms = sqrt(kT/m) that makes the stiff cavity spring numerically unstable with 1 fs dt.
-    # Start the cavity from rest so the initial configuration (e.g. from GSD) is not destroyed.
-    if cavity_available:
-        state = context.getState(getVelocities=True)
-        vels = list(state.getVelocities())
-        vels[cavity_index] = openmm.Vec3(0, 0, 0) * (unit.nanometer / unit.picosecond)
-        context.setVelocities(vels)
 
-    # Phase 1 debug: log PE/KE after thermalization when built from GSD
-    if build_from_gsd:
-        state = context.getState(getEnergy=True)
-        pe = state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
-        ke = state.getKineticEnergy().value_in_unit(unit.kilojoule_per_mole)
-        print("\n--- [DEBUG] After thermalization (before first step) ---")
-        print(f"  PE: {pe:.6g} kJ/mol  KE: {ke:.6g} kJ/mol")
-    
     # Calculate total steps
     total_steps = equilibration_steps + production_steps
     
@@ -1136,20 +1132,11 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         fkt_interval_steps = max(1, int(round(fkt_output_period_ps / dt)))
         # F(k,t) uses wrapped positions (cav-hoomd parity; correct at 0 K, no unwrapping drift)
     
-    first_step_pe_ke_logged = False
     for i in range(num_reports):
         steps_this_block = min(report_interval, total_steps - step_counter)
         for step in range(steps_this_block):
             integrator.step(1)
             step_counter += 1
-            # Phase 1 debug: log PE/KE once after first step when built from GSD
-            if build_from_gsd and not first_step_pe_ke_logged and step_counter >= 1:
-                state = context.getState(getEnergy=True)
-                pe = state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
-                ke = state.getKineticEnergy().value_in_unit(unit.kilojoule_per_mole)
-                print("\n--- [DEBUG] After first integrator step ---")
-                print(f"  PE: {pe:.6g} kJ/mol  KE: {ke:.6g} kJ/mol  (step_counter={step_counter})")
-                first_step_pe_ke_logged = True
             if not disable_dipole_output and (step_counter % dipole_output_interval_steps) == 0:
                 state = context.getState(getPositions=True)
                 current_time = step_counter * dt

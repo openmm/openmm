@@ -12,8 +12,6 @@
 \usepackage{bm}% bold math
 \usepackage{lipsum}
 
-
-
 \usepackage{hyperref}% add hypertext capabilities
 \usepackage[capitalize]{cleveref}
 
@@ -45,64 +43,68 @@
 
 \begin{abstract}
 
-Supercooled liquids fall out of equilibrium and kinetically arrest at the glass transition temperature due to the slowdown in structural relaxation.
-Below the glass transition, physical aging drives glasses toward equilibrium but on astronomical timescales, making the preparation of supercooled states a central challenge in glass physics.
-In this work, we show how we can induce aging without changing the temperature (nonthermal) in a Fabry-Pérot cavity, which traps light in resonant modes. %induces nonthermal aging via .
-Strong light-matter interactions lead to the cavity mode pumping energy into intramolecular vibrations, which creates energy imbalances that the system compensates by pushing intermolecular degrees of freedom into deeper potential minima.
-Applying a key principle in the physical aging of glasses known as time reparameterization softness, we show that nonthermal aging traverses equilibrium states at effectively lower temperatures.
-Exploiting this, we develop \textit{cavity configurational feedback (C$^2$F) cooling}, which combines periodic modulation of light-matter coupling with temperature feedback to prepare supercooled liquids below their glass transition, thus avoiding kinetic arrest.
-Furthermore, C$^2$F cooling leads to intramolecular vibrations that synchronize with the periodic driving, thus producing a Floquet supercooled state.
-These results establish light-matter interactions as a new way for manipulating structural relaxation in supercooled liquids. % and obtain states inaccessible through purely thermal means.
+% Supercooled liquids underpin many materials crucial for optics, electronics, and energy technologies, but fall out of equilibrium at the glass transition as relaxation slows down dramatically. Although physical aging can in principle restore equilibrium, it occurs on astronomical timescales, making deeply supercooled states difficult to access and a longstanding challenge.
+Controlling glass-forming liquids to reach deeply supercooled states would result in glassy materials with superior mechanical and thermal stability. 
+At the glass transition, liquids fall out of the equilibrium supercooled state as relaxation slows dramatically. While glasses naturally age to restore equilibrium, this process may take billions of years to complete, making these stable glassy materials practically inaccessible.
+In this work we propose a new route to access deeply supercooled states by confining liquids inside optical cavities, where selective pumping of intramolecular vibrations induces non-thermal aging. This process redistributes energy across degrees of freedom, driving the structural subsystem into deeper regions of the energy landscape while the temperature remains unchanged. Crucially, the resulting nonequilibrium dynamics follow the same universal aging trajectories as thermal glasses and can be predicted from equilibrium relaxation data via the fictive temperature, elevating non-thermal aging to a controlled and predictive framework. Building on this correspondence, we introduce cavity configurational feedback (C$^2$F) cooling, which exploits time-modulated cavity coupling to access equilibrium states at temperatures inaccessible by conventional cooling. Our results establish a new interface between glass physics and strong light-matter interactions, opening a pathway to manipulate relaxation beyond thermal or mechanical control.
+% In this work we propose a new route to access deeply supercooled states by confining liquids inside optical cavities, where selective pumping of intramolecular vibrations induces non-thermal aging. This process redistributes energy across degrees of freedom, driving the structural subsystem into deeper regions of the energy landscape while the temperature remains unchanged. Crucially, the resulting nonequilibrium dynamics follow the same universal aging trajectories as thermal glasses and can be predicted from equilibrium relaxation data via the fictive temperature, elevating non-thermal aging to a controlled and predictive framework. Building on this correspondence, we introduce cavity configurational feedback (C$^2$F) cooling, which exploits time-modulated cavity coupling to access equilibrium states at temperatures inaccessible by conventional cooling. Our results establish a new interface between glass physics and strong light-matter interactions, opening a pathway to manipulate structural relaxation beyond thermal or mechanical control.
+
+
+
 \end{abstract}
 
                               %display desired
 \maketitle
 
 
-
 \begin{figure*}[t]
     \centering
-    \includegraphics[width=\linewidth]{Figure1.pdf}
+    \includegraphics[width=0.95\linewidth]{fig1_illus_new.pdf}
     \caption{
-    Overview of nonthermal aging in supercooled liquids. 
+    Overview of non-thermal aging in supercooled liquids. 
     (a) Schematic of a supercooled liquid in a Fabry--Pérot cavity with mirror spacing $L \sim O(\mu\mathrm{m})$. The cavity mode (frequency $\omega_\mathrm{c}$) couples to A$_2$ molecular vibrations (red), while B$_2$ molecules (blue) remain uncoupled. Both molecular and cavity subsystems exchange energy with a thermal bath at temperature $T$.
-    (b) Left: Infrared absorption spectra at equilibrium ($T = 100$ K) with $\omega_\mathrm{c} = 1560$ cm$^{-1}$. Increasing coupling $\lambda$ splits the vibrational peak into upper and lower polariton branches, confirming strong light-matter coupling. Right: Linear scaling of Rabi splitting $\Omega_\mathrm{R}$ with $\lambda$.
-    (c) Time-correlation functions comparing out-of-cavity (blue) and in-cavity (orange, $\lambda = 0.141$ a.u.) dynamics during nonthermal aging. Selective pumping of intramolecular vibrations rapidly drives intermolecular degrees of freedom into deeper minima. The system then gradually ages back to equilibrium.
-    (d) Structural fictive temperature $T_\mathrm{s}(t)$ evolution comparing conventional quench (trapped in local minimum) versus $\mathrm{C^2F}$ protocol (reaches target at ultrafast timescales).
-    (e) Steady-state $\mathrm{C^2F}$ protocol showing $T_\mathrm{s}(t)$ and vibrational fictive temperature $T_\mathrm{v}(t)$ synchronized to periodic driving, demonstrating a Floquet supercooled state.
+    (b) Non-thermal effect on structural relaxation by a cavity. Outside, the supercooled liquid is at equilibrium ($T = 100$ K). Upon initiating strong light-matter coupling, evidenced by Rabi splitting in IR spectra, the system is driven into deeper energy basins associated with lower structural fictive temperatures $T_\mathrm{s}$. C$^2$F cooling applies this mechanism repeatedly to reach the lowest accessible $T_\mathrm{s}$, with a feedback loop keeping the bath temperature $T \approx T_\mathrm{s}$ to maintain structural equilibrium throughout. Vibrational temperature modulates in time according to the feedback cycle.
+    %, allows  and $T = 32$ K with $\omega_\mathrm{c} = 1560$ cm$^{-1}$, showing polariton splitting under strong light-matter coupling.
     }
     \label{fig:fig1}
 \end{figure*}
 
+% Supercooled liquids, the molten state of glasses, play an essential role in science and technology. 
+% They form the foundation of modern materials (e.g. optical fibers and photonics,\cite{dragic2018materials} high-strength metallic glasses\cite{johnson1999bulk}) and emerging energy technologies (e.g. solid electrolytes,\cite{famprikis2019fundamentals} phase-change materials\cite{raty2015aging}), and enable key applications in the life and environmental sciences as glassy water is the host medium in cryo-electron microscopy\cite{dubochet1988cryo} as well as in industrial and manufacturing applications (e.g. food stabilization \cite{roos2010glass} and pharmaceutical stabilization\cite{sun2012stability}). 
+% Hence, controlling and understanding how supercooled liquids relax toward equilibrium and what that equilibrium state would be, is essential for understanding their stability and behavior.
 
-%The signatures of supercooled liquids, the molten metastable state of glasses, appear in nearly every form of condensed matter: water,\cite{gallo2021advances} inorganics,\cite{varshneya2013fundamentals} metallic alloys,\cite{johnson1999bulk} organics and drug molecules,\cite{sun2012stability} proteins,\cite{ringe2003glass} colloidal systems,\cite{berthier2011dynamical,lu2013colloidal} and biological matter.\cite{sadhukhan2024perspective}
-%Despite this ubiquity, controlling their relaxation dynamics remains a central challenge. 
-%As the temperature decreases, the relaxation times increase dramatically from picoseconds to millions of years,\cite{angell2000relaxation} causing supercooled liquids to fall out of equilibrium and kinetically arrest at the glass transition temperature $T_\mathrm{g}$. This kinetic arrest prevents glasses from reaching their optimal stability, as equilibrium is the ideal limit of glass formation.\cite{ediger2017perspective}
-%More fundamentally, the kinetic arrest prevents verification of the Kauzmann temperature,\cite{kauzmann1948nature} a hypothetical transition at which the supercooled liquid ceases to be a metastable state and becomes a true equilibrium phase of matter. 
+% However, despite this ubiquity, controlling their relaxation dynamics remains a central challenge. 
+% As the temperature decreases, the relaxation times increase dramatically from picoseconds to millions of years,\cite{angell2000relaxation} causing supercooled liquids to fall out of equilibrium and become kinetically frozen at the glass transition temperature $T_\mathrm{g}$. More fundamentally, this kinetic freezing prevents verification of the Kauzmann temperature\cite{kauzmann1948nature}, at which a supercooled liquid would transition from a metastable state to its true equilibrium phase.
 
-%%%%%%%%%%%%% Higher level version %%%%%%%%%%%%%
-Supercooled liquids, the molten state of glasses, play an essential role in science and technology. 
-They form the foundation of modern materials (e.g. optical fibers and photonics,\cite{dragic2018materials} high-strength metallic glasses\cite{johnson1999bulk}) and emerging energy technologies (e.g. solid electrolytes,\cite{famprikis2019fundamentals} phase-change materials\cite{raty2015aging}), and enable key applications in the life and environmental sciences as glassy water is the host medium in cryo-electron microscopy\cite{dubochet1988cryo} as well as in industrial and manufacturing applications (e.g. food stabilization \cite{roos2010glass} and pharmaceutical stabilization\cite{sun2012stability}). 
-Hence, controlling and understanding how supercooled liquids relax toward equilibrium and what that equilibrium state would be, is essential for understanding their stability and behavior.
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-However, despite this ubiquity, controlling their relaxation dynamics remains a central challenge. 
-As the temperature decreases, the relaxation times increase dramatically from picoseconds to millions of years,\cite{angell2000relaxation} causing supercooled liquids to fall out of equilibrium and become kinetically frozen at the glass transition temperature $T_\mathrm{g}$. More fundamentally, this kinetic freezing prevents verification of the Kauzmann temperature\cite{kauzmann1948nature}, at which a supercooled liquid would transition from a metastable state to its true equilibrium phase.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-At ultralow temperatures ($T < T_\mathrm{g}$), glasses appear static, but can still relax to equilibrium through physical aging, a process that requires astronomical timescales to complete.\cite{berthier2011theoretical,biroli2013perspective,chen2023geological}
-To avoid this limitation, experimental techniques continue to be developed, most notably physical vapor deposition,\cite{ediger2017perspective,rodriguez2022ultrastable} which produces organic ultrastable glasses whose thermal stability is equivalent to conventional glasses aged hundreds of years.
-In computer simulations, combining swap Monte Carlo algorithms with polydisperse particle systems has allowed equilibration past the conventional glass transition.\cite{ninarello2017models,scalliet2022thirty,jung2025numericalinvestigationequilibriumkauzmann} However, the preparation of deeply supercooled states remains an open challenge, as these protocols do not generalize to other classes of glass-forming liquids.
+% At ultralow temperatures ($T < T_\mathrm{g}$), glasses appear static, but can still relax to equilibrium through physical aging, a process that requires astronomical timescales to complete.\cite{berthier2011theoretical,biroli2013perspective,chen2023geological}
+% To avoid this limitation, experimental techniques continue to be developed, most notably physical vapor deposition,\cite{ediger2017perspective,rodriguez2022ultrastable} which produces organic ultrastable glasses whose thermal stability is equivalent to conventional glasses aged hundreds of years.
+% In computer simulations, combining swap Monte Carlo algorithms with polydisperse particle systems has allowed equilibration past the conventional glass transition.\cite{ninarello2017models,scalliet2022thirty,jung2025numericalinvestigationequilibriumkauzmann} However, the preparation of deeply supercooled states remains an open challenge, as these protocols do not generalize to other classes of glass-forming liquids.
 
 
-In this Article, we propose a new route to control relaxation in supercooled liquids by exploiting strong light–matter interactions.\cite{cohen2024atom,cohen2024photons} Strong light-matter interactions can be achieved when molecules are placed inside an optical cavity. Under these conditions, molecular vibrational or electronic excitations can strongly couple to the cavity mode, hybridizing with the photon field to form new eigenstates, the upper and lower polaritons[]. This hybridization mechanism has been known since the 1950s, but has recently experienced a major resurgence through the emergence of molecular polaritonics and polaritonic chemistry, where polariton formation has been proposed to enable new reaction pathways[] and novel quantum materials[]. This promise has stimulated exciting experimental advances across chemistry[] and quantum materials[], as well as substantial theoretical efforts that bridge quantum chemistry, materials science, and quantum optics[]. Building on this rapidly developing interface, we explore a yet unexplored intersection between supercooled liquids and strong light-matter interactions. 
+% In this Article, we propose a new route to control relaxation in supercooled liquids by exploiting strong light–matter interactions.\cite{cohen2024atom,cohen2024photons} Strong light-matter interactions can be achieved when molecules are placed inside an optical cavity. Under these conditions, molecular vibrational or electronic excitations can strongly couple to the cavity mode, hybridizing with the photon field to form new eigenstates, the upper and lower polaritons[]. This hybridization mechanism has been known since the 1950s, but has recently experienced a major resurgence through the emergence of molecular polaritonics and polaritonic chemistry, where polariton formation has been proposed to enable new reaction pathways[] and novel quantum materials[]. This promise has stimulated exciting experimental advances across chemistry[] and quantum materials[], as well as substantial theoretical efforts that bridge quantum chemistry, materials science, and quantum optics[]. Building on this rapidly developing interface, we explore a yet unexplored intersection between supercooled liquids and strong light-matter interactions. 
 
-In this work, we propose that when a supercooled liquid is strongly coupled to an optical cavity, the cavity can act as a tunable \emph{non-thermal} energy source, selectively pumping energy into dipole-active vibrations and thereby inducing what we refer to as non-thermal aging, as it drives aging without changing the temperature. Interestingly, we find that these non-thermal aging dynamics can be predicted using only equilibrium relaxation data and the structural fictive temperature, i.e., the effective equilibrium temperature of the configuration at that time. Based on this correspondence, we propose cavity configurational feedback ($\mathrm{C^2F}$) cooling, a protocol in which a cavity is used to access lower-temperature equilibrium structures and dynamical states that cannot be reached through purely thermal means. Together, these results suggest that strong light–matter interactions offer a new and intriguing way to manipulate structural relaxation in supercooled liquids, opening a compelling and yet unexplored direction for controlling such systems.
+Supercooled liquids, the molten state of glasses, underpin all glassy materials, yet controlling their relaxation and phase transformation remains a central challenge.
+As temperature decreases, viscosity increases rapidly, stretching relaxation timescales from picoseconds to millions of years over a few hundred Kelvin.\cite{angell2000relaxation}
+This dramatic slowdown culminates in vitrification at the glass transition temperature, below which glasses appear static but continue to relax or age toward equilibrium on astronomical timescales.\cite{berthier2011theoretical,biroli2013perspective,chen2023geological}
+The slow aging process makes it difficult to reach the most stable glassy states, which exhibit markedly improved mechanical strength and thermal stability and could enable advances in quantum computing, structural engineering, and organic electronics.\cite{rodriguez2022ultrastable}
+Current experimental protocols for glass formation mostly rely on tuning a sample’s thermal history, which is difficult to control and offers few independent knobs, leaving the aforementioned applications out of reach.\cite{ediger2017perspective,rodriguez2022ultrastable,ninarello2017models,scalliet2022thirty,jung2025numericalinvestigationequilibriumkauzmann}
+These constraints suggest pursuing routes to manipulate relaxation pathways that are more controllable and precise.
+A promising versatile platform for this purpose is provided by optical cavities, which define tunable electromagnetic environments whose frequency, damping, and driving can be engineered to enable selective energy exchange between cavity modes and the system.
+
+% This motivates exploring new, externally controllable routes to bias relaxation pathways.
+% A particularly versatile platform for this purpose is provided by optical cavities, which define a well-controlled electromagnetic environment whose frequency, damping, and driving can be precisely engineered, enabling controlled and selective energy exchange of a cavity mode with specific modes in the system.
+
+
+In this work, we propose that when a supercooled liquid is strongly coupled to an optical cavity,\cite{cohen2024atom,cohen2024photons} the cavity can act as a tunable \emph{non-thermal} energy source, selectively pumping energy into dipole-active vibrations and thereby inducing what we refer to as non-thermal aging, as it drives aging without changing the temperature. Interestingly, we find that these non-thermal aging dynamics can be predicted using only equilibrium relaxation data and the structural fictive temperature, i.e., the effective equilibrium temperature of the configuration at that time. Based on this correspondence, we propose cavity configurational feedback ($\mathrm{C^2F}$) cooling, a protocol in which a cavity is used to access lower-temperature equilibrium structures and dynamical states that cannot be reached through purely thermal means. Together, these results suggest that strong light–matter interactions offer a new and intriguing way to manipulate structural relaxation in supercooled liquids, opening a compelling and yet unexplored direction for controlling such systems.
 
 
 \section*{Supercooled Liquid in a Cavity}
 
-\paragraph*{The light-matter system.} To explore the idea of non-thermal aging, we place a molecular model of a supercooled liquid at the center of a Fabry–Pérot cavity (\cref{fig:fig1}a), whose frequency is set within the infrared (IR) range to target intramolecular vibrations. To simulate this system efficiently, we utilize our newly developed GPU-accelerated implementation of cavity molecular dynamics\cite{li2020cavity,li2021cavity} in \texttt{HOOMD-blue}\cite{anderson2020hoomd}, called \texttt{cavHOOMD-blue} (see SI X for benchmarks). The GPU acceleration is essential for handling the substantial computational cost of cavity-mediated dynamics in supercooled liquids, particularly the long propagation times required to capture aging phenomena. Consistent with Refs.\cite{li2020cavity,li2021cavity}, we also include two transparent spacers inside the cavity to confine the supercooled liquid to its central region, allowing us to neglect the spatial structure of the cavity mode. Hence, the light–matter coupled system can be described using the nonrelativistic light–matter Hamiltonian in the dipole approximation and in the length gauge as
+\paragraph*{The light-matter system.} To explore the idea of non-thermal aging, we place a molecular model of a supercooled liquid at the center of a Fabry–Pérot cavity (\cref{fig:fig1}a), whose frequency is set within the infrared (IR) range to target intramolecular vibrations. To simulate this system efficiently, we utilize our newly developed GPU-accelerated implementation of cavity molecular dynamics\cite{li2020cavity,li2021cavity} in \texttt{HOOMD-blue}\cite{anderson2020hoomd}, called \texttt{cavHOOMD-blue} (see SI X for benchmarks). 
+%The GPU acceleration is essential for handling the substantial computational cost of cavity-mediated dynamics in supercooled liquids, particularly the long propagation times required to capture aging phenomena. 
+Consistent with Refs.\cite{li2020cavity,li2021cavity}, we also include two transparent spacers inside the cavity to confine the supercooled liquid to its central region, allowing us to neglect the spatial structure of the cavity mode. Hence, the light–matter coupled system can be described using the nonrelativistic light–matter Hamiltonian in the dipole approximation and in the length gauge as
 
 \begin{equation}
 H = H_\mathrm{M}+H_\mathrm{EM},
@@ -117,30 +119,38 @@ with momentum $\bm{P}_i$, position $\bm{R}_i$, mass $M_i$, and $V({ \bm R_i })$ 
 \begin{equation}
 H_\mathrm{EM} ({ p_\alpha, q_\alpha }) = \sum_{\alpha=1,2} \left[ \frac{p_\alpha^2}{2}+\frac{\omega_\mathrm{c}^2}{2} \left(q_\alpha +\frac{ \lambda \mu_\alpha}{\omega_\mathrm{c}} \right)^2 \right], \label{eq:Hem}
 \end{equation}
-where $\lambda$ is the coupling constant, $\omega_c$ the cavity frequency, and $(p_\alpha, q_\alpha)$ the canonical coordinates of the electromagnetic field along the transverse polarization directions ${\bm{\hat{e}}_\alpha}$. $\mu_\alpha = \bm \mu \cdot \bm e_\alpha$ is the dipole moment projected onto the polarization vectors, with the total dipole moment $\bm{\mu} = \sum_{i=1}^N z_i e \bm{R}_i$, where $z_i$ is the partial charge of atom $i$ and $e$ is the electron charge. Note that all degrees of freedom are treated classically. (see Refs.\cite{li2020cavity,li2021cavity} and \cref{app:hamiltonian} for more details on the derivations). 
+where $\lambda$ is the coupling constant, $\omega_c$ the cavity frequency, and $(p_\alpha, q_\alpha)$ the canonical coordinates of the electromagnetic field along the transverse polarization directions ${\bm{\hat{e}}_\alpha}$. $\mu_\alpha = \bm \mu \cdot \bm e_\alpha$ is the dipole moment projected onto the polarization vectors, with the total dipole moment $\bm{\mu} = \sum_{i=1}^N z_i e \bm{R}_i$, where $z_i$ is the partial charge of atom $i$ and $e$ is the electron charge. Note that all degrees of freedom are treated classically. (see Refs.\cite{li2020cavity,li2021cavity} and SI~Sec.~1.1 for more details on the derivations). 
 
-The supercooled liquid follows the Kob-Andersen (KA) model,\cite{kob1995testing} a two-component Lennard-Jones fluid, extended to include dipole-active intramolecular vibrations.  
-The new molecular KA model is a 4:1 mixture of diatomic molecules, $\mathrm{A}_2$ and $\mathrm{B}_2$, with opposing partial charges $\pm 0.3e$ to create permanent dipoles and masses matching an oxygen and nitrogen molecule, respectively.
-The intramolecular energy $V_\mathrm{b}$ consists of harmonic terms,
-\begin{equation}
-V_\mathrm{b} = \sum_{(i,j) \in \mathcal{B}} \frac{1}{2} k_{ij} \left(R_{ij}-R^0_{ij}\right)^2 \,,
-\end{equation}
-where $\mathcal{B}$ is the set of bonds, $R_{ij}=|\bm{R}_i-\bm{R}_j|$ is the distance between atoms $i$ and $j$, $R^0_{ij}$ is the equilibrium bond length. 
-The force constant $k_{ij}$ sets each molecule's harmonic vibrational stretch at 1560~cm$^{-1}$ ($\mathrm{A}_2$) or 2433~cm$^{-1}$ ($\mathrm{B}_2$), mimicking oxygen and nitrogen vibrational frequencies.\cite{wang2021accurate}
-Intermolecular interactions consist of the LJ potential %follows
-\begin{equation}
-V_\mathrm{LJ} = \sum_{(i,j) \in \mathcal{N}} 4 \epsilon_{ij}\left[\left(\frac{\sigma_{ij}}{R_{ij}}\right)^{12}-\left(\frac{\sigma_{ij}}{R_{ij}}\right)^6\right] \,,
-\end{equation}
-where $\mathcal{N}$ is the set of all atom pairs that exclude bonded pairs, and the Coulomb potential \cite{kob1995testing}
-\begin{gather}
-V_\mathrm{C} = \sum_{(i,j) \in \mathcal{N}} \frac{z_i z_j e^2}{4 \pi \epsilon_0 R_{ij}} \,,
-\end{gather}  
-where $\epsilon_0$ is the vacuum permittivity. 
-And thus, the total potential energy  is $V = V_\mathrm{b}+V_\mathrm{LJ}+V_\mathrm{C}$.
-Note that LJ parameters for the $\mathrm{A}_2$ molecule ($\epsilon_\mathrm{AA}$ and $\sigma_\mathrm{AA}$) are tuned to those of an O$_2$ molecule,\cite{wang2021accurate} and the remaining parameters, including cut-off radius, are scaled to preserve the original KA model characteristics. 
+
+The supercooled liquid follows the Kob-Andersen (KA) model,\cite{kob1995testing} a two-component Lennard-Jones fluid, extended to include dipole-active intramolecular vibrations. 
+The molecular KA model is a 4:1 mixture of diatomic molecules, $\mathrm{A}_2$ and $\mathrm{B}_2$, with opposing partial charges of $\pm 0.3e$ to create permanent dipoles, and masses matching those of oxygen and nitrogen molecules, respectively. 
+The intramolecular energy $V_\mathrm{b}$ consists of harmonic bond stretches (see SI), with force constants set to reproduce vibrational frequencies of 1560~cm$^{-1}$ ($\mathrm{A}_2$) and 2433~cm$^{-1}$ ($\mathrm{B}_2$), mimicking oxygen and nitrogen vibrational frequencies.\cite{wang2021accurate} 
+Intermolecular interactions consist of the LJ and Coulomb potentials (see SI),\cite{kob1995testing} giving a total potential energy $V = V_\mathrm{b}+V_\mathrm{LJ}+V_\mathrm{C}$. LJ parameters for the $\mathrm{A}_2$ molecule are tuned to those of an O$_2$ molecule,\cite{wang2021accurate} and the remaining parameters, including the cut-off radius, are scaled to preserve the original KA model characteristics.
+As a result, we obtain a new molecular KA model that serves as a minimal glassy system that can be coupled to a cavity mode. %cavity-coupled glassy system. 
+
+% The supercooled liquid follows the Kob-Andersen (KA) model,\cite{kob1995testing} a two-component Lennard-Jones fluid, extended to include dipole-active intramolecular vibrations.  
+% The new molecular KA model is a 4:1 mixture of diatomic molecules, $\mathrm{A}_2$ and $\mathrm{B}_2$, with opposing partial charges $\pm 0.3e$ to create permanent dipoles and masses matching an oxygen and nitrogen molecule, respectively.
+% The intramolecular energy $V_\mathrm{b}$ consists of harmonic terms,
+% \begin{equation}
+% V_\mathrm{b} = \sum_{(i,j) \in \mathcal{B}} \frac{1}{2} k_{ij} \left(R_{ij}-R^0_{ij}\right)^2 \,,
+% \end{equation}
+% where $\mathcal{B}$ is the set of bonds, $R_{ij}=|\bm{R}_i-\bm{R}_j|$ is the distance between atoms $i$ and $j$, $R^0_{ij}$ is the equilibrium bond length. 
+% The force constant $k_{ij}$ sets each molecule's harmonic vibrational stretch at 1560~cm$^{-1}$ ($\mathrm{A}_2$) or 2433~cm$^{-1}$ ($\mathrm{B}_2$), mimicking oxygen and nitrogen vibrational frequencies.\cite{wang2021accurate}
+% Intermolecular interactions consist of the LJ potential %follows
+% \begin{equation}
+% V_\mathrm{LJ} = \sum_{(i,j) \in \mathcal{N}} 4 \epsilon_{ij}\left[\left(\frac{\sigma_{ij}}{R_{ij}}\right)^{12}-\left(\frac{\sigma_{ij}}{R_{ij}}\right)^6\right] \,,
+% \end{equation}
+% where $\mathcal{N}$ is the set of all atom pairs that exclude bonded pairs, and the Coulomb potential \cite{kob1995testing}
+% \begin{gather}
+% V_\mathrm{C} = \sum_{(i,j) \in \mathcal{N}} \frac{z_i z_j e^2}{4 \pi \epsilon_0 R_{ij}} \,,
+% \end{gather}  
+% where $\epsilon_0$ is the vacuum permittivity. 
+% And thus, the total potential energy  is $V = V_\mathrm{b}+V_\mathrm{LJ}+V_\mathrm{C}$.
+% Note that LJ parameters for the $\mathrm{A}_2$ molecule ($\epsilon_\mathrm{AA}$ and $\sigma_\mathrm{AA}$) are tuned to those of an O$_2$ molecule,\cite{wang2021accurate} and the remaining parameters, including cut-off radius, are scaled to preserve the original KA model characteristics. 
 
 \paragraph*{Equations of motion (EOM) and baths:} 
-In the cavity molecular dynamics framework, the dynamics obey classical Hamilton's equations with additional forces from the external baths. It is important to note that we employ two distinct baths, $\gamma_c$ for the cavity mode and $\gamma_b$ for the molecular subsystem (\cref{fig:fig1}a). The cavity bath imposes a finite polariton lifetime, which is essential given the orders-of-magnitude separation between the relaxation times of the supercooled liquid (nanoseconds) and the polariton lifetime (picoseconds) []. The molecular bath, in contrast, maintains the temperature of the sample, consistent with standard conditions in molecular polaritonics where cavity coupling is not intended to heat the system [].
+In the cavity molecular dynamics framework, the dynamics obeys classical Hamilton's equations with additional forces from the external baths. %It is important to 
+Note that we employ two distinct baths, $\gamma_c$ for the cavity mode and $\gamma_b$ for the molecular subsystem (\cref{fig:fig1}a). The cavity bath imposes a finite polariton lifetime, which is essential given the orders-of-magnitude separation between the relaxation times of the supercooled liquid (nanoseconds) and the polariton lifetime (picoseconds) []. The molecular bath, in contrast, maintains the sample temperature, consistent with standard conditions in molecular polaritonics where cavity coupling is not intended to heat the system [].
 
 The cavity mode exchanges energy with a Langevin bath at a rate $\gamma_\mathrm{c}$ so that its EOM becomes
 \begin{gather}
@@ -155,12 +165,28 @@ The supercooled liquid is thermalized by a Bussi-Parrinello bath,\cite{bussi2007
 \\
 \bm F_i^\mathrm{c} = - \sum_{\alpha=1,2} \lambda z_i e \left(\omega_\mathrm{c} q_\alpha + \lambda \mu_\alpha \right)\hat{\bm e}_\alpha \,,
 \end{gather}
-where $\bm F_i^\mathrm{c} $ is the cavity force, $K$ is the system's total kinetic energy, and the generalized friction and diffusion coefficients are $\gamma_K = \frac{1}{2\tau_\mathrm{b}} \left(1-\left(1-\frac{1}{3 N}\right) \frac{\bar{K}}{K}\right)$ and $ D_K = \gamma_\mathrm{b} \bar{K} / (3 N  K)$, respectively, where $\bar{K} = \frac{3}{2}Nk_\mathrm{B} T$ is the total kinetic energy at equilibrium. For more details on deriving the EOMs, see \cref{app:bath}.
+where $\bm F_i^\mathrm{c} $ is the cavity force, $K$ is the system's total kinetic energy, and the generalized friction and diffusion coefficients are $\gamma_K = \frac{1}{2\tau_\mathrm{b}} \left(1-\left(1-\frac{1}{3 N}\right) \frac{\bar{K}}{K}\right)$ and $ D_K = \gamma_\mathrm{b} \bar{K} / (3 N  K)$, respectively, where $\bar{K} = \frac{3}{2}Nk_\mathrm{B} T$ is the total kinetic energy at equilibrium. For more details on deriving the EOMs, see SI~Sec.~1.2. %\cref{app:bath}.
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.975\linewidth]{Figure2.pdf}
+    \caption{
+    Cavity-induced slowdown of structural relaxation and non-thermal aging dynamics with $\omega_\mathrm{c} = 1560$ cm$^{-1}$ and $| \bm{k}| = 6.02$ a.u.
+    (a) IR absorption spectra (top) and normalized ISFs $\phi_{\bm{k}}^{(\lambda)}(t;t_\mathrm{w})$ (bottom) for increasing coupling strength $\lambda$ (left to right) and waiting times $t_\mathrm{w}$ (color-coded, purple to yellow).
+    (b) Normalized structural relaxation time $\tilde{\tau}_\mathrm{s} = \tau_\mathrm{s}/\tau_{s,\lambda=0}$ versus $\lambda$ at different $t_\mathrm{w}$ (color-coded, from  blue to red).
+    (c) $\tilde{\tau}_\mathrm{s}$ versus $t_\mathrm{w}$ for different coupling strengths.    
+    }
+    % Cavity-induced slowdown of structural relaxation and non-thermal aging dynamics with $\omega_\mathrm{c} = 1560$ cm$^{-1}$ and density-mode wavevector $| \bm{k}| = 6.02$ a.u. 
+    % (a) Top: Infrared absorption spectra $n(\omega)\alpha(\omega)$ showing polariton splitting at coupling strengths $\lambda$. Gray dashed line: cavity frequency $\omega_\mathrm{c} = 1560$ cm$^{-1}$. Bottom: Normalized intermediate scattering functions $\phi_{\bm{k}}^{(\lambda)}(t;t_\mathrm{w})$ at waiting times $t_\mathrm{w}$ (purple to yellow: $0$ to $2400$ ps). %Stronger coupling induces greater slowdown, recovering toward equilibrium at longer $t_\mathrm{w}$.
+    % (b) Normalized structural relaxation times $\tilde{\tau}_\mathrm{s} = \tau_\mathrm{s}/\tau_{s,\lambda=0}$ versus coupling strength $\lambda$ at different waiting times (color-coded by $t_\mathrm{w}$), where $\tau_{s,\lambda=0}$ is equilibrium relaxation time. Slowdown increases with $\lambda$, saturating at $\tilde{\tau}_\mathrm{s} \approx 4.75$ for $\lambda = 0.141$ a.u. at $t_\mathrm{w} = 0$, then decreasing toward equilibrium at large $t_\mathrm{w}$.
+    % (c) $\tilde{\tau}_\mathrm{s}$ evolution over waiting times for different coupling strengths. Memory effects persist up to $\sim 2.5$ ns ($\sim 50\times$ equilibrium relaxation time), with stronger coupling showing larger slowdown and longer relaxation to equilibrium.
+    \label{fig:figure2}
+\end{figure*}
 
 \section*{Cavity Induced Non-thermal Aging}
 
 
-We now place our model supercooled liquid, consisting of $N=250$ molecules at $T=100$ K, into the cavity. As mentioned in the theoretical setup, we include the $\mathrm{SiO_2}$ transparent spacers and employ two baths: a Langevin bath to impose realistic polariton lifetimes and a Bussi-Parrinello bath to maintain the sample at constant temperature $T=100$ K so that the cavity coupling does not heat the liquid. Note that, this constant-temperature condition will be essential later when analyzing how energy is redistributed during non-thermal aging. All simulations are performed using cavity molecular dynamics in \texttt{cavHOOMD-blue}, and ensemble averages are obtained over $N_\mathrm{T} = 500$ trajectories. Further computational details and convergence tests are provided in \cref{app:simulationdetails}. We tune the cavity frequency to $\omega_\mathrm{c} = 1560$ cm$^{-1}$, resonant with the $\mathrm{A}_2$ vibrational stretch. To confirm that the system is in the strong-coupling regime, we calculate the IR spectra for different light-matter coupling strengths using the dipole autocorrelation function,\cite{tuckerman2023statistical}
+We now place our model supercooled liquid, consisting of $N=250$ molecules at $T=100$ K, into the cavity. As mentioned in the theoretical setup, we include the $\mathrm{SiO_2}$ transparent spacers and employ two baths: a Langevin bath to impose realistic polariton lifetimes and a Bussi-Parrinello bath to maintain the sample at constant temperature $T=100$ K so that the cavity coupling does not heat the liquid. Note that, this constant-temperature condition will be essential later when analyzing how energy is redistributed during non-thermal aging. All simulations are performed using cavity molecular dynamics in \texttt{cavHOOMD-blue}, and ensemble averages are obtained over $N_\mathrm{T} = 500$ trajectories. Further computational details and convergence tests are provided in the SI, Sec.~3.%\cref{app:simulationdetails}. We tune the cavity frequency to $\omega_\mathrm{c} = 1560$ cm$^{-1}$, resonant with the $\mathrm{A}_2$ vibrational stretch. To confirm that the system is in the strong-coupling regime, we calculate the IR spectra for different light-matter coupling strengths using the dipole autocorrelation function,\cite{tuckerman2023statistical}
 \begin{equation}
 C_{\mu\mu} (t) = \sum_{\alpha=1,2} \left\langle \mu_\alpha(t) \mu_\alpha(0) \right\rangle \,,
 \end{equation}
@@ -170,18 +196,6 @@ n(\omega) \alpha(\omega) = \frac{\beta \omega^2}{4 \epsilon_0 V c} \int_{-\infty
 \end{equation}
 where $n(\omega)$ is the refractive index, $c$ is the speed of light, and $\beta = 1/k_\mathrm{B} T$. Fig.~2a shows the IR spectrum from the cavity-free case (left, dark blue) to increasing light-matter coupling strengths, $\lambda = 0.042$--$0.141$(a.u.) (left to right). At the \emph{light-matter equilibrium}, the vibrational peak (dashed gray line) splits into upper and lower polariton branches. As expected, we observe the linear increase of the Rabi splitting, i.e., the separation between the upper and lower polariton peaks, with increasing light-matter coupling strength, which is the characteristic fingerprint of strong light-matter interactions. Note, as emphasized above, this ``measurement'' is performed only after the system has reached its new light-matter equilibrium. 
 
-
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=0.975\linewidth]{Figure2.pdf}
-    \caption{
-    Cavity-induced slowdown of structural relaxation and nonthermal aging dynamics with $\omega_\mathrm{c} = 1560$ cm$^{-1}$ and density-mode wavevector $| \bm{k}| = 6.02$ a.u. 
-    (a) Top: Infrared absorption spectra $n(\omega)\alpha(\omega)$ showing polariton splitting at coupling strengths $\lambda$. Gray dashed line: cavity frequency $\omega_\mathrm{c} = 1560$ cm$^{-1}$. Bottom: Normalized intermediate scattering functions $\phi_{\bm{k}}^{(\lambda)}(t;t_\mathrm{w})$ at waiting times $t_\mathrm{w}$ (purple to yellow: $0$ to $2400$ ps). %Stronger coupling induces greater slowdown, recovering toward equilibrium at longer $t_\mathrm{w}$.
-    (b) Normalized structural relaxation times $\tilde{\tau}_\mathrm{s} = \tau_\mathrm{s}/\tau_{s,\lambda=0}$ versus coupling strength $\lambda$ at different waiting times (color-coded by $t_\mathrm{w}$), where $\tau_{s,\lambda=0}$ is equilibrium relaxation time. Slowdown increases with $\lambda$, saturating at $\tilde{\tau}_\mathrm{s} \approx 4.75$ for $\lambda = 0.141$ a.u. at $t_\mathrm{w} = 0$, then decreasing toward equilibrium at large $t_\mathrm{w}$.
-    (c) $\tilde{\tau}_\mathrm{s}$ evolution over waiting times for different coupling strengths. Memory effects persist up to $\sim 2.5$ ns ($\sim 50\times$ equilibrium relaxation time), with stronger coupling showing larger slowdown and longer relaxation to equilibrium.
-    }
-    \label{fig:figure2}
-\end{figure*}
 
 We therefore now examine more carefully what \emph{equilibrium} means in the context of traditional IR spectrum calculation procedures in polaritonic chemistry versus the relaxation pathways of supercooled liquids in cavities. To compute the IR spectra, we follow the standard protocol of Ref.~[], where the system is first equilibrated using Langevin thermostats applied to both the nuclear and photonic momenta, after which the resulting light-matter equilibrium configurations serve as initial conditions for the $500$ trajectories used to compute the spectra. This procedure ensures that no finite-$q$ effect is present, which corresponds to an artificial transient response that arises when the cavity coupling is switched on abruptly, i.e., the molecular dipoles and cavity field require time to adjust to one another. Any measurements taken before this adjustment would capture only this transient, non-equilibrium response. In typical polaritonic chemistry applications, e.g. water or organic liquids, structural relaxation is fast (on the order of tens to hundreds of picoseconds), so the system rapidly reaches its new light-matter equilibrium, and any cavity-induced modifications of the relaxation pathway are negligible on experimental timescales. However, in the present case the situation is fundamentally different. Our matter system is a supercooled liquid whose structural relaxation occurs on timescales far exceeding those of ordinary liquids. As a result, a sudden introduction of the cavity field does not simply produce a short transient finite-$q$ adjustment, but can imprint long-lived memory effects and induce a genuine change in the timescale of the relaxation pathway itself on experimentally relevant timescales.
 
@@ -199,6 +213,22 @@ The relaxation time $\tau_\mathrm{s}$ is then defined as $\phi_{\bm k}(\tau_\mat
 
 Fig.2a shows the structural relaxation in the cavity-free case (left) and under increasing light-matter coupling strengths (left to right), evaluated at different waiting times (blue to yellow). Interestingly we find that, with increasing coupling strength, the relaxation systematically slows down and becomes increasingly dependent on the waiting time. This behavior is characteristic of aging dynamics, which refer to the slow, out-of-equilibrium evolution of a supercooled liquid following a perturbation. In most aging experiments, this perturbation is a temperature quench, where an equilibrium supercooled liquid prepared at an initial temperature is instantaneously quenched to a lower final temperature. As the system relaxes toward its new equilibrium, dynamical and structural observables depend explicitly on the time elapsed since the quench, known as the \emph{waiting time}. In our case, however, the system is not thermally quenched; instead, we ensure that the temperature remains fixed at $T = 100$ K at all times. The perturbation is introduced through coupling to the cavity, which acts as a non-thermal control parameter that slows down structural relaxation without changing the system temperature. We therefore refer to this behavior as cavity-induced non-thermal aging.
 
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\linewidth]{Figure3_new.pdf}
+    \caption{
+    Understanding cavity-induced non-thermal aging through energy redistribution and fictive temperatures (for $\lambda = 0.141$ a.u).
+    (a) Hierarchy of kinetic processes: Rabi oscillations ($\Omega_R^{-1}$, femtoseconds), bath dissipation ($\tau_\mathrm{b}$, $\tau_\mathrm{c}$, picoseconds), and structural relaxation ($\tau_\mathrm{s}$, nanoseconds).
+    (b) Potential energy evolution after cavity activation, showing redistribution of energy into vibrational DOFs (blue), which leads decrease of intermolecular energy (red) to maintain equilibrium in the total energy (green) of the system.
+    (c) Fictive temperature evolution: vibrational $T_\mathrm{v}$ (blue), kinetic $T_\mathrm{k}$ (green), and structural $T_\mathrm{s}$ (red).
+    }% Understanding cavity-induced non-thermal aging through fictive temperatures.
+    % (a) Illustration on the hierarchy of kinetic processes: Rabi oscillations ($\Omega_R^{-1}$, femtoseconds) drive energy exchange between cavity and molecular vibrations; molecular and cavity baths ($\tau_\mathrm{b}$, $\tau_\mathrm{c}$, picoseconds) dissipate energy maintaining equilibrium; structural relaxation ($\tau_\mathrm{s}$, nanoseconds) governs glassy dynamics. %, with $\tau_\mathrm{s} \gg \tau_\mathrm{b} \gg \Omega_R^{-1}$.
+    % (b) Potential energy evolution after cavity activation at $t_0 = 200$ ps with $\lambda = 0.141$ a.u. Vibrational energy (blue) spikes initially due to cavity pumping, while Lennard-Jones and Coulombic energy (red) drops to maintain near-equilibrium total energy (green).% Dashed line indicates equilibrium reference.
+    % (c) Schematic of vibrational ($T_\mathrm{v}$) and structural ($T_\mathrm{s}$) fictive temperatures.
+    % (d) Fictive temperature evolution for $\lambda = 0.141$ a.u. Vibrational temperature $T_\mathrm{v}$ (blue) reaches $\sim 800$ K while kinetic temperature (green) remains near 100 K, while structural fictive temperature $T_\mathrm{s}$ (inset, red) drops to $\sim 70$ K. % to maintain thermal equilibrium. %Inset: initial 600 ps showing rapid onset and gradual relaxation to equilibrium.
+    % (e) Initial structural fictive temperature $T_\mathrm{s}^0$ following cavity activation versus coupling strength $\lambda$. % Self-quenching effect increases with $\lambda$.
+    \label{fig:fig3}
+\end{figure*}
 
 To quantify the cavity-induced contribution to aging, we consider the dimensionless relaxation times shown in Fig.~2b, defined as $\tilde{\tau}_\mathrm{s}(t_\mathrm{w}) = \tau_\mathrm{s}(t_\mathrm{w}) / \tau_{\mathrm{s},\lambda=0}(t_\mathrm{w})$, where each relaxation time is normalized to its cavity-free value at the same waiting time. This normalization removes the intrinsic thermal aging of the supercooled liquid and isolates the slowdown induced solely by light-matter coupling. Figure~2b shows this dimensionless relaxation time for different waiting times (dark blue to yellow) as a function of coupling strength. At short waiting times (blue), the relaxation time increases significantly with coupling strength and then eventually saturates ($\lambda = 0.098$) for the larger coupling strengths considered, indicating a maximum cavity-induced slowdown. This confirms the non-thermal ageing observed in Fig.~2a, demonstrating that coupling to the cavity slows collective structural relaxation while the system temperature remains unchanged ($T = 100$~K). At long waiting times (yellow), the relaxation approaches the cavity-free behavior, consistent with the system eventually reaching equilibrium.
 
@@ -211,26 +241,9 @@ We now turn to the question of how and why non-thermal aging emerges under cavit
 Figure~4b shows the evolution of the potential energy after the supercooled liquid is placed in the cavity, i.e., an instantaneous activation of the coupling. Note, importantly, that throughout this process the system temperature is held fixed at $T = 100$~K, ensuring that cavity coupling does not heat the system; hence, the kinetic energy remains unchanged. As a result, the energetic response to switching on the cavity coupling must be entirely compensated by the potential energy. Thus, at initial time, the cavity pumps energy into intramolecular vibrations, creating a spike in vibrational energy (Fig.~4b, blue). Despite this increase, the bath acts quickly to maintain the total energy near its initial equilibrium. To satisfy this effective energy conservation, ro-translational degrees of freedom compensate by accessing lower potential-energy configurations, where the Lennard-Jones and Coulombic energies drop simultaneously (Fig.~4b, red). Thus, the system reaches a deeper potential well from which it must escape, a process considerably slower than equilibrium relaxation.
 
 
+\paragraph*{Fictive temperatures.} To gain further qualitative understanding of cavity-induced non-thermal aging, we map the potential energy onto a temperature scale. Specifically, we introduce the fictive temperature, which is defined as the equilibrium temperature at which the system would exhibit the same potential energy as its instantaneous out-of-equilibrium configuration.\cite{dyre2018isomorph,dyre2020isomorph} Here, we assign distinct fictive temperatures to the vibrational and ro-translational subsystems (\cref{fig:fig3}c), and introduce an additional fictive temperature to characterize the structural degrees of freedom.
 
-\newpage 
-
-~
-\newpage
-
-
-
-
-
-%%%%%%%%%%% previous version%%%%%%%
-
-
-
-
-
-\paragraph*{Fictive temperatures.} We can gain further qualitative understanding by mapping potential energies onto a temperature scale.
-To this end, we introduce the fictive temperature, which is the temperature at which the equilibrium would exhibit the same instantaneous potential energy at time $t$.\cite{dyre2018isomorph,dyre2020isomorph}  %Leveraging their timescale separation,
-We also assign distinct fictive temperatures to the vibrational and ro-translational subsystems (\cref{fig:fig3}c) and compute them by inverting the analytical equilibrium potential-energy relations.
-For example, the equilibrium vibrational energy $\varphi(T):= \langle V_\mathrm{b} \rangle$ obeys equipartition at low-$T$, and thus $\varphi(T) = N c_\mathrm{v} T$ for $T \to 0$, where $c_\mathrm{v} = \frac{1}{4} k_\mathrm{B}$ is the specific heat capacity. Assuming $\varphi(T) \to N v_\infty$ at high $T$, we can write %the following approximation: % in the form of a Pad\'e approximant:
+For the vibrational and ro-translational subsystems (\cref{fig:fig3}c), we compute the corresponding fictive temperatures by inverting the analytical equilibrium potential-energy relations. In equilibrium, the vibrational energy $\varphi(T) := \langle V_\mathrm{b} \rangle$ obeys equipartition at low temperatures, such that $\varphi(T) = N c_\mathrm{v} T$ for $T \to 0$, where $c_\mathrm{v} = \tfrac{1}{4} k_\mathrm{B}$ is the specific heat capacity. Assuming $\varphi(T) \to N v_\infty$ at high $T$, we can write 
 \begin{equation}
     \varphi(T) \approx \frac{N c_\mathrm{v} T}{1+(c_\mathrm{v} /v_\infty)T  } \,,  \label{eq:vibenergy}
 \end{equation}
@@ -239,247 +252,28 @@ and thus the vibrational fictive temperature is
 T_\mathrm{v}(t) := \varphi^{-1}[V_\mathrm{b}(t)] \,. \label{eq:Tv}
 \end{equation}
 
-For the structural degrees of freedom, we use the equilibrium intramolecular potential energy $\vartheta(T) :=\langle V_\mathrm{LJ}+V_\mathrm{C}\rangle$, whose low-temperature limit follows Rosenfeld-Tarazona scaling, $\vartheta(T) = \vartheta_0+\alpha_0 T^{3/5}$ with $\vartheta_0$ and $\alpha_0$ are some constants. \cite{rosenfeld1998density} 
-Assuming $\vartheta(T) \to \vartheta_\infty$ at high $T$, we can use the following approximation: % construct a similar Pad\'e approximant:
-\begin{equation}
-\vartheta(T) \approx \vartheta_0+\frac{\alpha_0 T^{3/5}}{1+\frac{\alpha_0}{\vartheta_\infty-\vartheta_0}T^{3/5}} \,. \label{eq:varthetaT}
-\end{equation}
-Using \cref{eq:varthetaT},  the structural fictive temperature is
-\begin{equation}
-T_\mathrm{s}(t) := \vartheta^{-1}[V_\mathrm{LJ}(t)+V_\mathrm{C}(t)] \,. \label{eq:ts}
-\end{equation}
-Since Lennard-Jones and Coulombic interactions govern glassy dynamics, $T_\mathrm{s}$ indicates the system's depth in the potential energy landscape (\cref{fig:fig3}c). Note that we obtain all parameters in \cref{eq:vibenergy} and \cref{eq:varthetaT} by fitting the equilibrium potential energies over temperature.
-
-The calculated fictive temperatures can be found in \cref{fig:fig3}d, together with the kinetic temperature $T_\mathrm{k}(t)$, where we see nonthermal aging in terms of temperature. 
-During energy pumping, the vibrational fictive temperature $T_\mathrm{v}$ reaches $\sim$800~K, while $T_\mathrm{k}$ remains close to 100~K.
-At the highest coupling strength, the structural fictive temperature $T_\mathrm{s}$ approaches $\sim 70$ K, which is lower than the initial equilibrium temperature $T = 100$ K, explaining the slowdown in relaxation dynamics at early waiting times. 
-The extent in which a cavity reduces $T_\mathrm{s}$ over coupling strengths can be found in \Cref{fig:fig3}e, where we observe larger decrease in the initial $T_\mathrm{s}$ with larger $\lambda$. 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-\newpage
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%% just for me as summary do not delete %%%%%%%%
-
-%In our setup, a supercooled liquid is placed inside an optical cavity and coupled to a single cavity mode. The cavity itself is coupled to a bath, ensuring the polariton has a finite lifetime, while the molecular degrees of freedom remain coupled to a thermal bath that strictly holds the temperature constant—mimicking the standard experimental condition in molecular polaritonics where cavity coupling does not heat the sample. The sudden onset of light–matter coupling momentarily drives the liquid out of equilibrium. In ordinary polaritonic chemistry this transient can be ignored, as molecular relaxation rapidly restores equilibrium. In supercooled liquids, however, relaxation is intrinsically slow. As a result, even after the cavity excitation decays, the system retains a persistent memory of this initial perturbation. The short-lived increase in vibrational energy creates an imbalance that the system must compensate while maintaining the same temperature; the only available mechanism is to redistribute energy by pushing the ro-translational degrees of freedom into deeper regions of the potential energy landscape. This slows structural relaxation before the system eventually re-equilibrates. We refer to this process as non-thermal aging: the cavity induces aging-like behavior without any change in temperature.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-%%%%%%%% this was the intro before %%%%%%%
-
-%We place a molecular model of a supercooled liquid inside a Fabry–Pérot cavity (\cref{fig:fig1}a), an optical resonator whose mirror spacing $L \sim O(\mu \mathrm{m})$ tunes the resonance frequency $\omega_\mathrm{c}$ and coupling strength $\lambda$ of the cavity. 
-%The cavity mode hybridizes with molecular vibrations to form polaritons, whose spectroscopic signatures confirm strong light-matter coupling (\cref{fig:fig1}b).\cite{ebbesen2023introduction,Dunkelberger2022,li2022molecular}
-%Using classical molecular dynamics (MD) simulations,\cite{li2020cavity,li2021cavity} we show that the cavity acts as a tunable energy source, selectively pumping energy into dipole-active vibrations.
-%The sudden increase in vibrational energy creates an imbalance that is restored by driving ro-translational degrees of freedom to deeper potential energy minima (\cref{fig:fig1}c), slowing down structural relaxation before the system ages back to equilibrium.
-%We call this process \textit{non-thermal aging} since we can induce aging without ever changing the temperature. 
-
-%To understand and exploit nonthermal aging, we test for time-reparameterization softness,\cite{Cugliandolo1993,Cugliandolo1997,chamon2002separation,Chamon2002,Chamon2007,Kurchan2023,ghimenti2024cleveralgorithmsglassesdo} which states that time-correlation functions retain a universal form once we identify the material time $h_\lambda(t)$ that sets the relaxation pace for a given coupling strength $\lambda$.
-%Reconstructing $h_\lambda(t)$ from relaxation measurements,\cite{PedersenDyre2023,bohmer2024time} we find that time-correlation functions during aging and at equilibrium collapse onto a single curve, and aging dynamics can be predicted using only equilibrium relaxation data and the structural fictive temperature $T_\mathrm{s}(t)$, i.e., the effective `equilibrium' temperature of the configuration at time $t$.\cite{dyre2018isomorph,dyre2020isomorph,Tool1946,Narayanaswamy1971,PedersenDyre2023} 
-%This correspondence motivates us to devise cavity configurational feedback ($\mathrm{C^2F}$) cooling (\cref{fig:fig1}d), a protocol which uses a cavity to access lower-temperature equilibrium structures.
-%$\mathrm{C^2F}$ cooling uses time-periodic coupling constants and temperature feedback control to cool supercooled liquids from room temperature to ultralow temperatures ($T < T_\mathrm{g} \approx 32$ K) while avoiding kinetic arrest. 
-%Furthermore, the protocol allows intramolecular vibrations to synchronize with the periodic driving, yielding a Floquet supercooled state (\cref{fig:fig1}e).
-%This result shows how light-matter interactions accelerate equilibration and access dynamical states unreachable via pure thermal means. 
-
-
-
-
-\section*{Theoretical Setup}
-
-\paragraph*{The light-matter system.} 
-Our system is a $N$ molecular supercooled liquid confined at the center of a Fabry-Pérot cavity (\cref{fig:fig1}a), whose frequency $\omega_\mathrm{c}$ is set within the infrared (IR) range to target intramolecular vibrations. %, we set the cavity frequency 
-%The liquid occupies a thin region at the center, allowing us to neglect the spatial structure of the cavity mode. % spatial structure. 
-The supercooled liquid is a system of $N$ atoms, each with momentum $\bm{P}_i$, position $\bm{R}_i$, and mass $M_i$. 
-Retaining only the lowest-order mode, the electromagnetic field consists of a single cavity mode described by canonical coordinates $(p_\alpha, q_\alpha)$ along the transverse polarization directions $\{\bm{\hat{e}}_\alpha\}$.
-The cavity mode responds to fluctuations in the total dipole moment $\bm{\mu} = \sum_{i=1}^N z_i e \bm{R}_i$, where $z_i$ is the partial charge of atom $i$ and $e$ is the electron charge; an interaction captured by the following Hamiltonian:
-\begin{equation}
-H = H_\mathrm{M}+H_\mathrm{EM} \label{eq:tot_hamiltonian}
-\end{equation}
-where $H_\mathrm{M}$ denotes the molecular Hamiltonian, %which consists of its kinetic and potential energy,
-\begin{equation}
-H_\mathrm{M}(\{ \bm P_i,\bm R_i \}) = \sum_{i=1}^{N} \frac{|\bm P_i|^2}{2 M_i} +V(\{ \bm R_i\}) \,,
-\end{equation}
-with $V(\{ \bm R_i \})$ being the molecular potential energy, and $H_\mathrm{EM}$ is the EM field Hamiltonian,\cite{li2020cavity,li2021cavity} %which takes the form of a simple harmonic oscillator (SHO)
-\begin{equation}
-H_\mathrm{EM} (\{ p_\alpha, q_\alpha \}) = \sum_{\alpha=1,2} \left[ \frac{p_\alpha^2}{2}+\frac{\omega_\mathrm{c}^2}{2} \left(q_\alpha +\frac{ \lambda \mu_\alpha}{\omega_\mathrm{c}} \right)^2 \right], \label{eq:Hem}
-\end{equation}
-where $\lambda$ is the coupling constant and $\mu_\alpha = \bm \mu \cdot \bm e_\alpha$ is the dipole moment projected on the polarization vectors.
-Note that all degrees of freedom are treated classically; see \cref{app:hamiltonian} for more details on the derivations. 
-%From \cref{eq:Hem}, we see that the interaction corresponds to the displacement of the equilibrium position. % by $\bm q_0 = -\lambda\bm \mu/\omega_\mathrm{c}^2$.
-
-The supercooled liquid follows the Kob-Andersen (KA) model,\cite{kob1995testing} a two-component Lennard-Jones fluid, extended to include dipole-active intramolecular vibrations.  
-The new molecular KA model is a 4:1 mixture of diatomic molecules, $\mathrm{A}_2$ and $\mathrm{B}_2$, with opposing partial charges $\pm 0.3e$ to create permanent dipoles and masses matching an oxygen and nitrogen molecule, respectively.
-The intramolecular energy $V_\mathrm{b}$ consists of harmonic terms,
-\begin{equation}
-V_\mathrm{b} = \sum_{(i,j) \in \mathcal{B}} \frac{1}{2} k_{ij} \left(R_{ij}-R^0_{ij}\right)^2 \,,
-\end{equation}
-where $\mathcal{B}$ is the set of bonds, $R_{ij}=|\bm{R}_i-\bm{R}_j|$ is the distance between atoms $i$ and $j$, $R^0_{ij}$ is the equilibrium bond length. 
-The force constant $k_{ij}$ sets each molecule's harmonic vibrational stretch at 1560~cm$^{-1}$ ($\mathrm{A}_2$) or 2433~cm$^{-1}$ ($\mathrm{B}_2$), mimicking oxygen and nitrogen vibrational frequencies.\cite{wang2021accurate}
-Intermolecular interactions consist of the LJ potential %follows
-\begin{equation}
-V_\mathrm{LJ} = \sum_{(i,j) \in \mathcal{N}} 4 \epsilon_{ij}\left[\left(\frac{\sigma_{ij}}{R_{ij}}\right)^{12}-\left(\frac{\sigma_{ij}}{R_{ij}}\right)^6\right] \,,
-\end{equation}
-where $\mathcal{N}$ is the set of all atom pairs that exclude bonded pairs, and the Coulomb potential \cite{kob1995testing}
-\begin{gather}
-V_\mathrm{C} = \sum_{(i,j) \in \mathcal{N}} \frac{z_i z_j e^2}{4 \pi \epsilon_0 R_{ij}} \,,
-\end{gather}  
-where $\epsilon_0$ is the vacuum permittivity. 
-And thus, the total potential energy  is $V = V_\mathrm{b}+V_\mathrm{LJ}+V_\mathrm{C}$.
-Note that LJ parameters for the $\mathrm{A}_2$ molecule ($\epsilon_\mathrm{AA}$ and $\sigma_\mathrm{AA}$) are tuned to those of an O$_2$ molecule,\cite{wang2021accurate} and the remaining parameters, including cut-off radius, are scaled to preserve the original KA model characteristics. 
-
-
-%LJ parameters for the $\mathrm{A}_2$ molecule are tuned to those of an O$_2$ molecule,\cite{wang2021accurate} and the remaining parameters, including cut-off radius, are scaled to preserve the original KA model characteristics.\cite{kob1995testing}
-
-\paragraph*{Equations of motion (EOM).} 
-Dynamics obey classical Hamilton's equations with additional forces from the external baths.
-The cavity mode exchanges energy with a Langevin bath at a rate $\gamma_\mathrm{c}$ so that its EOM becomes
-\begin{gather}
-\dot{q}_{\alpha} = p_\alpha \label{eq:langevin_cavity_1} \,, \\ 
-\dot{p}_\alpha = -\omega_\mathrm{c}^2 q_\alpha - \lambda \omega_\mathrm{c} \mu_\alpha -\gamma_\mathrm{c} p_\alpha +\sqrt{2 \gamma_\mathrm{c} k_\mathrm{B} T } \eta_\alpha(t)  \,, \label{eq:langevin_cavity_2}
-\end{gather}
-where $\eta_\alpha(t)$ is white noise and $k_\mathrm{B}$ is the Boltzmann constant.
-The supercooled liquid is thermalized by a Bussi-Parrinello bath,\cite{bussi2007canonical,bussi2008stochastic} which exchanges energy like a Langevin bath at a rate $\gamma_\mathrm{b}$ but with minimal perturbation to the microscopic dynamics: % minimally perturbing the microscopic dynamics, % The EOM for the molecular system is 
-\begin{gather}
-\dot{\bm{R}}_i = \frac{\bm{P}_i}{M_i} \,, \label{eq:bussi_mol_1} \\
-\dot{\bm{P}}_i = -\nabla_{\bm{R}_i} V +\bm F_i^\mathrm{c}  -\gamma_K \bm P_i + \sqrt{2 D_K} \bm P_i \eta_i (t) \,, \label{eq:bussi_mol_2}
-\\
-\bm F_i^\mathrm{c} = - \sum_{\alpha=1,2} \lambda z_i e \left(\omega_\mathrm{c} q_\alpha + \lambda \mu_\alpha \right)\hat{\bm e}_\alpha \,,
-\end{gather}
-where $\bm F_i^\mathrm{c} $ is the cavity force, $K$ is the system's total kinetic energy, and the generalized friction and diffusion coefficients are $\gamma_K = \frac{1}{2\tau_\mathrm{b}} \left(1-\left(1-\frac{1}{3 N}\right) \frac{\bar{K}}{K}\right)$ and $ D_K = \gamma_\mathrm{b} \bar{K} / (3 N  K)$, respectively, where $\bar{K} = \frac{3}{2}Nk_\mathrm{B} T$ is the total kinetic energy at equilibrium. We refer to this fully classical approach in dynamics (\cref{eq:langevin_cavity_1,eq:langevin_cavity_2,eq:bussi_mol_1,eq:bussi_mol_2}) as cavity molecular dynamics (cavMD).\cite{li2020cavity,li2021cavity} 
-For more details on deriving the EOMs, see \cref{app:bath}.
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=0.975\linewidth]{Figure2.pdf}
-    \caption{
-    Cavity-induced slowdown of structural relaxation and nonthermal aging dynamics with $\omega_\mathrm{c} = 1560$ cm$^{-1}$ and density-mode wavevector $| \bm{k}| = 6.02$ a.u. 
-    (a) Top: Infrared absorption spectra $n(\omega)\alpha(\omega)$ showing polariton splitting at coupling strengths $\lambda$. Gray dashed line: cavity frequency $\omega_\mathrm{c} = 1560$ cm$^{-1}$. Bottom: Normalized intermediate scattering functions $\phi_{\bm{k}}^{(\lambda)}(t;t_\mathrm{w})$ at waiting times $t_\mathrm{w}$ (purple to yellow: $0$ to $2400$ ps). %Stronger coupling induces greater slowdown, recovering toward equilibrium at longer $t_\mathrm{w}$.
-    (b) Normalized structural relaxation times $\tilde{\tau}_\mathrm{s} = \tau_\mathrm{s}/\tau_{s,\lambda=0}$ versus coupling strength $\lambda$ at different waiting times (color-coded by $t_\mathrm{w}$), where $\tau_{s,\lambda=0}$ is equilibrium relaxation time. Slowdown increases with $\lambda$, saturating at $\tilde{\tau}_\mathrm{s} \approx 4.75$ for $\lambda = 0.141$ a.u. at $t_\mathrm{w} = 0$, then decreasing toward equilibrium at large $t_\mathrm{w}$.
-    (c) $\tilde{\tau}_\mathrm{s}$ evolution over waiting times for different coupling strengths. Memory effects persist up to $\sim 2.5$ ns ($\sim 50\times$ equilibrium relaxation time), with stronger coupling showing larger slowdown and longer relaxation to equilibrium.
-    }
-    \label{fig:figure2}
-\end{figure*}
 
 
 \begin{figure*}[t]
     \centering
-    \includegraphics[width=0.975\linewidth]{Figure3.pdf}
-    \caption{Understanding cavity-induced nonthermal aging through fictive temperatures.
-    (a) Illustration on the hierarchy of kinetic processes: Rabi oscillations ($\Omega_R^{-1}$, femtoseconds) drive energy exchange between cavity and molecular vibrations; molecular and cavity baths ($\tau_\mathrm{b}$, $\tau_\mathrm{c}$, picoseconds) dissipate energy maintaining equilibrium; structural relaxation ($\tau_\mathrm{s}$, nanoseconds) governs glassy dynamics. %, with $\tau_\mathrm{s} \gg \tau_\mathrm{b} \gg \Omega_R^{-1}$.
-    (b) Potential energy evolution after cavity activation at $t_0 = 200$ ps with $\lambda = 0.141$ a.u. Vibrational energy (blue) spikes initially due to cavity pumping, while Lennard-Jones and Coulombic energy (red) drops to maintain near-equilibrium total energy (green).% Dashed line indicates equilibrium reference.
-    (c) Schematic of vibrational ($T_\mathrm{v}$) and structural ($T_\mathrm{s}$) fictive temperatures.
-    (d) Fictive temperature evolution for $\lambda = 0.141$ a.u. Vibrational temperature $T_\mathrm{v}$ (blue) reaches $\sim 800$ K while kinetic temperature (green) remains near 100 K, while structural fictive temperature $T_\mathrm{s}$ (inset, red) drops to $\sim 70$ K. % to maintain thermal equilibrium. %Inset: initial 600 ps showing rapid onset and gradual relaxation to equilibrium.
-    (e) Initial structural fictive temperature $T_\mathrm{s}^0$ following cavity activation versus coupling strength $\lambda$. % Self-quenching effect increases with $\lambda$.
-    }
-    \label{fig:fig3}
-\end{figure*}
-
-
-\paragraph*{Observables.} 
-Using cavMD, we can probe dynamics by calculating observables such as dipole moments and their time-correlation functions,\cite{tuckerman2023statistical} %with the time-correlation function being
-\begin{equation}
-C_{\mu\mu} (t) = \sum_{\alpha=1,2} \left\langle \mu_\alpha(t) \mu_\alpha(0) \right\rangle \,,
-\end{equation}
-where $\langle \ldots \rangle$ denotes ensemble averaging. Its Fourier transform yields the IR absorption coefficient $\alpha(\omega)$, which is sensitive to polariton formation,
-\begin{equation}
-n(\omega) \alpha(\omega) = \frac{\beta \omega^2}{4 \epsilon_0 V c} \int_{-\infty}^{+\infty} \!\!\!\! dt \, e^{-i \omega t} C_{\mu\mu}(t)  \,, \label{eq:irspectrum}
-\end{equation}
-where $n(\omega)$ is the refractive index, $c$ is the speed of light, and $\beta = 1/k_\mathrm{B} T$. 
-At equilibrium ($T = 100$ K, \cref{fig:fig1}b), tuning $\omega_\mathrm{c} = \omega_\mathrm{AA}$ splits the vibrational peak into upper and lower polariton branches separated by the Rabi splitting $\Omega_\mathrm{R}$, which characterizes the energy exchange between the cavity mode and molecular system. % and is linear in $\lambda$.
-
-For structural relaxation, we use the density mode $\rho_{\bm{k}}(t) = \sum_{i=1}^N e^{\mathrm{i} \bm{k} \cdot \bm{R}_i(t)}$ measured at a particular wavevector $\bm k$ with its time-correlation function being
-\begin{equation}
-F_{\bm{k}}(t) = \langle \rho_{\bm{k}}(t)\rho^*_{\bm k}(0) \rangle \,. \label{eq:ISF_equil}
-\end{equation}
-Also known as the intermediate scattering function (ISF),  $F_{\bm k}(t)$ captures collective molecular motion and is measurable via neutron or X-ray scattering.\cite{hansen2013theory} Its value at $t=0$ defines the static structure factor $S_{\bm k}= \langle \rho_{\bm{k}}(0)\rho^*_{\bm k}(0) \rangle$, which we use to normalize the ISF as 
-\begin{equation}
-\phi_{\bm k}(t) := F_{\bm{k}}(t)/S_{\bm k}\,,
-\end{equation}
-and the relaxation time $\tau_\mathrm{s}$ is defined as $\phi_{\bm k}(\tau_\mathrm{s}) = 0.1$. 
-%4At equilibrium, our system can be supercooled at temperatures $T < T_\mathrm{o}=134.1$ K, where $T_\mathrm{o}$ is the onset temperature for glassy dynamics; see \cref{app:equildata} for more details. %In all our studies, we choose $|\bm k| \approx 3.18$ \AA$^{-1}$. 
-
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=0.875\linewidth]{Figure4.pdf}
+    \includegraphics[width=\linewidth]{Figure4_newnew.pdf}
     \caption{ 
-    Analysis of nonthermal aging through the lens of time reparameterization softness. 
-    (a) Material time $h_\lambda(t)$ reconstructed from ISF measurements (circles) at different coupling strengths $\lambda$ (color-coded). Stronger coupling leads to slower accumulation of material time.
-    (b) Collapse of all normalized ISFs onto a universal master curve following stretched exponential $\Phi_{\bm{k}}(h) = e^{-h^\beta}$ with $\beta = 0.55$ (black line), independent of coupling strength and waiting time. 
-    %This collapse confirms material-time translational invariance and demonstrates that all nonequilibrium states, including equilibrium ($\lambda = 0$), share the same functional form.
-    (c) The Tool--Narayanaswamy (TN) model predictions  for material time, $h_{\lambda,\mathrm{TN}}(t)$ (dashed lines) computed from equilibrium relaxation times and measured fictive temperatures.
-    (d) TN model prediction for normalized relaxation times, $\tilde{\tau}_\mathrm{s,TN}$, versus $\lambda$ at different waiting times $t_\mathrm{w}$ (color scale). TN predictions (lines with diamonds) qualitatively reproduce the trends observed in \cref{fig:figure2}b, confirming that equilibrium properties and fictive temperatures can determine aging dynamics.
-    (e) TN prediction for time evolution of $\tilde{\tau}_\mathrm{s}$ over $t_\mathrm{w}$ at different $\lambda$, capturing the aging back to equilibrium.}
+    Analysis of non-thermal aging through time reparameterization softness.
+    (a) Material time $h_\lambda(t)$ reconstructed from ISF measurements (circles) with Tool--Narayanaswamy (TN) model predictions (dashed lines) at different $\lambda$ (color-coded).
+    (b) Collapse of all normalized ISFs onto a universal stretched exponential $\Phi_{\bm{k}}(h) = e^{-h^\beta}$ with $\beta = 0.55$.
+    (c) TN predictions for $h_{\lambda,\mathrm{TN}}(t)$ at different waiting times $t_\mathrm{w}$ (color scale) and (d) at different $\lambda$.
+    }
+    % Analysis of non-thermal aging through the lens of time reparameterization softness. 
+    % (a) Material time $h_\lambda(t)$ reconstructed from ISF measurements (circles) at different coupling strengths $\lambda$ (color-coded). Stronger coupling leads to slower accumulation of material time.
+    % (b) Collapse of all normalized ISFs onto a universal master curve following stretched exponential $\Phi_{\bm{k}}(h) = e^{-h^\beta}$ with $\beta = 0.55$ (black line), independent of coupling strength and waiting time. 
+    % %This collapse confirms material-time translational invariance and demonstrates that all nonequilibrium states, including equilibrium ($\lambda = 0$), share the same functional form.
+    % (c) The Tool--Narayanaswamy (TN) model predictions  for material time, $h_{\lambda,\mathrm{TN}}(t)$ (dashed lines) computed from equilibrium relaxation times and measured fictive temperatures.
+    % (d) TN model prediction for normalized relaxation times, $\tilde{\tau}_\mathrm{s,TN}$, versus $\lambda$ at different waiting times $t_\mathrm{w}$ (color scale). TN predictions (lines with diamonds) qualitatively reproduce the trends observed in \cref{fig:figure2}b, confirming that equilibrium properties and fictive temperatures can determine aging dynamics.
+    % (e) TN prediction for time evolution of $\tilde{\tau}_\mathrm{s}$ over $t_\mathrm{w}$ at different $\lambda$, capturing the aging back to equilibrium.}
     \label{fig:fig4}
 \end{figure*}
-\section*{Nonthermal Aging}
 
-\paragraph*{Nonthermal aging protocol.} In a thermal aging experiment, an equilibrium supercooled liquid at an initial temperature $T_\mathrm{i}$ is quenched to a final temperature $T_\mathrm{f} < T_\mathrm{i}$ instantaneously at time $t = t_\mathrm{0}$. 
-As the system ages to a new equilibrium,  material properties depend on the time elapsed after $t_0$, known as the waiting time $t_\mathrm{w}$.\cite{berthier2011dynamical,berthier2011theoretical} 
-In a cavity, we introduce an analogous protocol that activates the light--matter coupling instead of temperature:
-\begin{equation}
-\lambda(t) = \lambda \Theta(t-t_0) \,, \label{eq:varepsilon}
-\end{equation}
-where $\Theta(t)$ is the Heaviside function. 
-\Cref{eq:varepsilon} models the first time we introduce the supercooled liquid into the cavity, triggering its aging process without changing $T$, and hence the term \textit{nonthermal} aging. %remains constant throughout. 
-The structure factor and ISF becomes $S_{\bm k}^{(\lambda)}(t_\mathrm{w}) = \langle \rho_{\bm k}(t_\mathrm{w}) \rho^*_{\bm k}(t_\mathrm{w}) \rangle_{\lambda}$ and 
-\begin{equation}
-F_{\bm{k}}^{(\lambda)}(t; t_\mathrm{w}) = \langle \rho_{\bm{k}}(t+t_\mathrm{w}) \rho^*_{\bm k}(t_\mathrm{w}) \rangle_\lambda \,, \label{eq:fkt_aging}
-\end{equation}
-respectively, yielding the following normalized ISF:
-\begin{equation}
-\phi_{\bm k}^{(\lambda)}(t; t_\mathrm{w}) = F_{\bm{k}}^{(\lambda)}(t; t_\mathrm{w})/S_{\bm k}^{(\lambda)}(t_\mathrm{w}) \,, \label{eq:phikt_aging}
-\end{equation}
-where the relaxation time $\tau_\mathrm{s}(t_\mathrm{w},\lambda)$, defined by $\phi_{\bm k}^{(\lambda)}(\tau_\mathrm{s}; t_\mathrm{w}) = 0.1$, now depends on the waiting time $t_\mathrm{w}$ and coupling strength $\lambda$. Note that we have adopted a new notation for the ensemble average, $\langle \ldots \rangle_\lambda$, to reflect the nonequilibrium averaging taken for this protocol. For more details on how we compute these averages from cavMD simulations, see \cref{app:avgobserv,app:timecorrel}.%,app:timerelax}.
-
-\paragraph*{Results.}  %results are in atomic units unless noted. 
-We perform cavMD simulations using \texttt{cavHOOMD-blue}, an extension of \texttt{HOOMD-blue}\cite{anderson2020hoomd} we developed to include light-matter interactions. 
-We simulate $N = 250$ molecules  at $T = 100$ K and perform ensemble averaging with $N_\mathrm{T} = 500$ trajectories; further details on the computational setup can be found in \cref{app:simulationdetails}.
-\Cref{fig:figure2}a shows the full extent of how the cavity reshapes the ISF
-with the cavity frequency $\omega_\mathrm{c} = 1560$ cm$^{-1}$ being on resonant with the $\mathrm{A}_2$ stretch, revealing the sudden slowdown of structural relaxation during nonthermal aging. 
-We also see that stronger coupling extends relaxation to much longer timescales. 
-From \cref{fig:figure2}b, which plots the dimensionless structural relaxation time $\tilde{\tau}_\mathrm{s}(t_\mathrm{w}) = \tau_\mathrm{s}(t_\mathrm{w})/\tau_\mathrm{s,\lambda=0}(t_\mathrm{w})$ normalized to the zero-coupling values, we also see that the enhancement of $\tilde{\tau}_\mathrm{s}(t_\mathrm{w}=0)$ saturates to $4.75$ at the highest coupling strength. %$\lambda = 0.141$ a.u.
-The increased slowdown persists over extended waiting times (\cref{fig:figure2}c), with memory effects lasting up to 2.5 ns. 
-Note that the new equilibrium is the same as its initial equilibrium, suggesting that cavity does not modify equilibrium behaviors; these results are consistent with previous studies on simulating bulk water and $\mathrm{CO}_2$ gas inside a Fabry-Pérot cavity.\cite{li2020cavity,li2021cavity}
-Furthermore, these results do not depend on the cavity frequency being on resonant with a vibrational stretch; see \cref{fig:fig5} in \cref{app:offres} for off-resonant results.
-
-To understand non-thermal aging, \cref{fig:fig3}a illustrates the hierarchy of timescales governing energy transfer: Rabi oscillations occur on femtosecond timescales ($\Omega_R^{-1}$), energy dissipation on picosecond timescales ($\tau_\mathrm{b}$), and structural relaxation on nanosecond timescales ($\tau_\mathrm{s}$), such that $\tau_\mathrm{s} \gg \tau_\mathrm{b} \gg \Omega_R^{-1}$.
-At $t = t_0$, the cavity pumps energy to intramolecular vibrations, creating a spike in vibrational energy shown in \cref{fig:fig3}b.
-Despite this increase, the bath acts quickly to maintain total energy near its initial equilibrium.
-To satisfy this effective energy conservation, ro-translational degrees of freedom compensate  by accessing lower potential-energy configurations, as evident in \cref{fig:fig3}b where Lennard-Jones and Coulombic energies drop simultaneously.
-Thus, the system reaches a deeper potential well from which it must escape from; a process considerably slower than equilibrium relaxation.
-
-
-\paragraph*{Fictive temperatures.} We can gain further qualitative understanding by mapping potential energies onto a temperature scale.
-To this end, we introduce the fictive temperature, which is the temperature at which the equilibrium would exhibit the same instantaneous potential energy at time $t$.\cite{dyre2018isomorph,dyre2020isomorph}  %Leveraging their timescale separation,
-We also assign distinct fictive temperatures to the vibrational and ro-translational subsystems (\cref{fig:fig3}c) and compute them by inverting the analytical equilibrium potential-energy relations.
-For example, the equilibrium vibrational energy $\varphi(T):= \langle V_\mathrm{b} \rangle$ obeys equipartition at low-$T$, and thus $\varphi(T) = N c_\mathrm{v} T$ for $T \to 0$, where $c_\mathrm{v} = \frac{1}{4} k_\mathrm{B}$ is the specific heat capacity. Assuming $\varphi(T) \to N v_\infty$ at high $T$, we can write %the following approximation: % in the form of a Pad\'e approximant:
-\begin{equation}
-    \varphi(T) \approx \frac{N c_\mathrm{v} T}{1+(c_\mathrm{v} /v_\infty)T  } \,,  \label{eq:vibenergy}
-\end{equation}
-and thus the vibrational fictive temperature is
-\begin{equation}
-T_\mathrm{v}(t) := \varphi^{-1}[V_\mathrm{b}(t)] \,. \label{eq:Tv}
-\end{equation}
-
-For the structural degrees of freedom, we use the equilibrium intramolecular potential energy $\vartheta(T) :=\langle V_\mathrm{LJ}+V_\mathrm{C}\rangle$, whose low-temperature limit follows Rosenfeld-Tarazona scaling, $\vartheta(T) = \vartheta_0+\alpha_0 T^{3/5}$ with $\vartheta_0$ and $\alpha_0$ are some constants. \cite{rosenfeld1998density} 
+For the structural degrees of freedom, we use the equilibrium intramolecular potential energy $\vartheta(T) :=\langle V_\mathrm{LJ}+V_\mathrm{C}\rangle$, whose low-temperature limit follows Rosenfeld-Tarazona scaling, $\vartheta(T) = \vartheta_0+\alpha_0 T^{3/5}$ with $\vartheta_0$ and $\alpha_0$ are constants. \cite{rosenfeld1998density} 
 Assuming $\vartheta(T) \to \vartheta_\infty$ at high $T$, we can use the following approximation: % construct a similar Pad\'e approximant:
 \begin{equation}
 \vartheta(T) \approx \vartheta_0+\frac{\alpha_0 T^{3/5}}{1+\frac{\alpha_0}{\vartheta_\infty-\vartheta_0}T^{3/5}} \,. \label{eq:varthetaT}
@@ -490,41 +284,22 @@ T_\mathrm{s}(t) := \vartheta^{-1}[V_\mathrm{LJ}(t)+V_\mathrm{C}(t)] \,. \label{e
 \end{equation}
 Since Lennard-Jones and Coulombic interactions govern glassy dynamics, $T_\mathrm{s}$ indicates the system's depth in the potential energy landscape (\cref{fig:fig3}c). Note that we obtain all parameters in \cref{eq:vibenergy} and \cref{eq:varthetaT} by fitting the equilibrium potential energies over temperature.
 
-The calculated fictive temperatures can be found in \cref{fig:fig3}d, together with the kinetic temperature $T_\mathrm{k}(t)$, where we see nonthermal aging in terms of temperature. 
-During energy pumping, the vibrational fictive temperature $T_\mathrm{v}$ reaches $\sim$800~K, while $T_\mathrm{k}$ remains close to 100~K.
-At the highest coupling strength, the structural fictive temperature $T_\mathrm{s}$ approaches $\sim 70$ K, which is lower than the initial equilibrium temperature $T = 100$ K, explaining the slowdown in relaxation dynamics at early waiting times. 
-The extent in which a cavity reduces $T_\mathrm{s}$ over coupling strengths can be found in \Cref{fig:fig3}e, where we observe larger decrease in the initial $T_\mathrm{s}$ with larger $\lambda$. 
 
+\cref{fig:fig3}d shows the time evolution of the fictive temperatures for a cavity coupling strength of $\lambda = 0.141$~a.u., including the vibrational fictive temperature $T_\mathrm{v}$ (blue), the structural fictive temperature $T_\mathrm{s}$ (red), and the kinetic temperature (green). Upon switching on the cavity coupling at $t = 100$~ps, energy is selectively pumped into the vibrational degrees of freedom, leading to a sharp increase of $T_\mathrm{v}$ to approximately $800$~K. By construction, the kinetic temperature remains close to $100$~K at all times, reflecting the fact that the cavity does not heat the system.  In contrast, the structural fictive temperature decreases and approaches $\sim 70$~K, below the initial equilibrium temperature $T = 100$~K. This reduction reflects the compensating response of the intermolecular degrees of freedom to the sudden vibrational energy injection and directly explains the slowdown of structural relaxation at short waiting times.
 
+\cref{fig:fig3}e shows the dependence of the structural fictive temperature on the cavity coupling strength. Here, the decrease in the structural fictive temperature is linear in the cavity coupling strength, reflecting the finite-$q$ response of the system to vibrational energy pumping by the cavity. In the resonant case considered here, this linear dependence can equivalently be mapped onto the Rabi splitting.
 
-
-
-
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=\linewidth]{Figure6.pdf}
-    \caption{Results on applying cavity configurational feedback (C$^2$F) cooling to the liquid at room temperature. 
-    (a) Schematic of the cavity configurational feedback (C$^2$F) cooling protocol. 
-    A feedback controller obtains measurement of the structural fictive temperature $T_\mathrm{s}$ and modulates both the cavity coupling strength $\lambda(t)$ and bath temperature $T(t)$ to drive the system to the lowest equilibrium temperature possible. %toward a target structural temperature $T_s$.
-    (b) \textit{Left:} $T_s$ versus time $t$ for different coupling strengths $\lambda$, showing rapid convergence to steady-state to the glass transition temperature within $\sim$100 ps. Stronger coupling (larger $\lambda$) results in faster convergence. 
-    \textit{Right:} Time-averaged structural temperature increases monotonically with coupling strength $\lambda$.%, ranging from $\sim$31 K at $\lambda = 0.030$ to $\sim$35 K at $\lambda = 0.120$. 
-    (c) \textit{Top:} The square-wave profile of $\lambda(t)$. \textit{Bottom:} Oscillations in vibrational fictive temperature $T_\mathrm{v}$ synchronized to the square-wave modulation of $\lambda(t)$, signatures of a Floquet state.
-    }
-    \label{fig:fig6}
-\end{figure*}
 
 
 \section*{From Time Reparameterization to a Cooling Protocol}
 
 
-\paragraph*{Time-reparametrization softness.}  Having established the mechanism behind the initial cavity-induced state, we now show how the subsequent long-time dynamics obey time-reparameterization softness (TRS).\cite{Cugliandolo1993,Cugliandolo1997,chamon2002separation,Chamon2002,Chamon2007,Kurchan2023,ghimenti2024cleveralgorithmsglassesdo}
-When perturbing an equilibrium glassy system via protocols parameterized by scalar $\lambda$, e.g., coupling constant, temperature jump, or shearing rate, TRS asserts that two-time correlation functions $C_{AA}^{(\lambda)}(t,t^\prime):= \langle A(t) A(t^\prime) \rangle_\lambda$ collapse onto a universal functional form,
+
+Having established the microscopic mechanism behind cavity-induced non-thermal aging and its description in terms of fictive temperatures, we now turn to the question of universality by showing that the subsequent long-time dynamics obey time-reparameterization softness (TRS).\cite{Cugliandolo1993,Cugliandolo1997,chamon2002separation,Chamon2002,Chamon2007,Kurchan2023,ghimenti2024cleveralgorithmsglassesdo} In glass physics, aging is powerful because it reveals how systems far from equilibrium nevertheless relax along structured and predictable pathways. TRS formalizes this idea by asserting that, when a glassy system is perturbed by a scalar control parameter $\lambda$, e.g., temperature, shear, or here the light-matter coupling, its two-time correlation functions $C_{AA}^{(\lambda)}(t,t^\prime):= \langle A(t) A(t^\prime) \rangle_\lambda$ collapse onto a universal functional form
 \begin{equation}
 C_{AA}^{(\lambda)}(t,t^\prime)=\mathcal{C}_{AA}\big(h_\lambda(t),h_\lambda(t^\prime)\big), \label{eq:TRS}
 \end{equation}
-where $\mathcal{C}_{AA}(h,h^\prime)$ is a two-variable scalar function and $h_\lambda(t)$ is the material time that tracks the system’s internal relaxation progress for a given protocol. %during the experiment.
-\Cref{eq:TRS} implies that, regardless of the protocol, aging dynamics represent the same universal process unfolding at different rates in time. 
-%While arising first as a phenomenological tool to describe aging in inorganic glasses,\cite{Tool1946,Narayanaswamy1971} TRS received its rigorous formulation through spin-glass models \cite{Cugliandolo1993,Cugliandolo1997,chamon2002separation,Chamon2002,Chamon2007} with subsequent confirmation in MD simulations and experiments. \cite{PedersenDyre2023,ghimenti2024cleveralgorithmsglassesdo}
+where $h_\lambda(t)$ is a material time that tracks the system’s internal relaxation progress for a given protocol. This relation implies that different perturbations do not introduce new long-time relaxation physics, but instead rescale the internal clock governing aging. Consequently, the nonequilibrium dynamics induced by the cavity follow the same universal aging trajectories as thermal glasses and can be quantitatively predicted using equilibrium relaxation data via the fictive temperature. This correspondence elevates non-thermal aging from a phenomenological observation to a controlled and predictive tool, laying the foundation for the cooling protocol developed below.
 
 Several approaches exist to show that a glassy system obeys TRS.\cite{ghimenti2024cleveralgorithmsglassesdo,Kurchan2023}
 Here, we proceed by invoking material-time translational invariance (MTTI),\cite{bohmer2024time} a specialization of TRS, which further posits that correlations depend only on material-time differences:
@@ -535,28 +310,46 @@ where $\mathcal{\widehat{C}}_{AA}(h)$ is a one-variable scalar function. Applyin
 \begin{equation}
 \phi_{\bm k}^{(\lambda)}(t; t_\mathrm{w}) = \Phi_{\bm k}(h_\lambda(t+t_\mathrm{w})-h_\lambda(t_\mathrm{w})), \label{eq:fkt_trs}
 \end{equation}
-where $\Phi_{\bm k}(s)$ is the universal scalar function for the ISF and we set the scale $\Phi_{\bm k}(1) = 0.1$. %, which means that the material-time difference is unity at the structural relaxation time.
+where $\Phi_{\bm k}(s)$ is the universal scalar function for the ISF and we set the scale $\Phi_{\bm k}(1) = 0.1$. 
 To reconstruct $h_\lambda(t)$, we set a series of waiting times $t_\mathrm{w}^{(r)}$ in which we measure the time correlations and compute the structural relaxation time $\tau_\mathrm{s}(t_\mathrm{w}^{(r)},\lambda) \equiv \tau_\mathrm{s}^{(r)}$. 
 Inverting \cref{eq:fkt_trs} for every $r$-th waiting time, we obtain the following datapoint:
 \begin{equation}
 h_\lambda(\tau_\mathrm{s}^{(r)}+t_\mathrm{w}^{(r)}) - h_\lambda(t_\mathrm{w}^{(r)}) =  \Phi_{\bm k}^{-1}(0.1) = 1 \,, \label{eq:const_mtti}
 \end{equation}
-which we can collectively fit (via least-squares regression) with the initial condition $h_\lambda(0) = 0$ to a parameterization of the material time, $\tilde{h}_\lambda(t)$, as a sum of linear basis functions; see \cref{app:mattime} for details. 
+which we can collectively fit (via least-squares regression) with the initial condition $h_\lambda(0) = 0$ to a parameterization of the material time, $\tilde{h}_\lambda(t)$, as a sum of linear basis functions; see SI~Sec.~2.3. %\cref{app:mattime} for details. 
 
-Figure~\ref{fig:fig4}a presents the results of this fitting procedure, revealing a nonlinear growth in $h_\lambda(t)$ that systematically slows with increasing coupling strength. 
-When all normalized ISFs are replotted using this material time, they collapse onto a single master curve (Fig.~\ref{fig:fig4}b) that empirically follows a stretched exponential form: 
+Figure~\ref{fig:fig4}a presents the results of this fitting procedure, revealing a nonlinear growth in $h_\lambda(t)$ that systematically slows with increasing coupling strength, as expected from the cavity-induced non-thermal aging discussed above. However, when all normalized ISFs are replotted using this material time, they collapse onto a single master curve (Fig.~\ref{fig:fig4}b) that empirically follows a stretched exponential form: 
 \begin{equation}
 \Phi_{\bm k}(h) = e^{-h^\beta} \,, \label{eq:stretchexp}
 \end{equation}
-where $\beta \approx 0.55$ for all coupling strengths. This collapse confirms TRS (\cref{eq:fkt_trs}) and MTTI (\cref{eq:MTTI}) in cavity-induced nonthermal aging.
+where $\beta \approx 0.55$ for all coupling strengths. This collapse confirms that the cavity does not introduce new relaxation physics, but instead provides a controllable, non-thermal way to slow the system’s intrinsic aging dynamics while preserving their universal form, consistent with TRS (\cref{eq:fkt_trs}) and MTTI (\cref{eq:MTTI}).
 
-\paragraph*{Correspondence to equilibrium states.} 
-An important feature of the universal collapse is the inclusion of equilibrium dynamics at zero coupling, where
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.95\linewidth]{Figure6_new.pdf}
+    \caption{
+    Cavity configurational feedback (C$^2$F) cooling applied to a room-temperature liquid.
+    (a) Schematic of the C$^2$F protocol, where a feedback controller measures $T_\mathrm{s}$ and modulates $\lambda(t)$ periodically while ensuring $T(t)$ chases the measured $G_\mathrm{s}$ via closed-loop feedback control.
+    (b) Top: Square-wave coupling profile the coupling $\lambda(t)$, with coupling peak $\lambda = 0.09$ a.u. Middle: Structural fictive temperature $T_\mathrm{s}$ and bath temperature $T$ converging to $T_\mathrm{g} \approx 32$ K under periodic cavity coupling. Bottom: synchronized oscillations of $T_\mathrm{v}$, indicating a Floquet state in vibrational DOFs.
+    }
+    % \caption{Results on applying cavity configurational feedback (C$^2$F) cooling to the liquid at room temperature. 
+    % (a) Schematic of the cavity configurational feedback (C$^2$F) cooling protocol. 
+    % A feedback controller obtains measurement of the structural fictive temperature $T_\mathrm{s}$ and modulates both the cavity coupling strength $\lambda(t)$ and bath temperature $T(t)$ to drive the system to the lowest equilibrium temperature possible. %toward a target structural temperature $T_s$.
+    % (b) \textit{Left:} $T_s$ versus time $t$ for different coupling strengths $\lambda$, showing rapid convergence to steady-state to the glass transition temperature within $\sim$100 ps. Stronger coupling (larger $\lambda$) results in faster convergence. 
+    % \textit{Right:} Time-averaged structural temperature increases monotonically with coupling strength $\lambda$.%, ranging from $\sim$31 K at $\lambda = 0.030$ to $\sim$35 K at $\lambda = 0.120$. 
+    % (c) \textit{Top:} The square-wave profile of $\lambda(t)$. \textit{Bottom:} Oscillations in vibrational fictive temperature $T_\mathrm{v}$ synchronized to the square-wave modulation of $\lambda(t)$, signatures of a Floquet state.
+    %}
+    \label{fig:fig6}
+\end{figure*}
+
+\paragraph*{Correspondence to equilibrium states.}  An important feature of the universal collapse is the inclusion of equilibrium dynamics at zero coupling, where
 \begin{equation}
 h_{\lambda = 0}(t) = \frac{t}{\tau_\mathrm{s}(T)}.
 \end{equation}
 When paired with the observed fictive temperatures in \cref{fig:fig6}
-the collapse of aging dynamics onto the zero-coupling equilibrium case implies a fundamental correspondence between the two cases.\cite{niss2017mapping,niss2022density} 
+the collapse of aging dynamics onto the zero-coupling equilibrium case implies a fundamental correspondence between the two cases.\cite{niss2017mapping,niss2022density} Consequently, despite being driven far from equilibrium by the cavity, the system relaxes along the same universal pathways as an equilibrium glass, but with its internal clock rescaled by the fictive temperature.
+
 To turn this insight into a quantitative tool, we apply the Tool--Narayanaswamy (TN) model for aging,\cite{Tool1946,Narayanaswamy1971} which asserts that the rate in which material time increases is determined by the instantaneous equilibrium relaxation time:
 \begin{equation}
     \frac{\mathrm{d} h_{\lambda,\mathrm{TN}}(t)}{\mathrm{d} t}  = \frac{1}{\tau_\mathrm{s,\mathrm{eq}}[T_\mathrm{s}(t)]} \,, \label{eq:TNmodel}
@@ -564,131 +357,207 @@ To turn this insight into a quantitative tool, we apply the Tool--Narayanaswamy 
 where $\tau_\mathrm{s,\mathrm{eq}}[T_\mathrm{s}(t)]$ is the equilibrium structural relaxation time at fictive temperature $T_\mathrm{s}(t)$.
 
 Integrating \cref{eq:TNmodel} with the initial condition $h_\lambda(0) = 0$ produces the predicted material time $h_{\mathrm{\lambda,TN}}(t)$. 
-As shown in Figure~\ref{fig:fig4}a, the material time of the TN model qualitatively predicts the observed material time. 
-From \cref{eq:TNmodel,eq:stretchexp}, we can also compute the structural relaxation time predicted by the TN model.
-Figures~\ref{fig:fig4}b,c show that TN predictions qualitatively reproduce the dependence on $\lambda$ and $t_\mathrm{w}$. %both the coupling-strength dependence and the waiting-time evolution of normalized relaxation times. 
-%Notable quantitative differences remain, such as the fact that the predicted maximum slowdown is $\tilde{\tau}_\mathrm{s,TN} \approx 4.0$, compared to $\tilde{\tau}_\mathrm{s} \approx 4.75 $ from \cref{fig:fig6}. 
-%However, we expect these  errors given that, in addition to statistical errors caused by the finite number of simulation trajectories, we have completely neglected the role of intramolecular vibrations at earlier waiting times.
-Altogether, these results confirm that nonthermal aging explores a sequence of states equilibrated at their fictive temperatures $T_\mathrm{s}(t)$. 
-%, albeit one reached through nonthermal means. TRS suggests that nonequilibrium aging states map onto a sequence of 
 
-%\section*{}
+
+
+
+
+Figure~\ref{fig:fig4}c shows the material time predicted by the TN and indeed we find that the TN model qualitatively reproduces the material time $h_\lambda(t)$ in Fig.~\ref{fig:fig4}a (using the same color coding for the coupling strength). From \cref{eq:TNmodel,eq:stretchexp}, we then compute the structural relaxation times predicted by the TN model. Figure~\ref{fig:fig4}c shows the corresponding TN predictions for the normalized relaxation times, $\tilde{\tau}_{\mathrm{s,TN}}$, as a function of $\lambda$ at different waiting times $t_\mathrm{w}$ (color scale). Interestingly, we find that the TN predictions reproduce the main trends observed in Fig.~\ref{fig:figure2}b in very good agreement. Finally, Figure~\ref{fig:fig4}d further shows the TN prediction for the time evolution of $\tilde{\tau}_\mathrm{s}$ over $t_\mathrm{w}$ at different coupling strengths, capturing the non-thermal aging as well as the long-lived memory effect, consistent with Fig.~\ref{fig:figure2}c. Altogether, these results demonstrate that cavity-induced non-thermal aging is fully determined by equilibrium relaxation properties evaluated at the instantaneous fictive temperature, with the cavity acting only to rescale the system’s internal clock.
 
 \paragraph*{Cavity configurational feedback ($\mathrm{C^2 F}$) cooling.} 
-With the knowledge that cavity-induced nonequilibrium states correspond to equilibrium states at effectively lower temperatures, we can use it to design a protocol that prepares deeply supercooled liquids, herein referred to as \textit{cavity configurational feedback ($\mathrm{C^2F}$) cooling}. 
-The protocol consists of three elements (\cref{fig:fig6}a):
+Building on the observation that a liquid coupled to a cavity behaves as if it were structurally colder than its bath temperature, we design a protocol, herein referred to as \textit{cavity configurational feedback ($\mathrm{C^2F}$) cooling}, that deliberately exploits this effect to prepare deeply supercooled liquids. The protocol consists of three elements (\cref{fig:fig6}a):
+
 \begin{enumerate}
-    \item Measurement of the structural fictive temperature $T_\mathrm{s}(t)$ using \cref{eq:ts}. 
-    \item Feedback control of the bath temperature $T$, which ensures that $T$ tracks $T_\mathrm{s}(t)$. Let the error between the bath and fictive temperatures be
+    \item Measurement of the structural fictive temperature $T_\mathrm{s}(t)$ using \cref{eq:ts}.
+    \item Feedback control of the bath temperature $T$, which ensures that the bath temperature $T$ is reduced to match the fictive temperature $T_\mathrm{s}(t)$. Assuming the error between the bath and fictive temperatures is
     \begin{equation}
     e(t) = T(t)-T_\mathrm{s}(t) \,.
     \end{equation}
-    The feedback control can be written as
+    the feedback control can be written as
     \begin{equation}
     \frac{\mathrm{d}T(t)}{\mathrm{d} t} = -k_\mathrm{I}e(t) \,, \label{eq:feedback}
     \end{equation}
-    where $k_\mathrm{I}$ is the control gain, i.e., the rate at which the bath relaxes to $T_\mathrm{s}(t)$.
-    We note that if $T_\mathrm{s}(t)$ is static, \cref{eq:feedback} is a continuous-time version of a proportional-integral-derivative (PID) control with only the integral action---a common control scheme for temperature regulation in experiments.
-    \item Periodic modulation of the coupling strength, which is now modeled as square waves:
+    where $k_\mathrm{I}$ is the rate at which the bath relaxes toward $T_\mathrm{s}(t)$.
+    \item Periodic modulation of the cavity coupling which can be modeled as square waves
     \begin{equation}
     \lambda(t) = \lambda \ \mathrm{sq}_D(\Omega_\mathrm{p}(t-t_\mathrm{0})) \label{eq:squarewave_coupling}
     \end{equation}
-    where $\mathrm{sq}_D(\ldots)$ denotes a square-wave function, with $D$ being the percentage in which the coupling is on, i.e., the duty cycle, and the period $\Omega_\mathrm{p}^{-1} = 10$ ps. We choose $D=10 \% $, and thus the coupling only turns on for 1 ps at a time. The short duration reflects the lifetime of cavity modes, which is in $O(1)$ ps as observed experimentally.\cite{D4CS01024H,10.1063/5.0282687}
-    \end{enumerate}
-With these elements combined, $\mathrm{C^2F}$ cooling pulses the coupling constant periodically to depress the structural fictive temperature $T_\mathrm{s}$ to lower values.
-The feedback control then reduces $T$ to match the lower $T_\mathrm{s}$. 
-Through repeated cycles of this process, the system reaches a steady state in which the structural degrees of freedom remain equilibrated with the bath ($T \approx T_\mathrm{s}$), thus avoiding the kinetic arrest that plagues conventional cooling.
+    where $\mathrm{sq}_D(\ldots)$ denotes a square-wave function, $D$ the percentage in which the coupling is on and  $\Omega_\mathrm{p}^{-1}$ ps the period. 
+\end{enumerate}
 
-We test $\mathrm{C^2 F}$ cooling by bringing a room-temperature liquid to the lowest achievable temperature. 
-As shown in \cref{fig:fig6}b(left), increasing $\lambda$ accelerates the approach to lower structural fictive temperatures $T_\mathrm{s}$. This behavior is consistent with \cref{fig:fig3}e, which demonstrates that a single coupling activation produces a substantial decrease in $T_\mathrm{s}$.
-Consequently, repeated strong pulses yield multiple large reductions in $T_\mathrm{s}$.
-\Cref{fig:fig6}b(right) shows the final temperature reaches $T_\mathrm{g}\approx 32$ K while maintaining kinetic equilibrium, producing ultralow-temperature equilibrium configurations inaccessible through conventional means.
-Unlike the kinetic arrest in conventional cooling, $\mathrm{C^2F}$ cooling (\cref{fig:fig1}d) achieves faster equilibration from room temperature.
-Note that the conventional protocol follows the same bath-temperature trajectory as $\mathrm{C^2F}$ cooling without cavity activation, isolating the advantage of light-matter interactions in avoiding kinetic arrest.
+Together, these elements define the $\mathrm{C^2F}$ feedback loop, see cref{fig:fig6}a. The cavity coupling is periodically switched on (e.g.), pumping energy into fast vibrational modes while the bath temperature is held fixed, thereby driving the structural degrees of freedom into deeper potential-energy configurations and reducing the structural fictive temperature $T_\mathrm{s}$. The fictive temperature is then measured (e.g.) and used to lower the bath temperature accordingly. Through repeated cycles of cavity activation and feedback-controlled cooling, the system reaches a steady state in which the structural degrees of freedom remain equilibrated with the bath ($T \approx T_\mathrm{s}$), thus avoiding the kinetic arrest that plagues conventional cooling.
 
 
-Despite structural equilibration, the vibrational subsystem remains out of equilibrium and synchronizes with periodic driving at frequency $\Omega_\mathrm{p}$ (\cref{fig:fig6}c), persisting to the point where $T_\mathrm{v}$ exceeds the onset temperature $T_\mathrm{o}$ for glassy dynamics.
-The $\mathrm{C^2F}$ protocol thus produces a \textit{Floquet supercooled liquid} in which structural degrees of freedom equilibrate with the bath, while vibrational modes remain driven and phase-locked to the cavity field.
-Since intramolecular vibrations evolve on timescales too fast to couple with glassy structural dynamics, this Floquet character should not impact long-time structural relaxation and thus offers opportunities to probe glassy dynamics where different degrees of freedom occupy distinct dynamical regimes.
+We test $\mathrm{C^2 F}$ cooling by bringing a room-temperature liquid to the lowest achievable temperature. Here we choose  $\Omega_\mathrm{p}^{-1}=10$ ps  and $D=10 \% $, which results in the coupling turning on for 1 ps at a time while being off for 10ps. The short on duration reflects the potentially short lifetime of cavity modes, which is in $O(1)$ ps as observed experimentally.\cite{D4CS01024H,10.1063/5.0282687}
 
-% We test $\mathrm{C^2 F}$ cooling by bringing a room-temperature liquid to the lowest achievable temperature. 
-% As shown in \cref{fig:fig6}b(left), the protocol achieves fast cooling where increasing $\lambda$ accelerates the approach to lower $T_\mathrm{s}$ values. This acceleration corroborates the results in \cref{fig:fig3}e, which shows the larger decrease in $T_\mathrm{s}$ after a single activation of the coupling constant; repeated applications of step-coupling would thus lead to multiple large step changes in the structural fictive temperature.
-% \Cref{fig:fig6}b(right) shows that the final temperature reaches near $T_\mathrm{g}\approx 32$ K and, critically, the system maintains kinetic equilibrium at this temperature, producing ultralow-temperature equilibrium configurations inaccessible through conventional means.
-% The ability to mantain structural and kinetic temperatures contrasts the kinetic arrest typically found in conventional cooling; As already shown in \cref{fig:fig1}d), $\mathrm{C^2F}$ cooling achieves faster equilibration from room temperature than conventional cooling.
-% Note that the conventional protocol follows the same bath-temperature trajectory as  without cavity activation, eliminating the cooling-rate dependence and isolating the protocol's advantage in avoiding kinetic arrest. % on fictive-temperature dynamics.
+\Cref{fig:fig6}b(left) shows the time evolution of the structural fictive temperature $T_\mathrm{s}$ for a coupling strength of $\lambda = 0.03$~a.u. The inset illustrates how periodic modulation of the cavity coupling progressively lowers $T_\mathrm{s}$ in a stepwise manner. We find that the system rapidly converges to a steady state, reaching the glass transition temperature $T_\mathrm{g} \approx 32$~K within $\sim 100$~ps while maintaining kinetic equilibrium. In contrast, the vibrational subsystem remains out of equilibrium and synchronizes with the periodic cavity driving. \Cref{fig:fig6}c shows the modulated cavity coupling profile (top) and the corresponding oscillations of the vibrational fictive temperature $T_\mathrm{v}$ synchronized with the coupling modulation (bottom). Each cycle appears identical and persists even when $T_\mathrm{v}$ exceeds the onset temperature $T_\mathrm{o}$ for glassy dynamics, since intramolecular vibrations evolve on timescales too fast to couple to structural relaxation and can fully relax during the off phase of the cavity coupling.
 
-% Despite structural equilibration, the vibrational subsystem remains out of equilibrium and synchronizes with periodic driving at frequency $\Omega_\mathrm{p}$ (\cref{fig:fig6}c), persisting to the point where $T_\mathrm{v}$ exceeds the onset temperature $T_\mathrm{o}$.
-% The $\mathrm{C^2F}$ protocol thus produces a \textit{Floquet supercooled liquid} where structural degrees of freedom equilibrate with the bath while vibrational modes remain driven and phase-locked to the cavity field.
-% Since intramolecular vibrations evolve on timescales too fast to couple with glassy structural dynamics, this Floquet character should not impact long-time structural relaxation, and thus offers opportunities to probe glassy dynamics where different degrees of freedom occupy distinct dynamical regimes. 
+Altogether, $\mathrm{C^2F}$ cooling exploits the separation of vibrational and structural timescales to bypass kinetic arrest, creating a controlled setting in which different degrees of freedom occupy distinct dynamical regimes.
 
 \section*{Implications and Outlook}
 
-In summary, our work shows how confining supercooled liquids in optical cavities induces nonthermal aging through selective  pumping of intramolecular vibrations, thereby driving intramolecular degrees of freedom to lower effective temperatures. 
-We use this phenomenon to develop cavity configurational feedback (C$^2$F) cooling, which combines periodic time-modulation of the coupling strength and temperature feedback to prepare equilibrium supercooled liquids at ultralow temperatures ($T \leq T_\mathrm{g}$), producing a Floquet state for the vibrational modes that synchronize with periodic driving. Our results reveal how combining glassy dynamics and strong light-matter interactions allows cavity effects to persist robustly over timescales that far exceed polariton lifetimes. 
-More broadly, our work opens a paradigm in which the extensive toolkit of atomic, molecular, and optical (AMO) physics beyond optical cavities, e.g., ultrafast laser control and pulse shaping, can be systematically applied to manipulate structural relaxation in condensed matter systems. 
-We hypothesize that applying strong light-matter interactions to glassy systems, together with the refinement of $\mathrm{C^2F}$ cooling introduced here, will enable access to dynamical phases that were previously inaccessible through thermal or mechanical protocols.
-%, potentially revealing new universality classes in glassy systems.
+In summary, we show that confining supercooled liquids inside optical cavities induces \textit{non-thermal aging}, arising from the selective pumping of intramolecular vibrations by the cavity. This process redistributes energy across degrees of freedom, driving the structural subsystem into deeper regions of the potential energy landscape without changing the bath temperature. Crucially, we demonstrate that the resulting nonequilibrium dynamics follow the same universal aging trajectories as thermally quenched glasses and can be quantitatively predicted from equilibrium relaxation data through the fictive temperature. This correspondence elevates non-thermal aging from a phenomenological observation to a controlled and predictive framework.
+
+
+Building on this insight, we introduce cavity configurational feedback (C$^2$F) cooling, a protocol that combines time-modulated light-matter coupling with temperature feedback to steer supercooled liquids toward equilibrium states at temperatures inaccessible by conventional cooling. In analogy to cavity-based cooling in atomic and molecular physics, C$^2$F exploits the separation of timescales ($\tau_\mathrm{mod} \ll \tau_\mathrm{s}$) between fast vibrational dynamics and slow structural relaxation to bypass kinetic arrest. In our simulations the protocol reaches $T_\mathrm{g}$ in $\sim$100 ps, which is an ultrafast timescale we deliberately set due to the longest timescales accessible via MD simulations. For deeply supercooled liquids, $\tau_\mathrm{s}$ can exceed milliseconds, and thus microsecond-scale cavity control is sufficient and such speeds are already within reach via, e.g., electro-optic modulation,\cite{dutta2017alloptical} tunable-finesse resonators,\cite{stone2020optical} liquid-crystal tuning.\cite{yavorskiy2025terahertz} Furthermore, the protocol does not demand precise resonance conditions, making the protocol suitable for experimental tests; see SI~Sec.~4 where we  further expand on these experimental considerations.
+%further.
+%points further. % in the Supporting Information..
+
+
+% Building on this insight, we introduce cavity configurational feedback (C$^2$F) cooling, a protocol that combines time-modulated light-matter coupling with temperature feedback to steer supercooled liquids toward equilibrium states at temperatures inaccessible by conventional cooling.
+% In analogy to cavity-based cooling schemes developed in atomic and molecular physics, C$^2$F cooling exploits the separation of timescales between fast vibrational dynamics and slow structural relaxation to bypass kinetic arrest.
+
+% Whether C$^2$F cooling can be realized in the lab hinges on separation of timescales. In the simulations we have used, the protocol reaches $T_\mathrm{g}$ in $\sim$100 ps, which is an ultrafast timescale we explicitly set due to the nanosecond ceiling of molecular dynamics simulations. So long as the cavity and bath modulation stay much faster than structural relaxation ($\tau_\mathrm{mod} \ll \tau_\mathrm{s}$), we can still realize C$^2$F cooling. For deeply supercooled liquids, $\tau_\mathrm{s}$ can exceed milliseconds in practice, and thus microsecond-scale cavity control is sufficient and such speeds are already within reach via, e.g., electro-optic modulation \cite{dutta2017alloptical}, tunable-finesse resonators \cite{stone2020optical}, liquid-crystal tuning \cite{yavorskiy2025terahertz}. Furthermore, the protocol does not demand precise resonance conditions, making the protocol highly suitable for tests in experiments; see SI~Sec.~4 where we expand on these points further. % in the Supporting Information.
+
+
+
+More broadly, our results establish a new interface between glass physics and strong light-matter interactions, where tools from atomic, molecular, and optical physics can be repurposed to manipulate structural relaxation in condensed matter. We anticipate that extending strong light-matter control to glassy systems, together with further refinement of C$^2$F cooling, will enable access to dynamical regimes and nonequilibrium phases that are inaccessible through purely thermal or mechanical protocols.
+
 
 \section*{Acknowledgements}
 
 This work was supported by the Simons Center for Computational Physical Chemistry (SCCPC) at NYU (SF Grant No. 839534). Additional support was provided in part through NYU IT High Performance Computing resources, services, and staff expertise. Simulations were partially executed on resources supported by the SCCPC. M.R.H. acknowledges support from a postdoctoral fellowship awarded by the SCCPC at NYU.
 
+
+%Altogether, $\mathrm{C^2F}$ cooling demonstrates how non-thermal control can be harnessed to steer glassy relaxation, opening a new route to study and manipulate supercooled liquids beyond traditional thermodynamic constraints.
+
+
+
 \bibliography{apssamp}
 
 
-\appendix
-% Switch to one-column for appendix/SI
-\onecolumngrid
-\begingroup  % Limit font size change to appendix only
-\large
-\newpage 
+% \appendix
+% % Switch to one-column for appendix/SI
+% \onecolumngrid
+% \begingroup  % Limit font size change to appendix only
+% \large
+% \newpage 
 
-\begin{center}
-{\LARGE \textbf{Supporting Information}}\\[8pt]
-{\Large Nonthermal Aging of Supercooled Liquids in Optical Cavities}\\[12pt]
-{\large Muhammad R. Hasyim\textsuperscript{1,2}, Arianna Damiani\textsuperscript{1,2}, Norah M. Hoffmann\textsuperscript{1,2,3}}\\[8pt]
-\begin{minipage}{0.85\textwidth}
-\small
-\centering
-\textit{\textsuperscript{1}Department of Chemistry, New York University, New York, NY 10003} \\
-\textit{\textsuperscript{2}The Simons Center for Computational Physical Chemistry, New York University, New York, NY 10003} \\
-\textit{\textsuperscript{3}Department of Physics, New York University, New York, NY 10003}
-\end{minipage}
-\end{center}
+% \begin{center}
+% {\LARGE \textbf{Supporting Information}}\\[8pt]
+% {\Large Non-thermal Aging of Supercooled Liquids in Optical Cavities}\\[12pt]
+% {\large Muhammad R. Hasyim\textsuperscript{1,2}, Arianna Damiani\textsuperscript{1,2}, Norah M. Hoffmann\textsuperscript{1,2,3}}\\[8pt]
+% \begin{minipage}{0.85\textwidth}
+% \small
+% \centering
+% \textit{\textsuperscript{1}Department of Chemistry, New York University, New York, NY 10003} \\
+% \textit{\textsuperscript{2}The Simons Center for Computational Physical Chemistry, New York University, New York, NY 10003} \\
+% \textit{\textsuperscript{3}Department of Physics, New York University, New York, NY 10003}
+% \end{minipage}
+% \end{center}
 
-\vspace{12pt}
+% \vspace{12pt}
 
-% Enable section numbering and use appendix style
-\setcounter{secnumdepth}{3}
-\renewcommand{\thesection}{\Alph{section}}
-\renewcommand{\thesubsection}{\arabic{subsection}}%\thesection.
-\renewcommand{\thesubsubsection}{\arabic{subsubsection}}%\thesubsection.
-\setcounter{section}{0}
+% % Enable section numbering and use appendix style
+% \setcounter{secnumdepth}{3}
+% \renewcommand{\thesection}{\Alph{section}}
+% \renewcommand{\thesubsection}{\arabic{subsection}}%\thesection.
+% \renewcommand{\thesubsubsection}{\arabic{subsubsection}}%\thesubsection.
+% \setcounter{section}{0}
 
-% Redefine section/subsection heading sizes AND make them write to TOC
-\makeatletter
+% % Redefine section/subsection heading sizes AND make them write to TOC
+% \makeatletter
 
-\def\section{\@startsection{section}{1}{\z@}%
-  {3.5ex plus 1ex minus .2ex}{2.3ex plus .2ex}%
-  {\centering\Large\bfseries}}
+% \def\section{\@startsection{section}{1}{\z@}%
+%   {3.5ex plus 1ex minus .2ex}{2.3ex plus .2ex}%
+%   {\centering\Large\bfseries}}
 
-\def\subsection{\@startsection{subsection}{2}{\z@}%
-  {3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}%
-  {\centering\large\bfseries}}
+% \def\subsection{\@startsection{subsection}{2}{\z@}%
+%   {3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}%
+%   {\centering\large\bfseries}}
 
-\def\subsubsection{\@startsection{subsubsection}{3}{\z@}%
-  {3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}%
-  {\centering\normalsize\itshape}}
+% \def\subsubsection{\@startsection{subsubsection}{3}{\z@}%
+%   {3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}%
+%   {\centering\normalsize\itshape}}
 
-% Hook into section commands to add TOC entries
-\let\old@sect\@sect
-\def\@sect#1#2#3#4#5#6[#7]#8{%
-  \old@sect{#1}{#2}{#3}{#4}{#5}{#6}[{#7}]{#8}%
-  \ifnum#2=1\addcontentsline{apptoc}{section}{\protect\numberline{\thesection}#7}\fi
-  \ifnum#2=2\addcontentsline{apptoc}{subsection}{\protect\numberline{\thesubsection}#7}\fi
-  \ifnum#2=3\addcontentsline{apptoc}{subsubsection}{\protect\numberline{\thesubsubsection}#7}\fi
+% % Hook into section commands to add TOC entries
+% \let\old@sect\@sect
+% \def\@sect#1#2#3#4#5#6[#7]#8{%
+%   \old@sect{#1}{#2}{#3}{#4}{#5}{#6}[{#7}]{#8}%
+%   \ifnum#2=1\addcontentsline{apptoc}{section}{\protect\numberline{\thesection}#7}\fi
+%   \ifnum#2=2\addcontentsline{apptoc}{subsection}{\protect\numberline{\thesubsection}#7}\fi
+%   \ifnum#2=3\addcontentsline{apptoc}{subsubsection}{\protect\numberline{\thesubsubsection}#7}\fi
+% }
+% \makeatother
+
+\end{document}
+
+\documentclass[11pt]{article}
+\usepackage{one-column}
+\usepackage{afterpage}
+\usepackage{circledsteps}
+%\usepackage{graphics}
+%\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage[export]{adjustbox}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand{\crefrangeconjunction}{--}
+\newcommand*\numcircledmod[1]{\raisebox{.5pt}{\textcircled{\raisebox{-.9pt} {#1}}}}
+
+\graphicspath{{figs/}}
+
+\crefname{subsection}{Section}{Subsections}
+\numberwithin{equation}{section}
+
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\DontPrintSemicolon
+\usepackage{booktabs}  % For professional-looking tables
+
+\renewcommand{\KwSty}[1]{\textnormal{\textcolor{blue!90!black}{\ttfamily\bfseries #1}}\unskip}
+\renewcommand{\ArgSty}[1]{\textnormal{\ttfamily #1}\unskip}
+\SetKwComment{Comment}{\color{green!50!black}// }{}
+\renewcommand{\CommentSty}[1]{\textnormal{\ttfamily\color{green!50!black}#1}\unskip}
+%\newcommand{\assign}{\leftarrow}
+%%\newcommand{\var}{\texttt}
+%\newcommand{\FuncCall}[2]{\texttt{\bfseries #1(#2)}}
+\SetKwProg{Function}{function}{}{}
+\renewcommand{\ProgSty}[1]{\texttt{\bfseries #1}}
+
+\title{\bfseries {\Large Supplemental Material} \\ {\Large Non-Thermal Aging of Supercooled Liquids in Optical Cavities}}
+
+\author{Muhammad R. Hasyim$^{1,2,}$\hyperlink{email1}{$^{\ddag}$} \and Arianna Damiani$^{1,2}$ \and Norah M. Hoffmann$^{1,2,3,}$\hyperlink{email2}{$^{*}$}}
+
+\date{%
+    \footnotesize $^1$Department of Chemistry, New York University, New York, NY 10003 \\[1pt]%
+    $^2$The Simons Center for Computational Physical Chemistry, New York University, New York, NY 10003 \\[1pt]%
+    $^3$Department of Physics, New York University, New York, NY 10003%
 }
-\makeatother
+
+
+\begin{document}
+\maketitle
+
+\pagenumbering{roman}
+
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
+{
+	\hypersetup{
+		linkcolor=Black,
+		citecolor=Black
+	}
+	\vspace{-30pt}
+	\tableofcontents
+}
+
+ % our e-mails are given here
+\noindent\rule{5.0cm}{0.4pt}
+{\footnotesize
+$\\${
+{
+    {$^\ddagger \,$}\hypertarget{email1}{mh7373@nyu.edu}}
+    \\
+    {$^* \,$}\hypertarget{email2}{norah.hoffmann@nyu.edu}
+}
+}
+
+
+\newpage 
+%\input{preface/preface_v2}
+%\clearpage
+\pagenumbering{arabic}
+
 
 \section{Theory}\label{app:theory}
 
@@ -760,7 +629,7 @@ With this choice, the Hamiltonian turns into
 \hat{H}_\mathrm{EM}
 = \sum_{\ell,\alpha}\hbar\omega_\ell\left(\hat{a}_{\ell,\alpha}^\dagger \hat{a}_{\ell,\alpha}+\frac{1}{2}\right).
 \end{equation}
-where we have used $[\hat{a}_{\ell,\alpha}^\dagger,\hat{a}_{\ell,\alpha}] = 1$.
+where we have used $[\hat{a}_{\ell,\alpha},\hat{a}_{\ell,\alpha}^\dagger] = 1$.
 Introducing the canonical position and momentum as
 \begin{equation}
 \hat{q}_{\ell,\alpha}=\sqrt{\frac{\hbar}{2\omega_\ell}}\bigl(\hat{a}_{\ell,\alpha}^\dagger+\hat{a}_{\ell,\alpha}\bigr),
@@ -785,7 +654,7 @@ The next step in our derivation involves unitary transformations that transfer t
 The first transformation eliminates the interaction term from the kinetic energy of matter by transferring it to the light momenta.
 Let the total molecular dipole moment be $\hat{\bm \mu} = \sum_i Z_i e \hat{\bm R}_i - \sum_j e \hat{\bm r}_j$. We define
 \begin{equation}
-\hat{U}_L = \exp \left[-\frac{\mathrm{i}}{\hbar}\hat{\bm \mu} \cdot \hat{\bm A}(0) \right] = \exp \left[-\frac{\mathrm{i}}{\hbar} \sum_{\ell,\alpha} \lambda_\ell \,\hat{\mu}_\alpha \, \hat{q}_{\ell,\alpha} \right] 
+\hat{U}_L = \exp \left[\frac{\mathrm{i}}{\hbar}\hat{\bm \mu} \cdot \hat{\bm A}(0) \right] = \exp \left[\frac{\mathrm{i}}{\hbar} \sum_{\ell,\alpha} \lambda_\ell \,\hat{\mu}_\alpha \, \hat{q}_{\ell,\alpha} \right] 
 \end{equation}
 where $\hat{\mu}_\alpha = \hat{\bm\mu} \cdot \hat{\bm e}_\alpha$. The action of this transformation on the relevant operators follows from the Baker-Campbell-Hausdorff formula.
 Using the commutation relations $[\hat{q}_{\ell,\alpha},\hat{p}_{\ell',\alpha'}]=i\hbar \delta_{\ell\ell'} \delta_{\alpha\alpha'}$ and $[\hat{\mu}_\alpha,\hat{q}_{\ell,\alpha'}]=0$, we obtain:
@@ -807,7 +676,7 @@ Applying $\hat{U}_{L}$ to the full Hamiltonian eliminates the vector potential f
 \label{eq:HL-dE}
 \end{align}
 
-The second transformation moves the coupling from the photonic momenta and to its positions via a $90^\circ$ phase rotation of these variables. A unitary transformation that achieves this is equivalent to time propagation of each cavity mode from $t=0$ to  $t=\pi\omega_\mathrm{\ell}/2$:
+The second transformation moves the coupling from the photonic momenta and to its positions via a $90^\circ$ phase rotation of these variables. A unitary transformation that achieves this is equivalent to time propagation of each cavity mode from $t=0$ to  $t=\pi/(2\omega_\ell)$:
 \begin{equation}
 \hat{U}_{\pi/2} \equiv
 \exp\!\left[\frac{\mathrm i\,\pi}{4\hbar}\sum_{\ell,\alpha}\frac{\hat{p}_{\ell,\alpha}^{2}
@@ -830,7 +699,7 @@ Acting with $\hat{U}_{\pi/2}$ on \cref{eq:HL-dE} and relabeling the rotated vari
 which is the multi-mode Pauli--Fierz Hamiltonian in coordinate-displacement form where the molecular dipole moment displaces the light coordinate in some proportion.
 In summary, the fully quantum light-matter Hamiltonian for the electron-nuclei-photonic system can be written as %We rewrite this compactly as:
 \begin{gather}
-\hat{H}_\mathrm{PF} = \hat{H}_\mathrm{M}+\hat{H}_\mathrm{F} \,, \label{eq:H-final}
+\hat{H}_\mathrm{PF} = \hat{H}_\mathrm{M}+\hat{H}_\mathrm{EM} \,, \label{eq:H-final}
 \\
 \hat{H}_\mathrm{M} = \sum_i \frac{|\hat{\bm P}_i|^{2}}{2M_i} + \sum_j \frac{|\hat{\bm p}_j|^{2}}{2m_j} + \hat{V}_{nn}+\hat{V}_{ee}+\hat{V}_{ne} \,, \label{eq:HM-final}
 \\
@@ -895,11 +764,11 @@ Defining the spectral density as
 \begin{equation}
 J(\omega) = \frac{\pi}{2} \sum_{b} \frac{c_b^2}{\omega_b} \delta(\omega - \omega_b) \,,
 \end{equation}
-we can write the memory kernel and noise correlation are related as follows:
+the memory kernel and noise correlation are related as follows:
 \begin{gather}
 G(t) = \frac{2}{\pi} \int_0^\infty \!\! d\omega \, \frac{J(\omega)}{\omega} \cos(\omega t) \,, \quad \langle \eta_\mathrm{c}(t) \eta_\mathrm{c}(t') \rangle = k_\mathrm{B} T \, G(t-t') \,.
 \end{gather}
-In the Ohmic, Markovian limit where $J(\omega) \approx \gamma_\mathrm{c} \omega$ at low frequencies, the memory kernel becomes $\Gamma(t) \approx 2\gamma_\mathrm{c} \delta(t)$, yielding standard Langevin dynamics in \cref{eq:langevin_cavity_1,eq:langevin_cavity_2} (the $\lambda=0$ case).
+In the Ohmic, Markovian limit where $J(\omega) \approx \gamma_\mathrm{c} \omega$ at low frequencies, the memory kernel becomes $G(t) \approx 2\gamma_\mathrm{c} \delta(t)$, yielding standard Langevin dynamics in \cref{eq:langevin_cavity_1,eq:langevin_cavity_2} (the $\lambda=0$ case).
 The lifetime of the cavity $\tau_\mathrm{c}$ is related to the damping rate through $\gamma_\mathrm{c} = 1/(2\tau_\mathrm{c})$.
 When we turn on the coupling, $q_\mathrm{c} \to q_\mathrm{c} + \lambda \mu_\alpha / \omega_\mathrm{c}$, the damping and noise statistics remain unchanged while the deterministic force acquires the coupling term.
 
@@ -939,7 +808,7 @@ The change in total energy under this force is
 Enforcing the equality with \cref{eq:energyrate_langevin} gives
 \begin{gather}
 \gamma_K = \frac{1}{2\tau_\mathrm{b}}\left(1-\left(1-\frac{1}{3N}\right)\frac{\bar{K}}{K}\right) \,, \\
-D_K = \frac{\bar{K}}{3N\,\tau_\mathrm{b}\,K}, \,.
+D_K = \frac{\bar{K}}{6N\,\tau_\mathrm{b}\,K} \,.
 \end{gather} 
 The equations of motion thus become
 \begin{gather}
@@ -950,7 +819,7 @@ This thermostat samples the canonical ensemble exactly and preserves short-time 
 For a single degree of freedom ($N=1$), it reduces to standard Langevin dynamics, whereas in many-particle systems, the global coupling reduces dynamical artifacts coming from the bath coupling.
 
 
-\section{Observables in an Aging System} \label{app:obervables}
+\section{Observables in an Aging System} \label{app:observables}
 
 
 \subsection{Averaged Observables} \label{app:avgobserv}
@@ -961,7 +830,7 @@ $A(\Gamma)$ at time $t$, e.g., the average potential energy or fictive temperatu
 \langle A(t) \rangle_\lambda = \int \mathrm{d}\Gamma\, A(\Gamma)\,
 \rho^{(\lambda)}(\Gamma, t) \,.
 \end{equation}
-Setting the time at which we activate the coupling to be $t_0$, we can write the Fokker--Planck equation for our nonthermal aging protocol as
+Setting the time at which we activate the coupling to be $t_0$, we can write the Fokker--Planck equation for our non-thermal aging protocol as
 \begin{equation}
 \frac{\partial \rho^{(\lambda)}(\Gamma,t)}{\partial t} 
 = \mathcal{L}_\lambda\,\rho^{(\lambda)}(\Gamma,t) \,,
@@ -1117,7 +986,7 @@ To track nonequilibrium dynamics, we maintain multiple waiting times $t_\mathrm{
 % \end{equation}
 
 % It is often convenient to express the same quantity using 
-In the limit of large waiting times, the system reaches equilibrium (for fixed $\lambda$) and time-correlation functions obey time-translational invariance. A short proof of this property follows from \cref{eq:CAA_ensavg}. In this regime, we assume that at time, the system has relaxed to the stationary distribution so that
+In the limit of large waiting times, the system reaches equilibrium (for fixed $\lambda$) and time-correlation functions obey time-translational invariance. A short proof of this property follows from \cref{eq:CAA_ensavg}. In this regime, we assume that at that time, the system has relaxed to the stationary distribution so that
 \begin{equation}
 \rho^{(\lambda)}(\Gamma,t_\mathrm{w}) = \rho^{(\lambda)}_\mathrm{eq}(\Gamma),
 \qquad
@@ -1132,7 +1001,7 @@ C_{AA}^{(\lambda)}(t;t_\mathrm{w})
 To eliminate the last remaining dependence in $t_\mathrm{w}$, we note that $A_{t+t_\mathrm{w}}(\Gamma)$ is obtained from solving the backward Kolmogorov equation with an initial condition at $t =t_\mathrm{w}$. Since the equation is invariant under time translation, $A_{t+t_\mathrm{w}}(\Gamma) \to A_{t}(\Gamma)$ provided that the initial condition is set at $t = 0$. Thus, we obtain
 \begin{equation}
 C_{AA}^{(\lambda)}(t;t_\mathrm{w})
-=  \int \mathrm{d} \Gamma A_{\tau}(\Gamma; \lambda) A(\Gamma) \rho_\mathrm{eq}^{(\lambda)}(\Gamma)
+=  \int \mathrm{d} \Gamma A_{t}(\Gamma; \lambda) A(\Gamma) \rho_\mathrm{eq}^{(\lambda)}(\Gamma)
 =: C_{AA,\mathrm{eq}}^{(\lambda)}(t), \label{eq:equilibrium_autocorr_ens}
 \end{equation}
 which makes explicit that the equilibrium correlation function depends only on the time difference $t$, i.e., it is time-translationally invariant.
@@ -1181,7 +1050,7 @@ where the sum runs over the two polarization directions $\alpha$. For the equili
 \end{equation}
 which follows from time-reversibility, $\bar{C}_{\mu \mu}^{(\lambda)}(\tau)=\bar{C}_{\mu \mu}^{(\lambda)}(-\tau)$ and the fact we only care about the real part of the absorption spectrum. Truncating \cref{eq:irspectrum} at the final simulation time, $\tau_{\max}$ then leads to
 \begin{equation}
-n(\omega) \alpha(\omega) \approx \frac{\beta \omega^{2}}{4 \epsilon_0 V c} \int_{0}^{\tau_{\max}} \!\!\!\!\!\mathrm{d} t \cos(\omega t)  \bar{C}_{\mu \mu}^{(\lambda)}(\tau) .
+n(\omega) \alpha(\omega) \approx \frac{\beta \omega^{2}}{4 \epsilon_0 V c} \int_{0}^{\tau_{\max}} \!\!\!\!\!\mathrm{d}\tau\,\cos(\omega \tau)\,\bar{C}_{\mu \mu}^{(\lambda)}(\tau) .
 \end{equation}
 We sample the DACF uniformly with spacing $\Delta t$ and $N$ points so that
 $\tau_{\max} = (N-1) \Delta t$ and $C_n = C_\mu(n\,\Delta t)$. The frequencies are gridded according to
@@ -1190,7 +1059,7 @@ $\tau_{\max} = (N-1) \Delta t$ and $C_n = C_\mu(n\,\Delta t)$. The frequencies a
 \end{equation}
 Using the discrete cosine transform, we compute
 \begin{equation}
-X_k = (-1)^k C_{N-1} + 2 \sum_{n=1}^{N-2} C_n \cos\!\left(\frac{\pi n k}{N-1}\right) .
+X_k = C_0 + (-1)^k C_{N-1} + 2 \sum_{n=1}^{N-2} C_n \cos\!\left(\frac{\pi n k}{N-1}\right) .
 \end{equation}
 The trapezoidal rule then approximates the cosine integral as
 \begin{equation}
@@ -1206,12 +1075,12 @@ Note that when plotting intensities, we often normalize the spectrum by the area
 \subsection{Material Time} \label{app:mattime}
 
 According to material-time translational invariance (MTTI), time-correlation functions across all protocols can be reparameterized as a scalar function that depends only on material-time differences. 
-If we choose a series of waiting times, indexed as $t_w^{(r)}$, and compute the corresponding structural relaxation time $\tau_{s}^{(r)}$ where $\phi_{\bm k}^{(\lambda)}(\tau_c^{(r)}; t_w^{(r)}) = 0.1$. We essentially obtain a series of data points
+If we choose a series of waiting times, indexed as $t_w^{(r)}$, and compute the corresponding structural relaxation time $\tau_{s}^{(r)}$ where $\phi_{\bm k}^{(\lambda)}(\tau_s^{(r)}; t_w^{(r)}) = 0.1$. We essentially obtain a series of data points
 \begin{equation}
 h_\lambda(t_\mathrm{w}^{(r)} + \tau_\mathrm{s}^{(r)}) - h_\lambda(t_\mathrm{w}^{(r)}) = 1, \quad r = 1, 2, \ldots, N_\mathrm{w}.
 \end{equation}
 Previous works typically rely on the iterative construction of $h_\lambda(t)$, which requires knowing the structural relaxation time of the previous waiting time to determine the next waiting time for measurements.
-When datapoints are more sparse, a more robust method is to view the reconstruction of $h_\lambda(t)$ as a \emph{least-squares fitting problem}. Let us denote $\tilde{h}_\lambda(t; \bm h_\lambda)$ as a parameterization of our material time based on a summation of linear basis functions, where $\boldsymbol{h_\lambda} = [h_{\lambda}^0, h_{\lambda}^1, \ldots, h_{\lambda}^{M-1}]^\mathsf{T}$ denotes the parameters we need to fit. 
+When datapoints are more sparse, a more robust method is to view the reconstruction of $h_\lambda(t)$ as a \emph{least-squares fitting problem}. Let us denote $\tilde{h}_\lambda(t; \bm h_\lambda)$ as a parameterization of our material time based on a summation of linear basis functions, where $\boldsymbol{h_\lambda} = [h_{\lambda}^0, h_{\lambda}^1, \ldots, h_{\lambda}^{M_\mathrm{grid}-1}]^\mathsf{T}$ denotes the parameters we need to fit. 
 The parameter vector $\bm h_\lambda$ corresponds to the list of values for the material time at all gridpoints. 
 In particular, if we discretize time on a dense regular grid of $M_\mathrm{grid}$-many points: $t_m = m \cdot \Delta t$ for $m = 0, 1, \ldots, M_\mathrm{grid}-1$, where $\Delta t = t_{\max}/(M_\mathrm{grid}-1)$, then $\tilde{h}_\lambda(t_m) = h_\lambda^m$.
 Note that $M_\mathrm{grid}$ should be large enough (e.g., $M_\mathrm{grid} = 500$) that the discrete grid approximates continuous $h_\lambda(t)$ well, enabling smooth reconstructions via linear interpolation. With these parameters, the linear basis expansion can be written as %The linear basis functions We handle this using linear interpolation weights.
@@ -1224,7 +1093,7 @@ where $\theta_m(t)$ is a 1D piecewise linear basis function, often written as:
 \end{equation}
 With this, every constraint becomes:
 \begin{equation}
-\sum_{m = 0}^{M_\mathrm{grid}-1}  \left( \theta_m(t_\mathrm{w}^{(r)} + \tau_\mathrm{m}^{(r)})  - \theta_s(t_\mathrm{w}^{(r)}) \right) h_\lambda^m= 1, \quad r = 1, 2, \ldots, N_\mathrm{w}.
+\sum_{m = 0}^{M_\mathrm{grid}-1}  \left( \theta_m(t_\mathrm{w}^{(r)} + \tau_\mathrm{s}^{(r)})  - \theta_m(t_\mathrm{w}^{(r)}) \right) h_\lambda^m= 1, \quad r = 1, 2, \ldots, N_\mathrm{w}.
 \label{eq:constraints_set}
 \end{equation}
 Let us define a $N_\mathrm{w} \times M_\mathrm{grid}$ matrix $\mathbf{A}$ whose element is composed of our interpolation weights %We can then write a matrix as 
@@ -1297,9 +1166,9 @@ In the second half-step, stochastic forces are added through a modified accelera
 \begin{equation}
 f_\alpha(t + \Delta t) \to f_\alpha(t + \Delta t) - \gamma_\mathrm{c} \, p_\alpha\left(t + \Delta t/2\right) + \xi_\alpha(t) \,,
 \end{equation}
-where $\gamma_\alpha = 1/(2\tau_\alpha)$ is the friction coefficient and $\xi_\alpha(t)$ is Gaussian random variable with variance %white noise with variance
+where $\gamma_\mathrm{c} = 1/(2\tau_\mathrm{c})$ is the friction coefficient and $\xi_\alpha(t)$ is Gaussian random variable with variance %white noise with variance
 \begin{equation}
-\langle \xi_\alpha^2 \rangle = \frac{6 \gamma_\alpha k_\mathrm{B} T}{\Delta t}
+\langle \xi_\alpha^2 \rangle = \frac{6 \gamma_\mathrm{c} k_\mathrm{B} T}{\Delta t}
 \end{equation}
 as required by the fluctuation-dissipation theorem.
 The final momentum is then
@@ -1333,7 +1202,7 @@ e^{-\Delta t/\tau_\mathrm{b}}\bigl(1 - e^{-\Delta t/\tau_\mathrm{b}}\bigr)
 }
 \biggr]^{1/2} \,,
 \end{equation}
-where $R_\Gamma$ and $R_\mathrm{N}$ are independent standard normal random variables.
+where $R_\mathrm{N}$ is a standard normal random variable, and $R_\Gamma$ is an independent chi-squared random variable with $3N-1$ degrees of freedom.
 After rescaling momenta $\bm{P}_i(t + \Delta t/2) \to \alpha_\upsilon \bm{P}_i(t + \Delta t/2)$, positions update according to
 \begin{equation}
 \bm{R}_i(t + \Delta t) = \bm{R}_i(t) + \frac{\bm{P}_i(t + \Delta t/2)}{M_i} \Delta t \,.
@@ -1366,7 +1235,7 @@ The per-particle error estimate at time $t$ is
 \end{align}
 and the system-wide error between the two trajectories is computed as the root-mean-square
 \begin{equation}
-\delta (t) = \sqrt{\frac{1}{N} \sum_{i=1}^{N} (\delta_i(t))}
+\delta (t) = \sqrt{\frac{1}{N} \sum_{i=1}^{N} \delta_i(t)^2}
 \end{equation}
 over all $N$ particles. The timestep for time $t$ then follows the formula
 \begin{equation}
@@ -1399,32 +1268,32 @@ When $f_0 = 0$, ramping is disabled and the integrator uses fixed $\varepsilon_*
 \begin{minipage}{0.75\linewidth}
 \normalsize
 \centering
-\begin{ruledtabular}
 \begin{tabular}{lccc}
+\toprule
 \multicolumn{4}{c}{\textbf{Intramolecular (Harmonic Bonds)}} \\
-\hline
+\midrule
 Bond type & $k$ (Hartree/Bohr$^2$) & $R^0$ (Bohr) & $\omega$ (cm$^{-1}$) \\
-\hline
+\midrule
 A--A & $0.73204$ & $2.2817$ & $1560$ \\
 B--B & $1.4325$ & $2.0744$ & $2433$ \\
-\hline
+\midrule
 \multicolumn{4}{c}{} \\
 \multicolumn{4}{c}{\textbf{Intermolecular (Lennard-Jones)}} \\
-\hline
+\midrule
 Pair type & $\epsilon$ (Hartree) & $\sigma$ (Bohr) & $r_\mathrm{cut}$ (Bohr) \\
-\hline
+\midrule
 A--A & $1.6685 \times 10^{-4}$ & $6.2304$ & $15.0$ \\
 B--B & $8.3426 \times 10^{-5}$ & $5.4828$ & $15.0$ \\
 A--B & $2.5028 \times 10^{-4}$ & $4.9832$ & $15.0$ \\
 \multicolumn{4}{l}{Potential is shifted at $r=r_\mathrm{cut}$ to ensure zeroth-order smoothness.} \\
-\hline
+\midrule
 \multicolumn{4}{c}{} \\
 \multicolumn{4}{c}{\textbf{Electrostatic (Coulombic)}} \\
-\hline
+\midrule
 \multicolumn{4}{l}{Partial charges: $\pm 0.3e$ per molecule} \\
 \multicolumn{4}{l}{Ewald summation with cut-off radius of 1 nm.} \\
+\bottomrule
 \end{tabular}
-\end{ruledtabular}
 \caption{\label{tab:forcefield}Force field parameters for the molecular Kob-Andersen (mKA) model. Harmonic bond parameters: spring constant $k$ and equilibrium bond length $R^0$. Lennard-Jones parameters: well depth $\epsilon$ and size parameter $\sigma$. Cutoff radius $r_\mathrm{cut}$ applies to all LJ interactions. All quantities in atomic units (Hartree for energy, Bohr for length). Each diatomic molecule has opposing partial charges $\pm 0.3e$ on its two atoms, creating a permanent dipole.}
 \end{minipage}
 \end{table}
@@ -1446,8 +1315,8 @@ Note that at temperatures considered in this work, the resulting pressures for a
 
 \subsection{Simulation Protocol}
 
-Nonthermal aging simulations reported in this work follow a three-stage protocol designed to generate statistically independent initial configurations and probe nonequilibrium dynamics following cavity activation. 
-Note that, apart from production runs, both simulations for nonthermal aging experiments and cavity configurational feedback (C$^2$F) cooling employ the same equilibration protocol, specified at different temperatures.
+Non-thermal aging simulations reported in this work follow a three-stage protocol designed to generate statistically independent initial configurations and probe nonequilibrium dynamics following cavity activation. 
+Note that, apart from production runs, both simulations for non-thermal aging experiments and cavity configurational feedback (C$^2$F) cooling employ the same equilibration protocol, specified at different temperatures.
 
 \subsubsection{Initial configuration generation.}
 
@@ -1457,7 +1326,7 @@ Bond lengths $r$ are sampled from the equilibrium Boltzmann distribution for har
 This initial configuration provides a reasonable starting point that avoids particle overlaps while respecting thermal fluctuations in intramolecular vibrations.
 
 \subsubsection{Equilibration run.}
-Starting from the initial configuration at Stage 1, we perform a single long NVT equilibration run at $T = 100$ K (for nonthermal aging experiment) and $T = 300$ K (for $\mathrm{C^2F}$ cooling) without the cavity mode.
+Starting from the initial configuration at Stage 1, we perform a single long NVT equilibration run at $T = 100$ K (for non-thermal aging experiment) and $T = 300$ K (for $\mathrm{C^2F}$ cooling) without the cavity mode.
 From this trajectory, we extract $500$ configurations separated by 300 ps, resulting in a total runtime of 150 ns. 
 These configurations serve as initial conditions for the $500$ independent production runs, enabling robust ensemble averaging of nonequilibrium observables. 
 Thermalization of the cavity mode is fast and is done during the production run, as described below. 
@@ -1465,10 +1334,10 @@ Thermalization of the cavity mode is fast and is done during the production run,
 \subsubsection{Production runs.}
 
 Each of the $500$ configurations from Stage 2 serves as the initial condition for an independent production run. Each production run continues for a total simulation time sufficient to observe relaxation back toward equilibrium, typically up to 2.5 ns.
-For nonthermal aging experiments, at $t = 0$, we introduce a cavity mode with position and momentum sampled from its thermal equilibrium distribution at $T = 100$ K. 
+For non-thermal aging experiments, at $t = 0$, we introduce a cavity mode with position and momentum sampled from its thermal equilibrium distribution at $T = 100$ K. 
 This sampling can be done exactly as the probability distribution of the cavity mode follows a Gaussian distribution.
 The cavity-molecule coupling is initially set to zero ($\lambda(t < t_0) = 0$), allowing the system to evolve under equilibrium conditions.
-At $t_0 = 200$ ps, the coupling is instantaneously activated to the target value $\lambda(t \geq t_0) = \lambda$ according to \cref{eq:varepsilon}, initiating the nonthermal aging process.
+At $t_0 = 200$ ps, the coupling is instantaneously activated to the target value $\lambda(t \geq t_0) = \lambda$ according to \cref{eq:varepsilon}, initiating the non-thermal aging process.
 For $t > t_0$, we also turn on adaptive timestepping with the parameters specified in the previous subsections.
 
 For $\mathrm{C^2F}$ cooling simulations, the procedure is nearly identical except that the cavity modes are sampled from their thermal equilibrium distribution at $T = 300$ K. 
@@ -1493,6 +1362,13 @@ For further details, please refer to the documentation website (\href{https://ca
 %Both implementations compute identical forces and maintain bit-level reproducibility when using the same random seed, differing only in performance characteristics.
 %Typical production runs on an NVIDIA A100 GPU achieve simulation rates of $10^6$ timesteps per hour for our $N=250$ molecular system.
 
+\section{Note on Experimental Timescale Requirements}
+
+While our MD simulations operate the C$^2$F protocol on picosecond timescales, this is chosen only because molecular dynamics simulations are computationally limited to nanosecond ranges. The C$^2$F protocol's only fundamental requirement is \emph{separation of timescales}: cavity and bath modulation must occur much faster than structural relaxation ($\tau_\mathrm{mod} \ll \tau_\mathrm{s}$). This means we can operate the protocol at lower temperatures. For instance, in deeply supercooled liquids we have $\tau_\mathrm{s} \gtrsim$ milliseconds, and thus microsecond cavity control provides a three-order-of-magnitude separation in timescales, more than sufficient for the protocol to function as designed. Experimentally, several techniques can achieve these timescales. Electro-optic modulation via Pockels cells enables nanosecond-to-microsecond switching of cavity parameters \cite{dutta2017alloptical,gryaznov2019active}. Tunable-finesse optical resonators based on coupled Fabry-Perot cavities achieve microsecond response times through controlled impedance mismatch \cite{stone2020optical}. For slower glass-forming systems, liquid crystal infiltration into cavities provides millisecond tuning \cite{yavorskiy2025terahertz}, while MEMS and piezoelectric mirrors offer intermediate timescales. Additionally, plasmonic nanoparticle lattices demonstrate tunable light-matter coupling through refractive index modulation \cite{wang2019manipulating}, potentially enabling even faster control.
+
+The separation of timescales also implies that it is not necessary for the cavity to be at resonance. As shown in \cref{app:offres} and \cref{fig:fig5}, scanning the cavity frequency $\omega_\mathrm{c}$ around the molecular vibration frequency reveals a weak monotonic frequency dependence of the relaxation slowdown. In other words, non-thermal aging persists at off-resonant frequencies as long as the timescale separation condition is maintained. Additionally, fictive temperature $T_\mathrm{f}$ can be measured experimentally through multiple complementary techniques. Standard differential scanning calorimetry (DSC) and fast scanning calorimetry (FSC) provide direct access to $T_\mathrm{f}$ with measurement timescales ranging from minutes to milliseconds \cite{elbanna2023challenging}. Spectroscopic methods based on fluctuation-dissipation relations offer faster probes; these well-established techniques use the ratio of response to fluctuation spectra in the frequency domain to extract the structural fictive temperature,\cite{henot2024crossing,baityjesi2016statics,zhang2021unifying} and are potentially attractive tools to incorporate fictive temperature measurements in Fabry-Perot cavities. %These enable experimental validation of the deeply equilibrated states predicted by the C$^2$F protocol.
+
+Finally, our proposal to confine supercooled liquids within optical cavities using silica spacers is experimentally standard. Fused silica, ultra-low-expansion (ULE) glass, and Zerodur are routinely used as cavity spacer materials due to their low thermal expansion and chemical inertness. Optofluidic Fabry-P\'erot cavities with fused silica capillaries have been demonstrated for liquid samples \cite{gaber2015volume}, and both spacerless flow-cell designs \cite{yamada2022spacerless} and standard cavity configurations \cite{fukushima2022inherent} have successfully achieved vibrational strong coupling in liquid-phase systems including water and ionic liquids.
 
 
 \section{Supplementary Results}
@@ -1516,14 +1392,13 @@ Many functional forms can fit the relaxation time; here, we choose the parabolic
 (\beta-\beta_\mathrm{o}) E_a+J^2(\beta-\beta_\mathrm{o})^2  &\beta \geq \beta_\mathrm{o}
 \end{cases}
 \end{equation}
-where $\beta_\mathrm{o} = 1/k_\mathrm{B} T_\mathrm{o}$, $E_\mathrm{a}$ is the activation energy at high temperatures, and $J$ is the energy-scale for low-temperature relaxation. 
 Within the so-called dynamical facilitation perspective of glassy dynamics, $J$ is proportional to the activation energy $J_\sigma$ of excitations, which are localized pure-shear deformations that mediate structural rearrangements in supercooled liquids.\cite{hasyim2021theory}
 At low temperatures, excitations typically facilitate the creation of other excitations nearby. Such a cooperative mechanism leads to non-Arrhenius behavior in the dynamics of density-mode fluctuations.\cite{hasyim2024emergent}
 
 \begin{figure}[t]
     \centering
     \includegraphics[width=0.6\linewidth]{Figure5.pdf}
-    \caption{Nonthermal aging at different cavity frequencies. (a) The normalized structural relaxation time over (a) frequency $\omega_\mathrm{c}$ and (b) waiting time $t_\mathrm{w}$, showing the non-monotonic behavior across $\omega_\mathrm{c}$ and $t_\mathrm{w}$.}
+    \caption{Non-thermal aging at different cavity frequencies. (a) The normalized structural relaxation time over (a) frequency $\omega_\mathrm{c}$ and (b) waiting time $t_\mathrm{w}$, showing the non-monotonic behavior across $\omega_\mathrm{c}$ and $t_\mathrm{w}$.}
     \label{fig:fig5}
 \end{figure}
 
@@ -1543,7 +1418,7 @@ To test whether polariton formation is necessary, we fix the coupling strength a
 If polariton formation is essential, we would expect a sharp peak in the normalized structural relaxation time $\tilde{\tau}_\mathrm{s}$ at $\omega_\mathrm{c} = \omega_{\mathrm{AA}}$, followed by rapid decay to the equilibrium baseline ($\tilde{\tau}_\mathrm{s}=1$) at off-resonant frequencies.
 However, results in \cref{fig:fig5}a reveal a monotonic effect where initial slowdown is more pronounced before tapering off at high frequencies.
 Furthermore, as shown in \cref{fig:fig5}b, aging at low frequencies retains memory longer, reaching equilibrium at longer waiting times than higher frequencies. Notably, some conditions display non-monotonic behavior in waiting time, with maximum slowdown at intermediate $t_\mathrm{w} = 200$ ps.
-These results show that nonthermal aging does not require polariton formation, with its magnitude and temporal characteristics depending non-trivially on $\omega_\mathrm{c}$ and $\lambda$.
+These results show that non-thermal aging does not require polariton formation, with its magnitude and temporal characteristics depending non-trivially on $\omega_\mathrm{c}$ and $\lambda$.
 
 
 \subsection{Benchmarking \texttt{cavHOOMD-blue} against LAMMPS+i-PI}
@@ -1561,8 +1436,20 @@ To validate our GPU-accelerated implementation of cavity molecular dynamics in \
 
 \Cref{fig:cavmd_benchmark} shows the comparison of the normalized dipole autocorrelation function $C_{\mu\mu}(t)/C_{\mu\mu}(0)$ and the infrared absorption spectrum $n(\omega)\alpha(\omega)$ computed by \texttt{cavHOOMD-blue} and LAMMPS+i-PI. Both quantities exhibit excellent agreement between the two implementations. The dipole autocorrelation functions overlap throughout the decay, confirming that the cavity-molecule coupling and thermostatting schemes produce identical equilibrium dynamics. The infrared spectra display the characteristic peaks at the A$2$ stretch (1560~cm$^{-1}$) and B$_2$ stretch (2335~cm$^{-1}$) frequencies, with matching lineshapes and intensities. This quantitative agreement validates that \texttt{cavHOOMD-blue} faithfully reproduces the physics of the original CavMD framework while offering significant computational acceleration through GPU parallelization, enabling the long-timescale simulations required to study aging phenomena in supercooled liquids.
 
-\endgroup
 
+\clearpage
 
+%*******************************%
+%                               %
+%           Bibliography        %
+%                               %
+%*******************************%
+
+%\section*{References}
+\addcontentsline{toc}{section}{References}
+\bibliographystyle{bibStyle}
+\bibliography{references}
+%{\footnotesize \printbibliography[heading=none]}
+
+%\printbibliography{references.bib}
 \end{document}
-

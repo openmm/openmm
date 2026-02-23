@@ -6,11 +6,15 @@ Test suite for verifying OpenMM functionality and correctness.
 
 ```
 tests/
-├── dimer_system/              # Verification tests for dimer system
-│   └── test_cavity_coupling.py  # Test script to verify CavityForce
-│
-├── _archive/                  # Legacy files and old outputs
-└── Test*.h, Test*.cpp         # C++ unit tests for OpenMM core
+├── dimer_system/      # Two-component toy model for cavity coupling
+├── water_system/      # Flexible TIP4P-Ew water
+├── cace-lr_water/    # CACE-LR ML water
+├── rpmd/              # UMA/RPMD tests (see rpmd/README.md)
+├── protein_system/   # Protein cavity tests
+├── uma_ice_rpmd/     # Ice RPMD
+├── _archive/         # Legacy outputs
+├── docs/             # Fix history, technical notes (docs/fix-history.md)
+└── Test*.h, Test*.cpp # C++ unit tests for OpenMM core
 ```
 
 ## Running Tests
@@ -67,9 +71,9 @@ Each simulation produces:
 
 ## Documentation
 
-- `dimer_system/README.md` - Dimer system details
-- `water_system/README.md` - Water system details
-- `TESTS_ORGANIZATION.md` - Organization notes
+- `dimer_system/README.md`, `water_system/README.md` - Per-system details
+- `rpmd/README.md` - UMA/RPMD test suite
+- `docs/fix-history.md` - Force constants, cavity coupling, IR fixes
 
 ## Notes
 

@@ -161,13 +161,13 @@ print(f"Speedup: {seq_total / batch_avg:.2f}x")
 print(f"Efficiency: {(seq_total / batch_avg) / 8 * 100:.1f}% of ideal 8x speedup")
 
 if batch_avg < seq_total * 0.3:
-    print("\n✅ EXCELLENT batching efficiency! >70% of ideal speedup")
+    print("\nEXCELLENT batching efficiency! >70% of ideal speedup")
 elif batch_avg < seq_total * 0.5:
-    print("\n✅ GOOD batching efficiency! ~50% of ideal speedup")
+    print("\nGOOD batching efficiency! ~50% of ideal speedup")
 elif batch_avg < seq_total * 0.7:
-    print("\n⚠️ MODERATE batching efficiency. ~30-50% of ideal speedup")
+    print("\nMODERATE batching efficiency. ~30-50% of ideal speedup")
 else:
-    print("\n❌ POOR batching efficiency. Batching not helping much")
+    print("\nPOOR batching efficiency. Batching not helping much")
 
 # Test 3: CORRECTNESS CHECK
 print("\n" + "="*80)
@@ -176,9 +176,9 @@ print("="*80)
 
 # Check if we got 8 separate energies
 if batch_energies.shape[0] == 8:
-    print("✅ Got 8 separate energies!")
+    print("Got 8 separate energies!")
 else:
-    print(f"❌ Expected 8 energies, got {batch_energies.shape[0]}")
+    print(f"Expected 8 energies, got {batch_energies.shape[0]}")
 
 # Compare first system's results
 print("\nPer-bead energies (sequential vs batched):")
@@ -226,7 +226,7 @@ for i in range(8):
     print(f"  bead {i}: seq_edges={seq_edges} | batch_edges={batch_edges}")
 
     if seq_edges != batch_edges:
-        print(f"    ⚠️ edge count mismatch for bead {i}")
+        print(f"    WARNING: edge count mismatch for bead {i}")
 
 def _edge_set(edge_index):
     edges = edge_index.cpu().numpy().T
@@ -280,12 +280,12 @@ for i in range(8):
 energy_diff0 = abs(seq_energies[0] - batch_energies[0])
 force_diff0 = np.abs(seq_forces_list[0] - batch_forces_split[0]).max()
 if energy_diff0 < 1e-4 and force_diff0 < 1e-4:
-    print("\n✅ PERFECT! Batched results match sequential!")
-    print("🎉 TRUE RPMD-STYLE BATCHING IS WORKING!")
+    print("\nPERFECT! Batched results match sequential!")
+    print("TRUE RPMD-STYLE BATCHING IS WORKING!")
 elif energy_diff0 < 1e-2 and force_diff0 < 1e-2:
-    print("\n✅ Forces match within tolerance")
+    print("\nForces match within tolerance")
 else:
-    print("\n❌ Results differ significantly - something is wrong")
+    print("\nResults differ significantly - something is wrong")
 
 # Memory
 print("\n" + "="*80)

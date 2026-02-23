@@ -41,11 +41,11 @@ try:
     if cuda_lib.exists():
         try:
             openmm.Platform.loadPluginLibrary(str(cuda_lib))
-            print("✓ CUDA platform plugin loaded")
+            print("CUDA platform plugin loaded")
         except Exception as e:
             print(f"⚠ Could not load CUDA plugin: {e}")
     
-    print("✓ OpenMM loaded successfully")
+    print("OpenMM loaded successfully")
 except ImportError as e:
     print(f"Error importing OpenMM: {e}")
     sys.exit(1)
@@ -237,8 +237,8 @@ def run_direct_laser_simulation(
     cavity_force.setCavityDriveEnabled(False)  # No cavity driving
     
     system.addForce(cavity_force)
-    print("  ✓ Direct molecule-laser coupling enabled")
-    print("  ✓ Cavity-mode driving disabled")
+    print("  Direct molecule-laser coupling enabled")
+    print("  Cavity-mode driving disabled")
     
     # Create integrator
     integrator = openmm.LangevinMiddleIntegrator(
@@ -257,7 +257,7 @@ def run_direct_laser_simulation(
     platform = None
     try:
         platform = openmm.Platform.getPlatformByName('CUDA')
-        print("  ✓ Using CUDA platform")
+        print("  Using CUDA platform")
     except Exception as e:
         print(f"  ⚠ CUDA not available: {e}")
         platform = openmm.Platform.getPlatformByName('Reference')
@@ -286,7 +286,7 @@ def run_direct_laser_simulation(
         
         try:
             openmm.LocalEnergyMinimizer.minimize(context, maxIterations=100)
-            print("  ✓ Minimization completed")
+            print("  Minimization completed")
         except Exception as e:
             print(f"  ⚠ Minimization failed: {e}")
             print("  Continuing with initial positions...")
@@ -296,7 +296,7 @@ def run_direct_laser_simulation(
         cavity_force.setDirectLaserCouplingEnabled(direct_laser_was_enabled)
         cavity_force.updateParametersInContext(context)
         if cavity_drive_was_enabled or direct_laser_was_enabled:
-            print("  ✓ Laser forces re-enabled for simulation")
+            print("  Laser forces re-enabled for simulation")
     else:
         print("\n--- Skipping Energy Minimization ---")
     
@@ -317,7 +317,7 @@ def run_direct_laser_simulation(
         print(f"\n--- Starting Production ({prod_time} ps) ---")
         cavity_force.setDirectLaserCouplingEnabled(True)
         cavity_force.updateParametersInContext(context)
-        print("  ✓ Laser forces enabled for production")
+        print("  Laser forces enabled for production")
         
         total_steps = int(prod_time / dt)
         start_step = 0

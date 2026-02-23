@@ -37,7 +37,7 @@ if len(sys.argv) < 2:
 else:
     input_file = sys.argv[1]
 
-# 1. Load the data
+# Load the data
 print(f"\n1. Loading cavity position trajectory data from: {input_file}")
 data = np.load(input_file, allow_pickle=True)
 time = data['time_ps']
@@ -54,7 +54,7 @@ print(f"   Total data points: {len(time)}")
 print(f"   Time range: {time[0]:.2f} - {time[-1]:.2f} ps")
 print(f"   Cavity position shape: {cavity_q.shape}")
 
-# 2. Cut off equilibration (first 20 ps or 10% of data, whichever is smaller)
+# Cut off equilibration (first 20 ps or 10% of data, whichever is smaller)
 print("\n2. Removing equilibration period...")
 total_time = time[-1] - time[0]
 cutoff_time = min(20.0, total_time * 0.1)  # 20 ps or 10% of total time
@@ -79,7 +79,7 @@ if len(time_cut) < 100:
     print(f"   Need at least 100 points. Please run simulation longer.")
     sys.exit(1)
 
-# 3. Compute cavity position with mean subtracted (δq = q - <q>)
+# Compute cavity position with mean subtracted (δq = q - <q>)
 print("\n3. Computing cavity position with mean subtracted (δq = q - <q>)...")
 # Use x,y components (cavity mode is in xy plane)
 cavity_q_xy = cavity_q_cut[:, :2]  # Only x,y components
@@ -89,7 +89,7 @@ cavity_q_centered = cavity_q_xy - cavity_q_mean
 print(f"   Mean cavity position (x,y): ({cavity_q_mean[0]:.6f}, {cavity_q_mean[1]:.6f}) nm")
 print(f"   RMS cavity position fluctuation: {np.sqrt(np.mean(np.sum(cavity_q_centered**2, axis=1))):.6f} nm")
 
-# 4. Calculate autocorrelation for x,y components
+# Calculate autocorrelation for x,y components
 print("\n4. Calculating cavity position autocorrelation function...")
 print("   Computing <δq(0)·δq(t)> = <δqx(0)·δqx(t)> + <δqy(0)·δqy(t)> (x,y only)")
 
@@ -107,7 +107,7 @@ time_autocorr = np.arange(len(autocorr)) * dt_ps
 print(f"   Autocorrelation length: {len(autocorr)} points")
 print(f"   Time step: {dt_ps:.4f} ps")
 
-# 5. Compute spectrum from autocorrelation using FFT (Wiener-Khinchin theorem)
+# Compute spectrum from autocorrelation using FFT (Wiener-Khinchin theorem)
 print("\n5. Computing cavity position spectrum from autocorrelation (Wiener-Khinchin theorem)...")
 print("   S(ω) = FT[<q(0)·q(t)>]")
 print("   Using autocorrelation: <qx(0)qx(t)> + <qy(0)qy(t)>")
@@ -123,16 +123,16 @@ freq_cm = freq_hz / (3e10)  # Convert Hz to cm^-1
 # Power spectrum from FFT
 spectrum_power = np.real(spectrum_fft * np.conj(spectrum_fft))
 
-# CRITICAL: Multiply by ω² for power spectrum intensity!
+# Multiply by ω² for power spectrum
 # I(ω) ∝ ω² × S(ω) where S(ω) is the power spectrum
 omega = 2 * np.pi * freq_hz  # Angular frequency in rad/s
 spectrum = spectrum_power * (omega**2)
 
-print(f"   ✓ Applied ω² factor for power spectrum intensity")
+print(f"   Applied ω² factor for power spectrum intensity")
 print(f"   Frequency range: 0 - {freq_cm[-1]:.1f} cm^-1")
 print(f"   Nyquist frequency: {freq_cm[-1]:.1f} cm^-1")
 
-# 6. Extract cavity position trajectory for a representative window
+# Extract cavity position trajectory for a representative window
 print("\n6. Extracting cavity position trajectory for representative window...")
 # Use last 20% of data or 20 ps window, whichever is smaller
 total_time_available = time[-1] - time[0]
@@ -155,8 +155,8 @@ else:
     time_window = time
     cavity_q_window = cavity_q
 
-# 7. Create comprehensive plot with 3 rows
-print("\n7. Creating comprehensive plot...")
+# Create plot with 3 rows
+print("\n7. Creating plot...")
 
 fig, axes = plt.subplots(3, 1, figsize=(14, 14))
 
@@ -224,7 +224,7 @@ ax3.axhline(y=0, color='k', linestyle='-', alpha=0.2, linewidth=0.5)
 plt.tight_layout()
 output_prefix = "cavity_position_spectrum"
 plt.savefig(f'{output_prefix}_full.png', dpi=300, bbox_inches='tight')
-print(f"   ✓ Saved: {output_prefix}_full.png")
+print(f"   Saved: {output_prefix}_full.png")
 
 # Also save a high-resolution version of just the spectrum
 fig2, ax = plt.subplots(figsize=(14, 6))
@@ -240,9 +240,9 @@ ax.axvline(x=1560, color='blue', linestyle='--', alpha=0.5, linewidth=1.5, label
 ax.legend(fontsize=10)
 plt.tight_layout()
 plt.savefig(f'{output_prefix}_hires.png', dpi=300, bbox_inches='tight')
-print(f"   ✓ Saved: {output_prefix}_hires.png")
+print(f"   Saved: {output_prefix}_hires.png")
 
-# 8. Save processed data
+# Save processed data
 print("\n8. Saving processed data...")
 np.savez(f'{output_prefix}_data.npz',
          frequencies_cm=freq_cm[idx_freq],
@@ -251,7 +251,7 @@ np.savez(f'{output_prefix}_data.npz',
          autocorr=autocorr[:idx_max],
          cavity_q_window_time=time_window,
          cavity_q_window=cavity_q_window)
-print(f"   ✓ Saved: {output_prefix}_data.npz")
+print(f"   Saved: {output_prefix}_data.npz")
 
 print("\n" + "=" * 60)
 print("Cavity Position Spectrum Calculation Complete!")

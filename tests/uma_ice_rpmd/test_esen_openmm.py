@@ -89,15 +89,15 @@ try:
         energy = state.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
         print(f"  Bead {i}: E = {energy:.2f} kJ/mol")
     
-    print("\n✓ SUCCESS! eSEN model works with batched RPMD!")
+    print("\nSUCCESS! eSEN model works with batched RPMD!")
     print("\nRunning a few MD steps...")
     integrator.step(5)
-    print("✓ MD steps completed successfully!")
+    print("MD steps completed successfully!")
     
     sys.exit(0)
     
 except Exception as e:
-    print(f"\n✗ FAILED: {type(e).__name__}: {str(e)}")
+    print(f"\nFAILED: {type(e).__name__}: {str(e)}")
     import traceback
     traceback.print_exc()
     sys.exit(1)

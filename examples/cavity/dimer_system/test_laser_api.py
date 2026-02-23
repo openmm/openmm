@@ -14,11 +14,11 @@ if os.path.exists(build_python):
 try:
     # Try to import just the SWIG module directly
     import _openmm
-    print("✓ _openmm module loaded")
+    print("_openmm module loaded")
     
     # Test if CavityForce has the new methods
     cf = _openmm.CavityForce(0, 0.01, 0.001, 1.0)
-    print("✓ CavityForce created")
+    print("CavityForce created")
     
     # Test new methods exist
     methods_to_check = [
@@ -52,10 +52,10 @@ try:
             missing.append(method)
     
     if missing:
-        print(f"❌ Missing methods: {missing}")
+        print(f"FAIL: Missing methods: {missing}")
         sys.exit(1)
     else:
-        print(f"✓ All {len(methods_to_check)} laser methods are available!")
+        print(f"All {len(methods_to_check)} laser methods are available!")
         
     # Test setting values
     cf.setCavityDriveAmplitude(0.01)
@@ -68,11 +68,11 @@ try:
     cf.setDirectLaserEnvelope("square", 0.0, 50.0)
     cf.setDirectLaserCouplingEnabled(False)
     
-    print("✓ All setter methods work!")
-    print("\n✅ Laser driving API is fully implemented and accessible!")
+    print("All setter methods work!")
+    print("\nSUCCESS: Laser driving API is fully implemented and accessible!")
     
 except Exception as e:
-    print(f"❌ Error: {e}")
+    print(f"Error: {e}")
     import traceback
     traceback.print_exc()
     sys.exit(1)

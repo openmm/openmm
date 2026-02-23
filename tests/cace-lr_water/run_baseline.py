@@ -28,7 +28,7 @@ try:
     from openmm.app import Topology, Element
     from openmmml import MLPotential
     import torch
-    print("✓ OpenMM and OpenMM-ML loaded successfully")
+    print("OpenMM and OpenMM-ML loaded successfully")
     print(f"  PyTorch version: {torch.__version__}")
     print(f"  CUDA available: {torch.cuda.is_available()}")
 except ImportError as e:
@@ -215,7 +215,7 @@ def run_baseline_simulation(num_molecules=10, temperature_K=300.0,
     # Create system
     print(f"\n--- Creating OpenMM System ---")
     system = potential.createSystem(topology, task_name='omol', charge=0, spin=1)
-    print(f"  ✓ System created with {system.getNumParticles()} particles")
+    print(f"  System created with {system.getNumParticles()} particles")
     print(f"  Forces: {[type(f).__name__ for f in system.getForces()]}")
     
     # Charges for dipole calculation (standard water charges)
@@ -340,7 +340,7 @@ def run_baseline_simulation(num_molecules=10, temperature_K=300.0,
                  'flexible_water': True
              })
     
-    print(f"  ✓ Saved: {output_file}")
+    print(f"  Saved: {output_file}")
     print(f"  Data points: {len(dipole_times):,}")
     print(f"  Production time: {dipole_times[-1]:.1f} ps")
     print(f"\nNext step: Analyze IR spectrum")

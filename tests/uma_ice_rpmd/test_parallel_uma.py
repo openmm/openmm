@@ -104,13 +104,13 @@ print(f"Speedup: {seq_total / batch_avg:.2f}x")
 print(f"Efficiency: {(seq_total / batch_avg) / 8 * 100:.1f}% of ideal 8x speedup")
 
 if batch_avg < seq_total * 0.3:
-    print("\n✅ EXCELLENT batching efficiency! >70% of ideal speedup")
+    print("\nEXCELLENT batching efficiency! >70% of ideal speedup")
 elif batch_avg < seq_total * 0.5:
-    print("\n✅ GOOD batching efficiency! ~50% of ideal speedup")
+    print("\nGOOD batching efficiency! ~50% of ideal speedup")
 elif batch_avg < seq_total * 0.7:
-    print("\n⚠️ MODERATE batching efficiency. ~30-50% of ideal speedup")
+    print("\nMODERATE batching efficiency. ~30-50% of ideal speedup")
 else:
-    print("\n❌ POOR batching efficiency. Graph batching not helping much")
+    print("\nPOOR batching efficiency. Graph batching not helping much")
 
 # Test 3: Verify correctness
 print("\n[3] CORRECTNESS CHECK")
@@ -125,11 +125,11 @@ force_diff = np.abs(batch_forces - seq_forces).max()
 print(f"  Max force difference: {force_diff:.2e} eV/Å")
 
 if force_diff < 1e-5:
-    print("  ✅ Forces match perfectly!")
+    print("  Forces match perfectly!")
 elif force_diff < 1e-3:
-    print("  ✅ Forces match within tolerance")
+    print("  Forces match within tolerance")
 else:
-    print(f"  ⚠️ Forces differ by {force_diff:.2e} - potential issue!")
+    print(f"  WARNING: Forces differ by {force_diff:.2e} - potential issue!")
 
 # Additional analysis: Check memory usage
 print("\n[4] MEMORY ANALYSIS")

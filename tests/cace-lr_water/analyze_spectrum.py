@@ -288,9 +288,9 @@ def analyze_trajectory(npz_file, plot_output=None, xlim=(0, 4500)):
         oh_freq = water_peaks['oh_stretch']
         print(f"  OH stretch:     {oh_freq:.0f} cm⁻¹ (height={water_peaks['oh_height']:.2f})")
         if 3000 < oh_freq < 4000:
-            print(f"    ✓ PASS: OH stretch in expected range")
+            print(f"    PASS: OH stretch in expected range")
         else:
-            print(f"    ✗ FAIL: OH stretch outside expected range!")
+            print(f"    FAIL: OH stretch outside expected range!")
     else:
         print(f"  OH stretch:     NOT FOUND")
         print(f"    → May need longer simulation for better resolution")
@@ -299,9 +299,9 @@ def analyze_trajectory(npz_file, plot_output=None, xlim=(0, 4500)):
         bend_freq = water_peaks['hoh_bend']
         print(f"  HOH bend:       {bend_freq:.0f} cm⁻¹ (height={water_peaks['bend_height']:.2f})")
         if 1500 < bend_freq < 1800:
-            print(f"    ✓ PASS: HOH bend in expected range")
+            print(f"    PASS: HOH bend in expected range")
         else:
-            print(f"    ✗ FAIL: HOH bend outside expected range!")
+            print(f"    FAIL: HOH bend outside expected range!")
     else:
         print(f"  HOH bend:       NOT FOUND")
     

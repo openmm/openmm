@@ -55,7 +55,7 @@ MultiModeCavityDisplacer::MultiModeCavityDisplacer(int numModes, double omega1, 
     for (int i = 0; i < numModes; i++) {
         int n = i + 1;
         double omega_n = n * omega1;
-        double lambda_n = std::sqrt((double)n) * lambda1;
+        double lambda_n = lambda1;
         
         // Spatial profile: f_n = sin(n * pi * z0 / L)
         spatialProfiles[i] = std::sin(n * M_PI * moleculeZ / cavityLength);

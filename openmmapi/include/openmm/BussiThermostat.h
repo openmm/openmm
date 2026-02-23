@@ -231,6 +231,24 @@ public:
         frequency = freq;
     }
     /**
+     * Get whether to subtract center-of-mass translational DOF from the DOF
+     * count. When enabled, 3 DOF are subtracted (matching HOOMD's behavior for
+     * a single momentum-conserving method covering all particles).
+     */
+    bool getSubtractCMMotion() const {
+        return subtractCMMotion;
+    }
+    /**
+     * Set whether to subtract center-of-mass translational DOF from the DOF
+     * count. Enable this when the thermostatted particles constitute the full
+     * system and the integrator conserves total momentum (e.g. velocity Verlet).
+     *
+     * @param subtract  if true, subtract 3 from the translational DOF count
+     */
+    void setSubtractCMMotion(bool subtract) {
+        subtractCMMotion = subtract;
+    }
+    /**
      * Returns whether or not this force makes use of periodic boundary conditions.
      *
      * @returns false - this force does not use PBC
@@ -245,6 +263,7 @@ private:
     double defaultTau;
     std::set<int> particles;
     bool applyToAll;
+    bool subtractCMMotion;
     int randomNumberSeed;
     int frequency;
 };

@@ -52,7 +52,7 @@ namespace OpenMM {
  *
  * where for mode n (1-indexed):
  *   - omega_n = n * omega_1           (harmonically spaced frequencies)
- *   - lambda_n = sqrt(n) * lambda_1   (coupling scales as sqrt of mode number)
+ *   - lambda_n = lambda_1             (constant coupling; effective coupling eps_n = n * eps_1)
  *   - eps_n = lambda_n * omega_n      (effective coupling)
  *   - K_n = m * omega_n^2             (spring constant, same mass for all modes)
  *   - f_n(z0) = sin(n*pi*z0/L)       (spatial profile at molecule position z0)
@@ -176,13 +176,13 @@ public:
         return n * omega1;
     }
     /**
-     * Get the coupling parameter of mode n (1-indexed): lambda_n = sqrt(n) * lambda_1.
+     * Get the coupling parameter of mode n (1-indexed): lambda_n = lambda_1 (constant).
      *
      * @param n  the mode number (1-indexed)
      * @return lambda_n (dimensionless)
      */
     double getLambdaN(int n) const {
-        return std::sqrt((double)n) * lambda1;
+        return lambda1;
     }
     /**
      * Get the effective coupling of mode n: eps_n = lambda_n * omega_n.

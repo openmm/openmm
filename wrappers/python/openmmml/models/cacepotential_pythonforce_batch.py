@@ -24,15 +24,7 @@ class CACEPotentialBatchedImplFactory(MLPotentialImplFactory):
         return CACEPotentialBatchedImpl(name)
 
 class CACEPotentialBatchedImpl(MLPotentialImpl):
-    """
-    CACE-LR potential with batched RPMD support.
-    
-    Features:
-    - Single-copy evaluation for standard MD
-    - Batched evaluation for RPMD (all beads in one inference call)
-    - GPU-accelerated via PyTorch
-    - Automatic periodic boundary condition handling
-    """
+    """CACE-LR potential with batched RPMD (all beads in one inference). GPU via PyTorch, PBC auto-detected."""
     
     def __init__(self, name: str) -> None:
         self.name = name
@@ -155,7 +147,7 @@ class CACEPotentialBatchedImpl(MLPotentialImpl):
             """Compute forces for a single copy (standard MD or single RPMD bead)."""
             try:
                 if DEBUG_LOGS and not cache.get("warned_single", False):
-                    print("⚠️ CACE single-copy function called", flush=True)
+                    print("CACE single-copy function called", flush=True)
                     cache["warned_single"] = True
                 
                 # Initialize PyTorch CUDA if needed
@@ -278,13 +270,13 @@ class CACEPotentialBatchedImpl(MLPotentialImpl):
             """Compute forces for multiple RPMD beads using true tensor batching.
             
             Uses CACE's native AtomicData and Batch classes for proper graph batching.
-            This enables single model forward pass for all beads simultaneously.
+            Single forward pass for all beads.
             """
             try:
                 from cace.data import AtomicData
                 from cace.tools.torch_geometric import Batch
                 if DEBUG_LOGS and not cache.get("warned_batch", False):
-                    print(f"✓ CACE batched function called with TRUE tensor batching (n_beads={len(all_states)})", flush=True)
+                    print(f"CACE batched function called with TRUE tensor batching (n_beads={len(all_states)})", flush=True)
                     cache["warned_batch"] = True
                 
                 # Initialize PyTorch CUDA if needed
@@ -295,7 +287,7 @@ class CACEPotentialBatchedImpl(MLPotentialImpl):
                 total_particles = cache['total_particles']
                 symbols = cache['symbols']  # Get symbols from cache
                 
-                # Step 1: Create AtomicData for each bead using CACE's native infrastructure
+                # Create AtomicData for each bead using CACE's native infrastructure
                 data_list = []
                 for state in all_states:
                     # Get positions for this bead
@@ -335,7 +327,7 @@ class CACEPotentialBatchedImpl(MLPotentialImpl):
                         )
                     
                     # AtomicData.from_atoms handles neighbor list construction automatically
-                    # CRITICAL: Pass atomic_energies to ensure proper energy shifts
+                    # Pass atomic_energies for correct energy shifts
                     data = AtomicData.from_atoms(
                         atoms_ase, 
                         cutoff=cutoff,
@@ -343,7 +335,7 @@ class CACEPotentialBatchedImpl(MLPotentialImpl):
                     )
                     data_list.append(data)
                 
-                # Step 2: Batch all AtomicData objects using CACE's Batch class
+                # Batch all AtomicData objects using CACE's Batch class
                 # This automatically:
                 # - Concatenates positions, atomic_numbers, etc.
                 # - Offsets edge_index properly for each graph
@@ -351,14 +343,14 @@ class CACEPotentialBatchedImpl(MLPotentialImpl):
                 # - Creates ptr tensor [0, n0, n0+n1, ...]
                 batch_data = Batch.from_data_list(data_list)
                 
-                # Step 3: Ensure positions require grad for force computation
+                # Ensure positions require grad for force computation
                 # CACE computes forces via autograd, so we need gradients
                 batch_data.positions = batch_data.positions.clone().requires_grad_(True)
                 
-                # Step 4: Move to device (GPU)
+                # Move to device (GPU)
                 batch_data = batch_data.to(device)
                 
-                # Step 5: Convert to dict format expected by CACE model
+                # Convert to dict format expected by CACE model
                 # Save batch indices before conversion
                 batch_indices_cpu = batch_data.batch.cpu().numpy()
                 
@@ -367,11 +359,11 @@ class CACEPotentialBatchedImpl(MLPotentialImpl):
                 for key in batch_data.keys:
                     data_dict[key] = batch_data[key]
                 
-                # Step 6: Single forward pass for all beads
+                # Single forward pass for all beads
                 # CACE will use scatter_sum with batch tensor to aggregate per-graph energies
                 output = model(data_dict, training=True)
                 
-                # Step 7: Extract energies (one per bead)
+                # Extract energies (one per bead)
                 energy_key = None
                 for key in ['CACE_energy', 'energy', 'total_energy']:
                     if key in output:
@@ -401,7 +393,7 @@ class CACEPotentialBatchedImpl(MLPotentialImpl):
                 if DEBUG_LOGS:
                     print(f"  Total energy (kJ/mol): {total_energy}")
                 
-                # Step 8: Extract forces using batch indices
+                # Extract forces using batch indices
                 force_key = None
                 for key in ['CACE_forces', 'forces', 'force']:
                     if key in output:
@@ -413,7 +405,7 @@ class CACEPotentialBatchedImpl(MLPotentialImpl):
                 
                 forces_ev_ang = output[force_key].detach().cpu().numpy()  # (n_beads*n_atoms, 3)
                 
-                # Step 9: Split forces by bead using batch indices
+                # Split forces by bead using batch indices
                 all_forces = np.zeros((n_beads, total_particles, 3), dtype=np.float32)
                 
                 for bead_idx in range(n_beads):
@@ -431,7 +423,7 @@ class CACEPotentialBatchedImpl(MLPotentialImpl):
                     else:
                         all_forces[bead_idx, :n_atoms] = bead_forces_kj_nm
                 
-                # Step 10: Clean up GPU resources
+                # Clean up GPU resources
                 # Delete tensors (minimal cleanup, avoid operations that can fail on corrupted GPU state)
                 del output, batch_data, data_dict, energies_ev_tensor, data_list
                 
@@ -453,7 +445,7 @@ class CACEPotentialBatchedImpl(MLPotentialImpl):
         system.addForce(force)
         
         pbc_status = "enabled" if isPeriodic else "dynamic"
-        print(f"✓ CACE-LR force added with batched RPMD support (device: {device}, PBC: {pbc_status})")
+        print(f"CACE-LR force added with batched RPMD support (device: {device}, PBC: {pbc_status})")
         print(f"  Single-copy callback: compute_cace_forces_single")
         print(f"  Batched callback: compute_cace_forces_batched (for RPMD)")
 

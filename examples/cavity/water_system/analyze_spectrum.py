@@ -150,7 +150,7 @@ def compute_ir_spectrum(time_ps, C_mumu, temperature_K, box_size_nm):
     volume_m3 = (box_size_nm * 1e-9)**3  # m³
     
     # Prefactor (convert units appropriately)
-    # This is approximate - main goal is to see peak positions
+    # Approximate; mainly for peak positions
     omega_rad = 2 * np.pi * freq_hz
     spectrum = np.abs(fft_result) * omega_rad**2
     
@@ -439,21 +439,21 @@ def analyze_trajectory(npz_file, plot_output=None, xlim=(2500, 4500)):
             print(f"  OH stretch:     {oh_freq:.0f} cm⁻¹ (height={water_peaks['oh_height']:.2f})")
             # Validate
             if 3000 < oh_freq < 4000:
-                print(f"    ✓ PASS: OH stretch in expected range (3000-4000 cm⁻¹)")
+                print(f"    PASS: OH stretch in expected range (3000-4000 cm⁻¹)")
             else:
-                print(f"    ✗ FAIL: OH stretch outside expected range!")
+                print(f"    FAIL: OH stretch outside expected range!")
         else:
             print(f"  OH stretch:     NOT FOUND")
-            print(f"    ✗ FAIL: No OH stretch peak detected!")
+            print(f"    FAIL: No OH stretch peak detected!")
             print(f"    → Check if water bonds are truly flexible (constraints=None)")
         
         if water_peaks.get('hoh_bend'):
             bend_freq = water_peaks['hoh_bend']
             print(f"  HOH bend:       {bend_freq:.0f} cm⁻¹ (height={water_peaks['bend_height']:.2f})")
             if 1500 < bend_freq < 1800:
-                print(f"    ✓ PASS: HOH bend in expected range (1500-1800 cm⁻¹)")
+                print(f"    PASS: HOH bend in expected range (1500-1800 cm⁻¹)")
             else:
-                print(f"    ✗ FAIL: HOH bend outside expected range!")
+                print(f"    FAIL: HOH bend outside expected range!")
         else:
             print(f"  HOH bend:       NOT FOUND")
         
@@ -469,12 +469,12 @@ def analyze_trajectory(npz_file, plot_output=None, xlim=(2500, 4500)):
         has_bend = water_peaks.get('hoh_bend') is not None
         
         if oh_valid:
-            print(f"✓ BASELINE VALIDATION PASSED")
+            print(f"BASELINE VALIDATION PASSED")
             print(f"  Flexible water bonds are working correctly")
             print(f"  IR spectrum shows expected OH stretch peak")
             print(f"  Ready to proceed with cavity simulations")
         else:
-            print(f"✗ BASELINE VALIDATION FAILED")
+            print(f"BASELINE VALIDATION FAILED")
             if not has_oh:
                 print(f"  No OH stretch peak found → Bonds may still be constrained")
                 print(f"  Check: rigidWater=False and constraints=None in simulation")

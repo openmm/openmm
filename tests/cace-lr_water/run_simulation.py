@@ -22,7 +22,7 @@ try:
     from openmm.app import Topology, Element
     from openmmml import MLPotential
     import torch
-    print("✓ OpenMM and OpenMM-ML loaded successfully")
+    print("OpenMM and OpenMM-ML loaded successfully")
     print(f"  PyTorch version: {torch.__version__}")
     print(f"  CUDA available: {torch.cuda.is_available()}")
 except ImportError as e:
@@ -142,10 +142,8 @@ def add_cavity_particle(system, positions, omegac_au, photon_mass_amu):
 def add_charges_for_cavity(system, topology, cavity_index):
     """
     Add a NonbondedForce with charges for cavity dipole calculation.
-    
-    IMPORTANT: UMA handles all molecular interactions via PythonForce, but
-    CavityForce needs atomic charges to compute the dipole moment.
-    We add a NonbondedForce with:
+    UMA provides molecular forces via PythonForce; CavityForce still needs
+    charges for dipole. We add a NonbondedForce with:
     - Proper charges (TIP3P-like for water)
     - Zero LJ parameters (epsilon=0) so it adds no nonbonded energy
     - NoCutoff method (just for charge storage, no actual interactions)
@@ -181,7 +179,7 @@ def add_charges_for_cavity(system, topology, cavity_index):
             nb.addException(i, j, 0.0, 0.1, 0.0)  # Zero charge product, zero LJ
     
     system.addForce(nb)
-    print(f"  ✓ NonbondedForce added with {n_molecular} molecular charges")
+    print(f"  NonbondedForce added with {n_molecular} molecular charges")
     print(f"  Note: Charges used for dipole only (all interactions from UMA)")
     
     return nb
@@ -198,14 +196,14 @@ def setup_cavity_coupling(system, topology, cavity_index, omegac_au, lambda_coup
     # CavityForce
     cavity_force = openmm.CavityForce(cavity_index, omegac_au, lambda_coupling, photon_mass_amu)
     system.addForce(cavity_force)
-    print(f"  ✓ CavityForce added")
+    print(f"  CavityForce added")
     
     # CavityParticleDisplacer for finite-q correction
     displacer = openmm.CavityParticleDisplacer(cavity_index, omegac_au, photon_mass_amu)
     displacer.setSwitchOnStep(0)
     displacer.setSwitchOnLambda(lambda_coupling)
     system.addForce(displacer)
-    print(f"  ✓ CavityParticleDisplacer added")
+    print(f"  CavityParticleDisplacer added")
     
     return cavity_force, displacer
 
@@ -286,7 +284,7 @@ def run_simulation(lambda_coupling=0.0, cavity_freq_cm=3500.0,
     # Create system
     print(f"\n--- Creating OpenMM System ---")
     system = potential.createSystem(topology, task_name='omol', charge=0, spin=1)
-    print(f"  ✓ System created with {system.getNumParticles()} particles")
+    print(f"  System created with {system.getNumParticles()} particles")
     
     # Add cavity if coupling > 0
     cavity_index = None
@@ -426,7 +424,7 @@ def run_simulation(lambda_coupling=0.0, cavity_freq_cm=3500.0,
         save_data['cavity_nm'] = np.array(cavity_values)
     np.savez(output_file, **save_data)
     
-    print(f"  ✓ Saved: {output_file}")
+    print(f"  Saved: {output_file}")
     print(f"  Data points: {len(dipole_times):,}")
 
 

@@ -4292,7 +4292,8 @@ void CommonApplyBussiThermostatKernel::initialize(const System& system, const Bu
     particleIndicesArray.initialize<int>(cc, numParticles, "bussiParticleIndices");
     particleIndicesArray.upload(particleIndices);
     
-    // Create array for masses and count DOF (only particles with mass > 0)
+    // Create array for masses and count DOF (only particles with mass > 0),
+    // optionally subtracting COM translational DOF to match HOOMD.
     vector<float> masses(numParticles);
     numDof = 0;
     for (int i = 0; i < numParticles; i++) {
@@ -4300,6 +4301,8 @@ void CommonApplyBussiThermostatKernel::initialize(const System& system, const Bu
         if (masses[i] > 0)
             numDof += 3;
     }
+    if (thermostat.getSubtractCMMotion())
+        numDof -= 3;
     massesArray.initialize<float>(cc, numParticles, "bussiMasses");
     massesArray.upload(masses);
     
@@ -4354,9 +4357,9 @@ void CommonApplyBussiThermostatKernel::execute(ContextImpl& context) {
     double dt = context.getIntegrator().getStepSize();
     
     // Compute kinetic energy on GPU.
-    // When running after Verlet Part1, use the pre-kick kernel to reconstruct
-    // on-step velocities v(t) = v(t+dt/2) - F(t)*dt/(2m), matching cav-hoomd's
-    // TwoStepConstantVolume which computes alpha from KE(v(t)).
+    // After Verlet Part1, velocities contain the half-step v(t+dt/2).
+    // Reconstruct the on-step v(t) = v(t+dt/2) - F(t)*dt/(2m), matching
+    // HOOMD's TwoStepConstantVolume which computes alpha from KE(v(t)).
     if (context.getStepPhase() == ContextImpl::STEP_PHASE_AFTER_VERLET_PART1) {
         bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
         if (useDouble)
@@ -4782,14 +4785,10 @@ void CommonApplyCavityDisplacementKernel::execute(ContextImpl& context, double l
     computeDipoleKernel->execute(cc.getNumAtoms());
     
     // Displace cavity particle
-    // The equilibrium position is q_eq = -(epsilon/K) * d
-    // With proper unit conversion:
-    //   epsilon = lambda * omega * CONV
-    //   K = photonMass_au * omega^2 * CONV
-    //   epsilon/K = lambda / (photonMass_au * omega) = lambda / (photonMass * 1822.888 * omega)
-    const double AMU_TO_AU = 1822.888486209;
-    double photonMass_au = photonMass * AMU_TO_AU;
-    float factor = (float) (-lambdaCoupling / (photonMass_au * omegac));
+    // Per Hamiltonian H_EM = sum [ p^2/2 + (omega_c^2/2)(q + lambda*mu/omega_c)^2 ], the
+    // equilibrium is q_eq = -(lambda/omega_c)*d with NO photon mass (unit mass in a.u.).
+    // Fix: use -lambda/omegac instead of -lambda/(photonMass_au*omegac)
+    float factor = (float) (-lambdaCoupling / omegac);
     displacementKernel->setArg(3, factor);
     displacementKernel->execute(1); // Only need to execute for one particle
 }
@@ -4842,7 +4841,7 @@ void CommonCalcMultiModeCavityForceKernel::reorderData() {
     for (int m = 0; m < numModes; m++) {
         int n = m + 1;
         double omega_n = n * omega1;
-        double lambda_n = std::sqrt((double)n) * lambda1;
+        double lambda_n = lambda1;
         double eps_n = lambda_n * omega_n * CONVERSION_FACTOR;
         double K_n = photonMass_au * omega_n * omega_n * CONVERSION_FACTOR;
         double f_n = spatialProfiles[m];
@@ -4905,16 +4904,12 @@ void CommonCalcMultiModeCavityForceKernel::initialize(const System& system, cons
     double photonMass_au = photonMass * AMU_TO_AU;
     
     // DSE prefactor = (1/2) * sum_n(eps_n^2/K_n * f_n^2) in OpenMM units
-    // eps_n [OpenMM] = lambda_n * omega_n * CONV
-    // K_n [OpenMM] = photonMass_au * omega_n^2 * CONV
-    // eps_n^2/K_n = lambda_n^2 * omega_n^2 * CONV^2 / (photonMass_au * omega_n^2 * CONV)
-    //            = lambda_n^2 * CONV / photonMass_au
-    //            = n * lambda1^2 * CONV / photonMass_au
+    // With constant lambda_n = lambda1: eps_n = lambda1 * omega_n
+    // eps_n^2/K_n = lambda1^2 * CONV / photonMass_au (same for all n)
     dsePrefactor = 0.0;
     for (int m = 0; m < numModes; m++) {
-        int n = m + 1;
         double fn = spatialProfiles[m];
-        dsePrefactor += n * lambda1 * lambda1 * fn * fn;
+        dsePrefactor += lambda1 * lambda1 * fn * fn;
     }
     dsePrefactor *= 0.5 * CONVERSION_FACTOR / photonMass_au;
     
@@ -5033,9 +5028,8 @@ void CommonCalcMultiModeCavityForceKernel::copyParametersToContext(ContextImpl& 
     double photonMass_au = photonMass * AMU_TO_AU;
     dsePrefactor = 0.0;
     for (int m = 0; m < numModes; m++) {
-        int n = m + 1;
         double fn = spatialProfiles[m];
-        dsePrefactor += n * lambda1 * lambda1 * fn * fn;
+        dsePrefactor += lambda1 * lambda1 * fn * fn;
     }
     dsePrefactor *= 0.5 * CONVERSION_FACTOR / photonMass_au;
     

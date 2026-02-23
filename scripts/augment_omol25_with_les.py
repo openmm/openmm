@@ -44,7 +44,7 @@ def setup_paths():
     try:
         from cace.modules import EwaldPotential
         from fairchem.core.datasets import AseDBDataset
-        logger.info("✓ Successfully imported CACE and FAIRChem modules")
+        logger.info("Successfully imported CACE and FAIRChem modules")
         return True
     except ImportError as e:
         logger.error(f"Import error: {e}")
@@ -178,7 +178,7 @@ def augment_dataset(
     # Load dataset
     try:
         dataset = AseDBDataset({"src": input_path})
-        logger.info(f"✓ Loaded dataset with {len(dataset)} structures")
+        logger.info(f"Loaded dataset with {len(dataset)} structures")
     except Exception as e:
         logger.error(f"Failed to load dataset: {e}")
         return
@@ -334,7 +334,7 @@ def main():
         sys.exit(1)
     
     if args.check_imports:
-        logger.info("✓ All required packages are available")
+        logger.info("All required packages are available")
         sys.exit(0)
     
     # Run augmentation

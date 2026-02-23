@@ -1,6 +1,6 @@
-# UMA Water System - Machine Learning Potential
+# CACE-LR / UMA Water Systems
 
-Water simulation using FAIRChem UMA (Universal Machine Learning Architecture) potential.
+Water simulations using ML potentials: CACE-LR (CACE Long Range) and FAIRChem UMA.
 
 ## System Description
 - UMA-S-1P1 machine learning potential from FAIRChem
@@ -10,10 +10,11 @@ Water simulation using FAIRChem UMA (Universal Machine Learning Architecture) po
 - Optional cavity coupling for polariton chemistry
 
 ## Files
-- `run_simulation.py` - Main UMA water simulation with cavity coupling support
-- `run_baseline.py` - Baseline UMA simulation for IR spectrum validation
-- `analyze_spectrum.py` - IR spectrum analysis
-- `benchmark_speed.py` - Performance benchmarking
+- `run_water_cace_lr.py` - CACE-LR water with real-time dipole output
+- `run_simulation.py` - UMA water with cavity coupling
+- `run_baseline.py` - Baseline UMA for IR validation
+- `compute_ir_realtime.py` - IR from dipole file while simulation runs
+- `analyze_spectrum.py` - IR analysis
 
 ## Quick Start
 
@@ -67,8 +68,21 @@ python benchmark_speed.py
 - More accurate but ~2000x slower than classical force fields
 - Uses PythonForce callback mechanism for OpenMM integration
 
+## Real-time IR (CACE-LR)
+
+`run_water_cace_lr.py` writes dipoles to `*_dipoles_realtime.txt` every 50 steps. Compute spectrum while simulation runs:
+```bash
+python run_water_cace_lr.py --molecules 15 --prod 10 --output water_test
+python compute_ir_realtime.py water_test_dipoles_realtime.txt --output ir
+# Or monitor mode: --monitor --interval 60
+```
+
+## IR Spectrum Notes
+
+Use unwrapped positions for dipoles (no `enforcePeriodicBox`); molecules across box edges must stay intact. ACF: subtract mean, FFT-based, ω² spectral weight. See `tests/docs/fix-history.md`.
+
 ## Expected Results
-- OH stretch: ~3200-3700 cm⁻¹ (should be captured by ML potential)
+- OH stretch: ~3200-3700 cm⁻¹
 - HOH bending: ~1645 cm⁻¹
-- Librational modes: 400-900 cm⁻¹
+- Librational: 400-900 cm⁻¹
 - With cavity: Rabi splitting around cavity frequency

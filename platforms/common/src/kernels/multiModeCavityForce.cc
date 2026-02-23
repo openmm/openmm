@@ -7,8 +7,8 @@
  *
  * where for mode n (1-indexed):
  *   omega_n = n * omega_1
- *   lambda_n = sqrt(n) * lambda_1
- *   eps_n = lambda_n * omega_n = n^(3/2) * eps_1
+ *   lambda_n = lambda_1 (constant)
+ *   eps_n = lambda_n * omega_n = n * eps_1
  *   K_n = m * omega_n^2 = n^2 * K_1
  *   f_n(z0) = sin(n * pi * z0 / L)
  *

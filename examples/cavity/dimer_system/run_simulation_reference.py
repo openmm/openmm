@@ -27,7 +27,7 @@ try:
     from openmm import openmm
     from openmm import unit
     from openmm.app import Simulation, StateDataReporter
-    print("✓ OpenMM loaded successfully")
+    print("OpenMM loaded successfully")
 except ImportError as e:
     print(f"Error importing OpenMM: {e}")
     print("Make sure OpenMM is installed and the Python path is correct.")
@@ -469,7 +469,7 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         print(f"  Cavity position before: ({x_nm:.6f}, {y_nm:.6f}, {z_nm:.6f}) nm")
         
         # Calculate displacement magnitude (typical value ~0.01 nm)
-        # This gives the cavity mode an initial excitation
+        # Initial cavity excitation
         displacement_magnitude = 0.01  # nm
         
         # Modify positions

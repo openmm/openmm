@@ -51,7 +51,7 @@ def check_system(num_molecules=32):
     elif density_gcm3 > 1.2:
         print(f"\n⚠ WARNING: Density is too high! This may cause issues.")
     else:
-        print(f"\n✓ Density is reasonable for liquid water.")
+        print(f"\nDensity is reasonable for liquid water.")
     
     # Create system and check PBC (openmm root is 2 levels up from tests/cace-lr_water/)
     openmm_root = Path(__file__).resolve().parents[2]
@@ -123,7 +123,7 @@ def check_system(num_molecules=32):
         print(f"     This means each atom will interact with multiple periodic images!")
         print(f"     This is OK but may cause issues with neighbor lists.")
     else:
-        print(f"  ✓ Cutoff is less than box_size/2, so each atom sees at most one image of each neighbor")
+        print(f"  Cutoff is less than box_size/2, so each atom sees at most one image of each neighbor")
     
     # Check actual distances between molecules
     print(f"\n--- Intermolecular Distances ---")
@@ -163,7 +163,7 @@ def check_system(num_molecules=32):
         elif avg_dist < 0.2:
             print(f"  ⚠ WARNING: Molecules are too close! May cause overlap.")
         else:
-            print(f"  ✓ Intermolecular distances look reasonable for liquid water.")
+            print(f"  Intermolecular distances look reasonable for liquid water.")
 
 if __name__ == "__main__":
     import argparse

@@ -148,7 +148,7 @@ def main():
     
     # Recommendation
     best_platform = max(results.items(), key=lambda x: x[1] or 0)
-    print(f"✓ Recommended platform: {best_platform[0]} ({best_platform[1]:.2f} ns/day)\n")
+    print(f"Recommended platform: {best_platform[0]} ({best_platform[1]:.2f} ns/day)\n")
 
 if __name__ == '__main__':
     main()

@@ -19,7 +19,7 @@ print(f"Loading CACE model from {model_path}...")
 device = torch.device('cpu')
 model = torch.load(model_path, map_location=device, weights_only=False)
 model.eval()
-print(f"✓ Model loaded")
+print(f"Model loaded")
 print(f"Model type: {type(model)}")
 print(f"Cutoff: {model.representation.cutoff if hasattr(model, 'representation') else 'unknown'}")
 
@@ -85,14 +85,14 @@ for key, value in output.items():
 # Check energy
 if 'CACE_energy' in output:
     energy_ev = float(output['CACE_energy'].detach().cpu())
-    print(f"\n✓ Energy: {energy_ev:.6f} eV")
+    print(f"\nEnergy: {energy_ev:.6f} eV")
     print(f"  = {energy_ev * 96.4853:.2f} kJ/mol")
     print(f"  Expected: ~0 eV for equilibrium geometry (without atomic energies)")
     
 # Check forces
 if 'CACE_forces' in output:
     forces = output['CACE_forces'].detach().cpu().numpy()
-    print(f"\n✓ Forces (eV/Å):")
+    print(f"\nForces (eV/Å):")
     for i, (Z, pos, force) in enumerate(zip(atomic_numbers, positions, forces)):
         element = 'O' if Z == 8 else 'H'
         force_mag = np.linalg.norm(force)

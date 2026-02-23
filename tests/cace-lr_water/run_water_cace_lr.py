@@ -25,7 +25,7 @@ try:
     from openmmml import MLPotential
     import torch
     from cace_dipole_calculator import CACEDipoleCalculator
-    print("✓ OpenMM, OpenMM-ML, and CACE loaded successfully")
+    print("OpenMM, OpenMM-ML, and CACE loaded successfully")
 except ImportError as e:
     print(f"Error importing required packages: {e}")
     sys.exit(1)
@@ -127,7 +127,7 @@ def run_simulation(num_molecules=32, temperature_K=300.0,
     n_atoms = len(positions)
     
     # Set periodic box vectors on topology BEFORE creating system
-    # This ensures PBC is detected correctly
+    # PBC detected from box
     # Topology.setPeriodicBoxVectors() takes a single tuple of 3 vectors
     topology.setPeriodicBoxVectors((
         [box_size_nm, 0, 0] * unit.nanometer,
@@ -141,7 +141,7 @@ def run_simulation(num_molecules=32, temperature_K=300.0,
     
     # Create system
     system = potential.createSystem(topology)
-    # Also set on system (redundant but ensures consistency)
+    # Also set on system (redundant check)
     system.setDefaultPeriodicBoxVectors(
         [box_size_nm, 0, 0] * unit.nanometer,
         [0, box_size_nm, 0] * unit.nanometer,
@@ -199,7 +199,7 @@ def run_simulation(num_molecules=32, temperature_K=300.0,
         print(f"  Minimized PE: {minimized_pe:.2f} kJ/mol", flush=True)
         print(f"  Energy change: {minimized_pe - initial_pe:.2f} kJ/mol", flush=True)
     except Exception as e:
-        print(f"  ✗ Energy minimization failed: {e}", flush=True)
+        print(f"  Energy minimization failed: {e}", flush=True)
         print(f"  Continuing without minimization...", flush=True)
         import traceback
         traceback.print_exc()
@@ -303,7 +303,7 @@ def run_simulation(num_molecules=32, temperature_K=300.0,
         # For IR spectroscopy, timestep should be 0.5-1.0 fs (0.0005-0.001 ps)
         # to properly sample high-frequency vibrations (e.g., O-H stretch ~3000-3500 cm⁻¹)
         # 
-        # CRITICAL: Use unwrapped positions for dipole calculation!
+        # Unwrapped positions for dipole (PBC continuity)
         # Do NOT use enforcePeriodicBox=True, otherwise molecules split across
         # boundaries will give artificial large dipoles
         state = context.getState(getPositions=True)
@@ -373,8 +373,8 @@ def run_simulation(num_molecules=32, temperature_K=300.0,
     pdb_handle.close()
     
     np.savez(output_file, **save_data)
-    print(f"\n✓ Simulation Complete. Saved {len(dipole_times)} data points.")
-    print(f"✓ PDB trajectory saved: {pdb_file}")
+    print(f"\nSimulation Complete. Saved {len(dipole_times)} data points.")
+    print(f"PDB trajectory saved: {pdb_file}")
 
 if __name__ == "__main__":
     import argparse

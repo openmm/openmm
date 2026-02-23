@@ -50,18 +50,18 @@ def validate_model(checkpoint_path: str, test_data_path: str, limit: int = 1000,
     try:
         predictor = load_predict_unit(checkpoint_path)
         calc = FAIRChemCalculator(predictor, task_name=task_name)
-        print("✓ Model loaded successfully")
+        print("Model loaded successfully")
     except Exception as e:
-        print(f"✗ Failed to load model: {e}")
+        print(f"Failed to load model: {e}")
         return None
     
     # Load test data
     print(f"\nLoading test data from {test_data_path}...")
     try:
         db = connect(test_data_path)
-        print(f"✓ Test database loaded")
+        print(f"Test database loaded")
     except Exception as e:
-        print(f"✗ Failed to load test data: {e}")
+        print(f"Failed to load test data: {e}")
         return None
     
     # Validate
@@ -99,7 +99,7 @@ def validate_model(checkpoint_path: str, test_data_path: str, limit: int = 1000,
         except Exception as e:
             failed += 1
             if failed < 10:  # Only print first 10 failures
-                print(f"\n✗ Failed on sample {i}: {e}")
+                print(f"\nFailed on sample {i}: {e}")
             continue
     
     # Compute statistics
@@ -190,7 +190,7 @@ def main():
             force_errors=errors["forces"],
             energy_per_atom_errors=errors["energy_per_atom"]
         )
-        print("✓ Results saved")
+        print("Results saved")
 
 
 if __name__ == "__main__":

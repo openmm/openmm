@@ -789,8 +789,9 @@ void CommonIntegrateRPMDStepKernel::applyBussiCentroidThermostat(const System& s
         applyBussiScalingKernel->execute(numParticles);
     } else {
         // Cold start: centroid KE is zero, cannot rescale on GPU.
-        // Initialize centroid velocities from Maxwell-Boltzmann on CPU, scale to K_new,
-        // then upload the modified velocities back to GPU.
+        // Initialize centroid velocities from Maxwell-Boltzmann on CPU, scale to
+        // K_target, then upload the modified velocities back to GPU.
+        double K_new = K_target;
         int paddedAtoms = cc.getPaddedNumAtoms();
         
         if (useDoublePrecision) {

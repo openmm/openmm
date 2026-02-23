@@ -21,24 +21,6 @@ import os
 import argparse
 from datetime import datetime
 
-# #region agent log
-def debug_log(location, message, data, hypothesis_id):
-    try:
-        log_entry = {
-            "sessionId": "cuda-debug",
-            "runId": "run1",
-            "hypothesisId": hypothesis_id,
-            "location": location,
-            "message": message,
-            "data": data,
-            "timestamp": int(datetime.now().timestamp() * 1000)
-        }
-        with open("/media/extradrive/Trajectories/openmm/.cursor/debug.log", "a") as f:
-            f.write(json.dumps(log_entry) + "\n")
-    except:
-        pass
-# #endregion
-
 try:
     # Find OpenMM module - check build directory first (where it was actually built)
     import sys
@@ -66,19 +48,13 @@ try:
     if cuda_lib.exists():
         try:
             openmm.Platform.loadPluginLibrary(str(cuda_lib))
-            print("✓ CUDA platform plugin loaded")
+            print("CUDA platform plugin loaded")
         except Exception as e:
             print(f"⚠ Could not load CUDA plugin: {e}")
     
-    print("✓ OpenMM loaded successfully")
-    # #region agent log
-    debug_log("run_simulation_cavity_driven.py:42", "OpenMM imported", {"version": str(openmm.__version__) if hasattr(openmm, '__version__') else "unknown", "file": str(openmm.__file__) if hasattr(openmm, '__file__') else "unknown", "cuda_loaded": cuda_lib.exists()}, "A")
-    # #endregion
+    print("OpenMM loaded successfully")
 except ImportError as e:
     print(f"Error importing OpenMM: {e}")
-    # #region agent log
-    debug_log("run_simulation_cavity_driven.py:38", "OpenMM import failed", {"error": str(e)}, "A")
-    # #endregion
     sys.exit(1)
 
 # Import helper functions from the main simulation script
@@ -255,24 +231,12 @@ def run_cavity_driven_simulation(
     
     # Add CavityForce
     print("\n--- Adding Cavity Force with Laser Driving ---")
-    # #region agent log
-    debug_log("run_simulation_cavity_driven.py:99", "Before CavityForce creation", {"cavity_index": cavity_index, "omegac_au": omegac_au, "lambda_coupling": lambda_coupling, "photon_mass": photon_mass}, "C")
-    # #endregion
     try:
         cavity_force = openmm.CavityForce(cavity_index, omegac_au, lambda_coupling, photon_mass)
-        # #region agent log
-        debug_log("run_simulation_cavity_driven.py:102", "CavityForce created", {"success": True}, "C")
-        # #endregion
     except Exception as e:
-        # #region agent log
-        debug_log("run_simulation_cavity_driven.py:105", "CavityForce creation failed", {"error": str(e)}, "C")
-        # #endregion
         raise
     
     # Configure cavity driving (Case 2)
-    # #region agent log
-    debug_log("run_simulation_cavity_driven.py:110", "Before laser config", {"f0": f0, "omega_d": omega_d, "phase_d": phase_d}, "E")
-    # #endregion
     cavity_force.setCavityDriveAmplitude(f0)
     cavity_force.setCavityDriveFrequency(omega_d)
     cavity_force.setCavityDrivePhase(phase_d)
@@ -283,16 +247,10 @@ def run_cavity_driven_simulation(
     else:
         cavity_force.setCavityDriveEnabled(True)
     cavity_force.setDirectLaserCouplingEnabled(False)  # Only cavity driving
-    # #region agent log
-    debug_log("run_simulation_cavity_driven.py:117", "Laser config completed", {"cavity_drive_enabled": cavity_force.getCavityDriveEnabled()}, "E")
-    # #endregion
-    
+
     system.addForce(cavity_force)
-    # #region agent log
-    debug_log("run_simulation_cavity_driven.py:120", "CavityForce added to system", {"num_forces": system.getNumForces()}, "C")
-    # #endregion
-    print("  ✓ Cavity-mode driving enabled")
-    print("  ✓ Direct molecule-laser coupling disabled")
+    print("  Cavity-mode driving enabled")
+    print("  Direct molecule-laser coupling disabled")
     
     # Create integrator
     integrator = openmm.LangevinMiddleIntegrator(
@@ -306,79 +264,37 @@ def run_cavity_driven_simulation(
     num_platforms = openmm.Platform.getNumPlatforms()
     platform_names = [openmm.Platform.getPlatform(i).getName() for i in range(num_platforms)]
     print(f"\n  Available platforms: {platform_names}")
-    # #region agent log
-    debug_log("run_simulation_cavity_driven.py:123", "Platforms checked", {"num_platforms": num_platforms, "platforms": platform_names}, "A")
-    # #endregion
-    
+
     # Try CUDA first, fall back to Reference if not available
     platform = None
     try:
-        # #region agent log
-        debug_log("run_simulation_cavity_driven.py:129", "Attempting CUDA platform", {}, "A")
-        # #endregion
         platform = openmm.Platform.getPlatformByName('CUDA')
-        print("  ✓ Using CUDA platform")
-        # #region agent log
-        debug_log("run_simulation_cavity_driven.py:132", "CUDA platform obtained", {"platform_name": platform.getName()}, "A")
-        # #endregion
+        print("  Using CUDA platform")
     except Exception as e:
         print(f"  ⚠ CUDA not available: {e}")
-        # #region agent log
-        debug_log("run_simulation_cavity_driven.py:135", "CUDA platform failed", {"error": str(e)}, "A")
-        # #endregion
         platform = openmm.Platform.getPlatformByName('Reference')
         print("  Using Reference platform")
-    
-    # #region agent log
-    debug_log("run_simulation_cavity_driven.py:140", "Before Context creation", {"platform": platform.getName(), "num_particles": system.getNumParticles(), "num_forces": system.getNumForces()}, "B")
-    # #endregion
+
     try:
         context = openmm.Context(system, integrator, platform)
-        # #region agent log
-        debug_log("run_simulation_cavity_driven.py:143", "Context created", {"success": True}, "B")
-        # #endregion
     except Exception as e:
-        # #region agent log
-        debug_log("run_simulation_cavity_driven.py:146", "Context creation failed", {"error": str(e)}, "B")
-        # #endregion
         raise
-    
-    # #region agent log
-    debug_log("run_simulation_cavity_driven.py:150", "Before setPositions", {"num_positions": len(positions)}, "D")
-    # #endregion
+
     try:
         context.setPositions(positions)
-        # #region agent log
-        debug_log("run_simulation_cavity_driven.py:153", "setPositions completed", {"success": True}, "D")
-        # #endregion
     except Exception as e:
-        # #region agent log
-        debug_log("run_simulation_cavity_driven.py:156", "setPositions failed", {"error": str(e)}, "D")
-        # #endregion
         raise
-    
+
     # Set initial time to 0 (important for time-dependent forces)
-    # #region agent log
-    debug_log("run_simulation_cavity_driven.py:161", "Before setTime", {"cavity_force_exists": any(isinstance(f, openmm.CavityForce) for f in [system.getForce(i) for i in range(system.getNumForces())])}, "E")
-    # #endregion
     try:
         context.setTime(0.0 * unit.picosecond)
-        # #region agent log
-        debug_log("run_simulation_cavity_driven.py:164", "setTime completed", {"time": 0.0}, "E")
-        # #endregion
     except Exception as e:
-        # #region agent log
-        debug_log("run_simulation_cavity_driven.py:167", "setTime failed", {"error": str(e)}, "E")
-        # #endregion
         raise
     
     # Minimize with laser forces temporarily disabled
     if minimize:
         print("\n--- Energy Minimization ---")
-        # #region agent log
-        debug_log("run_simulation_cavity_driven.py:241", "Before minimization", {"platform": platform.getName()}, "E")
-        # #endregion
-        
+
         # Store current laser enabled state
         cavity_drive_was_enabled = cavity_force.getCavityDriveEnabled()
         direct_laser_was_enabled = cavity_force.getDirectLaserCouplingEnabled()
@@ -392,7 +308,7 @@ def run_cavity_driven_simulation(
         
         try:
             openmm.LocalEnergyMinimizer.minimize(context, maxIterations=100)
-            print("  ✓ Minimization completed")
+            print("  Minimization completed")
         except Exception as e:
             print(f"  ⚠ Minimization failed: {e}")
             print("  Continuing with initial positions...")
@@ -402,23 +318,14 @@ def run_cavity_driven_simulation(
         cavity_force.setDirectLaserCouplingEnabled(direct_laser_was_enabled)
         cavity_force.updateParametersInContext(context)
         if cavity_drive_was_enabled or direct_laser_was_enabled:
-            print("  ✓ Laser forces re-enabled for simulation")
+            print("  Laser forces re-enabled for simulation")
     else:
         print("\n--- Skipping Energy Minimization ---")
-    
+
     # Set velocities
-    # #region agent log
-    debug_log("run_simulation_cavity_driven.py:256", "Before setVelocitiesToTemperature", {"temperature_K": temperature_K}, "E")
-    # #endregion
     try:
         context.setVelocitiesToTemperature(temperature_K * unit.kelvin)
-        # #region agent log
-        debug_log("run_simulation_cavity_driven.py:260", "setVelocitiesToTemperature completed", {"success": True}, "E")
-        # #endregion
     except Exception as e:
-        # #region agent log
-        debug_log("run_simulation_cavity_driven.py:263", "setVelocitiesToTemperature failed", {"error": str(e)}, "E")
-        # #endregion
         raise
     
     # Run simulation
@@ -435,7 +342,7 @@ def run_cavity_driven_simulation(
         print(f"\n--- Starting Production ({prod_time} ps) ---")
         cavity_force.setCavityDriveEnabled(True)
         cavity_force.updateParametersInContext(context)
-        print("  ✓ Laser forces enabled for production")
+        print("  Laser forces enabled for production")
         
         # Reset time for production (optional - comment out if you want continuous time)
         # context.setTime(0.0 * unit.picosecond)
@@ -467,28 +374,13 @@ def run_cavity_driven_simulation(
     simulation_start_time = time.time()
     last_report_wall_time = simulation_start_time
     last_report_sim_time_ps = 0.0
-    
-    # #region agent log
-    debug_log("run_simulation_cavity_driven.py:275", "Before simulation loop", {"total_steps": total_steps, "platform": platform.getName()}, "E")
-    # #endregion
-    
+
     # Run simulation with fine-grained dipole sampling
     # Only save dipole during production phase
     for step in range(start_step, start_step + total_steps):
-        # #region agent log
-        if step == 0:
-            debug_log("run_simulation_cavity_driven.py:273", "Before first integrator.step", {"step": step}, "E")
-        # #endregion
         try:
-            integrator.step(1)  # Step one timestep at a time
-            # #region agent log
-            if step == 0:
-                debug_log("run_simulation_cavity_driven.py:277", "First integrator.step completed", {"step": step}, "E")
-            # #endregion
+            integrator.step(1)
         except Exception as e:
-            # #region agent log
-            debug_log("run_simulation_cavity_driven.py:280", "integrator.step failed", {"step": step, "error": str(e)}, "E")
-            # #endregion
             raise
         
         # Save dipole moment and cavity position every 4 fs (0.004 ps = 4 steps)
@@ -523,17 +415,11 @@ def run_cavity_driven_simulation(
                 time_ps = state.getTime().value_in_unit(unit.picosecond)
                 
                 # Get energy components
-                # #region agent log
-                debug_log("run_simulation_cavity_driven.py:290", "Before getHarmonicEnergy", {"step": step, "time_ps": time_ps}, "E")
-                # #endregion
                 harmonic = cavity_force.getHarmonicEnergy(context)
                 coupling = cavity_force.getCouplingEnergy(context)
                 drive = cavity_force.getCavityDriveEnergy(context)
                 total_cavity = cavity_force.getTotalCavityEnergy(context)
-                # #region agent log
-                debug_log("run_simulation_cavity_driven.py:295", "After energy retrieval", {"harmonic": str(harmonic), "total_cavity": str(total_cavity), "drive": str(drive)}, "E")
-                # #endregion
-                
+
                 times.append(time_ps)
                 cavity_energies.append(total_cavity)
                 drive_energies.append(drive)
@@ -562,9 +448,6 @@ def run_cavity_driven_simulation(
                 print(f"  t={time_val:.1f} ps: E_cavity={total_cavity_val:.4f} kJ/mol, "
                       f"E_drive={drive_val:.4f} kJ/mol, Speed={instantaneous_speed_ns_per_day:.1f} ns/day")
             except Exception as e:
-                # #region agent log
-                debug_log("run_simulation_cavity_driven.py:298", "Energy retrieval failed", {"step": step, "error": str(e)}, "E")
-                # #endregion
                 print(f"  ⚠ Error retrieving energy at step {step}: {e}")
     
     # Calculate simulation speed

@@ -178,6 +178,7 @@ def build_openmm_system_and_context_from_gsd(
     ff_dir: Path | None = None,
     frame: int = 0,
     verbose: bool = True,
+    no_cavity: bool = False,
 ):
     """
     Build OpenMM system from GSD snapshot, add cavity force, return (context, forces_getter).
@@ -195,7 +196,7 @@ def build_openmm_system_and_context_from_gsd(
 
     cfg = load_gsd_config(gsd_path, frame=frame)
     n_mol = cfg["n_mol"]
-    has_cavity = cfg["has_cavity"]
+    has_cavity = cfg["has_cavity"] and not no_cavity
     bonds_group = cfg["bonds_group"]
     bonds_typeid = cfg["bonds_typeid"]
     box_bohr = np.asarray(cfg["box_bohr"][:3], dtype=np.float64)
@@ -322,10 +323,12 @@ def run_cav_hoomd_forces_inprocess(
     lambda_au: float,
     cavity_freq_cm: float = 1560.0,
     frame: int = 0,
+    incavity: bool = True,
 ) -> tuple[np.ndarray | None, str | None]:
     """
     Run cav-hoomd in-process: load GSD, build sim, run 1 step, return forces (N,3) in Hartree/Bohr.
     Returns (F_hoomd, None) on success, or (None, error_message) on failure.
+    When incavity=False (no-cavity / bare glassy system), runs 500-particle molecular system only.
     """
     try:
         import hoomd
@@ -345,7 +348,7 @@ def run_cav_hoomd_forces_inprocess(
         replica=0,
         freq=cavity_freq_cm,
         lambda_coupling=lambda_au,
-        incavity=True,
+        incavity=incavity,
         runtime_ps=0.0,
         input_gsd=gsd_str,
         frame=frame,
@@ -437,6 +440,7 @@ def main():
     )
     parser.add_argument("gsd", type=str, help="GSD file (same config for both codes)")
     parser.add_argument("--lambda", type=float, default=0.001, dest="lambda_coupling", help="Coupling λ in a.u. (default: 0.001)")
+    parser.add_argument("--no-cavity", action="store_true", dest="no_cavity", help="Compare bare molecular system (500 particles, no cavity)")
     parser.add_argument("--cavity-freq", type=float, default=1560.0, help="Cavity frequency cm^-1 (default: 1560)")
     parser.add_argument("--frame", type=int, default=0, help="GSD frame index (default: 0)")
     parser.add_argument("--ff-dir", type=str, default=None, help="Path to diamer_forcefield.xml dir (default: script dir)")
@@ -463,6 +467,7 @@ def main():
             ff_dir=ff_dir,
             frame=args.frame,
             verbose=not args.quiet,
+            no_cavity=args.no_cavity,
         )
     except Exception as e:
         print(f"OpenMM build failed: {e}", file=sys.stderr)
@@ -472,12 +477,16 @@ def main():
         sys.exit(1)
 
     # Unwrap molecules so bonded atoms are close, then override OpenMM positions.
-    # This ensures the cavity dipole is computed from consistent unwrapped positions.
+    # Cavity dipole from unwrapped positions (consistent with OpenMM kernel).
     from openmm import unit as _unit
     cfg = load_gsd_config(gsd_path, frame=args.frame)
     pos_unwrapped = unwrap_molecules(cfg)
     gsd_idx = openmm_to_gsd_indices(cfg)
-    pos_unwrapped_openmm_order = pos_unwrapped[gsd_idx] * BOHR_TO_NM
+    if args.no_cavity and cfg["has_cavity"]:
+        gsd_idx_mol = gsd_idx[:-1]
+    else:
+        gsd_idx_mol = gsd_idx
+    pos_unwrapped_openmm_order = pos_unwrapped[gsd_idx_mol] * BOHR_TO_NM
     context.setPositions(pos_unwrapped_openmm_order * _unit.nanometer)
 
     F_openmm = get_openmm_forces_fn()
@@ -512,7 +521,8 @@ def main():
                 if not args.quiet:
                     print(f"File {npz_path} not found; running cav-hoomd in-process...")
                 F_hoomd, err = run_cav_hoomd_forces_inprocess(
-                    gsd_for_hoomd, args.lambda_coupling, args.cavity_freq, frame=0
+                    gsd_for_hoomd, args.lambda_coupling, args.cavity_freq, frame=0,
+                    incavity=not args.no_cavity,
                 )
                 if err is not None:
                     print(f"cav-hoomd could not be run: {err}", file=sys.stderr)
@@ -525,7 +535,8 @@ def main():
             if not args.quiet:
                 print("Running cav-hoomd in-process for reference forces...")
             F_hoomd, err = run_cav_hoomd_forces_inprocess(
-                gsd_for_hoomd, args.lambda_coupling, args.cavity_freq, frame=0
+                gsd_for_hoomd, args.lambda_coupling, args.cavity_freq, frame=0,
+                incavity=not args.no_cavity,
             )
             if err is not None:
                 print(f"cav-hoomd could not be run: {err}", file=sys.stderr)
@@ -534,7 +545,11 @@ def main():
 
         # F_hoomd must be in GSD particle (tag) order; gsd_idx maps OpenMM bond order to GSD indices.
         gsd_idx = openmm_to_gsd_indices(cfg)
-        F_hoomd_ordered = np.asarray(F_hoomd)[gsd_idx]
+        if args.no_cavity and cfg["has_cavity"]:
+            gsd_idx_mol = gsd_idx[:-1]
+        else:
+            gsd_idx_mol = gsd_idx
+        F_hoomd_ordered = np.asarray(F_hoomd)[gsd_idx_mol]
 
         if args.diagnose_order:
             F_openmm_au = F_openmm * KJMOL_NM_TO_HARTREE_BOHR

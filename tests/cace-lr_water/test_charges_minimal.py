@@ -30,11 +30,11 @@ def test_model_charges(model_name):
         # Load model
         print(f"\nLoading model...")
         predictor = pretrained_mlip.get_predict_unit(model_name, device='cpu')  # Use CPU to avoid OOM
-        print(f"  ✓ Model loaded")
+        print(f"  Model loaded")
         
         # Check task support
         if "omol" not in predictor.dataset_to_tasks:
-            print(f"  ✗ No 'omol' task support")
+            print(f"  No 'omol' task support")
             return False
         
         # Create calculator
@@ -44,7 +44,7 @@ def test_model_charges(model_name):
         # Get energy
         print(f"\nComputing energy...")
         energy = water.get_potential_energy()
-        print(f"  ✓ Energy: {energy:.4f} eV")
+        print(f"  Energy: {energy:.4f} eV")
         
         # Check model structure for charges
         print(f"\nChecking model structure...")
@@ -52,7 +52,7 @@ def test_model_charges(model_name):
         print(f"  Model type: {type(model).__name__}")
         
         if hasattr(model, 'heads'):
-            print(f"  ✓ Has {len(model.heads)} head(s)")
+            print(f"  Has {len(model.heads)} head(s)")
             for i, head in enumerate(model.heads):
                 print(f"    Head {i}: {type(head).__name__}")
                 
@@ -62,17 +62,17 @@ def test_model_charges(model_name):
                     print(f"      Charge methods: {charge_methods}")
                     
                 if hasattr(head, 'get_charges'):
-                    print(f"      ✓✓✓ HAS get_charges()! ✓✓✓")
+                    print(f"      HAS get_charges()! ")
                     return True
                 elif hasattr(head, 'get_lr_energies'):
-                    print(f"      ✓ Has get_lr_energies() - may support charges")
+                    print(f"      Has get_lr_energies() - may support charges")
                     return True
                     
-        print(f"  ✗ No charge prediction capability found")
+        print(f"  No charge prediction capability found")
         return False
         
     except Exception as e:
-        print(f"  ✗ Error: {e}")
+        print(f"  Error: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     for model_name in models_to_test:
         result = test_model_charges(model_name)
         if result:
-            print(f"\n✓✓✓ FOUND WORKING MODEL: {model_name} ✓✓✓")
+            print(f"\nFOUND WORKING MODEL: {model_name} ")
             break
     else:
-        print(f"\n✗ No models with charge prediction found")
+        print(f"\nNo models with charge prediction found")

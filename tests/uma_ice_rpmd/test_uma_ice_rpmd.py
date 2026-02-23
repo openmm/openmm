@@ -1,22 +1,8 @@
 #!/usr/bin/env python3
 """
-UMA/eSEN Ice RPMD Simulation
-=============================
-
-Comprehensive RPMD simulation testing if ice remains frozen at 243K using 
-UMA or eSEN ML potentials.
-
-Features:
-- RPMD with PILE_G thermostat for quantum nuclear effects
-- NPT or NVT ensemble
-- Equilibration and production phases
-- Real-time progress reporting with energy and speed metrics
-- PDB trajectory output (centroid)
-- Comprehensive analysis and logging
-
-Usage:
-    python test_uma_ice_rpmd.py --molecules 50 --beads 16 --temperature 243 \\
-                                --dt 4.0 --equil 5 --prod 100 --pressure 0
+RPMD simulation testing if ice stays frozen at 243K with UMA or eSEN potentials.
+PILE_G thermostat, NPT/NVT, equilibration + production. Outputs centroid PDB.
+Run: python test_uma_ice_rpmd.py --molecules 50 --beads 16 --temperature 243 --dt 4.0 --equil 5 --prod 100
 """
 
 import sys
@@ -37,7 +23,7 @@ from openmm import app, unit, Vec3
 from openmm import RPMDIntegrator, Context, Platform, RPMDMonteCarloBarostat
 from openmmml import MLPotential
 
-print("✓ All required packages loaded successfully")
+print("All required packages loaded successfully")
 
 def create_ice_structure(num_molecules=32):
     """
@@ -184,7 +170,7 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
                    production_ps=100.0, model_name='uma-s-1p1-pythonforce-batch',
                    output_dir='.', report_interval_ps=1.0, pdb_interval_ps=1.0):
     """
-    Run comprehensive RPMD simulation of ice.
+    Run RPMD simulation of ice.
     
     Parameters
     ----------
@@ -636,7 +622,7 @@ if __name__ == '__main__':
         )
         sys.exit(0 if success else 1)
     except Exception as e:
-        print(f"\n✗ SIMULATION FAILED")
+        print(f"\nSIMULATION FAILED")
         print(f"Error: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()

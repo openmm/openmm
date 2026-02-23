@@ -22,7 +22,7 @@ try:
     from openmm import unit
     from openmm import app
     from openmmforcefields.generators import SystemGenerator
-    print("✓ OpenMM and openmmforcefields loaded successfully")
+    print("OpenMM and openmmforcefields loaded successfully")
 except ImportError as e:
     print(f"Error importing required packages: {e}")
     print("Make sure OpenMM and openmmforcefields are installed.")
@@ -68,7 +68,7 @@ def create_water_box(num_molecules=1000, box_size_nm=3.0, temperature_K=300.0):
     print(f"  Temperature: {temperature_K} K")
     
     # Use the simpler approach: generate a PDB string and load it
-    # This avoids the template matching issues
+    # Avoid template matching issues
     pdb_lines = ["CRYST1{:9.3f}{:9.3f}{:9.3f}  90.00  90.00  90.00 P 1           1".format(
         box_size_nm * 10, box_size_nm * 10, box_size_nm * 10)]  # Convert nm to Angstrom
     
@@ -172,7 +172,7 @@ def create_water_box(num_molecules=1000, box_size_nm=3.0, temperature_K=300.0):
         sys.exit(1)
     
     forcefield = app.ForceField(str(flexible_xml))
-    print(f"  ✓ Loaded flexible TIP4P-Ew from {flexible_xml}")
+    print(f"  Loaded flexible TIP4P-Ew from {flexible_xml}")
     
     # Use Modeller to add M-sites
     modeller = app.Modeller(pdb.topology, pdb.positions)
@@ -184,13 +184,13 @@ def create_water_box(num_molecules=1000, box_size_nm=3.0, temperature_K=300.0):
         modeller.topology,
         nonbondedMethod=app.PME,
         nonbondedCutoff=0.9 * unit.nanometer,
-        constraints=None,              # CRITICAL: No constraints on O-H bonds
-        rigidWater=False,              # CRITICAL: Allow water to vibrate
+        constraints=None,              # No constraints on O-H (allow vibration)
+        rigidWater=False,
         ewaldErrorTolerance=0.0005
     )
     
-    print(f"  ✓ System created: FLEXIBLE water (no bond constraints)")
-    print(f"  ✓ O-H bonds can vibrate → OH stretch will appear in IR")
+    print(f"  System created: FLEXIBLE water (no bond constraints)")
+    print(f"  O-H bonds can vibrate → OH stretch will appear in IR")
     
     # Extract charges for dipole calculation (only O and H atoms, not M-sites)
     num_molecular = len(pdb.positions)  # Original atoms before adding M-sites
@@ -569,7 +569,7 @@ def main():
     
     # Override for test mode
     if args.test:
-        print("\n*** QUICK TEST MODE ***\n")
+        print("\nQuick test mode\n")
         args.molecules = 216
         args.box = 1.8
         args.equil = 5.0

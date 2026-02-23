@@ -8,9 +8,9 @@ try:
     from openmmml import MLPotential
     from ase.build import molecule
     import torch
-    print("✓ Imports successful")
+    print("Imports successful")
 except ImportError as e:
-    print(f"✗ Import error: {e}")
+    print(f"Import error: {e}")
     sys.exit(1)
 
 print("\n" + "=" * 70)
@@ -37,41 +37,41 @@ for model_name in model_names:
     try:
         # Load potential
         potential = MLPotential(model_name)
-        print(f"  ✓ Model loaded")
+        print(f"  Model loaded")
         
         # Check if we can access the underlying predictor
         if hasattr(potential, 'predictor'):
             predictor = potential.predictor
-            print(f"  ✓ Has predictor attribute")
+            print(f"  Has predictor attribute")
             
             # Check model structure
             if hasattr(predictor, 'model'):
                 model = predictor.model
-                print(f"  ✓ Has model attribute")
+                print(f"  Has model attribute")
                 print(f"    Model type: {type(model)}")
                 
                 # Check for heads
                 if hasattr(model, 'heads'):
-                    print(f"  ✓ Model has heads: {len(model.heads)} head(s)")
+                    print(f"  Model has heads: {len(model.heads)} head(s)")
                     head = model.heads[0]
                     print(f"    Head type: {type(head).__name__}")
                     
                     # Check for charge methods
                     if hasattr(head, 'get_charges'):
-                        print(f"  ✓✓✓ HEAD HAS get_charges() METHOD! ✓✓✓")
+                        print(f"  HEAD HAS get_charges() METHOD! ")
                         print(f"\n  This model supports charge prediction!")
                         print(f"  Model: {model_name}")
                     else:
-                        print(f"  ✗ Head does not have get_charges()")
+                        print(f"  Head does not have get_charges()")
                         print(f"    Available methods: {[m for m in dir(head) if not m.startswith('_') and 'charge' in m.lower()]}")
                 else:
-                    print(f"  ✗ Model has no 'heads' attribute")
+                    print(f"  Model has no 'heads' attribute")
                     
         else:
-            print(f"  ✗ No predictor attribute")
+            print(f"  No predictor attribute")
             
     except Exception as e:
-        print(f"  ✗ Error: {e}")
+        print(f"  Error: {e}")
         import traceback
         traceback.print_exc()
 

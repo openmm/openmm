@@ -27,7 +27,7 @@ try:
     from openmm import openmm
     from openmm import unit
     from openmm import app
-    print("✓ OpenMM loaded successfully")
+    print("OpenMM loaded successfully")
 except ImportError as e:
     print(f"Error importing OpenMM: {e}")
     sys.exit(1)
@@ -163,12 +163,12 @@ def create_flexible_water_box(num_molecules=1000, box_size_nm=3.0, temperature_K
         sys.exit(1)
     
     forcefield = app.ForceField(str(flexible_xml))
-    print(f"  ✓ Loaded flexible TIP4P-Ew from {flexible_xml}")
+    print(f"  Loaded flexible TIP4P-Ew from {flexible_xml}")
     
     # Add M-sites (virtual particles)
     modeller = app.Modeller(pdb.topology, pdb.positions)
     modeller.addExtraParticles(forcefield)
-    print(f"  ✓ Added virtual M-sites for TIP4P-Ew")
+    print(f"  Added virtual M-sites for TIP4P-Ew")
     
     # Create system with FLEXIBLE water
     print(f"\n  Creating system with flexible bonds...")
@@ -176,13 +176,13 @@ def create_flexible_water_box(num_molecules=1000, box_size_nm=3.0, temperature_K
         modeller.topology,
         nonbondedMethod=app.PME,
         nonbondedCutoff=0.9 * unit.nanometer,
-        constraints=None,              # CRITICAL: No constraints on O-H bonds
-        rigidWater=False,              # CRITICAL: Allow water to vibrate
+        constraints=None,              # No constraints on O-H (allow vibration)
+        rigidWater=False,
         ewaldErrorTolerance=0.0005
     )
     
-    print(f"  ✓ System created: FLEXIBLE water (no bond constraints)")
-    print(f"  ✓ O-H bonds can vibrate → OH stretch will appear in IR")
+    print(f"  System created: FLEXIBLE water (no bond constraints)")
+    print(f"  O-H bonds can vibrate → OH stretch will appear in IR")
     
     # Extract charges for dipole calculation
     num_molecular = len(pdb.positions)
@@ -200,10 +200,10 @@ def create_flexible_water_box(num_molecules=1000, box_size_nm=3.0, temperature_K
     for force in system.getForces():
         if isinstance(force, openmm.HarmonicBondForce):
             has_bonds = True
-            print(f"  ✓ HarmonicBondForce: {force.getNumBonds()} bonds")
+            print(f"  HarmonicBondForce: {force.getNumBonds()} bonds")
         if isinstance(force, openmm.HarmonicAngleForce):
             has_angles = True
-            print(f"  ✓ HarmonicAngleForce: {force.getNumAngles()} angles")
+            print(f"  HarmonicAngleForce: {force.getNumAngles()} angles")
     
     if not has_bonds or not has_angles:
         print(f"  WARNING: Missing harmonic terms - water may still be rigid!")
@@ -231,7 +231,7 @@ def setup_thermostat(system, temperature_K, num_molecular_particles, tau_bussi_p
             bussi.addParticle(i)
         
         system.addForce(bussi)
-        print(f"  ✓ BussiThermostat added for {bussi.getNumParticles()} particles")
+        print(f"  BussiThermostat added for {bussi.getNumParticles()} particles")
         print(f"  Temperature: {temperature_K} K, Tau: {tau_bussi_ps} ps")
         return True
     except AttributeError:
@@ -422,7 +422,7 @@ def run_baseline_simulation(num_molecules=1000, box_size_nm=3.0, temperature_K=3
                  'flexible_water': True
              })
     
-    print(f"  ✓ Saved: {output_file}")
+    print(f"  Saved: {output_file}")
     print(f"  Data points: {len(dipole_times):,}")
     print(f"  Production time: {dipole_times[-1]:.1f} ps")
     print(f"\nNext step: Analyze IR spectrum to verify OH stretch peak")
@@ -457,7 +457,7 @@ def main():
     
     # Override for test mode
     if args.test:
-        print("\n*** QUICK TEST MODE ***\n")
+        print("\nQuick test mode\n")
         args.molecules = 216
         args.box = 1.8
         args.equil = 50.0

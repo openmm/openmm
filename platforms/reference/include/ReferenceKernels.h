@@ -1827,7 +1827,8 @@ class ReferenceApplyBussiThermostatKernel : public ApplyBussiThermostatKernel {
 public:
     ReferenceApplyBussiThermostatKernel(std::string name, const Platform& platform) : 
         ApplyBussiThermostatKernel(name, platform), 
-        reservoirEnergyTranslational(0.0), reservoirEnergyRotational(0.0) {
+        reservoirEnergyTranslational(0.0), reservoirEnergyRotational(0.0),
+        numDofSubtracted(0) {
     }
     /**
      * Initialize the kernel.
@@ -1863,6 +1864,7 @@ private:
     double reservoirEnergyTranslational;
     double reservoirEnergyRotational;
     unsigned int randomSeed;
+    int numDofSubtracted;
 };
 
 /**

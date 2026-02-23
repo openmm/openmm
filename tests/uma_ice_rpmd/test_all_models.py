@@ -37,10 +37,10 @@ for model_name in models:
         # We don't actually load the model yet, just test registration
         print(f"Testing: {model_name:<50}", end=" ")
         potential = MLPotential(model_name)
-        print("✓ REGISTERED")
+        print("REGISTERED")
         passed += 1
     except Exception as e:
-        print(f"✗ FAILED: {e}")
+        print(f"FAILED: {e}")
         failed += 1
         failed_models.append(model_name)
 

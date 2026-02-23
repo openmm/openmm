@@ -109,15 +109,15 @@ def test_openmm_integration(checkpoint_path: str, molecule: str = "water",
         print("Supported: water, methane")
         return False
     
-    print(f"   ✓ Topology created: {topology.getNumAtoms()} atoms")
+    print(f"   Topology created: {topology.getNumAtoms()} atoms")
     
     # Load UMA+LES model
     print("\n2. Loading UMA+LES model...")
     try:
         potential = MLPotential(checkpoint_path)
-        print("   ✓ Model loaded")
+        print("   Model loaded")
     except Exception as e:
-        print(f"   ✗ Failed to load model: {e}")
+        print(f"   Failed to load model: {e}")
         return False
     
     # Create OpenMM system
@@ -129,9 +129,9 @@ def test_openmm_integration(checkpoint_path: str, molecule: str = "water",
             charge=0,
             spin=1
         )
-        print(f"   ✓ System created: {system.getNumParticles()} particles")
+        print(f"   System created: {system.getNumParticles()} particles")
     except Exception as e:
-        print(f"   ✗ Failed to create system: {e}")
+        print(f"   Failed to create system: {e}")
         return False
     
     # Set up integrator
@@ -147,14 +147,14 @@ def test_openmm_integration(checkpoint_path: str, molecule: str = "water",
     try:
         platform = openmm.Platform.getPlatformByName('CUDA')
         properties = {'Precision': 'mixed'}
-        print("   ✓ Using CUDA platform")
+        print("   Using CUDA platform")
     except Exception:
         try:
             platform = openmm.Platform.getPlatformByName('CPU')
             properties = {}
-            print("   ✓ Using CPU platform (CUDA not available)")
+            print("   Using CPU platform (CUDA not available)")
         except Exception as e:
-            print(f"   ✗ Failed to get platform: {e}")
+            print(f"   Failed to get platform: {e}")
             return False
     
     simulation = app.Simulation(topology, system, integrator, platform, properties)
@@ -175,9 +175,9 @@ def test_openmm_integration(checkpoint_path: str, molecule: str = "water",
     print(f"\n7. Running {steps} MD steps...")
     try:
         integrator.step(steps)
-        print(f"   ✓ MD completed")
+        print(f"   MD completed")
     except Exception as e:
-        print(f"   ✗ MD failed: {e}")
+        print(f"   MD failed: {e}")
         return False
     
     # Get final state
@@ -199,7 +199,7 @@ def test_openmm_integration(checkpoint_path: str, molecule: str = "water",
     print(f"   RMSD: {rmsd:.4f} Å")
     
     print("\n" + "=" * 60)
-    print("✓ OpenMM integration test completed successfully!")
+    print("OpenMM integration test completed successfully!")
     print("=" * 60)
     
     return True

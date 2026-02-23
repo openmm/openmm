@@ -63,7 +63,7 @@ def test_model_batch(model_name, num_systems=2):
             data.sid = [f"mol-{i}"]
             # NOTE: Keep dataset as string for individual data
             # atomicdata_list_to_batch will combine into ['omol', 'omol']
-            print(f"✓ (atoms: {data.pos.shape[0]}, dataset: {repr(data.dataset)})")
+            print(f"(atoms: {data.pos.shape[0]}, dataset: {repr(data.dataset)})")
             data_list.append(data)
         
         # Test 1: Sequential prediction
@@ -88,7 +88,7 @@ def test_model_batch(model_name, num_systems=2):
             forces = pred['forces'].cpu().numpy()
             sequential_energies.append(energy)
             sequential_forces.append(forces)
-            print(f"✓ E={energy:.6f} eV")
+            print(f"E={energy:.6f} eV")
             
             del data_gpu, pred
             torch.cuda.empty_cache()
@@ -97,7 +97,7 @@ def test_model_batch(model_name, num_systems=2):
         print("\n--- Test 2: Batched Prediction ---")
         print("Creating batch...", end=" ")
         batch_data = atomicdata_list_to_batch(data_list)
-        print(f"✓ (num_graphs: {batch_data.num_graphs}, total_atoms: {batch_data.pos.shape[0]})")
+        print(f"(num_graphs: {batch_data.num_graphs}, total_atoms: {batch_data.pos.shape[0]})")
         
         print("Batch properties:")
         print(f"  batch indices: {batch_data.batch}")
@@ -112,7 +112,7 @@ def test_model_batch(model_name, num_systems=2):
         
         print("\nMoving batch to GPU...", end=" ")
         batch_data_gpu = batch_data.to("cuda")
-        print("✓")
+        print("")
         
         print("Running batched prediction...", end=" ", flush=True)
         torch.cuda.synchronize()
@@ -122,7 +122,7 @@ def test_model_batch(model_name, num_systems=2):
                 batch_pred = predictor.predict(batch_data_gpu)
             
             torch.cuda.synchronize()
-            print("✓")
+            print("")
             
             batch_energies = batch_pred['energy'].cpu().numpy()
             batch_forces = batch_pred['forces'].cpu().numpy()
@@ -144,14 +144,14 @@ def test_model_batch(model_name, num_systems=2):
                 e_diff = abs(seq_e - batch_e)
                 f_diff = np.max(np.abs(seq_f - batch_f))
                 
-                match = "✓" if e_diff < 1e-4 and f_diff < 1e-3 else "✗"
+                match = "" if e_diff < 1e-4 and f_diff < 1e-3 else ""
                 print(f"  System {i}: {match} ΔE={e_diff:.2e} eV, ΔF_max={f_diff:.2e} eV/Å")
             
-            print(f"\n✓ SUCCESS: {model_name} works with batched inference!")
+            print(f"\nSUCCESS: {model_name} works with batched inference!")
             return True
             
         except Exception as e:
-            print(f"✗ FAILED")
+            print(f"FAILED")
             print(f"\nError during batched prediction:")
             print(f"  Type: {type(e).__name__}")
             print(f"  Message: {str(e)}")
@@ -168,7 +168,7 @@ def test_model_batch(model_name, num_systems=2):
             return False
             
     except Exception as e:
-        print(f"\n✗ FAILED to load or test model")
+        print(f"\nFAILED to load or test model")
         print(f"  Error: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
@@ -195,5 +195,5 @@ if __name__ == '__main__':
     print("Summary")
     print(f"{'='*80}")
     for model_name, success in results.items():
-        status = "✓ PASS" if success else "✗ FAIL"
+        status = "PASS" if success else "FAIL"
         print(f"  {model_name:<40} {status}")

@@ -103,17 +103,16 @@ void MultiModeCavityForce::recomputeDerivedQuantities() {
     }
     
     // Precompute DSE prefactor: (1/2) * sum_n( eps_n^2 / K_n * f_n^2 )
-    // eps_n = lambda_n * omega_n = sqrt(n) * lambda1 * n * omega1 = n^(3/2) * lambda1 * omega1
+    // With constant lambda_n = lambda1: eps_n = lambda1 * omega_n = n * lambda1 * omega1
     // K_n = photonMass * omega_n^2 = photonMass * n^2 * omega1^2
-    // eps_n^2 / K_n = (n^3 * lambda1^2 * omega1^2) / (photonMass * n^2 * omega1^2) = n * lambda1^2 / photonMass
-    // So DSE prefactor = (1/2) * sum_n( n * lambda1^2 / photonMass * f_n^2 )
-    // = (lambda1^2 / (2 * photonMass)) * sum_n( n * f_n^2 )
+    // eps_n^2 / K_n = (n^2 * lambda1^2 * omega1^2) / (photonMass * n^2 * omega1^2) = lambda1^2 / photonMass
+    // So DSE prefactor = (1/2) * sum_n( lambda1^2 / photonMass * f_n^2 )
+    // = (lambda1^2 / (2 * photonMass)) * sum_n( f_n^2 )
     dsePrefactor = 0.0;
     double prefactorBase = lambda1 * lambda1 / (2.0 * photonMass);
     for (int i = 0; i < numModes; i++) {
-        int n = i + 1;
         double fn = spatialProfiles[i];
-        dsePrefactor += n * fn * fn;
+        dsePrefactor += fn * fn;
     }
     dsePrefactor *= prefactorBase;
 }
