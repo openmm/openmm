@@ -1,10 +1,6 @@
 from .mlpotential import MLPotential
 from . import models
 
-# Register CACE potential
-from openmmml.models.cacepotential import CACEPotentialImplFactory
-MLPotential.registerImplFactory('cace-lr', CACEPotentialImplFactory())
-
 # Register UMA batched RPMD potentials
 from openmmml.models.umapotential_pythonforce_batch import UMAPotentialPythonForceBatchedImplFactory
 

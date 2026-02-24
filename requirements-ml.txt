@@ -5,11 +5,11 @@
 #
 # Install with:  pip install -r requirements-ml.txt
 
-# UMA models (fairchem-core from the LES branch fork)
-fairchem-core @ git+https://github.com/muhammadhasyim/fairchem.git@les_branch#subdirectory=packages/fairchem-core
-
-# CACE models
-cace @ git+https://github.com/muhammadhasyim/cace.git
+# UMA models (standard fairchem-core from PyPI)
+fairchem-core>=2.14
 
 # PyTorch (required by all ML potentials)
 torch>=2.4
+
+# Optional: for ice Ih structure generation (tests/uma_ice_rpmd)
+# genice2  # pip install genice2 - enables proton-disordered ice; embedded CIF used as fallback

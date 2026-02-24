@@ -23,4 +23,4 @@ echo "PYTHONPATH=${PYTHONPATH}"
 echo "Running test..."
 echo ""
 
-python test_uma_ice_rpmd.py --molecules 10 --beads 8 --temperature 243 --dt 1.0 --equil 10 --prod 100 --pressure 0 "$@"
+python test_uma_ice_rpmd.py --molecules 10 --beads 8 --temperature 243 --dt 1.0 --equil 10 --prod 100 --pressure 0 --model uma-s-1-pythonforce-batch "$@"

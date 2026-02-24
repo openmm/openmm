@@ -16,7 +16,7 @@ CavityForce must receive `lambda_coupling` from t=0, not 0.0 with `setCouplingOn
 
 Kob-Andersen model needs non-additive N-O cross-terms; Lorentz-Berthelot fails. Use explicit exceptions with sigma_NO, epsilon_NO from cav-hoomd.
 
-## IR Spectrum (CACE-LR Water)
+## IR Spectrum (ML Water)
 
 - Use unwrapped positions when computing dipoles: omit `enforcePeriodicBox` so molecules across box edges stay intact.
 - ACF: subtract mean dipole, FFT-based method, ω² spectral weight.

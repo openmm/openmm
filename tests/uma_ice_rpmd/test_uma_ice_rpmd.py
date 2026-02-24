@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """
 RPMD simulation testing if ice stays frozen at 243K with UMA or eSEN potentials.
-PILE_G thermostat, NPT/NVT, equilibration + production. Outputs centroid PDB.
-Run: python test_uma_ice_rpmd.py --molecules 50 --beads 16 --temperature 243 --dt 4.0 --equil 5 --prod 100
+Uses proper ice Ih structure (GenIce2 or embedded CIF). PILE thermostat, NPT/NVT.
+Run: python test_uma_ice_rpmd.py --molecules 32 --beads 8 --temperature 243 --dt 1.0 --equil 5 --prod 50
 """
 
 import sys
 import os
+import subprocess
+import tempfile
 
 # Set plugin dir before openmm import: when openmm_library_path points to build/,
 # build/plugins has subdirs (amoeba, rpmd...) not .so files. Use installed plugins.
@@ -23,17 +25,139 @@ from openmm import app, unit, Vec3
 from openmm import RPMDIntegrator, Context, Platform, RPMDMonteCarloBarostat
 from openmmml import MLPotential
 
-print("All required packages loaded successfully")
+# Embedded ice Ih CIF from Avogadro/COD (12 water molecules) - fallback when GenIce2 unavailable
+# P 63 c m, a=b=7.82 A, c=7.36 A, gamma=120
+_ICE_IH_CIF = """
+data_1011023
+_cell_length_a 7.82
+_cell_length_b 7.82
+_cell_length_c 7.36
+_cell_angle_alpha 90
+_cell_angle_beta 90
+_cell_angle_gamma 120
+_symmetry_space_group_name_H-M 'P 63 c m'
+loop_
+_symmetry_equiv_pos_as_xyz
+ x,y,z
+ -y,x-y,z
+ y-x,-x,z
+ y,x,z
+ x-y,-y,z
+ -x,y-x,z
+ -x,-y,1/2+z
+ y,y-x,1/2+z
+ x-y,x,1/2+z
+ -y,-x,1/2+z
+ y-x,y,1/2+z
+ x,x-y,1/2+z
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+ O1 O 0.3333 0. 0.0625
+ O2 O 0.6667 0. 0.9375
+ H1 H 0.3333 0. 0.174
+ H2 H 0.438 0. 0.026
+ H3 H 0.772 0.105 0.975
+"""
+
+
+def _create_ice_from_ase(atoms_ase, num_molecules):
+    """Convert ASE Atoms (ice) to OpenMM topology and positions. Trim to num_molecules."""
+    # Ensure we have O and H in correct order (O, H, H per molecule)
+    symbols = atoms_ase.get_chemical_symbols()
+    pos = atoms_ase.get_positions()
+    cell = atoms_ase.get_cell()
+    mol_list = []
+    seen = set()
+    for i, s in enumerate(symbols):
+        if s == 'O' and i not in seen:
+            oidx = i
+            # Find closest 2 H to this O
+            dists = []
+            for j, (sj, pj) in enumerate(zip(symbols, pos)):
+                if sj == 'H':
+                    d = np.linalg.norm(pos[oidx] - pj)
+                    dists.append((d, j))
+            dists.sort(key=lambda x: x[0])
+            h1, h2 = dists[0][1], dists[1][1]
+            mol_list.append([oidx, h1, h2])
+            seen.update([oidx, h1, h2])
+
+    mol_list = mol_list[:num_molecules]
+    topology = app.Topology()
+    positions = []
+    for oidx, h1, h2 in mol_list:
+        chain = topology.addChain()
+        residue = topology.addResidue('HOH', chain)
+        o_atom = topology.addAtom('O', app.Element.getBySymbol('O'), residue)
+        h1_atom = topology.addAtom('H', app.Element.getBySymbol('H'), residue)
+        h2_atom = topology.addAtom('H', app.Element.getBySymbol('H'), residue)
+        topology.addBond(o_atom, h1_atom)
+        topology.addBond(o_atom, h2_atom)
+        for idx in [oidx, h1, h2]:
+            positions.append(pos[idx].tolist())
+
+    # Box in nm (ASE cell: rows are lattice vectors)
+    v = np.array(cell)
+    box_vectors = (
+        [v[0, 0] * 0.1, v[0, 1] * 0.1, v[0, 2] * 0.1] * unit.nanometer,
+        [v[1, 0] * 0.1, v[1, 1] * 0.1, v[1, 2] * 0.1] * unit.nanometer,
+        [v[2, 0] * 0.1, v[2, 1] * 0.1, v[2, 2] * 0.1] * unit.nanometer,
+    )
+
+    topology.setPeriodicBoxVectors(box_vectors)
+    return topology, positions, box_vectors
+
+
+def _create_ice_genice(num_molecules):
+    """Try GenIce2 subprocess. Returns (topology, positions, box_vectors) or None on failure."""
+    try:
+        # Replication to get >= num_molecules: 12 * r^3 >= n  =>  r = ceil((n/12)^(1/3))
+        r = max(1, int(np.ceil((num_molecules / 12) ** (1 / 3))))
+        with tempfile.NamedTemporaryFile(suffix='.y', delete=False) as f:
+            outpath = f.name
+        result = subprocess.run(
+            ['genice2', '1h', '--rep', str(r), str(r), str(r), '-f', 'y', '-o', outpath, '--seed', '42'],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode != 0:
+            return None
+        from ase.io import read
+        atoms = read(outpath, format='yaml')
+        os.unlink(outpath)
+        return _create_ice_from_ase(atoms, num_molecules)
+    except Exception:
+        return None
+
+
+def _create_ice_embedded(num_molecules):
+    """Create ice Ih from embedded CIF (12 molecules) + replication."""
+    from ase.io import read
+    from io import StringIO
+
+    atoms = read(StringIO(_ICE_IH_CIF), format='cif')
+    n_base = len(atoms) // 3
+    if num_molecules <= n_base:
+        return _create_ice_from_ase(atoms, num_molecules)
+    r = max(1, int(np.ceil((num_molecules / n_base) ** (1 / 3))))
+    from ase.build import make_supercell
+    P = np.diag([r, r, r])
+    supercell = make_supercell(atoms, P)
+    return _create_ice_from_ase(supercell, num_molecules)
+
 
 def create_ice_structure(num_molecules=32):
     """
-    Create ice Ih structure with tetrahedral coordination.
-    
-    Ice Ih parameters:
-    - O-O distance: ~2.75 Å
-    - O-H bond length: ~0.96 Å
-    - Tetrahedral angle: 109.47°
-    
+    Create ice Ih structure with tetrahedral hydrogen-bonding network.
+
+    Tries GenIce2 first (proton-disordered); falls back to embedded CIF (ice Ih from COD).
+    Ice Ih: O-O ~2.75 A, density ~0.92 g/cm3.
+
     Returns
     -------
     topology : app.Topology
@@ -41,133 +165,42 @@ def create_ice_structure(num_molecules=32):
     box_vectors : tuple of Vec3
     """
     print(f"\n--- Creating Ice Ih Structure ---")
-    print(f"  Molecules: {num_molecules}")
-    
-    # Calculate box size for ice density (0.92 g/cm³)
-    target_density = 0.92  # g/cm³
-    mass_per_molecule = 18.015  # g/mol  
-    avogadro = 6.022e23
-    
-    # Volume needed for target density: V = (N * M) / (ρ * N_A)
-    total_mass_g = (num_molecules * mass_per_molecule) / avogadro
-    volume_cm3 = total_mass_g / target_density
-    volume_nm3 = volume_cm3 * 1e21  # cm³ to nm³
-    box_size = volume_nm3 ** (1/3)
-    
-    # Spacing for cubic lattice
-    n_side = int(np.ceil(num_molecules ** (1/3)))
-    spacing_nm = box_size / n_side
-    
-    print(f"  Lattice: {n_side}x{n_side}x{n_side}")
-    print(f"  Box size: {box_size:.3f} nm")
-    
-    # Water geometry
-    oh_bond = 0.09572  # nm
-    hoh_angle = 104.52 * np.pi / 180.0
-    
-    # Create topology
-    topology = app.Topology()
-    positions = []
-    
-    np.random.seed(42)
-    
-    mol_count = 0
-    for i in range(n_side):
-        for j in range(n_side):
-            for k in range(n_side):
-                if mol_count >= num_molecules:
-                    break
-                
-                # Position of oxygen
-                o_pos = np.array([
-                    (i + 0.5) * spacing_nm,
-                    (j + 0.5) * spacing_nm,
-                    (k + 0.5) * spacing_nm
-                ])
-                
-                # Random orientation
-                theta = np.random.rand() * 2 * np.pi
-                phi = np.random.rand() * np.pi
-                psi = np.random.rand() * 2 * np.pi
-                
-                # Local H positions
-                h1_local = np.array([
-                    oh_bond * np.sin(hoh_angle/2),
-                    0,
-                    oh_bond * np.cos(hoh_angle/2)
-                ])
-                h2_local = np.array([
-                    -oh_bond * np.sin(hoh_angle/2),
-                    0,
-                    oh_bond * np.cos(hoh_angle/2)
-                ])
-                
-                # Rotation matrices
-                Rz = np.array([
-                    [np.cos(theta), -np.sin(theta), 0],
-                    [np.sin(theta), np.cos(theta), 0],
-                    [0, 0, 1]
-                ])
-                Ry = np.array([
-                    [np.cos(phi), 0, np.sin(phi)],
-                    [0, 1, 0],
-                    [-np.sin(phi), 0, np.cos(phi)]
-                ])
-                Rx = np.array([
-                    [1, 0, 0],
-                    [0, np.cos(psi), -np.sin(psi)],
-                    [0, np.sin(psi), np.cos(psi)]
-                ])
-                R = Rz @ Ry @ Rx
-                
-                h1_pos = o_pos + R @ h1_local
-                h2_pos = o_pos + R @ h2_local
-                
-                # Add to topology
-                chain = topology.addChain()
-                residue = topology.addResidue('HOH', chain)
-                o_atom = topology.addAtom('O', app.Element.getBySymbol('O'), residue)
-                h1_atom = topology.addAtom('H', app.Element.getBySymbol('H'), residue)
-                h2_atom = topology.addAtom('H', app.Element.getBySymbol('H'), residue)
-                topology.addBond(o_atom, h1_atom)
-                topology.addBond(o_atom, h2_atom)
-                
-                positions.append(o_pos.tolist())
-                positions.append(h1_pos.tolist())
-                positions.append(h2_pos.tolist())
-                
-                mol_count += 1
-            if mol_count >= num_molecules:
-                break
-        if mol_count >= num_molecules:
-            break
-    
+    print(f"  Target molecules: {num_molecules}")
+
+    result = _create_ice_genice(num_molecules)
+    if result is not None:
+        topology, positions, box_vectors = result
+        print(f"  Source: GenIce2 (proton-disordered)")
+    else:
+        topology, positions, box_vectors = _create_ice_embedded(num_molecules)
+        print(f"  Source: Embedded CIF (ice Ih from Avogadro/COD)")
+
+    n_atoms = len(positions)
+    mol_count = n_atoms // 3
     print(f"  Actual molecules: {mol_count}")
-    print(f"  Total atoms: {len(positions)}")
-    
-    # Set box vectors
-    box_vectors = (
-        [box_size, 0, 0] * unit.nanometer,
-        [0, box_size, 0] * unit.nanometer,
-        [0, 0, box_size] * unit.nanometer
-    )
-    
-    topology.setPeriodicBoxVectors(box_vectors)
-    print(f"  Box vectors (nm): [{box_size:.3f}, {box_size:.3f}, {box_size:.3f}]")
-    
-    # Calculate density
-    mass_per_molecule = 18.015  # g/mol for H2O
-    total_mass_g = (mol_count * mass_per_molecule) * 1.66054e-24
+    print(f"  Total atoms: {n_atoms}")
+
+    box_size = box_vectors[0][0].value_in_unit(unit.nanometer)
+    total_mass_g = (mol_count * 18.015) * 1.66054e-24
     volume_cm3 = (box_size * 1e-7) ** 3
-    density = total_mass_g / volume_cm3
+    if not np.isclose(volume_cm3, 0):
+        density = total_mass_g / volume_cm3
+    else:
+        vol_nm3 = np.abs(np.linalg.det(np.array([[box_vectors[i][j].value_in_unit(unit.nanometer)
+                                                  for j in range(3)] for i in range(3)])))
+        density = total_mass_g / (vol_nm3 * 1e-21)
     print(f"  Initial density: {density:.3f} g/cm³")
-    
+    print(f"  Expected ice Ih: ~0.92 g/cm³")
+
     return topology, positions, box_vectors
 
 
+print("All required packages loaded successfully")
+
+
 def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
-                   pressure_bar=1.0, dt_fs=4.0, equilibration_ps=5.0, 
-                   production_ps=100.0, model_name='uma-s-1p1-pythonforce-batch',
+                   pressure_bar=1.0, dt_fs=1.0, equilibration_ps=5.0,
+                   production_ps=100.0, model_name='uma-s-1-pythonforce-batch',
                    output_dir='.', report_interval_ps=1.0, pdb_interval_ps=1.0):
     """
     Run RPMD simulation of ice.
@@ -324,10 +357,14 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     initial_state = integrator.getState(0, getEnergy=True)
     initial_pe = initial_state.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
     print(f"  Initial PE: {initial_pe:.2f} kJ/mol")
-    
+
+    # Sync context with bead 0 positions before minimization (RPMD stores positions in integrator)
+    bead0_positions = integrator.getPositions(0)
+    context.setPositions(bead0_positions)
+
     # Perform energy minimization on bead 0, then copy to all beads
     from openmm import LocalEnergyMinimizer
-    LocalEnergyMinimizer.minimize(context, tolerance=10.0, maxIterations=1000)
+    LocalEnergyMinimizer.minimize(context, tolerance=1.0, maxIterations=2000)
     
     # Get minimized positions and copy to all beads
     minimized_state = context.getState(getPositions=True, getEnergy=True)
@@ -339,6 +376,9 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     for i in range(num_beads):
         integrator.setPositions(i, minimized_positions)
     print(f"  Minimized structure copied to all {num_beads} beads")
+
+    # Store for NVT RMSD check
+    minimized_positions_nm = np.array([[p[0].value_in_unit(unit.nanometer), p[1].value_in_unit(unit.nanometer), p[2].value_in_unit(unit.nanometer)] for p in minimized_positions])
     
     # Get initial energies
     print(f"\n--- Initial Bead Energies ---")
@@ -389,6 +429,8 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     energies = []
     temperatures = []
     densities = []
+    rmsds = []  # For NVT ice stability
+    minimized_positions_nm = None  # Store for RMSD
     
     pdb_file_handle = open(pdb_file, 'w')
     
@@ -472,7 +514,18 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
                 densities.append(current_density)
             else:
                 current_density = density
-            
+
+            # NVT: compute centroid RMSD from minimized structure (proxy for melting)
+            if pressure_bar == 0 and minimized_positions_nm is not None:
+                centroid_positions = np.zeros((n_atoms, 3))
+                for b in range(num_beads):
+                    state_b = integrator.getState(b, getPositions=True)
+                    centroid_positions += state_b.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
+                centroid_positions /= num_beads
+                diff = centroid_positions - minimized_positions_nm
+                rmsd = np.sqrt(np.mean(np.sum(diff**2, axis=1)))
+                rmsds.append(rmsd)
+
             energies.append(current_total)
             temperatures.append(current_temp)
             
@@ -564,10 +617,21 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
         print(f"    Ice Ih reference: ~0.92 g/cm³")
         
         is_frozen = np.mean(prod_densities) > 0.85
-        print(f"\n  Ice status: {'FROZEN ❄' if is_frozen else 'MELTED 💧'}")
+        print(f"\n  Ice status: {'FROZEN' if is_frozen else 'MELTED'} (NPT: density > 0.85 g/cm³)")
+    elif len(rmsds) > 0:
+        rmsds_arr = np.array(rmsds)
+        prod_rmsds = rmsds_arr[prod_start_idx:]
+        mean_rmsd = np.mean(prod_rmsds)
+        print(f"  RMSD from minimized (NVT):")
+        print(f"    Mean: {mean_rmsd:.4f} nm")
+        print(f"    Std:  {np.std(prod_rmsds):.4f} nm")
+        print(f"    Threshold for frozen: < 0.15 nm")
+        
+        is_frozen = mean_rmsd < 0.15
+        print(f"\n  Ice status: {'FROZEN' if is_frozen else 'MELTED'} (NVT: RMSD < 0.15 nm)")
     else:
-        is_frozen = True  # Can't determine without NPT
-        print(f"\n  Ice status: Cannot determine (NVT simulation)")
+        is_frozen = True
+        print(f"\n  Ice status: Cannot determine (no density or RMSD data)")
     
     print(f"\n  Output files:")
     print(f"    Trajectory: {pdb_file}")
@@ -590,13 +654,13 @@ if __name__ == '__main__':
     parser.add_argument('--pressure', type=float, default=1.0,
                        help='Pressure in bar (default: 1.0, use 0 for NVT)')
     parser.add_argument('--dt', type=float, default=1.0,
-                       help='Timestep in fs (default: 1.0, use 0.5-2.0 for stability)')
+                       help='Timestep in fs (default: 1.0, use 0.5-1.0 for stability)')
     parser.add_argument('--equil', type=float, default=5.0,
                        help='Equilibration time in ps (default: 5.0)')
     parser.add_argument('--prod', type=float, default=100.0,
                        help='Production time in ps (default: 100.0)')
-    parser.add_argument('--model', type=str, default='uma-s-1p1-pythonforce-batch',
-                       help='Model name (default: uma-s-1p1-pythonforce-batch)')
+    parser.add_argument('--model', type=str, default='uma-s-1-pythonforce-batch',
+                       help='Model name (default: uma-s-1-pythonforce-batch, smallest UMA model)')
     parser.add_argument('--output', type=str, default='.',
                        help='Output directory (default: current directory)')
     parser.add_argument('--report-interval', type=float, default=1.0,

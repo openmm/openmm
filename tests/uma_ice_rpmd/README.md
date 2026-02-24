@@ -5,55 +5,60 @@ Test if ice remains frozen at 243K using UMA potential with RPMD.
 ## Overview
 
 This simulation tests the stability of ice at sub-freezing temperatures using:
-- **UMA potential**: Universal Molecular Atomistic ML potential (uma-s-1p1-pythonforce)
+- **UMA potential**: Smallest model (uma-s-1-pythonforce-batch) for fast runs
 - **RPMD**: Ring Polymer Molecular Dynamics with 8 beads
 - **Temperature**: 243 K (30 degrees below freezing)
-- **System**: 32 water molecules in ice Ih structure
+- **Ice Ih structure**: Proper tetrahedral hydrogen-bonding network (GenIce2 or embedded CIF fallback)
+
+## Ice Structure
+
+The initial structure uses proper ice Ih:
+- **GenIce2** (optional): Proton-disordered ice via `pip install genice2`
+- **Embedded CIF fallback**: Ice Ih from Avogadro/COD (12 molecules) replicated to target size
 
 ## Key Physics
 
-- **Ice Ih structure**: Hexagonal ice, the common form of ice
-- **RPMD**: Captures quantum nuclear effects important for hydrogen bonding in water
-- **Temperature**: 243 K is well below the melting point (273 K), so ice should remain frozen
+- **Ice Ih**: Hexagonal ice, O-O ~2.75 Å, density ~0.92 g/cm³
+- **RPMD**: Captures quantum nuclear effects for hydrogen bonding
+- **Timestep**: 0.5-1.0 fs recommended for flexible water + RPMD
 
 ## Expected Results
 
 ### If Ice Remains Frozen
-- RMSD < 0.1 nm (atoms stay close to initial positions)
-- Density ~0.92 g/cm³ (ice density)
-- Sharp peaks in O-O radial distribution function
-- Low mean-squared displacement (MSD)
+- **NPT**: Density > 0.85 g/cm³ (ice ~0.92)
+- **NVT**: RMSD < 0.15 nm from minimized structure
+- Sharp O-O RDF first peak at ~0.275 nm
 
 ### If Ice Melts
-- RMSD > 0.1 nm (significant atomic rearrangement)
-- Density ~1.0 g/cm³ (liquid water density)
-- Broader peaks in RDF
-- Higher MSD
+- **NPT**: Density ~1.0 g/cm³ (liquid)
+- **NVT**: RMSD > 0.15 nm
+- Broader RDF
 
 ## Usage
 
-### Quick Test (10 ps equilibration + 100 ps production)
+### Quick Test
 ```bash
 python test_uma_ice_rpmd.py --molecules 32 --beads 8 --temperature 243 \
-                             --equil 10 --prod 100
+    --dt 1.0 --equil 5 --prod 50 --pressure 1 --model uma-s-1-pythonforce-batch
 ```
 
-### Longer Production Run
+### NVT (no barostat)
 ```bash
 python test_uma_ice_rpmd.py --molecules 32 --beads 8 --temperature 243 \
-                             --equil 50 --prod 500
+    --equil 10 --prod 100 --pressure 0
 ```
 
 ### Custom Parameters
 ```bash
 python test_uma_ice_rpmd.py \
-    --molecules 32 \        # Number of water molecules
-    --beads 8 \             # RPMD beads
-    --temperature 243 \     # Temperature (K)
-    --dt 1.0 \              # Timestep (fs)
-    --equil 10.0 \          # Equilibration (ps)
-    --prod 100.0 \          # Production (ps)
-    --output ice_test       # Output prefix
+    --molecules 32 \           # Number of water molecules
+    --beads 8 \                # RPMD beads
+    --temperature 243 \        # Temperature (K)
+    --dt 1.0 \                 # Timestep in fs (0.5-1.0 for stability)
+    --equil 5.0 \              # Equilibration (ps)
+    --prod 50.0 \              # Production (ps)
+    --model uma-s-1-pythonforce-batch \   # Smallest UMA model
+    --output ice_test          # Output directory
 ```
 
 ## Output Files

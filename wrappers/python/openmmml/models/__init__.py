@@ -1,1 +1,1 @@
-from . import anipotential, macepotential, nequippotential, deepmdpotential, aimnet2potential, umapotential, umapotential_pythonforce, umapotential_pythonforce_batch, cacepotential, cacepotential_pythonforce_batch
+from . import anipotential, macepotential, nequippotential, deepmdpotential, aimnet2potential, umapotential, umapotential_pythonforce, umapotential_pythonforce_batch

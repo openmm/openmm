@@ -49,7 +49,6 @@ See the README files in each subdirectory for detailed usage instructions.
 ### ML Potential Examples
 
 The `ml/` directory contains examples using machine learning potentials:
-- `ml/cace-lr_water/` - CACE-LR model examples for water systems
 - `ml/uma_ice_rpmd/` - UMA model examples for ice RPMD simulations
 
 These examples demonstrate integration of ML potentials with OpenMM for enhanced accuracy in molecular dynamics simulations.

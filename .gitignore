@@ -6,6 +6,7 @@ build_*
 
 # Cursor IDE
 .cursor/
+forcebalance/
 
 # Simulation output files
 *.npy
@@ -42,10 +43,6 @@ tests/protein_system/protein_cavity_*_metadata.json
 tests/protein_system/protein_cavity_*_stream.npy
 tests/protein_system/protein_ir_spectrum_*
 tests/protein_system/protein_cavity_*.pdb
-tests/cace-lr_water/*.npz
-tests/cace-lr_water/*.png
-tests/cace-lr_water/*.log
-tests/cace-lr_water/*.pdb
 tests/cavity_ir_spectrum*
 tests/rabi_*
 tests/bond_vibration_test.png

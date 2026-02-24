@@ -1,11 +1,9 @@
 #!/bin/bash
 # Full install into conda base: build OpenMM from this repo (cmake, make, install
 # including Python bindings with integrated openmmml), then install ML runtime
-# dependencies (fairchem-core, cace) via pip.
+# dependencies (fairchem-core) via pip.
 #
-# One script, full rebuild. Installs OpenMM (with openmmml baked in), fairchem-core
-# (from custom LES branch fork), CACE (from custom fork), matscipy>=1.2.0
-# (NumPy-2-compatible, for CACE backend).
+# One script, full rebuild. Installs OpenMM (with openmmml baked in), fairchem-core.
 #
 # Run with base active:
 #   conda activate base
@@ -85,24 +83,10 @@ export OPENMM_INCLUDE_PATH="$INSTALL_PREFIX/include"
 echo ""
 echo "Step 5/6: Install ML runtime dependencies via pip"
 echo "----------------------------------------------"
-# fairchem-core from the custom LES branch fork
-echo "Installing fairchem-core (LES branch fork)..."
-"$PYTHON" -m pip install "fairchem-core @ git+https://github.com/muhammadhasyim/fairchem.git@les_branch#subdirectory=packages/fairchem-core"
+# fairchem-core (standard PyPI release for UMA models)
+echo "Installing fairchem-core..."
+"$PYTHON" -m pip install "fairchem-core>=2.14"
 
-# CACE from the custom fork
-echo "Installing cace (custom fork)..."
-"$PYTHON" -m pip install "cace @ git+https://github.com/muhammadhasyim/cace.git"
-
-# matscipy>=1.2.0 for NumPy-2 compatibility (required by CACE backend)
-echo "Installing matscipy>=1.2.0..."
-"$PYTHON" -m pip install 'matscipy>=1.2.0'
-"$PYTHON" -c "
-import matscipy
-v = tuple(map(int, matscipy.__version__.split('.')[:2]))
-if v < (1, 2):
-    raise SystemExit('matscipy must be >=1.2.0 for NumPy-2; got %s. Fix env and re-run.' % matscipy.__version__)
-" || exit 1
-echo ""
 
 echo "Step 6/6: Verify imports"
 echo "----------------------------------------------"
@@ -119,15 +103,10 @@ try:
     print('  fairchem.core: ok (pip)')
 except ImportError:
     print('  fairchem.core: NOT FOUND (UMA models will not be available)')
-try:
-    import cace
-    print('  cace: ok (pip)')
-except ImportError:
-    print('  cace: NOT FOUND (CACE models will not be available)')
 print('  Stack OK')
 " || {
     echo "One or more required imports failed (openmm, openmm.app, openmmml)."
-    echo "ML backends (fairchem-core, cace) are optional runtime deps installed via pip."
+    echo "ML backend (fairchem-core) is optional runtime dep installed via pip."
     exit 1
 }
 
@@ -137,7 +116,7 @@ echo "  Install complete"
 echo "=============================================="
 echo "OpenMM was built from this repo and installed into this env (prefix: $INSTALL_PREFIX)."
 echo "openmmml is now integrated into OpenMM (no separate openmm-ml install needed)."
-echo "ML runtime deps (fairchem-core, cace) are pip-installed."
+echo "ML runtime dep (fairchem-core) is pip-installed."
 echo ""
 echo "To reinstall ML deps only:  pip install -r $REPO/requirements-ml.txt"
 echo ""
