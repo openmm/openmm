@@ -66,11 +66,41 @@ _atom_site_fract_z
 """
 
 
+def _transform_to_cubic_box(positions_angstrom, cell_angstrom):
+    """Transform hexagonal/triclinic ice cell to cubic periodic box.
+    Wraps positions into fractional [0,1), maps to cubic cell of same volume.
+    Preserves density. Returns (positions_nm, box_vectors).
+    """
+    pos = np.array(positions_angstrom)
+    cell = np.array(cell_angstrom)
+    # ASE convention: cart = frac @ cell (rows = lattice vecs)  =>  frac = pos @ inv(cell)
+    inv_cell = np.linalg.inv(cell)
+    frac = pos @ inv_cell
+    frac_wrapped = frac % 1.0  # wrap to [0, 1)
+    # Cubic side from volume
+    vol_angstrom3 = np.abs(np.linalg.det(cell))
+    L_angstrom = vol_angstrom3 ** (1.0 / 3.0)
+    # New Cartesian in cubic cell
+    new_pos_angstrom = frac_wrapped * L_angstrom
+    # Convert to nm for OpenMM
+    nm_per_angstrom = 0.1
+    positions_nm = (new_pos_angstrom * nm_per_angstrom).tolist()
+    L_nm = L_angstrom * nm_per_angstrom
+    box_vectors = (
+        [L_nm, 0.0, 0.0] * unit.nanometer,
+        [0.0, L_nm, 0.0] * unit.nanometer,
+        [0.0, 0.0, L_nm] * unit.nanometer,
+    )
+    return positions_nm, box_vectors
+
+
 def _create_ice_from_ase(atoms_ase, num_molecules):
-    """Convert ASE Atoms (ice) to OpenMM topology and positions. Trim to num_molecules."""
+    """Convert ASE Atoms (ice) to OpenMM topology and positions. Trim to num_molecules.
+    Transforms to cubic periodic box for clean PBC (ice Ih hexagonal -> cubic supercell).
+    """
     # Ensure we have O and H in correct order (O, H, H per molecule)
     symbols = atoms_ase.get_chemical_symbols()
-    pos = atoms_ase.get_positions()
+    pos = atoms_ase.get_positions()  # Angstrom
     cell = atoms_ase.get_cell()
     mol_list = []
     seen = set()
@@ -92,11 +122,14 @@ def _create_ice_from_ase(atoms_ase, num_molecules):
     mol_list = mol_list[:num_molecules]
 
     # When we trim molecules, scale the box to preserve ice Ih density (~0.92 g/cm³)
-    # Box volume should scale with number of molecules: V_new = V_old * (n_new / n_full)
     scale = (num_molecules / mol_count_full) ** (1.0 / 3.0) if num_molecules < mol_count_full else 1.0
+    cell_scaled = np.array(cell) * scale
+    pos_scaled = np.array([pos[idx] * scale for oidx, h1, h2 in mol_list for idx in [oidx, h1, h2]])
+
+    # Transform to cubic box (wrap fractional coords, same volume)
+    positions_nm, box_vectors = _transform_to_cubic_box(pos_scaled, cell_scaled)
 
     topology = app.Topology()
-    positions = []
     for oidx, h1, h2 in mol_list:
         chain = topology.addChain()
         residue = topology.addResidue('HOH', chain)
@@ -105,19 +138,9 @@ def _create_ice_from_ase(atoms_ase, num_molecules):
         h2_atom = topology.addAtom('H', app.Element.getBySymbol('H'), residue)
         topology.addBond(o_atom, h1_atom)
         topology.addBond(o_atom, h2_atom)
-        for idx in [oidx, h1, h2]:
-            positions.append((pos[idx] * scale).tolist())  # Scale positions with box
-
-    # Box in nm (ASE cell: rows are lattice vectors); scale when trimmed
-    v = np.array(cell) * scale * 0.1  # 0.1: Angstrom to nm
-    box_vectors = (
-        [v[0, 0], v[0, 1], v[0, 2]] * unit.nanometer,
-        [v[1, 0], v[1, 1], v[1, 2]] * unit.nanometer,
-        [v[2, 0], v[2, 1], v[2, 2]] * unit.nanometer,
-    )
 
     topology.setPeriodicBoxVectors(box_vectors)
-    return topology, positions, box_vectors
+    return topology, positions_nm, box_vectors
 
 
 def _create_ice_genice(num_molecules):
@@ -164,6 +187,7 @@ def create_ice_structure(num_molecules=32):
     Create ice Ih structure with tetrahedral hydrogen-bonding network.
 
     Tries GenIce2 first (proton-disordered); falls back to embedded CIF (ice Ih from COD).
+    Transforms hexagonal/triclinic cell to a cubic periodic box (same volume, density preserved).
     Ice Ih: O-O ~2.75 A, density ~0.92 g/cm3.
 
     Returns
@@ -188,11 +212,13 @@ def create_ice_structure(num_molecules=32):
     print(f"  Actual molecules: {mol_count}")
     print(f"  Total atoms: {n_atoms}")
 
-    # Use determinant for correct volume (hexagonal/triclinic cells)
+    # Cubic box: L x L x L
     box_matrix = np.array([[box_vectors[i][j].value_in_unit(unit.nanometer) for j in range(3)] for i in range(3)])
     vol_nm3 = np.abs(np.linalg.det(box_matrix))
+    L_nm = vol_nm3 ** (1.0 / 3.0)
     total_mass_g = (mol_count * 18.015) * 1.66054e-24
     density = total_mass_g / (vol_nm3 * 1e-21)  # 1 nm³ = 1e-21 cm³
+    print(f"  Box: cubic {L_nm*10:.2f} x {L_nm*10:.2f} x {L_nm*10:.2f} Å")
     print(f"  Initial density: {density:.3f} g/cm³")
     print(f"  Expected ice Ih: ~0.92 g/cm³")
 
