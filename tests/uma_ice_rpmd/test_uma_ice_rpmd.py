@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 """
 RPMD simulation testing if ice stays frozen at 243K with UMA or eSEN potentials.
-Uses proper ice Ih structure (GenIce2 or embedded CIF). PILE thermostat, NPT/NVT.
-Run: python test_uma_ice_rpmd.py --molecules 32 --beads 8 --temperature 243 --dt 1.0 --equil 5 --prod 50
+Uses proper ice Ih structure (GenIce CIF, GenIce2, or embedded CIF) in a periodic box.
+PILE thermostat, NPT/NVT.
+
+Run:
+  python test_uma_ice_rpmd.py --input ice.cif --beads 8 --temperature 243 --dt 1.0 --equil 5 --prod 50
+  python test_uma_ice_rpmd.py --box 1.0 --beads 8 ...
+  python test_uma_ice_rpmd.py --molecules 32 --beads 8 ...
+
+Input from GenIce: genice 1h --rep 2 2 2 --format cif > ice.cif
 """
 
 import sys
@@ -66,71 +73,108 @@ _atom_site_fract_z
 """
 
 
-def _transform_to_cubic_box(positions_angstrom, cell_angstrom):
-    """Transform hexagonal/triclinic ice cell to cubic periodic box.
-    Wraps positions into fractional [0,1), maps to cubic cell of same volume.
-    Preserves density. Returns (positions_nm, box_vectors).
-    """
-    pos = np.array(positions_angstrom)
-    cell = np.array(cell_angstrom)
-    # ASE convention: cart = frac @ cell (rows = lattice vecs)  =>  frac = pos @ inv(cell)
-    inv_cell = np.linalg.inv(cell)
-    frac = pos @ inv_cell
-    frac_wrapped = frac % 1.0  # wrap to [0, 1)
-    # Cubic side from volume
-    vol_angstrom3 = np.abs(np.linalg.det(cell))
-    L_angstrom = vol_angstrom3 ** (1.0 / 3.0)
-    # New Cartesian in cubic cell
-    new_pos_angstrom = frac_wrapped * L_angstrom
-    # Convert to nm for OpenMM
-    nm_per_angstrom = 0.1
-    positions_nm = (new_pos_angstrom * nm_per_angstrom).tolist()
-    L_nm = L_angstrom * nm_per_angstrom
-    box_vectors = (
-        [L_nm, 0.0, 0.0] * unit.nanometer,
-        [0.0, L_nm, 0.0] * unit.nanometer,
-        [0.0, 0.0, L_nm] * unit.nanometer,
+def _molecules_for_box(box_nm, density_g_cm3=0.92):
+    """Number of water molecules for cubic box L×L×L at ice Ih density."""
+    vol_cm3 = (box_nm * 1e-7) ** 3  # 1 nm = 1e-7 cm, so 1 nm³ = 1e-21 cm³
+    return max(1, int(round(density_g_cm3 * vol_cm3 / 18.015 * 6.022e23)))
+
+
+def _hexagonal_to_orthorhombic(atoms_ase):
+    """Transform hexagonal ice Ih cell to orthorhombic. Preserves Cartesian positions."""
+    cell = np.array(atoms_ase.get_cell())
+    pos = atoms_ase.get_positions()
+    # Orthorhombic: a' = a, b' = 2b - a, c' = c (IUCr convention)
+    cell_ortho = np.array([
+        cell[0],
+        2.0 * cell[1] - cell[0],
+        cell[2],
+    ])
+    # frac_new @ cell_ortho = frac_old @ cell  =>  frac_new = pos @ inv(cell_ortho)
+    frac_new = pos @ np.linalg.inv(cell_ortho.T)
+    frac_wrapped = frac_new % 1.0
+    from ase import Atoms
+    out = Atoms(
+        symbols=atoms_ase.get_chemical_symbols(),
+        positions=frac_wrapped @ cell_ortho,  # back to Cartesian (same as pos, wrapped)
+        cell=cell_ortho,
+        pbc=True,
     )
-    return positions_nm, box_vectors
+    return out
 
 
-def _create_ice_from_ase(atoms_ase, num_molecules):
-    """Convert ASE Atoms (ice) to OpenMM topology and positions. Trim to num_molecules.
-    Transforms to cubic periodic box for clean PBC (ice Ih hexagonal -> cubic supercell).
+def _ice_to_orthorhombic_then_scale(atoms_ase, num_molecules, box_nm=None, ice_type='1h'):
     """
-    # Ensure we have O and H in correct order (O, H, H per molecule)
-    symbols = atoms_ase.get_chemical_symbols()
-    pos = atoms_ase.get_positions()  # Angstrom
-    cell = atoms_ase.get_cell()
+    Transform ice to orthorhombic (1h only), replicate for roughly cubic supercell, uniformly scale.
+    Preserves O-O distances (~2.75 A) and tetrahedral angles.
+    For ice_type='1c', cell is already cubic; skip orthorhombic transform.
+    Returns (topology, positions_nm, box_vectors).
+    """
+    from ase.build import make_supercell
+
+    if ice_type == '1c':
+        atoms_ortho = atoms_ase.copy()
+    else:
+        atoms_ortho = _hexagonal_to_orthorhombic(atoms_ase)
+    cell = np.array(atoms_ortho.get_cell())
+    Lx, Ly, Lz = np.linalg.norm(cell[0]), np.linalg.norm(cell[1]), np.linalg.norm(cell[2])
+
+    # Replicate to get roughly cubic supercell with at least num_molecules
+    n_mol_per_cell = len(atoms_ortho) // 3
+    r_min = max(1, int(np.ceil((num_molecules / n_mol_per_cell) ** (1.0 / 3.0))))
+    # Choose na, nb, nc so na*Lx ≈ nb*Ly ≈ nc*Lz
+    ratios = np.array([Lx, Ly, Lz])
+    ratios = ratios / np.min(ratios)
+    r_approx = max(r_min, 1)
+    na = max(1, int(round(r_approx / ratios[0])))
+    nb = max(1, int(round(r_approx / ratios[1])))
+    nc = max(1, int(round(r_approx / ratios[2])))
+    P = np.diag([na, nb, nc])
+    supercell = make_supercell(atoms_ortho, P)
+
+    # Trim to num_molecules (first N by index preserves local order)
     mol_list = []
+    symbols = supercell.get_chemical_symbols()
+    pos_full = supercell.get_positions()
     seen = set()
     for i, s in enumerate(symbols):
         if s == 'O' and i not in seen:
             oidx = i
-            # Find closest 2 H to this O
-            dists = []
-            for j, (sj, pj) in enumerate(zip(symbols, pos)):
-                if sj == 'H':
-                    d = np.linalg.norm(pos[oidx] - pj)
-                    dists.append((d, j))
+            dists = [(np.linalg.norm(pos_full[oidx] - pos_full[j]), j)
+                     for j, sj in enumerate(symbols) if sj == 'H']
             dists.sort(key=lambda x: x[0])
             h1, h2 = dists[0][1], dists[1][1]
             mol_list.append([oidx, h1, h2])
             seen.update([oidx, h1, h2])
-
-    mol_count_full = len(mol_list)
     mol_list = mol_list[:num_molecules]
 
-    # When we trim molecules, scale the box to preserve ice Ih density (~0.92 g/cm³)
-    scale = (num_molecules / mol_count_full) ** (1.0 / 3.0) if num_molecules < mol_count_full else 1.0
-    cell_scaled = np.array(cell) * scale
-    pos_scaled = np.array([pos[idx] * scale for oidx, h1, h2 in mol_list for idx in [oidx, h1, h2]])
+    pos_ang = np.array([pos_full[idx] for mol in mol_list for idx in mol])
+    cell_super = np.array(supercell.get_cell())
+    vol_angstrom3 = np.abs(np.linalg.det(cell_super))
+    L_current = vol_angstrom3 ** (1.0 / 3.0)
 
-    # Transform to cubic box (wrap fractional coords, same volume)
-    positions_nm, box_vectors = _transform_to_cubic_box(pos_scaled, cell_scaled)
+    if box_nm is not None:
+        vol_target = (box_nm * 10.0) ** 3
+        scale = (vol_target / vol_angstrom3) ** (1.0 / 3.0)
+    else:
+        scale = 1.0
+
+    pos_scaled = pos_ang * scale
+    cell_scaled = cell_super * scale
+
+    # OpenMM requires reduced-form box vectors: a=(x,0,0), b=(bx,by,0), c=(cx,cy,cz)
+    raw_vectors = (
+        Vec3(cell_scaled[0, 0] * 0.1, cell_scaled[0, 1] * 0.1, cell_scaled[0, 2] * 0.1),
+        Vec3(cell_scaled[1, 0] * 0.1, cell_scaled[1, 1] * 0.1, cell_scaled[1, 2] * 0.1),
+        Vec3(cell_scaled[2, 0] * 0.1, cell_scaled[2, 1] * 0.1, cell_scaled[2, 2] * 0.1),
+    )
+    from openmm.app.internal.unitcell import reducePeriodicBoxVectors
+    reduced = reducePeriodicBoxVectors(raw_vectors)
+    vals = reduced.value_in_unit(unit.nanometer)
+    box_vectors = tuple(Vec3(v[0], v[1], v[2]) * unit.nanometer for v in vals)
+    positions_nm = (pos_scaled * 0.1).tolist()
 
     topology = app.Topology()
-    for oidx, h1, h2 in mol_list:
+    for _ in mol_list:
         chain = topology.addChain()
         residue = topology.addResidue('HOH', chain)
         o_atom = topology.addAtom('O', app.Element.getBySymbol('O'), residue)
@@ -143,15 +187,95 @@ def _create_ice_from_ase(atoms_ase, num_molecules):
     return topology, positions_nm, box_vectors
 
 
-def _create_ice_genice(num_molecules):
-    """Try GenIce2 subprocess. Returns (topology, positions, box_vectors) or None on failure."""
+def _ase_water_to_openmm(atoms_ase):
+    """
+    Convert ASE Atoms (water only) to OpenMM (topology, positions_nm, box_vectors).
+    Uses structure as-is; no replication, trimming, or scaling.
+    Assigns H to O by distance (nearest 2 H per O).
+    """
+    symbols = np.array(atoms_ase.get_chemical_symbols())
+    pos_ang = np.array(atoms_ase.get_positions())
+    cell = np.array(atoms_ase.get_cell())
+
+    mol_list = []
+    seen = set()
+    for i, s in enumerate(symbols):
+        if s == 'O' and i not in seen:
+            dists = [(np.linalg.norm(pos_ang[i] - pos_ang[j]), j)
+                     for j, sj in enumerate(symbols) if sj == 'H' and j not in seen]
+            dists.sort(key=lambda x: x[0])
+            if len(dists) < 2:
+                raise ValueError(f"O at index {i} has < 2 H neighbors")
+            h1, h2 = dists[0][1], dists[1][1]
+            mol_list.append([i, h1, h2])
+            seen.update([i, h1, h2])
+
+    pos_ordered = np.array([pos_ang[idx] for mol in mol_list for idx in mol])
+
+    raw_vectors = (
+        Vec3(cell[0, 0] * 0.1, cell[0, 1] * 0.1, cell[0, 2] * 0.1),
+        Vec3(cell[1, 0] * 0.1, cell[1, 1] * 0.1, cell[1, 2] * 0.1),
+        Vec3(cell[2, 0] * 0.1, cell[2, 1] * 0.1, cell[2, 2] * 0.1),
+    )
+    from openmm.app.internal.unitcell import reducePeriodicBoxVectors
+    reduced = reducePeriodicBoxVectors(raw_vectors)
+    vals = reduced.value_in_unit(unit.nanometer)
+    box_vectors = tuple(Vec3(v[0], v[1], v[2]) * unit.nanometer for v in vals)
+
+    topology = app.Topology()
+    for _ in mol_list:
+        chain = topology.addChain()
+        residue = topology.addResidue('HOH', chain)
+        o_atom = topology.addAtom('O', app.Element.getBySymbol('O'), residue)
+        h1_atom = topology.addAtom('H', app.Element.getBySymbol('H'), residue)
+        h2_atom = topology.addAtom('H', app.Element.getBySymbol('H'), residue)
+        topology.addBond(o_atom, h1_atom)
+        topology.addBond(o_atom, h2_atom)
+
+    topology.setPeriodicBoxVectors(box_vectors)
+    positions_nm = (pos_ordered * 0.1).tolist()
+    return topology, positions_nm, box_vectors
+
+
+def _load_structure_from_file(filepath):
+    """
+    Load ice/water structure from CIF or PDB file.
+    Returns (topology, positions_nm, box_vectors).
+    Supports GenIce CIF output (fractional coords) and standard PDB.
+    """
+    from ase.io import read
+
+    path = Path(filepath)
+    if not path.exists():
+        raise FileNotFoundError(f"Structure file not found: {filepath}")
+
+    suffix = path.suffix.lower()
+    if suffix in ('.cif', '.pdb', '.xyz'):
+        atoms = read(str(path))
+    else:
+        raise ValueError(f"Unsupported structure format: {suffix}. Use .cif, .pdb, or .xyz")
+
+    return _ase_water_to_openmm(atoms)
+
+
+def _create_ice_from_ase(atoms_ase, num_molecules, box_nm=None, ice_type='1h'):
+    """Convert ASE Atoms (ice Ih or Ic) to OpenMM topology and positions.
+    Uses orthorhombic transformation (1h only) + uniform scale to preserve structure.
+    """
+    return _ice_to_orthorhombic_then_scale(atoms_ase, num_molecules, box_nm=box_nm, ice_type=ice_type)
+
+
+def _create_ice_genice(num_molecules, box_nm=None, ice_type='1h'):
+    """Try GenIce2 subprocess. Returns (topology, positions, box_vectors) or None on failure.
+    ice_type: '1h' (hexagonal) or '1c' (cubic ice, natural cubic box).
+    """
     try:
-        # Replication to get >= num_molecules: 12 * r^3 >= n  =>  r = ceil((n/12)^(1/3))
-        r = max(1, int(np.ceil((num_molecules / 12) ** (1 / 3))))
+        n_per_cell = 12 if ice_type == '1h' else 8  # ice Ic has 8 molecules per cubic cell (Fd-3m)
+        r = max(1, int(np.ceil((num_molecules / n_per_cell) ** (1 / 3))))
         with tempfile.NamedTemporaryFile(suffix='.y', delete=False) as f:
             outpath = f.name
         result = subprocess.run(
-            ['genice2', '1h', '--rep', str(r), str(r), str(r), '-f', 'y', '-o', outpath, '--seed', '42'],
+            ['genice2', ice_type, '--rep', str(r), str(r), str(r), '-f', 'y', '-o', outpath, '--seed', '42'],
             capture_output=True,
             text=True,
             timeout=30,
@@ -161,12 +285,12 @@ def _create_ice_genice(num_molecules):
         from ase.io import read
         atoms = read(outpath, format='yaml')
         os.unlink(outpath)
-        return _create_ice_from_ase(atoms, num_molecules)
+        return _create_ice_from_ase(atoms, num_molecules, box_nm=box_nm, ice_type=ice_type)
     except Exception:
         return None
 
 
-def _create_ice_embedded(num_molecules):
+def _create_ice_embedded(num_molecules, box_nm=None):
     """Create ice Ih from embedded CIF (12 molecules) + replication."""
     from ase.io import read
     from io import StringIO
@@ -174,21 +298,21 @@ def _create_ice_embedded(num_molecules):
     atoms = read(StringIO(_ICE_IH_CIF), format='cif')
     n_base = len(atoms) // 3
     if num_molecules <= n_base:
-        return _create_ice_from_ase(atoms, num_molecules)
+        return _create_ice_from_ase(atoms, num_molecules, box_nm=box_nm, ice_type='1h')
     r = max(1, int(np.ceil((num_molecules / n_base) ** (1 / 3))))
     from ase.build import make_supercell
     P = np.diag([r, r, r])
     supercell = make_supercell(atoms, P)
-    return _create_ice_from_ase(supercell, num_molecules)
+    return _create_ice_from_ase(supercell, num_molecules, box_nm=box_nm, ice_type='1h')
 
 
-def create_ice_structure(num_molecules=32):
+def create_ice_structure(num_molecules=None, box_nm=None, ice_type='1h', input_file=None):
     """
-    Create ice Ih structure with tetrahedral hydrogen-bonding network.
+    Create ice structure with tetrahedral hydrogen-bonding network.
 
-    Tries GenIce2 first (proton-disordered); falls back to embedded CIF (ice Ih from COD).
-    Transforms hexagonal/triclinic cell to a cubic periodic box (same volume, density preserved).
-    Ice Ih: O-O ~2.75 A, density ~0.92 g/cm3.
+    If input_file is given, load structure directly from CIF/PDB/XYZ (e.g. GenIce output).
+    Otherwise specify num_molecules OR box_nm.
+    ice_type: '1h' (hexagonal Ih) or '1c' (cubic Ic, natural cubic box).
 
     Returns
     -------
@@ -196,29 +320,45 @@ def create_ice_structure(num_molecules=32):
     positions : list of Vec3
     box_vectors : tuple of Vec3
     """
-    print(f"\n--- Creating Ice Ih Structure ---")
-    print(f"  Target molecules: {num_molecules}")
-
-    result = _create_ice_genice(num_molecules)
-    if result is not None:
-        topology, positions, box_vectors = result
-        print(f"  Source: GenIce2 (proton-disordered)")
+    if input_file is not None:
+        print(f"\n--- Loading Ice Structure from File ---")
+        print(f"  Input: {input_file}")
+        topology, positions, box_vectors = _load_structure_from_file(input_file)
+        n_atoms = len(positions)
     else:
-        topology, positions, box_vectors = _create_ice_embedded(num_molecules)
-        print(f"  Source: Embedded CIF (ice Ih from Avogadro/COD)")
+        if box_nm is not None:
+            num_molecules = _molecules_for_box(box_nm)
+        elif num_molecules is None:
+            num_molecules = 32
 
-    n_atoms = len(positions)
+        print(f"\n--- Creating Ice Structure ---")
+        print(f"  Ice type: {ice_type}")
+        if box_nm is not None:
+            print(f"  Target box volume: {box_nm**3:.4f} nm³")
+        print(f"  Target molecules: {num_molecules}")
+
+        result = _create_ice_genice(num_molecules, box_nm=box_nm, ice_type=ice_type)
+        if result is not None:
+            topology, positions, box_vectors = result
+            print(f"  Source: GenIce2 (proton-disordered)")
+        else:
+            if ice_type == '1c':
+                print(f"  GenIce2 failed for 1c; falling back to 1h")
+                ice_type = '1h'
+            topology, positions, box_vectors = _create_ice_embedded(num_molecules, box_nm=box_nm)
+            print(f"  Source: Embedded CIF (ice Ih from Avogadro/COD)")
+
+        n_atoms = len(positions)
     mol_count = n_atoms // 3
     print(f"  Actual molecules: {mol_count}")
     print(f"  Total atoms: {n_atoms}")
 
-    # Cubic box: L x L x L
     box_matrix = np.array([[box_vectors[i][j].value_in_unit(unit.nanometer) for j in range(3)] for i in range(3)])
     vol_nm3 = np.abs(np.linalg.det(box_matrix))
-    L_nm = vol_nm3 ** (1.0 / 3.0)
+    L_sides = np.linalg.norm(box_matrix, axis=1) * 10  # nm to Angstrom
     total_mass_g = (mol_count * 18.015) * 1.66054e-24
     density = total_mass_g / (vol_nm3 * 1e-21)  # 1 nm³ = 1e-21 cm³
-    print(f"  Box: cubic {L_nm*10:.2f} x {L_nm*10:.2f} x {L_nm*10:.2f} Å")
+    print(f"  Box: {L_sides[0]:.2f} x {L_sides[1]:.2f} x {L_sides[2]:.2f} Å")
     print(f"  Initial density: {density:.3f} g/cm³")
     print(f"  Expected ice Ih: ~0.92 g/cm³")
 
@@ -228,7 +368,8 @@ def create_ice_structure(num_molecules=32):
 print("All required packages loaded successfully")
 
 
-def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
+def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=None,
+                   num_beads=8, temperature_K=243.0,
                    pressure_bar=1.0, dt_fs=1.0, equilibration_ps=5.0,
                    production_ps=100.0, model_name='uma-s-1-pythonforce-batch',
                    output_dir='.', report_interval_ps=1.0, pdb_interval_ps=1.0,
@@ -238,8 +379,10 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     
     Parameters
     ----------
-    num_molecules : int
-        Number of water molecules
+    num_molecules : int, optional
+        Number of water molecules (ignored if box_nm given)
+    box_nm : float, optional
+        Cubic box side in nm; overrides num_molecules
     num_beads : int
         Number of RPMD beads
     temperature_K : float
@@ -280,7 +423,14 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     print(f"Pressure: {pressure_bar} bar {'(NPT)' if pressure_bar > 0 else '(NVT)'}")
     print(f"RPMD beads: {num_beads}")
     print(f"Timestep: {dt_fs} fs")
-    print(f"Molecules: {num_molecules}")
+    if input_file is not None:
+        print(f"Input structure: {input_file}")
+    else:
+        if box_nm is not None:
+            num_molecules = _molecules_for_box(box_nm)
+        if num_molecules is None:
+            num_molecules = 32
+        print(f"Molecules: {num_molecules}" + (f" (from box {box_nm} nm)" if box_nm else ""))
     print(f"Equilibration: {equilibration_ps} ps")
     print(f"Production: {production_ps} ps")
     
@@ -289,8 +439,11 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     output_path.mkdir(exist_ok=True)
     
     # Create structure
-    topology, positions, box_vectors = create_ice_structure(num_molecules)
+    topology, positions, box_vectors = create_ice_structure(
+        num_molecules=num_molecules, box_nm=box_nm, ice_type=ice_type, input_file=input_file
+    )
     n_atoms = len(positions)
+    num_molecules = n_atoms // 3
     
     # Create potential
     print(f"\n--- Creating ML Potential ---")
@@ -501,14 +654,19 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     
     pdb_file_handle = open(pdb_file, 'w')
     
-    # Write PDB header with proper unit handling
-    box_size_nm = box_vectors[0][0].value_in_unit(unit.nanometer)
-    box_size_angstrom = box_size_nm * 10.0  # Convert nm to Angstrom for PDB
+    # Write PDB header with proper unit handling (support orthorhombic boxes from GenIce CIF)
+    _bm = box_matrix  # nm, 3x3
+    a_ang = np.linalg.norm(_bm[0]) * 10.0
+    b_ang = np.linalg.norm(_bm[1]) * 10.0
+    c_ang = np.linalg.norm(_bm[2]) * 10.0
+    alpha = np.degrees(np.arccos(np.clip(np.dot(_bm[1], _bm[2]) / (np.linalg.norm(_bm[1]) * np.linalg.norm(_bm[2]) + 1e-10), -1, 1)))
+    beta = np.degrees(np.arccos(np.clip(np.dot(_bm[0], _bm[2]) / (np.linalg.norm(_bm[0]) * np.linalg.norm(_bm[2]) + 1e-10), -1, 1)))
+    gamma = np.degrees(np.arccos(np.clip(np.dot(_bm[0], _bm[1]) / (np.linalg.norm(_bm[0]) * np.linalg.norm(_bm[1]) + 1e-10), -1, 1)))
     pdb_file_handle.write("REMARK   Ice RPMD simulation - centroid trajectory\n")
     pdb_file_handle.write("REMARK   Model: %s\n" % model_name)
     pdb_file_handle.write("REMARK   Temperature: %.1f K, Beads: %d\n" % (temperature_K, num_beads))
     pdb_file_handle.write("CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1\n" % (
-        box_size_angstrom, box_size_angstrom, box_size_angstrom, 90.0, 90.0, 90.0))
+        a_ang, b_ang, c_ang, alpha, beta, gamma))
     
     # Cache masses for temperature calculation
     masses = [system.getParticleMass(j).value_in_unit(unit.dalton) for j in range(n_atoms)]
@@ -714,8 +872,14 @@ if __name__ == '__main__':
     import argparse
     
     parser = argparse.ArgumentParser(description='UMA/eSEN Ice RPMD Simulation')
-    parser.add_argument('--molecules', type=int, default=32,
-                       help='Number of water molecules (default: 32)')
+    parser.add_argument('--input', '-i', type=str, default=None,
+                       help='Input structure file (CIF, PDB, or XYZ). e.g. ice.cif from GenIce. Overrides --molecules/--box.')
+    parser.add_argument('--molecules', type=int, default=None,
+                       help='Number of water molecules (default: from --box or 32)')
+    parser.add_argument('--box', type=float, default=None,
+                       help='Cubic box side length in nm (e.g. 0.5, 1.0). Overrides --molecules.')
+    parser.add_argument('--ice-type', type=str, default='1h', choices=['1h', '1c'],
+                       help='Ice type: 1h (hexagonal Ih) or 1c (cubic Ic, natural cubic box). Default: 1h')
     parser.add_argument('--beads', type=int, default=8,
                        help='Number of RPMD beads (default: 8)')
     parser.add_argument('--temperature', type=float, default=243.0,
@@ -745,10 +909,17 @@ if __name__ == '__main__':
                        help='OpenMM precision: single, mixed, or double. Default: double for NPT+CUDA, mixed otherwise.')
     
     args = parser.parse_args()
-    
+
+    if args.input is not None and (args.box is not None or args.molecules is not None):
+        print("Warning: --input given; ignoring --box and --molecules")
+    num_mol = args.molecules if args.box is None and args.input is None else None
+
     try:
         success = run_simulation(
-            num_molecules=args.molecules,
+            num_molecules=num_mol,
+            box_nm=args.box,
+            input_file=args.input,
+            ice_type=args.ice_type,
             num_beads=args.beads,
             temperature_K=args.temperature,
             pressure_bar=args.pressure,

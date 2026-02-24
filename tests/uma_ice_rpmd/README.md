@@ -8,12 +8,18 @@ This simulation tests the stability of ice at sub-freezing temperatures using:
 - **UMA potential**: Smallest model (uma-s-1-pythonforce-batch) for fast runs
 - **RPMD**: Ring Polymer Molecular Dynamics with 8 beads
 - **Temperature**: 243 K (30 degrees below freezing)
-- **Ice Ih structure**: Proper tetrahedral hydrogen-bonding network (GenIce2 or embedded CIF fallback)
+- **Ice Ih structure**: GenIce CIF, GenIce2, or embedded CIF fallback
 
 ## Ice Structure
 
-The initial structure uses proper ice Ih:
-- **GenIce2** (optional): Proton-disordered ice via `pip install genice2`
+The initial structure can come from:
+
+- **`--input ice.cif`** (recommended): Load from GenIce CIF directly.
+  ```bash
+  genice 1h --rep 2 2 2 --format cif > ice.cif
+  python test_uma_ice_rpmd.py --input ice.cif --beads 8 ...
+  ```
+- **GenIce2** (optional): `pip install genice2` for proton-disordered ice
 - **Embedded CIF fallback**: Ice Ih from Avogadro/COD (12 molecules) replicated to target size
 
 ## Key Physics
@@ -36,7 +42,32 @@ The initial structure uses proper ice Ih:
 
 ## Usage
 
-### Quick Test
+### Prepare Ice for a Cubic Box (standalone script)
+
+Create ice Ih to fill a cubic box of specified size:
+
+```bash
+python prepare_ice_box.py --box 1.0 -o ice.pdb          # 1 nm cubic box
+python prepare_ice_box.py --box 0.5 -o ice_05nm.pdb      # 0.5 nm box
+python prepare_ice_box.py --box 2.0 -f gro -o ice.gro    # 2 nm, GROMACS format
+```
+
+Requires ASE. Optional: `pip install genice2` for proton-disordered ice.
+
+### Quick Test (from GenIce CIF)
+```bash
+genice 1h --rep 2 2 2 --format cif > ice.cif
+python test_uma_ice_rpmd.py --input ice.cif --beads 8 --temperature 243 \
+    --dt 1.0 --equil 5 --prod 50 --platform cpu
+```
+
+### Quick Test (by box size)
+```bash
+python test_uma_ice_rpmd.py --box 1.0 --beads 8 --temperature 243 \
+    --dt 1.0 --equil 5 --prod 50 --model uma-s-1-pythonforce-batch
+```
+
+### Quick Test (by molecule count)
 ```bash
 python test_uma_ice_rpmd.py --molecules 32 --beads 8 --temperature 243 \
     --dt 1.0 --equil 5 --prod 50 --pressure 1 --model uma-s-1-pythonforce-batch
@@ -44,14 +75,16 @@ python test_uma_ice_rpmd.py --molecules 32 --beads 8 --temperature 243 \
 
 ### NVT (no barostat)
 ```bash
-python test_uma_ice_rpmd.py --molecules 32 --beads 8 --temperature 243 \
+python test_uma_ice_rpmd.py --box 1.0 --beads 8 --temperature 243 \
     --equil 10 --prod 100 --pressure 0
 ```
 
 ### Custom Parameters
 ```bash
 python test_uma_ice_rpmd.py \
-    --molecules 32 \           # Number of water molecules
+    --input ice.cif \         # Load from CIF/PDB/XYZ (OR --box/--molecules)
+    --box 1.0 \               # Cubic box side in nm (OR --molecules)
+    --molecules 32 \          # Number of water molecules (if no --box)
     --beads 8 \                # RPMD beads
     --temperature 243 \        # Temperature (K)
     --dt 1.0 \                 # Timestep in fs (0.5-1.0 for stability)
