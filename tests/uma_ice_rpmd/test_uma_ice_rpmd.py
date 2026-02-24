@@ -475,15 +475,6 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     
     pdb_file_handle = open(pdb_file, 'w')
     
-    # Map chains to single-char PDB chain IDs (OpenMM auto-generates "1","2",..."10",... which breaks %c)
-    chain_to_char = {}
-    for chain_idx, chain in enumerate(topology.chains()):
-        cid = chain.id
-        if cid is not None and len(str(cid)) == 1:
-            chain_to_char[chain] = str(cid)
-        else:
-            chain_to_char[chain] = chr(ord('A') + chain_idx % 26)
-    
     # Write PDB header with proper unit handling
     box_size_nm = box_vectors[0][0].value_in_unit(unit.nanometer)
     box_size_angstrom = box_size_nm * 10.0  # Convert nm to Angstrom for PDB
@@ -610,11 +601,13 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
             for residue in topology.residues():
                 for atom in residue.atoms():
                     pos_angstrom = centroid_positions[atom.index] * 10.0  # nm to Angstrom
-                    pdb_file_handle.write("ATOM  %5d %-4s %3s %c%4d    %8.3f%8.3f%8.3f%6.2f%6.2f          %2s\n" % (
+                    # PDB chain ID must be 1 char; OpenMM uses "1","2",..."10"... so use first char
+                    chain_char = (str(residue.chain.id) or ' ')[:1]
+                    pdb_file_handle.write("ATOM  %5d %-4s %3s %s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f          %2s\n" % (
                         atom_idx,
                         atom.name,
                         residue.name,
-                        chain_to_char[residue.chain],
+                        chain_char,
                         residue.index + 1,
                         pos_angstrom[0],
                         pos_angstrom[1],
@@ -701,7 +694,7 @@ if __name__ == '__main__':
                        help='Number of RPMD beads (default: 8)')
     parser.add_argument('--temperature', type=float, default=243.0,
                        help='Temperature in K (default: 243.0)')
-    parser.add_argument('--pressure', type=float, default=1.0,
+    parser.add_argument('--pressure', type=float, default=0.0,
                        help='Pressure in bar (default: 1.0, use 0 for NVT)')
     parser.add_argument('--dt', type=float, default=1.0,
                        help='Timestep in fs (default: 1.0, use 0.5-1.0 for stability)')
