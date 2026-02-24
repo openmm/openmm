@@ -155,6 +155,20 @@ When OpenMM and PyTorch both use CUDA on the same GPU, a context conflict can ca
 - Use `--ml-device cuda` to try GPU for ML (may fail on some systems).
 - Use `--platform cpu` to run everything on CPU if GPU issues persist.
 
+**Verifying the fix is active:** When running with `--platform cuda`, expect:
+```
+  ML model device: cpu
+  ...
+  Loading UMA model 'uma-s-1' on cpu...
+```
+If you see `on cuda` instead, the installed openmmml does not have the fix. Copy the modified
+files into the installed package:
+```bash
+INSTALL_PATH=$(python -c "import openmmml; import os; print(os.path.dirname(openmmml.__file__))")
+cp wrappers/python/openmmml/models/umapotential_pythonforce_batch.py "$INSTALL_PATH/models/"
+cp wrappers/python/openmmml/models/umapotential_pythonforce.py "$INSTALL_PATH/models/"
+```
+
 ## References
 
 - UMA: Universal Molecular Atomistic potentials (FAIRChem)

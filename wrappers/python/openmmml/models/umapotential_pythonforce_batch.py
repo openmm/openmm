@@ -4,9 +4,10 @@ umapotential_pythonforce_batch.py: UMA potential with batched RPMD support
 Implements both single and batched force evaluation for UMA models.
 The batched version evaluates all RPMD beads in a single ML inference call.
 
-When device is unspecified, the model defaults to CPU to avoid PyTorch/OpenMM
-CUDA context conflict (CUDA_ERROR_ILLEGAL_ADDRESS). Pass device='cuda' to try
-GPU; this may fail on some systems (see openmm-torch#13).
+The model is lazy-loaded on first force computation (when OpenMM has pushed its
+CUDA context), allowing PyTorch and OpenMM to share a single GPU without
+CUDA_ERROR_ILLEGAL_ADDRESS. Pass device='cuda' for GPU; device='cpu' or None
+for CPU.
 """
 import openmm
 from openmm import unit
@@ -67,48 +68,10 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
         except ImportError as e:
             raise ImportError(f"Failed to import ase: {e}")
 
-        # Load UMA model
-        if not hasattr(self, '_predict_unit'):
-            if device is None:
-                # Default to CPU: PyTorch + OpenMM CUDA causes context conflict
-                # (CUDA_ERROR_ILLEGAL_ADDRESS). Pass device='cuda' explicitly to use
-                # GPU (may fail; see openmm-torch#13).
-                device = "cpu"
-
-            print(f"Loading UMA model '{self.model_name}' on {device}...")
-            
-            # Enable PyTorch optimizations for faster inference
-            torch.backends.cudnn.benchmark = True  # Auto-tune kernel selection
-            torch.backends.cuda.matmul.allow_tf32 = True  # Enable TF32 for matmul
-            torch.backends.cudnn.allow_tf32 = True  # Enable TF32 for cudnn
-            
-            self._predict_unit = pretrained_mlip.get_predict_unit(
-                self.model_name,
-                inference_settings=inference_settings,
-                device=device,
-            )
-            self._device = device
-            
-            # Note: torch.compile() optimization attempted but causes compilation issues  
-            # with UMA's rotation layers. Keeping eager mode for stability.
-            
-            print(f"PyTorch optimizations enabled:")
-            print(f"  - cudnn.benchmark: {torch.backends.cudnn.benchmark}")
-            print(f"  - TF32 (matmul): {torch.backends.cuda.matmul.allow_tf32}")
-            print(f"  - TF32 (cudnn): {torch.backends.cudnn.allow_tf32}")
-
-        predict_unit = self._predict_unit
-
-        # Validate task name
-        if task_name is None:
-            valid_datasets = list(predict_unit.dataset_to_tasks.keys())
-            if len(valid_datasets) == 1:
-                task_name = valid_datasets[0]
-            else:
-                raise ValueError(f"Multiple tasks available: {valid_datasets}. Specify task_name.")
-        
-        # Store the valid dataset name for the model
-        valid_dataset_name = task_name  # Dataset ID model expects
+        # Device: default to CPU if not specified. Lazy-load on first compute allows
+        # device='cuda' to work (model loads when OpenMM's context is pushed).
+        if device is None:
+            device = "cpu"
 
         # Extract atomic symbols from topology
         symbols = []
@@ -123,44 +86,59 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
             topology.getPeriodicBoxVectors() is not None
         ) or system.usesPeriodicBoundaryConditions()
 
-        # Create initial AtomicData template
-        n_atoms = len(symbols)
-        initial_positions = np.zeros((n_atoms, 3), dtype=np.float32)
-        
-        atoms_ase = Atoms(
-            symbols=symbols,
-            positions=initial_positions,
-            pbc=isPeriodic
-        )
-        atoms_ase.info['charge'] = charge
-        atoms_ase.info['spin'] = spin
-        
-        atomic_data_template = AtomicData.from_ase(
-            atoms_ase,
-            task_name=task_name,
-            r_edges=False,
-            r_data_keys=['spin', 'charge']
-        )
-        atomic_data_template = atomic_data_template.to(device)
-        
-        # Fix dataset field
-        if hasattr(atomic_data_template, 'dataset'):
-            if isinstance(atomic_data_template.dataset, str):
-                atomic_data_template.dataset = [atomic_data_template.dataset]
-        
-        # Pre-allocate buffers
+        # Pre-allocate buffers (no device dependency)
         total_particles = system.getNumParticles()
         full_forces_buffer = np.zeros((total_particles, 3), dtype=np.float32) if total_particles > n_atoms or atom_indices is not None else None
         
-        # Cache for closures
+        # Cache for closures. Model and valid_dataset_name loaded lazily on first compute.
         cache = {
-            'atomic_data': atomic_data_template,
+            'predict_unit': None,
+            'valid_dataset_name': None,
             'full_forces_buffer': full_forces_buffer,
-            'batch_pos_buffer': None,  # Pre-allocated on first use
-            'batch_box_buffer': None,  # Pre-allocated on first use
-            'max_beads': 0,  # Track max beads seen for buffer sizing
-            'ase_atoms_templates': []  # Cache ASE Atoms objects (created on first use)
+            'batch_pos_buffer': None,
+            'batch_box_buffer': None,
+            'max_beads': 0,
+            'ase_atoms_templates': [],
         }
+
+        # Config for lazy load (stored in closure scope)
+        _config = {
+            'model_name': self.model_name,
+            'inference_settings': inference_settings,
+            'task_name': task_name,
+            'device': device,
+            'symbols': symbols,
+            'charge': charge,
+            'spin': spin,
+            'isPeriodic': isPeriodic,
+        }
+
+        def _ensure_model_loaded():
+            """Load UMA model on first compute, when OpenMM's CUDA context is current."""
+            if cache['predict_unit'] is not None:
+                return
+            dev = _config['device']
+            if dev == 'cuda':
+                torch.backends.cudnn.benchmark = True
+                torch.backends.cuda.matmul.allow_tf32 = True
+                torch.backends.cudnn.allow_tf32 = True
+            predict_unit = pretrained_mlip.get_predict_unit(
+                _config['model_name'],
+                inference_settings=_config['inference_settings'],
+                device=_config['device'],
+            )
+            task = _config['task_name']
+            if task is None:
+                valid = list(predict_unit.dataset_to_tasks.keys())
+                if len(valid) == 1:
+                    task = valid[0]
+                else:
+                    raise ValueError(f"Multiple datasets: {valid}. Specify task_name.")
+            elif task not in predict_unit.dataset_to_tasks:
+                raise ValueError(f"Invalid task_name '{task}'. Valid: {list(predict_unit.dataset_to_tasks.keys())}")
+            cache['predict_unit'] = predict_unit
+            cache['valid_dataset_name'] = task
+            print(f"Lazy-loaded UMA model '{_config['model_name']}' on {_config['device']} (OpenMM context)")
         
         # Import modules once for closure scope
         from fairchem.core.datasets.atomic_data import atomicdata_list_to_batch
@@ -169,6 +147,11 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
         def compute_uma_forces_single(state):
             """Compute forces for a single copy - use shared CUDA context with OpenMM."""
             try:
+                _ensure_model_loaded()
+                predict_unit = cache['predict_unit']
+                valid_dataset_name = cache['valid_dataset_name']
+                device = _config['device']
+
                 if DEBUG_LOGS and not cache.get("warned_single", False):
                     print(
                         "Single-copy function called (likely from getState/reporters). "
@@ -192,7 +175,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                 atoms_ase.info['spin'] = spin
 
                 # Create AtomicData (initially CPU-side)
-                data = AtomicData.from_ase(atoms_ase, task_name=task_name, r_edges=False, r_data_keys=['spin', 'charge'])
+                data = AtomicData.from_ase(atoms_ase, task_name=valid_dataset_name, r_edges=False, r_data_keys=['spin', 'charge'])
 
                 
                 # Set cell before moving to GPU (matches batch path)
@@ -240,7 +223,9 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
 
                 # Clean up GPU tensors immediately
                 del data_device, pred, data
-                torch.cuda.empty_cache()
+                if device == 'cuda':
+                    torch.cuda.synchronize()
+                    torch.cuda.empty_cache()
 
                 # Convert units (all CPU now)
                 energy_kj = energy_ev * 96.4853
@@ -268,6 +253,11 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
         def compute_uma_forces_batch(states, _from_single=False):
             """Compute forces for all RPMD beads using TRUE tensor batching."""
             try:
+                _ensure_model_loaded()
+                predict_unit = cache['predict_unit']
+                valid_dataset_name = cache['valid_dataset_name']
+                device = _config['device']
+
                 import time
                 batch_start = time.time()
                 if DEBUG_LOGS:
@@ -353,7 +343,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                     
                     data = AtomicData.from_ase(
                         atoms_ase,
-                        task_name=task_name,
+                        task_name=valid_dataset_name,
                         r_edges=False,
                         r_data_keys=['spin', 'charge'],
                     )
@@ -421,6 +411,9 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                     print(f"   Breakdown: prep={t_prep*1000:.1f}ms, inference={t_inference*1000:.1f}ms", flush=True)
                     print(f"   Speedup vs sequential: {num_copies * 41.4 / (t_inference*1000):.2f}x (ideal: {num_copies}x)", flush=True)
                 
+                if device == 'cuda':
+                    torch.cuda.synchronize()
+
                 return (total_energy * unit.kilojoules_per_mole,
                         forces_cpu * unit.kilojoules_per_mole / unit.nanometer)
             except Exception as e:
@@ -434,7 +427,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
         force.setUsesPeriodicBoundaryConditions(isPeriodic)
         system.addForce(force)
 
-        print(f"UMA force added with batched RPMD support (model: {self.model_name}, task: {task_name}, device: {device})")
+        print(f"UMA force added with batched RPMD support (model: {self.model_name}, task: {task_name or 'auto'}, device: {device})")
 
 
 # No need to register at module level - MLPotential will auto-register from entry points

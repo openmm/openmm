@@ -270,9 +270,12 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     if ml_device is not None:
         _ml_device = ml_device if ml_device != 'auto' else None
     elif platform_name.lower() == 'cuda':
-        _ml_device = 'cpu'  # Avoid PyTorch/OpenMM CUDA context conflict
+        _ml_device = 'cuda'  # Lazy-load allows single GPU; use --ml-device cpu to force CPU
     else:
         _ml_device = None
+
+    print(f"  ML model device: {_ml_device or 'auto (library default)'}")
+
     system = potential.createSystem(
         topology,
         task_name='omol',
@@ -691,8 +694,8 @@ if __name__ == '__main__':
     parser.add_argument('--platform', type=str, default='cuda', choices=['cuda', 'cpu'],
                        help='OpenMM platform: cuda (GPU) or cpu (default: cuda)')
     parser.add_argument('--ml-device', type=str, default=None,
-                       help='ML model device: cpu (default with CUDA), cuda, or auto. '
-                            'Use cpu to avoid PyTorch/OpenMM CUDA conflict.')
+                       help='ML model device: cuda (default with CUDA platform), cpu, or auto. '
+                            'Lazy-load enables single-GPU use.')
     
     args = parser.parse_args()
     
