@@ -10,12 +10,14 @@ import os
 import subprocess
 import tempfile
 
-# Set plugin dir before openmm import: when openmm_library_path points to build/,
-# build/plugins has subdirs (amoeba, rpmd...) not .so files. Use installed plugins.
+# Set plugin dir before openmm import. Try CONDA_PREFIX, then miniconda3, then build.
 if os.getenv('OPENMM_PLUGIN_DIR') is None:
-    _plugins = os.path.join(os.path.expanduser('~'), 'miniconda3', 'lib', 'plugins')
-    if os.path.isdir(_plugins):
-        os.environ['OPENMM_PLUGIN_DIR'] = _plugins
+    for _base in [os.getenv('CONDA_PREFIX'), os.path.expanduser('~/miniconda3')]:
+        if _base:
+            _plugins = os.path.join(_base, 'lib', 'plugins')
+            if os.path.isdir(_plugins):
+                os.environ['OPENMM_PLUGIN_DIR'] = _plugins
+                break
 
 import numpy as np
 import time
@@ -331,6 +333,15 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     
     # Create context
     print(f"\n--- Creating Simulation Context ---")
+    # CRITICAL: Initialize PyTorch CUDA before OpenMM creates its Context.
+    # torch.cuda.init() pops existing contexts from the stack; if OpenMM creates
+    # first, PyTorch later corrupts the context (CUDA_ERROR_ILLEGAL_ADDRESS).
+    # Init PyTorch first so both share the primary context (pytorch#75025).
+    if platform_name.lower() == 'cuda' and _ml_device == 'cuda':
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.init()
+            print(f"  PyTorch CUDA initialized before OpenMM Context (context-order fix)")
     platform = Platform.getPlatformByName(platform_name.upper())
     if platform_name.lower() == 'cuda':
         properties = {

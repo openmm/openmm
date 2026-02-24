@@ -11,7 +11,8 @@
 
 set -e
 
-REPO="/media/extradrive/Trajectories/openmm"
+# Repo root: parent of scripts/ (portable across machines)
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="$REPO/build"
 
 # Install prefix: use conda env if active, else default

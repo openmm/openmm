@@ -111,7 +111,9 @@ print(f"Final RMSD: {rmsds[-1]:.4f} nm")
 ## Requirements
 
 - OpenMM with RPMD plugin
-- openmm-ml with UMA support
+- openmm-ml with UMA support (integrated into OpenMM when built from this repo)
+
+For full rebuild and reinstall on a new machine, see [docs/BUILD_AND_REINSTALL.md](../docs/BUILD_AND_REINSTALL.md).
 - ASE (Atomic Simulation Environment)
 - NumPy
 - Matplotlib
@@ -150,10 +152,17 @@ Reduce system size or use CPU platform:
 
 ### CUDA Error (CUDA_ERROR_ILLEGAL_ADDRESS)
 When OpenMM and PyTorch both use CUDA on the same GPU, a context conflict can cause
-`CUDA_ERROR_ILLEGAL_ADDRESS`. To avoid this:
-- **ML model uses CPU by default** when OpenMM uses CUDA (OpenMM on GPU, UMA on CPU).
-- Use `--ml-device cuda` to try GPU for ML (may fail on some systems).
-- Use `--platform cpu` to run everything on CPU if GPU issues persist.
+`CUDA_ERROR_ILLEGAL_ADDRESS`. The test script applies two fixes:
+
+1. **Context order**: PyTorch CUDA is initialized *before* the OpenMM Context is created
+   (torch.cuda.init() pops existing contexts; PyTorch must own the primary context first).
+
+2. **Lazy model load**: The UMA model loads on first force computation (inside the callback),
+   when OpenMM has pushed its context, so tensors allocate in the shared context.
+
+If the error persists:
+- Use `--ml-device cpu` to run UMA on CPU (OpenMM stays on GPU).
+- Use `--platform cpu` to run everything on CPU.
 
 **Verifying the fix is active:** When running with `--platform cuda`, expect:
 ```
