@@ -88,7 +88,13 @@ def _create_ice_from_ase(atoms_ase, num_molecules):
             mol_list.append([oidx, h1, h2])
             seen.update([oidx, h1, h2])
 
+    mol_count_full = len(mol_list)
     mol_list = mol_list[:num_molecules]
+
+    # When we trim molecules, scale the box to preserve ice Ih density (~0.92 g/cm³)
+    # Box volume should scale with number of molecules: V_new = V_old * (n_new / n_full)
+    scale = (num_molecules / mol_count_full) ** (1.0 / 3.0) if num_molecules < mol_count_full else 1.0
+
     topology = app.Topology()
     positions = []
     for oidx, h1, h2 in mol_list:
@@ -100,14 +106,14 @@ def _create_ice_from_ase(atoms_ase, num_molecules):
         topology.addBond(o_atom, h1_atom)
         topology.addBond(o_atom, h2_atom)
         for idx in [oidx, h1, h2]:
-            positions.append(pos[idx].tolist())
+            positions.append((pos[idx] * scale).tolist())  # Scale positions with box
 
-    # Box in nm (ASE cell: rows are lattice vectors)
-    v = np.array(cell)
+    # Box in nm (ASE cell: rows are lattice vectors); scale when trimmed
+    v = np.array(cell) * scale * 0.1  # 0.1: Angstrom to nm
     box_vectors = (
-        [v[0, 0] * 0.1, v[0, 1] * 0.1, v[0, 2] * 0.1] * unit.nanometer,
-        [v[1, 0] * 0.1, v[1, 1] * 0.1, v[1, 2] * 0.1] * unit.nanometer,
-        [v[2, 0] * 0.1, v[2, 1] * 0.1, v[2, 2] * 0.1] * unit.nanometer,
+        [v[0, 0], v[0, 1], v[0, 2]] * unit.nanometer,
+        [v[1, 0], v[1, 1], v[1, 2]] * unit.nanometer,
+        [v[2, 0], v[2, 1], v[2, 2]] * unit.nanometer,
     )
 
     topology.setPeriodicBoxVectors(box_vectors)
@@ -182,15 +188,11 @@ def create_ice_structure(num_molecules=32):
     print(f"  Actual molecules: {mol_count}")
     print(f"  Total atoms: {n_atoms}")
 
-    box_size = box_vectors[0][0].value_in_unit(unit.nanometer)
+    # Use determinant for correct volume (hexagonal/triclinic cells)
+    box_matrix = np.array([[box_vectors[i][j].value_in_unit(unit.nanometer) for j in range(3)] for i in range(3)])
+    vol_nm3 = np.abs(np.linalg.det(box_matrix))
     total_mass_g = (mol_count * 18.015) * 1.66054e-24
-    volume_cm3 = (box_size * 1e-7) ** 3
-    if not np.isclose(volume_cm3, 0):
-        density = total_mass_g / volume_cm3
-    else:
-        vol_nm3 = np.abs(np.linalg.det(np.array([[box_vectors[i][j].value_in_unit(unit.nanometer)
-                                                  for j in range(3)] for i in range(3)])))
-        density = total_mass_g / (vol_nm3 * 1e-21)
+    density = total_mass_g / (vol_nm3 * 1e-21)  # 1 nm³ = 1e-21 cm³
     print(f"  Initial density: {density:.3f} g/cm³")
     print(f"  Expected ice Ih: ~0.92 g/cm³")
 
@@ -300,12 +302,12 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     else:
         print(f"  Running NVT (no barostat)")
     
-    # Calculate density
+    # Calculate density (use determinant for hexagonal/triclinic boxes)
     mass_per_molecule = 18.015
     total_mass_g = (num_molecules * mass_per_molecule) * 1.66054e-24
-    box_size = box_vectors[0][0].value_in_unit(unit.nanometer)
-    volume_cm3 = (box_size * 1e-7) ** 3
-    density = total_mass_g / volume_cm3
+    box_matrix = np.array([[box_vectors[i][j].value_in_unit(unit.nanometer) for j in range(3)] for i in range(3)])
+    vol_nm3 = np.abs(np.linalg.det(box_matrix))
+    density = total_mass_g / (vol_nm3 * 1e-21)
     print(f"  Initial density: {density:.3f} g/cm³")
     print(f"  Expected ice density: ~0.92 g/cm³")
     
@@ -459,8 +461,8 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     last_report_time = start_time
     
     step_counter = 0
-    phase = "Equilibration"
-    
+    phase = "Production" if equilibration_steps == 0 else "Equilibration"
+
     energies = []
     temperatures = []
     densities = []
@@ -497,8 +499,8 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
         step = next_stop
         step_counter = step
         
-        # Switch to production phase
-        if step == equilibration_steps:
+        # Switch to production phase (use >= so we catch it even if a chunk skips over equilibration_steps)
+        if step >= equilibration_steps and phase == "Equilibration":
             phase = "Production"
             print(f"\n{'=' * 80}")
             print(f"PRODUCTION PHASE STARTED")
