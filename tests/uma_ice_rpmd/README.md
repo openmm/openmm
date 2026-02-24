@@ -150,6 +150,12 @@ Reduce system size or use CPU platform:
 - Reduce `--molecules` to 16 or 8
 - Script will automatically fall back to CPU if CUDA fails
 
+### NPT on CUDA (posqCorrection Workaround)
+When running NPT (pressure > 0) on CUDA, the script uses **double precision** by default to avoid
+`posqCorrection` download crashes (`CUDA_ERROR_ILLEGAL_ADDRESS`). Mixed precision with the barostat
+can trigger this on some setups. You can try `--precision mixed` if the underlying issue has been
+fixed in your OpenMM build.
+
 ### CUDA Error (CUDA_ERROR_ILLEGAL_ADDRESS)
 When OpenMM and PyTorch both use CUDA on the same GPU, a context conflict can cause
 `CUDA_ERROR_ILLEGAL_ADDRESS`. The test script applies two fixes:

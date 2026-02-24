@@ -108,9 +108,11 @@ void RPMDMonteCarloBarostatImpl::updateRPMDState(ContextImpl& context) {
     double newVolume = volume+deltaVolume;
     double lengthScale = std::pow(newVolume/volume, 1.0/3.0);
     context.setPositions(centroid);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().synchronize(context);
     kernel.getAs<ApplyMonteCarloBarostatKernel>().saveCoordinates(context);
     context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale, box[1]*lengthScale, box[2]*lengthScale);
     kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale, lengthScale, lengthScale);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().synchronize(context);
     State scaledState = context.getOwner().getState(State::Positions);
 
     // Now apply the same offset to all the copies.

@@ -206,7 +206,7 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
                    pressure_bar=1.0, dt_fs=1.0, equilibration_ps=5.0,
                    production_ps=100.0, model_name='uma-s-1-pythonforce-batch',
                    output_dir='.', report_interval_ps=1.0, pdb_interval_ps=1.0,
-                   platform_name='cuda', ml_device=None):
+                   platform_name='cuda', ml_device=None, precision_override=None):
     """
     Run RPMD simulation of ice.
     
@@ -346,12 +346,16 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
             print(f"  PyTorch CUDA initialized before OpenMM Context (context-order fix)")
     platform = Platform.getPlatformByName(platform_name.upper())
     if platform_name.lower() == 'cuda':
+        # NPT: use double precision to avoid posqCorrection CUDA_ERROR_ILLEGAL_ADDRESS
+        precision = precision_override or ('double' if pressure_bar > 0 else 'mixed')
         properties = {
-            'Precision': 'mixed',
+            'Precision': precision,
             'DeviceIndex': '0',
             'DisablePmeStream': 'true',
         }
         print(f"  Using CUDA platform (GPU acceleration, DeviceIndex=0)")
+        if precision == 'double' and pressure_bar > 0:
+            print(f"  Precision: double (NPT workaround for posqCorrection crash)")
     else:
         properties = {}
         print(f"  Using CPU platform")
@@ -470,6 +474,15 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     minimized_positions_nm = None  # Store for RMSD
     
     pdb_file_handle = open(pdb_file, 'w')
+    
+    # Map chains to single-char PDB chain IDs (OpenMM auto-generates "1","2",..."10",... which breaks %c)
+    chain_to_char = {}
+    for chain_idx, chain in enumerate(topology.chains()):
+        cid = chain.id
+        if cid is not None and len(str(cid)) == 1:
+            chain_to_char[chain] = str(cid)
+        else:
+            chain_to_char[chain] = chr(ord('A') + chain_idx % 26)
     
     # Write PDB header with proper unit handling
     box_size_nm = box_vectors[0][0].value_in_unit(unit.nanometer)
@@ -601,7 +614,7 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
                         atom_idx,
                         atom.name,
                         residue.name,
-                        residue.chain.id if residue.chain.id else ' ',
+                        chain_to_char[residue.chain],
                         residue.index + 1,
                         pos_angstrom[0],
                         pos_angstrom[1],
@@ -709,6 +722,8 @@ if __name__ == '__main__':
     parser.add_argument('--ml-device', type=str, default=None,
                        help='ML model device: cuda (default with CUDA platform), cpu, or auto. '
                             'Lazy-load enables single-GPU use.')
+    parser.add_argument('--precision', type=str, default=None,
+                       help='OpenMM precision: single, mixed, or double. Default: double for NPT+CUDA, mixed otherwise.')
     
     args = parser.parse_args()
     
@@ -726,7 +741,8 @@ if __name__ == '__main__':
             report_interval_ps=args.report_interval,
             pdb_interval_ps=args.pdb_interval,
             platform_name=args.platform,
-            ml_device=args.ml_device
+            ml_device=args.ml_device,
+            precision_override=args.precision
         )
         sys.exit(0 if success else 1)
     except Exception as e:
