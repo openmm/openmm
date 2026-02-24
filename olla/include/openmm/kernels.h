@@ -1964,6 +1964,14 @@ public:
      *                   equal the number of components passed to initialize().
      */
     virtual void computeKineticEnergy(ContextImpl& context, std::vector<double>& ke) = 0;
+    /**
+     * Synchronize the GPU/compute queue before barostat operations.  No-op by default;
+     * GPU platforms override to flush pending work (avoids races with getState/downloads).
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    virtual void synchronize(ContextImpl& context) {
+    }
 };
 
 /**

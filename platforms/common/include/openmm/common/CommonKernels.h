@@ -1567,6 +1567,7 @@ public:
      *                   equal the number of components passed to initialize().
      */
     void computeKineticEnergy(ContextImpl& context, std::vector<double>& ke);
+    void synchronize(ContextImpl& context) override;
 private:
     ComputeContext& cc;
     bool hasInitializedKernels, rigidMolecules, atomsWereReordered;

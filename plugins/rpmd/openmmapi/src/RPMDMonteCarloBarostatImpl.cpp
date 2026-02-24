@@ -72,6 +72,9 @@ void RPMDMonteCarloBarostatImpl::updateRPMDState(ContextImpl& context) {
         return;
     step = 0;
 
+    // Ensure all prior GPU work (including PythonForce) completes before barostat operations
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().synchronize(context);
+
     // Compute the current potential energy.
 
     RPMDIntegrator& integrator = dynamic_cast<RPMDIntegrator&>(context.getIntegrator());

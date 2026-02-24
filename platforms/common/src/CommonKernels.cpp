@@ -106,6 +106,7 @@ void CommonUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3
         cc.getPosq().download(posq);
     }
     else if (cc.getUseMixedPrecision()) {
+        cc.flushQueue();  // Ensure posq/posqCorrection are ready before download
         mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
         cc.getPosq().download(posq, false);
         posCorrection.resize(numParticles);
@@ -5167,6 +5168,11 @@ void CommonApplyMonteCarloBarostatKernel::computeKineticEnergy(ContextImpl& cont
                 ke[j] += buffer[i];
         }
     }
+}
+
+void CommonApplyMonteCarloBarostatKernel::synchronize(ContextImpl& context) {
+    ContextSelector selector(cc);
+    cc.flushQueue();
 }
 
 class CommonCalcATMForceKernel::ReorderListener : public ComputeContext::ReorderListener {
