@@ -913,14 +913,16 @@ removing all center of mass motion.  At the start of every *n*\ ’th time step
 (where *n* is set by the user), it calculates the total center of mass
 velocity of the system:
 
-
 .. math::
    \mathbf{v}_\text{CM}=\frac{\sum _{i}{m}_{i}\mathbf{v}_{i}}{\sum _{i}{m}_{i}}
-
 
 where :math:`m_i` and :math:`\mathbf{v}_i` are the mass and velocity of particle
 \ *i*\ .  It then subtracts :math:`\mathbf{v}_\text{CM}` from the velocity of every
 particle.
+
+CMMotionRemover is an effective way to prevent the system from drifting, but it is
+not a rigorous constraint.  The center of mass may still move slightly, and may
+still be observed to have a small nonzero velocity.
 
 RMSDForce
 *********
