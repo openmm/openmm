@@ -201,7 +201,8 @@ print("All required packages loaded successfully")
 def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
                    pressure_bar=1.0, dt_fs=1.0, equilibration_ps=5.0,
                    production_ps=100.0, model_name='uma-s-1-pythonforce-batch',
-                   output_dir='.', report_interval_ps=1.0, pdb_interval_ps=1.0):
+                   output_dir='.', report_interval_ps=1.0, pdb_interval_ps=1.0,
+                   platform_name='cuda'):
     """
     Run RPMD simulation of ice.
     
@@ -229,6 +230,8 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
         Console reporting interval in picoseconds (default: 1.0)
     pdb_interval_ps : float
         PDB frame save interval in picoseconds (default: 1.0)
+    platform_name : str
+        OpenMM platform: 'cuda' (GPU) or 'cpu' (default: 'cuda')
         
     Returns
     -------
@@ -261,11 +264,13 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     print("Creating OpenMM system...")
     potential = MLPotential(model_name)
     
+    ml_device = 'cpu' if platform_name.lower() == 'cpu' else None
     system = potential.createSystem(
         topology,
         task_name='omol',
         charge=0,
-        spin=1
+        spin=1,
+        device=ml_device
     )
     
     print(f"  System uses PBC: {system.usesPeriodicBoundaryConditions()}")
@@ -315,10 +320,13 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     
     # Create context
     print(f"\n--- Creating Simulation Context ---")
-    platform = Platform.getPlatformByName('CUDA')
-    properties = {'Precision': 'mixed'}
-    print(f"  Using CUDA platform (GPU acceleration)")
-    
+    platform = Platform.getPlatformByName(platform_name.upper())
+    if platform_name.lower() == 'cuda':
+        properties = {'Precision': 'mixed'}
+        print(f"  Using CUDA platform (GPU acceleration)")
+    else:
+        properties = {}
+        print(f"  Using CPU platform")
     context = Context(system, integrator, platform, properties)
     
     # Initialize beads
@@ -359,7 +367,8 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     print(f"  Initial PE: {initial_pe:.2f} kJ/mol")
 
     # Sync context with bead 0 positions before minimization (RPMD stores positions in integrator)
-    bead0_positions = integrator.getPositions(0)
+    state0 = integrator.getState(0, getPositions=True)
+    bead0_positions = state0.getPositions()
     context.setPositions(bead0_positions)
 
     # Perform energy minimization on bead 0, then copy to all beads
@@ -667,6 +676,8 @@ if __name__ == '__main__':
                        help='Console report interval in ps (default: 1.0)')
     parser.add_argument('--pdb-interval', type=float, default=1.0,
                        help='PDB frame save interval in ps (default: 1.0)')
+    parser.add_argument('--platform', type=str, default='cuda', choices=['cuda', 'cpu'],
+                       help='OpenMM platform: cuda (GPU) or cpu (default: cuda)')
     
     args = parser.parse_args()
     
@@ -682,7 +693,8 @@ if __name__ == '__main__':
             model_name=args.model,
             output_dir=args.output,
             report_interval_ps=args.report_interval,
-            pdb_interval_ps=args.pdb_interval
+            pdb_interval_ps=args.pdb_interval,
+            platform_name=args.platform
         )
         sys.exit(0 if success else 1)
     except Exception as e:
