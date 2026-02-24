@@ -3,6 +3,10 @@ umapotential_pythonforce_batch.py: UMA potential with batched RPMD support
 
 Implements both single and batched force evaluation for UMA models.
 The batched version evaluates all RPMD beads in a single ML inference call.
+
+When device is unspecified, the model defaults to CPU to avoid PyTorch/OpenMM
+CUDA context conflict (CUDA_ERROR_ILLEGAL_ADDRESS). Pass device='cuda' to try
+GPU; this may fail on some systems (see openmm-torch#13).
 """
 import openmm
 from openmm import unit
@@ -66,7 +70,10 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
         # Load UMA model
         if not hasattr(self, '_predict_unit'):
             if device is None:
-                device = "cuda" if torch.cuda.is_available() else "cpu"
+                # Default to CPU: PyTorch + OpenMM CUDA causes context conflict
+                # (CUDA_ERROR_ILLEGAL_ADDRESS). Pass device='cuda' explicitly to use
+                # GPU (may fail; see openmm-torch#13).
+                device = "cpu"
 
             print(f"Loading UMA model '{self.model_name}' on {device}...")
             

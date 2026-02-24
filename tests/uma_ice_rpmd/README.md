@@ -148,6 +148,13 @@ Reduce system size or use CPU platform:
 - Reduce `--molecules` to 16 or 8
 - Script will automatically fall back to CPU if CUDA fails
 
+### CUDA Error (CUDA_ERROR_ILLEGAL_ADDRESS)
+When OpenMM and PyTorch both use CUDA on the same GPU, a context conflict can cause
+`CUDA_ERROR_ILLEGAL_ADDRESS`. To avoid this:
+- **ML model uses CPU by default** when OpenMM uses CUDA (OpenMM on GPU, UMA on CPU).
+- Use `--ml-device cuda` to try GPU for ML (may fail on some systems).
+- Use `--platform cpu` to run everything on CPU if GPU issues persist.
+
 ## References
 
 - UMA: Universal Molecular Atomistic potentials (FAIRChem)

@@ -202,7 +202,7 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
                    pressure_bar=1.0, dt_fs=1.0, equilibration_ps=5.0,
                    production_ps=100.0, model_name='uma-s-1-pythonforce-batch',
                    output_dir='.', report_interval_ps=1.0, pdb_interval_ps=1.0,
-                   platform_name='cuda'):
+                   platform_name='cuda', ml_device=None):
     """
     Run RPMD simulation of ice.
     
@@ -232,6 +232,9 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
         PDB frame save interval in picoseconds (default: 1.0)
     platform_name : str
         OpenMM platform: 'cuda' (GPU) or 'cpu' (default: 'cuda')
+    ml_device : str or None
+        ML model device: 'cpu', 'cuda', or None. When None with CUDA platform,
+        defaults to 'cpu' to avoid PyTorch/OpenMM CUDA context conflict.
         
     Returns
     -------
@@ -264,13 +267,18 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     print("Creating OpenMM system...")
     potential = MLPotential(model_name)
     
-    ml_device = 'cpu' if platform_name.lower() == 'cpu' else None
+    if ml_device is not None:
+        _ml_device = ml_device if ml_device != 'auto' else None
+    elif platform_name.lower() == 'cuda':
+        _ml_device = 'cpu'  # Avoid PyTorch/OpenMM CUDA context conflict
+    else:
+        _ml_device = None
     system = potential.createSystem(
         topology,
         task_name='omol',
         charge=0,
         spin=1,
-        device=ml_device
+        device=_ml_device
     )
     
     print(f"  System uses PBC: {system.usesPeriodicBoundaryConditions()}")
@@ -322,8 +330,12 @@ def run_simulation(num_molecules=32, num_beads=8, temperature_K=243.0,
     print(f"\n--- Creating Simulation Context ---")
     platform = Platform.getPlatformByName(platform_name.upper())
     if platform_name.lower() == 'cuda':
-        properties = {'Precision': 'mixed'}
-        print(f"  Using CUDA platform (GPU acceleration)")
+        properties = {
+            'Precision': 'mixed',
+            'DeviceIndex': '0',
+            'DisablePmeStream': 'true',
+        }
+        print(f"  Using CUDA platform (GPU acceleration, DeviceIndex=0)")
     else:
         properties = {}
         print(f"  Using CPU platform")
@@ -678,6 +690,9 @@ if __name__ == '__main__':
                        help='PDB frame save interval in ps (default: 1.0)')
     parser.add_argument('--platform', type=str, default='cuda', choices=['cuda', 'cpu'],
                        help='OpenMM platform: cuda (GPU) or cpu (default: cuda)')
+    parser.add_argument('--ml-device', type=str, default=None,
+                       help='ML model device: cpu (default with CUDA), cuda, or auto. '
+                            'Use cpu to avoid PyTorch/OpenMM CUDA conflict.')
     
     args = parser.parse_args()
     
@@ -694,7 +709,8 @@ if __name__ == '__main__':
             output_dir=args.output,
             report_interval_ps=args.report_interval,
             pdb_interval_ps=args.pdb_interval,
-            platform_name=args.platform
+            platform_name=args.platform,
+            ml_device=args.ml_device
         )
         sys.exit(0 if success else 1)
     except Exception as e:

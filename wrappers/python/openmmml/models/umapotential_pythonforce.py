@@ -91,7 +91,10 @@ class UMAPotentialPythonForceImpl(MLPotentialImpl):
         # Load the UMA model (only once per impl instance)
         if not hasattr(self, '_predict_unit'):
             if device is None:
-                device = "cuda" if torch.cuda.is_available() else "cpu"
+                # Default to CPU: PyTorch + OpenMM CUDA causes context conflict
+                # (CUDA_ERROR_ILLEGAL_ADDRESS). Pass device='cuda' explicitly to use
+                # GPU (may fail; see openmm-torch#13).
+                device = "cpu"
 
             print(f"Loading UMA model '{self.model_name}' on {device}...")
             self._predict_unit = pretrained_mlip.get_predict_unit(
