@@ -33,6 +33,7 @@
 #include "openmm/NonbondedForce.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/System.h"
+#include "openmm/VariableVerletIntegrator.h"
 #include "openmm/VerletIntegrator.h"
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
@@ -256,6 +257,47 @@ void testBussiZeroKineticEnergyThrows() {
 }
 
 /**
+ * Test that VariableVerletIntegrator works correctly with BussiThermostat.
+ * VariableVerletIntegrator.step() must call updateContextState between part1 and part2
+ * (STEP_PHASE_AFTER_VERLET_PART1) for correct canonical sampling.
+ */
+void testBussiWithVariableVerletIntegrator() {
+    const int numParticles = 8;
+    const double temp = 300.0;
+    const double tau = 1.0; // ps
+    const int numSteps = 3000;
+    System system;
+    VariableVerletIntegrator integrator(1e-5);
+    integrator.setMaximumStepSize(0.002);  // cap step size for stability
+    NonbondedForce* forceField = new NonbondedForce();
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(12.0);
+        forceField->addParticle((i%2 == 0 ? 0.5 : -0.5), 0.3, 1.0);
+    }
+    system.addForce(forceField);
+    BussiThermostat* thermostat = new BussiThermostat(temp, tau);
+    system.addForce(thermostat);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(temp);
+
+    integrator.step(5000);
+
+    double ke = 0.0;
+    for (int i = 0; i < numSteps; ++i) {
+        State state = context.getState(State::Energy);
+        ke += state.getKineticEnergy();
+        integrator.step(10);
+    }
+    ke /= numSteps;
+    double expected = 0.5 * numParticles * 3 * BOLTZ * temp;
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.15);
+}
+
+/**
  * Test that step order (Bussi after half-kick) produces reasonable temperature.
  */
 void testBussiStepOrderTemperature() {
@@ -301,6 +343,7 @@ int main(int argc, char* argv[]) {
         testBussiReservoirEnergy();
         testBussiRandomSeed();
         testBussiZeroKineticEnergyThrows();
+        testBussiWithVariableVerletIntegrator();
         testBussiStepOrderTemperature();
         runPlatformTests();
     }

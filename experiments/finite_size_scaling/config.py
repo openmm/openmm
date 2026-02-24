@@ -36,8 +36,8 @@ SYSTEM_SIZES = [250, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000, 128000]
 TEMPERATURE_K = 100.0
 CAVITY_FREQ_CM = 1560.0       # resonant with A2 (O-O) stretch
 DT_PS = 0.001                 # 1 fs
-SWITCH_TIME_PS = 200.0        # coupling activates at t0 = 200 ps
-PRODUCTION_PS = 2500.0        # total runtime (200 ps equilibrium + 2300 ps after switch)
+SWITCH_TIME_PS = 1500.0       # coupling activates at t0 = 1500 ps
+PRODUCTION_PS = 3000.0        # total: 1500 ps pre-switch (no cavity) + 1500 ps post-switch (cavity on)
 BUSSI_TAU_PS = 1.0            # Bussi thermostat time constant
 FRACTION_OO = 0.8             # 4:1 A2:B2 mixture
 DENSITY_BOHR = N_REF / L_REF_BOHR**3   # 0.00390625 molecules/Bohr^3

@@ -3497,7 +3497,6 @@ void ReferenceCalcCavityForceKernel::initialize(const System& system, const Cavi
     lambdaCoupling = force.getLambdaCoupling();
     photonMass = force.getPhotonMass();
     couplingSchedule = force.getLambdaCouplingSchedule();
-    stepCount = 0;
     
     // Store laser parameters
     cavityDriveEnabled = force.getCavityDriveEnabled();
@@ -3536,17 +3535,17 @@ void ReferenceCalcCavityForceKernel::initialize(const System& system, const Cavi
 }
 
 double ReferenceCalcCavityForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    // Get current lambda from schedule or use default
+    // Use context step count for schedule (canonical; immune to extra getState/getEnergy calls)
+    long long step = context.getStepCount();
     double currentLambda = lambdaCoupling;
     if (!couplingSchedule.empty()) {
         for (const auto& entry : couplingSchedule) {
-            if (entry.first <= stepCount)
+            if (entry.first <= step)
                 currentLambda = entry.second;
             else
                 break;
         }
     }
-    stepCount++;
     
     vector<Vec3>& posData = extractPositions(context);
     vector<Vec3>& forceData = extractForces(context);

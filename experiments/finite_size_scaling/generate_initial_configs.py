@@ -36,6 +36,9 @@ def generate_lattice(n_molecules: int, seed: int = 42):
         "--nmol", str(n_molecules),
         "--temperature", str(TEMPERATURE_K),
         "--seed", str(seed),
+        "--incavity",
+        "--coupling", "0.0",
+        "--frequency", str(CAVITY_FREQ_CM),
     ]
     print(f"[N={n_molecules}] Generating lattice config ...")
     print(f"  cmd: {' '.join(cmd)}")

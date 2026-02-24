@@ -41,7 +41,7 @@ python analyze_scaling.py
 Following the paper:
 - T = 100 K, omega_c = 1560 cm-1, dt = 1 fs
 - Coupling activates at t0 = 200 ps (`--switch-time 200`)
-- Production: 2500 ps total
+- Production: 1500 ps total
 - F(k,t) at k = 6.0 a.u. (113.4 nm-1), 50 wavevectors, t_w every 200 ps
 - Bussi thermostat (tau = 1.0 ps), Langevin cavity bath
 

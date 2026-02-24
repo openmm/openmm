@@ -175,7 +175,12 @@ def _build_system_from_gsd(gsd_path, frame_index, gsd_in_nm, no_cavity, ff_dir,
         raise FileNotFoundError(f"ForceField XML not found: {ff_path}")
     cfg = _load_gsd_config(gsd_path, frame_index)
     n_mol = cfg["n_mol"]
-    has_cavity = cfg["has_cavity"] and not no_cavity
+    cavity_in_gsd = cfg["has_cavity"]
+    # Add cavity whenever this is a cavity run (not --no-cavity). If GSD has only
+    # molecular particles (500), add cavity at origin; CavityParticleDisplacer will
+    # thermalize it at switch_time. This supports both 501-particle (initlattice --incavity)
+    # and 500-particle (equil --no-cavity) GSDs for cavity production runs.
+    has_cavity = not no_cavity
     bonds_group = cfg["bonds_group"]
     bonds_typeid = cfg["bonds_typeid"]
     box_bohr = np.asarray(cfg["box_bohr"][:3], dtype=np.float64)
@@ -206,7 +211,11 @@ def _build_system_from_gsd(gsd_path, frame_index, gsd_in_nm, no_cavity, ff_dir,
         cav_res = topology.addResidue("CAV", chain)
         topology.addAtom("Q", Element.getBySymbol("He"), cav_res)
         cavity_index = 2 * n_mol
-        positions_list.append(openmm.Vec3(float(pos_nm[-1, 0]), float(pos_nm[-1, 1]), float(pos_nm[-1, 2])) * unit.nanometer)
+        if cavity_in_gsd:
+            positions_list.append(openmm.Vec3(float(pos_nm[-1, 0]), float(pos_nm[-1, 1]), float(pos_nm[-1, 2])) * unit.nanometer)
+        else:
+            # GSD has only molecular particles; place cavity at origin (lambda=0 until switch)
+            positions_list.append(openmm.Vec3(0.0, 0.0, 0.0) * unit.nanometer)
 
     topology.setPeriodicBoxVectors((
         openmm.Vec3(box_nm[0], 0, 0) * unit.nanometer,
@@ -246,7 +255,7 @@ def _build_system_from_gsd(gsd_path, frame_index, gsd_in_nm, no_cavity, ff_dir,
                 ljf.addExclusion(cavity_index, i)
             if nbf is not None:
                 nbf.addException(cavity_index, i, 0.0, 0.1, 0.0)
-    return system, positions_list, topology, cavity_index, n_mol, float(box_nm[0])
+    return system, positions_list, topology, cavity_index, n_mol, float(box_nm[0]), cavity_in_gsd
 
 
 def _load_positions_and_box_from_gsd(path, frame_index, gsd_in_nm=False, bohr_to_nm=BOHR_TO_NM):
@@ -788,7 +797,7 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         if not HAS_GSD:
             raise ImportError("gsd.hoomd is required for --initial-gsd; install with: pip install gsd")
         ff_dir = Path(__file__).parent
-        system, positions, topology, cavity_index, num_molecules, box_size_nm = _build_system_from_gsd(
+        system, positions, topology, cavity_index, num_molecules, box_size_nm, gsd_had_cavity = _build_system_from_gsd(
             initial_gsd, initial_gsd_frame, gsd_in_nm, no_cavity, ff_dir,
             cutoff_nm=cutoff_nm
         )
@@ -796,7 +805,10 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         print(f"\n--- Initial structure from GSD ---")
         print(f"  File: {initial_gsd}, frame: {initial_gsd_frame}")
         print(f"  Box from GSD: {box_size_nm:.4f} nm (cubic)")
-        print(f"  Positions: {n_sys} particles (topology from GSD; order matches file); energy minimization will be skipped")
+        pos_note = "topology from GSD; order matches file"
+        if cavity_index is not None and not gsd_had_cavity:
+            pos_note += "; cavity added at origin (GSD had molecular particles only)"
+        print(f"  Positions: {n_sys} particles ({pos_note}); energy minimization will be skipped")
         if box_size_nm < 0.3:
             print(f"  WARNING: Box {box_size_nm:.4f} nm is very small. If GSD is in nm (not Bohr), use --gsd-in-nm.")
         elif box_size_nm > 50.0:
@@ -843,10 +855,13 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
     else:
         print(f"  PDB trajectory: disabled")
     fkt_prefix_resolved = None
+    # F(k,t) start: when using delayed cavity (switch_time_ps), track only after switch; else after equilibration
+    fkt_start_time_ps = switch_time_ps if (switch_time_ps is not None and switch_time_ps > 0) else equilibration_time_ps
     if enable_fkt:
         fkt_prefix_resolved = (fkt_output_prefix if fkt_output_prefix is not None else
                                (Path(output_file).with_suffix("").name if output_file else f"fkt_lambda{lambda_coupling:.4f}"))
         print(f"  F(k,t): enabled, prefix={fkt_prefix_resolved}, k={fkt_kmag} nm⁻¹")
+        print(f"    tracking starts at t={fkt_start_time_ps} ps {'(after cavity switch)' if switch_time_ps and switch_time_ps > 0 else '(after equilibration)'}")
         print(f"    wrapped molecular positions (cav-hoomd parity; correct at 0 K)")
         print(f"    reference interval (new file every): {fkt_reference_interval_ps} ps")
         print(f"    max reference files (FIFO drop): {fkt_max_refs}")
@@ -1003,12 +1018,26 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         except AttributeError as e:
             print(f"  BussiThermostat not available: {e}")
 
-    # Integrator: Verlet only (NVE) or Verlet + Bussi (no Langevin; molecules get Bussi only)
+    # Integrator: Verlet only (NVE) or Verlet + Bussi (no Langevin; molecules get Bussi only).
+    # When switch_time_ps is set, use VariableVerletIntegrator with ramped error tolerance
+    # to stabilize the transient at coupling activation: start strict (1e-5 nm), relax to 1.0 nm.
+    use_adaptive = switch_time_ps is not None and switch_time_ps > 0 and not nve
+    ADAPTIVE_EPS_MIN = 1e-5    # strict tolerance at switch (nm); smaller = smaller dt
+    ADAPTIVE_EPS_MAX = 1.0     # relaxed tolerance at long time (nm)
+    ADAPTIVE_TAU_PS = 50.0     # ramping time constant
+    ADAPTIVE_PRE_RAMP_PS = 1.0  # start using strict tol this many ps before switch
+    ADAPTIVE_DEBUG = True      # print when ramp is first triggered and at switch
+
     print("\n--- Creating Integrator ---")
     if nve:
         integrator = openmm.VerletIntegrator(dt * unit.picosecond)
         print(f"  VerletIntegrator created (NVE; no thermostat)")
         print(f"  Initial velocities will be set to T = {temperature_K} K")
+    elif use_adaptive:
+        integrator = openmm.VariableVerletIntegrator(ADAPTIVE_EPS_MAX)
+        integrator.setMaximumStepSize(dt * unit.picosecond)  # cap at nominal dt
+        print(f"  VariableVerletIntegrator (adaptive, for delayed coupling)")
+        print(f"  Error tol: {ADAPTIVE_EPS_MIN:.0e} nm at t0={switch_time_ps} ps, ramps to {ADAPTIVE_EPS_MAX} nm (tau={ADAPTIVE_TAU_PS} ps)")
     else:
         integrator = openmm.VerletIntegrator(dt * unit.picosecond)
         print(f"  VerletIntegrator created")
@@ -1142,14 +1171,38 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
         fkt_interval_steps = max(1, int(round(fkt_output_period_ps / dt)))
         # F(k,t) uses wrapped positions (cav-hoomd parity; correct at 0 K, no unwrapping drift)
     
-    for i in range(num_reports):
-        steps_this_block = min(report_interval, total_steps - step_counter)
+    total_time_ps = equilibration_time_ps + production_time_ps
+    next_report_time_ps = 0.0
+    _ramp_triggered = False
+    _ramp_at_switch_printed = False
+
+    while True:
+        steps_this_block = min(report_interval, total_steps - step_counter) if not use_adaptive else report_interval
         for step in range(steps_this_block):
+            # Adaptive: update error tolerance every step (ramp before switch to strict, then relax)
+            if use_adaptive:
+                sim_time_ps = context.getState().getTime().value_in_unit(unit.picosecond)
+                if sim_time_ps >= switch_time_ps - ADAPTIVE_PRE_RAMP_PS:
+                    t_since = max(0.0, sim_time_ps - switch_time_ps)
+                    eps = ADAPTIVE_EPS_MIN + (ADAPTIVE_EPS_MAX - ADAPTIVE_EPS_MIN) * (1.0 - np.exp(-t_since / ADAPTIVE_TAU_PS))
+                    integrator.setErrorTolerance(eps)
+                    if ADAPTIVE_DEBUG and not _ramp_triggered:
+                        _ramp_triggered = True
+                        dt_actual = integrator.getStepSize().value_in_unit(unit.picosecond)
+                        print(f"  [RAMP] First trigger: sim_time={sim_time_ps:.3f} ps, eps={eps:.2e} nm, dt={dt_actual:.6f} ps")
+                    if ADAPTIVE_DEBUG and not _ramp_at_switch_printed and sim_time_ps >= switch_time_ps - 0.5 * dt:
+                        _ramp_at_switch_printed = True
+                        eps_now = integrator.getErrorTolerance()
+                        dt_actual = integrator.getStepSize().value_in_unit(unit.picosecond)
+                        print(f"  [RAMP] At switch: sim_time={sim_time_ps:.3f} ps, eps={eps_now:.2e} nm, dt={dt_actual:.6f} ps")
             integrator.step(1)
             step_counter += 1
+            sim_time_ps = context.getState().getTime().value_in_unit(unit.picosecond) if use_adaptive else step_counter * dt
+            if use_adaptive and sim_time_ps >= total_time_ps:
+                break
             if not disable_dipole_output and (step_counter % dipole_output_interval_steps) == 0:
                 state = context.getState(getPositions=True)
-                current_time = step_counter * dt
+                current_time = sim_time_ps if use_adaptive else step_counter * dt
                 dipole = compute_dipole_moment(state, charges, num_molecular_particles)
                 dipole_times.append(current_time)
                 dipole_trajectory.append(dipole)
@@ -1164,17 +1217,22 @@ def run_test(num_molecules=250, lambda_coupling=0.001, temperature_K=100.0,
             # particles are in the primary image, matching HOOMD's snap.particles.position).
             # Without this flag, OpenMM returns unwrapped positions where boundary crossings
             # add spurious phase shifts exp(i k·n L) that decorrelate ρ_k artificially.
-            # Skip during equilibration: freshly randomised velocities need ~10 tau_Bussi
-            # to reach the correct position-velocity correlations; collecting F(k,t) during
-            # this transient biases ref 0 and contaminates the grand average.
+            # Start F(k,t) after equilibration (or after cavity switch when using delayed coupling).
+            # For delayed switch: avoid pre-switch data; F(k,t) measures dynamics under cavity coupling.
             if enable_fkt and fkt_tracker is not None and (step_counter % fkt_interval_steps) == 0:
-                current_time_ps = step_counter * dt
-                if current_time_ps >= equilibration_time_ps:
+                current_time_ps = sim_time_ps if use_adaptive else step_counter * dt
+                if current_time_ps >= fkt_start_time_ps:
                     _st = context.getState(getPositions=True, enforcePeriodicBox=True)
                     _pos_all = _st.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
                     pos_mol = np.asarray(_pos_all[:num_molecular_particles], dtype=np.float64)
-                    fkt_time_ps = current_time_ps - equilibration_time_ps
+                    fkt_time_ps = current_time_ps - fkt_start_time_ps
                     fkt_tracker.update(fkt_time_ps, pos_mol)
+        if use_adaptive:
+            sim_time_ps = context.getState().getTime().value_in_unit(unit.picosecond)
+            if sim_time_ps >= total_time_ps:
+                break
+        if step_counter >= total_steps:
+            break
         
         # Report progress with timing
         current_wall_time = time.time()
