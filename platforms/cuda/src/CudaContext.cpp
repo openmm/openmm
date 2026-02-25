@@ -472,13 +472,22 @@ void CudaContext::popAsCurrent() {
 
 void CudaContext::pushPrimaryContextForExternalCall() {
     if (contextIsValid) {
-        CHECK_RESULT2(cuCtxSynchronize(), "Error synchronizing OpenMM work before external call");
+        // Sync OpenMM work before external (e.g. PyTorch) call.
+        // OPENMM_CUDA_FAST_EXTERNAL_CALL=1: use stream sync only (faster, may be unsafe with multi-stream).
+        const char* fastEnv = std::getenv("OPENMM_CUDA_FAST_EXTERNAL_CALL");
+        if (fastEnv && fastEnv[0] == '1' && fastEnv[1] == '\0') {
+            CHECK_RESULT2(cuStreamSynchronize(getCurrentStream()), "Error synchronizing OpenMM stream before external call");
+        } else {
+            CHECK_RESULT2(cuCtxSynchronize(), "Error synchronizing OpenMM work before external call");
+        }
         CHECK_RESULT2(cuCtxPushCurrent(primaryContext), "Error pushing primary context for external call");
     }
 }
 
 void CudaContext::popPrimaryContextAfterExternalCall() {
     if (contextIsValid) {
+        // Sync external work (e.g. PyTorch) before restoring OpenMM context.
+        // Full context sync required: external libs may use different streams.
         CHECK_RESULT2(cuCtxSynchronize(), "Error synchronizing external work after callback");
         CUcontext popped;
         CHECK_RESULT2(cuCtxPopCurrent(&popped), "Error popping primary context after external call");

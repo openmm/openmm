@@ -26,6 +26,10 @@ if os.getenv('OPENMM_PLUGIN_DIR') is None:
                 os.environ['OPENMM_PLUGIN_DIR'] = _plugins
                 break
 
+# Set DEBUG_LOGS before openmmml import so UMA batch profiling is enabled
+if '--debug-logs' in sys.argv:
+    os.environ['OPENMMML_DEBUG_LOGS'] = '1'
+
 import numpy as np
 import time
 from pathlib import Path
@@ -237,11 +241,12 @@ def _ase_water_to_openmm(atoms_ase):
     return topology, positions_nm, box_vectors
 
 
-def _load_structure_from_file(filepath):
+def _load_structure_from_file(filepath, max_molecules=None):
     """
     Load ice/water structure from CIF or PDB file.
     Returns (topology, positions_nm, box_vectors).
     Supports GenIce CIF output (fractional coords) and standard PDB.
+    max_molecules: if set, trim to first N molecules and scale box (preserves density). For CUDA OOM.
     """
     from ase.io import read
 
@@ -255,7 +260,34 @@ def _load_structure_from_file(filepath):
     else:
         raise ValueError(f"Unsupported structure format: {suffix}. Use .cif, .pdb, or .xyz")
 
-    return _ase_water_to_openmm(atoms)
+    topo, positions, box = _ase_water_to_openmm(atoms)
+    if max_molecules is not None:
+        n_mol = len(positions) // 3
+        if n_mol > max_molecules:
+            n_keep = max_molecules
+            n_atoms_keep = n_keep * 3
+            positions = positions[:n_atoms_keep]
+            box_matrix = np.array([[box[i][j].value_in_unit(unit.nanometer) for j in range(3)] for i in range(3)])
+            scale = (n_keep / n_mol) ** (1.0 / 3.0)
+            box_matrix *= scale
+            positions_nm = np.array([[p[0], p[1], p[2]] for p in positions]) * scale
+            box_vectors = (
+                Vec3(box_matrix[0, 0], box_matrix[0, 1], box_matrix[0, 2]) * unit.nanometer,
+                Vec3(box_matrix[1, 0], box_matrix[1, 1], box_matrix[1, 2]) * unit.nanometer,
+                Vec3(box_matrix[2, 0], box_matrix[2, 1], box_matrix[2, 2]) * unit.nanometer,
+            )
+            topo = app.Topology()
+            for _ in range(n_keep):
+                chain = topo.addChain()
+                res = topo.addResidue('HOH', chain)
+                o_atom = topo.addAtom('O', app.Element.getBySymbol('O'), res)
+                h1 = topo.addAtom('H', app.Element.getBySymbol('H'), res)
+                h2 = topo.addAtom('H', app.Element.getBySymbol('H'), res)
+                topo.addBond(o_atom, h1)
+                topo.addBond(o_atom, h2)
+            topo.setPeriodicBoxVectors(box_vectors)
+            return topo, positions_nm.tolist(), box_vectors
+    return topo, positions, box
 
 
 def _create_ice_from_ase(atoms_ase, num_molecules, box_nm=None, ice_type='1h'):
@@ -266,28 +298,44 @@ def _create_ice_from_ase(atoms_ase, num_molecules, box_nm=None, ice_type='1h'):
 
 
 def _create_ice_genice(num_molecules, box_nm=None, ice_type='1h'):
-    """Try GenIce2 subprocess. Returns (topology, positions, box_vectors) or None on failure.
+    """Try GenIce (or GenIce2) subprocess. Returns (topology, positions, box_vectors) or None on failure.
     ice_type: '1h' (hexagonal) or '1c' (cubic ice, natural cubic box).
+    Tries GenIce 1.x first (genice --format cif), then GenIce2, then embedded CIF.
     """
-    try:
-        n_per_cell = 12 if ice_type == '1h' else 8  # ice Ic has 8 molecules per cubic cell (Fd-3m)
-        r = max(1, int(np.ceil((num_molecules / n_per_cell) ** (1 / 3))))
-        with tempfile.NamedTemporaryFile(suffix='.y', delete=False) as f:
-            outpath = f.name
-        result = subprocess.run(
-            ['genice2', ice_type, '--rep', str(r), str(r), str(r), '-f', 'y', '-o', outpath, '--seed', '42'],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if result.returncode != 0:
-            return None
-        from ase.io import read
-        atoms = read(outpath, format='yaml')
-        os.unlink(outpath)
-        return _create_ice_from_ase(atoms, num_molecules, box_nm=box_nm, ice_type=ice_type)
-    except Exception:
-        return None
+    from ase.io import read
+
+    n_per_cell = 12 if ice_type == '1h' else 8  # ice Ic has 8 molecules per cubic cell (Fd-3m)
+    r = max(1, int(np.ceil((num_molecules / n_per_cell) ** (1 / 3))))
+    rep_args = [str(r), str(r), str(r)]
+
+    # Try GenIce 1.x (genice): outputs CIF to stdout
+    for cmd, out_format in [
+        (['genice', ice_type, '--rep'] + rep_args + ['--format', 'cif'], 'cif'),
+        (['genice2', ice_type, '--rep'] + rep_args + ['--format', 'cif'], 'cif'),
+        (['genice2', ice_type, '--rep'] + rep_args + ['-f', 'y'], 'yaml'),
+    ]:
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            stdout = result.stdout.strip()
+            if result.returncode != 0 or not stdout:
+                continue
+            with tempfile.NamedTemporaryFile(suffix='.cif' if out_format == 'cif' else '.y', delete=False, mode='w') as f:
+                f.write(stdout)
+                outpath = f.name
+            try:
+                atoms = read(outpath, format=out_format)
+            finally:
+                os.unlink(outpath)
+            if len(atoms) >= num_molecules * 3:
+                return _create_ice_from_ase(atoms, num_molecules, box_nm=box_nm, ice_type=ice_type)
+        except Exception:
+            continue
+    return None
 
 
 def _create_ice_embedded(num_molecules, box_nm=None):
@@ -306,11 +354,13 @@ def _create_ice_embedded(num_molecules, box_nm=None):
     return _create_ice_from_ase(supercell, num_molecules, box_nm=box_nm, ice_type='1h')
 
 
-def create_ice_structure(num_molecules=None, box_nm=None, ice_type='1h', input_file=None):
+def create_ice_structure(num_molecules=None, box_nm=None, ice_type='1h', input_file=None,
+                         max_molecules=None):
     """
     Create ice structure with tetrahedral hydrogen-bonding network.
 
     If input_file is given, load structure directly from CIF/PDB/XYZ (e.g. GenIce output).
+    max_molecules: when loading from file, trim to first N molecules and scale box (for CUDA OOM).
     Otherwise specify num_molecules OR box_nm.
     ice_type: '1h' (hexagonal Ih) or '1c' (cubic Ic, natural cubic box).
 
@@ -323,8 +373,10 @@ def create_ice_structure(num_molecules=None, box_nm=None, ice_type='1h', input_f
     if input_file is not None:
         print(f"\n--- Loading Ice Structure from File ---")
         print(f"  Input: {input_file}")
-        topology, positions, box_vectors = _load_structure_from_file(input_file)
+        topology, positions, box_vectors = _load_structure_from_file(input_file, max_molecules=max_molecules)
         n_atoms = len(positions)
+        if max_molecules is not None:
+            print(f"  Trimmed to {max_molecules} molecules (--molecules, for GPU memory)")
     else:
         if box_nm is not None:
             num_molecules = _molecules_for_box(box_nm)
@@ -340,7 +392,7 @@ def create_ice_structure(num_molecules=None, box_nm=None, ice_type='1h', input_f
         result = _create_ice_genice(num_molecules, box_nm=box_nm, ice_type=ice_type)
         if result is not None:
             topology, positions, box_vectors = result
-            print(f"  Source: GenIce2 (proton-disordered)")
+            print(f"  Source: GenIce (proton-disordered)")
         else:
             if ice_type == '1c':
                 print(f"  GenIce2 failed for 1c; falling back to 1h")
@@ -369,11 +421,14 @@ print("All required packages loaded successfully")
 
 
 def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=None,
+                   max_molecules=None,
                    num_beads=8, temperature_K=243.0,
                    pressure_bar=1.0, dt_fs=1.0, equilibration_ps=5.0,
                    production_ps=100.0, model_name='uma-s-1-pythonforce-batch',
                    output_dir='.', report_interval_ps=1.0, pdb_interval_ps=1.0,
-                   platform_name='cuda', ml_device=None, precision_override=None):
+                   platform_name='cuda', ml_device=None, precision_override=None,
+                   minimal_report=False, optimize_inference=False,
+                   optimize_inference_tf32_only=False):
     """
     Run RPMD simulation of ice.
     
@@ -408,7 +463,17 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     ml_device : str or None
         ML model device: 'cpu', 'cuda', or None. When None with CUDA platform,
         defaults to 'cpu' to avoid PyTorch/OpenMM CUDA context conflict.
-        
+    minimal_report : bool
+        If True, skip getState(Energy) in report block; only print progress and
+        ns/day. Reduces extra UMA inference for faster runs (default: False).
+    optimize_inference : bool
+        If True, use fast inference settings (no activation checkpointing,
+        TF32) to speed up UMA force evaluation. Increases GPU memory; reduce
+        beads/molecules if OOM. Use optimize_inference_tf32_only on constrained GPUs.
+    optimize_inference_tf32_only : bool
+        If True, enable only TF32 (keeps activation checkpointing). Lower memory,
+        some speedup (default: False).
+
     Returns
     -------
     success : bool
@@ -440,7 +505,8 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     
     # Create structure
     topology, positions, box_vectors = create_ice_structure(
-        num_molecules=num_molecules, box_nm=box_nm, ice_type=ice_type, input_file=input_file
+        num_molecules=num_molecules, box_nm=box_nm, ice_type=ice_type, input_file=input_file,
+        max_molecules=max_molecules
     )
     n_atoms = len(positions)
     num_molecules = n_atoms // 3
@@ -459,18 +525,27 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
 
     print(f"  ML model device: {_ml_device or 'auto (library default)'}")
 
-    system = potential.createSystem(
-        topology,
-        task_name='omol',
-        charge=0,
-        spin=1,
-        device=_ml_device
-    )
+    create_kwargs = {'task_name': 'omol', 'charge': 0, 'spin': 1, 'device': _ml_device}
+    if optimize_inference or optimize_inference_tf32_only:
+        from dataclasses import replace
+        from fairchem.core.units.mlip_unit.api.inference import inference_settings_default
+        d = inference_settings_default()
+        if optimize_inference_tf32_only and not optimize_inference:
+            create_kwargs['inference_settings'] = replace(d, compile=False, tf32=True)
+            print(f"  Inference optimizations: tf32=on only (lower memory)")
+        else:
+            create_kwargs['inference_settings'] = replace(
+                d, activation_checkpointing=False, compile=False, tf32=True
+            )
+            print(f"  Inference optimizations: checkpoint=off, tf32=on (compile=off, UMA equivariant layers incompatible)")
+    system = potential.createSystem(topology, **create_kwargs)
     
     print(f"  System uses PBC: {system.usesPeriodicBoundaryConditions()}")
     
-    # Add barostat if NPT
-    if pressure_bar > 0:
+    # Add barostat if NPT. Skip on CUDA: RPMDMonteCarloBarostat + PythonForce causes
+    # CUDA_ERROR_ILLEGAL_ADDRESS (posqCorrection download crash).
+    _use_barostat = pressure_bar > 0 and platform_name.lower() != 'cuda'
+    if _use_barostat:
         barostat = RPMDMonteCarloBarostat(
             pressure_bar * unit.bar,
             25  # Attempt every 25 steps
@@ -479,6 +554,8 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
         print(f"  Added RPMDMonteCarloBarostat (NPT ensemble)")
         print(f"  Pressure: {pressure_bar} bar")
     else:
+        if pressure_bar > 0 and platform_name.lower() == 'cuda':
+            print(f"  Skipping barostat on CUDA (avoids CUDA_ERROR_ILLEGAL_ADDRESS); running NVT")
         print(f"  Running NVT (no barostat)")
     
     # Calculate density (use determinant for hexagonal/triclinic boxes)
@@ -525,16 +602,14 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
             print(f"  PyTorch CUDA initialized before OpenMM Context (context-order fix)")
     platform = Platform.getPlatformByName(platform_name.upper())
     if platform_name.lower() == 'cuda':
-        # NPT: use double precision to avoid posqCorrection CUDA_ERROR_ILLEGAL_ADDRESS
-        precision = precision_override or ('double' if pressure_bar > 0 else 'mixed')
+        # Barostat disabled on CUDA (see above). Use mixed precision for NVT.
+        precision = precision_override or 'mixed'
         properties = {
             'Precision': precision,
             'DeviceIndex': '0',
             'DisablePmeStream': 'true',
         }
         print(f"  Using CUDA platform (GPU acceleration, DeviceIndex=0)")
-        if precision == 'double' and pressure_bar > 0:
-            print(f"  Precision: double (NPT workaround for posqCorrection crash)")
     else:
         properties = {}
         print(f"  Using CPU platform")
@@ -630,6 +705,9 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     total_steps = equilibration_steps + production_steps
     
     report_interval_steps = max(1, int(report_interval_ps / dt_ps))
+    if minimal_report and report_interval_steps < 100:
+        report_interval_steps = 100
+        print(f"  Minimal mode: report interval clamped to {report_interval_steps} steps for speed")
     pdb_interval_steps = max(1, int(pdb_interval_ps / dt_ps))
     
     print(f"  Report interval: {report_interval_steps} steps ({report_interval_steps * dt_ps:.2f} ps)")
@@ -639,6 +717,8 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     print("\n" + "=" * 80)
     print("RUNNING SIMULATION")
     print("=" * 80)
+    if minimal_report and platform_name.lower() == 'cuda' and os.environ.get('OPENMM_CUDA_FAST_EXTERNAL_CALL') != '1':
+        print("  Tip: OPENMM_CUDA_FAST_EXTERNAL_CALL=1 may improve speed (reduces GPU sync before Python callback)")
     
     start_time = time.time()
     last_report_time = start_time
@@ -700,71 +780,75 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
             elapsed_since_last = current_wall_time - last_report_time
             last_report_time = current_wall_time
             
-            # Get state from bead 0 for PE and positions
-            state0 = integrator.getState(0, getEnergy=True, getPositions=True)
-            current_pe = state0.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
-            
-            # Calculate physical temperature from centroid kinetic energy
-            # Physical T = (2 * KE_centroid) / (3 * N_atoms * k_B)
-            centroid_ke = 0.0
-            
-            # Get velocities for all beads (write into pre-allocated buffer)
-            for b in range(num_beads):
-                state_b = integrator.getState(b, getVelocities=True)
-                all_bead_velocities_buffer[b] = state_b.getVelocities(asNumpy=True).value_in_unit(unit.nanometer/unit.picosecond)
-            
-            centroid_velocities = np.mean(all_bead_velocities_buffer, axis=0)
-            
-            # KE = 0.5 * sum(m * v^2)
-            # v is in nm/ps, m is in dalton (g/mol)
-            # 1 dalton * (nm/ps)^2 = 1 g/mol * (1e-9 m / 1e-12 s)^2 = 1e-3 kg/mol * 1e6 m^2/s^2 = 1000 J/mol = 1 kJ/mol
-            # So the result is directly in kJ/mol
-            for j in range(n_atoms):
-                v2 = np.sum(centroid_velocities[j]**2)
-                centroid_ke += 0.5 * masses[j] * v2
-            
-            current_ke = centroid_ke # This is the physical KE
-            current_total = current_pe + current_ke
-            
-            # Calculate temperature from physical KE
-            # k_B = 8.314e-3 kJ/(mol*K)
-            current_temp = (2.0 * current_ke) / (3.0 * n_atoms * 8.314e-3)
-            
-            # Calculate density if NPT
-            if pressure_bar > 0:
-                box = state0.getPeriodicBoxVectors()
-                volume_nm3 = (box[0][0] * box[1][1] * box[2][2]).value_in_unit(unit.nanometer**3)
-                volume_cm3 = volume_nm3 * 1e-21
-                current_density = total_mass_g / volume_cm3
-                densities.append(current_density)
-            else:
-                current_density = density
-
-            # NVT: compute centroid RMSD from minimized structure (proxy for melting)
-            if pressure_bar == 0 and minimized_positions_nm is not None:
-                centroid_positions = np.zeros((n_atoms, 3))
-                for b in range(num_beads):
-                    state_b = integrator.getState(b, getPositions=True)
-                    centroid_positions += state_b.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
-                centroid_positions /= num_beads
-                diff = centroid_positions - minimized_positions_nm
-                rmsd = np.sqrt(np.mean(np.sum(diff**2, axis=1)))
-                rmsds.append(rmsd)
-
-            energies.append(current_total)
-            temperatures.append(current_temp)
-            
-            # Calculate speed
             sim_time_ps = step * dt_ps
             progress_pct = (step / total_steps) * 100
             steps_per_sec = report_interval_steps / elapsed_since_last
             ns_per_day = steps_per_sec * dt_ps * 86400.0 / 1000.0
             
-            print(f"[{progress_pct:5.1f}%] {phase:13s} | "
-                  f"Step {step:7d}/{total_steps} ({sim_time_ps:6.1f} ps) | "
-                  f"{ns_per_day:6.2f} ns/day")
-            print(f"         PE={current_pe:10.1f} KE={current_ke:8.1f} Total={current_total:10.1f} kJ/mol | "
-                  f"T={current_temp:6.1f} K | ρ={current_density:.3f} g/cm³")
+            if minimal_report:
+                print(f"[{progress_pct:5.1f}%] {phase:13s} | "
+                      f"Step {step:7d}/{total_steps} ({sim_time_ps:6.1f} ps) | "
+                      f"{ns_per_day:6.2f} ns/day")
+            else:
+                # Get state from bead 0 for PE and positions
+                state0 = integrator.getState(0, getEnergy=True, getPositions=True)
+                current_pe = state0.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
+                
+                # Calculate physical temperature from centroid kinetic energy
+                # Physical T = (2 * KE_centroid) / (3 * N_atoms * k_B)
+                centroid_ke = 0.0
+                
+                # Get velocities for all beads (write into pre-allocated buffer)
+                for b in range(num_beads):
+                    state_b = integrator.getState(b, getVelocities=True)
+                    all_bead_velocities_buffer[b] = state_b.getVelocities(asNumpy=True).value_in_unit(unit.nanometer/unit.picosecond)
+                
+                centroid_velocities = np.mean(all_bead_velocities_buffer, axis=0)
+                
+                # KE = 0.5 * sum(m * v^2)
+                # v is in nm/ps, m is in dalton (g/mol)
+                # 1 dalton * (nm/ps)^2 = 1 g/mol * (1e-9 m / 1e-12 s)^2 = 1e-3 kg/mol * 1e6 m^2/s^2 = 1000 J/mol = 1 kJ/mol
+                # So the result is directly in kJ/mol
+                for j in range(n_atoms):
+                    v2 = np.sum(centroid_velocities[j]**2)
+                    centroid_ke += 0.5 * masses[j] * v2
+                
+                current_ke = centroid_ke # This is the physical KE
+                current_total = current_pe + current_ke
+                
+                # Calculate temperature from physical KE
+                # k_B = 8.314e-3 kJ/(mol*K)
+                current_temp = (2.0 * current_ke) / (3.0 * n_atoms * 8.314e-3)
+                
+                # Calculate density if NPT (barostat active)
+                if _use_barostat:
+                    box = state0.getPeriodicBoxVectors()
+                    volume_nm3 = (box[0][0] * box[1][1] * box[2][2]).value_in_unit(unit.nanometer**3)
+                    volume_cm3 = volume_nm3 * 1e-21
+                    current_density = total_mass_g / volume_cm3
+                    densities.append(current_density)
+                else:
+                    current_density = density
+
+                # NVT: compute centroid RMSD from minimized structure (proxy for melting)
+                if not _use_barostat and minimized_positions_nm is not None:
+                    centroid_positions = np.zeros((n_atoms, 3))
+                    for b in range(num_beads):
+                        state_b = integrator.getState(b, getPositions=True)
+                        centroid_positions += state_b.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
+                    centroid_positions /= num_beads
+                    diff = centroid_positions - minimized_positions_nm
+                    rmsd = np.sqrt(np.mean(np.sum(diff**2, axis=1)))
+                    rmsds.append(rmsd)
+
+                energies.append(current_total)
+                temperatures.append(current_temp)
+                
+                print(f"[{progress_pct:5.1f}%] {phase:13s} | "
+                      f"Step {step:7d}/{total_steps} ({sim_time_ps:6.1f} ps) | "
+                      f"{ns_per_day:6.2f} ns/day")
+                print(f"         PE={current_pe:10.1f} KE={current_ke:8.1f} Total={current_total:10.1f} kJ/mol | "
+                      f"T={current_temp:6.1f} K | ρ={current_density:.3f} g/cm³")
             print("")
         
         # Save PDB frame (production only, at specified interval)
@@ -785,13 +869,13 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
             for residue in topology.residues():
                 for atom in residue.atoms():
                     pos_angstrom = centroid_positions[atom.index] * 10.0  # nm to Angstrom
-                    # PDB chain ID must be 1 char; OpenMM uses "1","2",..."10"... so use first char
-                    chain_char = (str(residue.chain.id) or ' ')[:1]
+                    # PDB chain ID must be 1 char; use %s (not %c) to avoid TypeError with non-char chain.id
+                    chain_str = (str(residue.chain.id) or ' ')[:1]
                     pdb_file_handle.write("ATOM  %5d %-4s %3s %s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f          %2s\n" % (
                         atom_idx,
                         atom.name,
                         residue.name,
-                        chain_char,
+                        chain_str,
                         residue.index + 1,
                         pos_angstrom[0],
                         pos_angstrom[1],
@@ -818,47 +902,51 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     
     # Analysis
     print(f"\n--- Simulation Analysis ---")
-    energies = np.array(energies)
-    temperatures = np.array(temperatures)
-    
-    # Production phase only
-    prod_start_idx = len(energies) // 2
-    prod_energies = energies[prod_start_idx:]
-    prod_temps = temperatures[prod_start_idx:]
-    
-    print(f"\nProduction phase statistics:")
-    print(f"  Energy:")
-    print(f"    Mean: {np.mean(prod_energies):.2f} kJ/mol")
-    print(f"    Std:  {np.std(prod_energies):.2f} kJ/mol")
-    print(f"    Drift: {(prod_energies[-1] - prod_energies[0])/prod_energies[0]*100:+.2f}%")
-    print(f"  Temperature:")
-    print(f"    Mean: {np.mean(prod_temps):.2f} K (target: {temperature_K} K)")
-    print(f"    Std:  {np.std(prod_temps):.2f} K")
-    
-    if pressure_bar > 0 and len(densities) > 0:
-        densities = np.array(densities)
-        prod_densities = densities[prod_start_idx:]
-        print(f"  Density:")
-        print(f"    Mean: {np.mean(prod_densities):.3f} g/cm³")
-        print(f"    Std:  {np.std(prod_densities):.3f} g/cm³")
-        print(f"    Ice Ih reference: ~0.92 g/cm³")
-        
-        is_frozen = np.mean(prod_densities) > 0.85
-        print(f"\n  Ice status: {'FROZEN' if is_frozen else 'MELTED'} (NPT: density > 0.85 g/cm³)")
-    elif len(rmsds) > 0:
-        rmsds_arr = np.array(rmsds)
-        prod_rmsds = rmsds_arr[prod_start_idx:]
-        mean_rmsd = np.mean(prod_rmsds)
-        print(f"  RMSD from minimized (NVT):")
-        print(f"    Mean: {mean_rmsd:.4f} nm")
-        print(f"    Std:  {np.std(prod_rmsds):.4f} nm")
-        print(f"    Threshold for frozen: < 0.15 nm")
-        
-        is_frozen = mean_rmsd < 0.15
-        print(f"\n  Ice status: {'FROZEN' if is_frozen else 'MELTED'} (NVT: RMSD < 0.15 nm)")
-    else:
+    if minimal_report:
+        print("  Minimal mode: no energy/temp analysis.")
         is_frozen = True
-        print(f"\n  Ice status: Cannot determine (no density or RMSD data)")
+    else:
+        energies = np.array(energies)
+        temperatures = np.array(temperatures)
+        
+        # Production phase only
+        prod_start_idx = len(energies) // 2
+        prod_energies = energies[prod_start_idx:]
+        prod_temps = temperatures[prod_start_idx:]
+        
+        print(f"\nProduction phase statistics:")
+        print(f"  Energy:")
+        print(f"    Mean: {np.mean(prod_energies):.2f} kJ/mol")
+        print(f"    Std:  {np.std(prod_energies):.2f} kJ/mol")
+        print(f"    Drift: {(prod_energies[-1] - prod_energies[0])/prod_energies[0]*100:+.2f}%")
+        print(f"  Temperature:")
+        print(f"    Mean: {np.mean(prod_temps):.2f} K (target: {temperature_K} K)")
+        print(f"    Std:  {np.std(prod_temps):.2f} K")
+        
+        if _use_barostat and len(densities) > 0:
+            densities = np.array(densities)
+            prod_densities = densities[prod_start_idx:]
+            print(f"  Density:")
+            print(f"    Mean: {np.mean(prod_densities):.3f} g/cm³")
+            print(f"    Std:  {np.std(prod_densities):.3f} g/cm³")
+            print(f"    Ice Ih reference: ~0.92 g/cm³")
+            
+            is_frozen = np.mean(prod_densities) > 0.85
+            print(f"\n  Ice status: {'FROZEN' if is_frozen else 'MELTED'} (NPT: density > 0.85 g/cm³)")
+        elif len(rmsds) > 0:
+            rmsds_arr = np.array(rmsds)
+            prod_rmsds = rmsds_arr[prod_start_idx:]
+            mean_rmsd = np.mean(prod_rmsds)
+            print(f"  RMSD from minimized (NVT):")
+            print(f"    Mean: {mean_rmsd:.4f} nm")
+            print(f"    Std:  {np.std(prod_rmsds):.4f} nm")
+            print(f"    Threshold for frozen: < 0.15 nm")
+            
+            is_frozen = mean_rmsd < 0.15
+            print(f"\n  Ice status: {'FROZEN' if is_frozen else 'MELTED'} (NVT: RMSD < 0.15 nm)")
+        else:
+            is_frozen = True
+            print(f"\n  Ice status: Cannot determine (no density or RMSD data)")
     
     print(f"\n  Output files:")
     print(f"    Trajectory: {pdb_file}")
@@ -875,7 +963,7 @@ if __name__ == '__main__':
     parser.add_argument('--input', '-i', type=str, default=None,
                        help='Input structure file (CIF, PDB, or XYZ). e.g. ice.cif from GenIce. Overrides --molecules/--box.')
     parser.add_argument('--molecules', type=int, default=None,
-                       help='Number of water molecules (default: from --box or 32)')
+                       help='With --input: trim to N molecules (for CUDA OOM). Else: target count. Default: from --box or 32')
     parser.add_argument('--box', type=float, default=None,
                        help='Cubic box side length in nm (e.g. 0.5, 1.0). Overrides --molecules.')
     parser.add_argument('--ice-type', type=str, default='1h', choices=['1h', '1c'],
@@ -907,18 +995,34 @@ if __name__ == '__main__':
                             'Lazy-load enables single-GPU use.')
     parser.add_argument('--precision', type=str, default=None,
                        help='OpenMM precision: single, mixed, or double. Default: double for NPT+CUDA, mixed otherwise.')
+    parser.add_argument('--minimal', action='store_true',
+                       help='Minimal reporting: only progress and ns/day. Avoids getState(Energy) for faster runs. '
+                            'With CUDA, set OPENMM_CUDA_FAST_EXTERNAL_CALL=1 for extra speed. Use --report-interval 1.0 or higher.')
+    parser.add_argument('--debug-logs', action='store_true',
+                       help='Enable OPENMMML_DEBUG_LOGS for UMA batch timing breakdown (prep/atomicdata/inference). Use for profiling.')
+    parser.add_argument('--optimize-inference', action='store_true',
+                       help='Fast inference: no activation checkpointing, TF32. Increases GPU memory; use --optimize-inference-tf32-only if OOM.')
+    parser.add_argument('--optimize-inference-tf32-only', action='store_true',
+                       help='Enable only TF32 (keeps checkpointing). Lower memory, some speedup. Use if --optimize-inference causes OOM.')
     
     args = parser.parse_args()
 
-    if args.input is not None and (args.box is not None or args.molecules is not None):
-        print("Warning: --input given; ignoring --box and --molecules")
-    num_mol = args.molecules if args.box is None and args.input is None else None
+    if args.debug_logs:
+        import openmmml.models.umapotential_pythonforce_batch as _umab
+        _umab.DEBUG_LOGS = True
+
+    if args.input is not None and args.box is not None:
+        print("Warning: --input given; ignoring --box")
+    # --molecules with --input: trim to N molecules (for CUDA OOM). Without --input: target count.
+    num_mol = args.molecules
+    max_mol = args.molecules if args.input is not None else None
 
     try:
         success = run_simulation(
-            num_molecules=num_mol,
-            box_nm=args.box,
+            num_molecules=num_mol if args.input is None else None,
+            box_nm=args.box if args.input is None else None,
             input_file=args.input,
+            max_molecules=max_mol,
             ice_type=args.ice_type,
             num_beads=args.beads,
             temperature_K=args.temperature,
@@ -930,9 +1034,12 @@ if __name__ == '__main__':
             output_dir=args.output,
             report_interval_ps=args.report_interval,
             pdb_interval_ps=args.pdb_interval,
+            minimal_report=args.minimal,
             platform_name=args.platform,
             ml_device=args.ml_device,
-            precision_override=args.precision
+            precision_override=args.precision,
+            optimize_inference=args.optimize_inference,
+            optimize_inference_tf32_only=args.optimize_inference_tf32_only
         )
         sys.exit(0 if success else 1)
     except Exception as e:

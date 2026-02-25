@@ -8,7 +8,11 @@ The model is lazy-loaded on first force computation (when OpenMM has pushed its
 CUDA context), allowing PyTorch and OpenMM to share a single GPU without
 CUDA_ERROR_ILLEGAL_ADDRESS. Pass device='cuda' for GPU; device='cpu' or None
 for CPU.
+
+Profiling: set OPENMMML_DEBUG_LOGS=1 to enable per-callback timing breakdown
+(prep, atomicdata, inference) for bottleneck analysis.
 """
+import os
 import openmm
 from openmm import unit
 from openmmml.mlpotential import MLPotential, MLPotentialImpl, MLPotentialImplFactory
@@ -17,8 +21,21 @@ import numpy as np
 import torch
 
 # Debug controls (leave code paths intact, just silence output)
-DEBUG_LOGS = False
+# Set OPENMMML_DEBUG_LOGS=1 to enable profiling timings for bottleneck analysis
+DEBUG_LOGS = os.environ.get('OPENMMML_DEBUG_LOGS', '0').lower() in ('1', 'true', 'yes')
 DEBUG_FILE_LOGS = False
+
+
+def _fast_inference_settings():
+    """InferenceSettings with checkpoint disabled and tf32 enabled for speed.
+
+    torch.compile is not enabled because UMA equivariant layers have known
+    incompatibilities (shape mismatches in MoLE layers).
+    """
+    from dataclasses import replace
+    from fairchem.core.units.mlip_unit.api.inference import inference_settings_default
+    d = inference_settings_default()
+    return replace(d, activation_checkpointing=False, compile=False, tf32=True)
 
 
 class UMAPotentialPythonForceBatchedImplFactory(MLPotentialImplFactory):
@@ -56,6 +73,9 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
     ) -> None:
         """Add UMA force with batched RPMD support."""
         import torch
+
+        if inference_settings == "optimized":
+            inference_settings = _fast_inference_settings()
         
         try:
             from fairchem.core.calculate import pretrained_mlip
@@ -99,6 +119,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
             'batch_box_buffer': None,
             'max_beads': 0,
             'ase_atoms_templates': [],
+            'atomic_data_templates': [],  # Reused across steps; only pos/cell updated
         }
 
         # Config for lazy load (stored in closure scope)
@@ -122,6 +143,12 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                 torch.backends.cudnn.benchmark = True
                 torch.backends.cuda.matmul.allow_tf32 = True
                 torch.backends.cudnn.allow_tf32 = True
+                # Workaround for gradual simulation slowdown (NVFuser fallback). Set
+                # PYTORCH_NVFUSER_DISABLE=fallback or torch._C._jit_set_nvfuser_enabled(False).
+                try:
+                    torch._C._jit_set_nvfuser_enabled(False)
+                except Exception:
+                    pass
             predict_unit = pretrained_mlip.get_predict_unit(
                 _config['model_name'],
                 inference_settings=_config['inference_settings'],
@@ -314,15 +341,13 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                 
                 # PROFILING
                 t_prep = time.time() - batch_start
-                
+                t_atomic_start = time.time()
+
                 # =================================================================
                 # BATCHED EXECUTION: Single batched model call
                 # =================================================================
-                t_inference_start = time.time()
-                
-                # Create or reuse ASE Atoms templates
+                # Create or reuse ASE Atoms templates (for initial AtomicData creation only)
                 if len(cache['ase_atoms_templates']) < num_copies:
-                    # First time or increased number of beads - create new templates
                     cache['ase_atoms_templates'] = []
                     for i in range(num_copies):
                         if isPeriodic:
@@ -332,27 +357,40 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                         atoms_ase.info['charge'] = charge
                         atoms_ase.info['spin'] = spin
                         cache['ase_atoms_templates'].append(atoms_ase)
-                
-                # Update positions (and cell if periodic) in cached templates
-                data_list = []
+
+                # Create or reuse AtomicData templates (P3: avoid per-step from_ase)
+                atomic_templates = cache['atomic_data_templates']
+                if len(atomic_templates) < num_copies:
+                    for i in range(len(atomic_templates), num_copies):
+                        atoms_ase = cache['ase_atoms_templates'][i]
+                        atoms_ase.set_positions(all_pos_angstrom[i])
+                        if isPeriodic and all_boxes is not None:
+                            atoms_ase.set_cell(all_boxes[i] * 10.0)
+                        data = AtomicData.from_ase(
+                            atoms_ase,
+                            task_name=valid_dataset_name,
+                            r_edges=False,
+                            r_data_keys=['spin', 'charge'],
+                        )
+                        data.sid = [f"bead-{i}"]
+                        atomic_templates.append(data)
+
+                # Update positions and cell in place (no AtomicData.from_ase per step)
                 for i in range(num_copies):
-                    atoms_ase = cache['ase_atoms_templates'][i]
-                    atoms_ase.set_positions(all_pos_angstrom[i])
-                    if isPeriodic and all_boxes is not None:
-                        atoms_ase.set_cell(all_boxes[i] * 10.0)
-                    
-                    data = AtomicData.from_ase(
-                        atoms_ase,
-                        task_name=valid_dataset_name,
-                        r_edges=False,
-                        r_data_keys=['spin', 'charge'],
+                    atomic_templates[i].pos = torch.from_numpy(
+                        np.ascontiguousarray(all_pos_angstrom[i], dtype=np.float32)
                     )
-                    data.sid = [f"bead-{i}"]
-                    data_list.append(data)
-                
+                    if isPeriodic and all_boxes is not None:
+                        cell_np = np.ascontiguousarray(all_boxes[i] * 10.0, dtype=np.float32)
+                        atomic_templates[i].cell = torch.from_numpy(cell_np).unsqueeze(0)
+
+                data_list = atomic_templates[:num_copies]
+                t_atomicdata = time.time() - t_atomic_start
+                t_inference_start = time.time()
+
                 batch_data = atomicdata_list_to_batch(data_list)
                 batch_indices = batch_data.batch.numpy()
-                batch_data = batch_data.to(device)
+                batch_data = batch_data.to(device, non_blocking=True)
                 
                 with torch.no_grad():
                     try:
@@ -372,8 +410,11 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                             print(f"CUDA error in batched inference: {error_info}")
                         raise
                 
-                energies_ev = pred['energy'].detach().cpu().numpy()
-                forces_ev_ang = pred['forces'].detach().cpu().numpy()
+                # Start both GPU->CPU transfers in parallel, then sync via .numpy()
+                energies_t = pred['energy'].detach().to('cpu', non_blocking=True)
+                forces_t = pred['forces'].detach().to('cpu', non_blocking=True)
+                energies_ev = energies_t.numpy()
+                forces_ev_ang = forces_t.numpy()
                 
                 t_inference = time.time() - t_inference_start
                 if DEBUG_LOGS:
@@ -408,7 +449,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                 batch_time = time.time() - batch_start
                 if DEBUG_LOGS:
                     print(f"BATCH COMPLETED in {batch_time:.3f}s for {num_copies} beads ({batch_time/num_copies*1000:.1f} ms/bead)", flush=True)
-                    print(f"   Breakdown: prep={t_prep*1000:.1f}ms, inference={t_inference*1000:.1f}ms", flush=True)
+                    print(f"   Breakdown: prep={t_prep*1000:.1f}ms, atomicdata={t_atomicdata*1000:.1f}ms, inference={t_inference*1000:.1f}ms", flush=True)
                     print(f"   Speedup vs sequential: {num_copies * 41.4 / (t_inference*1000):.2f}x (ideal: {num_copies}x)", flush=True)
                 
                 if device == 'cuda':

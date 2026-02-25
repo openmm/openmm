@@ -72,37 +72,31 @@ def molecules_for_box(box_nm: float, density_g_cm3: float = ICE_DENSITY_G_CM3) -
 
 
 def _get_ice_atoms(num_molecules: int, ice_type: str = "1h") -> "atoms":
-    """Get ASE Atoms for ice with at least num_molecules."""
+    """Get ASE Atoms for ice with at least num_molecules. Tries GenIce, then GenIce2, then embedded CIF."""
     n_per_cell = 12 if ice_type == "1h" else 8  # ice Ic: 8 molecules per cell (Fd-3m)
-    try:
-        r = max(1, int(np.ceil((num_molecules / n_per_cell) ** (1 / 3))))
-        with tempfile.NamedTemporaryFile(suffix=".y", delete=False) as f:
-            outpath = f.name
-        result = subprocess.run(
-            [
-                "genice2",
-                ice_type,
-                "--rep",
-                str(r),
-                str(r),
-                str(r),
-                "-f",
-                "y",
-                "-o",
-                outpath,
-                "--seed",
-                "42",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if result.returncode == 0:
-            atoms = read(outpath, format="yaml")
-            Path(outpath).unlink(missing_ok=True)
-            return atoms
-    except Exception:
-        pass
+    r = max(1, int(np.ceil((num_molecules / n_per_cell) ** (1 / 3))))
+    rep_args = [str(r), str(r), str(r)]
+
+    for cmd, out_format in [
+        (["genice", ice_type, "--rep"] + rep_args + ["--format", "cif"], "cif"),
+        (["genice2", ice_type, "--rep"] + rep_args + ["--format", "cif"], "cif"),
+        (["genice2", ice_type, "--rep"] + rep_args + ["-f", "y"], "yaml"),
+    ]:
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            stdout = result.stdout.strip() if result.stdout else ""
+            if result.returncode == 0 and stdout:
+                with tempfile.NamedTemporaryFile(suffix=".cif" if out_format == "cif" else ".y", delete=False, mode="w") as f:
+                    f.write(stdout)
+                    outpath = f.name
+                try:
+                    atoms = read(outpath, format=out_format)
+                    if len(atoms) >= num_molecules * 3:
+                        return atoms
+                finally:
+                    Path(outpath).unlink(missing_ok=True)
+        except Exception:
+            pass
 
     # Fallback: embedded CIF
     from io import StringIO

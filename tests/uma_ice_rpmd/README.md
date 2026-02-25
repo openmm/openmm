@@ -19,8 +19,8 @@ The initial structure can come from:
   genice 1h --rep 2 2 2 --format cif > ice.cif
   python test_uma_ice_rpmd.py --input ice.cif --beads 8 ...
   ```
-- **GenIce2** (optional): `pip install genice2` for proton-disordered ice
-- **Embedded CIF fallback**: Ice Ih from Avogadro/COD (12 molecules) replicated to target size
+- **Auto GenIce** (when no `--input`): The script calls GenIce or GenIce2 to generate ice. Tries `genice` first, then `genice2`. Install with `pip install genice` or `pip install genice2`.
+- **Embedded CIF fallback**: Ice Ih from Avogadro/COD (12 molecules) if GenIce unavailable
 
 ## Key Physics
 
@@ -59,6 +59,13 @@ Requires ASE. Optional: `pip install genice2` for proton-disordered ice.
 genice 1h --rep 2 2 2 --format cif > ice.cif
 python test_uma_ice_rpmd.py --input ice.cif --beads 8 --temperature 243 \
     --dt 1.0 --equil 5 --prod 50 --platform cpu
+```
+
+### CUDA with limited memory (use --molecules to trim)
+```bash
+# ice.cif has 128 molecules; trim to 32 for ~12 GB GPU
+python test_uma_ice_rpmd.py --input ice.cif --molecules 32 --beads 4 --temperature 243 \
+    --dt 1.0 --equil 5 --prod 50 --platform cuda --pressure 0
 ```
 
 ### Quick Test (by box size)

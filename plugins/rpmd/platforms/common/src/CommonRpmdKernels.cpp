@@ -579,10 +579,30 @@ void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         // NEW BATCHED PATH: Evaluate all copies at once
         // printf("DEBUG: Using batched RPMD evaluation for %d beads\n", numCopies);
         
-        // 1. Collect all bead positions from GPU
+        // 1. Collect all bead positions from GPU (single download, then slice - avoids 8x redundant transfers)
         std::vector<std::vector<Vec3>> allBeadPositions(numCopies);
-        for (int i = 0; i < numCopies; i++) {
-            downloadPositionsFromGPU(i, allBeadPositions[i]);
+        int paddedParticles = cc.getPaddedNumAtoms();
+        bool useDoublePrecision = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision());
+        if (useDoublePrecision) {
+            vector<mm_double4> posData(paddedParticles * numCopies);
+            positions.download(posData);
+            for (int i = 0; i < numCopies; i++) {
+                allBeadPositions[i].resize(numParticles);
+                int offset = i * paddedParticles;
+                for (int j = 0; j < numParticles; j++) {
+                    allBeadPositions[i][j] = Vec3(posData[offset + j].x, posData[offset + j].y, posData[offset + j].z);
+                }
+            }
+        } else {
+            vector<mm_float4> posData(paddedParticles * numCopies);
+            positions.download(posData);
+            for (int i = 0; i < numCopies; i++) {
+                allBeadPositions[i].resize(numParticles);
+                int offset = i * paddedParticles;
+                for (int j = 0; j < numParticles; j++) {
+                    allBeadPositions[i][j] = Vec3(posData[offset + j].x, posData[offset + j].y, posData[offset + j].z);
+                }
+            }
         }
         
         // 2. Get the PythonForce implementation and call batched evaluation
