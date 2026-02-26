@@ -948,7 +948,7 @@ class Modeller(object):
                                         if acceptor.residue != residue:
                                             acceptorPos = self.positions[acceptor.index]
                                             if isHbond(ne2Pos, he2Pos, acceptorPos):
-                                                nd1IsBonded = True
+                                                ne2IsBonded = True
                                                 break
                                 if ne2IsBonded and not nd1IsBonded:
                                     variant = 'HIE'
