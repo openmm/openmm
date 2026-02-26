@@ -25,6 +25,9 @@ import torch
 DEBUG_LOGS = os.environ.get('OPENMMML_DEBUG_LOGS', '0').lower() in ('1', 'true', 'yes')
 DEBUG_FILE_LOGS = False
 
+# Unit conversion: eV/Å -> kJ/(mol·nm) for forces (1 kJ/mol/nm = 0.0103642 eV/Å)
+EV_ANG_TO_KJ_NM = 96.4853
+
 
 def _fast_inference_settings():
     """InferenceSettings with checkpoint disabled and tf32 enabled for speed.
@@ -85,6 +88,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
 
         try:
             from ase import Atoms
+            from ase.geometry import wrap_positions
         except ImportError as e:
             raise ImportError(f"Failed to import ase: {e}")
 
@@ -195,13 +199,26 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                     pos_nm = all_pos_nm[:n_atoms].copy()  # Explicit copy
 
                 pos_angstrom = np.ascontiguousarray(pos_nm * 10.0)  # Ensure contiguous
-                
+
                 # Create ASE atoms (this is CPU-side)
                 atoms_ase = Atoms(symbols=symbols, positions=pos_angstrom, pbc=isPeriodic)
                 atoms_ase.info['charge'] = charge
                 atoms_ase.info['spin'] = spin
 
-                # Create AtomicData (initially CPU-side)
+                # Set cell before from_ase so wrap_positions (inside from_ase) uses correct box.
+                # Without this, from_ase would wrap using a default/zero cell and positions would be wrong.
+                if isPeriodic:
+                    try:
+                        box = state.getPeriodicBoxVectors(asNumpy=True)
+                        if box is not None:
+                            cell_angstrom = np.ascontiguousarray(
+                                box.value_in_unit(unit.nanometer) * 10.0, dtype=np.float64
+                            )
+                            atoms_ase.set_cell(cell_angstrom)
+                    except Exception as box_err:
+                        raise ValueError(f"Box vector error in single-copy: {box_err}") from box_err
+
+                # Create AtomicData (initially CPU-side). from_ase wraps positions using atoms' cell.
                 data = AtomicData.from_ase(atoms_ase, task_name=valid_dataset_name, r_edges=False, r_data_keys=['spin', 'charge'])
 
                 
@@ -256,7 +273,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
 
                 # Convert units (all CPU now)
                 energy_kj = energy_ev * 96.4853
-                molecular_forces = forces_ev_ang * (96.4853 / 10.0)
+                molecular_forces = forces_ev_ang * EV_ANG_TO_KJ_NM
 
                 if cache['full_forces_buffer'] is not None:
                     forces_kj_nm = cache['full_forces_buffer'].copy()
@@ -308,7 +325,6 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                 
                 # Collect all positions and boxes (write directly into pre-allocated buffers)
                 for bead_idx, state in enumerate(states):
-                    # Positions are already wrapped by C++ when State is built in executeBatch
                     pos = state.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
                     if atom_indices is not None:
                         all_pos_nm[bead_idx] = pos[atom_indices]
@@ -338,6 +354,19 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                 
                 # Convert to Angstroms (views into buffer, no copy)
                 all_pos_angstrom = all_pos_nm * 10.0
+
+                # Wrap positions into primary cell before model input (Fairchem LAMMPS convention).
+                # MD coordinates are unwrapped; without wrapping, molecules crossing boundaries
+                # appear disconnected to the model, producing wrong forces.
+                if isPeriodic and all_boxes is not None:
+                    for i in range(num_copies):
+                        cell_angstrom = np.ascontiguousarray(all_boxes[i] * 10.0, dtype=np.float64)
+                        all_pos_angstrom[i] = wrap_positions(
+                            all_pos_angstrom[i],
+                            cell=cell_angstrom,
+                            pbc=True,
+                            eps=0,
+                        )
                 
                 # PROFILING
                 t_prep = time.time() - batch_start
@@ -430,7 +459,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                 
                 forces_kj_nm_list = []
                 for i, forces_ev_ang_i in enumerate(forces_ev_ang_list):
-                    forces_kj_nm = forces_ev_ang_i * (96.4853 / 10.0)
+                    forces_kj_nm = forces_ev_ang_i * EV_ANG_TO_KJ_NM
                     
                     if cache['full_forces_buffer'] is not None:
                         forces_full = cache['full_forces_buffer'].copy()
