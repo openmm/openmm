@@ -1,0 +1,60 @@
+<ForceField>
+  <Info>
+    <!-- Monovalent ion parameters for TIP3P water from Aqvist (adapeted) in parm99.dat -->
+    <DateGenerated>2022-09-11T06:28:33.593081</DateGenerated>
+    <Source Source="parm/frcmod.ionsff99_tip3p" md5hash="7a95d0238cc433073d73ad21b478f7d0" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">parm/frcmod.ionsff99_tip3p</Source>
+    <Source Source="lib/atomic_ions.lib" md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">lib/atomic_ions.lib</Source>
+  </Info>
+  <AtomTypes>
+    <Type class="ionsff99_tip3p-Li+" element="Li" mass="6.94" name="ionsff99_tip3p-Li+"/><!--          0.029          lithium   pol: J. Phys. Chem. 11,1541,(1978) -->
+    <Type class="ionsff99_tip3p-Na+" element="Na" mass="22.99" name="ionsff99_tip3p-Na+"/><!--          0.250          sodium    pol: J. Phys. Chem. 11,1541,(1978) -->
+    <Type class="ionsff99_tip3p-K+" element="K" mass="39.10" name="ionsff99_tip3p-K+"/><!--          1.060          potassium -->
+    <Type class="ionsff99_tip3p-Rb+" element="Rb" mass="85.47" name="ionsff99_tip3p-Rb+"/><!--                         rubidium -->
+    <Type class="ionsff99_tip3p-Cs+" element="Cs" mass="132.91" name="ionsff99_tip3p-Cs+"/><!--                         cesium -->
+    <Type class="ionsff99_tip3p-F-" element="F" mass="19.00" name="ionsff99_tip3p-F-"/><!--          0.320          fluorine -->
+    <Type class="ionsff99_tip3p-Cl-" element="Cl" mass="35.45" name="ionsff99_tip3p-Cl-"/><!--          1.910          chlorine  (Applequist) -->
+    <Type class="ionsff99_tip3p-Br-" element="Br" mass="79.90" name="ionsff99_tip3p-Br-"/><!--          2.880          bromine   (Applequist) -->
+    <Type class="ionsff99_tip3p-I-" element="I" mass="126.9" name="ionsff99_tip3p-I-"/><!--          4.690          iodine    (Applequist) -->
+  </AtomTypes>
+  <Residues>
+    <Residue name="BR">
+      <Atom charge="-1.0" name="BR" type="ionsff99_tip3p-Br-"/>
+    </Residue>
+    <Residue name="CL">
+      <Atom charge="-1.0" name="CL" type="ionsff99_tip3p-Cl-"/>
+    </Residue>
+    <Residue name="CS">
+      <Atom charge="1.0" name="CS" type="ionsff99_tip3p-Cs+"/>
+    </Residue>
+    <Residue name="F">
+      <Atom charge="-1.0" name="F" type="ionsff99_tip3p-F-"/>
+    </Residue>
+    <Residue name="I">
+      <Atom charge="-1.0" name="I" type="ionsff99_tip3p-I-"/>
+    </Residue>
+    <Residue name="K">
+      <Atom charge="1.0" name="K" type="ionsff99_tip3p-K+"/>
+    </Residue>
+    <Residue name="LI">
+      <Atom charge="1.0" name="LI" type="ionsff99_tip3p-Li+"/>
+    </Residue>
+    <Residue name="NA">
+      <Atom charge="1.0" name="NA" type="ionsff99_tip3p-Na+"/>
+    </Residue>
+    <Residue name="RB">
+      <Atom charge="1.0" name="RB" type="ionsff99_tip3p-Rb+"/>
+    </Residue>
+  </Residues>
+  <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+    <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="0.0765672" sigma="0.20259036850511314" type="ionsff99_tip3p-Li+"/><!--              Li+ Aqvist JPC 1990,94,8021. (adapted) -->
+    <Atom epsilon="0.01158968" sigma="0.3328397610972308" type="ionsff99_tip3p-Na+"/><!--             Na+ Aqvist JPC 1990,94,8021. (adapted) -->
+    <Atom epsilon="0.001372352" sigma="0.4736017585634044" type="ionsff99_tip3p-K+"/><!--            K+  Aqvist JPC 1990,94,8021. (adapted) -->
+    <Atom epsilon="0.0007112800000000001" sigma="0.5266993221645686" type="ionsff99_tip3p-Rb+"/><!--             Rb+ Aqvist JPC 1990,94,8021. (adapted) -->
+    <Atom epsilon="0.00033723039999999997" sigma="0.6049202296172904" type="ionsff99_tip3p-Cs+"/><!--           Cs+ Aqvist JPC 1990,94,8021. (adapted) -->
+    <Atom epsilon="0.255224" sigma="0.3118145513491188" type="ionsff99_tip3p-F-"/><!--               Gough et al. JCC 13,(1992),963. -->
+    <Atom epsilon="1.1087600000000002" sigma="0.3470941405874762" type="ionsff99_tip3p-Cl-"/><!--               Fox, JPCB,102,8070,(98),flex.mdl CHCl3 -->
+    <Atom epsilon="1.33888" sigma="0.39555903085431066" type="ionsff99_tip3p-Br-"/><!--               Junmei(?) -->
+    <Atom epsilon="1.6736000000000002" sigma="0.41872239752595947" type="ionsff99_tip3p-I-"/><!--                JCC,7,(1986),230; -->
+  </NonbondedForce>
+</ForceField>
