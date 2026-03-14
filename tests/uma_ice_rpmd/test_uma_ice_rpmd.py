@@ -447,7 +447,7 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
                    output_dir='.', report_interval_ps=1.0, pdb_interval_ps=0.2,
                    platform_name='cuda', ml_device=None, precision_override=None,
                    minimal_report=False, optimize_inference=False,
-                   optimize_inference_tf32_only=False):
+                   optimize_inference_tf32_only=False, inference_turbo_rpmd=False):
     """
     Run RPMD simulation of ice.
     
@@ -492,6 +492,10 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     optimize_inference_tf32_only : bool
         If True, enable only TF32 (keeps activation checkpointing). Lower memory,
         some speedup (default: False).
+    inference_turbo_rpmd : bool
+        If True, use Fairchem **turbo_rpmd** preset with batched RPMD: TF32, no
+        checkpoint, **merge_mole=True** (constant composition per bead), **compile=False**
+        (UMA-safe). Often faster than ``--optimize-inference``; may use more VRAM.
 
     Returns
     -------
@@ -545,7 +549,13 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     print(f"  ML model device: {_ml_device or 'auto (library default)'}")
 
     create_kwargs = {'task_name': 'omol', 'charge': 0, 'spin': 1, 'device': _ml_device}
-    if optimize_inference or optimize_inference_tf32_only:
+    if inference_turbo_rpmd:
+        create_kwargs['inference_settings'] = 'turbo_rpmd'
+        print(
+            "  Inference: turbo_rpmd (TF32, no checkpoint, merge_mole, compile=off; "
+            "pairs with batched RPMD)"
+        )
+    elif optimize_inference or optimize_inference_tf32_only:
         from dataclasses import replace
         from fairchem.core.units.mlip_unit.api.inference import inference_settings_default
         d = inference_settings_default()
@@ -1096,6 +1106,9 @@ if __name__ == '__main__':
                        help='Fast inference: no activation checkpointing, TF32. Increases GPU memory; use --optimize-inference-tf32-only if OOM.')
     parser.add_argument('--optimize-inference-tf32-only', action='store_true',
                        help='Enable only TF32 (keeps checkpointing). Lower memory, some speedup. Use if --optimize-inference causes OOM.')
+    parser.add_argument('--inference-turbo-rpmd', action='store_true',
+                       help='Turbo-like Fairchem preset for batched RPMD: TF32, no checkpoint, merge_mole (compile off). '
+                            'Overrides --optimize-inference when set.')
     
     args = parser.parse_args()
 
@@ -1131,7 +1144,8 @@ if __name__ == '__main__':
             ml_device=args.ml_device,
             precision_override=args.precision,
             optimize_inference=args.optimize_inference,
-            optimize_inference_tf32_only=args.optimize_inference_tf32_only
+            optimize_inference_tf32_only=args.optimize_inference_tf32_only,
+            inference_turbo_rpmd=args.inference_turbo_rpmd,
         )
         sys.exit(0 if success else 1)
     except Exception as e:

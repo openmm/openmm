@@ -1,0 +1,19 @@
+# Same physics as in.ice_uma_openmm_match.lmp but NO dump — match OpenMM --no-trajectory
+# for wall-clock ns/day comparison (I/O removed).
+
+units           metal
+atom_style      atomic
+boundary        p p p
+read_data       data.ice_uma
+comm_modify     cutoff 12.0
+timestep        0.001
+
+minimize        0.0 1.0e-6 500 150
+
+velocity        all create 243.0 284759 dist gaussian
+velocity        all scale 243.0
+fix             nve all nve
+fix             lang all langevin 243.0 243.0 1.0 284759 zero yes
+thermo_style    custom step time temp pe ke etotal
+thermo          100
+run             100

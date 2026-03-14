@@ -18,6 +18,7 @@ This simulation tests the stability of ice at sub-freezing temperatures using:
 | **Same ML stack** | LAMMPS (`fix external`) and OpenMM both call Fairchem **`predict(AtomicData)`**—no faster LAMMPS-only API. |
 | **CUDA sync (optional)** | openmmml avoids **`torch.cuda.synchronize()`** / **`empty_cache()`** in the hot path by default. Set **`OPENMMML_CUDA_SYNC_AFTER_FORCE=1`** only if debugging OOM or async errors (hurts throughput). |
 | **Profiling** | **`OPENMMML_DEBUG_LOGS=1`** plus **`--debug-logs`** on `test_uma_ice_rpmd.py` prints per-step **prep / atomicdata / inference** ms so you can see where time goes. |
+| **Turbo + batching (RPMD)** | Batched RPMD already calls UMA once per step with all beads. **`--inference-turbo-rpmd`** (or `createSystem(..., inference_settings='turbo_rpmd')`) turns on **TF32**, **no activation checkpointing**, and Fairchem **`merge_mole=True`** (constant composition across beads). Full Fairchem **turbo** also sets **`torch.compile`**; that is **off** here for UMA stability. **`--optimize-inference`** is TF32 + no checkpoint but **without** merge_mole (slightly lower peak VRAM in some cases). |
 
 Example (fast classical comparison to LAMMPS):
 
@@ -26,6 +27,25 @@ OPENMMML_DEBUG_LOGS=1 python test_uma_ice_rpmd.py --molecules 128 --beads 1 --pl
   --ml-device cuda --temperature 243 --pressure 0 --dt 1.0 --equil 0 --prod 0.1 \
   --model uma-s-1p1-pythonforce-batch --debug-logs --minimal
 ```
+
+### Ice order vs disorder (`run_openmm_ice_lammps_match.py`)
+
+To quantify **melting / loss of crystal order** (oxygen framework):
+
+| Quantity | Interpretation |
+|----------|----------------|
+| **Q6** (Steinhardt *l*=6, mean over O) | Higher in **ordered** ice-like shells; **drops** as structure becomes liquid-like / amorphous. |
+| **q_tet** (Chau–Harding, mean over O) | **1** = perfect tetrahedron of 4 nearest O neighbors; **lower** when second shell or disorder breaks tetrahedral H-bond geometry. |
+
+Requires **scipy** (uses `sph_harm_y`). First O–O shell is included with **r** in ~(2.0, 3.7) Å (see `ice_order_parameters.py`).
+
+```bash
+python run_openmm_ice_lammps_match.py --steps 5000 --report-every 100 --order-every 100 \
+  --order-csv ice_order.csv --platform cuda --ml-device cuda --model uma-s-1p1-pythonforce-batch
+# Or omit --order-every: --order-csv alone defaults order sampling to --report-every (CSV + Q6/q_tet on log lines).
+```
+
+Use **`--report-every`** ≤ **`--order-every`** (or equal) so order lines are printed when you expect. Post-process **`ice_order.csv`** (e.g. plot `q6_mean` vs `time_ps`).
 
 ## Ice Structure
 
@@ -230,8 +250,12 @@ python lammps/build_lammps_ice_data.py -n 128   # data.ice_uma
 # Default minimization is short (~1 min); full LAMMPS-like minimize = many UMA evals (looks frozen).
 python run_openmm_ice_lammps_match.py --steps 100 --platform cuda --ml-device cuda \
   --model uma-s-1p1-pythonforce-batch -o ice_after_openmm_lammps_match.pdb
-# Fast MD-only test (same starting geometry as LAMMPS data file):
-python run_openmm_ice_lammps_match.py --skip-minimize --steps 100 ...
+# Writes full trajectory by default: ice_after_openmm_lammps_match.dcd (every step). Ovito: open DCD + load topology from PDB.
+# Optional multi-frame XYZ: --xyz traj.xyz   |  Speed (printed at end): ~0.2–1 ns/day typical for 128 H2O UMA on one GPU.
+# Fast MD-only, no trajectory: --no-trajectory
+python run_openmm_ice_lammps_match.py --skip-minimize --steps 100 --no-trajectory ...
+
+**LAMMPS same settings:** `lammps/in.ice_uma_openmm_match.lmp` (+ optional `_notraj` for speed). See `lammps/README.md` § OpenMM-matched deck.
 ```
 
 ### Same-structure benchmark (OpenMM vs LAMMPS pipeline)

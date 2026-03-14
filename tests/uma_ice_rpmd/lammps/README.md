@@ -35,6 +35,37 @@ If you only have `.lammpstrj`:
 RPMD in LAMMPS needs extra packages (`fix pimd`, etc.); this deck is the **direct classical analogue**
 of a **1-bead** run so forces and geometry match.
 
+## OpenMM-matched deck (fair benchmark)
+
+To match **`run_openmm_ice_lammps_match.py`** defaults as closely as LAMMPS allows:
+
+| Setting | OpenMM | LAMMPS `in.ice_uma_openmm_match.lmp` |
+|--------|--------|--------------------------------------|
+| Structure | `data.ice_uma` | same `read_data` |
+| Minimize cap | `--minimize-iters 150` | `minimize … 150` (max **150** evals) |
+| T / Langevin γ | 243 K, 1/ps | `fix langevin 243 243 1.0` |
+| Velocity seed | `--seed 284759` | `velocity create … 284759` |
+| Langevin RNG seed | same integrator seed | `284759` on fix langevin |
+| Δt | 1 fs | `timestep 0.001` (metal) |
+| MD steps | `--steps 100` | `run 100` |
+| Trajectory | every step | `dump … 1` (or **notraj** deck) |
+
+**With trajectory (like OpenMM DCD/XYZ every step):**
+```bash
+cd tests/uma_ice_rpmd/lammps
+python run_lammps_uma_ice.py --infile in.ice_uma_openmm_match.lmp --device cuda --molecules 128
+```
+
+**No dump — match OpenMM `--no-trajectory` (pure ns/day):**
+```bash
+python run_lammps_uma_ice.py --infile in.ice_uma_openmm_match_notraj.lmp --device cuda --molecules 128
+```
+
+Time wall seconds and compute **ns/day** = `(100 fs) / (time_s) * 86400 / 1e6` or use printed thermo. OpenMM:
+```bash
+OPENMM_CUDA_FAST_EXTERNAL_CALL=1 python ../run_openmm_ice_lammps_match.py --no-trajectory --steps 100 ...
+```
+
 ## Prerequisites
 
 1. **LAMMPS with Python interface** — `pip install lammps` is enough. The wheel links **MPICH** (`libmpi.so.12`). Conda **OpenMPI** only provides `libmpi.so.40`, so you still get *cannot open libmpi.so.12* unless you add MPICH:

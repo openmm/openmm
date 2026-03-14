@@ -19,6 +19,8 @@ Usage:
   python run_openmm_ice_lammps_match.py --steps 100 --platform cuda --ml-device cuda
   # Full trajectory (DCD every step + optional XYZ for Ovito):
   python run_openmm_ice_lammps_match.py --steps 100 --trajectory run.dcd --xyz run.xyz
+  # Track ice disorder (Q6 ↓, q_tet ↓ as structure melts):
+  python run_openmm_ice_lammps_match.py --steps 5000 --order-every 100 --order-csv order.csv
 """
 from __future__ import annotations
 
@@ -55,6 +57,12 @@ from openmmml import MLPotential
 # Reuse parser from benchmark (same file layout)
 sys.path.insert(0, str(_SCRIPT_DIR))
 from benchmark_same_structure_openmm_vs_lammps import parse_lammps_data
+
+try:
+    from ice_order_parameters import ice_order_metrics, positions_nm_to_oxygen_angstrom
+except ImportError:
+    ice_order_metrics = None  # type: ignore
+    positions_nm_to_oxygen_angstrom = None  # type: ignore
 
 
 def water_topology(n_molecules: int) -> Topology:
@@ -115,9 +123,35 @@ def main() -> None:
         metavar="PATH.xyz",
         help="Optional extended trajectory as multi-frame XYZ (Ovito-friendly; O/H labels)",
     )
-    ap.add_argument("--no-trajectory", action="store_true", help="Do not write DCD")
+    ap.add_argument(
+        "--no-trajectory",
+        action="store_true",
+        help="No DCD (faster MD; only final PDB). Default is to write <output>.dcd every step.",
+    )
     ap.add_argument("--report-every", type=int, default=10)
+    ap.add_argument(
+        "--order-every",
+        type=int,
+        default=0,
+        help="If >0, print mean Q6 + q_tet (ice order) every N steps. Requires scipy. "
+        "Q6 = Steinhardt l=6 (drops as ice disorders); q_tet = tetrahedral order 0–1.",
+    )
+    ap.add_argument(
+        "--order-csv",
+        type=Path,
+        default=None,
+        metavar="PATH.csv",
+        help="Write order metrics CSV (also sets --order-every to --report-every if you omit --order-every)",
+    )
     args = ap.parse_args()
+
+    if args.order_csv is not None and args.order_every <= 0:
+        args.order_every = max(1, args.report_every)
+        print(
+            f"  NOTE: --order-csv without --order-every → using --order-every={args.order_every} "
+            f"(same as report interval). CSV updates every {args.order_every} steps.",
+            flush=True,
+        )
 
     if not args.data.is_file():
         print(f"Missing {args.data} — run: python {_LAMMPS_DIR / 'build_lammps_ice_data.py'} -n 128")
@@ -199,7 +233,7 @@ def main() -> None:
 
     context.setVelocitiesToTemperature(args.temperature * unit.kelvin, args.seed)
 
-    topology.setPeriodicBoxVectors(a, b, c)
+    topology.setPeriodicBoxVectors((a, b, c))
     out = args.output or (
         _SCRIPT_DIR / f"ice_openmm_lammps_match_T{args.temperature:.0f}_steps{args.steps}.pdb"
     )
@@ -228,9 +262,12 @@ def main() -> None:
         xyz_f = open(args.xyz, "w")
         print(f"  Trajectory XYZ: {args.xyz}")
 
+    # Orthorhombic cell (Å) → nm; DCD triclinic pack can fail if angles aren’t plain floats
+    _uc_nm = Vec3(float(lx) * 0.1, float(ly) * 0.1, float(lz) * 0.1) * unit.nanometer
+
     def _write_traj_frame(step_index: int, pos_nm) -> None:
         if dcd is not None and (step_index == 0 or step_index % args.traj_every == 0):
-            dcd.writeModel(pos_nm, periodicBoxVectors=(a, b, c))
+            dcd.writeModel(pos_nm, unitCellDimensions=_uc_nm)
         if xyz_f is not None and (step_index == 0 or step_index % args.traj_every == 0):
             pos_ang = np.array(
                 [[p[i].value_in_unit(unit.nanometer) * 10.0 for i in range(3)] for p in pos_nm]
@@ -244,46 +281,92 @@ def main() -> None:
     st0 = context.getState(getPositions=True)
     _write_traj_frame(0, st0.getPositions())
 
+    box_ang = np.array([float(lx), float(ly), float(lz)], dtype=np.float64)
+    order_csv_f = None
+    if args.order_every > 0:
+        if ice_order_metrics is None:
+            print("  WARNING: --order-every ignored (ice_order_parameters import failed)", flush=True)
+        else:
+            print(
+                f"  Order params every {args.order_every} steps: Q6 (Steinhardt), q_tet (1=ideal tetrahedron)",
+                flush=True,
+            )
+            if args.order_csv:
+                order_csv_f = open(args.order_csv, "w")
+                order_csv_f.write("step,time_ps,T_K,PE_kj_mol,q6_mean,q6_std,q_tet_mean,q_tet_std\n")
+
     print(f"\n--- MD {args.steps} steps @ {args.dt_fs} fs (cf. LAMMPS run 100) ---")
     dt_ps = args.dt_fs / 1000.0
     t_md = time.perf_counter()
-    # Instantaneous T from velocities (avoids kJ/mol vs joule ambiguity in getKineticEnergy).
-    kB_J_K = unit.BOLTZMANN_CONSTANT_kB.value_in_unit(unit.joule / unit.kelvin)
-    masses_kg = []
-    for atom in topology.atoms():
-        masses_kg.append(atom.element.mass.value_in_unit(unit.dalton) * 1.66053906660e-27)
+    # Same T as OpenMM StateDataReporter: T = 2*KE/(dof*R), KE = getKineticEnergy() [kJ/mol]
     dof = 3 * n
+    R = unit.MOLAR_GAS_CONSTANT_R
 
     def _instantaneous_T_K(st_) -> float:
-        ke_j = 0.0
-        for i, v in enumerate(st_.getVelocities()):
-            vx = v[0].value_in_unit(unit.nanometer / unit.picosecond)
-            vy = v[1].value_in_unit(unit.nanometer / unit.picosecond)
-            vz = v[2].value_in_unit(unit.nanometer / unit.picosecond)
-            v_si = np.array([vx, vy, vz]) * 1e3  # nm/ps -> m/s
-            ke_j += 0.5 * masses_kg[i] * float(np.dot(v_si, v_si))
-        return (2.0 * ke_j) / (dof * kB_J_K) if dof else 0.0
+        if hasattr(integrator, "computeSystemTemperature"):
+            return integrator.computeSystemTemperature().value_in_unit(unit.kelvin)
+        ke = st_.getKineticEnergy()
+        return (2 * ke / (dof * R)).value_in_unit(unit.kelvin)
 
-    for k in range(0, args.steps, args.report_every):
-        n_sub = min(args.report_every, args.steps - k)
-        integrator.step(n_sub)
-        st = context.getState(getEnergy=True, getVelocities=True)
-        pe = st.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
-        temp = _instantaneous_T_K(st)
-        step = k + n_sub
-        print(f"  step {step:5d}  t={step * dt_ps:.4f} ps  T={temp:7.2f} K  PE={pe:14.2f} kJ/mol")
-    print(f"  MD wall time: {time.perf_counter() - t_md:.1f} s")
+    write_traj = dcd is not None or xyz_f is not None
+    for step in range(1, args.steps + 1):
+        integrator.step(1)
+        if write_traj and step % args.traj_every == 0:
+            stp = context.getState(getPositions=True)
+            _write_traj_frame(step, stp.getPositions())
+        if step % args.report_every == 0 or step == args.steps:
+            st = context.getState(getEnergy=True, getVelocities=True)
+            pe = st.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
+            temp = _instantaneous_T_K(st)
+            line = f"  step {step:5d}  t={step * dt_ps:.4f} ps  T={temp:7.2f} K  PE={pe:14.2f} kJ/mol"
+            if (
+                args.order_every > 0
+                and ice_order_metrics is not None
+                and (step % args.order_every == 0 or step == args.steps)
+            ):
+                pos_nm = context.getState(getPositions=True).getPositions()
+                pos_ang = positions_nm_to_oxygen_angstrom(pos_nm)
+                om = ice_order_metrics(pos_ang, box_ang)
+                line += f"  Q6={om.q6_mean:.3f}  q_tet={om.q_tet_mean:.3f}"
+                if order_csv_f is not None:
+                    order_csv_f.write(
+                        f"{step},{step * dt_ps:.6f},{temp:.4f},{pe:.6f},"
+                        f"{om.q6_mean:.6f},{om.q6_std:.6f},{om.q_tet_mean:.6f},{om.q_tet_std:.6f}\n"
+                    )
+                    order_csv_f.flush()
+            print(line)
 
-    out = args.output or (_SCRIPT_DIR / f"ice_openmm_lammps_match_T{args.temperature:.0f}_steps{args.steps}.pdb")
+    elapsed = time.perf_counter() - t_md
+    ps_done = args.steps * dt_ps
+    ns = ps_done * 1e-3
+    ns_per_day = ns / elapsed * 86400.0 if elapsed > 0 else 0.0
+    steps_per_s = args.steps / elapsed if elapsed > 0 else 0.0
+    print(f"  MD wall time: {elapsed:.1f} s")
+    print(f"  Simulation speed: {ns_per_day:.3f} ns/day  |  {steps_per_s:.2f} steps/s  |  {ps_done:.4f} ps integrated")
+
+    if dcd is not None:
+        dcd_f.close()
+        print(f"  Trajectory (DCD): {dcd_path}  ({1 + args.steps // args.traj_every} frames @ every {args.traj_every} step)")
+    if xyz_f is not None:
+        xyz_f.close()
+        print(f"  Trajectory (XYZ): {args.xyz}")
+    if order_csv_f is not None:
+        order_csv_f.close()
+        print(f"  Order CSV: {args.order_csv}")
+
     from openmm.app import PDBFile
 
+    # PDB CRYST1 uses % float formatting; orthogonal cell avoids Quantity angles from triclinic.
+    topology.setUnitCellDimensions(
+        Vec3(float(lx) * 0.1, float(ly) * 0.1, float(lz) * 0.1) * unit.nanometer
+    )
     PDBFile.writeFile(
         topology,
         context.getState(getPositions=True).getPositions(),
         open(out, "w"),
         keepIds=True,
     )
-    print(f"\n  Wrote final geometry: {out}")
+    print(f"  Final PDB: {out}")
     print("=" * 72)
 
 
