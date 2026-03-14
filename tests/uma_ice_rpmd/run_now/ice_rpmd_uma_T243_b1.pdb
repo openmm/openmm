@@ -1,0 +1,31 @@
+REMARK   Ice RPMD simulation - centroid trajectory
+REMARK   Model: uma-s-1p1-pythonforce-batch
+REMARK   Temperature: 243.0 K, Beads: 1
+CRYST1    6.209    5.837    7.172  90.00  90.00  90.00 P 1           1
+MODEL        3
+ATOM      1 O    HOH 1   1       4.872   3.696   7.078  1.00  0.00           O
+ATOM      2 H    HOH 1   1       1.099   4.264   1.751  1.00  0.00           H
+ATOM      3 H    HOH 1   1       3.116   5.257   0.139  1.00  0.00           H
+ATOM      4 O    HOH 2   2       4.449   2.271   1.741  1.00  0.00           O
+ATOM      5 H    HOH 2   2       1.334   1.185   2.914  1.00  0.00           H
+ATOM      6 H    HOH 2   2       4.014   2.240   4.738  1.00  0.00           H
+ATOM      7 O    HOH 3   3       1.342   1.691   6.678  1.00  0.00           O
+ATOM      8 H    HOH 3   3       0.320   0.482   0.616  1.00  0.00           H
+ATOM      9 H    HOH 3   3       2.564   5.496   0.642  1.00  0.00           H
+ATOM     10 O    HOH 4   4       3.960   2.794   0.519  1.00  0.00           O
+ATOM     11 H    HOH 4   4       4.932   1.403   1.447  1.00  0.00           H
+ATOM     12 H    HOH 4   4       3.837   1.553   4.618  1.00  0.00           H
+ATOM     13 O    HOH 5   5       0.039   4.704   4.478  1.00  0.00           O
+ATOM     14 H    HOH 5   5       2.166   1.982   6.239  1.00  0.00           H
+ATOM     15 H    HOH 5   5       1.644   1.034   3.524  1.00  0.00           H
+ATOM     16 O    HOH 6   6       5.779   0.239   1.153  1.00  0.00           O
+ATOM     17 H    HOH 6   6       5.477   5.213   0.830  1.00  0.00           H
+ATOM     18 H    HOH 6   6       5.864   2.583   6.218  1.00  0.00           H
+ATOM     19 O    HOH 7   7       0.894   4.847   5.284  1.00  0.00           O
+ATOM     20 H    HOH 7   7       3.270   3.419   0.851  1.00  0.00           H
+ATOM     21 H    HOH 7   7       3.815   4.774   2.729  1.00  0.00           H
+ATOM     22 O    HOH 8   8       0.295   1.951   5.721  1.00  0.00           O
+ATOM     23 H    HOH 8   8       3.345   4.674   3.303  1.00  0.00           H
+ATOM     24 H    HOH 8   8       1.045   3.618   2.000  1.00  0.00           H
+ENDMDL
+END

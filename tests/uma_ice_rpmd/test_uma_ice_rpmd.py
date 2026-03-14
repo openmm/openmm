@@ -1061,7 +1061,7 @@ if __name__ == '__main__':
     parser.add_argument('--ice-type', type=str, default='1h', choices=['1h', '1c'],
                        help='Ice type: 1h (hexagonal Ih) or 1c (cubic Ic, natural cubic box). Default: 1h')
     parser.add_argument('--beads', type=int, default=8,
-                       help='Number of RPMD beads (default: 8)')
+                       help='RPMD beads (default: 8). Use 1 for classical MD / LAMMPS-like UMA cost per step.')
     parser.add_argument('--temperature', type=float, default=243.0,
                        help='Temperature in K (default: 243.0)')
     parser.add_argument('--pressure', type=float, default=0.0,
@@ -1072,8 +1072,8 @@ if __name__ == '__main__':
                        help='Equilibration time in ps (default: 5.0)')
     parser.add_argument('--prod', type=float, default=100.0,
                        help='Production time in ps (default: 100.0)')
-    parser.add_argument('--model', type=str, default='uma-s-1-pythonforce-batch',
-                       help='Model name (default: uma-s-1-pythonforce-batch, smallest UMA model)')
+    parser.add_argument('--model', type=str, default='uma-s-1p1-pythonforce-batch',
+                       help='Model name (default: uma-s-1p1; HF no longer has uma-s-1.pt)')
     parser.add_argument('--output', type=str, default='.',
                        help='Output directory (default: current directory)')
     parser.add_argument('--report-interval', type=float, default=1.0,

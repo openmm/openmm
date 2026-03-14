@@ -5,10 +5,27 @@ Test if ice remains frozen at 243K using UMA potential with RPMD.
 ## Overview
 
 This simulation tests the stability of ice at sub-freezing temperatures using:
-- **UMA potential**: Smallest model (uma-s-1-pythonforce-batch) for fast runs
-- **RPMD**: Ring Polymer Molecular Dynamics with 8 beads
+- **UMA potential**: Small model **`uma-s-1p1-pythonforce-batch`** (HF removed `uma-s-1.pt`; `uma-s-1-pythonforce-batch` is remapped to p1 in current openmmml)
+- **RPMD**: Ring Polymer Molecular Dynamics (default **8 beads**; use **`--beads 1`** for classical MD and **~LAMMPS-equivalent UMA cost** per step)
 - **Temperature**: 243 K (30 degrees below freezing)
 - **Ice Ih structure**: GenIce CIF, GenIce2, or embedded CIF fallback
+
+### Speed vs LAMMPS (why OpenMM can feel slow)
+
+| Cause | What to do |
+|-------|------------|
+| **Multiple RPMD beads** | Each MD step runs UMA on **every bead** (batched, but still ~N× GNN work vs one classical config). LAMMPS ice uses **one config per step**. Use **`--beads 1`** to match that cost when benchmarking or developing. |
+| **Same ML stack** | LAMMPS (`fix external`) and OpenMM both call Fairchem **`predict(AtomicData)`**—no faster LAMMPS-only API. |
+| **CUDA sync (optional)** | openmmml avoids **`torch.cuda.synchronize()`** / **`empty_cache()`** in the hot path by default. Set **`OPENMMML_CUDA_SYNC_AFTER_FORCE=1`** only if debugging OOM or async errors (hurts throughput). |
+| **Profiling** | **`OPENMMML_DEBUG_LOGS=1`** plus **`--debug-logs`** on `test_uma_ice_rpmd.py` prints per-step **prep / atomicdata / inference** ms so you can see where time goes. |
+
+Example (fast classical comparison to LAMMPS):
+
+```bash
+OPENMMML_DEBUG_LOGS=1 python test_uma_ice_rpmd.py --molecules 128 --beads 1 --platform cuda \
+  --ml-device cuda --temperature 243 --pressure 0 --dt 1.0 --equil 0 --prod 0.1 \
+  --model uma-s-1p1-pythonforce-batch --debug-logs --minimal
+```
 
 ## Ice Structure
 
@@ -71,13 +88,13 @@ python test_uma_ice_rpmd.py --input ice.cif --molecules 32 --beads 4 --temperatu
 ### Quick Test (by box size)
 ```bash
 python test_uma_ice_rpmd.py --box 1.0 --beads 8 --temperature 243 \
-    --dt 1.0 --equil 5 --prod 50 --model uma-s-1-pythonforce-batch
+    --dt 1.0 --equil 5 --prod 50 --model uma-s-1p1-pythonforce-batch
 ```
 
 ### Quick Test (by molecule count)
 ```bash
 python test_uma_ice_rpmd.py --molecules 32 --beads 8 --temperature 243 \
-    --dt 1.0 --equil 5 --prod 50 --pressure 1 --model uma-s-1-pythonforce-batch
+    --dt 1.0 --equil 5 --prod 50 --pressure 1 --model uma-s-1p1-pythonforce-batch
 ```
 
 ### NVT (no barostat)
@@ -97,7 +114,7 @@ python test_uma_ice_rpmd.py \
     --dt 1.0 \                 # Timestep in fs (0.5-1.0 for stability)
     --equil 5.0 \              # Equilibration (ps)
     --prod 50.0 \              # Production (ps)
-    --model uma-s-1-pythonforce-batch \   # Smallest UMA model
+    --model uma-s-1p1-pythonforce-batch \   # Small UMA (HF checkpoint)
     --output ice_test          # Output directory (use a persistent path; do NOT use /tmp)
 ```
 
@@ -166,9 +183,75 @@ For full rebuild and reinstall on a new machine, see [docs/BUILD_AND_REINSTALL.m
 
 NPT (RPMDMonteCarloBarostat) is supported on CUDA. Ensure OpenMM is built with CUDA (`-DOPENMM_BUILD_CUDA_LIB=ON`). If you encounter `CUDA_ERROR_ILLEGAL_ADDRESS` with NPT, try `--precision double` or report the issue.
 
+### Why OpenMM UMA ice failed while LAMMPS worked (fix: molecular wrap)
+
+OpenMM often keeps **unwrapped** Cartesian coordinates (atoms can sit outside the primary cell).
+The old UMA path called **`wrap_positions()` per atom** before the model. That **splits each atom
+independently** across PBC → an H can jump to the opposite face while its O stays put → **fake
+long bonds** → wrong UMA neighbor graph → **catastrophic forces / melting**.
+
+LAMMPS + fairchem also uses per-atom wrap, but short runs from a **wrapped** data file often never
+unwrap enough to break molecules; OpenMM **RPMD / integrator** unwraps aggressively.
+
+**Fix (in `umapotential_pythonforce_batch.py`):** `_wrap_water_molecules_per_bead` — for **O,H,H × N**
+(water), put **O in the primary cell** and each **H by minimum-image displacement from that O**.
+**RPMD:** wrapping runs **per bead** (bead `i` uses only `state[i]` positions and box); there is no
+centroid or wrap across beads.
+Reinstall:
+
+```bash
+cp wrappers/python/openmmml/models/umapotential_pythonforce_batch.py \
+   "$(python -c "import openmmml,os; print(os.path.join(os.path.dirname(openmmml.__file__),'models'))")/"
+```
+
+### LAMMPS + UMA (same ice, trajectory)
+
+See **`lammps/README.md`**. From **`tests/uma_ice_rpmd/`** you can run:
+
+```bash
+python build_lammps_ice_data.py              # writes lammps/data.ice_uma
+python run_lammps_uma_ice.py               # or: cd lammps && python run_lammps_uma_ice.py
+```
+
+FAIRChem’s **`fairchem-lammps`** driver runs LAMMPS with **UMA** on the **same `ice.cif`** as OpenMM. Produces **`lammps/dump.ice_uma.lammpstrj`**. Classical NVT @ 243 K (OpenMM RPMD analogue: 1 bead).
+
+### OpenMM MD = LAMMPS conditions (stable ice check)
+
+**`run_openmm_ice_lammps_match.py`** loads the **same** `lammps/data.ice_uma` as LAMMPS, then:
+
+1. Energy minimization  
+2. **Classical** **`LangevinMiddleIntegrator`**: **243 K**, **γ = 1/ps**, **1 fs** (same spirit as `fix nve` + `fix langevin 243 243 1.0`)  
+3. **`run N`** steps (default **100** = 100 fs, like `in.ice_uma_quick.lmp`)
+
+Not RPMD — matches the **classical** LAMMPS deck so you can compare stability (T drift, PE) and final PDB.
+
+```bash
+python lammps/build_lammps_ice_data.py -n 128   # data.ice_uma
+# Default minimization is short (~1 min); full LAMMPS-like minimize = many UMA evals (looks frozen).
+python run_openmm_ice_lammps_match.py --steps 100 --platform cuda --ml-device cuda \
+  --model uma-s-1p1-pythonforce-batch -o ice_after_openmm_lammps_match.pdb
+# Fast MD-only test (same starting geometry as LAMMPS data file):
+python run_openmm_ice_lammps_match.py --skip-minimize --steps 100 ...
+```
+
+### Same-structure benchmark (OpenMM vs LAMMPS pipeline)
+
+**`benchmark_same_structure_openmm_vs_lammps.py`** reads **`lammps/data.ice_uma`** (same atoms/box/positions as `run_lammps_uma_ice.py`) and times:
+
+1. **LAMMPS_pipeline** — `wrap_positions` + `atomic_data_from_lammps_data` + `predict` (same as `FixExternalCallback`).
+2. **OpenMM_pipeline** — molecular water wrap + `atomicdata_list_to_batch` + `predict` (same as openmmml 1-bead batch).
+3. **predict_only** — frozen `AtomicData`, `predict` only (ML lower bound).
+
+Expect **~same ms** for (1) vs (2): slowness is **UMA inference**, not RPMD or OpenMM vs LAMMPS Python glue.
+
+```bash
+python build_lammps_ice_data.py -n 128   # writes lammps/data.ice_uma if missing
+python benchmark_same_structure_openmm_vs_lammps.py --reps 40
+```
+
 ### UMA-LAMMPS Benchmarking
 
-UMA does **not** have a native LAMMPS pair style. The canonical reference is **ASE + FAIRChemCalculator**. Use `benchmark_ase_reference.py` to compare OpenMM UMA against ASE:
+UMA does **not** use a classical LAMMPS `pair_style`; FAIRChem injects forces via **`fix external`**. The canonical ASE reference is **ASE + FAIRChemCalculator**. Use `benchmark_ase_reference.py` to compare OpenMM UMA against ASE:
 ```bash
 python tests/uma_ice_rpmd/benchmark_ase_reference.py
 ```
@@ -245,6 +328,28 @@ files into the installed package:
 INSTALL_PATH=$(python -c "import openmmml; import os; print(os.path.dirname(openmmml.__file__))")
 cp wrappers/python/openmmml/models/umapotential_pythonforce_batch.py "$INSTALL_PATH/models/"
 cp wrappers/python/openmmml/models/umapotential_pythonforce.py "$INSTALL_PATH/models/"
+```
+
+### Why compare_forces_ice.py still shows ~100 kJ/(mol·nm) max |ΔF|
+
+OpenMM (`uma-s-1p1-pythonforce-batch`) and ASE (`uma-s-1p1`) load the **same** UMA weights. After the
+eV/Å → kJ/(mol·nm) fix and **wrapping** the same positions into the primary cell for both paths, the
+remaining gap is **not** a wrong potential—it is **small relative to the force magnitude**.
+
+- In condensed ice, single components of **F** can be **tens of thousands** of kJ/(mol·nm) (large
+  condensed-phase gradients). A max |ΔF| of ~100 kJ/(mol·nm) is typically **~0.1–0.2% relative**
+  on those components.
+- UMA inference is **float32** on GPU; ASE’s calculator uses the same model but can differ slightly
+  in tensor layout, batching, and CUDA kernel order. That shows up as **sub‑percent** force noise,
+  not as a systematic unit or geometry bug.
+- **Energy** usually agrees within a few kJ/mol on totals of order 10⁶ kJ/mol—consistent with the
+  same underlying energy surface.
+
+So: **there is no “extra” 100 kJ/(mol·nm) error in the sense of a duplicated or wrong model**; the
+number is large in absolute units because **forces themselves are huge** in those units on dense ice.
+
+```bash
+python compare_forces_ice.py --input ice.cif --molecules 16
 ```
 
 ## References

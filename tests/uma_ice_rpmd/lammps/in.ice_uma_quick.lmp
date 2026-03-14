@@ -1,0 +1,24 @@
+# 100 fs MD @ 1 fs/step, dump every frame (after UMA minimize)
+# metal: timestep 0.001 = 1 fs; run 100 => 100 fs
+units           metal
+atom_style      atomic
+boundary        p p p
+read_data       data.ice_uma
+comm_modify     cutoff 12.0
+timestep        0.001
+
+minimize        0.0 1.0e-6 500 10000
+
+velocity        all create 243.0 284759 dist gaussian
+velocity        all scale 243.0
+fix             nve all nve
+fix             lang all langevin 243.0 243.0 1.0 48279 zero yes
+thermo_style    custom step time temp pe ke etotal
+thermo          1
+
+# Every timestep → 100 frames for 100 fs
+dump            traj all custom 1 dump.ice_uma_quick.lammpstrj id type mass x y z
+dump_modify     traj sort id flush yes
+dump            ovito all xyz 1 dump.ice_uma_quick_ovito.xyz
+dump_modify     ovito element O H sort id append yes
+run             100
