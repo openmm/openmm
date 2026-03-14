@@ -1,0 +1,104 @@
+[W302 15:22:38.147072804 init.cpp:772] Warning: nvfuser is no longer supported in torch script, use _jit_set_nvfuser_enabled is deprecated and a no-op (function operator())
+All required packages loaded successfully
+================================================================================
+UMA/eSEN Ice RPMD Simulation
+================================================================================
+Model: uma-s-1-pythonforce-batch
+Temperature: 243.0 K
+Pressure: 0.0 bar (NVT)
+RPMD beads: 1
+Timestep: 0.5 fs
+Input structure: tests/uma_ice_rpmd/water1.xyz
+Equilibration: 0.5 ps
+Production: 2.0 ps
+
+--- Loading Ice Structure from File ---
+  Input: tests/uma_ice_rpmd/water1.xyz
+  Actual molecules: 1
+  Total atoms: 3
+  Box: 5.00 x 5.00 x 5.00 Å
+  Initial density: 0.239 g/cm³
+  Expected ice Ih: ~0.92 g/cm³
+
+--- Creating ML Potential ---
+Creating OpenMM system...
+  ML model device: cuda
+UMA force added with batched RPMD support (model: uma-s-1, task: omol, device: cuda)
+  System uses PBC: True
+  Running NVT (no barostat)
+  Initial density: 0.239 g/cm³
+  Expected ice density: ~0.92 g/cm³
+
+--- Creating RPMD Integrator ---
+  Beads: 1
+  Temperature: 243.0 K
+  Timestep: 0.5 fs
+  Thermostat: PILE (Langevin for all modes)
+  Friction: 1.0 ps^-1
+
+--- Creating Simulation Context ---
+  PyTorch CUDA initialized before OpenMM Context (context-order fix)
+  Using CUDA platform (GPU acceleration, DeviceIndex=0)
+
+--- Initializing RPMD Beads ---
+  Bead 0: positions set
+  Velocities initialized to 243.0 K
+
+--- Energy Minimization ---
+  Minimizing energy to relax initial structure...
+Lazy-loaded UMA model 'uma-s-1' on cuda (OpenMM context)
+  Initial PE: -200675.08 kJ/mol
+  Minimized PE: -200676.08 kJ/mol
+  Energy reduction: 1.00 kJ/mol
+  Minimized structure copied to all 1 beads
+
+--- Initial Bead Energies ---
+  Getting initial bead energies...
+  Bead  0: PE = -200676.08 kJ/mol, KE =     5.36 kJ/mol, Total = -200670.72 kJ/mol
+
+  Mean: PE = -200676.08 kJ/mol, KE =     5.36 kJ/mol, Total = -200670.72 kJ/mol
+
+--- Setting up PDB Reporter ---
+  PDB output: tests/uma_ice_rpmd/ice_rpmd_uma_T243_b1.pdb
+  Report interval: 2000 steps (1.00 ps)
+  PDB save interval: 400 steps (0.20 ps)
+
+================================================================================
+RUNNING SIMULATION
+================================================================================
+
+================================================================================
+PRODUCTION PHASE STARTED
+================================================================================
+
+[ 40.0%] Production    | Step    2000/5000 (   1.0 ps) |   0.95 ns/day
+         PE= -200207.3 KE=     7.6 Total= -200199.8 kJ/mol | T= 202.5 K | ρ=0.239 g/cm³
+
+[ 80.0%] Production    | Step    4000/5000 (   2.0 ps) |   0.95 ns/day
+         PE= -200034.7 KE=     2.8 Total= -200031.9 kJ/mol | T=  75.2 K | ρ=0.239 g/cm³
+
+================================================================================
+SIMULATION COMPLETE
+================================================================================
+Total time: 3.8 minutes (0.06 hours)
+Average speed: 0.95 ns/day
+
+--- Simulation Analysis ---
+
+Production phase statistics:
+  Energy:
+    Mean: -200031.90 kJ/mol
+    Std:  0.00 kJ/mol
+    Drift: -0.00%
+  Temperature:
+    Mean: 75.16 K (target: 243.0 K)
+    Std:  0.00 K
+
+  Ice status: Cannot determine (no density or RMSD data)
+
+  Output files:
+    Trajectory: tests/uma_ice_rpmd/ice_rpmd_uma_T243_b1.pdb
+    NPZ data: tests/uma_ice_rpmd/uma_ice_rpmd_T243K_b1.npz
+    Analysis PNG: tests/uma_ice_rpmd/uma_ice_rpmd_T243K_b1_analysis.png
+
+================================================================================

@@ -1239,8 +1239,9 @@ void CommonIntegrateRPMDStepKernel::uploadForcesToGPU(int beadIndex, const std::
 }
 
 void CommonIntegrateRPMDStepKernel::uploadAllForcesToGPU(const std::vector<std::vector<Vec3>>& allBeadForces) {
-    // Upload all bead forces at once to avoid multiple download/upload cycles
-    // forces array layout: [bead0_atom0_x, bead0_atom0_y, bead0_atom0_z, bead0_atom1_x, ...]
+    // Upload all bead forces at once to avoid multiple download/upload cycles.
+    // RPMD kernel expects structure-of-arrays layout per bead:
+    //   [all_x_at_base+0..PADDED-1, all_y_at_base+PADDED..2*PADDED-1, all_z_at_base+2*PADDED..3*PADDED-1]
     // forces is stored as long long (fixed point for atomics)
     
     int paddedParticles = cc.getPaddedNumAtoms();
@@ -1249,17 +1250,17 @@ void CommonIntegrateRPMDStepKernel::uploadAllForcesToGPU(const std::vector<std::
     
     double forceScale = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? 1.0 : 0x100000000);
     
-    // Pack all bead forces into flat array
+    // Pack all bead forces into flat array (SoA layout to match integrateStep kernel)
     for (int b = 0; b < numCopies; b++) {
         if (allBeadForces[b].size() != (size_t)numParticles) {
             throw OpenMMException("uploadAllForcesToGPU: force vector size mismatch for bead " + std::to_string(b));
         }
         
-        int offset = b * paddedParticles * 3;  // Use paddedParticles, not numParticles
+        int offset = b * paddedParticles * 3;
         for (int i = 0; i < numParticles; i++) {
-            forceData[offset + i*3 + 0] = (long long)(allBeadForces[b][i][0] * forceScale);
-            forceData[offset + i*3 + 1] = (long long)(allBeadForces[b][i][1] * forceScale);
-            forceData[offset + i*3 + 2] = (long long)(allBeadForces[b][i][2] * forceScale);
+            forceData[offset + i] = (long long)(allBeadForces[b][i][0] * forceScale);
+            forceData[offset + paddedParticles + i] = (long long)(allBeadForces[b][i][1] * forceScale);
+            forceData[offset + 2*paddedParticles + i] = (long long)(allBeadForces[b][i][2] * forceScale);
         }
         // Padded atoms (from numParticles to paddedParticles) remain zero
     }

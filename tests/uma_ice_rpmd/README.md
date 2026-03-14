@@ -98,8 +98,10 @@ python test_uma_ice_rpmd.py \
     --equil 5.0 \              # Equilibration (ps)
     --prod 50.0 \              # Production (ps)
     --model uma-s-1-pythonforce-batch \   # Smallest UMA model
-    --output ice_test          # Output directory
+    --output ice_test          # Output directory (use a persistent path; do NOT use /tmp)
 ```
+
+**Note:** Always use `--output` with a persistent directory (e.g. `tests/uma_ice_rpmd/` or `ice_test/`). Do **not** use `/tmp`—outputs there are ephemeral and may be deleted.
 
 ## Output Files
 
@@ -157,6 +159,27 @@ For full rebuild and reinstall on a new machine, see [docs/BUILD_AND_REINSTALL.m
 - ASE (Atomic Simulation Environment)
 - NumPy
 - Matplotlib
+
+## Limitations and Caveats
+
+### NPT on CUDA
+
+NPT (RPMDMonteCarloBarostat) is supported on CUDA. Ensure OpenMM is built with CUDA (`-DOPENMM_BUILD_CUDA_LIB=ON`). If you encounter `CUDA_ERROR_ILLEGAL_ADDRESS` with NPT, try `--precision double` or report the issue.
+
+### UMA-LAMMPS Benchmarking
+
+UMA does **not** have a native LAMMPS pair style. The canonical reference is **ASE + FAIRChemCalculator**. Use `benchmark_ase_reference.py` to compare OpenMM UMA against ASE:
+```bash
+python tests/uma_ice_rpmd/benchmark_ase_reference.py
+```
+
+### Minimal System Testing (OOM Avoidance)
+
+For memory-constrained runs or validation, use a single water molecule:
+```bash
+python test_uma_ice_rpmd.py --molecules 1 --beads 1 --equil 5 --prod 20 --platform cpu
+python tests/uma_ice_rpmd/test_force_layout.py
+```
 
 ## Notes
 

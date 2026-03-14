@@ -1,0 +1,15 @@
+REMARK   Ice RPMD simulation - centroid trajectory
+REMARK   Model: uma-s-1-pythonforce-batch
+REMARK   Temperature: 243.0 K, Beads: 1
+CRYST1    1.200    1.200    1.200  90.00  90.00  90.00 P 1           1
+MODEL        1
+ATOM      1 O    HOH 1   1       4.486   3.783   0.381  1.00  0.00           O
+ATOM      2 H    HOH 1   1      -0.610 -12.176   1.080  1.00  0.00           H
+ATOM      3 H    HOH 1   1      -1.079 -10.193   0.743  1.00  0.00           H
+ENDMDL
+MODEL        2
+ATOM      1 O    HOH 1   1       4.288   4.154   0.186  1.00  0.00           O
+ATOM      2 H    HOH 1   1       0.087 -15.729   2.099  1.00  0.00           H
+ATOM      3 H    HOH 1   1       1.295 -12.611   2.851  1.00  0.00           H
+ENDMDL
+END

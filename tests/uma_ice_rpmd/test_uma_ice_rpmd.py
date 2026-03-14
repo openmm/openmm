@@ -34,6 +34,14 @@ import numpy as np
 import time
 from pathlib import Path
 
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    _HAS_MATPLOTLIB = True
+except ImportError:
+    _HAS_MATPLOTLIB = False
+
 from openmm import app, unit, Vec3
 from openmm import RPMDIntegrator, Context, Platform, RPMDMonteCarloBarostat
 from openmmml import MLPotential
@@ -260,6 +268,17 @@ def _load_structure_from_file(filepath, max_molecules=None):
     else:
         raise ValueError(f"Unsupported structure format: {suffix}. Use .cif, .pdb, or .xyz")
 
+    # XYZ and some formats lack cell; set cubic box for gas-phase structures.
+    # ASE set_cell() uses Angstroms.
+    # Single molecule (3 atoms): use 5 Å box to keep molecule stable (avoids "no edges" when H drifts in large box).
+    # Multi-molecule: use 12 Å (1.2 nm) per molecule region.
+    cell = np.array(atoms.get_cell())
+    if cell.size < 9 or np.abs(np.linalg.det(cell)) < 1e-10:
+        box_angstrom = 5.0 if len(atoms) == 3 else 12.0
+        atoms.set_cell([box_angstrom, box_angstrom, box_angstrom])
+        atoms.set_pbc(True)
+        atoms.center()
+
     topo, positions, box = _ase_water_to_openmm(atoms)
     if max_molecules is not None:
         n_mol = len(positions) // 3
@@ -425,7 +444,7 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
                    num_beads=8, temperature_K=243.0,
                    pressure_bar=1.0, dt_fs=1.0, equilibration_ps=5.0,
                    production_ps=100.0, model_name='uma-s-1-pythonforce-batch',
-                   output_dir='.', report_interval_ps=1.0, pdb_interval_ps=1.0,
+                   output_dir='.', report_interval_ps=1.0, pdb_interval_ps=0.2,
                    platform_name='cuda', ml_device=None, precision_override=None,
                    minimal_report=False, optimize_inference=False,
                    optimize_inference_tf32_only=False):
@@ -457,7 +476,7 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     report_interval_ps : float
         Console reporting interval in picoseconds (default: 1.0)
     pdb_interval_ps : float
-        PDB frame save interval in picoseconds (default: 1.0)
+        PDB frame save interval in picoseconds (default: 0.2, 5 frames/ps)
     platform_name : str
         OpenMM platform: 'cuda' (GPU) or 'cpu' (default: 'cuda')
     ml_device : str or None
@@ -542,9 +561,8 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     
     print(f"  System uses PBC: {system.usesPeriodicBoundaryConditions()}")
     
-    # Add barostat if NPT. Skip on CUDA: RPMDMonteCarloBarostat + PythonForce causes
-    # CUDA_ERROR_ILLEGAL_ADDRESS (posqCorrection download crash).
-    _use_barostat = pressure_bar > 0 and platform_name.lower() != 'cuda'
+    # Add barostat if NPT. Use on all platforms including CUDA.
+    _use_barostat = pressure_bar > 0
     if _use_barostat:
         barostat = RPMDMonteCarloBarostat(
             pressure_bar * unit.bar,
@@ -554,8 +572,6 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
         print(f"  Added RPMDMonteCarloBarostat (NPT ensemble)")
         print(f"  Pressure: {pressure_bar} bar")
     else:
-        if pressure_bar > 0 and platform_name.lower() == 'cuda':
-            print(f"  Skipping barostat on CUDA (avoids CUDA_ERROR_ILLEGAL_ADDRESS); running NVT")
         print(f"  Running NVT (no barostat)")
     
     # Calculate density (use determinant for hexagonal/triclinic boxes)
@@ -659,7 +675,8 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
 
     # Perform energy minimization on bead 0, then copy to all beads
     from openmm import LocalEnergyMinimizer
-    LocalEnergyMinimizer.minimize(context, tolerance=1.0, maxIterations=2000)
+    max_min_iter = 200 if n_atoms <= 3 else 2000  # Faster for single-molecule smoke tests
+    LocalEnergyMinimizer.minimize(context, tolerance=1.0, maxIterations=max_min_iter)
     
     # Get minimized positions and copy to all beads
     minimized_state = context.getState(getPositions=True, getEnergy=True)
@@ -853,13 +870,17 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
         
         # Save PDB frame (production only, at specified interval)
         if step > equilibration_steps and (step - equilibration_steps) % pdb_interval_steps == 0:
-            # Get centroid positions
+            # Get centroid positions (OpenMM returns unwrapped; wrap into [0,1) frac for PBC)
             centroid_positions = np.zeros((n_atoms, 3))
             for bead in range(num_beads):
                 state = integrator.getState(bead, getPositions=True)
                 pos = state.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
                 centroid_positions += pos
             centroid_positions /= num_beads
+            # Wrap into primary cell so PDB viewers show compact structure
+            frac = centroid_positions @ np.linalg.inv(_bm)
+            frac_wrapped = frac - np.floor(frac)
+            centroid_positions = frac_wrapped @ _bm
             
             # Write PDB frame manually
             model_num = (step - equilibration_steps) // pdb_interval_steps
@@ -948,8 +969,79 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
             is_frozen = True
             print(f"\n  Ice status: Cannot determine (no density or RMSD data)")
     
+    # NPZ and analysis PNG (skip in minimal mode)
+    npz_path = None
+    png_path = None
+    if not minimal_report and len(energies) > 0:
+        base_name = f"uma_ice_rpmd_T{temperature_K:.0f}K_b{num_beads}"
+        npz_path = output_path / f"{base_name}.npz"
+        
+        times_ps = np.arange(len(energies)) * report_interval_steps * dt_ps
+        rmsds_arr = np.array(rmsds) if rmsds else np.array([], dtype=np.float64)
+        densities_arr = np.array(densities) if densities else np.array([], dtype=np.float64)
+        
+        # Final centroid positions
+        final_centroid = np.zeros((n_atoms, 3))
+        for bead in range(num_beads):
+            state = integrator.getState(bead, getPositions=True)
+            final_centroid += state.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
+        final_centroid /= num_beads
+        
+        np.savez(
+            npz_path,
+            times=times_ps,
+            rmsds=rmsds_arr,
+            densities=densities_arr,
+            energies=np.array(energies),
+            temperatures=np.array(temperatures),
+            initial_positions=minimized_positions_nm if minimized_positions_nm is not None else np.zeros((n_atoms, 3)),
+            final_positions=final_centroid,
+            is_frozen=np.array(is_frozen),
+        )
+        
+        # Analysis PNG (2x2 subplots: RMSD, density, energy, temperature)
+        if _HAS_MATPLOTLIB:
+            png_path = output_path / f"{base_name}_analysis.png"
+            fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+            # axes[0]: RMSD, [1]: Density, [2]: Energy, [3]: Temperature
+            if len(rmsds_arr) > 0:
+                axes[0, 0].plot(times_ps[:len(rmsds_arr)], rmsds_arr * 10, 'b-')  # nm -> Å
+                axes[0, 0].set_xlabel("Time (ps)")
+                axes[0, 0].set_ylabel("RMSD (Å)")
+                axes[0, 0].set_title("RMSD vs time")
+                axes[0, 0].grid(True, alpha=0.3)
+            else:
+                axes[0, 0].set_visible(False)
+            if len(densities_arr) > 0:
+                axes[0, 1].plot(times_ps[:len(densities_arr)], densities_arr, 'g-')
+                axes[0, 1].set_xlabel("Time (ps)")
+                axes[0, 1].set_ylabel("Density (g/cm³)")
+                axes[0, 1].set_title("Density vs time")
+                axes[0, 1].axhline(0.92, color='gray', linestyle='--', alpha=0.7, label="Ice Ih ref")
+                axes[0, 1].grid(True, alpha=0.3)
+            else:
+                axes[0, 1].set_visible(False)
+            axes[1, 0].plot(times_ps, energies, 'r-')
+            axes[1, 0].set_xlabel("Time (ps)")
+            axes[1, 0].set_ylabel("Total energy (kJ/mol)")
+            axes[1, 0].set_title("Total energy vs time")
+            axes[1, 0].grid(True, alpha=0.3)
+            axes[1, 1].plot(times_ps, temperatures, 'm-')
+            axes[1, 1].axhline(temperature_K, color='gray', linestyle='--', alpha=0.7)
+            axes[1, 1].set_xlabel("Time (ps)")
+            axes[1, 1].set_ylabel("Temperature (K)")
+            axes[1, 1].set_title("Temperature vs time")
+            axes[1, 1].grid(True, alpha=0.3)
+            plt.tight_layout()
+            plt.savefig(png_path, dpi=150, bbox_inches='tight')
+            plt.close()
+    
     print(f"\n  Output files:")
     print(f"    Trajectory: {pdb_file}")
+    if npz_path is not None:
+        print(f"    NPZ data: {npz_path}")
+    if png_path is not None:
+        print(f"    Analysis PNG: {png_path}")
     
     print("\n" + "=" * 80)
     
@@ -986,8 +1078,8 @@ if __name__ == '__main__':
                        help='Output directory (default: current directory)')
     parser.add_argument('--report-interval', type=float, default=1.0,
                        help='Console report interval in ps (default: 1.0)')
-    parser.add_argument('--pdb-interval', type=float, default=1.0,
-                       help='PDB frame save interval in ps (default: 1.0)')
+    parser.add_argument('--pdb-interval', type=float, default=0.2,
+                       help='PDB frame save interval in ps (default: 0.2, 5 frames/ps)')
     parser.add_argument('--platform', type=str, default='cuda', choices=['cuda', 'cpu'],
                        help='OpenMM platform: cuda (GPU) or cpu (default: cuda)')
     parser.add_argument('--ml-device', type=str, default=None,
