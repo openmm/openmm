@@ -288,7 +288,8 @@ class UMAPotentialPythonForceImpl(MLPotentialImpl):
                     forces_ev_ang = torch.stack(forces_list)  # (8, n_atoms, 3)
                     
                     # Convert units on GPU (eV/Å -> kJ/(mol·nm) for forces)
-                    EV_ANG_TO_KJ_NM = 96.4853
+                    # 1 eV/Å = 96.4853 kJ/mol / 0.1 nm = 964.853 kJ/(mol·nm)
+                    EV_ANG_TO_KJ_NM = 96.4853 * 10.0
                     energies_kj = energies_ev * 96.4853
                     forces_kj_nm = forces_ev_ang * EV_ANG_TO_KJ_NM
                     
@@ -323,7 +324,7 @@ class UMAPotentialPythonForceImpl(MLPotentialImpl):
                         pred = predict_unit.predict(cache['atomic_data'])
                     
                     energy_kj = float(pred['energy'].item()) * 96.4853
-                    molecular_forces = (pred['forces'] * 96.4853).cpu().numpy()
+                    molecular_forces = (pred['forces'] * 96.4853 * 10.0).cpu().numpy()  # eV/Å -> kJ/(mol·nm)
                 
                 # Always return forces for ALL particles in the system
                 # (Extra particles like cavity get zero force from UMA)

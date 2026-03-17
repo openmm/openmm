@@ -1,0 +1,41 @@
+# Phase 1: NVT thermalization (0.5 ps) then export state
+# Phase 2: Pure NVE continuation (0.3 ps) for Q6 comparison
+#
+# Units: metal (A, ps, eV, K)
+# dt=0.1 fs = 0.0001 ps; 5000 steps = 0.5 ps; 3000 steps = 0.3 ps
+
+units           metal
+atom_style      atomic
+boundary        p p p
+read_data       data.ice_uma
+comm_modify     cutoff 12.0
+timestep        0.0001
+
+# Skip minimize (structure already minimized)
+minimize        0.0 1.0e-6 0 0
+
+velocity        all create 243.0 284759 dist gaussian
+velocity        all scale 243.0
+fix             nve_fix all nve
+fix             lang_fix all langevin 243.0 243.0 0.1 284759 zero yes
+thermo_style    custom step time temp pe ke etotal
+thermo          500
+
+# Phase 1: NVT thermalization for 0.5 ps
+dump            nvt_traj all custom 500 dump.nve_export_nvt.lammpstrj id type mass x y z
+dump_modify     nvt_traj sort id flush yes
+run             5000
+
+# Export full state (positions + velocities) at step 5000
+undump          nvt_traj
+dump            state_export all custom 1 dump.nve_state_5000.lammpstrj id type mass x y z vx vy vz
+dump_modify     state_export sort id flush yes
+run             0
+undump          state_export
+
+# Phase 2: Remove Langevin, keep only NVE, run 0.3 ps
+unfix           lang_fix
+dump            nve_traj all custom 100 dump.nve_continuation.lammpstrj id type mass x y z
+dump_modify     nve_traj sort id flush yes
+thermo          100
+run             3000

@@ -61,6 +61,23 @@ python run_lammps_uma_ice.py --infile in.ice_uma_openmm_match.lmp --device cuda 
 python run_lammps_uma_ice.py --infile in.ice_uma_openmm_match_notraj.lmp --device cuda --molecules 128
 ```
 
+**Long run (same as OpenMM `--steps 10000 --traj-every 10`) and order-parameter parity**
+
+Use **`in.ice_uma_openmm_match_long.lmp`** (run 10000, thermo/dump every 10), or override from any deck:
+
+```bash
+python run_lammps_uma_ice.py --infile in.ice_uma_openmm_match.lmp --steps 10000 --dump-every 10 --thermo-every 10 --device cuda
+```
+
+Then post-process the dump to get **ice order CSV** (same schema as OpenMM `ice_order.csv`):
+
+```bash
+cd ..
+python lammps_order_from_dump.py --data lammps/data.ice_uma --dump lammps/dump.openmm_match_long.lammpstrj -o ice_order_lammps.csv
+```
+
+Plot **`ice_order.csv`** (OpenMM) vs **`ice_order_lammps.csv`** (LAMMPS) to compare Q6 / q_tet trends. See main **`../README.md`** section “OpenMM vs LAMMPS same experiment”.
+
 Time wall seconds and compute **ns/day** = `(100 fs) / (time_s) * 86400 / 1e6` or use printed thermo. OpenMM:
 ```bash
 OPENMM_CUDA_FAST_EXTERNAL_CALL=1 python ../run_openmm_ice_lammps_match.py --no-trajectory --steps 100 ...

@@ -25,8 +25,50 @@ import torch
 DEBUG_LOGS = os.environ.get('OPENMMML_DEBUG_LOGS', '0').lower() in ('1', 'true', 'yes')
 DEBUG_FILE_LOGS = False
 
-# Unit conversion: eV/Å -> kJ/(mol·nm) for forces (1 kJ/mol/nm = 0.0103642 eV/Å)
-EV_ANG_TO_KJ_NM = 96.4853
+# Unit conversion: eV/Å -> kJ/(mol·nm) for forces
+# 1 eV/Å = 96.4853 kJ/mol / 0.1 nm = 964.853 kJ/(mol·nm)  (1 Å = 0.1 nm)
+EV_ANG_TO_KJ_NM = 96.4853 * 10.0
+
+
+def _wrap_water_molecules_per_bead(pos_angstrom: np.ndarray, cell_3x3: np.ndarray) -> np.ndarray:
+    """
+    Molecular PBC wrap for one full atomic configuration (one RPMD bead or classical step).
+
+    **RPMD:** Call with **that bead’s** Cartesian positions and **that bead’s** cell only.
+    The batched path does ``for bead_idx: wrap(all_pos[bead_idx], all_boxes[bead_idx])`` —
+    no mixing across beads. Algorithm per H2O: **O** into primary cell (fractional floor);
+    each **H = O_new + minimum-image(Δ)** from the **same bead’s** O/H (not centroid across
+    beads; not per-atom independent wrap).
+
+    Per-atom ``wrap_positions()`` breaks O–H when OpenMM unwraps coordinates.
+    """
+    n = int(pos_angstrom.shape[0])
+    if n % 3 != 0:
+        return np.asarray(pos_angstrom, dtype=np.float64)
+    cell = np.asarray(cell_3x3, dtype=np.float64)
+    inv = np.linalg.inv(cell)
+    out = np.array(pos_angstrom, dtype=np.float64, copy=True)
+    for m in range(n // 3):
+        o = out[3 * m]
+        fo = o @ inv.T
+        fo = fo - np.floor(fo)
+        o_n = fo[0] * cell[0] + fo[1] * cell[1] + fo[2] * cell[2]
+        out[3 * m] = o_n
+        for k in (1, 2):
+            d = out[3 * m + k] - o
+            df = d @ inv.T
+            df = df - np.round(df)
+            out[3 * m + k] = o_n + df[0] * cell[0] + df[1] * cell[1] + df[2] * cell[2]
+    return out
+
+
+def _is_water_ohm_topology(symbols: list) -> bool:
+    if len(symbols) < 3 or len(symbols) % 3 != 0:
+        return False
+    for m in range(len(symbols) // 3):
+        if symbols[3 * m] != "O" or symbols[3 * m + 1] != "H" or symbols[3 * m + 2] != "H":
+            return False
+    return True
 
 
 def _fast_inference_settings():
@@ -183,95 +225,61 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                 valid_dataset_name = cache['valid_dataset_name']
                 device = _config['device']
 
-                if DEBUG_LOGS and not cache.get("warned_single", False):
-                    print(
-                        "Single-copy function called (likely from getState/reporters). "
-                        "Batch path is still used for RPMD force evaluation.",
-                        flush=True,
-                    )
-                    cache["warned_single"] = True
-                
-                # Get positions from OpenMM State and ensure it's contiguous numpy with no shared memory
                 all_pos_nm = state.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
                 if atom_indices is not None:
-                    pos_nm = all_pos_nm[atom_indices].copy()  # Explicit copy
+                    pos_nm = all_pos_nm[atom_indices].copy()
                 else:
-                    pos_nm = all_pos_nm[:n_atoms].copy()  # Explicit copy
+                    pos_nm = all_pos_nm[:n_atoms].copy()
 
-                pos_angstrom = np.ascontiguousarray(pos_nm * 10.0)  # Ensure contiguous
+                pos_angstrom = np.ascontiguousarray(pos_nm * 10.0, dtype=np.float64)
 
-                # Create ASE atoms (this is CPU-side)
-                atoms_ase = Atoms(symbols=symbols, positions=pos_angstrom, pbc=isPeriodic)
+                # Detect periodicity from the runtime state, not from the
+                # closure captured at addForces time, because box vectors may
+                # be set on the Context after system creation.
+                box_vectors = state.getPeriodicBoxVectors(asNumpy=True)
+                has_periodic_box = box_vectors is not None and np.any(
+                    box_vectors.value_in_unit(unit.nanometer)
+                )
+
+                cell_angstrom = None
+                if has_periodic_box:
+                    cell_angstrom = np.ascontiguousarray(
+                        box_vectors.value_in_unit(unit.nanometer) * 10.0,
+                        dtype=np.float64,
+                    )
+                    if _is_water_ohm_topology(symbols):
+                        pos_angstrom = _wrap_water_molecules_per_bead(
+                            pos_angstrom, cell_angstrom
+                        )
+                    else:
+                        pos_angstrom = wrap_positions(
+                            pos_angstrom, cell=cell_angstrom, pbc=True, eps=0
+                        )
+
+                atoms_ase = Atoms(
+                    symbols=symbols,
+                    positions=pos_angstrom,
+                    pbc=has_periodic_box,
+                )
                 atoms_ase.info['charge'] = charge
                 atoms_ase.info['spin'] = spin
+                if cell_angstrom is not None:
+                    atoms_ase.set_cell(cell_angstrom)
 
-                # Set cell before from_ase so wrap_positions (inside from_ase) uses correct box.
-                # Without this, from_ase would wrap using a default/zero cell and positions would be wrong.
-                if isPeriodic:
-                    try:
-                        box = state.getPeriodicBoxVectors(asNumpy=True)
-                        if box is not None:
-                            cell_angstrom = np.ascontiguousarray(
-                                box.value_in_unit(unit.nanometer) * 10.0, dtype=np.float64
-                            )
-                            atoms_ase.set_cell(cell_angstrom)
-                    except Exception as box_err:
-                        raise ValueError(f"Box vector error in single-copy: {box_err}") from box_err
+                data = AtomicData.from_ase(
+                    atoms_ase,
+                    task_name=valid_dataset_name,
+                    r_edges=False,
+                    r_data_keys=['spin', 'charge'],
+                )
 
-                # Create AtomicData (initially CPU-side). from_ase wraps positions using atoms' cell.
-                data = AtomicData.from_ase(atoms_ase, task_name=valid_dataset_name, r_edges=False, r_data_keys=['spin', 'charge'])
+                pred = predict_unit.predict(data)
 
-                
-                # Set cell before moving to GPU (matches batch path)
-                # Now using shared CUDA context, so tensors should work correctly
-                with torch.no_grad():
-                    if isPeriodic:
-                        try:
-                            box = state.getPeriodicBoxVectors(asNumpy=True)
-                            if box is not None:
-                                # Explicit copy to break any OpenMM memory connection
-                                cell_np = np.ascontiguousarray(box.value_in_unit(unit.nanometer) * 10.0)
-                                
-                                                
-                                # Allocate cell in PyTorch CUDA context (not OpenMM's)
-                                # Create empty tensor on GPU first (PyTorch allocates in its own context)
-                                cell_gpu = torch.empty((1, 3, 3), dtype=torch.float32, device=device)
-                                # Copy data from numpy (CPU) to GPU tensor
-                                cell_gpu[0] = torch.from_numpy(cell_np).float()
-                                
-                                                
-                                # Set cell BEFORE .to(device) - matches batch path exactly (line 378)
-                                data.cell = cell_gpu
-                                
-                                                
-                                del cell_gpu
-                        except Exception as box_err:
-                                        print(f"Warning: Box vector error in single-copy: {box_err}")
-                    
-                    # Now move entire data to GPU (matches batch path line 382)
-                    data_device = data.to(device)
-                    
-                        
-                    # dataset must be list (FAIRChem iterates over it)
-                    data_device.dataset = [valid_dataset_name]
-                    
-                        
-                    try:
-                        pred = predict_unit.predict(data_device)
-                    except Exception as pred_err:
-                                raise
-                    
-                    # Extract results and move to CPU immediately
-                    energy_ev = float(pred['energy'].cpu().item())
-                    forces_ev_ang = pred['forces'].cpu().numpy()
+                energy_ev = float(pred['energy'].cpu().item())
+                forces_ev_ang = pred['forces'].cpu().numpy()
 
-                # Clean up GPU tensors immediately
-                del data_device, pred, data
-                if device == 'cuda':
-                    torch.cuda.synchronize()
-                    torch.cuda.empty_cache()
+                del pred, data
 
-                # Convert units (all CPU now)
                 energy_kj = energy_ev * 96.4853
                 molecular_forces = forces_ev_ang * EV_ANG_TO_KJ_NM
 
@@ -304,96 +312,69 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
 
                 import time
                 batch_start = time.time()
-                if DEBUG_LOGS:
-                    print(f"Batch function called: num_beads={len(states)} _from_single={_from_single}", flush=True)
                 
                 num_copies = len(states)
                 
-                # Pre-allocate or reuse position and box buffers
                 if cache['batch_pos_buffer'] is None or cache['max_beads'] < num_copies:
                     cache['batch_pos_buffer'] = np.zeros((num_copies, n_atoms, 3), dtype=np.float64)
-                    if isPeriodic:
-                        cache['batch_box_buffer'] = np.zeros((num_copies, 3, 3), dtype=np.float64)
+                    cache['batch_box_buffer'] = np.zeros((num_copies, 3, 3), dtype=np.float64)
                     cache['max_beads'] = num_copies
                 
                 all_pos_nm = cache['batch_pos_buffer'][:num_copies]
-                all_boxes = cache['batch_box_buffer'][:num_copies] if isPeriodic else None
+                all_boxes = cache['batch_box_buffer'][:num_copies]
+                has_box = False
                 
-                # =================================================================
-                # TRUE TENSOR BATCHING: Build a batched AtomicData object
-                # =================================================================
-                
-                # Collect all positions and boxes (write directly into pre-allocated buffers)
-                for bead_idx, state in enumerate(states):
-                    pos = state.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
+                for bead_idx, bead_state in enumerate(states):
+                    pos = bead_state.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
                     if atom_indices is not None:
                         all_pos_nm[bead_idx] = pos[atom_indices]
                     else:
                         all_pos_nm[bead_idx] = pos[:n_atoms]
                     
-                    # Validate positions: check for NaN, Inf, or extreme values
                     if np.any(np.isnan(all_pos_nm[bead_idx])) or np.any(np.isinf(all_pos_nm[bead_idx])):
                         raise ValueError(f"Invalid positions (NaN/Inf) detected in bead {bead_idx}")
-                    if np.any(np.abs(all_pos_nm[bead_idx]) > 1000.0):
-                        raise ValueError(f"Extreme positions detected in bead {bead_idx}: max={np.max(np.abs(all_pos_nm[bead_idx])):.2f} nm")
                     
-                    if isPeriodic:
-                        try:
-                            box = state.getPeriodicBoxVectors(asNumpy=True)
-                            if box is not None:
-                                all_boxes[bead_idx] = box.value_in_unit(unit.nanometer)
-                                # Validate box vectors
-                                if np.any(np.isnan(all_boxes[bead_idx])) or np.any(np.isinf(all_boxes[bead_idx])):
-                                    raise ValueError(f"Invalid box vectors (NaN/Inf) detected in bead {bead_idx}")
-                                # Ensure box is reasonable (not zero or negative)
-                                box_diag = np.array([all_boxes[bead_idx][0,0], all_boxes[bead_idx][1,1], all_boxes[bead_idx][2,2]])
-                                if np.any(box_diag <= 0) or np.any(box_diag > 1000.0):
-                                    raise ValueError(f"Invalid box size in bead {bead_idx}: {box_diag}")
-                        except Exception as e:
-                            raise ValueError(f"Error getting box vectors for bead {bead_idx}: {e}")
+                    box_vectors = bead_state.getPeriodicBoxVectors(asNumpy=True)
+                    if box_vectors is not None:
+                        box_nm = box_vectors.value_in_unit(unit.nanometer)
+                        if np.any(box_nm):
+                            all_boxes[bead_idx] = box_nm
+                            has_box = True
                 
-                # Convert to Angstroms (views into buffer, no copy)
                 all_pos_angstrom = all_pos_nm * 10.0
 
-                # Wrap positions into primary cell before model input (Fairchem LAMMPS convention).
-                # MD coordinates are unwrapped; without wrapping, molecules crossing boundaries
-                # appear disconnected to the model, producing wrong forces.
-                if isPeriodic and all_boxes is not None:
+                if has_box:
                     for i in range(num_copies):
                         cell_angstrom = np.ascontiguousarray(all_boxes[i] * 10.0, dtype=np.float64)
-                        all_pos_angstrom[i] = wrap_positions(
-                            all_pos_angstrom[i],
-                            cell=cell_angstrom,
-                            pbc=True,
-                            eps=0,
-                        )
+                        if _is_water_ohm_topology(symbols):
+                            all_pos_angstrom[i] = _wrap_water_molecules_per_bead(
+                                all_pos_angstrom[i], cell_angstrom
+                            )
+                        else:
+                            all_pos_angstrom[i] = wrap_positions(
+                                all_pos_angstrom[i],
+                                cell=cell_angstrom,
+                                pbc=True,
+                                eps=0,
+                            )
                 
-                # PROFILING
                 t_prep = time.time() - batch_start
                 t_atomic_start = time.time()
 
-                # =================================================================
-                # BATCHED EXECUTION: Single batched model call
-                # =================================================================
-                # Create or reuse ASE Atoms templates (for initial AtomicData creation only)
                 if len(cache['ase_atoms_templates']) < num_copies:
                     cache['ase_atoms_templates'] = []
                     for i in range(num_copies):
-                        if isPeriodic:
-                            atoms_ase = Atoms(symbols=symbols, pbc=True)
-                        else:
-                            atoms_ase = Atoms(symbols=symbols, pbc=False)
+                        atoms_ase = Atoms(symbols=symbols, pbc=has_box)
                         atoms_ase.info['charge'] = charge
                         atoms_ase.info['spin'] = spin
                         cache['ase_atoms_templates'].append(atoms_ase)
 
-                # Create or reuse AtomicData templates (P3: avoid per-step from_ase)
                 atomic_templates = cache['atomic_data_templates']
                 if len(atomic_templates) < num_copies:
                     for i in range(len(atomic_templates), num_copies):
                         atoms_ase = cache['ase_atoms_templates'][i]
                         atoms_ase.set_positions(all_pos_angstrom[i])
-                        if isPeriodic and all_boxes is not None:
+                        if has_box:
                             atoms_ase.set_cell(all_boxes[i] * 10.0)
                         data = AtomicData.from_ase(
                             atoms_ase,
@@ -404,14 +385,16 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                         data.sid = [f"bead-{i}"]
                         atomic_templates.append(data)
 
-                # Update positions and cell in place (no AtomicData.from_ase per step)
                 for i in range(num_copies):
                     atomic_templates[i].pos = torch.from_numpy(
                         np.ascontiguousarray(all_pos_angstrom[i], dtype=np.float32)
-                    )
-                    if isPeriodic and all_boxes is not None:
+                    ).float()
+                    if has_box:
                         cell_np = np.ascontiguousarray(all_boxes[i] * 10.0, dtype=np.float32)
-                        atomic_templates[i].cell = torch.from_numpy(cell_np).unsqueeze(0)
+                        atomic_templates[i].cell = torch.from_numpy(cell_np).float().unsqueeze(0)
+                    co = getattr(atomic_templates[i], "cell_offsets", None)
+                    if co is not None and co.numel() > 0:
+                        atomic_templates[i].cell_offsets = co.float()
 
                 data_list = atomic_templates[:num_copies]
                 t_atomicdata = time.time() - t_atomic_start
@@ -419,39 +402,16 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
 
                 batch_data = atomicdata_list_to_batch(data_list)
                 batch_indices = batch_data.batch.numpy()
-                batch_data = batch_data.to(device, non_blocking=True)
+
+                pred = predict_unit.predict(batch_data)
                 
-                with torch.no_grad():
-                    try:
-                        pred = predict_unit.predict(batch_data)
-                    except RuntimeError as e:
-                        # If CUDA error occurs, provide detailed diagnostics
-                        if "CUDA" in str(e) or "illegal" in str(e).lower():
-                            error_info = {
-                                "model": self.model_name,
-                                "num_beads": num_copies,
-                                "num_atoms": n_atoms,
-                                "batch_size": batch_data.num_graphs if hasattr(batch_data, 'num_graphs') else 'unknown',
-                                "has_cell": hasattr(batch_data, 'cell'),
-                                "has_edges": hasattr(batch_data, 'edge_index'),
-                                "device": str(device),
-                            }
-                            print(f"CUDA error in batched inference: {error_info}")
-                        raise
-                
-                # Start both GPU->CPU transfers in parallel, then sync via .numpy()
                 energies_t = pred['energy'].detach().to('cpu', non_blocking=True)
                 forces_t = pred['forces'].detach().to('cpu', non_blocking=True)
                 energies_ev = energies_t.numpy()
                 forces_ev_ang = forces_t.numpy()
                 
                 t_inference = time.time() - t_inference_start
-                if DEBUG_LOGS:
-                    print(f"  ⏱️ Batched GPU inference: {t_inference*1000:.1f} ms ({num_copies} systems)", flush=True)
-                
-                # =================================================================
-                # Collect results and reshape
-                # =================================================================
+
                 energies_kj = energies_ev * 96.4853
                 total_energy = float(np.sum(energies_kj))
                 
@@ -474,15 +434,6 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                         forces_kj_nm_list.append(forces_kj_nm)
                 
                 forces_cpu = np.array(forces_kj_nm_list, dtype=np.float32)
-                
-                batch_time = time.time() - batch_start
-                if DEBUG_LOGS:
-                    print(f"BATCH COMPLETED in {batch_time:.3f}s for {num_copies} beads ({batch_time/num_copies*1000:.1f} ms/bead)", flush=True)
-                    print(f"   Breakdown: prep={t_prep*1000:.1f}ms, atomicdata={t_atomicdata*1000:.1f}ms, inference={t_inference*1000:.1f}ms", flush=True)
-                    print(f"   Speedup vs sequential: {num_copies * 41.4 / (t_inference*1000):.2f}x (ideal: {num_copies}x)", flush=True)
-                
-                if device == 'cuda':
-                    torch.cuda.synchronize()
 
                 return (total_energy * unit.kilojoules_per_mole,
                         forces_cpu * unit.kilojoules_per_mole / unit.nanometer)
@@ -494,7 +445,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
         # Create PythonForce with both single and batch callbacks
         force = openmm.PythonForce(compute_uma_forces_single, {}, compute_uma_forces_batch)
         force.setForceGroup(forceGroup)
-        force.setUsesPeriodicBoundaryConditions(isPeriodic)
+        force.setUsesPeriodicBoundaryConditions(True)
         system.addForce(force)
 
         print(f"UMA force added with batched RPMD support (model: {self.model_name}, task: {task_name or 'auto'}, device: {device})")

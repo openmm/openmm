@@ -1,0 +1,28 @@
+# Same as in.ice_uma_openmm_match.lmp but long run for parity with OpenMM --steps 10000 --traj-every 10:
+#   run 10000 | thermo 10 | dump every 10 | minimize max 150 evals
+#
+# Build data:  python build_lammps_ice_data.py -n 128
+# Run:         python run_lammps_uma_ice.py --infile in.ice_uma_openmm_match_long.lmp --device cuda
+# Post-process order:  python lammps_order_from_dump.py ...
+
+units           metal
+atom_style      atomic
+boundary        p p p
+read_data       data.ice_uma
+comm_modify     cutoff 12.0
+timestep        0.001
+
+minimize        0.0 1.0e-6 500 150
+
+velocity        all create 243.0 284759 dist gaussian
+velocity        all scale 243.0
+fix             nve all nve
+fix             lang all langevin 243.0 243.0 1.0 284759 zero yes
+thermo_style    custom step time temp pe ke etotal
+thermo          10
+
+dump            traj all custom 10 dump.openmm_match_long.lammpstrj id type mass x y z
+dump_modify     traj sort id flush yes
+dump            ovito all xyz 10 dump.openmm_match_long_ovito.xyz
+dump_modify     ovito element O H sort id append yes
+run             10000

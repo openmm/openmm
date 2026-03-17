@@ -43,8 +43,10 @@ if os.getenv("OPENMM_PLUGIN_DIR") is None:
                 os.environ["OPENMM_PLUGIN_DIR"] = _plugins
                 break
 
+import openmm
 from openmm import (
     Context,
+    CustomIntegrator,
     LangevinMiddleIntegrator,
     LocalEnergyMinimizer,
     Platform,
@@ -53,6 +55,56 @@ from openmm import (
 )
 from openmm.app import Topology, element
 from openmmml import MLPotential
+
+
+def _make_bbk_integrator(
+    temperature: float,
+    friction: float,
+    dt_fs: float,
+    seed: int,
+) -> CustomIntegrator:
+    """LAMMPS-equivalent BBK Langevin integrator (fix nve + fix langevin).
+
+    Splitting: half-kick -> full drift -> force eval -> O-U thermostat -> half-kick.
+    This matches the LAMMPS order where ``fix nve`` does Velocity-Verlet position/velocity
+    updates and ``fix langevin`` adds friction + stochastic forces at the post_force stage.
+
+    The key difference from LangevinMiddleIntegrator (BAOAB) is that the thermostat acts
+    AFTER the force evaluation (not between two half-drifts), matching LAMMPS dynamics.
+
+    CustomIntegrator works in OpenMM internal units: ps (time), nm (length),
+    kJ/mol (energy), Da (mass). Variables set via addGlobalVariable use these units.
+    """
+    dt = dt_fs * unit.femtoseconds
+
+    # Convert to OpenMM internal units (ps, kJ/mol)
+    gamma_ps = friction  # already in 1/ps
+    kT_kjmol = (
+        unit.MOLAR_GAS_CONSTANT_R * temperature * unit.kelvin
+    ).value_in_unit(unit.kilojoules_per_mole)
+
+    integrator = CustomIntegrator(dt)
+    integrator.setRandomNumberSeed(seed)
+
+    integrator.addGlobalVariable("gamma_val", gamma_ps)
+    integrator.addGlobalVariable("kT_val", kT_kjmol)
+
+    # Half kick with current forces
+    integrator.addComputePerDof("v", "v + 0.5*dt*f/m")
+    # Full drift
+    integrator.addComputePerDof("x", "x + dt*v")
+    # Force evaluation at new positions (updateContextState triggers PythonForce)
+    integrator.addUpdateContextState()
+    integrator.addComputePerDof("v", "v + 0.5*dt*f/m")
+    # O-U velocity modification (Langevin thermostat) matching LAMMPS fix langevin
+    # vscale = exp(-gamma*dt), fscale = sqrt(kT*(1-vscale^2)/m)
+    integrator.addComputePerDof(
+        "v",
+        "exp(-gamma_val*dt)*v + sqrt(kT_val*(1 - exp(-2*gamma_val*dt))/m)*gaussian",
+    )
+
+    return integrator
+
 
 # Reuse parser from benchmark (same file layout)
 sys.path.insert(0, str(_SCRIPT_DIR))
@@ -102,6 +154,18 @@ def main() -> None:
     ap.add_argument("--platform", default="cuda", choices=["cuda", "cpu"])
     ap.add_argument("--ml-device", default=None)
     ap.add_argument("--seed", type=int, default=284759, help="LAMMPS velocity seed analogue")
+    ap.add_argument(
+        "--integrator",
+        default="langevin-middle",
+        choices=["langevin-middle", "bbk"],
+        help="Integration scheme: langevin-middle = BAOAB (OpenMM default), "
+        "bbk = LAMMPS-equivalent Velocity-Verlet + Langevin (fix nve + fix langevin)",
+    )
+    ap.add_argument(
+        "--no-cm-removal",
+        action="store_true",
+        help="Do not add CMMotionRemover to the system (LAMMPS uses 'fix langevin zero yes' instead)",
+    )
     ap.add_argument("-o", "--output", type=Path, default=None, help="Final PDB")
     ap.add_argument(
         "--trajectory",
@@ -193,15 +257,30 @@ def main() -> None:
 
     potential = MLPotential(args.model)
     system = potential.createSystem(
-        topology, task_name="omol", charge=0, spin=1, device=ml_dev
+        topology,
+        task_name="omol",
+        charge=0,
+        spin=1,
+        device=ml_dev,
+        use_atom_wrap_for_lammps_parity=True,
+        removeCMMotion=not args.no_cm_removal,
     )
 
-    integrator = LangevinMiddleIntegrator(
-        args.temperature * unit.kelvin,
-        args.friction / unit.picosecond,
-        args.dt_fs * unit.femtoseconds,
-    )
-    integrator.setRandomNumberSeed(args.seed)
+    if args.integrator == "bbk":
+        integrator = _make_bbk_integrator(
+            args.temperature, args.friction, args.dt_fs, args.seed,
+        )
+        print(f"  Integrator: BBK (LAMMPS-equivalent VV + Langevin)")
+    else:
+        integrator = LangevinMiddleIntegrator(
+            args.temperature * unit.kelvin,
+            args.friction / unit.picosecond,
+            args.dt_fs * unit.femtoseconds,
+        )
+        integrator.setRandomNumberSeed(args.seed)
+        print(f"  Integrator: LangevinMiddleIntegrator (BAOAB)")
+    if args.no_cm_removal:
+        print(f"  CMMotionRemover: DISABLED")
 
     platform = Platform.getPlatformByName(args.platform.upper())
     props = {}
@@ -302,11 +381,14 @@ def main() -> None:
     dof = 3 * n
     R = unit.MOLAR_GAS_CONSTANT_R
 
+    n_cm_removed = 3 if not args.no_cm_removal else 0
+    dof_effective = dof - n_cm_removed
+
     def _instantaneous_T_K(st_) -> float:
         if hasattr(integrator, "computeSystemTemperature"):
             return integrator.computeSystemTemperature().value_in_unit(unit.kelvin)
         ke = st_.getKineticEnergy()
-        return (2 * ke / (dof * R)).value_in_unit(unit.kelvin)
+        return (2 * ke / (dof_effective * R)).value_in_unit(unit.kelvin)
 
     write_traj = dcd is not None or xyz_f is not None
     for step in range(1, args.steps + 1):

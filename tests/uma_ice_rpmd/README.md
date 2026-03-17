@@ -47,6 +47,60 @@ python run_openmm_ice_lammps_match.py --steps 5000 --report-every 100 --order-ev
 
 Use **`--report-every`** ≤ **`--order-every`** (or equal) so order lines are printed when you expect. Post-process **`ice_order.csv`** (e.g. plot `q6_mean` vs `time_ps`).
 
+### OpenMM vs LAMMPS same experiment (order parameters)
+
+To compare **ice disorder (Q6, q_tet)** between OpenMM and LAMMPS on the same protocol:
+
+1. **Build shared structure** (once):  
+   `cd tests/uma_ice_rpmd && python lammps/build_lammps_ice_data.py -n 128`
+
+2. **OpenMM** (10k steps, dump every 10, order CSV):  
+   `python run_openmm_ice_lammps_match.py --steps 10000 --traj-every 10 --report-every 10 --order-csv ice_order.csv --platform cuda --ml-device cuda --model uma-s-1p1-pythonforce-batch`
+
+3. **LAMMPS** (same length/interval via long deck or CLI):  
+   `cd lammps && python run_lammps_uma_ice.py --infile in.ice_uma_openmm_match_long.lmp --device cuda`  
+   Or override from short deck:  
+   `python run_lammps_uma_ice.py --infile in.ice_uma_openmm_match.lmp --steps 10000 --dump-every 10 --thermo-every 10 --device cuda`
+
+4. **Post-process LAMMPS trajectory** → same CSV schema as OpenMM:  
+   `cd .. && python lammps_order_from_dump.py --data lammps/data.ice_uma --dump lammps/dump.openmm_match_long.lammpstrj -o ice_order_lammps.csv`
+
+5. **Compare** `ice_order.csv` (OpenMM) vs `ice_order_lammps.csv` (LAMMPS): same columns; trajectories will differ (different Langevin RNG) but **trends** (q_tet / Q6 drift) should be comparable.
+
+### End-to-end pipeline (1 ps, three models)
+
+A **single script** runs the full workflow sequentially (no parallel simulations, to avoid GPU OOM):
+
+1. **Generate** `ice.cif` if missing (via GenIce: `genice 1h --rep 2 2 2 --format cif`).
+2. **Build** 128-molecule LAMMPS data: `lammps/data.ice_uma`.
+3. **Run** 1 ps NVT (Langevin τ = 0.1 ps, **0.1 fs** default for TIP4P/2005f, 243 K) with **TIP4P/2005f** (OpenMM).
+4. **Run** 1 ps same conditions with **UMA** (OpenMM).
+5. **Run** 1 ps same conditions with **UMA** (LAMMPS), then post-process dump → order CSV.
+6. **Plot** Q6 and q_tet vs time for all three runs → `order_vs_time.png`.
+
+All three simulations use the **same initial structure**, **same box**, **same thermostat and timestep** (default **0.1 fs** for TIP4P/2005f stability). Run length is 1 ps (10000 steps @ 0.1 fs). Order parameters and trajectory frames are written every 10 fs.
+
+**Run (foreground):**
+```bash
+cd tests/uma_ice_rpmd
+python run_ice_pipeline.py --out-dir pipeline_out
+```
+
+**Run in background** (one command; log to `pipeline.log`):
+```bash
+cd tests/uma_ice_rpmd
+nohup python run_ice_pipeline.py --out-dir pipeline_out >> pipeline.log 2>&1 &
+# Monitor: tail -f pipeline.log
+```
+
+**Classical (TIP4P/2005f) stability:** The pipeline uses **0.1 fs** by default (paper-recommended). The TIP4P/2005f force field matches González & Abascal (J. Chem. Phys. 135, 224516, 2011), Table I and Eq. (4) (M-site d_OM^rel = 0.13194). The script applies **geometry relaxation** by default so minimization is stable. The pipeline uses **GPU (cuda)** for all runs by default. If the classical CSV still shows huge T_K, use **`--variable-step-classical`** so the classical step uses OpenMM’s **VariableLangevinIntegrator** (adaptive dt). The classical script asserts **PBC**: nonbonded cutoff (0.7 nm) &lt; half the smallest box length, and aborts if max force after minimization exceeds 1e5 kJ/(mol·nm).
+
+```bash
+nohup python run_ice_pipeline.py --out-dir pipeline_out --variable-step-classical >> pipeline.log 2>&1 &
+```
+
+Options: `--work-dir` (default: script directory), `--dt-fs` (default **0.1** fs for TIP4P/2005f stability), `--steps` (default: 10000 for 1 ps @ 0.1 fs), `--skip-lammps`, `--only-plot`, `--platform-classical` (default **cuda**), `--variable-step-classical`. Tests: `pytest test_ice_pipeline.py -v`.
+
 ## Ice Structure
 
 The initial structure can come from:
@@ -271,6 +325,21 @@ Expect **~same ms** for (1) vs (2): slowness is **UMA inference**, not RPMD or O
 ```bash
 python build_lammps_ice_data.py -n 128   # writes lammps/data.ice_uma if missing
 python benchmark_same_structure_openmm_vs_lammps.py --reps 40
+```
+
+### Classical flexible water (TIP4P/2005f)
+
+**`run_openmm_ice_classical_flex.py`** runs the same ICE setup (structure from `lammps/data.ice_uma`, 243 K, NVT Langevin) with the **TIP4P/2005f** flexible water model (González & Abascal, J. Chem. Phys. 135, 224516, 2011). Use it to compare classical vs UMA ice stability and order parameters (Q6, q_tet).
+
+- **Force field**: TIP4P/2005f (Morse O–H, harmonic H–O–H, LJ + M-site). Parameters match the paper (SklogWiki / González & Abascal 2011), Table I and Eq. (4): M-site d_OM^rel = 0.13194 (average3 weights 0.73612, 0.13194, 0.13194). The XML is in `wrappers/python/openmm/app/data/tip4p2005f.xml` when building OpenMM from this repo; otherwise copy it or pass `--force-field /path/to/tip4p2005f.xml`.
+- **Geometry relaxation**: By default the script sets each water to TIP4P/2005f equilibrium (r_OH = 0.09419 nm, H–O–H = 107.4°) before minimization, because the LAMMPS/CIF ice structure has rigid TIP4P/2005 geometry (r_OH ≈ 0.0957 nm, angle ≈ 104.5°). Use `--no-relax-geometry` only if your structure is already equilibrated with TIP4P/2005f.
+- **Timestep**: 0.1 fs default (recommended for TIP4P/2005f; 0.2 fs may be unstable).
+- **Output**: Same order-parameter CSV schema as `run_openmm_ice_lammps_match.py` for direct comparison.
+
+```bash
+python lammps/build_lammps_ice_data.py -n 128
+python run_openmm_ice_classical_flex.py --steps 5000 --order-csv ice_order_classical.csv --platform cuda
+# Compare with UMA: ice_order.csv (UMA) vs ice_order_classical.csv (TIP4P/2005f)
 ```
 
 ### UMA-LAMMPS Benchmarking

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -55,6 +56,49 @@ def _split_minimize_then_md(script: str) -> tuple[list[str], list[str]]:
     return pre, post
 
 
+def _rewrite_post_for_parity(
+    post: list[str],
+    steps: int | None = None,
+    dump_every: int | None = None,
+    thermo_every: int | None = None,
+    min_eval: int | None = None,
+    skip_minimize: bool = False,
+) -> list[str]:
+    """Replace run, thermo, dump interval, and minimize max eval in post block for OpenMM parity."""
+    out: list[str] = []
+    for line in post:
+        s = line.strip()
+        if steps is not None and (s.startswith("run ") or s == "run"):
+            out.append(f"run             {steps}\n")
+            continue
+        if thermo_every is not None and s.startswith("thermo "):
+            out.append(f"thermo          {thermo_every}\n")
+            continue
+        if dump_every is not None and s.startswith("dump "):
+            parts = line.split()
+            if len(parts) >= 4:
+                # dump ID group style N file args...
+                parts[4] = str(dump_every)
+                out.append(" ".join(parts) + "\n")
+            else:
+                out.append(line)
+            continue
+        if skip_minimize and s.lower().startswith("minimize "):
+            out.append("minimize        0.0 1.0e-6 0 0\n")
+            continue
+        if min_eval is not None and s.lower().startswith("minimize "):
+            parts = s.split()
+            if len(parts) >= 5:
+                # minimize etol ftol maxiter maxeval
+                parts[4] = str(min_eval)
+                out.append(" ".join(parts) + "\n")
+            else:
+                out.append(line)
+            continue
+        out.append(line)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description="LAMMPS + UMA ice (fairchem-lammps)")
     ap.add_argument("--input", "-i", type=Path, default=_ROOT / "ice.cif")
@@ -65,6 +109,34 @@ def main():
     ap.add_argument("--infile", type=Path, default=_SCRIPT_DIR / "in.ice_uma.lmp")
     ap.add_argument("--spin", type=int, default=1, help="omol spin (match OpenMM)")
     ap.add_argument("--charge", type=int, default=0)
+    ap.add_argument("--steps", type=int, default=None, help="Override run length (match OpenMM --steps)")
+    ap.add_argument("--dump-every", type=int, default=None, help="Dump every N steps (match OpenMM --traj-every)")
+    ap.add_argument("--thermo-every", type=int, default=None, help="Thermo every N steps (match OpenMM --report-every)")
+    ap.add_argument("--min-eval", type=int, default=None, help="Minimize max force evaluations (match OpenMM --minimize-iters)")
+    ap.add_argument(
+        "--dt-fs",
+        type=float,
+        default=None,
+        help="Timestep in fs (metal: timestep in ps = dt_fs * 0.001). If set, overrides input script timestep for pipeline parity.",
+    )
+    ap.add_argument(
+        "--skip-minimize",
+        action="store_true",
+        help="Skip minimization (0 iterations). Use when starting from an already-minimized structure (e.g. --shared-initial-structure in pipeline).",
+    )
+    ap.add_argument(
+        "--temperature",
+        type=float,
+        default=None,
+        help="Temperature in K (overrides input script; must match OpenMM for parity). units metal: K.",
+    )
+    ap.add_argument(
+        "--friction",
+        type=float,
+        default=None,
+        help="Langevin friction in 1/ps (overrides input script). LAMMPS damp (ps) = 1/friction, e.g. 10 -> damp 0.1.",
+    )
+    ap.add_argument("--seed", type=int, default=284759, help="Random seed for velocity and Langevin (match OpenMM)")
     args = ap.parse_args()
 
     try:
@@ -94,8 +166,43 @@ def main():
         subprocess.check_call(cmd)
 
     in_text = args.infile.read_text()
-    if "read_data       data.ice_uma" in in_text and args.data.name != "data.ice_uma":
-        in_text = in_text.replace("read_data       data.ice_uma", f"read_data       {args.data.name}")
+    data_path_resolved = args.data.resolve()
+    if "read_data       data.ice_uma" in in_text and data_path_resolved.name != "data.ice_uma":
+        # Use absolute path so LAMMPS finds the file when cwd is _SCRIPT_DIR (e.g. shared_data.ice_uma in pipeline_out).
+        in_text = in_text.replace("read_data       data.ice_uma", f"read_data       {data_path_resolved}")
+    if args.dt_fs is not None:
+        # Override timestep for pipeline parity (same dt as OpenMM). Metal units: 1 fs = 0.001 ps.
+        # Replace only the actual LAMMPS command line (not comment lines), since count=1 would
+        # otherwise hit the first "timestep" in a comment and leave the real command unchanged.
+        dt_ps = args.dt_fs * 0.001
+        timestep_re = re.compile(r"^(\s*timestep\s+)[\d.e+-]+")
+        new_lines = []
+        for line in in_text.splitlines():
+            stripped = line.strip()
+            if stripped and not stripped.startswith("#") and timestep_re.match(line):
+                line = timestep_re.sub(rf"\g<1>{dt_ps}", line)
+            new_lines.append(line)
+        in_text = "\n".join(new_lines) + ("\n" if in_text.endswith("\n") else "")
+    # Temperature/friction/seed parity with OpenMM. Units: metal → T in K, time in ps; LAMMPS damp (ps) = 1/friction (1/ps).
+    if args.temperature is not None or args.friction is not None:
+        T = args.temperature if args.temperature is not None else 243.0
+        damp_ps = (1.0 / args.friction) if args.friction is not None else 0.1
+        seed = args.seed
+        if args.temperature is not None:
+            in_text = re.sub(
+                r"velocity\s+all\s+create\s+[\d.]+\s+\d+(\s+dist\s+gaussian)?",
+                f"velocity        all create {T} {seed}\\1",
+                in_text,
+                count=1,
+            )
+            in_text = re.sub(r"velocity\s+all\s+scale\s+[\d.]+", f"velocity        all scale {T}", in_text, count=1)
+        in_text = re.sub(
+            r"(fix\s+\S+\s+all\s+langevin)\s+[\d.]+\s+[\d.]+\s+[\d.]+\s+\d+",
+            f"\\1 {T} {T} {damp_ps} {seed}",
+            in_text,
+            count=1,
+        )
+    if "read_data       data.ice_uma" in in_text and data_path_resolved.name != "data.ice_uma":
         tmp_in = _SCRIPT_DIR / "_in_active.lmp"
         tmp_in.write_text(in_text)
         in_path = str(tmp_in)
@@ -125,6 +232,15 @@ def main():
         print(f"  xyz (O/H for Ovito):            {dump_xyz}")
 
     pre, post = _split_minimize_then_md(in_text)
+    if any(x is not None for x in (args.steps, args.dump_every, args.thermo_every, args.min_eval)) or args.skip_minimize:
+        post = _rewrite_post_for_parity(
+            post,
+            steps=args.steps,
+            dump_every=args.dump_every,
+            thermo_every=args.thermo_every,
+            min_eval=args.min_eval,
+            skip_minimize=args.skip_minimize,
+        )
     machine = os.environ.get("LAMMPS_MACHINE_NAME")
     lmp = lammps(name=machine, cmdargs=["-nocite", "-log", "none", "-echo", "screen"])
     lmp._predictor = pretrained_mlip.get_predict_unit(args.model, device=args.device)
