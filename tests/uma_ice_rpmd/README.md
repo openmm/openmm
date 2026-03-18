@@ -67,6 +67,17 @@ To compare **ice disorder (Q6, q_tet)** between OpenMM and LAMMPS on the same pr
 
 5. **Compare** `ice_order.csv` (OpenMM) vs `ice_order_lammps.csv` (LAMMPS): same columns; trajectories will differ (different Langevin RNG) but **trends** (q_tet / Q6 drift) should be comparable.
 
+### RPMD benchmark: OpenMM vs i-PI + LAMMPS UMA
+
+Compare **path-integral RPMD** (243 K, PILE-L thermostat, 0.5 fs) between OpenMM and i-PI + LAMMPS UMA. Default **32 molecules, 4 beads** (scaled from 128×8) to avoid GPU OOM. Order parameters use **centroid** bead positions. Prerequisites: `pip install ipi fairchem-lammps fairchem-core lammps`, LAMMPS built with MISC package (fix ipi).
+
+1. **Build LAMMPS data**: `python lammps/build_lammps_ice_data.py -n 32 -o lammps/data.ice_uma_32`
+2. **Convert LAMMPS data → i-PI init**: `python ipi/convert_lammps_to_ipi_xyz.py --data lammps/data.ice_uma_32 -o ipi/init.xyz`
+3. **Run i-PI + LAMMPS UMA**: `python run_ipi_lammps_uma_rpmd.py --molecules 32 --beads 4 --steps 100` (or 1000 for longer run)
+4. **Post-process i-PI trajectory** (centroid over beads): `python ipi_order_from_traj.py --traj ipi/ice__i-pi.traj_0.xyz --beads 4 -o pipeline_out/ice_order_ipi_rpmd.csv`
+5. **Run OpenMM RPMD reference**: `python run_openmm_rpmd_reference.py --molecules 32 --beads 4 --steps 100`
+6. **Plot comparison**: `python plot_rpmd_comparison.py -o pipeline_out/rpmd_comparison.png`
+
 ### End-to-end pipeline (1 ps, three models)
 
 A **single script** runs the full workflow sequentially (no parallel simulations, to avoid GPU OOM):

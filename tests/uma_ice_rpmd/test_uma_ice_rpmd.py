@@ -42,6 +42,13 @@ try:
 except ImportError:
     _HAS_MATPLOTLIB = False
 
+try:
+    from ice_order_parameters import ice_order_metrics
+    _HAS_ICE_ORDER = True
+except ImportError:
+    ice_order_metrics = None  # type: ignore
+    _HAS_ICE_ORDER = False
+
 from openmm import app, unit, Vec3
 from openmm import RPMDIntegrator, Context, Platform, RPMDMonteCarloBarostat
 from openmmml import MLPotential
@@ -439,6 +446,33 @@ def create_ice_structure(num_molecules=None, box_nm=None, ice_type='1h', input_f
 print("All required packages loaded successfully")
 
 
+def _mic_centroid(positions_per_bead: list[np.ndarray], box_matrix: np.ndarray) -> np.ndarray:
+    """MIC-aware centroid of RPMD bead positions.
+
+    Uses bead 0 as reference frame.  For each subsequent bead, the displacement
+    from bead 0 is folded via minimum-image convention before averaging.
+    This prevents PBC-wrap artifacts when beads straddle a cell boundary.
+
+    Parameters
+    ----------
+    positions_per_bead : list of (n_atoms, 3) arrays in nm
+    box_matrix : (3, 3) cell vectors in nm (rows = a, b, c)
+
+    Returns
+    -------
+    centroid : (n_atoms, 3) array in nm
+    """
+    ref = positions_per_bead[0]
+    inv_box = np.linalg.inv(box_matrix)
+    accum = np.zeros_like(ref)
+    for b in range(len(positions_per_bead)):
+        delta = positions_per_bead[b] - ref
+        frac = delta @ inv_box.T
+        frac -= np.round(frac)
+        accum += frac @ box_matrix
+    return ref + accum / len(positions_per_bead)
+
+
 def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=None,
                    max_molecules=None,
                    num_beads=8, temperature_K=243.0,
@@ -447,7 +481,8 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
                    output_dir='.', report_interval_ps=1.0, pdb_interval_ps=0.2,
                    platform_name='cuda', ml_device=None, precision_override=None,
                    minimal_report=False, optimize_inference=False,
-                   optimize_inference_tf32_only=False, inference_turbo_rpmd=False):
+                   optimize_inference_tf32_only=False, inference_turbo_rpmd=False,
+                   order_csv_path=None, order_every_steps=None, seed=284759):
     """
     Run RPMD simulation of ice.
     
@@ -548,7 +583,8 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
 
     print(f"  ML model device: {_ml_device or 'auto (library default)'}")
 
-    create_kwargs = {'task_name': 'omol', 'charge': 0, 'spin': 1, 'device': _ml_device}
+    create_kwargs = {'task_name': 'omol', 'charge': 0, 'spin': 1, 'device': _ml_device,
+                     'use_atom_wrap_for_lammps_parity': True}
     if inference_turbo_rpmd:
         create_kwargs['inference_settings'] = 'turbo_rpmd'
         print(
@@ -608,7 +644,7 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
         friction / unit.picosecond,
         dt_fs * unit.femtoseconds
     )
-    
+    integrator.setRandomNumberSeed(seed)
     # Set PILE thermostat (standard Langevin for all modes)
     integrator.setThermostatType(RPMDIntegrator.Pile)
     
@@ -643,6 +679,7 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     
     # Initialize beads
     print(f"\n--- Initializing RPMD Beads ---")
+    np.random.seed(seed)
     positions_nm = np.array(positions)
     
     # Set context positions first (required before getting velocities)
@@ -740,6 +777,17 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     print(f"  Report interval: {report_interval_steps} steps ({report_interval_steps * dt_ps:.2f} ps)")
     print(f"  PDB save interval: {pdb_interval_steps} steps ({pdb_interval_steps * dt_ps:.2f} ps)")
     
+    order_csv_f = None
+    order_every_steps = order_every_steps or 0
+    if order_csv_path and order_every_steps > 0 and _HAS_ICE_ORDER:
+        order_csv_f = open(Path(order_csv_path), 'w')
+        order_csv_f.write("step,time_ps,T_K,PE_kj_mol,q6_mean,q6_std,q_tet_mean,q_tet_std\n")
+        print(f"  Order CSV: {order_csv_path} (every {order_every_steps} steps)")
+    elif order_csv_path and not _HAS_ICE_ORDER:
+        print(f"  Order CSV skipped: ice_order_parameters not available")
+    box_orth_ang = np.linalg.norm(box_matrix, axis=1) * 10.0  # nm -> Angstrom
+    z_arr = np.array([8 if a.element.symbol == 'O' else 1 for a in topology.atoms()], dtype=np.int64)
+    
     # Run simulation
     print("\n" + "=" * 80)
     print("RUNNING SIMULATION")
@@ -781,12 +829,32 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     # Pre-allocate velocity buffer for reporting
     all_bead_velocities_buffer = np.zeros((num_beads, n_atoms, 3), dtype=np.float64)
     
+    # Step-0 diagnostic: verify initial structure order before dynamics
+    if _HAS_ICE_ORDER:
+        bead0_state = integrator.getState(0, getPositions=True)
+        init_pos_ang = np.array(bead0_state.getPositions(asNumpy=True).value_in_unit(unit.nanometer)) * 10.0
+        init_om = ice_order_metrics(init_pos_ang, box_orth_ang, z=z_arr)
+        print(f"  Step-0 order (bead 0): Q6={init_om.q6_mean:.4f}  q_tet={init_om.q_tet_mean:.4f} "
+              f"(n_O={init_om.n_oxygen}, valid Q6={init_om.n_q6_valid}, valid q_tet={init_om.n_q_tet_valid})")
+        if order_csv_f:
+            order_csv_f.write(
+                f"0,0.000000,,,{init_om.q6_mean:.6f},{init_om.q6_std:.6f},"
+                f"{init_om.q_tet_mean:.6f},{init_om.q_tet_std:.6f}\n"
+            )
+            order_csv_f.flush()
+    
     step = 0
     while step < total_steps:
         # Calculate next checkpoint
         next_report = ((step // report_interval_steps) + 1) * report_interval_steps
         next_pdb = ((step // pdb_interval_steps) + 1) * pdb_interval_steps if step >= equilibration_steps else total_steps
-        next_stop = min(next_report, next_pdb, total_steps)
+        next_order = total_steps
+        if order_csv_f and step >= equilibration_steps and order_every_steps > 0:
+            prod_step = step - equilibration_steps
+            next_order = equilibration_steps + ((prod_step // order_every_steps) + 1) * order_every_steps
+            if next_order > total_steps:
+                next_order = total_steps
+        next_stop = min(next_report, next_pdb, next_order, total_steps)
         chunk = next_stop - step
         
         # Run chunked steps
@@ -859,11 +927,11 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
 
                 # NVT: compute centroid RMSD from minimized structure (proxy for melting)
                 if not _use_barostat and minimized_positions_nm is not None:
-                    centroid_positions = np.zeros((n_atoms, 3))
+                    bead_pos_list = []
                     for b in range(num_beads):
                         state_b = integrator.getState(b, getPositions=True)
-                        centroid_positions += state_b.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
-                    centroid_positions /= num_beads
+                        bead_pos_list.append(state_b.getPositions(asNumpy=True).value_in_unit(unit.nanometer))
+                    centroid_positions = _mic_centroid(bead_pos_list, box_matrix)
                     diff = centroid_positions - minimized_positions_nm
                     rmsd = np.sqrt(np.mean(np.sum(diff**2, axis=1)))
                     rmsds.append(rmsd)
@@ -880,13 +948,11 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
         
         # Save PDB frame (production only, at specified interval)
         if step > equilibration_steps and (step - equilibration_steps) % pdb_interval_steps == 0:
-            # Get centroid positions (OpenMM returns unwrapped; wrap into [0,1) frac for PBC)
-            centroid_positions = np.zeros((n_atoms, 3))
+            bead_pos_list = []
             for bead in range(num_beads):
                 state = integrator.getState(bead, getPositions=True)
-                pos = state.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
-                centroid_positions += pos
-            centroid_positions /= num_beads
+                bead_pos_list.append(state.getPositions(asNumpy=True).value_in_unit(unit.nanometer))
+            centroid_positions = _mic_centroid(bead_pos_list, box_matrix)
             # Wrap into primary cell so PDB viewers show compact structure
             frac = centroid_positions @ np.linalg.inv(_bm)
             frac_wrapped = frac - np.floor(frac)
@@ -918,10 +984,39 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
                     atom_idx += 1
             
             pdb_file_handle.write("ENDMDL\n")
+
+        # Write order CSV (production only, at specified interval)
+        if order_csv_f and step > equilibration_steps and (step - equilibration_steps) % order_every_steps == 0:
+            bead_pos_list = []
+            for bead in range(num_beads):
+                state = integrator.getState(bead, getPositions=True)
+                bead_pos_list.append(state.getPositions(asNumpy=True).value_in_unit(unit.nanometer))
+            centroid_positions = _mic_centroid(bead_pos_list, box_matrix)
+            pos_ang = centroid_positions * 10.0  # nm -> Angstrom
+            om = ice_order_metrics(pos_ang, box_orth_ang, z=z_arr)
+            sim_time_ps = step * dt_ps
+            t_k = ""  # Fill if not minimal
+            pe_kj = ""
+            if not minimal_report:
+                state0 = integrator.getState(0, getEnergy=True)
+                pe_kj = f"{state0.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole):.6f}"
+                for b in range(num_beads):
+                    state_b = integrator.getState(b, getVelocities=True)
+                    all_bead_velocities_buffer[b] = state_b.getVelocities(asNumpy=True).value_in_unit(unit.nanometer/unit.picosecond)
+                centroid_velocities = np.mean(all_bead_velocities_buffer, axis=0)
+                centroid_ke = sum(0.5 * masses[j] * np.sum(centroid_velocities[j]**2) for j in range(n_atoms))
+                t_k = f"{(2.0 * centroid_ke) / (3.0 * n_atoms * 8.314e-3):.4f}"
+            order_csv_f.write(
+                f"{step},{sim_time_ps:.6f},{t_k},{pe_kj},"
+                f"{om.q6_mean:.6f},{om.q6_std:.6f},{om.q_tet_mean:.6f},{om.q_tet_std:.6f}\n"
+            )
+            order_csv_f.flush()
     
     # Close PDB file
     pdb_file_handle.write("END\n")
     pdb_file_handle.close()
+    if order_csv_f is not None:
+        order_csv_f.close()
     
     total_elapsed = time.time() - start_time
     
@@ -1109,7 +1204,12 @@ if __name__ == '__main__':
     parser.add_argument('--inference-turbo-rpmd', action='store_true',
                        help='Turbo-like Fairchem preset for batched RPMD: TF32, no checkpoint, merge_mole (compile off). '
                             'Overrides --optimize-inference when set.')
-    
+    parser.add_argument('--order-csv', type=str, default=None,
+                       help='Write Q6/q_tet order CSV to path (for plot_rpmd_comparison)')
+    parser.add_argument('--order-every', type=int, default=0,
+                       help='Order CSV write interval in steps (default: 0 = disabled)')
+    parser.add_argument('--seed', type=int, default=284759,
+                       help='Random seed for thermostat and velocity initialization')
     args = parser.parse_args()
 
     if args.debug_logs:
@@ -1146,6 +1246,9 @@ if __name__ == '__main__':
             optimize_inference=args.optimize_inference,
             optimize_inference_tf32_only=args.optimize_inference_tf32_only,
             inference_turbo_rpmd=args.inference_turbo_rpmd,
+            order_csv_path=args.order_csv,
+            order_every_steps=args.order_every if args.order_every > 0 else None,
+            seed=args.seed,
         )
         sys.exit(0 if success else 1)
     except Exception as e:
