@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <set>
 #include <map>
+#include <unordered_map>
 #include <cmath>
 
 using namespace std;
@@ -612,13 +613,16 @@ void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadI
     vector<int> blockAtoms;
     vector<float> blockAtomX(blockSize), blockAtomY(blockSize), blockAtomZ(blockSize);
     vector<VoxelIndex> atomVoxelIndex;
+    // Use a flat array for exclusion flags — avoids map/unordered_map heap allocations per block.
+    vector<BlockExclusionMask> atomFlags(numAtoms, 0);
+    vector<int> flaggedAtoms;  // track which entries to clear
     while (true) {
         int i = atomicCounter++;
         if (i >= numBlocks)
             break;
 
         // Find the atoms in this block and compute their bounding box.
-        
+
         int firstIndex = blockSize*i;
         int atomsInBlock = min(blockSize, numAtoms-firstIndex);
         blockAtoms.resize(atomsInBlock);
@@ -649,25 +653,25 @@ void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadI
 
         // Record the exclusions for this block.
 
-        map<int, BlockExclusionMask> atomFlags;
+        flaggedAtoms.resize(0);
         for (int j = 0; j < atomsInBlock; j++) {
             const set<int>& atomExclusions = (*exclusions)[sortedAtoms[firstIndex+j]];
             const BlockExclusionMask mask = 1<<j;
             for (int exclusion : atomExclusions) {
-                const auto thisAtomFlags = atomFlags.find(exclusion);
-                if (thisAtomFlags == atomFlags.end())
-                    atomFlags[exclusion] = mask;
-                else
-                    thisAtomFlags->second |= mask;
+                if (atomFlags[exclusion] == 0)
+                    flaggedAtoms.push_back(exclusion);
+                atomFlags[exclusion] |= mask;
             }
         }
         int numNeighbors = blockNeighbors[i].size();
         for (int k = 0; k < numNeighbors; k++) {
             int atomIndex = blockNeighbors[i][k];
-            auto thisAtomFlags = atomFlags.find(atomIndex);
-            if (thisAtomFlags != atomFlags.end())
-                blockExclusions[i][k] |= thisAtomFlags->second;
+            if (atomFlags[atomIndex] != 0)
+                blockExclusions[i][k] |= atomFlags[atomIndex];
         }
+        // Clear only the entries we set.
+        for (int idx : flaggedAtoms)
+            atomFlags[idx] = 0;
     }
 }
 
