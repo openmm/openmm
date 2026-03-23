@@ -69,14 +69,54 @@ To compare **ice disorder (Q6, q_tet)** between OpenMM and LAMMPS on the same pr
 
 ### RPMD benchmark: OpenMM vs i-PI + LAMMPS UMA
 
-Compare **path-integral RPMD** (243 K, PILE-L thermostat, 0.5 fs) between OpenMM and i-PI + LAMMPS UMA. Default **32 molecules, 4 beads** (scaled from 128×8) to avoid GPU OOM. Order parameters use **centroid** bead positions. Prerequisites: `pip install ipi fairchem-lammps fairchem-core lammps`, LAMMPS built with MISC package (fix ipi).
+Compare **path-integral RPMD** (243 K, 0.5 fs default in i-PI script) between OpenMM and i-PI + LAMMPS UMA. **OpenMM** uses **`RPMDIntegrator` PILE_G** by default (Bussi/SVR on the **centroid** normal mode + PILE Langevin on **internal** ring-polymer modes; see `plugins/rpmd` and `--rpmd-thermostat` / `--rpmd-centroid-friction` in `test_uma_ice_rpmd.py`). **i-PI** XML uses `pile_l` (PILE-L), which is a different discretization—expect qualitative, not bit-identical, agreement with OpenMM. Default **32 molecules, 4 beads** (scaled from 128×8) to avoid GPU OOM. Order parameters use **centroid** bead positions. Prerequisites: `pip install ipi fairchem-lammps fairchem-core lammps`, LAMMPS built with MISC package (fix ipi).
 
-1. **Build LAMMPS data**: `python lammps/build_lammps_ice_data.py -n 32 -o lammps/data.ice_uma_32`
+**Monitoring:** i-PI’s own log is the right place for step/progress (`run_ipi_lammps_uma_rpmd.py` writes **`ipi/i-pi_run.log`** by default). LAMMPS thermo with `fix ipi` is not the main progress indicator; bead trajectories (`ice__i-pi.traj_*.xyz`) also show how many frames have been saved (see `stride` in `ipi/input.xml`).
+
+**Why LAMMPS can look “stuck” at Step 0:** Under `fix ipi`, dynamics are owned by **i-PI** (see LAMMPS docs: initial LAMMPS coordinates are replaced by i-PI). The warning `No fixes with time integration` is expected in this sense—i-PI drives the loop. For a longer explanation, wiring checklist, and references, see **[docs/IPI_LAMMPS_OUTPUT_AND_PROGRESS.md](docs/IPI_LAMMPS_OUTPUT_AND_PROGRESS.md)**.
+
+1. **Build LAMMPS data**: `python lammps/build_lammps_ice_data.py -n 32 -o lammps/data.ice_uma_32`  
+   (`-n` uses `create_ice_structure`, not CIF truncation: 32 molecules use **ice Ic** tiling so O–O distances stay physical; naive “first 32 molecules” truncation gave ~1.7 Å O–O and TIP4P/2005f failures.)
 2. **Convert LAMMPS data → i-PI init**: `python ipi/convert_lammps_to_ipi_xyz.py --data lammps/data.ice_uma_32 -o ipi/init.xyz`
 3. **Run i-PI + LAMMPS UMA**: `python run_ipi_lammps_uma_rpmd.py --molecules 32 --beads 4 --steps 100` (or 1000 for longer run)
-4. **Post-process i-PI trajectory** (centroid over beads): `python ipi_order_from_traj.py --traj ipi/ice__i-pi.traj_0.xyz --beads 4 -o pipeline_out/ice_order_ipi_rpmd.csv`
+4. **Post-process i-PI trajectory** (path-integral order over beads): `python ipi_order_from_traj.py --traj ipi/ice__i-pi.traj_0.xyz --beads 4 -o pipeline_out/ice_order_ipi_rpmd.csv`
 5. **Run OpenMM RPMD reference**: `python run_openmm_rpmd_reference.py --molecules 32 --beads 4 --steps 100`
-6. **Plot comparison**: `python plot_rpmd_comparison.py -o pipeline_out/rpmd_comparison.png`
+6. **Plot comparison**: `python plot_rpmd_comparison.py -o pipeline_out/rpmd_comparison.png` (three panels: ⟨Q6⟩, ⟨q_tet⟩, kinetic T vs time; `--bath-temperature-k` draws the PILE-G target bath line)
+
+#### 32 beads × 32 molecules (full RPMD resolution)
+
+Batched UMA on **all 32 beads at once** can exceed VRAM on ~12 GB GPUs. The OpenMM path supports **chunked inference**: set `OPENMMML_UMA_RPMD_CHUNK` (e.g. `4` or `8`) so each ML call evaluates at most that many beads at a time (see `openmmml` `umapotential_pythonforce_batch.py`). Also set `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` if you see fragmentation OOM.
+
+RPMD order CSVs (OpenMM UMA, TIP4P, i-PI post-process) use **path-integral** means:
+per-oxygen ⟨Q6⟩ = mean over beads of Q6 evaluated on each bead’s positions, then
+`q6_mean` / `q6_std` / `q6_p10` / `q6_p50` / `q6_p90` / `q6_min` / `q6_max` over oxygens
+(same pattern for `q_tet_*`), plus `n_q6_valid`, `n_q_tet_valid`, and `n_oxygen`.
+Chau–Harding *q* is **not** bounded below by 0, so `q_tet_min` / `q_tet_p10` may be
+negative for distorted shells. This avoids evaluating observables on **centroid**
+coordinates.
+
+Example (OpenMM UMA RPMD, default **1 ps** = 10000 steps @ 0.1 fs in `run_rpmd_32x32.sh`; override with `RPMD_STEPS`):
+
+```bash
+cd tests/uma_ice_rpmd
+export OPENMMML_UMA_RPMD_CHUNK=4
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+python run_openmm_rpmd_reference.py --molecules 32 --beads 32 --dt 0.1 --steps 10000 --platform cuda
+```
+
+End-to-end (**TIP4P RPMD PILE-G → OpenMM UMA RPMD PILE-G → i-PI `pile_g` + LAMMPS UMA → order CSV → 3-way plot**):
+
+```bash
+bash run_rpmd_32x32.sh
+```
+
+The script **best-effort kills** prior `run_openmm_*`, `run_ipi_*`, `test_uma_ice_rpmd`, and `i-pi` processes, then runs all three models with matched `RPMD_STEPS` / `RPMD_DT_FS` (default **10000** steps @ 0.1 fs → **1.0 ps**). Outputs include `pipeline_out/ice_order_tip4p_rpmd.csv`, `ice_order_openmm_rpmd.csv`, `ice_order_ipi_rpmd.csv`, and `pipeline_out/rpmd_comparison_32x32.png`.
+
+**OpenMM UMA RPMD only** (skip TIP4P and i-PI): `bash run_openmm_uma_rpmd_only.sh` — writes `pipeline_out/ice_order_openmm_rpmd.csv` with the same defaults as step 2 of `run_rpmd_32x32.sh`. Optional: `RPMD_STEPS`, `RPMD_DT_FS`, `OPENMMML_UMA_RPMD_CHUNK`.
+
+**UMA vs TIP4P only** (no i-PI CSV required): `plot_rpmd_comparison.py` accepts `--openmm` and `--tip4p` and omits `--ipi` if you only want the two OpenMM curves, e.g. `pipeline_out/uma_vs_tip4p_rpmd_order.png`. The TIP4P runner (`run_openmm_tip4p_rpmd.py`) fills `T_K` / `PE_kj_mol` on each order row so the temperature panel compares both models.
+
+i-PI 3 writes bead trajectories as `ipi/ice__i-pi.traj_00.xyz` … `traj_31.xyz`. Pass `--traj ipi/ice__i-pi.traj_00.xyz` to `ipi_order_from_traj.py` (zero-padded indices are detected automatically).
 
 ### End-to-end pipeline (1 ps, three models)
 
@@ -374,7 +414,7 @@ python tests/uma_ice_rpmd/test_force_layout.py
 - RPMD with 8 beads captures quantum effects at 243 K
 - 1 fs timestep is appropriate for flexible water models
 - UMA potential provides accurate ML-based forces and energies
-- Simulation uses PILE thermostat (default for RPMD)
+- OpenMM RPMD uses **PILE_G** by default (`--rpmd-thermostat pile-g`); use `--rpmd-thermostat pile` for PILE on all modes (older default)
 
 ## Performance
 

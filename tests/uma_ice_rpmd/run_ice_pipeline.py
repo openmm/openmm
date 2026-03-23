@@ -52,32 +52,32 @@ def _ensure_ice_cif(work_dir: Path) -> None:
     print(f"Wrote {ice_cif}")
 
 
-def _build_data(work_dir: Path, out_dir: Path) -> None:
-    """Build 128-molecule data.ice_uma from ice.cif."""
+def _build_data(work_dir: Path, out_dir: Path, molecules: int) -> Path:
+    """Build data.ice_uma or data.ice_uma_{molecules} from ice.cif."""
     ice_cif = work_dir / "ice.cif"
-    data_path = work_dir / "lammps" / "data.ice_uma"
+    data_path = work_dir / "lammps" / (f"data.ice_uma_{molecules}" if molecules != 128 else "data.ice_uma")
     cmd = [
         sys.executable,
         str(_LAMMPS_DIR / "build_lammps_ice_data.py"),
         "-i", str(ice_cif),
-        "-n", "128",
+        "-n", str(molecules),
         "-o", str(data_path),
     ]
     subprocess.check_call(cmd, cwd=str(work_dir))
     if not data_path.is_file():
         print(f"Build did not create {data_path}", file=sys.stderr)
         sys.exit(1)
-    # Quick sanity: 128 * 3 = 384 atoms
     n_atoms = 0
     for line in data_path.read_text().splitlines():
         parts = line.strip().split()
         if len(parts) == 2 and parts[1] == "atoms":
             n_atoms = int(parts[0])
             break
-    if n_atoms != 384:
-        print(f"Expected 384 atoms, got {n_atoms}", file=sys.stderr)
+    if n_atoms != molecules * 3:
+        print(f"Expected {molecules * 3} atoms, got {n_atoms}", file=sys.stderr)
         sys.exit(1)
     print(f"Built {data_path} ({n_atoms} atoms)")
+    return data_path
 
 
 def _run_openmm_classical(
@@ -86,11 +86,12 @@ def _run_openmm_classical(
     steps: int,
     dt_fs: float,
     output_every: int,
+    data_path: Path,
     platform: str = "cpu",
     variable_step: bool = False,
+    cutoff_nm: float | None = None,
 ) -> None:
     """Run TIP4P/2005f OpenMM; wait for completion."""
-    data_path = work_dir / "lammps" / "data.ice_uma"
     cmd = [
         sys.executable,
         str(_SCRIPT_DIR / "run_openmm_ice_classical_flex.py"),
@@ -107,6 +108,8 @@ def _run_openmm_classical(
     ]
     if variable_step:
         cmd.append("--variable-step")
+    if cutoff_nm is not None:
+        cmd.extend(["--cutoff", str(cutoff_nm)])
     subprocess.check_call(cmd, cwd=str(work_dir))
     print("OpenMM TIP4P/2005f done.")
 
@@ -117,7 +120,7 @@ def _run_openmm_uma(
     steps: int,
     dt_fs: float,
     output_every: int,
-    data_path: Path | None = None,
+    data_path: Path,
     skip_minimize: bool = False,
     temperature: float = 243.0,
     friction: float = 10.0,
@@ -257,6 +260,12 @@ def main() -> None:
     ap.add_argument("--steps", type=int, default=None, help="MD steps per run (default: 1000/dt_fs for 1 ps, e.g. 5000 @ 0.2 fs)")
     ap.add_argument("--temperature", type=float, default=243.0, help="Temperature in K for NVT (OpenMM and LAMMPS, default 243)")
     ap.add_argument("--friction", type=float, default=10.0, help="Langevin friction in 1/ps (OpenMM and LAMMPS). LAMMPS damp (ps) = 1/friction (default 10 -> damp 0.1 ps)")
+    ap.add_argument("--molecules", type=int, default=128, help="Number of water molecules (default 128; use 32 for smaller runs)")
+    ap.add_argument(
+        "--skip-classical",
+        action="store_true",
+        help="Skip TIP4P/2005f (optional; use only if debugging). Small systems use build_lammps_ice_data -n (ice Ic tiling), not CIF truncation.",
+    )
     ap.add_argument("--skip-lammps", action="store_true", help="Skip LAMMPS run (still plot if OpenMM CSVs exist)")
     ap.add_argument(
         "--only-plot",
@@ -322,7 +331,7 @@ def main() -> None:
     # Step 0: ice.cif
     _ensure_ice_cif(work_dir)
     # Step 1: build data
-    _build_data(work_dir, out_dir)
+    data_path = _build_data(work_dir, out_dir, args.molecules)
 
     shared_data_path: Path | None = None
     skip_minimize = False
@@ -333,7 +342,7 @@ def main() -> None:
             [
                 sys.executable,
                 str(_SCRIPT_DIR / "export_minimized_ice.py"),
-                "--data", str(work_dir / "lammps" / "data.ice_uma"),
+                "--data", str(data_path),
                 "-o", str(shared_path),
             ],
             cwd=str(work_dir),
@@ -341,20 +350,26 @@ def main() -> None:
         shared_data_path = shared_path
         skip_minimize = True
 
-    # Step 2: OpenMM classical
-    _run_openmm_classical(
-        work_dir,
-        out_dir,
-        steps,
-        dt_fs,
-        output_every,
-        platform=args.platform_classical,
-        variable_step=args.variable_step_classical,
-    )
+    # Step 2: OpenMM classical (use smaller cutoff for small boxes)
+    if not args.skip_classical:
+        cutoff_classical = 0.4 if args.molecules <= 32 else None
+        _run_openmm_classical(
+            work_dir,
+            out_dir,
+            steps,
+            dt_fs,
+            output_every,
+            data_path=data_path,
+            platform=args.platform_classical,
+            variable_step=args.variable_step_classical,
+            cutoff_nm=cutoff_classical,
+        )
+    else:
+        print("Skipping TIP4P/2005f (--skip-classical).")
     # Step 3: OpenMM UMA
     _run_openmm_uma(
         work_dir, out_dir, steps, dt_fs, output_every,
-        data_path=shared_data_path, skip_minimize=skip_minimize,
+        data_path=shared_data_path or data_path, skip_minimize=skip_minimize,
         temperature=args.temperature, friction=args.friction,
         integrator=args.integrator, no_cm_removal=args.no_cm_removal,
     )
@@ -362,7 +377,7 @@ def main() -> None:
     if not args.skip_lammps:
         _run_lammps_uma(
             work_dir, out_dir, steps, output_every, dt_fs,
-            data_path=shared_data_path, skip_minimize=skip_minimize,
+            data_path=shared_data_path or data_path, skip_minimize=skip_minimize,
             temperature=args.temperature, friction=args.friction,
         )
     else:

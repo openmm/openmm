@@ -201,6 +201,7 @@ def main() -> None:
         help="Max time chunk per stepTo() in fs for variable-step (default: same as --dt-fs). Use 0.1 for stricter stepping.",
     )
     ap.add_argument("--seed", type=int, default=284759)
+    ap.add_argument("--cutoff", type=float, default=0.7, help="Nonbonded cutoff in nm (default 0.7; reduce for small boxes, e.g. 0.4 for 32 molecules)")
     ap.add_argument("-o", "--output", type=Path, default=None)
     ap.add_argument("--trajectory", type=Path, default=None)
     ap.add_argument("--traj-every", type=int, default=1)
@@ -267,7 +268,7 @@ def main() -> None:
     assert not np.any(np.isnan(pos_nm_arr)) and not np.any(np.isinf(pos_nm_arr))
     print("  Structure check: O,H1,H2,M per residue OK; positions finite", flush=True)
 
-    cutoff_nm = 0.7
+    cutoff_nm = args.cutoff
     system = forcefield.createSystem(
         modeller.topology,
         nonbondedMethod=PME,

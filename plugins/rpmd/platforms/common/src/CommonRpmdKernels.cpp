@@ -1248,7 +1248,10 @@ void CommonIntegrateRPMDStepKernel::uploadAllForcesToGPU(const std::vector<std::
     int totalSize = paddedParticles * numCopies * 3;
     vector<long long> forceData(totalSize, 0);  // Initialize to zero (important for padded atoms)
     
-    double forceScale = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? 1.0 : 0x100000000);
+    // The RPMD force buffer is long long fixed-point: the GPU integrator kernel
+    // always divides by 0x100000000 (see rpmd.cc integrateStep*).  We must apply
+    // the same scale when uploading forces, regardless of precision mode.
+    double forceScale = (double) 0x100000000;
     
     // Pack all bead forces into flat array (SoA layout to match integrateStep kernel)
     for (int b = 0; b < numCopies; b++) {

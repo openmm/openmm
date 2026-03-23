@@ -2,10 +2,11 @@
 """
 OpenMM RPMD with TIP4P/2005f flexible water on ice.
 
-Runs path-integral RPMD (PILE thermostat) using TIP4P/2005f forces instead of UMA.
-Same structure source as UMA/LAMMPS runs (LAMMPS data file). Order parameters
-use centroid bead positions (Q6, q_tet) for comparison with OpenMM UMA and
-i-PI+LAMMPS UMA RPMD.
+Runs path-integral RPMD using TIP4P/2005f forces instead of UMA. Default bath:
+**PILE_G** (Bussi/SVR on centroid normal mode + PILE on internal modes), matching
+OpenMM ``RPMDIntegrator.PileG`` and the UMA ice script defaults. Same structure
+source as UMA/LAMMPS runs (LAMMPS data file). Order parameters use centroid bead
+positions (Q6, q_tet) for comparison with OpenMM UMA RPMD.
 
 Prerequisites:
   pip install openmm scipy
@@ -52,9 +53,15 @@ sys.path.insert(0, str(_SCRIPT_DIR))
 from benchmark_same_structure_openmm_vs_lammps import parse_lammps_data
 
 try:
-    from ice_order_parameters import ice_order_metrics
+    from ice_order_parameters import (
+        ICE_ORDER_PI_CSV_HEADER,
+        format_ice_order_pi_csv_row,
+        ice_order_metrics_path_integral,
+    )
 except ImportError:
-    ice_order_metrics = None
+    ICE_ORDER_PI_CSV_HEADER = ""
+    format_ice_order_pi_csv_row = None  # type: ignore
+    ice_order_metrics_path_integral = None  # type: ignore
 
 _TIP4P2005F_R_OH_NM = 0.09419
 _TIP4P2005F_ANGLE_RAD = 1.87448  # 107.4°
@@ -120,16 +127,40 @@ def _relax_water_geometry_to_tip4p2005f(pos_nm: np.ndarray, n_mol: int, box_nm: 
     return out
 
 
-def _mic_centroid(positions_per_bead: list[np.ndarray], box_matrix: np.ndarray) -> np.ndarray:
-    ref = positions_per_bead[0]
-    inv_box = np.linalg.inv(box_matrix)
-    accum = np.zeros_like(ref)
-    for b in range(len(positions_per_bead)):
-        delta = positions_per_bead[b] - ref
-        frac = delta @ inv_box.T
-        frac -= np.round(frac)
-        accum += frac @ box_matrix
-    return ref + accum / len(positions_per_bead)
+def _centroid_kinetic_temperature_and_pe_kj_mol(
+    integrator: RPMDIntegrator,
+    n_beads: int,
+    masses: np.ndarray,
+    vel_buf: np.ndarray,
+) -> tuple[float, float]:
+    """Kinetic temperature (K) and PE (kJ/mol) consistent with UMA RPMD order CSV.
+
+    ``T`` is from the centroid velocity (mean over beads), with equipartition using
+    all particles with positive mass (same ``k_B`` convention as ``test_uma_ice_rpmd``).
+    PE is from bead 0.
+    """
+    n_total = masses.shape[0]
+    for b in range(n_beads):
+        st = integrator.getState(b, getVelocities=True)
+        vel_buf[b, :, :] = st.getVelocities(asNumpy=True).value_in_unit(
+            unit.nanometer / unit.picosecond
+        )
+    centroid_vel = np.mean(vel_buf, axis=0)
+    ke = 0.0
+    for j in range(n_total):
+        m = float(masses[j])
+        if m <= 0.0:
+            continue
+        ke += 0.5 * m * float(np.sum(centroid_vel[j] ** 2))
+    ndof = 3 * int(np.count_nonzero(masses > 0.0))
+    if ndof <= 0:
+        t_k = float("nan")
+    else:
+        gas_k = 8.314e-3  # kJ/(mol*K), m in dalton, v in nm/ps → kJ/mol for KE
+        t_k = (2.0 * ke) / (ndof * gas_k)
+    st0 = integrator.getState(0, getEnergy=True)
+    pe = st0.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
+    return t_k, pe
 
 
 def main() -> None:
@@ -138,7 +169,18 @@ def main() -> None:
     ap.add_argument("--molecules", type=int, default=128)
     ap.add_argument("--beads", type=int, default=8)
     ap.add_argument("--dt", type=float, default=0.1)
-    ap.add_argument("--prod", type=float, default=100.0)
+    ap.add_argument(
+        "--prod",
+        type=float,
+        default=1.0,
+        help="Production time in ps (default: 1.0). Ignored if --steps is set.",
+    )
+    ap.add_argument(
+        "--steps",
+        type=int,
+        default=None,
+        help="Production steps (overrides --prod). prod_ps = steps * dt / 1000",
+    )
     ap.add_argument("--temperature", type=float, default=243.0)
     ap.add_argument("--order-csv", type=Path, default=None)
     ap.add_argument("--order-every", type=int, default=10)
@@ -146,8 +188,40 @@ def main() -> None:
     ap.add_argument("--platform", default="cuda")
     ap.add_argument("--output", type=Path, default=None)
     ap.add_argument("--force-field", type=Path, default=None)
+    ap.add_argument(
+        "--cutoff-nm",
+        type=float,
+        default=None,
+        help="Nonbonded cutoff (nm). Default: 0.4 if molecules<=32 else 0.7",
+    )
     ap.add_argument("--skip-minimize", action="store_true")
+    ap.add_argument(
+        "--rpmd-thermostat",
+        type=str,
+        default="pile-g",
+        choices=["pile-g", "pile", "none"],
+        help="pile-g = PILE_G (default); pile = PILE on all modes; none = NVE RPMD",
+    )
+    ap.add_argument(
+        "--rpmd-friction",
+        type=float,
+        default=1.0,
+        help="PILE internal friction 1/ps (default: 1.0)",
+    )
+    ap.add_argument(
+        "--rpmd-centroid-friction",
+        type=float,
+        default=0.5,
+        help="PILE_G Bussi centroid coupling 1/ps (default: 0.5)",
+    )
     args = ap.parse_args()
+
+    dt_fs = args.dt
+    dt_ps = dt_fs / 1000.0
+    if args.steps is not None:
+        prod_ps = args.steps * dt_ps
+    else:
+        prod_ps = args.prod
 
     data_path = args.data or (_LAMMPS_DIR / f"data.ice_uma_{args.molecules}")
     if not data_path.is_file():
@@ -195,25 +269,33 @@ def main() -> None:
     n_total = modeller.topology.getNumAtoms()
     assert n_total == 4 * n_mol
 
+    cutoff_nm = args.cutoff_nm if args.cutoff_nm is not None else (0.4 if n_mol <= 32 else 0.7)
     system = ff.createSystem(
         modeller.topology,
         nonbondedMethod=PME,
-        nonbondedCutoff=0.7 * unit.nanometer,
+        nonbondedCutoff=cutoff_nm * unit.nanometer,
         constraints=None,
         rigidWater=False,
         ewaldErrorTolerance=0.0005,
     )
 
-    dt_fs = args.dt
-    friction = 1.0
+    _ts = args.rpmd_thermostat.replace("-", "_")
     integrator = RPMDIntegrator(
         args.beads,
         args.temperature * unit.kelvin,
-        friction / unit.picosecond,
+        args.rpmd_friction / unit.picosecond,
         dt_fs * unit.femtoseconds,
     )
-    integrator.setThermostatType(RPMDIntegrator.Pile)
     integrator.setRandomNumberSeed(args.seed)
+    if _ts == "pile_g":
+        integrator.setThermostatType(RPMDIntegrator.PileG)
+        integrator.setCentroidFriction(args.rpmd_centroid_friction / unit.picosecond)
+    elif _ts == "pile":
+        integrator.setThermostatType(RPMDIntegrator.Pile)
+    elif _ts == "none":
+        integrator.setThermostatType(RPMDIntegrator.NoneThermo)
+    else:
+        raise ValueError(f"Invalid --rpmd-thermostat: {args.rpmd_thermostat!r}")
 
     platform = Platform.getPlatformByName(args.platform.upper())
     props = {"Precision": "mixed", "DeviceIndex": "0"} if args.platform == "cuda" else {}
@@ -244,27 +326,42 @@ def main() -> None:
         integrator.setVelocities(i, vel_list)
         integrator.setPositions(i, min_pos)
 
-    dt_ps = dt_fs / 1000.0
-    total_steps = int(args.prod / dt_ps)
+    total_steps = int(prod_ps / dt_ps)
     order_every = args.order_every or 10
     report_every = max(1, int(1.0 / dt_ps))
 
     box_orth_ang = np.linalg.norm(box_matrix, axis=1) * 10.0
     z_arr = np.array([8, 1, 1, 0] * n_mol, dtype=np.int64)
 
+    masses = np.array(
+        [system.getParticleMass(i).value_in_unit(unit.dalton) for i in range(n_total)],
+        dtype=np.float64,
+    )
+    vel_buf = np.zeros((args.beads, n_total, 3), dtype=np.float64)
+
     order_csv_f = None
     if args.order_csv:
         args.order_csv.parent.mkdir(parents=True, exist_ok=True)
-        order_csv_f = open(args.order_csv, "w")
-        order_csv_f.write("step,time_ps,T_K,PE_kj_mol,q6_mean,q6_std,q_tet_mean,q_tet_std\n")
+        # Explicit flush after each row so monitoring with `tail -f` works during long runs.
+        order_csv_f = open(args.order_csv, "w", encoding="utf-8", newline="\n")
+        order_csv_f.write(ICE_ORDER_PI_CSV_HEADER)
+        order_csv_f.flush()
 
-    if ice_order_metrics and order_csv_f:
-        bead0 = integrator.getState(0, getPositions=True)
-        init_pos = np.array(bead0.getPositions(asNumpy=True).value_in_unit(unit.nanometer)) * 10.0
-        om = ice_order_metrics(init_pos, box_orth_ang, z=z_arr)
-        order_csv_f.write(f"0,0.000000,,,{om.q6_mean:.6f},{om.q6_std:.6f},{om.q_tet_mean:.6f},{om.q_tet_std:.6f}\n")
+    if ice_order_metrics_path_integral and format_ice_order_pi_csv_row and order_csv_f:
+        bead_ang = []
+        for b in range(args.beads):
+            st = integrator.getState(b, getPositions=True)
+            bead_ang.append(
+                np.array(st.getPositions(asNumpy=True).value_in_unit(unit.nanometer)) * 10.0
+            )
+        om0 = ice_order_metrics_path_integral(bead_ang, box_orth_ang, z=z_arr)
+        order_csv_f.write(format_ice_order_pi_csv_row(0, 0.0, "", "", om0))
+        order_csv_f.flush()
 
-    print(f"TIP4P/2005f RPMD: {n_mol} mol, {args.beads} beads, {dt_fs} fs, {args.prod} ps, {total_steps} steps")
+    print(
+        f"TIP4P/2005f RPMD: {n_mol} mol, {args.beads} beads, {dt_fs} fs, {prod_ps} ps, {total_steps} steps | "
+        f"thermostat={args.rpmd_thermostat}"
+    )
     start = time.time()
     for step in range(1, total_steps + 1):
         integrator.step(1)
@@ -274,16 +371,23 @@ def main() -> None:
             pe = state.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
             ns_day = (step / (time.time() - start)) * dt_ps * 86400 / 1000.0
             print(f"  step {step:6d}  t={t_ps:.3f} ps  PE={pe:.1f}  {ns_day:.2f} ns/day")
-        if order_csv_f and step % order_every == 0 and ice_order_metrics:
-            bead_pos_list = []
+        if order_csv_f and step % order_every == 0 and ice_order_metrics_path_integral:
+            bead_ang = []
             for b in range(args.beads):
                 s = integrator.getState(b, getPositions=True)
-                bead_pos_list.append(s.getPositions(asNumpy=True).value_in_unit(unit.nanometer))
-            centroid = _mic_centroid(bead_pos_list, box_matrix)
-            pos_ang = centroid * 10.0
-            om = ice_order_metrics(pos_ang, box_orth_ang, z=z_arr)
+                bead_ang.append(
+                    np.array(s.getPositions(asNumpy=True).value_in_unit(unit.nanometer)) * 10.0
+                )
+            om = ice_order_metrics_path_integral(bead_ang, box_orth_ang, z=z_arr)
             t_ps = step * dt_ps
-            order_csv_f.write(f"{step},{t_ps:.6f},,,{om.q6_mean:.6f},{om.q6_std:.6f},{om.q_tet_mean:.6f},{om.q_tet_std:.6f}\n")
+            t_k_str, pe_str = "", ""
+            t_k_val, pe_val = _centroid_kinetic_temperature_and_pe_kj_mol(
+                integrator, args.beads, masses, vel_buf
+            )
+            if np.isfinite(t_k_val):
+                t_k_str = f"{t_k_val:.4f}"
+            pe_str = f"{pe_val:.6f}"
+            order_csv_f.write(format_ice_order_pi_csv_row(step, t_ps, t_k_str, pe_str, om))
             order_csv_f.flush()
 
     if order_csv_f:

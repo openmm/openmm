@@ -11,6 +11,9 @@ for CPU.
 
 Profiling: set OPENMMML_DEBUG_LOGS=1 to enable per-callback timing breakdown
 (prep, atomicdata, inference) for bottleneck analysis.
+
+Memory: for many RPMD beads, set OPENMMML_UMA_RPMD_CHUNK to a positive integer
+(e.g. 4 or 8) to evaluate UMA on bead subsets and cap peak GPU memory.
 """
 import os
 import openmm
@@ -114,6 +117,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
         charge: int = 0,
         spin: int = 1,
         device: Optional[str] = None,
+        use_atom_wrap_for_lammps_parity: bool = False,
         **args,
     ) -> None:
         """Add UMA force with batched RPMD support."""
@@ -169,6 +173,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
         }
 
         # Config for lazy load (stored in closure scope)
+        _use_atom_wrap = use_atom_wrap_for_lammps_parity
         _config = {
             'model_name': self.model_name,
             'inference_settings': inference_settings,
@@ -247,13 +252,13 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                         box_vectors.value_in_unit(unit.nanometer) * 10.0,
                         dtype=np.float64,
                     )
-                    if _is_water_ohm_topology(symbols):
-                        pos_angstrom = _wrap_water_molecules_per_bead(
-                            pos_angstrom, cell_angstrom
-                        )
-                    else:
+                    if _use_atom_wrap or not _is_water_ohm_topology(symbols):
                         pos_angstrom = wrap_positions(
                             pos_angstrom, cell=cell_angstrom, pbc=True, eps=0
+                        )
+                    else:
+                        pos_angstrom = _wrap_water_molecules_per_bead(
+                            pos_angstrom, cell_angstrom
                         )
 
                 atoms_ase = Atoms(
@@ -346,16 +351,16 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                 if has_box:
                     for i in range(num_copies):
                         cell_angstrom = np.ascontiguousarray(all_boxes[i] * 10.0, dtype=np.float64)
-                        if _is_water_ohm_topology(symbols):
-                            all_pos_angstrom[i] = _wrap_water_molecules_per_bead(
-                                all_pos_angstrom[i], cell_angstrom
-                            )
-                        else:
+                        if _use_atom_wrap or not _is_water_ohm_topology(symbols):
                             all_pos_angstrom[i] = wrap_positions(
                                 all_pos_angstrom[i],
                                 cell=cell_angstrom,
                                 pbc=True,
                                 eps=0,
+                            )
+                        else:
+                            all_pos_angstrom[i] = _wrap_water_molecules_per_bead(
+                                all_pos_angstrom[i], cell_angstrom
                             )
                 
                 t_prep = time.time() - batch_start
@@ -400,39 +405,57 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                 t_atomicdata = time.time() - t_atomic_start
                 t_inference_start = time.time()
 
-                batch_data = atomicdata_list_to_batch(data_list)
-                batch_indices = batch_data.batch.numpy()
+                # Optional: split bead batch to cap peak GPU memory (32+ beads on consumer GPUs).
+                # Example: OPENMMML_UMA_RPMD_CHUNK=8
+                _chunk_s = os.environ.get("OPENMMML_UMA_RPMD_CHUNK", "").strip()
+                chunk_max = int(_chunk_s) if _chunk_s.isdigit() and int(_chunk_s) > 0 else None
+                if chunk_max is not None and num_copies > chunk_max:
+                    n_chunks = (num_copies + chunk_max - 1) // chunk_max
+                else:
+                    n_chunks = 1
+                    chunk_max = num_copies
 
-                pred = predict_unit.predict(batch_data)
-                
-                energies_t = pred['energy'].detach().to('cpu', non_blocking=True)
-                forces_t = pred['forces'].detach().to('cpu', non_blocking=True)
-                energies_ev = energies_t.numpy()
-                forces_ev_ang = forces_t.numpy()
-                
+                total_energy = 0.0
+                forces_kj_nm_list: list = []
+
+                for chunk_idx in range(n_chunks):
+                    start_b = chunk_idx * chunk_max
+                    end_b = min(start_b + chunk_max, num_copies)
+                    sub_list = data_list[start_b:end_b]
+                    n_sub = end_b - start_b
+
+                    batch_data = atomicdata_list_to_batch(sub_list)
+                    batch_indices = batch_data.batch.numpy()
+
+                    pred = predict_unit.predict(batch_data)
+
+                    energies_t = pred['energy'].detach().to('cpu', non_blocking=True)
+                    forces_t = pred['forces'].detach().to('cpu', non_blocking=True)
+                    energies_ev = energies_t.numpy()
+                    forces_ev_ang = forces_t.numpy()
+
+                    energies_kj = energies_ev * 96.4853
+                    total_energy += float(np.sum(energies_kj))
+
+                    forces_ev_ang_list = [forces_ev_ang[batch_indices == i] for i in range(n_sub)]
+
+                    for i, forces_ev_ang_i in enumerate(forces_ev_ang_list):
+                        forces_kj_nm = forces_ev_ang_i * EV_ANG_TO_KJ_NM
+
+                        if cache['full_forces_buffer'] is not None:
+                            forces_full = cache['full_forces_buffer'].copy()
+                            forces_full.fill(0.0)
+                            if atom_indices is not None:
+                                for j, atom_idx in enumerate(atom_indices):
+                                    forces_full[atom_idx] = forces_kj_nm[j]
+                            else:
+                                forces_full[:n_atoms] = forces_kj_nm
+                            forces_kj_nm_list.append(forces_full)
+                        else:
+                            forces_kj_nm_list.append(forces_kj_nm)
+
                 t_inference = time.time() - t_inference_start
 
-                energies_kj = energies_ev * 96.4853
-                total_energy = float(np.sum(energies_kj))
-                
-                forces_ev_ang_list = [forces_ev_ang[batch_indices == i] for i in range(num_copies)]
-                
-                forces_kj_nm_list = []
-                for i, forces_ev_ang_i in enumerate(forces_ev_ang_list):
-                    forces_kj_nm = forces_ev_ang_i * EV_ANG_TO_KJ_NM
-                    
-                    if cache['full_forces_buffer'] is not None:
-                        forces_full = cache['full_forces_buffer'].copy()
-                        forces_full.fill(0.0)
-                        if atom_indices is not None:
-                            for j, atom_idx in enumerate(atom_indices):
-                                forces_full[atom_idx] = forces_kj_nm[j]
-                        else:
-                            forces_full[:n_atoms] = forces_kj_nm
-                        forces_kj_nm_list.append(forces_full)
-                    else:
-                        forces_kj_nm_list.append(forces_kj_nm)
-                
                 forces_cpu = np.array(forces_kj_nm_list, dtype=np.float32)
 
                 return (total_energy * unit.kilojoules_per_mole,
@@ -448,7 +471,8 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
         force.setUsesPeriodicBoundaryConditions(True)
         system.addForce(force)
 
-        print(f"UMA force added with batched RPMD support (model: {self.model_name}, task: {task_name or 'auto'}, device: {device})")
+        wrap_mode = "atom (LAMMPS parity)" if _use_atom_wrap else "molecular (water O-H preserving)"
+        print(f"UMA force added with batched RPMD support (model: {self.model_name}, task: {task_name or 'auto'}, device: {device}, wrap: {wrap_mode})")
 
 
 # No need to register at module level - MLPotential will auto-register from entry points

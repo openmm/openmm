@@ -64,13 +64,48 @@ def _lammps_data_to_xyz(data_path: Path, molecules: int) -> Path:
 def main() -> None:
     ap = argparse.ArgumentParser(description="OpenMM RPMD reference (match i-PI params)")
     ap.add_argument("--steps", type=int, default=None, help="Override: MD steps (default: from --prod and --dt)")
-    ap.add_argument("--prod", type=float, default=100.0, help="Production time in ps (default: 100)")
+    ap.add_argument("--prod", type=float, default=1.0, help="Production time in ps (default: 1.0)")
     ap.add_argument("--dt", type=float, default=0.1, help="Timestep in fs (default: 0.1)")
     ap.add_argument("--molecules", type=int, default=32, help="Water molecules (default 32, scaled from 128)")
     ap.add_argument("--beads", type=int, default=4, help="RPMD beads (default 4, scaled from 8)")
     ap.add_argument("--seed", type=int, default=284759, help="Random seed for thermostat/velocities")
     ap.add_argument("--order-csv", type=Path, default=_SCRIPT_DIR / "pipeline_out" / "ice_order_openmm_rpmd.csv")
     ap.add_argument("--platform", default="cuda")
+    ap.add_argument(
+        "--ml-device",
+        default=None,
+        help="UMA compute device: cuda (default with CUDA platform), cpu (slower; use if 32 beads OOM on GPU).",
+    )
+    ap.add_argument(
+        "--inference-turbo-rpmd",
+        action="store_true",
+        help="Forward to test_uma_ice_rpmd: Fairchem 'turbo' preset. Incompatible with batched RPMD on some stacks (merge_mole); prefer --optimize-inference-tf32-only for 32+ beads.",
+    )
+    ap.add_argument(
+        "--optimize-inference-tf32-only",
+        action="store_true",
+        help="Forward to test_uma_ice_rpmd: TF32 without merge_mole (fits batched RPMD; use for high bead count / VRAM limits).",
+    )
+    ap.add_argument(
+        "--rpmd-thermostat",
+        type=str,
+        default="pile-g",
+        choices=["pile-g", "pile", "none"],
+        help="OpenMM RPMD bath: pile-g = PILE_G Bussi centroid + PILE internal (default); "
+        "pile = PILE on all modes; none = no thermostat",
+    )
+    ap.add_argument(
+        "--rpmd-friction",
+        type=float,
+        default=1.0,
+        help="PILE internal friction 1/ps (default: 1.0)",
+    )
+    ap.add_argument(
+        "--rpmd-centroid-friction",
+        type=float,
+        default=0.5,
+        help="PILE_G centroid (Bussi) coupling 1/ps (default: 0.5)",
+    )
     args = ap.parse_args()
 
     # Ensure identical initial structure: LAMMPS data → XYZ → --input
@@ -79,9 +114,12 @@ def main() -> None:
     print(f"Using shared structure: {data_path} → {xyz_path}")
 
     dt_fs = args.dt
-    prod_ps = args.prod
-    steps = args.steps if args.steps is not None else int(prod_ps * 1000.0 / dt_fs)
-    report_ps = max(0.01, min(0.1, prod_ps / 5.0))
+    # test_uma_ice_rpmd uses --prod (ps), not step count; derive prod from --steps when given
+    if args.steps is not None:
+        prod_ps = args.steps * dt_fs / 1000.0
+    else:
+        prod_ps = args.prod
+    report_ps = max(0.01, min(0.1, max(prod_ps / 5.0, 0.02)))
     cmd = [
         sys.executable,
         str(_SCRIPT_DIR / "test_uma_ice_rpmd.py"),
@@ -97,7 +135,19 @@ def main() -> None:
         "--seed", str(args.seed),
         "--platform", args.platform,
         "--model", "uma-s-1p1-pythonforce-batch",
+        "--rpmd-thermostat",
+        args.rpmd_thermostat,
+        "--rpmd-friction",
+        str(args.rpmd_friction),
+        "--rpmd-centroid-friction",
+        str(args.rpmd_centroid_friction),
     ]
+    if args.ml_device:
+        cmd.extend(["--ml-device", args.ml_device])
+    if args.inference_turbo_rpmd:
+        cmd.append("--inference-turbo-rpmd")
+    if args.optimize_inference_tf32_only:
+        cmd.append("--optimize-inference-tf32-only")
     args.order_csv.parent.mkdir(parents=True, exist_ok=True)
     subprocess.check_call(cmd, cwd=str(_SCRIPT_DIR))
     print(f"Order CSV: {args.order_csv}")

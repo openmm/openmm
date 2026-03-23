@@ -7,8 +7,9 @@ i-PI xyz format per frame:
   Line 2: # [CELL(abcABC): a b c alpha beta gamma] or other comment
   Lines 3+: symbol x y z (O and H)
 
-When --beads > 1, reads traj_0 .. traj_{N-1}, averages positions for centroid
-order (matches OpenMM RPMD centroid convention). Derives bead paths from --traj
+When --beads > 1, reads traj_0 .. traj_{N-1} and computes **path-integral** order:
+for each oxygen, average Q6 / q_tet over beads, then report mean/std/percentiles
+over oxygens (same as OpenMM RPMD order CSV). Derives bead paths from --traj
 (e.g. ipi/ice__i-pi.traj_0.xyz -> ipi/ice__i-pi.traj_{0..N-1}.xyz).
 
 Output CSV matches lammps_order_from_dump schema for plot_rpmd_comparison.py.
@@ -31,7 +32,11 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))
 
-from ice_order_parameters import ice_order_metrics
+from ice_order_parameters import (
+    ICE_ORDER_PI_CSV_HEADER,
+    format_ice_order_pi_csv_row,
+    ice_order_metrics_path_integral,
+)
 
 
 def _abc_to_box_orth(a: float, b: float, c: float, alpha: float, beta: float, gamma: float) -> np.ndarray:
@@ -56,11 +61,20 @@ BOHR_TO_ANG = 0.529177249  # 1 Bohr in Angstrom
 
 
 def _traj_paths_from_prefix(traj_path: Path, beads: int) -> list[Path]:
-    """Infer bead trajectory paths from e.g. ipi/ice__i-pi.traj_0.xyz -> traj_0..traj_{beads-1}."""
-    stem = traj_path.stem  # e.g. ice__i-pi.traj_0
-    base = re.sub(r"_\d+$", "", stem)  # e.g. ice__i-pi.traj
+    """Infer bead trajectory paths from one bead file (e.g. ice__i-pi.traj_0 or traj_00).
+
+    i-PI 3 may zero-pad indices (traj_00 .. traj_31). We detect padding width from the
+    given path and generate bead_0 .. bead_{beads-1} with the same width.
+    """
     parent = traj_path.parent
     suffix = traj_path.suffix
+    stem = traj_path.stem
+    m = re.match(r"^(.*_)(\d+)$", stem)
+    if m:
+        prefix_part, idx_str = m.group(1), m.group(2)
+        width = len(idx_str)
+        return [parent / f"{prefix_part}{b:0{width}d}{suffix}" for b in range(beads)]
+    base = re.sub(r"_\d+$", "", stem)
     return [parent / f"{base}_{b}{suffix}" for b in range(beads)]
 
 
@@ -139,27 +153,8 @@ def _iter_ipi_xyz_frames(traj_path: Path):
         frame_idx += 1
 
 
-def _mic_centroid_ang(positions_per_bead: list[np.ndarray], box_orth: np.ndarray) -> np.ndarray:
-    """MIC-aware centroid averaging over RPMD beads (positions in Angstrom).
-
-    Uses bead 0 as reference; folds displacements via minimum-image convention
-    before averaging, preventing PBC-wrap artifacts at cell boundaries.
-    """
-    ref = positions_per_bead[0]
-    accum = np.zeros_like(ref)
-    for b in range(len(positions_per_bead)):
-        delta = positions_per_bead[b] - ref
-        for k in range(3):
-            delta[:, k] -= box_orth[k] * np.round(delta[:, k] / box_orth[k])
-        accum += delta
-    return ref + accum / len(positions_per_bead)
-
-
-def _iter_ipi_xyz_frames_centroid(traj_path: Path, beads: int):
-    """Yield (step, time_ps, centroid_pos_ang, box_orth, z) per frame.
-    Reads traj_0..traj_{beads-1}, averages positions for centroid order
-    using MIC-aware averaging to handle PBC correctly.
-    """
+def _iter_ipi_xyz_frames_beads(traj_path: Path, beads: int):
+    """Yield (step, time_ps, list[pos_ang per bead], box_orth, z) per frame."""
     paths = _traj_paths_from_prefix(traj_path, beads)
     for p in paths:
         if not p.is_file():
@@ -169,12 +164,11 @@ def _iter_ipi_xyz_frames_centroid(traj_path: Path, beads: int):
         bead_frames.append(list(_iter_ipi_xyz_frames(p)))
     n_frames = min(len(f) for f in bead_frames)
     if n_frames == 0:
-        print(f"Warning: no frames parsed from bead trajectories", file=sys.stderr)
+        print("Warning: no frames parsed from bead trajectories", file=sys.stderr)
     for i in range(n_frames):
         step, time_ps, _foo, box_orth, z = bead_frames[0][i]
         poses = [bead_frames[b][i][2] for b in range(beads)]
-        centroid = _mic_centroid_ang(poses, box_orth)
-        yield step, time_ps, centroid, box_orth, z
+        yield step, time_ps, poses, box_orth, z
 
 
 def main() -> None:
@@ -187,7 +181,7 @@ def main() -> None:
         "--beads",
         type=int,
         default=1,
-        help="RPMD beads; when >1, read traj_0..traj_{N-1} and use centroid positions",
+        help="RPMD beads; when >1, read traj_0..traj_{N-1} and path-integral average of Q6/q_tet",
     )
     args = ap.parse_args()
 
@@ -199,20 +193,22 @@ def main() -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     if args.beads <= 1:
-        frame_iter = _iter_ipi_xyz_frames(args.traj)
+        frame_iter = (
+            (step, time_ps, [pos_ang], box_orth, z)
+            for step, time_ps, pos_ang, box_orth, z in _iter_ipi_xyz_frames(args.traj)
+        )
     else:
-        frame_iter = _iter_ipi_xyz_frames_centroid(args.traj, args.beads)
+        frame_iter = _iter_ipi_xyz_frames_beads(args.traj, args.beads)
 
-    with out_path.open("w") as f:
-        f.write("step,time_ps,T_K,PE_kj_mol,q6_mean,q6_std,q_tet_mean,q_tet_std\n")
-        for frame_idx, (step, time_ps, pos_ang, box_orth, z) in enumerate(frame_iter):
+    with out_path.open("w", encoding="utf-8", newline="\n") as f:
+        f.write(ICE_ORDER_PI_CSV_HEADER)
+        f.flush()
+        for frame_idx, (step, time_ps, bead_poses_ang, box_orth, z) in enumerate(frame_iter):
             if frame_idx % args.every != 0:
                 continue
-            res = ice_order_metrics(pos_ang, box_orth, z=z)
-            f.write(
-                f"{step},{time_ps:.6f},,,{res.q6_mean:.6f},{res.q6_std:.6f},"
-                f"{res.q_tet_mean:.6f},{res.q_tet_std:.6f}\n"
-            )
+            res = ice_order_metrics_path_integral(bead_poses_ang, box_orth, z=z)
+            f.write(format_ice_order_pi_csv_row(step, time_ps, "", "", res))
+            f.flush()
     print(f"Wrote {out_path}")
 
 

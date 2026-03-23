@@ -14,6 +14,8 @@ Usage:
   cd tests/uma_ice_rpmd
   python run_ipi_lammps_uma_rpmd.py [--steps 1000] [--device cuda]
   python run_ipi_lammps_uma_rpmd.py --molecules 32 --beads 4 --steps 100   # short test
+
+i-PI progress (steps, timing) is written to ``--ipi-log`` (default ``ipi/i-pi_run.log``), not to the LAMMPS screen stream.
 """
 from __future__ import annotations
 
@@ -59,12 +61,18 @@ def _write_ipi_input(
     dt_fs: float = 0.5,
     seed: int = 284759,
     port: int = IPI_PORT_DEFAULT,
+    thermostat_mode: str = "pile_g",
+    tau_fs: float = 1000.0,
 ) -> None:
-    """Write i-PI input.xml with natoms=3*molecules, nbeads=beads."""
+    """Write i-PI input.xml with natoms=3*molecules, nbeads=beads.
+
+    thermostat_mode: i-PI ``pile_g`` (SVR on centroid + PILE on internals, matches
+    OpenMM ``RPMDIntegrator.PileG`` intent) or ``pile_l`` (Langevin on centroid).
+    """
     natoms = 3 * molecules
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <simulation verbosity="medium">
-  <!-- RPMD benchmark: {molecules} mol, {beads} beads, 243 K, PILE-L, {dt_fs} fs -->
+  <!-- RPMD: {molecules} mol, {beads} beads, 243 K, thermostat={thermostat_mode}, {dt_fs} fs -->
   <total_steps>{total_steps}</total_steps>
   <prng>
     <seed>{seed}</seed>
@@ -90,8 +98,8 @@ def _write_ipi_input(
     <motion mode="dynamics">
       <dynamics mode="nvt">
         <timestep units="femtosecond">{dt_fs}</timestep>
-        <thermostat mode="pile_l">
-          <tau units="femtosecond">1000</tau>
+        <thermostat mode="{thermostat_mode}">
+          <tau units="femtosecond">{tau_fs}</tau>
         </thermostat>
       </dynamics>
     </motion>
@@ -131,6 +139,27 @@ def main() -> None:
     )
     ap.add_argument("--ipi-input", type=Path, default=IPI_DIR / "input.xml")
     ap.add_argument("--lammps-in", type=Path, default=LAMMPS_DIR / "in.ice_uma_ipi_client.lmp")
+    ap.add_argument(
+        "--ipi-log",
+        type=Path,
+        default=IPI_DIR / "i-pi_run.log",
+        help="Append-free log file for i-PI stdout/stderr (default: ipi/i-pi_run.log). "
+        "Use this to monitor real progress; do not use PIPE without reading it.",
+    )
+    ap.add_argument(
+        "--ipi-thermostat",
+        type=str,
+        default="pile_g",
+        choices=["pile_g", "pile_l"],
+        help="i-PI ring-polymer thermostat: pile_g = SVR centroid + PILE internal (default; "
+        "aligns with OpenMM PILE_G). pile_l = Langevin on centroid.",
+    )
+    ap.add_argument(
+        "--ipi-tau-fs",
+        type=float,
+        default=1000.0,
+        help="i-PI thermostat tau in fs (default: 1000)",
+    )
     args = ap.parse_args()
 
     # Resolve data path: use scaled default when --data not given
@@ -184,23 +213,31 @@ def main() -> None:
         dt_fs=args.dt_fs,
         seed=args.seed,
         port=port,
+        thermostat_mode=args.ipi_thermostat,
+        tau_fs=args.ipi_tau_fs,
     )
     print(f"Wrote {args.ipi_input} ({args.molecules} mol, {args.beads} beads)")
 
-    # Start i-PI (use i-pi executable; python -m ipi may not work)
-    ipi_proc = subprocess.Popen(
-        ["i-pi", str(args.ipi_input)],
-        cwd=str(IPI_DIR),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-    )
-    print(f"Started i-PI (pid {ipi_proc.pid}) from {IPI_DIR}")
-
+    # Start i-PI (use i-pi executable; python -m ipi may not work).
+    # Stream i-PI output to a file — this is where step/progress messages appear;
+    # LAMMPS thermo is not the primary monitor for fix ipi runs.
+    args.ipi_log.parent.mkdir(parents=True, exist_ok=True)
+    ipi_log_f = open(args.ipi_log, "w", encoding="utf-8", buffering=1)
+    ipi_proc: subprocess.Popen | None = None
     try:
+        ipi_proc = subprocess.Popen(
+            ["i-pi", str(args.ipi_input)],
+            cwd=str(IPI_DIR),
+            stdout=ipi_log_f,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        print(f"Started i-PI (pid {ipi_proc.pid}) from {IPI_DIR}; log: {args.ipi_log.resolve()}")
+
         if not _wait_for_port("127.0.0.1", port, timeout_s=60):
             print("i-PI port did not become ready in time", file=sys.stderr)
-            ipi_proc.terminate()
+            if ipi_proc is not None:
+                ipi_proc.terminate()
             sys.exit(1)
         print(f"i-PI ready: 127.0.0.1:{port}")
         time.sleep(5.0)  # Give i-PI time to finish init and enter accept loop
@@ -274,9 +311,15 @@ def main() -> None:
         print("LAMMPS client finished")
 
     finally:
-        ipi_proc.terminate()
-        ipi_proc.wait(timeout=10)
-        print("i-PI stopped")
+        if ipi_proc is not None:
+            ipi_proc.terminate()
+            try:
+                ipi_proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                ipi_proc.kill()
+                ipi_proc.wait(timeout=5)
+            print("i-PI stopped")
+        ipi_log_f.close()
 
     # Report outputs
     traj = IPI_DIR / "ice_traj.xyz"

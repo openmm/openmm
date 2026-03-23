@@ -43,10 +43,16 @@ except ImportError:
     _HAS_MATPLOTLIB = False
 
 try:
-    from ice_order_parameters import ice_order_metrics
+    from ice_order_parameters import (
+        ICE_ORDER_PI_CSV_HEADER,
+        format_ice_order_pi_csv_row,
+        ice_order_metrics_path_integral,
+    )
     _HAS_ICE_ORDER = True
 except ImportError:
-    ice_order_metrics = None  # type: ignore
+    ICE_ORDER_PI_CSV_HEADER = ""
+    format_ice_order_pi_csv_row = None  # type: ignore
+    ice_order_metrics_path_integral = None  # type: ignore
     _HAS_ICE_ORDER = False
 
 from openmm import app, unit, Vec3
@@ -121,6 +127,68 @@ def _hexagonal_to_orthorhombic(atoms_ase):
     return out
 
 
+def _factor_supercell_cells(n_cells: int) -> tuple[int, int, int]:
+    """Integer na,nb,nc with na*nb*nc == n_cells, preferring compact aspect ratio."""
+    best = (1, 1, n_cells)
+    best_score = n_cells  # max side length
+    lim = int(np.ceil(n_cells ** (1.0 / 3.0))) + 2
+    for na in range(1, min(lim, n_cells) + 1):
+        if n_cells % na != 0:
+            continue
+        r1 = n_cells // na
+        for nb in range(1, min(lim, r1) + 1):
+            if r1 % nb != 0:
+                continue
+            nc = r1 // nb
+            score = max(na, nb, nc)
+            if score < best_score:
+                best_score = score
+                best = (na, nb, nc)
+    return best
+
+
+def _trim_molecules_spatial(mol_list: list, pos_full: np.ndarray, n_keep: int) -> list:
+    """Keep n_keep molecules in a spatially contiguous set (BFS on O–O neighbors)."""
+    if n_keep >= len(mol_list):
+        return mol_list
+    o_pos = np.array([pos_full[mol[0]] for mol in mol_list])
+    n = len(mol_list)
+    # Neighbor graph: O within ~3.5 Å (ice first-shell) in minimum image of supercell
+    # Approximation: use raw distance (supercell already large enough for inner cluster)
+    cutoff = 3.6  # Angstrom
+    neighbors = [[] for _ in range(n)]
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = float(np.linalg.norm(o_pos[i] - o_pos[j]))
+            if d < cutoff:
+                neighbors[i].append(j)
+                neighbors[j].append(i)
+    from collections import deque
+
+    start = 0
+    q = deque([start])
+    seen = {start}
+    while q and len(seen) < n_keep:
+        i = q.popleft()
+        for j in neighbors[i]:
+            if j not in seen and len(seen) < n_keep:
+                seen.add(j)
+                q.append(j)
+    if len(seen) < n_keep:
+        # Fallback: add by nearest O–O to any chosen
+        rest = [j for j in range(n) if j not in seen]
+        while len(seen) < n_keep and rest:
+            best_j, best_d = None, 1e9
+            for j in rest:
+                dmin = min(np.linalg.norm(o_pos[j] - o_pos[k]) for k in seen)
+                if dmin < best_d:
+                    best_d, best_j = dmin, j
+            seen.add(best_j)
+            rest.remove(best_j)
+    order = sorted(seen)[:n_keep]
+    return [mol_list[k] for k in order]
+
+
 def _ice_to_orthorhombic_then_scale(atoms_ase, num_molecules, box_nm=None, ice_type='1h'):
     """
     Transform ice to orthorhombic (1h only), replicate for roughly cubic supercell, uniformly scale.
@@ -137,20 +205,29 @@ def _ice_to_orthorhombic_then_scale(atoms_ase, num_molecules, box_nm=None, ice_t
     cell = np.array(atoms_ortho.get_cell())
     Lx, Ly, Lz = np.linalg.norm(cell[0]), np.linalg.norm(cell[1]), np.linalg.norm(cell[2])
 
-    # Replicate to get roughly cubic supercell with at least num_molecules
     n_mol_per_cell = len(atoms_ortho) // 3
-    r_min = max(1, int(np.ceil((num_molecules / n_mol_per_cell) ** (1.0 / 3.0))))
-    # Choose na, nb, nc so na*Lx ≈ nb*Ly ≈ nc*Lz
-    ratios = np.array([Lx, Ly, Lz])
-    ratios = ratios / np.min(ratios)
-    r_approx = max(r_min, 1)
-    na = max(1, int(round(r_approx / ratios[0])))
-    nb = max(1, int(round(r_approx / ratios[1])))
-    nc = max(1, int(round(r_approx / ratios[2])))
-    P = np.diag([na, nb, nc])
+    # Prefer exact supercell na*nb*nc*n_mol_per_cell == num_molecules (no trim → no clashes).
+    exact_cells = None
+    if num_molecules % n_mol_per_cell == 0:
+        n_cells = num_molecules // n_mol_per_cell
+        na, nb, nc = _factor_supercell_cells(n_cells)
+        if na * nb * nc == n_cells:
+            exact_cells = (na, nb, nc)
+    if exact_cells is not None:
+        na, nb, nc = exact_cells
+        P = np.diag([na, nb, nc])
+    else:
+        # Replicate to get roughly cubic supercell with at least num_molecules
+        r_min = max(1, int(np.ceil((num_molecules / n_mol_per_cell) ** (1.0 / 3.0))))
+        ratios = np.array([Lx, Ly, Lz])
+        ratios = ratios / np.min(ratios)
+        r_approx = max(r_min, 1)
+        na = max(1, int(round(r_approx / ratios[0])))
+        nb = max(1, int(round(r_approx / ratios[1])))
+        nc = max(1, int(round(r_approx / ratios[2])))
+        P = np.diag([na, nb, nc])
     supercell = make_supercell(atoms_ortho, P)
 
-    # Trim to num_molecules (first N by index preserves local order)
     mol_list = []
     symbols = supercell.get_chemical_symbols()
     pos_full = supercell.get_positions()
@@ -164,18 +241,28 @@ def _ice_to_orthorhombic_then_scale(atoms_ase, num_molecules, box_nm=None, ice_t
             h1, h2 = dists[0][1], dists[1][1]
             mol_list.append([oidx, h1, h2])
             seen.update([oidx, h1, h2])
-    mol_list = mol_list[:num_molecules]
+    n_mol_super = len(mol_list)
+    if num_molecules < n_mol_super:
+        mol_list = _trim_molecules_spatial(mol_list, pos_full, num_molecules)
+    elif num_molecules == n_mol_super:
+        pass
+    else:
+        raise ValueError(
+            f"Supercell has {n_mol_super} molecules < requested {num_molecules}"
+        )
 
     pos_ang = np.array([pos_full[idx] for mol in mol_list for idx in mol])
     cell_super = np.array(supercell.get_cell())
     vol_angstrom3 = np.abs(np.linalg.det(cell_super))
-    L_current = vol_angstrom3 ** (1.0 / 3.0)
+    # Volume that corresponds to the kept molecules at the same number density as the
+    # full supercell (avoids huge empty boxes when trimming to num_molecules < n_mol_super).
+    vol_effective = vol_angstrom3 * (num_molecules / float(n_mol_super))
 
     if box_nm is not None:
         vol_target = (box_nm * 10.0) ** 3
-        scale = (vol_target / vol_angstrom3) ** (1.0 / 3.0)
+        scale = (vol_target / vol_effective) ** (1.0 / 3.0)
     else:
-        scale = 1.0
+        scale = (num_molecules / float(n_mol_super)) ** (1.0 / 3.0)
 
     pos_scaled = pos_ang * scale
     cell_scaled = cell_super * scale
@@ -261,7 +348,10 @@ def _load_structure_from_file(filepath, max_molecules=None):
     Load ice/water structure from CIF or PDB file.
     Returns (topology, positions_nm, box_vectors).
     Supports GenIce CIF output (fractional coords) and standard PDB.
-    max_molecules: if set, trim to first N molecules and scale box (preserves density). For CUDA OOM.
+    max_molecules: if set, trim to first N molecules and scale box. **Unsafe for small N**:
+    the first N molecules in file order are not a spatially valid ice fragment (can yield
+    O–O ~1.7 Å). Prefer :func:`create_ice_structure` / :func:`lammps.build_lammps_ice_data.main`
+    with ``-n`` for target molecule counts.
     """
     from ase.io import read
 
@@ -482,7 +572,10 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
                    platform_name='cuda', ml_device=None, precision_override=None,
                    minimal_report=False, optimize_inference=False,
                    optimize_inference_tf32_only=False, inference_turbo_rpmd=False,
-                   order_csv_path=None, order_every_steps=None, seed=284759):
+                   order_csv_path=None, order_every_steps=None, seed=284759,
+                   rpmd_thermostat='pile_g',
+                   rpmd_friction_ps_inv=1.0,
+                   rpmd_centroid_friction_ps_inv=0.5):
     """
     Run RPMD simulation of ice.
     
@@ -528,9 +621,21 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
         If True, enable only TF32 (keeps activation checkpointing). Lower memory,
         some speedup (default: False).
     inference_turbo_rpmd : bool
-        If True, use Fairchem **turbo_rpmd** preset with batched RPMD: TF32, no
-        checkpoint, **merge_mole=True** (constant composition per bead), **compile=False**
-        (UMA-safe). Often faster than ``--optimize-inference``; may use more VRAM.
+        If True, use Fairchem **turbo** string preset (``turbo_rpmd`` is not always
+        a valid Fairchem name). **Warning:** ``turbo`` may enable merge_mole, which
+        is incompatible with multi-system batched RPMD on some stacks; prefer
+        ``--optimize-inference-tf32-only`` for high bead counts.
+    rpmd_thermostat : str
+        ``pile_g`` (default): OpenMM ``RPMDIntegrator.PileG`` — Bussi stochastic
+        velocity rescaling on the **centroid** normal mode and PILE Langevin on
+        internal modes (canonical ring-polymer bath; matches OpenMM/i-PI docs for
+        centroid kinetic ergodicity). ``pile``: PILE on all modes including centroid.
+        ``none``: no thermostat (NVE-like for RPMD; rarely used for equilibration).
+    rpmd_friction_ps_inv : float
+        Friction in 1/ps coupling internal ring-polymer modes to the bath (PILE /
+        PILE-G internal branch). Default 1.0.
+    rpmd_centroid_friction_ps_inv : float
+        For ``pile_g`` only: Bussi centroid coupling in 1/ps. Default 0.5.
 
     Returns
     -------
@@ -586,10 +691,10 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     create_kwargs = {'task_name': 'omol', 'charge': 0, 'spin': 1, 'device': _ml_device,
                      'use_atom_wrap_for_lammps_parity': True}
     if inference_turbo_rpmd:
-        create_kwargs['inference_settings'] = 'turbo_rpmd'
+        # Fairchem API accepts string names 'default' | 'turbo' (turbo_rpmd may be unavailable).
+        create_kwargs['inference_settings'] = 'turbo'
         print(
-            "  Inference: turbo_rpmd (TF32, no checkpoint, merge_mole, compile=off; "
-            "pairs with batched RPMD)"
+            "  Inference: turbo (TF32-friendly preset; pairs with batched RPMD when supported)"
         )
     elif optimize_inference or optimize_inference_tf32_only:
         from dataclasses import replace
@@ -629,27 +734,38 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     print(f"  Initial density: {density:.3f} g/cm³")
     print(f"  Expected ice density: ~0.92 g/cm³")
     
-    # Create RPMD integrator with PILE_G thermostat
+    # Create RPMD integrator (PILE_G recommended: Bussi on centroid + PILE on internals)
     print(f"\n--- Creating RPMD Integrator ---")
     print(f"  Beads: {num_beads}")
     print(f"  Temperature: {temperature_K} K")
     print(f"  Timestep: {dt_fs} fs")
-    
-    friction = 1.0  # ps^-1
-    centroid_friction = 0.5  # ps^-1 for Bussi thermostat
-    
+
+    _ts = (rpmd_thermostat or "pile_g").strip().lower().replace("-", "_")
+    if _ts not in ("pile", "pile_g", "none"):
+        raise ValueError(
+            f"rpmd_thermostat must be 'pile', 'pile_g', or 'none', got {rpmd_thermostat!r}"
+        )
+
     integrator = RPMDIntegrator(
         num_beads,
         temperature_K * unit.kelvin,
-        friction / unit.picosecond,
-        dt_fs * unit.femtoseconds
+        rpmd_friction_ps_inv / unit.picosecond,
+        dt_fs * unit.femtoseconds,
     )
     integrator.setRandomNumberSeed(seed)
-    # Set PILE thermostat (standard Langevin for all modes)
-    integrator.setThermostatType(RPMDIntegrator.Pile)
-    
-    print(f"  Thermostat: PILE (Langevin for all modes)")
-    print(f"  Friction: {friction} ps^-1")
+    if _ts == "pile_g":
+        integrator.setThermostatType(RPMDIntegrator.PileG)
+        integrator.setCentroidFriction(rpmd_centroid_friction_ps_inv / unit.picosecond)
+        print("  Thermostat: PILE_G (Bussi/SVR on centroid + PILE on internal modes)")
+        print(f"  Internal friction: {rpmd_friction_ps_inv} ps^-1")
+        print(f"  Centroid friction (Bussi): {rpmd_centroid_friction_ps_inv} ps^-1")
+    elif _ts == "pile":
+        integrator.setThermostatType(RPMDIntegrator.Pile)
+        print("  Thermostat: PILE (Langevin-like on all normal modes, including centroid)")
+        print(f"  Friction: {rpmd_friction_ps_inv} ps^-1")
+    else:
+        integrator.setThermostatType(RPMDIntegrator.NoneThermo)
+        print("  Thermostat: none (NVE RPMD — no stochastic bath)")
     
     # Create context
     print(f"\n--- Creating Simulation Context ---")
@@ -780,9 +896,10 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     order_csv_f = None
     order_every_steps = order_every_steps or 0
     if order_csv_path and order_every_steps > 0 and _HAS_ICE_ORDER:
-        order_csv_f = open(Path(order_csv_path), 'w')
-        order_csv_f.write("step,time_ps,T_K,PE_kj_mol,q6_mean,q6_std,q_tet_mean,q_tet_std\n")
-        print(f"  Order CSV: {order_csv_path} (every {order_every_steps} steps)")
+        order_csv_f = open(Path(order_csv_path), "w", encoding="utf-8", newline="\n")
+        order_csv_f.write(ICE_ORDER_PI_CSV_HEADER)
+        order_csv_f.flush()
+        print(f"  Order CSV: {order_csv_path} (every {order_every_steps} steps; path-integral Q6/q_tet; line-flushed)")
     elif order_csv_path and not _HAS_ICE_ORDER:
         print(f"  Order CSV skipped: ice_order_parameters not available")
     box_orth_ang = np.linalg.norm(box_matrix, axis=1) * 10.0  # nm -> Angstrom
@@ -829,18 +946,21 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     # Pre-allocate velocity buffer for reporting
     all_bead_velocities_buffer = np.zeros((num_beads, n_atoms, 3), dtype=np.float64)
     
-    # Step-0 diagnostic: verify initial structure order before dynamics
-    if _HAS_ICE_ORDER:
-        bead0_state = integrator.getState(0, getPositions=True)
-        init_pos_ang = np.array(bead0_state.getPositions(asNumpy=True).value_in_unit(unit.nanometer)) * 10.0
-        init_om = ice_order_metrics(init_pos_ang, box_orth_ang, z=z_arr)
-        print(f"  Step-0 order (bead 0): Q6={init_om.q6_mean:.4f}  q_tet={init_om.q_tet_mean:.4f} "
-              f"(n_O={init_om.n_oxygen}, valid Q6={init_om.n_q6_valid}, valid q_tet={init_om.n_q_tet_valid})")
-        if order_csv_f:
-            order_csv_f.write(
-                f"0,0.000000,,,{init_om.q6_mean:.6f},{init_om.q6_std:.6f},"
-                f"{init_om.q_tet_mean:.6f},{init_om.q_tet_std:.6f}\n"
+    # Step-0 diagnostic: path-integral order (mean over beads of per-bead observable, then stats over O)
+    if _HAS_ICE_ORDER and ice_order_metrics_path_integral:
+        bead_ang_s0 = []
+        for b in range(num_beads):
+            st = integrator.getState(b, getPositions=True)
+            bead_ang_s0.append(
+                np.array(st.getPositions(asNumpy=True).value_in_unit(unit.nanometer)) * 10.0
             )
+        init_om = ice_order_metrics_path_integral(bead_ang_s0, box_orth_ang, z=z_arr)
+        print(
+            f"  Step-0 order (PI avg over beads): Q6={init_om.q6_mean:.4f}  q_tet={init_om.q_tet_mean:.4f} "
+            f"(n_O={init_om.n_oxygen}, p50 Q6={init_om.q6_p50:.4f})"
+        )
+        if order_csv_f and format_ice_order_pi_csv_row:
+            order_csv_f.write(format_ice_order_pi_csv_row(0, 0.0, "", "", init_om))
             order_csv_f.flush()
     
     step = 0
@@ -985,15 +1105,21 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
             
             pdb_file_handle.write("ENDMDL\n")
 
-        # Write order CSV (production only, at specified interval)
-        if order_csv_f and step > equilibration_steps and (step - equilibration_steps) % order_every_steps == 0:
-            bead_pos_list = []
+        # Write order CSV (production only): path-integral estimator for Q6 / q_tet
+        if (
+            order_csv_f
+            and format_ice_order_pi_csv_row
+            and ice_order_metrics_path_integral
+            and step > equilibration_steps
+            and (step - equilibration_steps) % order_every_steps == 0
+        ):
+            bead_ang = []
             for bead in range(num_beads):
                 state = integrator.getState(bead, getPositions=True)
-                bead_pos_list.append(state.getPositions(asNumpy=True).value_in_unit(unit.nanometer))
-            centroid_positions = _mic_centroid(bead_pos_list, box_matrix)
-            pos_ang = centroid_positions * 10.0  # nm -> Angstrom
-            om = ice_order_metrics(pos_ang, box_orth_ang, z=z_arr)
+                bead_ang.append(
+                    np.array(state.getPositions(asNumpy=True).value_in_unit(unit.nanometer)) * 10.0
+                )
+            om = ice_order_metrics_path_integral(bead_ang, box_orth_ang, z=z_arr)
             sim_time_ps = step * dt_ps
             t_k = ""  # Fill if not minimal
             pe_kj = ""
@@ -1006,10 +1132,7 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
                 centroid_velocities = np.mean(all_bead_velocities_buffer, axis=0)
                 centroid_ke = sum(0.5 * masses[j] * np.sum(centroid_velocities[j]**2) for j in range(n_atoms))
                 t_k = f"{(2.0 * centroid_ke) / (3.0 * n_atoms * 8.314e-3):.4f}"
-            order_csv_f.write(
-                f"{step},{sim_time_ps:.6f},{t_k},{pe_kj},"
-                f"{om.q6_mean:.6f},{om.q6_std:.6f},{om.q_tet_mean:.6f},{om.q_tet_std:.6f}\n"
-            )
+            order_csv_f.write(format_ice_order_pi_csv_row(step, sim_time_ps, t_k, pe_kj, om))
             order_csv_f.flush()
     
     # Close PDB file
@@ -1210,6 +1333,26 @@ if __name__ == '__main__':
                        help='Order CSV write interval in steps (default: 0 = disabled)')
     parser.add_argument('--seed', type=int, default=284759,
                        help='Random seed for thermostat and velocity initialization')
+    parser.add_argument(
+        '--rpmd-thermostat',
+        type=str,
+        default='pile-g',
+        choices=['pile-g', 'pile', 'none'],
+        help='RPMD bath: pile-g = PILE_G (Bussi centroid + PILE internal; default), '
+        'pile = PILE on all modes, none = no thermostat',
+    )
+    parser.add_argument(
+        '--rpmd-friction',
+        type=float,
+        default=1.0,
+        help='PILE internal-mode friction coefficient in 1/ps (default: 1.0)',
+    )
+    parser.add_argument(
+        '--rpmd-centroid-friction',
+        type=float,
+        default=0.5,
+        help='PILE_G only: Bussi centroid coupling in 1/ps (default: 0.5)',
+    )
     args = parser.parse_args()
 
     if args.debug_logs:
@@ -1249,6 +1392,9 @@ if __name__ == '__main__':
             order_csv_path=args.order_csv,
             order_every_steps=args.order_every if args.order_every > 0 else None,
             seed=args.seed,
+            rpmd_thermostat=args.rpmd_thermostat.replace('-', '_'),
+            rpmd_friction_ps_inv=args.rpmd_friction,
+            rpmd_centroid_friction_ps_inv=args.rpmd_centroid_friction,
         )
         sys.exit(0 if success else 1)
     except Exception as e:
