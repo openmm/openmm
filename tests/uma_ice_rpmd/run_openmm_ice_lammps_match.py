@@ -12,7 +12,7 @@ ensemble matches LAMMPS NVE + Langevin as closely as OpenMM allows.
 
 Prerequisites:
   pip install openmm openmmml fairchem-core
-  Build data:  python lammps/build_lammps_ice_data.py -n 128
+  Build data:  python lammps/build_lammps_ice_data.py --nx 2 --ny 2 --nz 4 -o lammps/data.ice_uma
 
 Usage:
   cd tests/uma_ice_rpmd
@@ -218,7 +218,10 @@ def main() -> None:
         )
 
     if not args.data.is_file():
-        print(f"Missing {args.data} — run: python {_LAMMPS_DIR / 'build_lammps_ice_data.py'} -n 128")
+        print(
+            f"Missing {args.data} — run: python {_LAMMPS_DIR / 'build_lammps_ice_data.py'} "
+            f"--nx 2 --ny 2 --nz 4 -o {args.data}"
+        )
         sys.exit(1)
 
     pos_ang, cell, Z = parse_lammps_data(args.data)

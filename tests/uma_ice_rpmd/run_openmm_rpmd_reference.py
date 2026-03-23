@@ -3,19 +3,19 @@
 Run OpenMM RPMD reference for i-PI+LAMMPS benchmark comparison.
 
 Parameters match i-PI input: 243 K, PILE thermostat, 0.5 fs timestep.
-Default 32 molecules, 4 beads (scaled from 128×8) for GPU memory.
+Default supercell 2×2×2 (64 molecules), 4 beads. Structure from ``generate_ice_ih`` via ``--nx/--ny/--nz``.
 
 Uses the same LAMMPS data file as the i-PI+LAMMPS run (via conversion to
 XYZ with convert_lammps_to_ipi_xyz.py) so both engines start from an
-identical initial structure. If the data file is missing, it is built
-automatically with build_lammps_ice_data.py.
+identical initial structure. If the data file is missing, it is built automatically with
+``--nx/--ny/--nz`` (default 2×2×2 → 64 molecules).
 
 Produces ice_order_openmm_rpmd.csv for plot_rpmd_comparison.py.
 
 Usage:
   cd tests/uma_ice_rpmd
   python run_openmm_rpmd_reference.py
-  python run_openmm_rpmd_reference.py --molecules 32 --beads 4 --steps 100   # short test
+  python run_openmm_rpmd_reference.py --nx 2 --ny 2 --nz 2 --beads 4 --steps 100   # short test
 """
 from __future__ import annotations
 
@@ -28,8 +28,9 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 _LAMMPS_DIR = _SCRIPT_DIR / "lammps"
 
 
-def _ensure_lammps_data(molecules: int) -> Path:
+def _ensure_lammps_data(nx: int, ny: int, nz: int) -> Path:
     """Build LAMMPS data file if it doesn't exist. Return its path."""
+    molecules = 8 * nx * ny * nz
     data = _LAMMPS_DIR / f"data.ice_uma_{molecules}"
     if data.is_file():
         return data
@@ -37,7 +38,18 @@ def _ensure_lammps_data(molecules: int) -> Path:
     if not builder.is_file():
         raise FileNotFoundError(f"Missing builder: {builder}")
     subprocess.check_call(
-        [sys.executable, str(builder), "-n", str(molecules), "-o", str(data)],
+        [
+            sys.executable,
+            str(builder),
+            "--nx",
+            str(nx),
+            "--ny",
+            str(ny),
+            "--nz",
+            str(nz),
+            "-o",
+            str(data),
+        ],
         cwd=str(_SCRIPT_DIR),
     )
     return data
@@ -66,7 +78,14 @@ def main() -> None:
     ap.add_argument("--steps", type=int, default=None, help="Override: MD steps (default: from --prod and --dt)")
     ap.add_argument("--prod", type=float, default=1.0, help="Production time in ps (default: 1.0)")
     ap.add_argument("--dt", type=float, default=0.1, help="Timestep in fs (default: 0.1)")
-    ap.add_argument("--molecules", type=int, default=32, help="Water molecules (default 32, scaled from 128)")
+    ap.add_argument(
+        "--nx",
+        type=int,
+        default=2,
+        help="Ice Ih supercell replication along a (default 2; 2×2×2 → 64 molecules)",
+    )
+    ap.add_argument("--ny", type=int, default=2, help="Supercell along b (default 2)")
+    ap.add_argument("--nz", type=int, default=2, help="Supercell along c (default 2)")
     ap.add_argument("--beads", type=int, default=4, help="RPMD beads (default 4, scaled from 8)")
     ap.add_argument("--seed", type=int, default=284759, help="Random seed for thermostat/velocities")
     ap.add_argument("--order-csv", type=Path, default=_SCRIPT_DIR / "pipeline_out" / "ice_order_openmm_rpmd.csv")
@@ -108,10 +127,14 @@ def main() -> None:
     )
     args = ap.parse_args()
 
+    molecules = 8 * args.nx * args.ny * args.nz
     # Ensure identical initial structure: LAMMPS data → XYZ → --input
-    data_path = _ensure_lammps_data(args.molecules)
-    xyz_path = _lammps_data_to_xyz(data_path, args.molecules)
-    print(f"Using shared structure: {data_path} → {xyz_path}")
+    data_path = _ensure_lammps_data(args.nx, args.ny, args.nz)
+    xyz_path = _lammps_data_to_xyz(data_path, molecules)
+    print(
+        f"Using shared structure (ice Ih {args.nx}x{args.ny}x{args.nz} = {molecules} mol): "
+        f"{data_path} → {xyz_path}"
+    )
 
     dt_fs = args.dt
     # test_uma_ice_rpmd uses --prod (ps), not step count; derive prod from --steps when given

@@ -13,7 +13,7 @@ Steps (per plan):
 Usage:
   cd tests/uma_ice_rpmd
   python diagnose_tip4p2005f.py
-  python diagnose_tip4p2005f.py --data lammps/data.ice_uma_32 --skip-scaling
+  python diagnose_tip4p2005f.py --data lammps/data.ice_uma_64 --skip-scaling
 """
 from __future__ import annotations
 
@@ -411,7 +411,11 @@ def main() -> int:
         "--data",
         type=Path,
         nargs="*",
-        default=[_LAMMPS_DIR / "data.ice_uma", _LAMMPS_DIR / "data.ice_uma_32"],
+        default=[
+            _LAMMPS_DIR / "data.ice_uma",
+            _LAMMPS_DIR / "data.ice_uma_64",
+            _LAMMPS_DIR / "data.ice_uma_32",
+        ],
         help="LAMMPS data files to diagnose",
     )
     ap.add_argument("--skip-scaling", action="store_true")

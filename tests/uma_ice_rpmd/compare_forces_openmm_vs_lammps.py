@@ -148,7 +148,11 @@ def main() -> None:
     args = ap.parse_args()
 
     if not args.data.is_file():
-        print(f"Missing {args.data}. Run: python lammps/build_lammps_ice_data.py -n 128", file=sys.stderr)
+        print(
+            f"Missing {args.data}. Run: python lammps/build_lammps_ice_data.py "
+            f"--nx 2 --ny 2 --nz 4 -o {args.data}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     pos_ang, cell, Z = parse_lammps_data(args.data)

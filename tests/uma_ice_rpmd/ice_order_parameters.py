@@ -31,14 +31,22 @@ from typing import Optional, Tuple
 import numpy as np
 
 def _sph_harm_batch(l: int, theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
-    """Y_l^m for m=-l..l; shape (2l+1, n). SciPy >=1.14: sph_harm_y(n,m,theta,phi)."""
+    """Y_l^m for m=-l..l; shape (2l+1, n).
+
+    Prefer SciPy's ``sph_harm_y`` (SciPy >= 1.14); fall back to ``sph_harm`` for older
+    installs (signature ``sph_harm(m, l, theta, phi)``).
+    """
+    out = np.zeros((2 * l + 1, len(theta)), dtype=np.complex128)
     try:
         from scipy.special import sph_harm_y
-    except ImportError as e:
-        raise ImportError("ice_order_parameters Q6 needs scipy.special.sph_harm_y") from e
-    out = np.zeros((2 * l + 1, len(theta)), dtype=np.complex128)
-    for k, m in enumerate(range(-l, l + 1)):
-        out[k] = sph_harm_y(l, m, theta, phi)
+
+        for k, m in enumerate(range(-l, l + 1)):
+            out[k] = sph_harm_y(l, m, theta, phi)
+    except ImportError:
+        from scipy.special import sph_harm
+
+        for k, m in enumerate(range(-l, l + 1)):
+            out[k] = sph_harm(m, l, theta, phi)
     return out
 
 

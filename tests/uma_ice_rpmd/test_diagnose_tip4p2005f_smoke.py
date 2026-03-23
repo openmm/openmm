@@ -12,9 +12,14 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 
 @pytest.mark.timeout(120)
 def test_diagnose_tip4p2005f_smoke() -> None:
-    data = _SCRIPT_DIR / "lammps" / "data.ice_uma_32"
-    if not data.is_file():
-        pytest.skip(f"Missing {data}")
+    data: Path | None = None
+    for name in ("data.ice_uma_64", "data.ice_uma_32"):
+        candidate = _SCRIPT_DIR / "lammps" / name
+        if candidate.is_file():
+            data = candidate
+            break
+    if data is None:
+        pytest.skip("Missing lammps/data.ice_uma_64 or data.ice_uma_32")
     r = subprocess.run(
         [
             sys.executable,

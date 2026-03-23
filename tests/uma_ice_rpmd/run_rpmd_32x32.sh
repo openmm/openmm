@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Full RPMD pipeline: TIP4P/2005f + OpenMM UMA + i-PI/LAMMPS UMA (all PILE-G / pile_g).
-# 32 H2O, 32 beads. Run from tests/uma_ice_rpmd/.
+# 64 H2O (ice Ih supercell 2×2×2), 32 beads. Run from tests/uma_ice_rpmd/.
 #
 # Large batched UMA RPMD can OOM on ~12 GB GPUs; chunk inference:
 #   export OPENMMML_UMA_RPMD_CHUNK=4   # or 8
@@ -38,23 +38,24 @@ mkdir -p pipeline_out
 PROD_PS=$(python3 -c "import sys; print(float(sys.argv[1]) * float(sys.argv[2]) / 1000.0)" "${STEPS}" "${DT_FS}")
 echo "=== Settings: steps=${STEPS} dt=${DT_FS} fs -> ${PROD_PS} ps production ==="
 
-echo "=== 1) OpenMM TIP4P/2005f RPMD (PILE-G), order CSV ==="
-python run_openmm_tip4p_rpmd.py \
-  --molecules 32 --beads 32 --dt "$DT_FS" --steps "$STEPS" \
-  --rpmd-thermostat pile-g \
-  --order-csv pipeline_out/ice_order_tip4p_rpmd.csv \
-  --order-every 10 \
-  --platform cuda
+# TIP4P/2005f RPMD already completed — reuse pipeline_out/ice_order_tip4p_rpmd.csv for plotting.
+# echo "=== 1) OpenMM TIP4P/2005f RPMD (PILE-G), order CSV ==="
+# python run_openmm_tip4p_rpmd.py \
+#   --molecules 64 --beads 32 --dt "$DT_FS" --steps "$STEPS" \
+#   --rpmd-thermostat pile-g \
+#   --order-csv pipeline_out/ice_order_tip4p_rpmd.csv \
+#   --order-every 10 \
+#   --platform cuda
 
 echo "=== 2) OpenMM UMA RPMD (PILE-G via test_uma_ice_rpmd defaults) ==="
 python run_openmm_rpmd_reference.py \
-  --molecules 32 --beads 32 --dt "$DT_FS" --steps "$STEPS" \
+  --nx 2 --ny 2 --nz 2 --beads 32 --dt "$DT_FS" --steps "$STEPS" \
   --platform cuda \
   --rpmd-thermostat pile-g
 
 echo "=== 3) i-PI + LAMMPS UMA (thermostat pile_g, match dt-fs) ==="
 python run_ipi_lammps_uma_rpmd.py \
-  --molecules 32 --beads 32 --dt-fs "$DT_FS" --steps "$STEPS" \
+  --molecules 64 --beads 32 --dt-fs "$DT_FS" --steps "$STEPS" \
   --device cuda \
   --ipi-thermostat pile_g
 
@@ -69,6 +70,6 @@ python plot_rpmd_comparison.py \
   --ipi pipeline_out/ice_order_ipi_rpmd.csv \
   --tip4p pipeline_out/ice_order_tip4p_rpmd.csv \
   -o pipeline_out/rpmd_comparison_32x32.png \
-  --title "RPMD ice order: TIP4P vs OpenMM UMA vs i-PI+LAMMPS UMA (32 mol, 32 beads, 243 K, PILE-G)"
+  --title "RPMD ice order: TIP4P vs OpenMM UMA vs i-PI+LAMMPS UMA (64 mol, 32 beads, 243 K, PILE-G)"
 
 echo "Done."

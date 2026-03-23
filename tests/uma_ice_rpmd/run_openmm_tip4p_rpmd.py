@@ -10,12 +10,12 @@ positions (Q6, q_tet) for comparison with OpenMM UMA RPMD.
 
 Prerequisites:
   pip install openmm scipy
-  Build data:  python lammps/build_lammps_ice_data.py -n 128
+  Build data:  python lammps/build_lammps_ice_data.py --nx 2 --ny 2 --nz 4 -o lammps/data.ice_uma_128
 
 Usage:
   cd tests/uma_ice_rpmd
   python run_openmm_tip4p_rpmd.py --data lammps/data.ice_uma_128 --beads 8 --dt 0.1 --prod 100
-  python run_openmm_tip4p_rpmd.py --molecules 32 --beads 4 --order-csv pipeline_out/ice_order_tip4p_rpmd.csv --seed 284760
+  python run_openmm_tip4p_rpmd.py --molecules 64 --beads 4 --order-csv pipeline_out/ice_order_tip4p_rpmd.csv --seed 284760
 """
 from __future__ import annotations
 
@@ -127,6 +127,19 @@ def _relax_water_geometry_to_tip4p2005f(pos_nm: np.ndarray, n_mol: int, box_nm: 
     return out
 
 
+def _auto_pme_cutoff_nm(cell: np.ndarray, n_mol: int) -> float:
+    """Choose PME cutoff (nm) strictly below half the shortest box side.
+
+    Orthorhombic LAMMPS cell: ``cell[i,i]`` in Ångström → nm is ``/10``; half-box is ``/20``.
+    Previously we used 0.7 nm for ``n_mol > 32``, which is invalid for small ice supercells
+    (e.g. 2×2×2 → ~0.45 nm half width) and triggers OpenMM's box-size check.
+    """
+    lx, ly, lz = float(cell[0, 0]), float(cell[1, 1]), float(cell[2, 2])
+    half_min_nm = min(abs(lx), abs(ly), abs(lz)) / 20.0
+    preferred = 0.4 if n_mol <= 64 else 0.7
+    return min(preferred, 0.99 * half_min_nm)
+
+
 def _centroid_kinetic_temperature_and_pe_kj_mol(
     integrator: RPMDIntegrator,
     n_beads: int,
@@ -192,7 +205,10 @@ def main() -> None:
         "--cutoff-nm",
         type=float,
         default=None,
-        help="Nonbonded cutoff (nm). Default: 0.4 if molecules<=32 else 0.7",
+        help=(
+            "Nonbonded cutoff (nm). Default: min(0.4 if molecules<=64 else 0.7, 0.99×half shortest box) "
+            "so PME cutoff stays below half the periodic box."
+        ),
     )
     ap.add_argument("--skip-minimize", action="store_true")
     ap.add_argument(
@@ -225,7 +241,25 @@ def main() -> None:
 
     data_path = args.data or (_LAMMPS_DIR / f"data.ice_uma_{args.molecules}")
     if not data_path.is_file():
-        print(f"Missing {data_path}. Run: python lammps/build_lammps_ice_data.py -n {args.molecules} -o {data_path}")
+        m = args.molecules
+        if m == 32:
+            _nx, _ny, _nz = 1, 2, 2
+        elif m == 64:
+            _nx, _ny, _nz = 2, 2, 2
+        elif m == 128:
+            _nx, _ny, _nz = 2, 2, 4
+        else:
+            _nx = _ny = _nz = None
+        if _nx is not None:
+            hint = (
+                f"python lammps/build_lammps_ice_data.py --nx {_nx} --ny {_ny} --nz {_nz} -o {data_path}"
+            )
+        else:
+            hint = (
+                f"python lammps/build_lammps_ice_data.py --nx NX --ny NY --nz NZ -o {data_path}  "
+                f"(8×NX×NY×NZ = molecule count)"
+            )
+        print(f"Missing {data_path}. Run: {hint}", file=sys.stderr)
         sys.exit(1)
 
     ff_path = args.force_field or _tip4p2005f_forcefield_path()
@@ -269,7 +303,16 @@ def main() -> None:
     n_total = modeller.topology.getNumAtoms()
     assert n_total == 4 * n_mol
 
-    cutoff_nm = args.cutoff_nm if args.cutoff_nm is not None else (0.4 if n_mol <= 32 else 0.7)
+    cutoff_nm = (
+        float(args.cutoff_nm)
+        if args.cutoff_nm is not None
+        else _auto_pme_cutoff_nm(cell, n_mol)
+    )
+    _half_min_nm = min(abs(cell[0, 0]), abs(cell[1, 1]), abs(cell[2, 2])) / 20.0
+    print(
+        f"  PME nonbonded cutoff: {cutoff_nm:.4f} nm (orthorhombic half min box: {_half_min_nm:.4f} nm)",
+        flush=True,
+    )
     system = ff.createSystem(
         modeller.topology,
         nonbondedMethod=PME,

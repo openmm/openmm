@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <simulation verbosity="medium">
-  <!-- RPMD: 32 mol, 4 beads, 243 K, thermostat=pile_g, 0.1 fs -->
-  <total_steps>25</total_steps>
+  <!-- RPMD: 32 mol, 32 beads, 243 K, thermostat=pile_g, 0.1 fs -->
+  <total_steps>10000</total_steps>
   <prng>
     <seed>284759</seed>
   </prng>
   <output>
     <trajectory filename="traj" stride="10" format="xyz">positions</trajectory>
-    <checkpoint filename="RESTART" stride="25"/>
+    <checkpoint filename="RESTART" stride="10000"/>
   </output>
 
   <ffsocket mode="inet" name="lammps">
     <address>127.0.0.1</address>
-    <port>64523</port>
+    <port>65535</port>
     <timeout>3600</timeout>
   </ffsocket>
 
@@ -31,8 +31,8 @@
         </thermostat>
       </dynamics>
     </motion>
-    <beads nbeads="4" natoms="96"/>
-    <initialize nbeads="4">
+    <beads nbeads="32" natoms="96"/>
+    <initialize nbeads="32">
       <file mode="xyz" units="angstrom">init.xyz</file>
     </initialize>
   </system>

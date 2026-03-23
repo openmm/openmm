@@ -5,10 +5,14 @@ Post-process LAMMPS custom dump → ice order CSV (same schema as OpenMM ice_ord
 Reads orthorhombic box from data.ice_uma, parses dump (id type mass x y z), builds
 positions in id order with type 1=O/8, 2=H/1, and calls ice_order_metrics per frame.
 
+Use ``--thermo-log`` with the LAMMPS ``-log`` file from ``run_lammps_uma_ice.py`` (default
+``lammps/lammps_uma_run.log``) to fill **T_K** and **PE_kj_mol** by matching **Step** to each
+dump frame (same schema as OpenMM order CSVs).
+
 Usage:
   cd tests/uma_ice_rpmd
   python lammps_order_from_dump.py --data lammps/data.ice_uma --dump lammps/dump.openmm_match_long.lammpstrj -o ice_order_lammps.csv
-  python lammps_order_from_dump.py --data lammps/data.ice_uma --dump lammps/dump.openmm_match_long.lammpstrj -o ice_order_lammps.csv --every 1
+  python lammps_order_from_dump.py --data lammps/data.ice_uma --dump lammps/dump.foo.lammpstrj -o ice_order_lammps.csv --thermo-log lammps/lammps_uma_run.log --dt-fs 0.1
 """
 from __future__ import annotations
 
@@ -24,6 +28,7 @@ if str(_SCRIPT_DIR) not in sys.path:
 
 from benchmark_same_structure_openmm_vs_lammps import parse_lammps_data
 from ice_order_parameters import ice_order_metrics
+from lammps_thermo_log import parse_lammps_thermo_log
 
 
 def _read_box_orth_ang(data_path: Path) -> np.ndarray:
@@ -78,6 +83,15 @@ def main() -> None:
     ap.add_argument("-o", "--output", type=Path, default=None, help="Output CSV (default: dump stem + _order.csv)")
     ap.add_argument("--every", type=int, default=1, help="Write CSV row every N frames (default 1)")
     ap.add_argument("--dt-fs", type=float, default=1.0, help="Timestep in fs (metal 0.001 = 1 fs)")
+    ap.add_argument(
+        "--thermo-log",
+        type=Path,
+        default=None,
+        help=(
+            "LAMMPS -log file with thermo (Step, Temp, PotEng). "
+            "Fills T_K and PE_kj_mol columns by matching timestep to dump frames."
+        ),
+    )
     args = ap.parse_args()
 
     if not args.dump.is_file():
@@ -90,14 +104,28 @@ def main() -> None:
     box_orth = _read_box_orth_ang(args.data)
     out_path = args.output or args.dump.with_name(args.dump.stem + "_order.csv")
 
+    thermo_by_step: dict[int, tuple[float, float]] = {}
+    if args.thermo_log is not None:
+        thermo_by_step = parse_lammps_thermo_log(args.thermo_log)
+        if not thermo_by_step and args.thermo_log.is_file():
+            print(
+                f"Warning: no thermo rows parsed from {args.thermo_log} (T_K/PE_kj_mol empty).",
+                file=sys.stderr,
+            )
+
     with out_path.open("w") as f:
         f.write("step,time_ps,T_K,PE_kj_mol,q6_mean,q6_std,q_tet_mean,q_tet_std\n")
         for frame_idx, (step, time_ps, pos_ang, z) in enumerate(_iter_frames(args.dump, args.dt_fs)):
             if frame_idx % args.every != 0:
                 continue
             res = ice_order_metrics(pos_ang, box_orth, z=z)
+            t_k = pe_kj = ""
+            if step in thermo_by_step:
+                T_k, pe = thermo_by_step[step]
+                t_k = f"{T_k:.4f}"
+                pe_kj = f"{pe:.6f}"
             f.write(
-                f"{step},{time_ps:.6f},,,{res.q6_mean:.6f},{res.q6_std:.6f},"
+                f"{step},{time_ps:.6f},{t_k},{pe_kj},{res.q6_mean:.6f},{res.q6_std:.6f},"
                 f"{res.q_tet_mean:.6f},{res.q_tet_std:.6f}\n"
             )
     print(f"Wrote {out_path}")

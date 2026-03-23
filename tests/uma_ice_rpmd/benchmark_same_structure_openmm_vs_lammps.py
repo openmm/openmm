@@ -106,7 +106,10 @@ def main() -> None:
     args = ap.parse_args()
 
     if not args.data.is_file():
-        print(f"Missing {args.data}. Build with: python {_LAMMPS_DIR / 'build_lammps_ice_data.py'} -n 128")
+        print(
+            f"Missing {args.data}. Build with: python {_LAMMPS_DIR / 'build_lammps_ice_data.py'} "
+            f"--nx 2 --ny 2 --nz 4 -o {args.data}"
+        )
         sys.exit(1)
 
     pos, cell, atomic_numbers = parse_lammps_data(args.data)

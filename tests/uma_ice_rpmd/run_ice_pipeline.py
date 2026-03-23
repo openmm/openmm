@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-End-to-end ice pipeline: generate structure → 1 ps TIP4P/2005f (OpenMM) → 1 ps UMA (OpenMM)
+End-to-end ice pipeline: build Ih supercell (``--nx/--ny/--nz``) → 1 ps TIP4P/2005f (OpenMM) → 1 ps UMA (OpenMM)
 → 1 ps UMA (LAMMPS) → plot order parameters. Runs strictly sequentially (no parallel sims)
 to avoid GPU OOM. Same thermostat (Langevin), same timestep (--dt-fs), same T and friction for both.
 
@@ -12,7 +12,10 @@ Order/trajectory every 10 fs.
 
 Usage:
   cd tests/uma_ice_rpmd
+  # Default: proton-ordered ice Ih 2×2×2 (same as RPMD benchmark) → 64 molecules
   python run_ice_pipeline.py --out-dir pipeline_out
+  # Other supercells:
+  python run_ice_pipeline.py --out-dir pipeline_out --nx 1 --ny 2 --nz 2
   # Background:
   nohup python run_ice_pipeline.py --out-dir pipeline_out >> pipeline.log 2>&1 &
 """
@@ -27,41 +30,22 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 _LAMMPS_DIR = _SCRIPT_DIR / "lammps"
 
 
-def _ensure_ice_cif(work_dir: Path) -> None:
-    """Generate ice.cif via GenIce if missing. Exit with clear message on failure."""
-    ice_cif = work_dir / "ice.cif"
-    if ice_cif.is_file():
-        return
-    result = subprocess.run(
-        ["genice", "1h", "--rep", "2", "2", "2", "--format", "cif"],
-        capture_output=True,
-        text=True,
-        timeout=60,
-        cwd=str(work_dir),
-    )
-    if result.returncode != 0 or not (result.stdout or "").strip():
-        print(
-            "ice.cif not found and GenIce failed or is not installed.\n"
-            "Install GenIce (pip install genice) and run:\n"
-            "  genice 1h --rep 2 2 2 --format cif > ice.cif\n"
-            "or provide ice.cif in the work directory.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    ice_cif.write_text(result.stdout)
-    print(f"Wrote {ice_cif}")
-
-
-def _build_data(work_dir: Path, out_dir: Path, molecules: int) -> Path:
-    """Build data.ice_uma or data.ice_uma_{molecules} from ice.cif."""
-    ice_cif = work_dir / "ice.cif"
-    data_path = work_dir / "lammps" / (f"data.ice_uma_{molecules}" if molecules != 128 else "data.ice_uma")
+def _build_data_supercell(work_dir: Path, nx: int, ny: int, nz: int) -> Path:
+    """Proton-ordered ice Ih from ``generate_ice_ih`` replication (same as RPMD ``--nx/--ny/--nz``)."""
+    molecules = 8 * nx * ny * nz
+    data_path = work_dir / "lammps" / f"data.ice_uma_{molecules}"
+    data_path.parent.mkdir(parents=True, exist_ok=True)
     cmd = [
         sys.executable,
         str(_LAMMPS_DIR / "build_lammps_ice_data.py"),
-        "-i", str(ice_cif),
-        "-n", str(molecules),
-        "-o", str(data_path),
+        "--nx",
+        str(nx),
+        "--ny",
+        str(ny),
+        "--nz",
+        str(nz),
+        "-o",
+        str(data_path),
     ]
     subprocess.check_call(cmd, cwd=str(work_dir))
     if not data_path.is_file():
@@ -76,7 +60,7 @@ def _build_data(work_dir: Path, out_dir: Path, molecules: int) -> Path:
     if n_atoms != molecules * 3:
         print(f"Expected {molecules * 3} atoms, got {n_atoms}", file=sys.stderr)
         sys.exit(1)
-    print(f"Built {data_path} ({n_atoms} atoms)")
+    print(f"Built {data_path} ({n_atoms} atoms, Ih supercell {nx}×{ny}×{nz})")
     return data_path
 
 
@@ -192,6 +176,7 @@ def _run_lammps_uma(
         print(f"LAMMPS did not produce {dump_path}", file=sys.stderr)
         sys.exit(1)
     # Use same dt_fs as LAMMPS run (set via --dt-fs above) so time_ps in CSV matches actual simulated time.
+    thermo_log = work_dir / "lammps" / "lammps_uma_run.log"
     cmd2 = [
         sys.executable,
         str(_SCRIPT_DIR / "lammps_order_from_dump.py"),
@@ -199,6 +184,7 @@ def _run_lammps_uma(
         "--dump", str(dump_path),
         "-o", str(out_dir / "ice_order_uma_lammps.csv"),
         "--dt-fs", str(dt_fs),
+        "--thermo-log", str(thermo_log),
     ]
     subprocess.check_call(cmd2, cwd=str(work_dir))
     print("LAMMPS UMA + order post-process done.")
@@ -255,16 +241,36 @@ def main() -> None:
         description="End-to-end ice pipeline: structure → 1 ps × 3 (TIP4P/2005f, UMA OpenMM, UMA LAMMPS) → plot"
     )
     ap.add_argument("--out-dir", type=Path, default=_SCRIPT_DIR / "pipeline_out", help="Output directory for CSVs, trajectories, plot")
-    ap.add_argument("--work-dir", type=Path, default=_SCRIPT_DIR, help="Work directory (ice.cif, lammps/)")
+    ap.add_argument("--work-dir", type=Path, default=_SCRIPT_DIR, help="Work directory (lammps/ data and outputs)")
     ap.add_argument("--dt-fs", type=float, default=0.1, help="Timestep in fs for all runs (default 0.1 for TIP4P/2005f stability; 1 ps = 10000 steps)")
     ap.add_argument("--steps", type=int, default=None, help="MD steps per run (default: 1000/dt_fs for 1 ps, e.g. 5000 @ 0.2 fs)")
     ap.add_argument("--temperature", type=float, default=243.0, help="Temperature in K for NVT (OpenMM and LAMMPS, default 243)")
     ap.add_argument("--friction", type=float, default=10.0, help="Langevin friction in 1/ps (OpenMM and LAMMPS). LAMMPS damp (ps) = 1/friction (default 10 -> damp 0.1 ps)")
-    ap.add_argument("--molecules", type=int, default=128, help="Number of water molecules (default 128; use 32 for smaller runs)")
+    ap.add_argument(
+        "--nx",
+        type=int,
+        default=2,
+        metavar="NX",
+        help="Ice Ih supercell replication along a (default 2; with ny=nz=2 → 64 H2O). Uses generate_ice_ih replication.",
+    )
+    ap.add_argument(
+        "--ny",
+        type=int,
+        default=2,
+        metavar="NY",
+        help="Supercell along b (default 2).",
+    )
+    ap.add_argument(
+        "--nz",
+        type=int,
+        default=2,
+        metavar="NZ",
+        help="Supercell along c (default 2).",
+    )
     ap.add_argument(
         "--skip-classical",
         action="store_true",
-        help="Skip TIP4P/2005f (optional; use only if debugging). Small systems use build_lammps_ice_data -n (ice Ic tiling), not CIF truncation.",
+        help="Skip TIP4P/2005f (optional; use only if debugging).",
     )
     ap.add_argument("--skip-lammps", action="store_true", help="Skip LAMMPS run (still plot if OpenMM CSVs exist)")
     ap.add_argument(
@@ -310,6 +316,9 @@ def main() -> None:
     )
     args = ap.parse_args()
 
+    if args.nx < 1 or args.ny < 1 or args.nz < 1:
+        ap.error("--nx, --ny, and --nz must be >= 1")
+
     work_dir = args.work_dir.resolve()
     out_dir = args.out_dir.resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -328,10 +337,9 @@ def main() -> None:
         plot_order_vs_time(csv_c, csv_o, csv_l, out_dir / "order_vs_time.png")
         return
 
-    # Step 0: ice.cif
-    _ensure_ice_cif(work_dir)
-    # Step 1: build data
-    data_path = _build_data(work_dir, out_dir, args.molecules)
+    # Step 0–1: proton-ordered ice Ih supercell (same builder as RPMD benchmark)
+    data_path = _build_data_supercell(work_dir, args.nx, args.ny, args.nz)
+    n_molecules_effective = 8 * args.nx * args.ny * args.nz
 
     shared_data_path: Path | None = None
     skip_minimize = False
@@ -352,7 +360,8 @@ def main() -> None:
 
     # Step 2: OpenMM classical (use smaller cutoff for small boxes)
     if not args.skip_classical:
-        cutoff_classical = 0.4 if args.molecules <= 32 else None
+        # Orthorhombic ice supercells can have a side < ~1 nm; default 0.7 nm cutoff then violates PBC.
+        cutoff_classical = 0.4 if n_molecules_effective <= 64 else None
         _run_openmm_classical(
             work_dir,
             out_dir,

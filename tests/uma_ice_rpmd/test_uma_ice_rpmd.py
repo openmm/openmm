@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
 RPMD simulation testing if ice stays frozen at 243K with UMA or eSEN potentials.
-Uses proper ice Ih structure (GenIce CIF, GenIce2, or embedded CIF) in a periodic box.
-PILE thermostat, NPT/NVT.
+Proton-ordered ice Ih from :mod:`generate_ice_ih` via ``--nx/--ny/--nz`` (8 molecules/cell);
+otherwise GenIce / embedded CIF. PILE thermostat, NVT/NPT.
 
 Run:
   python test_uma_ice_rpmd.py --input ice.cif --beads 8 --temperature 243 --dt 1.0 --equil 5 --prod 50
   python test_uma_ice_rpmd.py --box 1.0 --beads 8 ...
-  python test_uma_ice_rpmd.py --molecules 32 --beads 8 ...
+  python test_uma_ice_rpmd.py --nx 2 --ny 2 --nz 2 --beads 8 ...
+  python test_uma_ice_rpmd.py --molecules 48 --beads 8 ...   # GenIce path (no --nx/--ny/--nz)
 
 Input from GenIce: genice 1h --rep 2 2 2 --format cif > ice.cif
 """
@@ -471,14 +472,20 @@ def _create_ice_embedded(num_molecules, box_nm=None):
 
 
 def create_ice_structure(num_molecules=None, box_nm=None, ice_type='1h', input_file=None,
-                         max_molecules=None):
+                         max_molecules=None, ice_supercell=None):
     """
     Create ice structure with tetrahedral hydrogen-bonding network.
 
     If input_file is given, load structure directly from CIF/PDB/XYZ (e.g. GenIce output).
     max_molecules: when loading from file, trim to first N molecules and scale box (for CUDA OOM).
-    Otherwise specify num_molecules OR box_nm.
-    ice_type: '1h' (hexagonal Ih) or '1c' (cubic Ic, natural cubic box).
+
+    If ``ice_supercell`` is ``(nx, ny, nz)``, build **ice Ih proton-ordered** using
+    :mod:`generate_ice_ih` replicated ``nx * ny * nz`` times (8 molecules per cell) via
+    :func:`ice_ih_openmm.openmm_from_ice_supercell`. This is the preferred path when you want
+    explicit supercell factors (no ambiguity from molecule count alone).
+
+    Otherwise specify num_molecules OR box_nm; ``ice_type`` selects GenIce ice Ih or Ic, then
+    embedded CIF fallback.
 
     Returns
     -------
@@ -494,27 +501,34 @@ def create_ice_structure(num_molecules=None, box_nm=None, ice_type='1h', input_f
         if max_molecules is not None:
             print(f"  Trimmed to {max_molecules} molecules (--molecules, for GPU memory)")
     else:
-        if box_nm is not None:
-            num_molecules = _molecules_for_box(box_nm)
-        elif num_molecules is None:
-            num_molecules = 32
-
         print(f"\n--- Creating Ice Structure ---")
-        print(f"  Ice type: {ice_type}")
-        if box_nm is not None:
-            print(f"  Target box volume: {box_nm**3:.4f} nm³")
-        print(f"  Target molecules: {num_molecules}")
+        if ice_supercell is not None:
+            nx, ny, nz = ice_supercell
+            n_mol_expected = 8 * nx * ny * nz
+            print(f"  Ice Ih supercell: nx={nx} ny={ny} nz={nz}  ({n_mol_expected} molecules)")
+            from ice_ih_openmm import openmm_from_ice_supercell
 
-        result = _create_ice_genice(num_molecules, box_nm=box_nm, ice_type=ice_type)
-        if result is not None:
-            topology, positions, box_vectors = result
-            print(f"  Source: GenIce (proton-disordered)")
+            topology, positions, box_vectors = openmm_from_ice_supercell(nx, ny, nz)
+            print("  Source: generate_ice_ih.py (proton-ordered)")
         else:
-            if ice_type == '1c':
-                print(f"  GenIce2 failed for 1c; falling back to 1h")
-                ice_type = '1h'
-            topology, positions, box_vectors = _create_ice_embedded(num_molecules, box_nm=box_nm)
-            print(f"  Source: Embedded CIF (ice Ih from Avogadro/COD)")
+            if box_nm is not None:
+                num_molecules = _molecules_for_box(box_nm)
+            elif num_molecules is None:
+                num_molecules = 32
+            print(f"  Ice type: {ice_type}")
+            if box_nm is not None:
+                print(f"  Target box volume: {box_nm**3:.4f} nm³")
+            print(f"  Target molecules: {num_molecules}")
+            result = _create_ice_genice(num_molecules, box_nm=box_nm, ice_type=ice_type)
+            if result is not None:
+                topology, positions, box_vectors = result
+                print("  Source: GenIce (proton-disordered)")
+            else:
+                if ice_type == '1c':
+                    print("  GenIce2 failed for 1c; falling back to 1h")
+                    ice_type = '1h'
+                topology, positions, box_vectors = _create_ice_embedded(num_molecules, box_nm=box_nm)
+                print("  Source: Embedded CIF (ice Ih from Avogadro/COD)")
 
         n_atoms = len(positions)
     mol_count = n_atoms // 3
@@ -564,7 +578,7 @@ def _mic_centroid(positions_per_bead: list[np.ndarray], box_matrix: np.ndarray) 
 
 
 def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=None,
-                   max_molecules=None,
+                   max_molecules=None, ice_supercell=None,
                    num_beads=8, temperature_K=243.0,
                    pressure_bar=1.0, dt_fs=1.0, equilibration_ps=5.0,
                    production_ps=100.0, model_name='uma-s-1-pythonforce-batch',
@@ -653,6 +667,10 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     print(f"Timestep: {dt_fs} fs")
     if input_file is not None:
         print(f"Input structure: {input_file}")
+    elif ice_supercell is not None:
+        _nx, _ny, _nz = ice_supercell
+        _nmol = 8 * _nx * _ny * _nz
+        print(f"Ice Ih supercell: {_nx} x {_ny} x {_nz}  ({_nmol} molecules)")
     else:
         if box_nm is not None:
             num_molecules = _molecules_for_box(box_nm)
@@ -669,7 +687,7 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     # Create structure
     topology, positions, box_vectors = create_ice_structure(
         num_molecules=num_molecules, box_nm=box_nm, ice_type=ice_type, input_file=input_file,
-        max_molecules=max_molecules
+        max_molecules=max_molecules, ice_supercell=ice_supercell,
     )
     n_atoms = len(positions)
     num_molecules = n_atoms // 3
@@ -1288,6 +1306,11 @@ if __name__ == '__main__':
                        help='Cubic box side length in nm (e.g. 0.5, 1.0). Overrides --molecules.')
     parser.add_argument('--ice-type', type=str, default='1h', choices=['1h', '1c'],
                        help='Ice type: 1h (hexagonal Ih) or 1c (cubic Ic, natural cubic box). Default: 1h')
+    parser.add_argument('--nx', type=int, default=None, metavar='NX',
+                       help='Ice Ih supercell replication along a (Å cell); use with --ny, --nz. 8 molecules/cell. '
+                            'Mutually exclusive with --input.')
+    parser.add_argument('--ny', type=int, default=None, metavar='NY', help='Supercell replication along b')
+    parser.add_argument('--nz', type=int, default=None, metavar='NZ', help='Supercell replication along c')
     parser.add_argument('--beads', type=int, default=8,
                        help='RPMD beads (default: 8). Use 1 for classical MD / LAMMPS-like UMA cost per step.')
     parser.add_argument('--temperature', type=float, default=243.0,
@@ -1361,17 +1384,31 @@ if __name__ == '__main__':
 
     if args.input is not None and args.box is not None:
         print("Warning: --input given; ignoring --box")
-    # --molecules with --input: trim to N molecules (for CUDA OOM). Without --input: target count.
-    num_mol = args.molecules
-    max_mol = args.molecules if args.input is not None else None
+
+    has_scell = args.nx is not None or args.ny is not None or args.nz is not None
+    if has_scell:
+        if args.nx is None or args.ny is None or args.nz is None:
+            parser.error("--nx, --ny, and --nz must be given together for built-in ice Ih (generate_ice_ih)")
+        if args.input is not None:
+            parser.error("Use either --input or (--nx, --ny, --nz), not both")
+        if args.box is not None:
+            parser.error("Use either --box or (--nx, --ny, --nz), not both")
+        ice_supercell = (args.nx, args.ny, args.nz)
+        num_mol = None
+        max_mol = None
+    else:
+        ice_supercell = None
+        num_mol = args.molecules
+        max_mol = args.molecules if args.input is not None else None
 
     try:
         success = run_simulation(
-            num_molecules=num_mol if args.input is None else None,
-            box_nm=args.box if args.input is None else None,
+            num_molecules=num_mol if args.input is None and ice_supercell is None else None,
+            box_nm=args.box if args.input is None and ice_supercell is None else None,
             input_file=args.input,
             max_molecules=max_mol,
             ice_type=args.ice_type,
+            ice_supercell=ice_supercell,
             num_beads=args.beads,
             temperature_K=args.temperature,
             pressure_bar=args.pressure,

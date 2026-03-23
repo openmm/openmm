@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 """
-Plot Q6 / q_tet / kinetic T: OpenMM UMA RPMD vs i-PI + LAMMPS UMA, optionally TIP4P RPMD.
+Plot ice **order-parameter CVs** (⟨Q6⟩, ⟨q_tet⟩) and kinetic T from RPMD exports.
+
+The structural collective variables (CVs) tracked here are **Steinhardt Q6** and
+**Chau–Harding q_tet**, computed with the path-integral / bead-averaging estimator
+(see ``ice_order_parameters.ice_order_metrics_path_integral``). The default figure
+shows **time series** of these CVs plus centroid kinetic temperature.
+
+Use ``--cv-plane PATH`` to also save the **trajectory projected into the
+(⟨Q6⟩, ⟨q_tet⟩) plane** (same data as the top two panels, useful for visualizing
+sampling in CV space).
 
 Third panel: ``T_K`` (centroid kinetic temperature) vs time, with optional bath reference
 line (default 243 K for PILE-G). Use this to check thermostat behaviour.
@@ -13,6 +22,11 @@ Reads CSV files produced by:
 Usage:
   cd tests/uma_ice_rpmd
   python plot_rpmd_comparison.py --openmm pipeline_out/ice_order_openmm_rpmd.csv --ipi pipeline_out/ice_order_ipi_rpmd.csv --tip4p pipeline_out/ice_order_tip4p_rpmd.csv -o rpmd_comparison.png
+
+  # Same inputs, plus CV-plane (Q6 vs q_tet) trajectory:
+  python plot_rpmd_comparison.py ... -o rpmd_comparison.png --cv-plane pipeline_out/rpmd_cv_plane.png
+
+For **classical (single-bead) MD** only — LAMMPS vs OpenMM vs TIP4P — use ``plot_md_comparison.py`` (not this script).
 """
 from __future__ import annotations
 
@@ -31,6 +45,85 @@ except ImportError:
     _HAS_MPL = False
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
+
+# Compact figure + larger type; serif + Computer Modern mathtext ≈ LaTeX default look
+# (no external ``latex`` required; see ``mathtext.fontset``).
+_PLOT_RC = {
+    "font.size": 12,
+    "font.family": "serif",
+    "font.serif": ["DejaVu Serif", "Bitstream Vera Serif", "Computer Modern Roman", "Times", "Palatino"],
+    "mathtext.fontset": "cm",
+    "axes.labelsize": 14,
+    "axes.titlesize": 13,
+    "xtick.labelsize": 12,
+    "ytick.labelsize": 12,
+    "legend.fontsize": 12,
+    "figure.titlesize": 14,
+    "axes.unicode_minus": False,
+}
+# Width fixed; height gives room for 3 stacked panels without a huge title gap.
+_FIGSIZE_IN = (6.0, 7.75)
+_DEFAULT_DPI = 150
+
+
+def _format_title_two_lines(title: str) -> str:
+    """Return a two-line suptitle when possible (shorter single line per row).
+
+    If *title* already contains a newline, it is returned unchanged. Otherwise,
+    split on an em dash `` — `` (common in our CLI titles) into headline + subtitle.
+    """
+    t = title.strip()
+    if "\n" in t:
+        return t
+    em = " — "
+    if em in t:
+        left, right = t.split(em, 1)
+        return f"{left.rstrip()}\n{right.strip()}"
+    return t
+
+
+def _read_n_oxygen_from_csv(path: Path) -> int | None:
+    """Return ``n_oxygen`` from the first parsable data row, or ``None`` if absent.
+
+    For water ice order exports, ``n_oxygen`` equals the number of water molecules.
+    """
+    if not path.is_file():
+        return None
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    if len(lines) < 2:
+        return None
+    cols = [c.strip() for c in lines[0].split(",")]
+    if "n_oxygen" not in cols:
+        return None
+    idx = cols.index("n_oxygen")
+    for line in lines[1:]:
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) <= idx:
+            continue
+        try:
+            return int(float(parts[idx]))
+        except ValueError:
+            continue
+    return None
+
+
+def _enrich_title_with_system(
+    title: str,
+    n_molecules: int | None,
+    n_beads: int | None,
+) -> str:
+    """Append `` · N molecules, P beads`` to the last title line when values are set."""
+    parts: list[str] = []
+    if n_molecules is not None:
+        parts.append(f"{n_molecules} molecules")
+    if n_beads is not None:
+        parts.append(f"{n_beads} beads")
+    if not parts:
+        return title
+    suffix = ", ".join(parts)
+    lines = title.split("\n")
+    lines[-1] = f"{lines[-1]} · {suffix}"
+    return "\n".join(lines)
 
 
 def _read_csv(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray | None]:
@@ -80,6 +173,49 @@ def _read_csv(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarra
     return t_arr, q6_arr, qt_arr, tk_arr
 
 
+def _save_cv_plane_figure(
+    output: Path,
+    *,
+    has_openmm: bool,
+    q6_o: np.ndarray,
+    qt_o: np.ndarray,
+    has_ipi: bool,
+    q6_i: np.ndarray,
+    qt_i: np.ndarray,
+    tip4p_data: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray | None] | None,
+    title: str,
+    n_molecules: int | None,
+    n_beads_ann: int | None,
+    dpi: int,
+) -> None:
+    """Save ⟨Q6⟩ vs ⟨q_tet⟩ (RPMD order-parameter CV plane); points connected in time order."""
+    with plt.rc_context(_PLOT_RC):
+        fig, ax = plt.subplots(1, 1, figsize=(6.0, 5.0), constrained_layout=True)
+        if has_openmm and q6_o.size:
+            ax.plot(q6_o, qt_o, "b-", label="OpenMM UMA RPMD", alpha=0.8, lw=1.8)
+            ax.scatter(q6_o[0], qt_o[0], c="blue", s=36, marker="o", zorder=5, edgecolors="k", linewidths=0.4)
+            ax.scatter(q6_o[-1], qt_o[-1], c="blue", s=36, marker="s", zorder=5, edgecolors="k", linewidths=0.4)
+        if has_ipi and q6_i.size:
+            ax.plot(q6_i, qt_i, "r--", label="i-PI + LAMMPS UMA", alpha=0.8, lw=1.8)
+            ax.scatter(q6_i[0], qt_i[0], c="red", s=36, marker="o", zorder=5, edgecolors="k", linewidths=0.4)
+            ax.scatter(q6_i[-1], qt_i[-1], c="red", s=36, marker="s", zorder=5, edgecolors="k", linewidths=0.4)
+        if tip4p_data is not None:
+            _, q6_t, qt_t, _ = tip4p_data
+            if q6_t.size:
+                ax.plot(q6_t, qt_t, "g-.", label="TIP4P/2005f RPMD", alpha=0.85, lw=1.8)
+                ax.scatter(q6_t[0], qt_t[0], c="green", s=36, marker="o", zorder=5, edgecolors="k", linewidths=0.4)
+                ax.scatter(q6_t[-1], qt_t[-1], c="green", s=36, marker="s", zorder=5, edgecolors="k", linewidths=0.4)
+        ax.set_xlabel(r"$\langle Q_6 \rangle$ (order CV)")
+        ax.set_ylabel(r"$\langle q_{\mathrm{tet}} \rangle$ (order CV)")
+        ax.set_title("RPMD trajectory in order-parameter plane")
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        cv_title = _format_title_two_lines(title) + "\n(circle=start, square=end)"
+        fig.suptitle(_enrich_title_with_system(cv_title, n_molecules, n_beads_ann))
+        output.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(output, dpi=dpi, bbox_inches="tight", pad_inches=0.08)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Plot OpenMM vs i-PI+LAMMPS Q6 comparison")
     ap.add_argument(
@@ -105,10 +241,23 @@ def main() -> None:
     )
     ap.add_argument("-o", "--output", type=Path, default=_SCRIPT_DIR / "pipeline_out" / "rpmd_comparison.png")
     ap.add_argument(
+        "--cv-plane",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help=(
+            "Also save a figure: ⟨Q6⟩ vs ⟨q_tet⟩ (RPMD order-parameter CV plane), "
+            "trajectory in time order (circle=start, square=end)."
+        ),
+    )
+    ap.add_argument(
         "--title",
         type=str,
-        default="RPMD ice order: OpenMM UMA vs i-PI+LAMMPS UMA (243 K, PILE-G)",
-        help="Figure suptitle (include bead/molecule counts as needed).",
+        default=(
+            "RPMD ice order: OpenMM UMA vs i-PI+LAMMPS UMA\n"
+            "(243 K, PILE-G)"
+        ),
+        help="Figure suptitle; use \\n for manual line breaks, or rely on splitting at ' — '.",
     )
     ap.add_argument(
         "--bath-temperature-k",
@@ -120,6 +269,29 @@ def main() -> None:
         "--no-temperature-line",
         action="store_true",
         help="Do not draw the bath-temperature reference line on the kinetic T panel.",
+    )
+    ap.add_argument(
+        "--dpi",
+        type=int,
+        default=_DEFAULT_DPI,
+        help=f"Raster resolution for PNG output (default {_DEFAULT_DPI}).",
+    )
+    ap.add_argument(
+        "--molecules",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Molecule count in suptitle; default: read n_oxygen from the first available CSV.",
+    )
+    ap.add_argument(
+        "--beads",
+        type=int,
+        default=32,
+        metavar="P",
+        help=(
+            "RPMD bead count in suptitle (default 32, matching run_openmm_uma_rpmd_only.sh). "
+            "Use 0 to omit beads from the annotation."
+        ),
     )
     args = ap.parse_args()
 
@@ -150,25 +322,6 @@ def main() -> None:
     if has_ipi:
         t_i, q6_i, qt_i, tk_i = _read_csv(Path(ipi_path))
 
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(9, 8.5), sharex=True)
-    if has_openmm and t_o.size:
-        ax1.plot(t_o, q6_o, "b-", label="OpenMM UMA RPMD", alpha=0.8)
-        ax2.plot(t_o, qt_o, "b-", label="OpenMM UMA RPMD", alpha=0.8)
-    if has_ipi and t_i.size:
-        ax1.plot(t_i, q6_i, "r--", label="i-PI + LAMMPS UMA", alpha=0.8)
-        ax2.plot(t_i, qt_i, "r--", label="i-PI + LAMMPS UMA", alpha=0.8)
-    if tip4p_data is not None:
-        t_t, q6_t, qt_t, tk_t = tip4p_data
-        ax1.plot(t_t, q6_t, "g-.", label="TIP4P/2005f RPMD", alpha=0.85, lw=1.8)
-        ax2.plot(t_t, qt_t, "g-.", label="TIP4P/2005f RPMD", alpha=0.85, lw=1.8)
-    ax1.set_ylabel(r"$\langle Q_6 \rangle$")
-    ax1.legend(fontsize=8)
-    ax1.grid(True, alpha=0.3)
-
-    ax2.set_ylabel(r"$\langle q_{\mathrm{tet}} \rangle$ (Chau–Harding, PI)")
-    ax2.legend(fontsize=8)
-    ax2.grid(True, alpha=0.3)
-
     def _plot_tk(
         ax: "plt.Axes",
         t_arr: np.ndarray,
@@ -184,32 +337,89 @@ def main() -> None:
             return
         ax.plot(t_arr[mask], tk_arr[mask], style, label=label, alpha=0.85, lw=lw)
 
-    if has_openmm and t_o.size:
-        _plot_tk(ax3, t_o, tk_o, "OpenMM UMA RPMD", "b-")
-    if has_ipi and t_i.size:
-        _plot_tk(ax3, t_i, tk_i, "i-PI + LAMMPS UMA", "r--")
-    if tip4p_data is not None:
-        t_t, q6_t, qt_t, tk_t = tip4p_data
-        _plot_tk(ax3, t_t, tk_t, "TIP4P/2005f RPMD", "g-.", lw=1.8)
-    if not args.no_temperature_line:
-        ax3.axhline(
-            args.bath_temperature_k,
-            color="k",
-            ls=":",
-            lw=1.0,
-            alpha=0.6,
-            label=f"Bath target ({args.bath_temperature_k:.0f} K)",
-        )
-    ax3.set_ylabel(r"$T_{\mathrm{kin}}$ (K)")
-    ax3.set_xlabel("Time (ps)")
-    ax3.legend(fontsize=8)
-    ax3.grid(True, alpha=0.3)
+    title_fmt = _format_title_two_lines(args.title)
+    n_mol = args.molecules
+    if n_mol is None:
+        if has_openmm:
+            n_mol = _read_n_oxygen_from_csv(args.openmm)
+        if n_mol is None and args.tip4p is not None:
+            n_mol = _read_n_oxygen_from_csv(args.tip4p)
+        if n_mol is None and has_ipi and ipi_path is not None:
+            n_mol = _read_n_oxygen_from_csv(Path(ipi_path))
+    n_beads_ann: int | None = args.beads if args.beads > 0 else None
 
-    fig.suptitle(args.title)
-    plt.tight_layout()
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(args.output, dpi=150)
+    with plt.rc_context(_PLOT_RC):
+        # constrained_layout pulls panels up under a multi-line suptitle (less dead space
+        # than tight_layout(rect=...) + bbox_inches=tight, which often over-reserves the top).
+        fig, (ax1, ax2, ax3) = plt.subplots(
+            3,
+            1,
+            figsize=_FIGSIZE_IN,
+            sharex=True,
+            constrained_layout=True,
+        )
+        if has_openmm and t_o.size:
+            ax1.plot(t_o, q6_o, "b-", label="OpenMM UMA RPMD", alpha=0.8)
+            ax2.plot(t_o, qt_o, "b-", label="OpenMM UMA RPMD", alpha=0.8)
+        if has_ipi and t_i.size:
+            ax1.plot(t_i, q6_i, "r--", label="i-PI + LAMMPS UMA", alpha=0.8)
+            ax2.plot(t_i, qt_i, "r--", label="i-PI + LAMMPS UMA", alpha=0.8)
+        if tip4p_data is not None:
+            t_t, q6_t, qt_t, tk_t = tip4p_data
+            ax1.plot(t_t, q6_t, "g-.", label="TIP4P/2005f RPMD", alpha=0.85, lw=1.8)
+            ax2.plot(t_t, qt_t, "g-.", label="TIP4P/2005f RPMD", alpha=0.85, lw=1.8)
+        ax1.set_ylabel(r"$\langle Q_6 \rangle$")
+        ax1.legend()
+        ax1.grid(True, alpha=0.3)
+
+        ax2.set_ylabel(r"$\langle q_{\mathrm{tet}} \rangle$")
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+
+        if has_openmm and t_o.size:
+            _plot_tk(ax3, t_o, tk_o, "OpenMM UMA RPMD", "b-")
+        if has_ipi and t_i.size:
+            _plot_tk(ax3, t_i, tk_i, "i-PI + LAMMPS UMA", "r--")
+        if tip4p_data is not None:
+            t_t, q6_t, qt_t, tk_t = tip4p_data
+            _plot_tk(ax3, t_t, tk_t, "TIP4P/2005f RPMD", "g-.", lw=1.8)
+        if not args.no_temperature_line:
+            ax3.axhline(
+                args.bath_temperature_k,
+                color="k",
+                ls=":",
+                lw=1.0,
+                alpha=0.6,
+                label=f"Bath target ({args.bath_temperature_k:.0f} K)",
+            )
+        ax3.set_ylabel(r"$T_{\mathrm{kin}}$ (K)")
+        ax3.set_xlabel("Time (ps)")
+        ax3.legend()
+        ax3.grid(True, alpha=0.3)
+
+        fig.suptitle(_enrich_title_with_system(title_fmt, n_mol, n_beads_ann))
+        # Tighter vertical packing between stacked axes (title spacing is handled above).
+        fig.set_constrained_layout_pads(w_pad=0.02, h_pad=0.0, hspace=0.06)
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(args.output, dpi=args.dpi, bbox_inches="tight", pad_inches=0.08)
     print(f"Saved {args.output}")
+
+    if args.cv_plane is not None:
+        _save_cv_plane_figure(
+            args.cv_plane,
+            has_openmm=has_openmm and bool(t_o.size),
+            q6_o=q6_o,
+            qt_o=qt_o,
+            has_ipi=has_ipi and bool(t_i.size),
+            q6_i=q6_i,
+            qt_i=qt_i,
+            tip4p_data=tip4p_data,
+            title=args.title,
+            n_molecules=n_mol,
+            n_beads_ann=n_beads_ann,
+            dpi=args.dpi,
+        )
+        print(f"Saved CV-plane figure {args.cv_plane}")
 
 
 if __name__ == "__main__":

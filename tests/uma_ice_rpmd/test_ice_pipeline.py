@@ -1,6 +1,6 @@
 """TDD tests for the end-to-end ice pipeline (run_ice_pipeline.py).
 
-Validates: ice.cif generation, build data, OpenMM classical/UMA short runs,
+Validates: Ih supercell data build (--nx/--ny/--nz), OpenMM classical/UMA short runs,
 LAMMPS UMA (if available), plotting from fixture CSVs, and short full pipeline.
 """
 from __future__ import annotations
@@ -63,31 +63,6 @@ def test_generate_ice_cif_if_genice_available(tmp_path: Path) -> None:
     assert pos.shape[0] == 384, "128 molecules => 384 atoms"
 
 
-def test_pipeline_exits_clear_error_when_ice_cif_missing() -> None:
-    """When ice.cif is missing and GenIce fails, pipeline exits with a clear message."""
-    run_pipeline = _SCRIPT_DIR / "run_ice_pipeline.py"
-    if not run_pipeline.is_file():
-        pytest.skip("run_ice_pipeline.py not yet implemented")
-    with tempfile.TemporaryDirectory() as d:
-        out = Path(d) / "out"
-        out.mkdir()
-        # Use a work dir that has no ice.cif and no genice (or mock)
-        result = subprocess.run(
-            [sys.executable, str(run_pipeline), "--out-dir", str(out), "--work-dir", d],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            cwd=str(_SCRIPT_DIR),
-        )
-        # Expect non-zero exit and message mentioning ice.cif or GenIce
-        if result.returncode == 0:
-            pytest.skip("Pipeline may have created ice another way")
-        err = (result.stderr + result.stdout).lower()
-        assert "ice.cif" in err or "genice" in err or "structure" in err or "missing" in err, (
-            f"Expected clear error about ice.cif/GenIce, got: {result.stderr[:500]}"
-        )
-
-
 # --- Test 2: Build data ---
 def test_build_data_from_ice_cif(tmp_path: Path) -> None:
     """Running build_lammps_ice_data.py -n 128 produces data.ice_uma with 384 atoms."""
@@ -117,7 +92,10 @@ def test_openmm_classical_short_run(tmp_path: Path) -> None:
     """OpenMM TIP4P/2005f run completes and writes order CSV with expected columns."""
     data = _LAMMPS_DIR / "data.ice_uma"
     if not data.is_file():
-        pytest.skip("lammps/data.ice_uma not found (build with build_lammps_ice_data.py -n 128)")
+        pytest.skip(
+            "lammps/data.ice_uma not found (build: "
+            "python lammps/build_lammps_ice_data.py --nx 2 --ny 2 --nz 4 -o lammps/data.ice_uma)"
+        )
     csv_path = tmp_path / "ice_o.csv"
     # Use 0.2 fs for stability (TIP4P/2005f flexible can blow up at 1 fs on CPU)
     cmd = [
@@ -283,18 +261,25 @@ def test_pipeline_short_integration(tmp_path: Path) -> None:
     run_pipeline = _SCRIPT_DIR / "run_ice_pipeline.py"
     if not run_pipeline.is_file():
         pytest.skip("run_ice_pipeline.py not yet implemented")
-    ice_cif = _SCRIPT_DIR / "ice.cif"
-    if not ice_cif.is_file():
-        pytest.skip("ice.cif required for full pipeline")
+    work = tmp_path / "work"
+    work.mkdir()
     out_dir = tmp_path / "pipeline_out"
     out_dir.mkdir()
     cmd = [
         sys.executable,
         str(run_pipeline),
         "--out-dir", str(out_dir),
-        "--work-dir", str(_SCRIPT_DIR),
-        "--steps", "20",
-        "--dt-fs", "0.2",
+        "--work-dir", str(work),
+        "--nx",
+        "2",
+        "--ny",
+        "2",
+        "--nz",
+        "2",
+        "--steps",
+        "20",
+        "--dt-fs",
+        "0.2",
         "--skip-lammps",  # optional: avoid LAMMPS in CI
     ]
     try:
@@ -304,9 +289,17 @@ def test_pipeline_short_integration(tmp_path: Path) -> None:
             sys.executable,
             str(run_pipeline),
             "--out-dir", str(out_dir),
-            "--work-dir", str(_SCRIPT_DIR),
-            "--steps", "20",
-            "--dt-fs", "0.2",
+            "--work-dir", str(work),
+            "--nx",
+            "2",
+            "--ny",
+            "2",
+            "--nz",
+            "2",
+            "--steps",
+            "20",
+            "--dt-fs",
+            "0.2",
         ]
         subprocess.check_call(cmd, cwd=str(_SCRIPT_DIR), timeout=300)
     assert (out_dir / "ice_order_classical.csv").is_file()

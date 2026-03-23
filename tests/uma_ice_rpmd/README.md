@@ -8,7 +8,7 @@ This simulation tests the stability of ice at sub-freezing temperatures using:
 - **UMA potential**: Small model **`uma-s-1p1-pythonforce-batch`** (HF removed `uma-s-1.pt`; `uma-s-1-pythonforce-batch` is remapped to p1 in current openmmml)
 - **RPMD**: Ring Polymer Molecular Dynamics (default **8 beads**; use **`--beads 1`** for classical MD and **~LAMMPS-equivalent UMA cost** per step)
 - **Temperature**: 243 K (30 degrees below freezing)
-- **Ice Ih structure**: GenIce CIF, GenIce2, or embedded CIF fallback
+- **Ice Ih structure**: proton-ordered orthorhombic supercell from `generate_ice_ih.py`, chosen by **explicit replication** `--nx`, `--ny`, `--nz` (8 molecules per cell); otherwise GenIce CIF, GenIce2, or embedded CIF fallback
 
 ### Speed vs LAMMPS (why OpenMM can feel slow)
 
@@ -69,21 +69,26 @@ To compare **ice disorder (Q6, q_tet)** between OpenMM and LAMMPS on the same pr
 
 ### RPMD benchmark: OpenMM vs i-PI + LAMMPS UMA
 
-Compare **path-integral RPMD** (243 K, 0.5 fs default in i-PI script) between OpenMM and i-PI + LAMMPS UMA. **OpenMM** uses **`RPMDIntegrator` PILE_G** by default (Bussi/SVR on the **centroid** normal mode + PILE Langevin on **internal** ring-polymer modes; see `plugins/rpmd` and `--rpmd-thermostat` / `--rpmd-centroid-friction` in `test_uma_ice_rpmd.py`). **i-PI** XML uses `pile_l` (PILE-L), which is a different discretization—expect qualitative, not bit-identical, agreement with OpenMM. Default **32 molecules, 4 beads** (scaled from 128×8) to avoid GPU OOM. Order parameters use **centroid** bead positions. Prerequisites: `pip install ipi fairchem-lammps fairchem-core lammps`, LAMMPS built with MISC package (fix ipi).
+Compare **path-integral RPMD** (243 K, 0.5 fs default in i-PI script) between OpenMM and i-PI + LAMMPS UMA. **OpenMM** uses **`RPMDIntegrator` PILE_G** by default (Bussi/SVR on the **centroid** normal mode + PILE Langevin on **internal** ring-polymer modes; see `plugins/rpmd` and `--rpmd-thermostat` / `--rpmd-centroid-friction` in `test_uma_ice_rpmd.py`). **i-PI** XML uses `pile_l` (PILE-L), which is a different discretization—expect qualitative, not bit-identical, agreement with OpenMM. The pipeline (`run_rpmd_32x32.sh`) uses **64 molecules** (ice Ih **2×2×2** supercell) and **32 beads** by default. Order parameters use **centroid** bead positions. Prerequisites: `pip install ipi fairchem-lammps fairchem-core lammps`, LAMMPS built with MISC package (fix ipi).
 
 **Monitoring:** i-PI’s own log is the right place for step/progress (`run_ipi_lammps_uma_rpmd.py` writes **`ipi/i-pi_run.log`** by default). LAMMPS thermo with `fix ipi` is not the main progress indicator; bead trajectories (`ice__i-pi.traj_*.xyz`) also show how many frames have been saved (see `stride` in `ipi/input.xml`).
 
 **Why LAMMPS can look “stuck” at Step 0:** Under `fix ipi`, dynamics are owned by **i-PI** (see LAMMPS docs: initial LAMMPS coordinates are replaced by i-PI). The warning `No fixes with time integration` is expected in this sense—i-PI drives the loop. For a longer explanation, wiring checklist, and references, see **[docs/IPI_LAMMPS_OUTPUT_AND_PROGRESS.md](docs/IPI_LAMMPS_OUTPUT_AND_PROGRESS.md)**.
 
-1. **Build LAMMPS data**: `python lammps/build_lammps_ice_data.py -n 32 -o lammps/data.ice_uma_32`  
-   (`-n` uses `create_ice_structure`, not CIF truncation: 32 molecules use **ice Ic** tiling so O–O distances stay physical; naive “first 32 molecules” truncation gave ~1.7 Å O–O and TIP4P/2005f failures.)
-2. **Convert LAMMPS data → i-PI init**: `python ipi/convert_lammps_to_ipi_xyz.py --data lammps/data.ice_uma_32 -o ipi/init.xyz`
-3. **Run i-PI + LAMMPS UMA**: `python run_ipi_lammps_uma_rpmd.py --molecules 32 --beads 4 --steps 100` (or 1000 for longer run)
+1. **Build LAMMPS data** (64 molecules = 2×2×2 cells):  
+   `python lammps/build_lammps_ice_data.py --nx 2 --ny 2 --nz 2 -o lammps/data.ice_uma_64`  
+   (`--nx/--ny/--nz` uses `generate_ice_ih.py` replication; no CIF truncation. For GenIce-based sizing instead, use `-n` with `--input ice.cif`.)
+2. **Convert LAMMPS data → i-PI init**: `python ipi/convert_lammps_to_ipi_xyz.py --data lammps/data.ice_uma_64 -o ipi/init.xyz`
+3. **Run i-PI + LAMMPS UMA**: `python run_ipi_lammps_uma_rpmd.py --molecules 64 --beads 4 --steps 100` (or 1000 for longer run)
 4. **Post-process i-PI trajectory** (path-integral order over beads): `python ipi_order_from_traj.py --traj ipi/ice__i-pi.traj_0.xyz --beads 4 -o pipeline_out/ice_order_ipi_rpmd.csv`
-5. **Run OpenMM RPMD reference**: `python run_openmm_rpmd_reference.py --molecules 32 --beads 4 --steps 100`
-6. **Plot comparison**: `python plot_rpmd_comparison.py -o pipeline_out/rpmd_comparison.png` (three panels: ⟨Q6⟩, ⟨q_tet⟩, kinetic T vs time; `--bath-temperature-k` draws the PILE-G target bath line)
+5. **Run OpenMM RPMD reference**: `python run_openmm_rpmd_reference.py --nx 2 --ny 2 --nz 2 --beads 4 --steps 100`
+6. **Plot comparison (RPMD)**: `python plot_rpmd_comparison.py -o pipeline_out/rpmd_comparison.png` (three panels: ⟨Q6⟩, ⟨q_tet⟩, kinetic T vs time; `--bath-temperature-k` draws the PILE-G target bath line). Add **`--cv-plane pipeline_out/rpmd_cv_plane.png`** for a **2D trajectory** in the order-parameter plane (⟨Q6⟩ vs ⟨q_tet⟩; circle = start, square = end). The suptitle appends **`· N molecules, P beads`**: `N` is read from CSV `n_oxygen` (override with `--molecules`), `P` defaults to **32** (`--beads`; use **`0`** to omit beads).
 
-#### 32 beads × 32 molecules (full RPMD resolution)
+**Classical MD only** (LAMMPS UMA vs OpenMM UMA vs TIP4P/2005f — **no** RPMD curves): `python plot_md_comparison.py -o pipeline_out/md_order_comparison.png`. Defaults read `ice_order_uma_lammps.csv`, `ice_order_uma_openmm.csv`, `ice_order_classical.csv` from `pipeline_out/` (from `run_ice_pipeline.py` or equivalent). **Kinetic temperature / PE on the LAMMPS curve:** `run_lammps_uma_ice.py` writes **`lammps/lammps_uma_run.log`** (LAMMPS `-log`); `lammps_order_from_dump.py --thermo-log` fills **T_K** and **PE_kj_mol** by matching **Step** to each dump frame (`run_ice_pipeline.py` passes this automatically). Use `--no-log-file` on the LAMMPS runner only if you do not need those columns.
+
+#### 32 beads × 64 molecules (full RPMD resolution)
+
+Pipeline default supercell is **2×2×2** (64 H₂O). The script name `run_rpmd_32x32.sh` refers to **32 RPMD beads**.
 
 Batched UMA on **all 32 beads at once** can exceed VRAM on ~12 GB GPUs. The OpenMM path supports **chunked inference**: set `OPENMMML_UMA_RPMD_CHUNK` (e.g. `4` or `8`) so each ML call evaluates at most that many beads at a time (see `openmmml` `umapotential_pythonforce_batch.py`). Also set `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` if you see fragmentation OOM.
 
@@ -101,7 +106,7 @@ Example (OpenMM UMA RPMD, default **1 ps** = 10000 steps @ 0.1 fs in `run_rpmd_3
 cd tests/uma_ice_rpmd
 export OPENMMML_UMA_RPMD_CHUNK=4
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-python run_openmm_rpmd_reference.py --molecules 32 --beads 32 --dt 0.1 --steps 10000 --platform cuda
+python run_openmm_rpmd_reference.py --nx 2 --ny 2 --nz 2 --beads 32 --dt 0.1 --steps 10000 --platform cuda
 ```
 
 End-to-end (**TIP4P RPMD PILE-G → OpenMM UMA RPMD PILE-G → i-PI `pile_g` + LAMMPS UMA → order CSV → 3-way plot**):
@@ -114,7 +119,7 @@ The script **best-effort kills** prior `run_openmm_*`, `run_ipi_*`, `test_uma_ic
 
 **OpenMM UMA RPMD only** (skip TIP4P and i-PI): `bash run_openmm_uma_rpmd_only.sh` — writes `pipeline_out/ice_order_openmm_rpmd.csv` with the same defaults as step 2 of `run_rpmd_32x32.sh`. Optional: `RPMD_STEPS`, `RPMD_DT_FS`, `OPENMMML_UMA_RPMD_CHUNK`.
 
-**UMA vs TIP4P only** (no i-PI CSV required): `plot_rpmd_comparison.py` accepts `--openmm` and `--tip4p` and omits `--ipi` if you only want the two OpenMM curves, e.g. `pipeline_out/uma_vs_tip4p_rpmd_order.png`. The TIP4P runner (`run_openmm_tip4p_rpmd.py`) fills `T_K` / `PE_kj_mol` on each order row so the temperature panel compares both models.
+**UMA vs TIP4P only** (no i-PI CSV required): `plot_rpmd_comparison.py` accepts `--openmm` and `--tip4p` and omits `--ipi` if you only want the two OpenMM curves, e.g. `pipeline_out/uma_vs_tip4p_rpmd_order.png`. The TIP4P runner (`run_openmm_tip4p_rpmd.py`) fills `T_K` / `PE_kj_mol` on each order row so the temperature panel compares both models. Match `--beads` to your RPMD count if it is not 32.
 
 i-PI 3 writes bead trajectories as `ipi/ice__i-pi.traj_00.xyz` … `traj_31.xyz`. Pass `--traj ipi/ice__i-pi.traj_00.xyz` to `ipi_order_from_traj.py` (zero-padded indices are detected automatically).
 
@@ -122,12 +127,11 @@ i-PI 3 writes bead trajectories as `ipi/ice__i-pi.traj_00.xyz` … `traj_31.xyz`
 
 A **single script** runs the full workflow sequentially (no parallel simulations, to avoid GPU OOM):
 
-1. **Generate** `ice.cif` if missing (via GenIce: `genice 1h --rep 2 2 2 --format cif`).
-2. **Build** 128-molecule LAMMPS data: `lammps/data.ice_uma`.
-3. **Run** 1 ps NVT (Langevin τ = 0.1 ps, **0.1 fs** default for TIP4P/2005f, 243 K) with **TIP4P/2005f** (OpenMM).
-4. **Run** 1 ps same conditions with **UMA** (OpenMM).
-5. **Run** 1 ps same conditions with **UMA** (LAMMPS), then post-process dump → order CSV.
-6. **Plot** Q6 and q_tet vs time for all three runs → `order_vs_time.png`.
+1. **Build** proton-ordered ice **Ih** LAMMPS data from **`--nx/--ny/--nz`** (default **2×2×2** → 64 H₂O, same as the RPMD benchmark). Output: `lammps/data.ice_uma_<8·nx·ny·nz>`.
+2. **Run** 1 ps NVT (Langevin τ = 0.1 ps, **0.1 fs** default for TIP4P/2005f, 243 K) with **TIP4P/2005f** (OpenMM).
+3. **Run** 1 ps same conditions with **UMA** (OpenMM).
+4. **Run** 1 ps same conditions with **UMA** (LAMMPS), then post-process dump → order CSV (with **`--thermo-log`** for **T_K** / **PE**).
+5. **Plot** Q6 and q_tet vs time for all three runs → `order_vs_time.png`.
 
 All three simulations use the **same initial structure**, **same box**, **same thermostat and timestep** (default **0.1 fs** for TIP4P/2005f stability). Run length is 1 ps (10000 steps @ 0.1 fs). Order parameters and trajectory frames are written every 10 fs.
 
@@ -135,6 +139,8 @@ All three simulations use the **same initial structure**, **same box**, **same t
 ```bash
 cd tests/uma_ice_rpmd
 python run_ice_pipeline.py --out-dir pipeline_out
+# Explicit supercell (example: 1×2×2 → 32 H₂O):
+# python run_ice_pipeline.py --out-dir pipeline_out --nx 1 --ny 2 --nz 2
 ```
 
 **Run in background** (one command; log to `pipeline.log`):
@@ -150,7 +156,7 @@ nohup python run_ice_pipeline.py --out-dir pipeline_out >> pipeline.log 2>&1 &
 nohup python run_ice_pipeline.py --out-dir pipeline_out --variable-step-classical >> pipeline.log 2>&1 &
 ```
 
-Options: `--work-dir` (default: script directory), `--dt-fs` (default **0.1** fs for TIP4P/2005f stability), `--steps` (default: 10000 for 1 ps @ 0.1 fs), `--skip-lammps`, `--only-plot`, `--platform-classical` (default **cuda**), `--variable-step-classical`. Tests: `pytest test_ice_pipeline.py -v`.
+Options: `--nx` / `--ny` / `--nz` (default **2** each), `--work-dir` (default: script directory), `--dt-fs` (default **0.1** fs for TIP4P/2005f stability), `--steps` (default: 10000 for 1 ps @ 0.1 fs), `--skip-lammps`, `--only-plot`, `--platform-classical` (default **cuda**), `--variable-step-classical`. Tests: `pytest test_ice_pipeline.py -v`.
 
 ## Ice Structure
 

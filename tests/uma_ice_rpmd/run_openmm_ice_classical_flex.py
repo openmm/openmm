@@ -10,7 +10,7 @@ OpenMM classical MD with TIP4P/2005f flexible water on the same ICE setup as UMA
 
 Prerequisites:
   pip install openmm
-  Build data:  python lammps/build_lammps_ice_data.py -n 128
+  Build data:  python lammps/build_lammps_ice_data.py --nx 2 --ny 2 --nz 4 -o lammps/data.ice_uma
 
 Usage:
   cd tests/uma_ice_rpmd
@@ -220,7 +220,10 @@ def main() -> None:
         )
 
     if not args.data.is_file():
-        print(f"Missing {args.data} — run: python {_LAMMPS_DIR / 'build_lammps_ice_data.py'} -n 128")
+        print(
+            f"Missing {args.data} — run: python {_LAMMPS_DIR / 'build_lammps_ice_data.py'} "
+            f"--nx 2 --ny 2 --nz 4 -o {args.data}"
+        )
         sys.exit(1)
 
     if args.force_field is not None and not args.force_field.is_file():

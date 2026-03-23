@@ -29,7 +29,7 @@ echo "=== OpenMM UMA RPMD only: ${STEPS} steps @ ${DT_FS} fs -> ${PROD_PS} ps pr
 echo "=== Output: pipeline_out/ice_order_openmm_rpmd.csv ==="
 
 python run_openmm_rpmd_reference.py \
-  --molecules 32 --beads 32 --dt "$DT_FS" --steps "$STEPS" \
+  --nx 2 --ny 2 --nz 2 --beads 32 --dt "$DT_FS" --steps "$STEPS" \
   --platform cuda \
   --rpmd-thermostat pile-g
 

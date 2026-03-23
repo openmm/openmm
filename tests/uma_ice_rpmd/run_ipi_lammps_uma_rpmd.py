@@ -4,7 +4,7 @@ Orchestrate i-PI + LAMMPS UMA for RPMD benchmark vs OpenMM.
 
 Starts i-PI (PIMD/RPMD driver), waits for socket, then runs LAMMPS as force
 client with fix ipi + fix external (UMA). Parameters match OpenMM RPMD:
-243 K, PILE-L, 0.5 fs timestep. Default 32 molecules, 4 beads (scaled from 128×8).
+243 K, PILE-L, 0.5 fs timestep. Default 64 molecules (2×2×2 supercell), 4 beads.
 
 Prerequisites:
   pip install ipi fairchem-lammps fairchem-core lammps
@@ -13,7 +13,7 @@ Prerequisites:
 Usage:
   cd tests/uma_ice_rpmd
   python run_ipi_lammps_uma_rpmd.py [--steps 1000] [--device cuda]
-  python run_ipi_lammps_uma_rpmd.py --molecules 32 --beads 4 --steps 100   # short test
+  python run_ipi_lammps_uma_rpmd.py --molecules 64 --beads 4 --steps 100   # short test
 
 i-PI progress (steps, timing) is written to ``--ipi-log`` (default ``ipi/i-pi_run.log``), not to the LAMMPS screen stream.
 """
@@ -127,7 +127,7 @@ def main() -> None:
         default=None,
         help=f"i-PI socket port (default {IPI_PORT_DEFAULT}, use for SLURM array isolation)",
     )
-    ap.add_argument("--molecules", type=int, default=32, help="Water molecules (default 32, scaled from 128)")
+    ap.add_argument("--molecules", type=int, default=64, help="Water molecules (default 64 = ice Ih 2×2×2)")
     ap.add_argument("--beads", type=int, default=4, help="RPMD beads (default 4, scaled from 8)")
     ap.add_argument("--device", default="cuda", help="Device for UMA (cuda/cpu)")
     ap.add_argument("--model", default="uma-s-1p1")
@@ -166,7 +166,8 @@ def main() -> None:
     data_path = args.data or (LAMMPS_DIR / f"data.ice_uma_{args.molecules}")
     if not data_path.is_file():
         print(
-            f"Missing data file: {data_path}. Run: python lammps/build_lammps_ice_data.py -n {args.molecules} -o {data_path}",
+            f"Missing data file: {data_path}. Example (64 molecules, 2×2×2): "
+            f"python lammps/build_lammps_ice_data.py --nx 2 --ny 2 --nz 2 -o {data_path}",
             file=sys.stderr,
         )
         sys.exit(1)

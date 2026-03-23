@@ -137,6 +137,20 @@ def main():
         help="Langevin friction in 1/ps (overrides input script). LAMMPS damp (ps) = 1/friction, e.g. 10 -> damp 0.1.",
     )
     ap.add_argument("--seed", type=int, default=284759, help="Random seed for velocity and Langevin (match OpenMM)")
+    ap.add_argument(
+        "--log-file",
+        type=Path,
+        default=_SCRIPT_DIR / "lammps_uma_run.log",
+        help=(
+            "LAMMPS -log path (thermo lines for post-processing). "
+            "Default: lammps/lammps_uma_run.log. Pass with lammps_order_from_dump.py --thermo-log."
+        ),
+    )
+    ap.add_argument(
+        "--no-log-file",
+        action="store_true",
+        help="Use LAMMPS -log none (no thermo file; order CSV T_K/PE stay empty).",
+    )
     args = ap.parse_args()
 
     try:
@@ -166,7 +180,8 @@ def main():
         subprocess.check_call(cmd)
 
     in_text = args.infile.read_text()
-    data_path_resolved = args.data.resolve()
+    # Resolve before os.chdir(_SCRIPT_DIR): relative paths are relative to invocation cwd.
+    data_path_resolved = Path(args.data).expanduser().resolve()
     if "read_data       data.ice_uma" in in_text and data_path_resolved.name != "data.ice_uma":
         # Use absolute path so LAMMPS finds the file when cwd is _SCRIPT_DIR (e.g. shared_data.ice_uma in pipeline_out).
         in_text = in_text.replace("read_data       data.ice_uma", f"read_data       {data_path_resolved}")
@@ -210,6 +225,7 @@ def main():
         in_path = str(args.infile)
 
     os.chdir(_SCRIPT_DIR)
+    args.data = data_path_resolved
     check_input_script(in_text)
 
     dump_custom = None
@@ -241,8 +257,13 @@ def main():
             min_eval=args.min_eval,
             skip_minimize=args.skip_minimize,
         )
+    log_arg = "none"
+    if not args.no_log_file and args.log_file is not None:
+        log_arg = str(args.log_file.resolve())
+        args.log_file.parent.mkdir(parents=True, exist_ok=True)
+
     machine = os.environ.get("LAMMPS_MACHINE_NAME")
-    lmp = lammps(name=machine, cmdargs=["-nocite", "-log", "none", "-echo", "screen"])
+    lmp = lammps(name=machine, cmdargs=["-nocite", "-log", log_arg, "-echo", "screen"])
     lmp._predictor = pretrained_mlip.get_predict_unit(args.model, device=args.device)
     lmp._task_name = "omol"
 
@@ -254,12 +275,20 @@ def main():
 
     del lmp._predictor
     print("Done.")
-    data_for_box = args.data.name if args.data.name == "data.ice_uma" else str(args.data)
+    if log_arg != "none":
+        print(f"  Thermo log (for lammps_order_from_dump --thermo-log): {log_arg}")
     if dump_custom and (_SCRIPT_DIR / dump_custom).is_file():
         ext = _SCRIPT_DIR / (Path(dump_custom).stem + ".extxyz")
         try:
             subprocess.run(
-                [sys.executable, str(_SCRIPT_DIR / "lammpstrj_to_extxyz.py"), dump_custom, data_for_box, "-o", str(ext)],
+                [
+                    sys.executable,
+                    str(_SCRIPT_DIR / "lammpstrj_to_extxyz.py"),
+                    dump_custom,
+                    str(data_path_resolved),
+                    "-o",
+                    str(ext),
+                ],
                 cwd=str(_SCRIPT_DIR),
                 check=True,
             )
