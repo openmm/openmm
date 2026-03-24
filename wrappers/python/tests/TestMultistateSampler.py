@@ -31,20 +31,35 @@ class TestMultistateSampler(unittest.TestCase):
         self.context = Context(self.system, integrator, Platform.getPlatform('Reference'))
         self.context.setPositions([Vec3(0, 0, 0), Vec3(0, 2, 0)])
 
+    def validateEnergies(self, sampler, expected):
+        """Check that all states have the correct energies when computed in various ways."""
+        for i in range(len(sampler.states)):
+            energy = sampler.computeEnergy(i)
+            self.assertAlmostEqual(expected[i], energy.value_in_unit(kilojoules_per_mole), 5)
+        energies = sampler.computeAllEnergies()
+        self.assertEqual(len(sampler.states), len(energies))
+        for e1, e2 in zip(expected, energies):
+            self.assertAlmostEqual(e1, e2.value_in_unit(kilojoules_per_mole), 5)
+        relative = sampler.computeRelativeEnergies()
+        self.assertEqual(len(sampler.states), len(relative))
+        for e1, e2 in zip(expected, relative):
+            self.assertAlmostEqual(e1-expected[0], (e2-relative[0]).value_in_unit(kilojoules_per_mole), 6)
+        if sampler.groups is None:
+            for i in range(len(sampler.states)):
+                sampler.applyState(i)
+                energy = sampler.context.getState(energy=True).getPotentialEnergy()
+                self.assertAlmostEqual(expected[i], energy.value_in_unit(kilojoules_per_mole), 5)
+
     def testTemperatures(self):
         """Test a set of states that vary only in temperature."""
         states = [{'temperature':t} for t in [300, 350, 400, 450, 500]]
         sampler = MultistateSampler(states, self.context)
         self.assertEqual(1, len(sampler.subsets))
         for i in range(len(states)):
-            energy = sampler.computeEnergy(i)
-            self.assertAlmostEqual(16.0, energy.value_in_unit(kilojoules_per_mole), 5)
+            sampler.applyState(i)
             self.assertAlmostEqual(states[i]['temperature'], self.context.getIntegrator().getTemperature().value_in_unit(kelvin), 5)
             self.assertAlmostEqual(states[i]['temperature'], self.context.getParameter('MonteCarloTemperature'), 5)
-        energies = sampler.computeAllEnergies()
-        self.assertEqual(len(states), len(energies))
-        for energy in energies:
-            self.assertAlmostEqual(16.0, energy.value_in_unit(kilojoules_per_mole), 5)
+        self.validateEnergies(sampler, [16.0]*len(states))
 
     def testGroups(self):
         """Test a set of states that use different force groups."""
@@ -59,16 +74,7 @@ class TestMultistateSampler(unittest.TestCase):
             sampler.applyState(i)
             self.assertAlmostEqual(states[i]['temperature'], self.context.getIntegrator().getTemperature().value_in_unit(kelvin), 5)
             self.assertAlmostEqual(states[i]['temperature'], self.context.getParameter('MonteCarloTemperature'), 5)
-        self.assertAlmostEqual(4.0, sampler.computeEnergy(0).value_in_unit(kilojoules_per_mole), 5)
-        self.assertAlmostEqual(16.0, sampler.computeEnergy(1).value_in_unit(kilojoules_per_mole), 5)
-        self.assertAlmostEqual(2.0, sampler.computeEnergy(2).value_in_unit(kilojoules_per_mole), 5)
-        self.assertAlmostEqual(10.0, sampler.computeEnergy(3).value_in_unit(kilojoules_per_mole), 5)
-        energies = sampler.computeAllEnergies()
-        self.assertEqual(len(states), len(energies))
-        self.assertAlmostEqual(4.0, energies[0].value_in_unit(kilojoules_per_mole), 5)
-        self.assertAlmostEqual(16.0, energies[1].value_in_unit(kilojoules_per_mole), 5)
-        self.assertAlmostEqual(2.0, energies[2].value_in_unit(kilojoules_per_mole), 5)
-        self.assertAlmostEqual(10.0, energies[3].value_in_unit(kilojoules_per_mole), 5)
+        self.validateEnergies(sampler, [4.0, 16.0, 2.0, 10.0])
 
     def testParameters(self):
         """Test a set of states that set parameters to different values."""
@@ -81,14 +87,7 @@ class TestMultistateSampler(unittest.TestCase):
             sampler.applyState(i)
             self.assertAlmostEqual(states[i]['k1'], self.context.getParameter('k1'), 5)
             self.assertAlmostEqual(states[i]['k2'], self.context.getParameter('k2'), 5)
-        self.assertAlmostEqual(16.0, sampler.computeEnergy(0).value_in_unit(kilojoules_per_mole), 5)
-        self.assertAlmostEqual(18.0, sampler.computeEnergy(1).value_in_unit(kilojoules_per_mole), 5)
-        self.assertAlmostEqual(20.0, sampler.computeEnergy(2).value_in_unit(kilojoules_per_mole), 5)
-        energies = sampler.computeAllEnergies()
-        self.assertEqual(len(states), len(energies))
-        self.assertAlmostEqual(16.0, energies[0].value_in_unit(kilojoules_per_mole), 5)
-        self.assertAlmostEqual(18.0, energies[1].value_in_unit(kilojoules_per_mole), 5)
-        self.assertAlmostEqual(20.0, energies[2].value_in_unit(kilojoules_per_mole), 5)
+        self.validateEnergies(sampler, [16.0, 18.0, 20.0])
 
     def testParametersAndGroups(self):
         """Test a set of states that differ in both parameters and force groups."""
@@ -104,16 +103,7 @@ class TestMultistateSampler(unittest.TestCase):
             sampler.applyState(i)
             self.assertAlmostEqual(states[i]['k1'], self.context.getParameter('k1'), 5)
             self.assertAlmostEqual(1.0, self.context.getParameter('k2'), 5)
-        self.assertAlmostEqual(4.0, sampler.computeEnergy(0).value_in_unit(kilojoules_per_mole), 5)
-        self.assertAlmostEqual(16.0, sampler.computeEnergy(1).value_in_unit(kilojoules_per_mole), 5)
-        self.assertAlmostEqual(4.0, sampler.computeEnergy(2).value_in_unit(kilojoules_per_mole), 5)
-        self.assertAlmostEqual(14.0, sampler.computeEnergy(3).value_in_unit(kilojoules_per_mole), 5)
-        energies = sampler.computeAllEnergies()
-        self.assertEqual(len(states), len(energies))
-        self.assertAlmostEqual(4.0, energies[0].value_in_unit(kilojoules_per_mole), 5)
-        self.assertAlmostEqual(16.0, energies[1].value_in_unit(kilojoules_per_mole), 5)
-        self.assertAlmostEqual(4.0, energies[2].value_in_unit(kilojoules_per_mole), 5)
-        self.assertAlmostEqual(14.0, energies[3].value_in_unit(kilojoules_per_mole), 5)
+        self.validateEnergies(sampler, [4.0, 16.0, 4.0, 14.0])
 
     def testCustomIntegrator(self):
         """Test a set of states that set global variables on a CustomIntegrator."""
@@ -129,12 +119,8 @@ class TestMultistateSampler(unittest.TestCase):
         sampler = MultistateSampler(states, context)
         self.assertEqual(1, len(sampler.subsets))
         for i in range(len(states)):
-            energy = sampler.computeEnergy(i)
-            self.assertAlmostEqual(16.0, energy.value_in_unit(kilojoules_per_mole), 5)
+            sampler.applyState(i)
             self.assertAlmostEqual(states[i]['temperature'], integrator.getGlobalVariableByName('temperature'), 5)
             self.assertAlmostEqual(states[i]['friction'], integrator.getGlobalVariableByName('friction'), 5)
             self.assertAlmostEqual(states[i]['temperature'], context.getParameter('MonteCarloTemperature'), 5)
-        energies = sampler.computeAllEnergies()
-        self.assertEqual(len(states), len(energies))
-        for energy in energies:
-            self.assertAlmostEqual(16.0, energy.value_in_unit(kilojoules_per_mole), 5)
+        self.validateEnergies(sampler, [16.0]*len(states))

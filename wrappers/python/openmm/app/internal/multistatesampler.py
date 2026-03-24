@@ -200,6 +200,9 @@ class MultistateSampler(object):
         """Compute the potential energies of states.  This is much more efficient than calling computeEnergy() for each
         state individually.
 
+        If you only care about energy differences between states, not absolute energies, use computeRelativeEnergies()
+        instead.  It can be even more efficient.
+
         When this method returns, it is undefined which state the Context will be in.
 
         Returns
@@ -225,3 +228,19 @@ class MultistateSampler(object):
                         if g in self.groups[j]:
                             energies[j] += energy*self.groups[j][g]
         return energies
+
+    def computeRelativeEnergies(self):
+        """This is similar to computeAllEnergies(), but the energies are shifted by a constant to make the energy of the
+        first state exactly zero.  The advantage is that if states differ only in temperature or other ways that do not
+        affect energy, there is no need to compute any energies at all.
+
+        When this method returns, it is undefined which state the Context will be in.
+
+        Returns
+        -------
+        an array containing the shifted potential energies of all states in the order they appear in self.states
+        """
+        if len(self.subsets) == 1 and self.groups is None:
+            return [0*kilojoules_per_mole]*len(self.states)
+        energies = self.computeAllEnergies()
+        return [e-energies[0] for e in energies]
