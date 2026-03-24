@@ -262,9 +262,9 @@ class TestForceField(unittest.TestCase):
                 self.assertEqual(1.0, lengths[(0, 4)])
                 self.assertEqual(1.0, lengths[(0, 5)])
 
-    def test_TemplateConstraintsMultipleMols(self):
+    def testTemplateConstraintsMultipleMols(self):
         """Test that constraints defined by a residue template don't leak into
-        subsequent residues.
+        other residues.
         See https://github.com/openmm/openmm/issues/5234
         """
         MOL_A = """<ForceField>
