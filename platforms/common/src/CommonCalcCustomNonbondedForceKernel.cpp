@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -110,20 +110,29 @@ private:
 
 class CommonCalcCustomNonbondedForceKernel::LongRangeTask : public ComputeContext::WorkTask {
 public:
-    LongRangeTask(ComputeContext& cc, Context& context, CustomNonbondedForceImpl::LongRangeCorrectionData& data,
-                  double& longRangeCoefficient, vector<double>& longRangeCoefficientDerivs, CustomNonbondedForce* force) :
-                        cc(cc), context(context), data(data), longRangeCoefficient(longRangeCoefficient),
-                        longRangeCoefficientDerivs(longRangeCoefficientDerivs), force(force) {
+    LongRangeTask(ComputeContext& cc, Context& context, CustomNonbondedForceImpl::LongRangeCorrectionData& data, vector<float>& globalParamValues,
+                  double& longRangeCoefficient, vector<double>& longRangeCoefficientDerivs, CustomNonbondedForce* force,
+                  map<vector<float>, double>& longRangeCoefficientCache, map<vector<float>, vector<double> >& longRangeCoefficientDerivsCache) :
+                        cc(cc), context(context), data(data), globalParamValues(globalParamValues), longRangeCoefficient(longRangeCoefficient),
+                        longRangeCoefficientDerivs(longRangeCoefficientDerivs), force(force), longRangeCoefficientCache(longRangeCoefficientCache),
+                        longRangeCoefficientDerivsCache(longRangeCoefficientDerivsCache) {
     }
     void execute() {
         CustomNonbondedForceImpl::calcLongRangeCorrection(*force, data, context, longRangeCoefficient, longRangeCoefficientDerivs, cc.getThreadPool());
+        if (longRangeCoefficientCache.size() < 1000) {
+            longRangeCoefficientCache[globalParamValues] = longRangeCoefficient;
+            longRangeCoefficientDerivsCache[globalParamValues] = longRangeCoefficientDerivs;
+        }
     }
 private:
     ComputeContext& cc;
     Context& context;
     CustomNonbondedForceImpl::LongRangeCorrectionData& data;
+    vector<float>& globalParamValues;
     double& longRangeCoefficient;
     vector<double>& longRangeCoefficientDerivs;
+    map<vector<float>, double>& longRangeCoefficientCache;
+    map<vector<float>, vector<double> >& longRangeCoefficientDerivsCache;
     CustomNonbondedForce* force;
 };
 
@@ -639,9 +648,15 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             globalParamValues[i] = value;
         }
     }
+    if (recomputeLongRangeCorrection && longRangeCoefficientCache.find(globalParamValues) != longRangeCoefficientCache.end()) {
+        longRangeCoefficient = longRangeCoefficientCache[globalParamValues];
+        longRangeCoefficientDerivs = longRangeCoefficientDerivsCache[globalParamValues];
+        recomputeLongRangeCorrection = false;
+    }
     if (recomputeLongRangeCorrection) {
         if (includeEnergy || forceCopy->getNumEnergyParameterDerivatives() > 0) {
-            cc.getWorkThread().addTask(new LongRangeTask(cc, context.getOwner(), longRangeCorrectionData, longRangeCoefficient, longRangeCoefficientDerivs, forceCopy));
+            cc.getWorkThread().addTask(new LongRangeTask(cc, context.getOwner(), longRangeCorrectionData, globalParamValues, longRangeCoefficient,
+                                       longRangeCoefficientDerivs, forceCopy, longRangeCoefficientCache, longRangeCoefficientDerivsCache));
             hasInitializedLongRangeCorrection = true;
         }
         else
