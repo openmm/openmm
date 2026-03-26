@@ -738,15 +738,6 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
         params->setParameterValuesSubset(firstParticle, paramVector);
     }
 
-    // If necessary, recompute the long range correction.
-
-    if (forceCopy != NULL) {
-        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
-        CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, cc.getThreadPool());
-        hasInitializedLongRangeCorrection = false;
-        *forceCopy = force;
-    }
-
     // See if any tabulated functions have changed.
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
@@ -757,6 +748,16 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
             vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
             tabulatedFunctionArrays[i].upload(f);
         }
+    }
+
+    // If necessary, recompute the long range correction.
+
+    if (forceCopy != NULL) {
+        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
+        hasInitializedLongRangeCorrection = false;
+        *forceCopy = force;
+        longRangeCoefficientCache.clear();
+        longRangeCoefficientDerivsCache.clear();
     }
 
     // Mark that the current reordering may be invalid.
