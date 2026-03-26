@@ -173,8 +173,8 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     returnFlag.initialize<int>(cc, 1, "returnFlag");
     returnValue.initialize(cc, 1, elementSize, "returnValue");
     gradNorm.initialize(cc, 1, elementSize, "gradNorm");
-    lineSearchData.initialize(cc, 4, elementSize, "lineSearchData");
-    lineSearchDataBackup.initialize(cc, 4, elementSize, "lineSearchDataBackup");
+    lineSearchData.initialize(cc, 3, elementSize, "lineSearchData");
+    lineSearchDataBackup.initialize(cc, 3, elementSize, "lineSearchDataBackup");
 
     // Compile kernels and set arguments.
 
@@ -341,7 +341,6 @@ void CommonMinimizeKernel::setup(ContextImpl& context) {
     lineSearchSetupKernel->addArg(gradNorm);
     lineSearchSetupKernel->addArg(lineSearchData);
     lineSearchSetupKernel->addArg(numVariables);
-    lineSearchSetupKernel->addArg(); // energyStart
 
     lineSearchStepKernel = program->createKernel("lineSearchStep");
     lineSearchStepKernel->addArg(x);
@@ -405,12 +404,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
     for (int iteration = 1, end = 0;;) {
         // Prepare for a line search.
 
-        if (mixedIsDouble) {
-            lineSearchSetupKernel->setArg(9, energy);
-        }
-        else {
-            lineSearchSetupKernel->setArg(9, (float) energy);
-        }
+        energyStart = energy;
         lineSearchSetupKernel->execute(numVariables);
 
         // Take line search steps.
@@ -746,11 +740,10 @@ double CommonMinimizeKernel::downloadGradNormSync() {
 
 void CommonMinimizeKernel::runLineSearchKernels() {
     if (mixedIsDouble) {
-        lineSearchDotKernel->setArg(6, isfinite(energy) ? energy : (double) std::numeric_limits<float>::max());
+        lineSearchDotKernel->setArg(6, isfinite(energy) ? energy - energyStart : (double) std::numeric_limits<float>::max());
     }
     else {
-        float hostEnergy = (float) energy;
-        lineSearchDotKernel->setArg(6, isfinite(hostEnergy) ? hostEnergy : std::numeric_limits<float>::max());
+        lineSearchDotKernel->setArg(6, isfinite((float) energy) ? (float) (energy - energyStart) : std::numeric_limits<float>::max());
     }
     lineSearchDotKernel->execute(numVariables);
     lineSearchContinueKernel->execute(1);
