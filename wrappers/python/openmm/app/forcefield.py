@@ -1423,7 +1423,7 @@ class ForceField(object):
                     continue
                 t1 = data.atomTemplateIndexes[atom1]
                 t2 = data.atomTemplateIndexes[atom2]
-                for constraint in template.constraints:
+                for constraint in matchedTemplateForResidue[atom1.residue].constraints:
                     if sorted((t1, t2)) == sorted((constraint[0], constraint[1])):
                         bond.isConstrained = True
 

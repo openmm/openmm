@@ -262,6 +262,75 @@ class TestForceField(unittest.TestCase):
                 self.assertEqual(1.0, lengths[(0, 4)])
                 self.assertEqual(1.0, lengths[(0, 5)])
 
+    def testTemplateConstraintsMultipleMols(self):
+        """Test that constraints defined by a residue template don't leak into
+        other residues.
+        See https://github.com/openmm/openmm/issues/5234
+        """
+        MOL_A = """<ForceField>
+ <AtomTypes>
+  <Type name="A0" mass="12" class="A0" element="C"/>
+  <Type name="A1" mass="12" class="A1" element="C"/>
+ </AtomTypes>
+ <HarmonicBondForce>
+  <Bond class1="A0" class2="A1" length="0.15" k="200000"/>
+ </HarmonicBondForce>
+ <NonbondedForce coulomb14scale="1" lj14scale="1">
+  <Atom class="A0" sigma="0.3" epsilon="0.1" charge="0"/>
+  <Atom class="A1" sigma="0.3" epsilon="0.1" charge="0"/>
+ </NonbondedForce>
+ <Residues>
+  <Residue name="MOLA">
+   <Atom name="a0" type="A0"/><Atom name="a1" type="A1"/>
+   <Bond atomName1="a0" atomName2="a1"/>
+  </Residue>
+ </Residues>
+</ForceField>"""
+
+        MOL_B = """<ForceField>
+ <AtomTypes>
+  <Type name="B0" mass="12" class="B0" element="C"/>
+  <Type name="B1" mass="1" class="B1" element="H"/>
+ </AtomTypes>
+ <HarmonicBondForce>
+  <Bond class1="B0" class2="B1" length="0.11" k="300000"/>
+ </HarmonicBondForce>
+ <NonbondedForce coulomb14scale="1" lj14scale="1">
+  <Atom class="B0" sigma="0.3" epsilon="0.1" charge="0"/>
+  <Atom class="B1" sigma="0.1" epsilon="0.01" charge="0"/>
+ </NonbondedForce>
+ <Residues>
+  <Residue name="MOLB">
+   <Atom name="b0" type="B0"/><Atom name="b1" type="B1"/>
+   <Bond atomName1="b0" atomName2="b1"/>
+   <Constraint atomName1="b0" atomName2="b1" distance="0.11"/>
+  </Residue>
+ </Residues>
+</ForceField>"""
+
+        top = Topology()
+        c = top.addChain()
+        C, H = Element.getBySymbol('C'), Element.getBySymbol('H')
+        r1 = top.addResidue('MOLA', c)
+        a0, a1 = top.addAtom('a0', C, r1), top.addAtom('a1', C, r1)
+        top.addBond(a0, a1)
+        r2 = top.addResidue('MOLB', c)
+        b0, b1 = top.addAtom('b0', C, r2), top.addAtom('b1', H, r2)
+        top.addBond(b0, b1)
+
+        ff = ForceField()
+        ff.loadFile(StringIO(MOL_A))
+        ff.loadFile(StringIO(MOL_B))
+        sys = ff.createSystem(top,
+                              nonbondedMethod=NoCutoff,
+                              constraints=None)
+
+        self.assertEqual(sys.getNumConstraints(), 1)
+        constraintParameters = sys.getConstraintParameters(0)
+        self.assertEqual(constraintParameters[0], 2)
+        self.assertEqual(constraintParameters[1], 3)
+        self.assertEqual(constraintParameters[2], 0.11 * nanometer)
+
     def test_ImplicitSolvent(self):
         """Test the four types of implicit solvents using the implicitSolvent
         parameter.
