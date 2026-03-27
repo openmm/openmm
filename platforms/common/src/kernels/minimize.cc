@@ -1,7 +1,6 @@
 #define LS_DOT_START 0
 #define LS_DOT 1
-#define LS_ENERGY 2
-#define LS_STEP 3
+#define LS_STEP 2
 
 #define LS_FAIL 0
 #define LS_SUCCEED 1
@@ -668,8 +667,7 @@ KERNEL void lineSearchSetup(
     GLOBAL int* RESTRICT returnFlag,
     GLOBAL mixed* RESTRICT gradNorm,
     GLOBAL mixed* RESTRICT lineSearchData,
-    const int numVariables,
-    const mixed energyStart
+    const int numVariables
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
@@ -694,7 +692,6 @@ KERNEL void lineSearchSetup(
     if (GLOBAL_ID == 0) {
         *returnFlag = LS_CONTINUE;
         *gradNorm = 0;
-        lineSearchData[LS_ENERGY] = energyStart;
     }
 }
 
@@ -758,7 +755,6 @@ KERNEL void lineSearchStep(
 
         lineSearchDataBackup[LS_DOT_START] = lineSearchData[LS_DOT_START];
         lineSearchDataBackup[LS_DOT] = lineSearchData[LS_DOT] = 0;
-        lineSearchDataBackup[LS_ENERGY] = lineSearchData[LS_ENERGY];
         lineSearchDataBackup[LS_STEP] = lineSearchData[LS_STEP];
     }
 }
@@ -770,7 +766,7 @@ KERNEL void lineSearchDot(
     GLOBAL int* RESTRICT returnFlag,
     GLOBAL const mixed* RESTRICT returnValue,
     const int numVariables,
-    mixed energy
+    mixed deltaEnergy
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
@@ -781,13 +777,13 @@ KERNEL void lineSearchDot(
     // Any restraint energy in returnValue hasn't been downloaded yet to be
     // passed back up in the energy parameter, so add it in here.
 
-    energy += *returnValue;
+    deltaEnergy += *returnValue;
 
     // The energy may be such that we don't need to do a dot product and can
     // immediately decide to scale the step, so mark this case with LS_SUCCEED.
     // This will be checked in the following kernel.
 
-    if (!(FABS_MIXED(energy) < FLT_MAX) || energy > lineSearchData[LS_ENERGY] + lineSearchData[LS_STEP] * LBFGS_FTOL * lineSearchData[LS_DOT_START]) {
+    if (!(FABS_MIXED(deltaEnergy) < FLT_MAX) || deltaEnergy > lineSearchData[LS_STEP] * LBFGS_FTOL * lineSearchData[LS_DOT_START]) {
         if (GLOBAL_ID == 0) {
             *returnFlag = LS_SUCCEED;
         }
