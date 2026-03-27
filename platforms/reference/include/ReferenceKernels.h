@@ -1992,10 +1992,10 @@ public:
     /**
      * Initialize the kernel.
      *
-     * @param system     the System this kernel will be applied to
+     * @param context    the ContextImpl this kernel will be applied to
      * @param force      the CustomCPPForceImpl this kernel will be used for
      */
-    void initialize(const System& system, CustomCPPForceImpl& force);
+    void initialize(const ContextImpl& context, CustomCPPForceImpl& force);
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -2020,10 +2020,10 @@ public:
     /**
      * Initialize the kernel.
      *
-     * @param system     the System this kernel will be applied to
+     * @param context    the ContextImpl this kernel will be applied to
      * @param force      the PythonForce this kernel will be used for
      */
-    void initialize(const System& system, const PythonForce& force);
+    void initialize(const ContextImpl& context, const PythonForce& force);
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *

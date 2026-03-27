@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2025 Stanford University and the Authors.           *
+ * Portions copyright (c) 2025-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -47,7 +47,7 @@ PythonForceImpl::~PythonForceImpl() {
 
 void PythonForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcPythonForceKernel::Name(), context);
-    kernel.getAs<CalcPythonForceKernel>().initialize(context.getSystem(), owner);
+    kernel.getAs<CalcPythonForceKernel>().initialize(context, owner);
 }
 
 double PythonForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {

@@ -3535,9 +3535,9 @@ void ReferenceCalcATMForceKernel::copyParametersToContext(ContextImpl& context, 
     loadParams(numParticles, force);
 }
 
-void ReferenceCalcCustomCPPForceKernel::initialize(const System& system, CustomCPPForceImpl& force) {
+void ReferenceCalcCustomCPPForceKernel::initialize(const ContextImpl& context, CustomCPPForceImpl& force) {
     this->force = &force;
-    forces.resize(system.getNumParticles());
+    forces.resize(context.getSystem().getNumParticles());
 }
 
 double ReferenceCalcCustomCPPForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -3550,9 +3550,9 @@ double ReferenceCalcCustomCPPForceKernel::execute(ContextImpl& context, bool inc
     return energy;
 }
 
-void ReferenceCalcPythonForceKernel::initialize(const System& system, const PythonForce& force) {
+void ReferenceCalcPythonForceKernel::initialize(const ContextImpl& context, const PythonForce& force) {
     computation = &force.getComputation();
-    forces.resize(system.getNumParticles());
+    forces.resize(context.getSystem().getNumParticles());
     usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
