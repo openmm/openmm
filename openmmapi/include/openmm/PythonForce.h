@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2025 Stanford University and the Authors.           *
+ * Portions copyright (c) 2025-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -102,6 +102,15 @@ public:
  * to return True, and the State passed to the computation function will contain periodic
  * box vectors.  The positions may also be wrapped into a different periodic box to keep them
  * closer to the origin and improve accuracy.
+ *
+ * A PythonForce can optionally be applied to only a subset of the particles in a system.  To do
+ * this, call setParticles() on it, providing the indices of the particles to apply it to.  The
+ * computation function should then proceed as if those particles were the entire system.
+ * state.getPositions() will return a smaller array containing only the positions of those
+ * particles, and the array of forces should similarly contain only those particles.  That is,
+ * forces[i] should be the force on the i'th particle passed to setParticles().  When applying
+ * forces to only a small fraction of the particles in a system, this can greatly improve
+ * performance.
  * 
  * When using XmlSerializer to save a PythonForce, it uses the Python pickle module to save
  * the computation function.  If it cannot be pickled, you will not be able to serialize the
@@ -124,9 +133,12 @@ public:
      * @param computation        an object defining how the forces and energy should be computed
      * @param globalParameters   any global parameters used by the force.  Keys are the parameter
      *                           names, and the corresponding values are their default values.
+     * @param particles          the indices of the particles to use when computing the force.  If
+     *                           this is empty (the default), all particles in the system will be used.
      * @private
      */
-    explicit PythonForce(PythonForceComputation* computation, const std::map<std::string, double>& globalParameters);
+    explicit PythonForce(PythonForceComputation* computation, const std::map<std::string, double>& globalParameters,
+                         const std::vector<int>& particles=std::vector<int>());
     ~PythonForce();
     /**
      * Get the PythonForceComputation that defines the computation.
@@ -138,6 +150,18 @@ public:
      * corresponding values are their default values.
      */
     const std::map<std::string, double>& getGlobalParameters() const;
+    /**
+     * Get the indices of the particles to use when computing the force.  If this
+     * is empty, all particles in the system will be used.
+     */
+    const std::vector<int>& getParticles() const {
+        return particles;
+    }
+    /**
+     * Set the indices of the particles to use when computing the force.  If this
+     * is empty, all particles in the system will be used.
+     */
+    void setParticles(const std::vector<int>& particles);
     /**
      * Get the pickled representation of the computation function.  If it cannot be pickled,
      * this will be an empty vector.
@@ -168,6 +192,7 @@ private:
     PythonForceComputation* computation;
     std::map<std::string, double> globalParameters;
     bool usePeriodic;
+    std::vector<int> particles;
     std::vector<char> pickled;
 };
 

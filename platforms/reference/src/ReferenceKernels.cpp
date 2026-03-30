@@ -3552,7 +3552,13 @@ double ReferenceCalcCustomCPPForceKernel::execute(ContextImpl& context, bool inc
 
 void ReferenceCalcPythonForceKernel::initialize(const ContextImpl& context, const PythonForce& force) {
     computation = &force.getComputation();
-    forces.resize(context.getSystem().getNumParticles());
+    particles = force.getParticles();
+    numParticles = particles.size();
+    if (numParticles == 0)
+        numParticles = context.getSystem().getNumParticles();
+    else
+        positions.resize(numParticles);
+    forces.resize(numParticles);
     usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
@@ -3560,7 +3566,13 @@ double ReferenceCalcPythonForceKernel::execute(ContextImpl& context, bool includ
     vector<Vec3>& posData = extractPositions(context);
     vector<Vec3>& forceData = extractForces(context);
     State::StateBuilder builder(context.getTime(), context.getStepCount());
-    builder.setPositions(posData);
+    if (particles.size() == 0)
+        builder.setPositions(posData);
+    else {
+        for (int i = 0; i < particles.size(); i++)
+            positions[i] = posData[particles[i]];
+        builder.setPositions(positions);
+    }
     builder.setParameters(context.getParameters());
     if (usePeriodic) {
         Vec3 a, b, c;
@@ -3570,8 +3582,15 @@ double ReferenceCalcPythonForceKernel::execute(ContextImpl& context, bool includ
     double energy;
     State state = builder.getState();
     computation->compute(state, energy, forces.data(), true);
-    if (includeForces)
-        for (int i = 0; i < forces.size(); i++)
-            forceData[i] += forces[i];
+    if (includeForces) {
+        if (particles.size() == 0) {
+            for (int i = 0; i < forces.size(); i++)
+                forceData[i] += forces[i];
+        }
+        else {
+            for (int i = 0; i < forces.size(); i++)
+                forceData[particles[i]] += forces[i];
+        }
+    }
     return energy;
 }
