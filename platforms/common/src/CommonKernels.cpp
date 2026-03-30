@@ -4912,6 +4912,7 @@ void CommonCalcPythonForceKernel::getPositions() {
     else {
         // Retrieve positions for the subset of particles the force is applied to.
 
+        ContextSelector selector(cc);
         copyPositionsKernel->execute(numParticles);
         if (cc.getUseDoublePrecision()) {
             vector<double> pos(3*numParticles);
