@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <set>
 #include <map>
+#include <unordered_map>
 #include <cmath>
 
 using namespace std;
@@ -649,14 +650,15 @@ void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadI
 
         // Record the exclusions for this block.
 
-        map<int, BlockExclusionMask> atomFlags;
+        unordered_map<int, BlockExclusionMask> atomFlags;
+        atomFlags.reserve(atomsInBlock*4);
         for (int j = 0; j < atomsInBlock; j++) {
             const set<int>& atomExclusions = (*exclusions)[sortedAtoms[firstIndex+j]];
             const BlockExclusionMask mask = 1<<j;
             for (int exclusion : atomExclusions) {
                 const auto thisAtomFlags = atomFlags.find(exclusion);
                 if (thisAtomFlags == atomFlags.end())
-                    atomFlags[exclusion] = mask;
+                    atomFlags.emplace(exclusion, mask);
                 else
                     thisAtomFlags->second |= mask;
             }
