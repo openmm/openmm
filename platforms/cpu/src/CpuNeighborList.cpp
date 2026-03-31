@@ -651,14 +651,14 @@ void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadI
         // Record the exclusions for this block.
 
         unordered_map<int, BlockExclusionMask> atomFlags;
-        atomFlags.reserve(atomsInBlock*4);
+        atomFlags.reserve(atomsInBlock*2);
         for (int j = 0; j < atomsInBlock; j++) {
             const set<int>& atomExclusions = (*exclusions)[sortedAtoms[firstIndex+j]];
             const BlockExclusionMask mask = 1<<j;
             for (int exclusion : atomExclusions) {
                 const auto thisAtomFlags = atomFlags.find(exclusion);
                 if (thisAtomFlags == atomFlags.end())
-                    atomFlags.emplace(exclusion, mask);
+                    atomFlags[exclusion] = mask;
                 else
                     thisAtomFlags->second |= mask;
             }
