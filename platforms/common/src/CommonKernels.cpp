@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,6 +34,7 @@
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/DPDIntegratorUtilities.h"
 #include "openmm/internal/OSRngSeed.h"
+#include "openmm/internal/PythonForceImpl.h"
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/timer.h"
 #include "CommonKernelSources.h"
@@ -4688,10 +4689,10 @@ public:
     CommonCalcCustomCPPForceKernel& owner;
 };
 
-void CommonCalcCustomCPPForceKernel::initialize(const System& system, CustomCPPForceImpl& force) {
+void CommonCalcCustomCPPForceKernel::initialize(const ContextImpl& context, CustomCPPForceImpl& force) {
     ContextSelector selector(cc);
     this->force = &force;
-    int numParticles = system.getNumParticles();
+    int numParticles = context.getSystem().getNumParticles();
     forcesVec.resize(numParticles);
     positionsVec.resize(numParticles);
     floatForces.resize(3*numParticles);
@@ -4706,14 +4707,18 @@ void CommonCalcCustomCPPForceKernel::initialize(const System& system, CustomCPPF
     addForcesKernel->addArg(cc.getLongForceBuffer());
     addForcesKernel->addArg(cc.getAtomIndexArray());
     forceGroupFlag = (1<<force.getOwner().getForceGroup());
-    if (cc.getNumContexts() == 1) {
+    useWorkerThread = (cc.getNumContexts() == 1);
+    for (const ForceImpl* impl : context.getForceImpls())
+        if (dynamic_cast<const CustomCPPForceImpl*>(impl) != NULL || dynamic_cast<const PythonForceImpl*>(impl) != NULL)
+            useWorkerThread = false;
+    if (useWorkerThread) {
         cc.addPreComputation(new StartCalculationPreComputation(*this));
         cc.addPostComputation(new AddForcesPostComputation(*this));
     }
 }
 
 double CommonCalcCustomCPPForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    if (cc.getNumContexts() == 1) {
+    if (useWorkerThread) {
         // This method does nothing.  The actual calculation is started by the pre-computation, continued on
         // the worker thread, and finished by the post-computation.
 
@@ -4765,7 +4770,7 @@ double CommonCalcCustomCPPForceKernel::addForces(bool includeForces, bool includ
 
     // Wait until executeOnWorkerThread() is finished.
 
-    if (cc.getNumContexts() == 1)
+    if (useWorkerThread)
         cc.getWorkThread().flush();
 
     // Add in the forces.
@@ -4811,11 +4816,11 @@ public:
     CommonCalcPythonForceKernel& owner;
 };
 
-void CommonCalcPythonForceKernel::initialize(const System& system, const PythonForce& force) {
+void CommonCalcPythonForceKernel::initialize(const ContextImpl& context, const PythonForce& force) {
     ContextSelector selector(cc);
     computation = &force.getComputation();
     usePeriodic = force.usesPeriodicBoundaryConditions();
-    int numParticles = system.getNumParticles();
+    int numParticles = context.getSystem().getNumParticles();
     positionsVec.resize(numParticles);
     forcesVec.resize(3*numParticles);
     int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
@@ -4829,14 +4834,18 @@ void CommonCalcPythonForceKernel::initialize(const System& system, const PythonF
     addForcesKernel->addArg(cc.getLongForceBuffer());
     addForcesKernel->addArg(cc.getAtomIndexArray());
     forceGroupFlag = (1<<force.getForceGroup());
-    if (cc.getNumContexts() == 1) {
+    useWorkerThread = (cc.getNumContexts() == 1);
+    for (const ForceImpl* impl : context.getForceImpls())
+        if (dynamic_cast<const CustomCPPForceImpl*>(impl) != NULL || dynamic_cast<const PythonForceImpl*>(impl) != NULL)
+            useWorkerThread = false;
+    if (useWorkerThread) {
         cc.addPreComputation(new StartCalculationPreComputation(*this));
         cc.addPostComputation(new AddForcesPostComputation(*this));
     }
 }
 
 double CommonCalcPythonForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    if (cc.getNumContexts() == 1) {
+    if (useWorkerThread) {
         // This method does nothing.  The actual calculation is started by the pre-computation, continued on
         // the worker thread, and finished by the post-computation.
 
@@ -4857,9 +4866,9 @@ double CommonCalcPythonForceKernel::execute(ContextImpl& context, bool includeFo
 void CommonCalcPythonForceKernel::beginComputation(bool includeForces, bool includeEnergy, int groups) {
     if ((groups&forceGroupFlag) == 0)
         return;
-    
+
     // The actual force computation will be done on a different thread.
-    
+
     cc.getWorkThread().addTask(new ExecuteTask(*this, includeForces));
 }
 
@@ -4886,8 +4895,8 @@ double CommonCalcPythonForceKernel::addForces(bool includeForces, bool includeEn
         return 0;
 
     // Wait until executeOnWorkerThread() is finished.
-    
-    if (cc.getNumContexts() == 1)
+
+    if (useWorkerThread)
         cc.getWorkThread().flush();
 
     // Add in the forces.
@@ -4896,7 +4905,7 @@ double CommonCalcPythonForceKernel::addForces(bool includeForces, bool includeEn
         ContextSelector selector(cc);
         addForcesKernel->execute(cc.getNumAtoms());
     }
-    
+
     // Return the energy.
     
     return energy;

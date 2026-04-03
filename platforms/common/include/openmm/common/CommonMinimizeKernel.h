@@ -98,7 +98,7 @@ private:
     int maxIterations;
     MinimizationReporter* reporter;
 
-    double kRestraint, energy;
+    double kRestraint, energy, energyStart;
     bool largeGrad;
 
     ComputeArray constraintIndices, constraintDistances;
