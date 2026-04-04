@@ -121,7 +121,14 @@ def run_openmm_1bead(n_steps=50, dt_fs=0.5):
     except Exception:
         _platform = Platform.getPlatformByName('Reference')
         _ml_dev = 'cpu'
-    system = potential.createSystem(topology, task_name='omol', charge=0, spin=1, device=_ml_dev)
+    system = potential.createSystem(
+        topology,
+        task_name='omol',
+        charge=0,
+        spin=1,
+        device=_ml_dev,
+        use_atom_wrap_for_lammps_parity=True,
+    )
 
     integrator = RPMDIntegrator(
         1,

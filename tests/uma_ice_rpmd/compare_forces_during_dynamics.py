@@ -26,6 +26,11 @@ sys.path.insert(0, str(_SCRIPT_DIR))
 from benchmark_same_structure_openmm_vs_lammps import parse_lammps_data
 
 
+def _atomic_numbers_list(z: np.ndarray) -> list[int]:
+    """Plain ints for Fairchem / torch (PyTorch 2.x rejects ``torch.tensor(np.int64)`` without dtype)."""
+    return [int(x) for x in np.asarray(z, dtype=np.int64).ravel()]
+
+
 def read_dump_frame(dump_path: str, frame_idx: int):
     """Read a specific frame from a LAMMPS dump file. Returns (step, pos, box)."""
     with open(dump_path) as f:
@@ -95,9 +100,10 @@ def compute_forces_direct(pos_ang, cell, atomic_numbers, predict_unit, task_name
     pos_wrapped = wrap_positions(pos_ang, cell=cell, pbc=True, eps=0)
     n = len(pos_wrapped)
 
+    z_long = torch.tensor(_atomic_numbers_list(atomic_numbers), dtype=torch.long)
     data = AtomicData(
         pos=torch.tensor(pos_wrapped, dtype=torch.float32),
-        atomic_numbers=torch.tensor(atomic_numbers),
+        atomic_numbers=z_long,
         cell=torch.tensor(cell, dtype=torch.float32).unsqueeze(0),
         pbc=torch.tensor([True, True, True], dtype=torch.bool).unsqueeze(0),
         natoms=torch.tensor([n], dtype=torch.long),
@@ -131,9 +137,14 @@ def compute_forces_lammps_style(pos_ang, cell, atomic_numbers, predict_unit, tas
 
     cell_t = torch.tensor(cell, dtype=torch.float32).unsqueeze(0)
     data = atomic_data_from_lammps_data(
-        pos_wrapped, atomic_numbers, n, cell_t,
-        [True, True, True], task_name,
-        charge=charge, spin=spin,
+        pos_wrapped,
+        _atomic_numbers_list(atomic_numbers),
+        n,
+        cell_t,
+        [True, True, True],
+        task_name,
+        charge=charge,
+        spin=spin,
     )
 
     with torch.no_grad():
@@ -158,6 +169,7 @@ def main():
     atomic_numbers = Z.astype(np.int64)
 
     from fairchem.core.calculate import pretrained_mlip
+
     predict_unit = pretrained_mlip.get_predict_unit(args.model, device=args.device)
 
     print(f"{'Frame':>6s} {'Step':>8s} {'E_direct':>14s} {'E_lammps':>14s} {'dE(eV)':>12s} "

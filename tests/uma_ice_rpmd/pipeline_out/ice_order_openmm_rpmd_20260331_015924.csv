@@ -1,0 +1,2 @@
+step,time_ps,T_K,PE_kj_mol,q6_mean,q6_std,q6_p10,q6_p50,q6_p90,q6_min,q6_max,q_tet_mean,q_tet_std,q_tet_p10,q_tet_p50,q_tet_p90,q_tet_min,q_tet_max,n_q6_valid,n_q_tet_valid,n_oxygen
+0,0.000000,,,0.618468,0.000554,0.617893,0.618456,0.619103,0.616896,0.620053,0.992886,0.000400,0.992455,0.992871,0.993338,0.991726,0.993989,64,64,64

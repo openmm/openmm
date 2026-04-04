@@ -17,7 +17,7 @@ line (default 243 K for PILE-G). Use this to check thermostat behaviour.
 Reads CSV files produced by:
   - OpenMM UMA RPMD: test_uma_ice_rpmd.py (ice_order_openmm_rpmd.csv)
   - TIP4P RPMD: run_openmm_tip4p_rpmd.py (ice_order_tip4p_rpmd.csv)
-  - i-PI+LAMMPS: ipi_order_from_traj.py (ice_order_ipi_rpmd.csv)
+  - i-PI+LAMMPS: ipi_order_from_traj.py (ice_order_ipi_rpmd.csv; default per-atom PBC wrap)
 
 Usage:
   cd tests/uma_ice_rpmd
@@ -129,8 +129,9 @@ def _enrich_title_with_system(
 def _read_csv(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray | None]:
     """Return (time_ps, q6_mean, q_tet_mean, T_K) from ice order CSV.
 
-    ``T_K`` is the instantaneous kinetic temperature (PI estimator) when the
-    column exists; missing or empty cells become ``nan``. If the
+    ``T_K`` is **centroid kinetic temperature** (same estimator as OpenMM
+    ``centroid_kinetic_energy_and_temperature`` / i-PI post-process from bead
+    velocities when vtraj is available). Missing or empty cells become ``nan``. If the
     ``T_K`` column is absent, the fourth return is ``None`` (e.g. some i-PI exports).
     """
     lines = path.read_text().splitlines()
@@ -392,7 +393,7 @@ def main() -> None:
                 alpha=0.6,
                 label=f"Bath target ({args.bath_temperature_k:.0f} K)",
             )
-        ax3.set_ylabel(r"$T_{\mathrm{kin}}$ (K)")
+        ax3.set_ylabel(r"$T_{\mathrm{K,centroid}}$ (K)")
         ax3.set_xlabel("Time (ps)")
         ax3.legend()
         ax3.grid(True, alpha=0.3)

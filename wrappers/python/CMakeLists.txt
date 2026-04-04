@@ -200,6 +200,8 @@ add_custom_command(
     OUTPUT "${SWIG_OPENMM_DIR}/OpenMMSwig.cxx" "${OPENMM_PYTHON_STAGING_DIR}/openmm/openmm.py"
     COMMAND ${SWIG_EXECUTABLE}
         -python -c++
+        # Suppress known-noisy warnings from large auto-generated OpenMM.i (typemaps, shadowed overloads, PythonForce bases).
+        -w314 -w401 -w453 -w509
         -outdir "${OPENMM_PYTHON_STAGING_DIR}/openmm"
         -o OpenMMSwig.cxx
         OpenMM.i

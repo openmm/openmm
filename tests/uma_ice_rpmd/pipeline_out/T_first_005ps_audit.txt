@@ -1,0 +1,46 @@
+UMA RPMD centroid T_K audit (molecular PBC wrap ON: use_atom_wrap_for_lammps_parity=False)
+================================================================================
+
+Criterion: centroid T_K must stay <= 300 K during the first 0.05 ps of reported dynamics.
+
+1) Production-only, no equilibration (isolates early trajectory)
+   Command:
+     run_openmm_rpmd_reference.py --nx 2 --ny 2 --nz 2 --beads 8 --steps 500 --dt 0.1
+       --equil 0 --platform cuda --optimize-inference-tf32-only
+       --order-csv pipeline_out/ice_order_T_track_005ps.csv
+   Log: pipeline_out/T_track_005ps.log
+   CSV: pipeline_out/ice_order_T_track_005ps.csv
+
+   Samples (time_ps, T_K):
+     0.001  219.2 K   (OK)
+     0.002  404.3 K   (FAIL — exceeds 300 K)
+     ...
+     0.029 1082.3 K   (max in window)
+     0.050  988.5 K
+
+   Verdict: FAIL. T_K > 300 K by 0.002 ps.
+
+2) Short equil + short production (same wall time ~13 min as 500-step prod-only)
+   Command:
+     --equil 0.03 --prod 0.02  (300 equil + 200 prod steps; order CSV only in prod)
+   Log: pipeline_out/T_equil003_prod002.log
+   CSV: pipeline_out/ice_order_T_equil003_prod002.csv
+
+   Production samples (first row with T_K at step 400 = 0.040 ps):
+     0.040–0.050 ps: T_K ~820–1059 K
+
+   Verdict: FAIL for any production row. Equilibration did not bring centroid T_K
+   under 300 K before production (progress logs during equil also showed T ~850 K).
+
+3) Reference: TIP4P/2005f RPMD on same cell (existing pipeline CSV)
+   File: pipeline_out/ice_order_tip4p_rpmd.csv
+   First 0.05 ps: T_K stays ~98–202 K (max ~202 K at 0.001 ps).
+
+Conclusion
+----------
+Molecular wrapping is active (log line: "wrap: molecular (water O-H preserving)").
+Per-atom wrap is no longer used for this driver. Despite that, centroid T_K for UMA
+still diverges from TIP4P within the first few femtoseconds and far exceeds 300 K
+throughout the first 0.05 ps. So something remains wrong relative to the stated
+criterion — likely beyond PBC wrapping alone (e.g. ML force/thermostat balance,
+centroid vs ring-polymer mode energy partition, or timestep/stiffness).

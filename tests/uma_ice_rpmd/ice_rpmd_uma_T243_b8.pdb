@@ -1,5 +1,5 @@
 REMARK   Ice RPMD simulation - centroid trajectory
 REMARK   Model: uma-s-1p1-pythonforce-batch
 REMARK   Temperature: 243.0 K, Beads: 8
-CRYST1   23.469   44.121   27.110  90.00  90.00  90.00 P 1           1
+CRYST1    4.497    7.789    7.322  90.00  90.00  90.00 P 1           1
 END

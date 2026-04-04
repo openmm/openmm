@@ -97,7 +97,14 @@ def test_1bead_rpmd_matches_standard_openmm():
     potential = MLPotential(model_name)
     platform = _get_platform()
     _ml_device = 'cuda' if platform.getName() == 'CUDA' else 'cpu'
-    system = potential.createSystem(topology, task_name='omol', charge=0, spin=1, device=_ml_device)
+    system = potential.createSystem(
+        topology,
+        task_name='omol',
+        charge=0,
+        spin=1,
+        device=_ml_device,
+        use_atom_wrap_for_lammps_parity=True,
+    )
 
     pos_with_units = [Vec3(float(p[0]), float(p[1]), float(p[2])) * unit.nanometer for p in positions]
 
@@ -160,7 +167,14 @@ def test_1bead_rpmd_step_produces_same_trajectory_as_standard():
     potential = MLPotential(model_name)
     platform = _get_platform()
     _ml_device = 'cuda' if platform.getName() == 'CUDA' else 'cpu'
-    system = potential.createSystem(topology, task_name='omol', charge=0, spin=1, device=_ml_device)
+    system = potential.createSystem(
+        topology,
+        task_name='omol',
+        charge=0,
+        spin=1,
+        device=_ml_device,
+        use_atom_wrap_for_lammps_parity=True,
+    )
 
     pos_nm = np.array(positions)
     vel_nm_ps = np.random.randn(len(positions), 3) * 0.05  # nm/ps
@@ -218,7 +232,14 @@ def test_single_water_molecule_stability():
     potential = MLPotential(model_name)
     platform = _get_platform()
     _ml_device = 'cuda' if platform.getName() == 'CUDA' else 'cpu'
-    system = potential.createSystem(topology, task_name='omol', charge=0, spin=1, device=_ml_device)
+    system = potential.createSystem(
+        topology,
+        task_name='omol',
+        charge=0,
+        spin=1,
+        device=_ml_device,
+        use_atom_wrap_for_lammps_parity=True,
+    )
 
     pos_with_units = [Vec3(float(p[0]), float(p[1]), float(p[2])) * unit.nanometer for p in positions]
 

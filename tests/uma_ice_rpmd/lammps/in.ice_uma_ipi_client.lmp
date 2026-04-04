@@ -1,23 +1,26 @@
 # LAMMPS i-PI client for UMA ice RPMD benchmark.
-# i-PI drives dynamics; LAMMPS computes forces via fix external (UMA).
-# Must be run via run_ipi_lammps_uma_rpmd.py (injects fix external callback).
+# i-PI drives dynamics; LAMMPS computes UMA forces via fix external pf/callback.
+#
+# This deck is used by run_ipi_lammps_uma_rpmd.py (--client lammps) through
+# the LAMMPS Python API.  For manual two-terminal use, see README.md.
 #
 # INET: localhost 65535 (match i-PI ffsocket mode=inet)
-# Atom order must match init.xyz (shared_data.ice_uma or data.ice_uma)
+# Atom order must match init.xyz / data file.
 
 units           metal
 atom_style      atomic
 boundary        p p p
 read_data       data.ice_uma
+
 comm_modify     cutoff 12.0
 
-# No classical pair potential; UMA via fix external
+# No classical pair potential; UMA forces come from fix external
 pair_style      zero 1.0
 pair_coeff      * *
 
-# fix external is injected by run_ipi_lammps_uma_rpmd.py (fairchem UMA)
-# fix ext all external pf/callback 1 1
+# fix external pf/callback is registered via Python API (fairchem-lammps)
+# fix ext_fc all external pf/callback 1 1
 
-# Connect to i-PI (inet). Run count must match i-PI total_steps.
+# Connect to i-PI server (inet socket). Run count must match i-PI total_steps.
 fix             1 all ipi 127.0.0.1 65535
 run             1000

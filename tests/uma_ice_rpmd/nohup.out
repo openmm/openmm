@@ -1,319 +1,385 @@
-usage: run_ice_pipeline.py [-h] [--out-dir OUT_DIR] [--work-dir WORK_DIR]
-                           [--dt-fs DT_FS] [--steps STEPS]
-                           [--temperature TEMPERATURE] [--friction FRICTION]
-                           [--skip-lammps] [--only-plot]
-                           [--order-csv-classical ORDER_CSV_CLASSICAL]
-                           [--order-csv-uma-openmm ORDER_CSV_UMA_OPENMM]
-                           [--order-csv-uma-lammps ORDER_CSV_UMA_LAMMPS]
-                           [--platform-classical {cpu,cuda}]
-                           [--variable-step-classical]
-                           [--shared-initial-structure PATH]
-run_ice_pipeline.py: error: argument --shared-initial-structure: expected one argument
-nohup: ignoring input
-/home/mh7373/miniconda3/lib/python3.12/site-packages/ase/io/cif.py:410: UserWarning: crystal system 'orthorhombic' is not interpreted for space group Spacegroup(1, setting=1). This may result in wrong setting!
-  warnings.warn(
+INFO: OpenMM leg will run minimization + velocity initialization + production (no separate equilibration).
+=== Stamped run: STAMP=20260403_104115 | OUT_DIR=pipeline_out ===
+    OpenMM order CSV: pipeline_out/ice_order_openmm_rpmd_20260403_104115.csv
+    i-PI order CSV:   pipeline_out/ice_order_ipi_rpmd_20260403_104115.csv
+    Plot:             pipeline_out/rpmd_comparison_20260403_104115.png
+=== Stop stale i-PI (best-effort) ===
+=== Settings: steps=400 dt=0.25 fs -> 0.1 ps production | equil=0 ps | chunk=4 | client=lammps | pile_tau=1000 fs ===
+=== 1) OpenMM UMA RPMD ===
+[W403 10:41:20.803317368 init.cpp:772] Warning: nvfuser is no longer supported in torch script, use _jit_set_nvfuser_enabled is deprecated and a no-op (function operator())
+WARNING:root:If 'dataset_list' is provided in the config, the code assumes that each dataset maps to itself. Please use 'dataset_mapping' as 'dataset_list' is deprecated and will be removed in the future.
 All required packages loaded successfully
-Wrote /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/lammps/data.ice_uma (384 atoms, box lx=15.6457 ly=14.7071 lz=18.0730 Å)
-[W317 00:10:40.448298949 init.cpp:772] Warning: nvfuser is no longer supported in torch script, use _jit_set_nvfuser_enabled is deprecated and a no-op (function operator())
-UMA force added with batched RPMD support (model: uma-s-1p1, task: omol, device: cuda)
-Minimizing with OpenMM UMA...
+================================================================================
+UMA/eSEN Ice RPMD Simulation
+================================================================================
+Model: uma-s-1p1-pythonforce-batch
+Temperature: 243.0 K
+Pressure: 0.0 bar (NVT)
+RPMD beads: 32
+Timestep: 0.25 fs
+Input structure: /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/pipeline_out/init_openmm_rpmd_64.xyz
+Equilibration: 0.0 ps
+Production: 0.1 ps
+
+--- Loading Ice Structure from File ---
+  Input: /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/pipeline_out/init_openmm_rpmd_64.xyz
+  Actual molecules: 64
+  Total atoms: 192
+  Box: 8.99 x 15.58 x 14.64 Å
+  Initial density: 0.933 g/cm³
+  Expected ice Ih: ~0.92 g/cm³
+
+--- Creating ML Potential ---
+Creating OpenMM system...
+  ML model device: cuda
+  UMA PBC wrap: per-atom (LAMMPS / Fairchem parity)
+UMA force added with batched RPMD support (model: uma-s-1p1, task: omol, device: cuda, wrap: atom (LAMMPS parity))
+  System uses PBC: True
+  Running NVT (no barostat)
+  Initial density: 0.933 g/cm³
+  Expected ice density: ~0.92 g/cm³
+
+--- Creating RPMD Integrator ---
+  Beads: 32
+  Temperature: 243.0 K
+  Timestep: 0.25 fs
+  Thermostat: PILE_G (Bussi/SVR on centroid + PILE on internal modes)
+  Internal friction: 1.0 ps^-1
+  Centroid friction (Bussi): 1.0 ps^-1
+
+--- Creating Simulation Context ---
+  PyTorch CUDA initialized before OpenMM Context (context-order fix)
+  Using CUDA platform (GPU acceleration, DeviceIndex=0)
+
+--- Initializing RPMD Beads ---
+  Bead 0: positions set
+  Bead 1: positions set
+  Bead 2: positions set
+  Bead 3: positions set
+  Bead 4: positions set
+  Bead 5: positions set
+  Bead 6: positions set
+  Bead 7: positions set
+  Bead 8: positions set
+  Bead 9: positions set
+  Bead 10: positions set
+  Bead 11: positions set
+  Bead 12: positions set
+  Bead 13: positions set
+  Bead 14: positions set
+  Bead 15: positions set
+  Bead 16: positions set
+  Bead 17: positions set
+  Bead 18: positions set
+  Bead 19: positions set
+  Bead 20: positions set
+  Bead 21: positions set
+  Bead 22: positions set
+  Bead 23: positions set
+  Bead 24: positions set
+  Bead 25: positions set
+  Bead 26: positions set
+  Bead 27: positions set
+  Bead 28: positions set
+  Bead 29: positions set
+  Bead 30: positions set
+  Bead 31: positions set
+
+--- Energy Minimization ---
+  Minimizing energy to relax initial structure...
 Lazy-loaded UMA model 'uma-s-1p1' on cuda (OpenMM context)
-  PE after minimize: -25691658.32 kJ/mol
-  Wall time: 46.5 s
-Wrote /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/pipeline_out/shared_data.ice_uma
-  Structure check: O,H1,H2,M per residue OK; positions finite
-  PBC check: cutoff 0.7 nm < half_box 0.735 nm OK
-  Unit check: box ~1.565 nm, O-O(0,1)=0.520 nm OK
-  Applied --relax-geometry: each water set to r_OH=0.09419 nm, H-O-H=107.4°
-========================================================================
-OpenMM TIP4P/2005f flexible water — ICE benchmark (same structure as UMA)
-========================================================================
-  Molecules: 128  atoms: 512 (3 O,H,H + 1 M per water)
-  T = 243.0 K  dt = 0.1 fs  platform: cuda
-  [pre-min] PE=-4561.5 kJ/mol  max|F|=3374.3 kJ/(mol·nm)
-  [pre-min] O-H (first 10 mol): min=0.0942 max=0.0942 nm (TIP4P/2005f eq 0.09419)
-  [pre-min] H-O-H (first 10 mol): 107.4-107.4 deg (eq 107.4)
-  [pre-min] min O-O (first 32): 0.2753 nm
-  PE after minimize: -7612.58 kJ/mol
-  Max |force| after minimize: 2637.69 kJ/(mol·nm)
-  O-H distances (first mol): 0.0971, 0.0972 nm (expect ~0.096)
-  Min O-O (first 20): 0.2703 nm (expect > 0.25)
-  Minimize wall time: 0.0 s
-  [diagnostic] After setVelocitiesToTemperature: KE=1130.15 kJ/mol  T=235.98 K
-  Trajectory DCD: /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/pipeline_out/traj_classical.dcd (every 100 step(s))
-  Order params every 100 steps: Q6, q_tet
+  Initial PE: -12846266.33 kJ/mol
+  Minimized PE: -12846649.44 kJ/mol
+  Energy reduction: 383.11 kJ/mol
+  Minimized structure copied to all 32 beads
+  Velocities initialized (NM thermal, i-PI parity) at 243.0 K (after minimization)
 
---- MD 10000 steps @ 0.1 fs ---
-  step   100  t=0.0100 ps  T= 168.04 K  PE=      -7212.26 kJ/mol  Q6=0.598  q_tet=0.954
-  step   200  t=0.0200 ps  T= 180.71 K  PE=      -7169.18 kJ/mol  Q6=0.595  q_tet=0.954
-  step   300  t=0.0300 ps  T= 159.10 K  PE=      -6978.27 kJ/mol  Q6=0.591  q_tet=0.951
-  step   400  t=0.0400 ps  T= 159.51 K  PE=      -6901.96 kJ/mol  Q6=0.587  q_tet=0.947
-  step   500  t=0.0500 ps  T= 173.30 K  PE=      -6871.72 kJ/mol  Q6=0.584  q_tet=0.941
-  step   600  t=0.0600 ps  T= 181.86 K  PE=      -6872.63 kJ/mol  Q6=0.582  q_tet=0.940
-  step   700  t=0.0700 ps  T= 187.56 K  PE=      -6844.57 kJ/mol  Q6=0.583  q_tet=0.934
-  step   800  t=0.0800 ps  T= 185.15 K  PE=      -6759.86 kJ/mol  Q6=0.577  q_tet=0.934
-  step   900  t=0.0900 ps  T= 191.93 K  PE=      -6713.34 kJ/mol  Q6=0.569  q_tet=0.931
-  step  1000  t=0.1000 ps  T= 194.68 K  PE=      -6698.07 kJ/mol  Q6=0.562  q_tet=0.927
-  step  1100  t=0.1100 ps  T= 198.24 K  PE=      -6677.13 kJ/mol  Q6=0.560  q_tet=0.925
-  step  1200  t=0.1200 ps  T= 192.65 K  PE=      -6626.85 kJ/mol  Q6=0.558  q_tet=0.922
-  step  1300  t=0.1300 ps  T= 204.37 K  PE=      -6634.62 kJ/mol  Q6=0.556  q_tet=0.920
-  step  1400  t=0.1400 ps  T= 219.43 K  PE=      -6640.32 kJ/mol  Q6=0.556  q_tet=0.916
-  step  1500  t=0.1500 ps  T= 210.83 K  PE=      -6582.09 kJ/mol  Q6=0.553  q_tet=0.915
-  step  1600  t=0.1600 ps  T= 211.01 K  PE=      -6549.00 kJ/mol  Q6=0.551  q_tet=0.918
-  step  1700  t=0.1700 ps  T= 213.21 K  PE=      -6505.03 kJ/mol  Q6=0.551  q_tet=0.913
-  step  1800  t=0.1800 ps  T= 215.40 K  PE=      -6530.24 kJ/mol  Q6=0.549  q_tet=0.913
-  step  1900  t=0.1900 ps  T= 209.78 K  PE=      -6490.59 kJ/mol  Q6=0.548  q_tet=0.914
-  step  2000  t=0.2000 ps  T= 220.96 K  PE=      -6523.28 kJ/mol  Q6=0.548  q_tet=0.910
-  step  2100  t=0.2100 ps  T= 221.44 K  PE=      -6495.06 kJ/mol  Q6=0.547  q_tet=0.911
-  step  2200  t=0.2200 ps  T= 238.30 K  PE=      -6491.74 kJ/mol  Q6=0.550  q_tet=0.910
-  step  2300  t=0.2300 ps  T= 224.86 K  PE=      -6447.97 kJ/mol  Q6=0.550  q_tet=0.910
-  step  2400  t=0.2400 ps  T= 244.91 K  PE=      -6498.64 kJ/mol  Q6=0.552  q_tet=0.910
-  step  2500  t=0.2500 ps  T= 223.17 K  PE=      -6397.94 kJ/mol  Q6=0.552  q_tet=0.911
-  step  2600  t=0.2600 ps  T= 235.97 K  PE=      -6484.13 kJ/mol  Q6=0.552  q_tet=0.914
-  step  2700  t=0.2700 ps  T= 240.29 K  PE=      -6524.76 kJ/mol  Q6=0.547  q_tet=0.915
-  step  2800  t=0.2800 ps  T= 222.99 K  PE=      -6481.76 kJ/mol  Q6=0.548  q_tet=0.917
-  step  2900  t=0.2900 ps  T= 242.00 K  PE=      -6532.11 kJ/mol  Q6=0.551  q_tet=0.919
-  step  3000  t=0.3000 ps  T= 247.05 K  PE=      -6553.70 kJ/mol  Q6=0.555  q_tet=0.921
-  step  3100  t=0.3100 ps  T= 236.33 K  PE=      -6485.74 kJ/mol  Q6=0.552  q_tet=0.922
-  step  3200  t=0.3200 ps  T= 230.95 K  PE=      -6490.96 kJ/mol  Q6=0.552  q_tet=0.923
-  step  3300  t=0.3300 ps  T= 240.33 K  PE=      -6522.19 kJ/mol  Q6=0.558  q_tet=0.926
-  step  3400  t=0.3400 ps  T= 228.84 K  PE=      -6463.58 kJ/mol  Q6=0.557  q_tet=0.927
-  step  3500  t=0.3500 ps  T= 246.91 K  PE=      -6484.73 kJ/mol  Q6=0.557  q_tet=0.923
-  step  3600  t=0.3600 ps  T= 247.21 K  PE=      -6530.92 kJ/mol  Q6=0.556  q_tet=0.923
-  step  3700  t=0.3700 ps  T= 234.59 K  PE=      -6483.37 kJ/mol  Q6=0.556  q_tet=0.922
-  step  3800  t=0.3800 ps  T= 251.13 K  PE=      -6526.88 kJ/mol  Q6=0.553  q_tet=0.925
-  step  3900  t=0.3900 ps  T= 244.83 K  PE=      -6471.78 kJ/mol  Q6=0.552  q_tet=0.921
-  step  4000  t=0.4000 ps  T= 234.51 K  PE=      -6463.58 kJ/mol  Q6=0.553  q_tet=0.920
-  step  4100  t=0.4100 ps  T= 243.72 K  PE=      -6507.87 kJ/mol  Q6=0.551  q_tet=0.921
-  step  4200  t=0.4200 ps  T= 249.09 K  PE=      -6523.34 kJ/mol  Q6=0.550  q_tet=0.923
-  step  4300  t=0.4300 ps  T= 240.08 K  PE=      -6461.40 kJ/mol  Q6=0.551  q_tet=0.924
-  step  4400  t=0.4400 ps  T= 252.73 K  PE=      -6494.54 kJ/mol  Q6=0.551  q_tet=0.925
-  step  4500  t=0.4500 ps  T= 244.29 K  PE=      -6440.63 kJ/mol  Q6=0.551  q_tet=0.925
-  step  4600  t=0.4600 ps  T= 243.34 K  PE=      -6474.74 kJ/mol  Q6=0.551  q_tet=0.926
-  step  4700  t=0.4700 ps  T= 241.23 K  PE=      -6454.06 kJ/mol  Q6=0.551  q_tet=0.926
-  step  4800  t=0.4800 ps  T= 246.60 K  PE=      -6474.82 kJ/mol  Q6=0.551  q_tet=0.926
-  step  4900  t=0.4900 ps  T= 244.32 K  PE=      -6424.49 kJ/mol  Q6=0.549  q_tet=0.925
-  step  5000  t=0.5000 ps  T= 243.51 K  PE=      -6490.68 kJ/mol  Q6=0.549  q_tet=0.924
-  step  5100  t=0.5100 ps  T= 243.56 K  PE=      -6509.01 kJ/mol  Q6=0.551  q_tet=0.924
-  step  5200  t=0.5200 ps  T= 234.51 K  PE=      -6488.95 kJ/mol  Q6=0.551  q_tet=0.924
-  step  5300  t=0.5300 ps  T= 234.83 K  PE=      -6502.22 kJ/mol  Q6=0.549  q_tet=0.921
-  step  5400  t=0.5400 ps  T= 228.25 K  PE=      -6449.13 kJ/mol  Q6=0.546  q_tet=0.921
-  step  5500  t=0.5500 ps  T= 243.33 K  PE=      -6488.82 kJ/mol  Q6=0.546  q_tet=0.921
-  step  5600  t=0.5600 ps  T= 230.57 K  PE=      -6450.28 kJ/mol  Q6=0.546  q_tet=0.924
-  step  5700  t=0.5700 ps  T= 253.71 K  PE=      -6523.60 kJ/mol  Q6=0.547  q_tet=0.924
-  step  5800  t=0.5800 ps  T= 243.45 K  PE=      -6498.62 kJ/mol  Q6=0.547  q_tet=0.923
-  step  5900  t=0.5900 ps  T= 240.81 K  PE=      -6479.64 kJ/mol  Q6=0.547  q_tet=0.921
-  step  6000  t=0.6000 ps  T= 261.13 K  PE=      -6566.78 kJ/mol  Q6=0.545  q_tet=0.918
-  step  6100  t=0.6100 ps  T= 230.52 K  PE=      -6432.51 kJ/mol  Q6=0.544  q_tet=0.915
-  step  6200  t=0.6200 ps  T= 229.05 K  PE=      -6470.63 kJ/mol  Q6=0.544  q_tet=0.912
-  step  6300  t=0.6300 ps  T= 221.02 K  PE=      -6412.25 kJ/mol  Q6=0.541  q_tet=0.912
-  step  6400  t=0.6400 ps  T= 237.94 K  PE=      -6505.40 kJ/mol  Q6=0.537  q_tet=0.910
-  step  6500  t=0.6500 ps  T= 222.61 K  PE=      -6426.66 kJ/mol  Q6=0.539  q_tet=0.910
-  step  6600  t=0.6600 ps  T= 230.04 K  PE=      -6481.56 kJ/mol  Q6=0.539  q_tet=0.909
-  step  6700  t=0.6700 ps  T= 230.41 K  PE=      -6421.07 kJ/mol  Q6=0.537  q_tet=0.901
-  step  6800  t=0.6800 ps  T= 226.59 K  PE=      -6381.52 kJ/mol  Q6=0.536  q_tet=0.899
-  step  6900  t=0.6900 ps  T= 232.82 K  PE=      -6395.42 kJ/mol  Q6=0.536  q_tet=0.901
-  step  7000  t=0.7000 ps  T= 238.93 K  PE=      -6448.94 kJ/mol  Q6=0.533  q_tet=0.903
-  step  7100  t=0.7100 ps  T= 238.64 K  PE=      -6431.84 kJ/mol  Q6=0.539  q_tet=0.907
-  step  7200  t=0.7200 ps  T= 249.86 K  PE=      -6483.42 kJ/mol  Q6=0.538  q_tet=0.907
-  step  7300  t=0.7300 ps  T= 237.96 K  PE=      -6366.40 kJ/mol  Q6=0.537  q_tet=0.903
-  step  7400  t=0.7400 ps  T= 232.06 K  PE=      -6385.88 kJ/mol  Q6=0.540  q_tet=0.904
-  step  7500  t=0.7500 ps  T= 223.93 K  PE=      -6389.63 kJ/mol  Q6=0.540  q_tet=0.903
-  step  7600  t=0.7600 ps  T= 225.99 K  PE=      -6414.19 kJ/mol  Q6=0.543  q_tet=0.902
-  step  7700  t=0.7700 ps  T= 221.38 K  PE=      -6394.18 kJ/mol  Q6=0.544  q_tet=0.905
-  step  7800  t=0.7800 ps  T= 237.25 K  PE=      -6416.43 kJ/mol  Q6=0.545  q_tet=0.905
-  step  7900  t=0.7900 ps  T= 228.49 K  PE=      -6411.75 kJ/mol  Q6=0.547  q_tet=0.903
-  step  8000  t=0.8000 ps  T= 243.00 K  PE=      -6477.68 kJ/mol  Q6=0.550  q_tet=0.905
-  step  8100  t=0.8100 ps  T= 238.04 K  PE=      -6449.44 kJ/mol  Q6=0.550  q_tet=0.911
-  step  8200  t=0.8200 ps  T= 234.90 K  PE=      -6413.36 kJ/mol  Q6=0.549  q_tet=0.913
-  step  8300  t=0.8300 ps  T= 241.94 K  PE=      -6470.99 kJ/mol  Q6=0.548  q_tet=0.912
-  step  8400  t=0.8400 ps  T= 243.08 K  PE=      -6451.95 kJ/mol  Q6=0.545  q_tet=0.911
-  step  8500  t=0.8500 ps  T= 241.14 K  PE=      -6478.51 kJ/mol  Q6=0.545  q_tet=0.912
-  step  8600  t=0.8600 ps  T= 236.26 K  PE=      -6433.79 kJ/mol  Q6=0.547  q_tet=0.912
-  step  8700  t=0.8700 ps  T= 246.42 K  PE=      -6499.30 kJ/mol  Q6=0.549  q_tet=0.914
-  step  8800  t=0.8800 ps  T= 233.41 K  PE=      -6453.13 kJ/mol  Q6=0.550  q_tet=0.914
-  step  8900  t=0.8900 ps  T= 244.26 K  PE=      -6476.10 kJ/mol  Q6=0.552  q_tet=0.915
-  step  9000  t=0.9000 ps  T= 243.31 K  PE=      -6468.83 kJ/mol  Q6=0.552  q_tet=0.916
-  step  9100  t=0.9100 ps  T= 251.46 K  PE=      -6491.56 kJ/mol  Q6=0.549  q_tet=0.917
-  step  9200  t=0.9200 ps  T= 249.22 K  PE=      -6463.10 kJ/mol  Q6=0.549  q_tet=0.917
-  step  9300  t=0.9300 ps  T= 254.25 K  PE=      -6503.56 kJ/mol  Q6=0.549  q_tet=0.918
-  step  9400  t=0.9400 ps  T= 242.62 K  PE=      -6471.50 kJ/mol  Q6=0.548  q_tet=0.918
-  step  9500  t=0.9500 ps  T= 244.99 K  PE=      -6503.22 kJ/mol  Q6=0.546  q_tet=0.917
-  step  9600  t=0.9600 ps  T= 235.59 K  PE=      -6477.12 kJ/mol  Q6=0.548  q_tet=0.917
-  step  9700  t=0.9700 ps  T= 242.76 K  PE=      -6521.50 kJ/mol  Q6=0.549  q_tet=0.918
-  step  9800  t=0.9800 ps  T= 246.63 K  PE=      -6505.98 kJ/mol  Q6=0.555  q_tet=0.920
-  step  9900  t=0.9900 ps  T= 238.10 K  PE=      -6552.45 kJ/mol  Q6=0.557  q_tet=0.923
-  MD wall time: 2.0 s
-  Speed: 42.199 ns/day  |  4884.17 steps/s
-  Trajectory (DCD): /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/pipeline_out/traj_classical.dcd
-  Order CSV: /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/pipeline_out/ice_order_classical.csv
-  Final PDB: /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/ice_classical_flex_T243_steps10000.pdb
-========================================================================
-[W317 00:11:32.288737605 init.cpp:772] Warning: nvfuser is no longer supported in torch script, use _jit_set_nvfuser_enabled is deprecated and a no-op (function operator())
-========================================================================
-OpenMM MD — LAMMPS-matched (data.ice_uma + Langevin 243 K, 1 fs)
-========================================================================
-  Atoms: 384  molecules: 128
-  Box (nm): a=1.5646 …
-  Model: uma-s-1p1-pythonforce-batch  platform: cuda
-UMA force added with batched RPMD support (model: uma-s-1p1, task: omol, device: cuda)
+--- Initial Bead Energies ---
+  Getting initial bead energies...
+  Bead  0: PE = -12846649.48 kJ/mol, KE = 20103.41 kJ/mol, Total = -12826546.07 kJ/mol
+  Bead  1: PE = -12846649.41 kJ/mol, KE = 18363.53 kJ/mol, Total = -12828285.88 kJ/mol
+  Bead  2: PE = -12846649.57 kJ/mol, KE = 19355.16 kJ/mol, Total = -12827294.41 kJ/mol
+  Bead  3: PE = -12846649.30 kJ/mol, KE = 18823.86 kJ/mol, Total = -12827825.45 kJ/mol
+  Bead  4: PE = -12846649.46 kJ/mol, KE = 18129.84 kJ/mol, Total = -12828519.62 kJ/mol
+  Bead  5: PE = -12846649.45 kJ/mol, KE = 16595.12 kJ/mol, Total = -12830054.32 kJ/mol
+  Bead  6: PE = -12846649.37 kJ/mol, KE = 17123.18 kJ/mol, Total = -12829526.19 kJ/mol
+  Bead  7: PE = -12846649.35 kJ/mol, KE = 20092.72 kJ/mol, Total = -12826556.63 kJ/mol
+  Bead  8: PE = -12846649.44 kJ/mol, KE = 18961.07 kJ/mol, Total = -12827688.37 kJ/mol
+  Bead  9: PE = -12846649.47 kJ/mol, KE = 19434.73 kJ/mol, Total = -12827214.74 kJ/mol
+  Bead 10: PE = -12846649.44 kJ/mol, KE = 18295.04 kJ/mol, Total = -12828354.39 kJ/mol
+  Bead 11: PE = -12846649.50 kJ/mol, KE = 18242.18 kJ/mol, Total = -12828407.32 kJ/mol
+  Bead 12: PE = -12846649.51 kJ/mol, KE = 19842.78 kJ/mol, Total = -12826806.73 kJ/mol
+  Bead 13: PE = -12846649.38 kJ/mol, KE = 18471.26 kJ/mol, Total = -12828178.11 kJ/mol
+  Bead 14: PE = -12846649.40 kJ/mol, KE = 18983.27 kJ/mol, Total = -12827666.14 kJ/mol
+  Bead 15: PE = -12846649.43 kJ/mol, KE = 19593.56 kJ/mol, Total = -12827055.87 kJ/mol
+  Bead 16: PE = -12846649.34 kJ/mol, KE = 18748.93 kJ/mol, Total = -12827900.41 kJ/mol
+  Bead 17: PE = -12846649.36 kJ/mol, KE = 17403.49 kJ/mol, Total = -12829245.86 kJ/mol
+  Bead 18: PE = -12846649.53 kJ/mol, KE = 19987.63 kJ/mol, Total = -12826661.90 kJ/mol
+  Bead 19: PE = -12846649.39 kJ/mol, KE = 18845.22 kJ/mol, Total = -12827804.17 kJ/mol
+  Bead 20: PE = -12846649.39 kJ/mol, KE = 17894.09 kJ/mol, Total = -12828755.31 kJ/mol
+  Bead 21: PE = -12846649.36 kJ/mol, KE = 18708.28 kJ/mol, Total = -12827941.08 kJ/mol
+  Bead 22: PE = -12846649.51 kJ/mol, KE = 19060.43 kJ/mol, Total = -12827589.08 kJ/mol
+  Bead 23: PE = -12846649.31 kJ/mol, KE = 18372.88 kJ/mol, Total = -12828276.43 kJ/mol
+  Bead 24: PE = -12846649.39 kJ/mol, KE = 17111.62 kJ/mol, Total = -12829537.77 kJ/mol
+  Bead 25: PE = -12846649.38 kJ/mol, KE = 17676.45 kJ/mol, Total = -12828972.93 kJ/mol
+  Bead 26: PE = -12846649.45 kJ/mol, KE = 18720.09 kJ/mol, Total = -12827929.35 kJ/mol
+  Bead 27: PE = -12846649.38 kJ/mol, KE = 18009.48 kJ/mol, Total = -12828639.89 kJ/mol
+  Bead 28: PE = -12846649.41 kJ/mol, KE = 18742.90 kJ/mol, Total = -12827906.51 kJ/mol
+  Bead 29: PE = -12846649.39 kJ/mol, KE = 18115.67 kJ/mol, Total = -12828533.73 kJ/mol
+  Bead 30: PE = -12846649.50 kJ/mol, KE = 19395.36 kJ/mol, Total = -12827254.14 kJ/mol
+  Bead 31: PE = -12846649.35 kJ/mol, KE = 17299.96 kJ/mol, Total = -12829349.39 kJ/mol
 
---- Minimize (cf. LAMMPS minimize) ---
-  --skip-minimize: no minimization (instant).
-Lazy-loaded UMA model 'uma-s-1p1' on cuda (OpenMM context)
-  Trajectory DCD: /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/pipeline_out/traj_uma_openmm.dcd (every 100 step(s))
-  Order params every 100 steps: Q6 (Steinhardt), q_tet (1=ideal tetrahedron)
+  Mean: PE = -12846649.42 kJ/mol, KE = 18578.23 kJ/mol, Total = -12828071.19 kJ/mol
 
---- MD 10000 steps @ 0.1 fs (cf. LAMMPS run 100) ---
-  step   100  t=0.0100 ps  T= 161.92 K  PE=  -25691269.79 kJ/mol  Q6=0.569  q_tet=0.932
-  step   200  t=0.0200 ps  T= 159.08 K  PE=  -25691129.04 kJ/mol  Q6=0.566  q_tet=0.925
-  step   300  t=0.0300 ps  T= 159.79 K  PE=  -25691060.01 kJ/mol  Q6=0.561  q_tet=0.921
-  step   400  t=0.0400 ps  T= 170.24 K  PE=  -25691041.17 kJ/mol  Q6=0.556  q_tet=0.916
-  step   500  t=0.0500 ps  T= 170.81 K  PE=  -25690983.68 kJ/mol  Q6=0.552  q_tet=0.909
-  step   600  t=0.0600 ps  T= 182.18 K  PE=  -25690935.68 kJ/mol  Q6=0.548  q_tet=0.905
-  step   700  t=0.0700 ps  T= 179.16 K  PE=  -25690876.20 kJ/mol  Q6=0.544  q_tet=0.897
-  step   800  t=0.0800 ps  T= 183.55 K  PE=  -25690872.95 kJ/mol  Q6=0.542  q_tet=0.888
-  step   900  t=0.0900 ps  T= 185.32 K  PE=  -25690827.22 kJ/mol  Q6=0.539  q_tet=0.878
-  step  1000  t=0.1000 ps  T= 187.64 K  PE=  -25690812.05 kJ/mol  Q6=0.534  q_tet=0.874
-  step  1100  t=0.1100 ps  T= 201.64 K  PE=  -25690792.27 kJ/mol  Q6=0.530  q_tet=0.866
-  step  1200  t=0.1200 ps  T= 217.71 K  PE=  -25690798.93 kJ/mol  Q6=0.529  q_tet=0.865
-  step  1300  t=0.1300 ps  T= 207.20 K  PE=  -25690724.15 kJ/mol  Q6=0.530  q_tet=0.865
-  step  1400  t=0.1400 ps  T= 210.13 K  PE=  -25690726.02 kJ/mol  Q6=0.529  q_tet=0.863
-  step  1500  t=0.1500 ps  T= 219.63 K  PE=  -25690758.51 kJ/mol  Q6=0.526  q_tet=0.854
-  step  1600  t=0.1600 ps  T= 202.84 K  PE=  -25690659.60 kJ/mol  Q6=0.521  q_tet=0.853
-  step  1700  t=0.1700 ps  T= 214.78 K  PE=  -25690668.34 kJ/mol  Q6=0.518  q_tet=0.844
-  step  1800  t=0.1800 ps  T= 225.32 K  PE=  -25690673.20 kJ/mol  Q6=0.518  q_tet=0.841
-  step  1900  t=0.1900 ps  T= 228.96 K  PE=  -25690630.55 kJ/mol  Q6=0.517  q_tet=0.839
-  step  2000  t=0.2000 ps  T= 238.22 K  PE=  -25690659.33 kJ/mol  Q6=0.513  q_tet=0.838
-  step  2100  t=0.2100 ps  T= 244.13 K  PE=  -25690687.60 kJ/mol  Q6=0.509  q_tet=0.831
-  step  2200  t=0.2200 ps  T= 238.20 K  PE=  -25690621.52 kJ/mol  Q6=0.506  q_tet=0.824
-  step  2300  t=0.2300 ps  T= 245.56 K  PE=  -25690617.33 kJ/mol  Q6=0.502  q_tet=0.822
-  step  2400  t=0.2400 ps  T= 231.04 K  PE=  -25690548.79 kJ/mol  Q6=0.498  q_tet=0.815
-  step  2500  t=0.2500 ps  T= 236.83 K  PE=  -25690526.83 kJ/mol  Q6=0.498  q_tet=0.808
-  step  2600  t=0.2600 ps  T= 229.79 K  PE=  -25690535.61 kJ/mol  Q6=0.495  q_tet=0.806
-  step  2700  t=0.2700 ps  T= 237.92 K  PE=  -25690558.93 kJ/mol  Q6=0.493  q_tet=0.806
-  step  2800  t=0.2800 ps  T= 248.77 K  PE=  -25690654.52 kJ/mol  Q6=0.491  q_tet=0.801
-  step  2900  t=0.2900 ps  T= 243.09 K  PE=  -25690613.34 kJ/mol  Q6=0.489  q_tet=0.792
-  step  3000  t=0.3000 ps  T= 236.52 K  PE=  -25690579.04 kJ/mol  Q6=0.488  q_tet=0.787
-  step  3100  t=0.3100 ps  T= 244.81 K  PE=  -25690627.30 kJ/mol  Q6=0.490  q_tet=0.764
-  step  3200  t=0.3200 ps  T= 237.53 K  PE=  -25690616.20 kJ/mol  Q6=0.487  q_tet=0.759
-  step  3300  t=0.3300 ps  T= 234.87 K  PE=  -25690590.30 kJ/mol  Q6=0.491  q_tet=0.759
-  step  3400  t=0.3400 ps  T= 247.32 K  PE=  -25690659.50 kJ/mol  Q6=0.492  q_tet=0.757
-  step  3500  t=0.3500 ps  T= 244.45 K  PE=  -25690611.45 kJ/mol  Q6=0.492  q_tet=0.758
-  step  3600  t=0.3600 ps  T= 243.11 K  PE=  -25690570.10 kJ/mol  Q6=0.495  q_tet=0.771
-  step  3700  t=0.3700 ps  T= 253.04 K  PE=  -25690622.93 kJ/mol  Q6=0.494  q_tet=0.777
-  step  3800  t=0.3800 ps  T= 244.30 K  PE=  -25690584.51 kJ/mol  Q6=0.489  q_tet=0.772
-  step  3900  t=0.3900 ps  T= 238.08 K  PE=  -25690592.99 kJ/mol  Q6=0.487  q_tet=0.771
-  step  4000  t=0.4000 ps  T= 247.26 K  PE=  -25690623.78 kJ/mol  Q6=0.487  q_tet=0.772
-  step  4100  t=0.4100 ps  T= 246.16 K  PE=  -25690628.13 kJ/mol  Q6=0.487  q_tet=0.766
-  step  4200  t=0.4200 ps  T= 242.01 K  PE=  -25690540.19 kJ/mol  Q6=0.486  q_tet=0.766
-  step  4300  t=0.4300 ps  T= 245.65 K  PE=  -25690541.31 kJ/mol  Q6=0.487  q_tet=0.756
-  step  4400  t=0.4400 ps  T= 240.50 K  PE=  -25690525.87 kJ/mol  Q6=0.482  q_tet=0.750
-  step  4500  t=0.4500 ps  T= 236.17 K  PE=  -25690494.92 kJ/mol  Q6=0.477  q_tet=0.740
-  step  4600  t=0.4600 ps  T= 237.19 K  PE=  -25690517.05 kJ/mol  Q6=0.480  q_tet=0.735
-  step  4700  t=0.4700 ps  T= 242.48 K  PE=  -25690507.53 kJ/mol  Q6=0.477  q_tet=0.743
-  step  4800  t=0.4800 ps  T= 241.86 K  PE=  -25690523.13 kJ/mol  Q6=0.475  q_tet=0.741
-  step  4900  t=0.4900 ps  T= 237.26 K  PE=  -25690528.97 kJ/mol  Q6=0.474  q_tet=0.733
-  step  5000  t=0.5000 ps  T= 233.81 K  PE=  -25690545.39 kJ/mol  Q6=0.475  q_tet=0.730
-  step  5100  t=0.5100 ps  T= 227.75 K  PE=  -25690538.60 kJ/mol  Q6=0.479  q_tet=0.733
-  step  5200  t=0.5200 ps  T= 224.20 K  PE=  -25690542.31 kJ/mol  Q6=0.479  q_tet=0.727
-  step  5300  t=0.5300 ps  T= 234.16 K  PE=  -25690591.74 kJ/mol  Q6=0.481  q_tet=0.728
-  step  5400  t=0.5400 ps  T= 233.86 K  PE=  -25690592.23 kJ/mol  Q6=0.479  q_tet=0.721
-  step  5500  t=0.5500 ps  T= 229.69 K  PE=  -25690571.86 kJ/mol  Q6=0.478  q_tet=0.722
-  step  5600  t=0.5600 ps  T= 226.46 K  PE=  -25690528.15 kJ/mol  Q6=0.477  q_tet=0.727
-  step  5700  t=0.5700 ps  T= 235.27 K  PE=  -25690567.46 kJ/mol  Q6=0.470  q_tet=0.738
-  step  5800  t=0.5800 ps  T= 236.19 K  PE=  -25690534.40 kJ/mol  Q6=0.469  q_tet=0.739
-  step  5900  t=0.5900 ps  T= 254.49 K  PE=  -25690593.87 kJ/mol  Q6=0.466  q_tet=0.735
-  step  6000  t=0.6000 ps  T= 239.97 K  PE=  -25690514.43 kJ/mol  Q6=0.464  q_tet=0.736
-  step  6100  t=0.6100 ps  T= 242.96 K  PE=  -25690548.55 kJ/mol  Q6=0.463  q_tet=0.735
-  step  6200  t=0.6200 ps  T= 238.48 K  PE=  -25690578.81 kJ/mol  Q6=0.464  q_tet=0.728
-  step  6300  t=0.6300 ps  T= 240.15 K  PE=  -25690566.17 kJ/mol  Q6=0.464  q_tet=0.715
-  step  6400  t=0.6400 ps  T= 221.23 K  PE=  -25690523.55 kJ/mol  Q6=0.463  q_tet=0.728
-  step  6500  t=0.6500 ps  T= 237.39 K  PE=  -25690569.43 kJ/mol  Q6=0.463  q_tet=0.725
-  step  6600  t=0.6600 ps  T= 258.93 K  PE=  -25690648.19 kJ/mol  Q6=0.464  q_tet=0.712
-  step  6700  t=0.6700 ps  T= 241.27 K  PE=  -25690572.53 kJ/mol  Q6=0.468  q_tet=0.714
-  step  6800  t=0.6800 ps  T= 233.35 K  PE=  -25690526.29 kJ/mol  Q6=0.469  q_tet=0.713
-  step  6900  t=0.6900 ps  T= 230.87 K  PE=  -25690545.11 kJ/mol  Q6=0.473  q_tet=0.704
-  step  7000  t=0.7000 ps  T= 239.09 K  PE=  -25690582.17 kJ/mol  Q6=0.469  q_tet=0.714
-  step  7100  t=0.7100 ps  T= 243.93 K  PE=  -25690607.52 kJ/mol  Q6=0.474  q_tet=0.712
-  step  7200  t=0.7200 ps  T= 252.30 K  PE=  -25690626.52 kJ/mol  Q6=0.478  q_tet=0.710
-  step  7300  t=0.7300 ps  T= 243.14 K  PE=  -25690554.99 kJ/mol  Q6=0.478  q_tet=0.719
-  step  7400  t=0.7400 ps  T= 239.75 K  PE=  -25690511.80 kJ/mol  Q6=0.473  q_tet=0.715
-  step  7500  t=0.7500 ps  T= 235.75 K  PE=  -25690508.59 kJ/mol  Q6=0.471  q_tet=0.716
-  step  7600  t=0.7600 ps  T= 233.91 K  PE=  -25690501.92 kJ/mol  Q6=0.468  q_tet=0.712
-  step  7700  t=0.7700 ps  T= 248.64 K  PE=  -25690575.54 kJ/mol  Q6=0.469  q_tet=0.716
-  step  7800  t=0.7800 ps  T= 241.02 K  PE=  -25690579.22 kJ/mol  Q6=0.467  q_tet=0.722
-  step  7900  t=0.7900 ps  T= 238.20 K  PE=  -25690613.31 kJ/mol  Q6=0.469  q_tet=0.718
-  step  8000  t=0.8000 ps  T= 231.59 K  PE=  -25690573.53 kJ/mol  Q6=0.465  q_tet=0.723
-  step  8100  t=0.8100 ps  T= 233.52 K  PE=  -25690584.08 kJ/mol  Q6=0.464  q_tet=0.726
-  step  8200  t=0.8200 ps  T= 237.30 K  PE=  -25690618.90 kJ/mol  Q6=0.463  q_tet=0.720
-  step  8300  t=0.8300 ps  T= 233.67 K  PE=  -25690582.93 kJ/mol  Q6=0.465  q_tet=0.708
-  step  8400  t=0.8400 ps  T= 237.46 K  PE=  -25690567.33 kJ/mol  Q6=0.466  q_tet=0.712
-  step  8500  t=0.8500 ps  T= 231.95 K  PE=  -25690544.01 kJ/mol  Q6=0.466  q_tet=0.716
-  step  8600  t=0.8600 ps  T= 224.75 K  PE=  -25690544.97 kJ/mol  Q6=0.466  q_tet=0.708
-  step  8700  t=0.8700 ps  T= 228.92 K  PE=  -25690551.57 kJ/mol  Q6=0.466  q_tet=0.703
-  step  8800  t=0.8800 ps  T= 236.38 K  PE=  -25690581.74 kJ/mol  Q6=0.465  q_tet=0.698
-  step  8900  t=0.8900 ps  T= 239.55 K  PE=  -25690573.23 kJ/mol  Q6=0.466  q_tet=0.696
-  step  9000  t=0.9000 ps  T= 238.04 K  PE=  -25690543.71 kJ/mol  Q6=0.464  q_tet=0.707
-  step  9100  t=0.9100 ps  T= 249.15 K  PE=  -25690573.04 kJ/mol  Q6=0.465  q_tet=0.712
-  step  9200  t=0.9200 ps  T= 231.68 K  PE=  -25690520.77 kJ/mol  Q6=0.461  q_tet=0.711
-  step  9300  t=0.9300 ps  T= 253.79 K  PE=  -25690598.87 kJ/mol  Q6=0.458  q_tet=0.708
-  step  9400  t=0.9400 ps  T= 250.02 K  PE=  -25690594.30 kJ/mol  Q6=0.456  q_tet=0.711
-  step  9500  t=0.9500 ps  T= 241.22 K  PE=  -25690574.97 kJ/mol  Q6=0.451  q_tet=0.702
-  step  9600  t=0.9600 ps  T= 236.23 K  PE=  -25690547.88 kJ/mol  Q6=0.451  q_tet=0.706
-  step  9700  t=0.9700 ps  T= 230.32 K  PE=  -25690524.53 kJ/mol  Q6=0.446  q_tet=0.697
-  step  9800  t=0.9800 ps  T= 245.06 K  PE=  -25690545.27 kJ/mol  Q6=0.447  q_tet=0.698
-  step  9900  t=0.9900 ps  T= 248.34 K  PE=  -25690552.86 kJ/mol  Q6=0.448  q_tet=0.688
-  step 10000  t=1.0000 ps  T= 242.19 K  PE=  -25690536.60 kJ/mol  Q6=0.450  q_tet=0.671
-  MD wall time: 2624.8 s
-  Simulation speed: 0.033 ns/day  |  3.81 steps/s  |  1.0000 ps integrated
-  Trajectory (DCD): /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/pipeline_out/traj_uma_openmm.dcd  (101 frames @ every 100 step)
-  Order CSV: /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/pipeline_out/ice_order_uma_openmm.csv
-  Final PDB: /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/ice_openmm_lammps_match_T243_steps10000.pdb
-========================================================================
+--- Setting up PDB Reporter ---
+  PDB output: ice_rpmd_uma_T243_b32.pdb
+  Report interval: 80 steps (0.02 ps)
+  PDB save interval: 800 steps (0.20 ps)
+  Order CSV: pipeline_out/ice_order_openmm_rpmd_20260403_104115.csv (every 10 steps; path-integral Q6/q_tet; line-flushed)
+
+================================================================================
+RUNNING SIMULATION
+================================================================================
+  Step-0 order (PI avg over beads): Q6=0.6185  q_tet=0.9929 (n_O=64, p50 Q6=0.6185)
+[ 20.0%] Production    | Step      80/400 (   0.0 ps) |   0.00 ns/day
+         PE=-12844683.7 KE=   377.5 Total=-12844306.2 kJ/mol | T= 157.7 K | ρ=0.933 g/cm³
+
+[ 40.0%] Production    | Step     160/400 (   0.0 ps) |   0.00 ns/day
+         PE=-12844680.1 KE=   385.0 Total=-12844295.1 kJ/mol | T= 160.8 K | ρ=0.933 g/cm³
+
+[ 60.0%] Production    | Step     240/400 (   0.1 ps) |   0.00 ns/day
+         PE=-12844608.8 KE=   378.5 Total=-12844230.3 kJ/mol | T= 158.1 K | ρ=0.933 g/cm³
+
+[ 80.0%] Production    | Step     320/400 (   0.1 ps) |   0.00 ns/day
+         PE=-12844813.0 KE=   402.8 Total=-12844410.2 kJ/mol | T= 168.2 K | ρ=0.933 g/cm³
+
+[100.0%] Production    | Step     400/400 (   0.1 ps) |   0.00 ns/day
+         PE=-12844637.6 KE=   422.1 Total=-12844215.5 kJ/mol | T= 176.3 K | ρ=0.933 g/cm³
+
+================================================================================
+SIMULATION COMPLETE
+================================================================================
+Total time: 38.9 minutes (0.65 hours)
+Average speed: 0.00 ns/day
+
+--- Simulation Analysis ---
+
+Production phase statistics:
+  Energy:
+    Mean: -12844285.33 kJ/mol
+    Std:  88.50 kJ/mol
+    Drift: -0.00%
+  Temperature:
+    Mean: 167.52 K (target: 243.0 K)
+    Std:  7.45 K
+  RMSD from minimized (NVT):
+    Mean: 0.0285 nm
+    Std:  0.0034 nm
+    Threshold for frozen: < 0.15 nm
+
+  Ice status: FROZEN (NVT: RMSD < 0.15 nm)
+
+  Output files:
+    Trajectory: ice_rpmd_uma_T243_b32.pdb
+    NPZ data: uma_ice_rpmd_T243K_b32.npz
+    Analysis PNG: uma_ice_rpmd_T243K_b32_analysis.png
+
+================================================================================
+Using shared structure (ice Ih 2x2x2 = 64 mol): /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/lammps/data.ice_uma_64 → /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/pipeline_out/init_openmm_rpmd_64.xyz
+Order CSV: pipeline_out/ice_order_openmm_rpmd_20260403_104115.csv
+OpenMM stamped order CSV complete: rows=41 time_ps=0.000000->0.100000
+=== 2) i-PI + UMA (lammps) ===
+UMA minimization (LAMMPS+fix external) before i-PI: etol=0.0 ftol=1e-06 maxiter=2000 maxeval=50000
+Loading UMA predictor (uma-s-1p1) on cuda ...
+WARNING:root:If 'dataset_list' is provided in the config, the code assumes that each dataset maps to itself. Please use 'dataset_mapping' as 'dataset_list' is deprecated and will be removed in the future.
 LAMMPS (22 Jul 2025 - Update 2)
   using 2 OpenMP thread(s) per MPI task
-# Pipeline 1 ps @ 0.2 fs: NVT Langevin tau=0.1 ps, timestep 0.2 fs, 5000 steps = 1 ps.
-#   thermo/dump every 50 steps (10 fs). Order post-process: lammps_order_from_dump.py --dt-fs 0.2
-#
-# Build data:  python build_lammps_ice_data.py -n 128
-# Run:         python run_lammps_uma_ice.py --infile in.ice_uma_pipeline_1ps_02fs.lmp
-# Post-process: python lammps_order_from_dump.py --dump lammps/dump.pipeline_1ps_02fs.lammpstrj --dt-fs 0.2 -o ice_order_uma_lammps.csv
-units           metal
-atom_style      atomic
-boundary        p p p
-read_data       shared_data.ice_uma
-ERROR: Cannot open file shared_data.ice_uma: No such file or directory (src/src/read_data.cpp:380)
-Last input line: read_data shared_data.ice_uma 
-                           ^^^^^^^^^^^^^^^^^^^
-Model uma-s-1p1 device=cuda task=omol spin=1
-  lammpstrj (id type mass x y z): dump.pipeline_1ps_02fs.lammpstrj
-  xyz (O/H for Ovito):            dump.pipeline_1ps_02fs_ovito.xyz
+units metal
+atom_style atomic
+boundary p p p
+read_data /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/lammps/data.ice_uma_64
+Reading data file ...
+  triclinic box = (0 0 0) to (8.994 15.578 14.644) with tilt (0 0 0)
+  1 by 1 by 1 MPI processor grid
+  reading atoms ...
+  192 atoms
+  read_data CPU = 0.000 seconds
+comm_modify cutoff 12.0
+pair_style zero 1.0
+pair_coeff * *
+
+fix ext_fc all external pf/callback 1 1
+UMA fix external registered → minimize
+minimize 0.0 1e-06 2000 50000
+Generated 0 of 1 mixed pair_coeff terms from geometric mixing rule
+Neighbor list info ...
+  update: every = 1 steps, delay = 0 steps, check = yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 3
+  ghost atom cutoff = 12
+  binsize = 1.5, bins = 6 11 10
+  1 neighbor lists, perpetual/occasional/extra = 1 0 0
+  (1) pair zero, perpetual
+      attributes: half, newton on
+      pair build: half/bin/atomonly/newton/tri
+      stencil: half/bin/3d/tri
+      bin: standard
+Setting up cg style minimization ...
+  Unit style    : metal
+  Current step  : 0
+Per MPI rank memory allocation (min/avg/max) = 5.742 | 5.742 | 5.742 Mbytes
+   Step          Temp          E_pair         E_mol          TotEng         Press     
+         0   0              0              0             -133143.12      0            
+        89   0              0              0             -133146.25      0            
+Loop time of 41.3302 on 2 procs for 89 steps with 192 atoms
+
+89.8% CPU use with 1 MPI tasks x 2 OpenMP threads
+
+Minimization stats:
+  Stopping criterion = linesearch alpha is zero
+  Energy initial, next-to-last, final = 
+     -133143.120673466   -133146.25098288  -133146.250980707
+  Force two-norm initial, final = 15.535539 0.010826494
+  Force max component initial, final = 1.3686359 0.001913327
+  Final line search alpha, max atom move = 6.1035156e-05 1.1678021e-07
+  Iterations, force evaluations = 89 235
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0.00014605 | 0.00014605 | 0.00014605 |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 0.0028476  | 0.0028476  | 0.0028476  |   0.0 |  0.01
+Output  | 0          | 0          | 0          |   0.0 |  0.00
+Modify  | 41.325     | 41.325     | 41.325     |   0.0 | 99.99
+Other   |            | 0.00234    |            |       |  0.01
+
+Nlocal:            192 ave         192 max         192 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:           4573 ave        4573 max        4573 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:            768 ave         768 max         768 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 768
+Ave neighs/atom = 4
+Neighbor list builds = 0
+Dangerous builds = 0
+displace_atoms all move -4.4969999999999999 -7.7889999999999997 -7.3220000000000001
+Displacing atoms ...
+change_box all x final -4.4969999999999999 4.4969999999999999 y final -7.7889999999999997 7.7889999999999997 z final -7.3220000000000001 7.3220000000000001
+Changing box ...
+  triclinic box = (-4.497 0 0) to (4.497 15.578 14.644) with tilt (0 0 0)
+  triclinic box = (-4.497 -7.789 0) to (4.497 7.789 14.644) with tilt (0 0 0)
+  triclinic box = (-4.497 -7.789 -7.322) to (4.497 7.789 7.322) with tilt (0 0 0)
+write_data /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/ipi/lammps_data_ipi_client.data
+System init for write_data ...
+Generated 0 of 1 mixed pair_coeff terms from geometric mixing rule
+WARNING: Not all mixed pair coeffs generated from mixing. Use write_data with 'pair ij' option to store all pair coeffs. (src/src/write_data.cpp:364)
+Wrote minimized LAMMPS data /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/ipi/lammps_data_ipi_client.data
+Total wall time: 0:00:41
+Wrote /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/ipi/init.xyz (192 atoms)
+Wrote minimized i-PI template /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/ipi/init.xyz
+  Removed stale: ice__i-pi.traj_09.xyz
+  Removed stale: ice__i-pi.vtraj_12.xyz
+  Removed stale: ice__i-pi.traj_30.xyz
+  Removed stale: ice__i-pi.vtraj_19.xyz
+  Removed stale: ice__i-pi.vtraj_14.xyz
+  Removed stale: ice__i-pi.traj_04.xyz
+  Removed stale: ice__i-pi.traj_20.xyz
+  Removed stale: ice__i-pi.traj_11.xyz
+  Removed stale: ice__i-pi.vtraj_00.xyz
+  Removed stale: ice__i-pi.traj_14.xyz
+  Removed stale: ice__i-pi.traj_06.xyz
+  Removed stale: ice__i-pi.vtraj_20.xyz
+  Removed stale: ice__i-pi.traj_28.xyz
+  Removed stale: ice__i-pi.traj_13.xyz
+  Removed stale: ice__i-pi.vtraj_09.xyz
+  Removed stale: ice__i-pi.traj_03.xyz
+  Removed stale: ice__i-pi.vtraj_10.xyz
+  Removed stale: ice__i-pi.traj_15.xyz
+  Removed stale: ice__i-pi.vtraj_23.xyz
+  Removed stale: ice__i-pi.traj_01.xyz
+  Removed stale: ice__i-pi.traj_24.xyz
+  Removed stale: ice__i-pi.traj_31.xyz
+  Removed stale: ice__i-pi.traj_05.xyz
+  Removed stale: ice__i-pi.vtraj_22.xyz
+  Removed stale: ice__i-pi.vtraj_28.xyz
+  Removed stale: ice__i-pi.vtraj_31.xyz
+  Removed stale: ice__i-pi.vtraj_01.xyz
+  Removed stale: ice__i-pi.vtraj_03.xyz
+  Removed stale: ice__i-pi.traj_08.xyz
+  Removed stale: ice__i-pi.vtraj_15.xyz
+  Removed stale: ice__i-pi.traj_17.xyz
+  Removed stale: ice__i-pi.traj_19.xyz
+  Removed stale: ice__i-pi.vtraj_05.xyz
+  Removed stale: ice__i-pi.vtraj_21.xyz
+  Removed stale: ice__i-pi.vtraj_06.xyz
+  Removed stale: ice__i-pi.traj_29.xyz
+  Removed stale: ice__i-pi.traj_10.xyz
+  Removed stale: ice__i-pi.vtraj_07.xyz
+  Removed stale: ice__i-pi.vtraj_26.xyz
+  Removed stale: ice__i-pi.vtraj_17.xyz
+  Removed stale: ice__i-pi.traj_27.xyz
+  Removed stale: ice__i-pi.traj_07.xyz
+  Removed stale: ice__i-pi.vtraj_11.xyz
+  Removed stale: ice__i-pi.vtraj_30.xyz
+  Removed stale: ice__i-pi.traj_12.xyz
+  Removed stale: ice__i-pi.traj_02.xyz
+  Removed stale: ice__i-pi.traj_16.xyz
+  Removed stale: ice__i-pi.traj_23.xyz
+  Removed stale: ice__i-pi.vtraj_24.xyz
+  Removed stale: ice__i-pi.vtraj_04.xyz
+  Removed stale: ice__i-pi.traj_21.xyz
+  Removed stale: ice__i-pi.traj_18.xyz
+  Removed stale: ice__i-pi.vtraj_08.xyz
+  Removed stale: ice__i-pi.md
+  Removed stale: ice__i-pi.traj_26.xyz
+  Removed stale: ice__i-pi.vtraj_16.xyz
+  Removed stale: ice__i-pi.traj_22.xyz
+  Removed stale: ice__i-pi.vtraj_25.xyz
+  Removed stale: ice__i-pi.traj_25.xyz
+  Removed stale: ice__i-pi.vtraj_02.xyz
+  Removed stale: ice__i-pi.vtraj_27.xyz
+  Removed stale: ice__i-pi.vtraj_13.xyz
+  Removed stale: ice__i-pi.traj_00.xyz
+  Removed stale: ice__i-pi.vtraj_18.xyz
+  Removed stale: ice__i-pi.vtraj_29.xyz
+  Removed stale: RESTART
+Resolved: 400 i-PI <total_steps> ≈ 0.100000 ps (dt_fs=0.25 fs); LAMMPS client run cap: 9000000 (i-PI ends the job when done). If trajectories end at a much smaller Step:, the run was interrupted — not a --prod cap.
+Wrote /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/ipi/input.xml (64 mol, 32 beads)
+Previous i-PI log saved as /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/ipi/i-pi_run_backup_20260403_112119.log
+Started i-PI (pid 173664) from /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/ipi; log: /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/ipi/i-pi_run.log
+i-PI ready: 127.0.0.1:65535
+Starting lammps client ...
+Loading UMA predictor (uma-s-1p1) on cuda ...
+WARNING:root:If 'dataset_list' is provided in the config, the code assumes that each dataset maps to itself. Please use 'dataset_mapping' as 'dataset_list' is deprecated and will be removed in the future.
+LAMMPS (22 Jul 2025 - Update 2)
+  using 2 OpenMP thread(s) per MPI task
+units metal
+atom_style atomic
+boundary p p p
+read_data /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/ipi/lammps_data_ipi_client.data
+Reading data file ...
+  triclinic box = (-4.497 -7.789 -7.322) to (4.497 7.789 7.322) with tilt (0 0 0)
+  1 by 1 by 1 MPI processor grid
+ERROR: Must define pair_style before Pair Coeffs (src/src/read_data.cpp:807)
+Last input line: read_data /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/ipi/lammps_data_ipi_client.data 
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+i-PI stopped
 Traceback (most recent call last):
-  File "/media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/lammps/run_lammps_uma_ice.py", line 272, in <module>
+  File "/media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/run_ipi_lammps_uma_rpmd.py", line 1278, in <module>
     main()
-  File "/media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/lammps/run_lammps_uma_ice.py", line 247, in main
-    lmp.commands_list([x for x in pre if x.strip()])
-  File "/home/mh7373/miniconda3/lib/python3.12/site-packages/lammps/core.py", line 853, in commands_list
+  File "/media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/run_ipi_lammps_uma_rpmd.py", line 1180, in main
+    _run_client_lammps(
+  File "/media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/run_ipi_lammps_uma_rpmd.py", line 739, in _run_client_lammps
+    lmp.commands_list([
+  File "/home/mh7373/miniconda3/envs/fairchem/lib/python3.12/site-packages/lammps/core.py", line 853, in commands_list
     with ExceptionCheck(self):
          ^^^^^^^^^^^^^^^^^^^^
-  File "/home/mh7373/miniconda3/lib/python3.12/site-packages/lammps/core.py", line 59, in __exit__
+  File "/home/mh7373/miniconda3/envs/fairchem/lib/python3.12/site-packages/lammps/core.py", line 59, in __exit__
     raise self.lmp._lammps_exception
-Exception: ERROR: Cannot open file shared_data.ice_uma: No such file or directory (src/src/read_data.cpp:380)
-Last input line: read_data shared_data.ice_uma 
-                           ^^^^^^^^^^^^^^^^^^^
-Total wall time: 0:00:02
-Built /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/lammps/data.ice_uma (384 atoms)
-Creating shared initial structure: OpenMM UMA minimize -> /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/pipeline_out/shared_data.ice_uma
-OpenMM TIP4P/2005f done.
-OpenMM UMA done.
-Traceback (most recent call last):
-  File "/media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/run_ice_pipeline.py", line 361, in <module>
-    main()
-  File "/media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/run_ice_pipeline.py", line 342, in main
-    _run_lammps_uma(
-  File "/media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/run_ice_pipeline.py", line 178, in _run_lammps_uma
-    subprocess.check_call(cmd, cwd=str(work_dir))
-  File "/home/mh7373/miniconda3/lib/python3.12/subprocess.py", line 413, in check_call
-    raise CalledProcessError(retcode, cmd)
-subprocess.CalledProcessError: Command '['/home/mh7373/miniconda3/bin/python', '/media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/lammps/run_lammps_uma_ice.py', '--infile', '/media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/lammps/in.ice_uma_pipeline_1ps_02fs.lmp', '--data', '/media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/pipeline_out/shared_data.ice_uma', '--dt-fs', '0.1', '--temperature', '243.0', '--friction', '10.0', '--steps', '10000', '--dump-every', '100', '--thermo-every', '100', '--skip-minimize']' returned non-zero exit status 1.
+Exception: ERROR: Must define pair_style before Pair Coeffs (src/src/read_data.cpp:807)
+Last input line: read_data /media/extradrive/Trajectories/openmm/tests/uma_ice_rpmd/ipi/lammps_data_ipi_client.data 
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Total wall time: 0:00:05

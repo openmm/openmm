@@ -102,7 +102,14 @@ def main() -> None:
 
     ml_dev = args.ml_device or ("cuda" if args.platform == "cuda" else None)
     potential = MLPotential(args.model)
-    system = potential.createSystem(topology, task_name="omol", charge=0, spin=1, device=ml_dev)
+    system = potential.createSystem(
+        topology,
+        task_name="omol",
+        charge=0,
+        spin=1,
+        device=ml_dev,
+        use_atom_wrap_for_lammps_parity=True,
+    )
     integrator = VerletIntegrator(1.0 * unit.femtoseconds)
 
     platform = Platform.getPlatformByName(args.platform.upper())

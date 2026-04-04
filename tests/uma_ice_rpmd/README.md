@@ -10,6 +10,8 @@ This simulation tests the stability of ice at sub-freezing temperatures using:
 - **Temperature**: 243 K (30 degrees below freezing)
 - **Ice Ih structure**: proton-ordered orthorhombic supercell from `generate_ice_ih.py`, chosen by **explicit replication** `--nx`, `--ny`, `--nz` (8 molecules per cell); otherwise GenIce CIF, GenIce2, or embedded CIF fallback
 
+**LAMMPS force parity:** OpenMM UMA uses **per-atom** PBC wrap by default (same as Fairchem LAMMPS `fix external`). Override with **`--use-molecular-wrap-for-uma`** on `test_uma_ice_rpmd.py` if you need the old molecular wrap. See [docs/LAMMPS_OPENMM_UMA_PARITY.md](docs/LAMMPS_OPENMM_UMA_PARITY.md).
+
 ### Speed vs LAMMPS (why OpenMM can feel slow)
 
 | Cause | What to do |
@@ -67,22 +69,99 @@ To compare **ice disorder (Q6, q_tet)** between OpenMM and LAMMPS on the same pr
 
 5. **Compare** `ice_order.csv` (OpenMM) vs `ice_order_lammps.csv` (LAMMPS): same columns; trajectories will differ (different Langevin RNG) but **trends** (q_tet / Q6 drift) should be comparable.
 
-### RPMD benchmark: OpenMM vs i-PI + LAMMPS UMA
+### RPMD benchmark: OpenMM vs i-PI + UMA
 
-Compare **path-integral RPMD** (243 K, 0.5 fs default in i-PI script) between OpenMM and i-PI + LAMMPS UMA. **OpenMM** uses **`RPMDIntegrator` PILE_G** by default (Bussi/SVR on the **centroid** normal mode + PILE Langevin on **internal** ring-polymer modes; see `plugins/rpmd` and `--rpmd-thermostat` / `--rpmd-centroid-friction` in `test_uma_ice_rpmd.py`). **i-PI** XML uses `pile_l` (PILE-L), which is a different discretization—expect qualitative, not bit-identical, agreement with OpenMM. The pipeline (`run_rpmd_32x32.sh`) uses **64 molecules** (ice Ih **2×2×2** supercell) and **32 beads** by default. Order parameters use **centroid** bead positions. Prerequisites: `pip install ipi fairchem-lammps fairchem-core lammps`, LAMMPS built with MISC package (fix ipi).
+Compare **path-integral RPMD** (243 K, PILE-G / pile_g) between OpenMM and i-PI. The i-PI side follows the standard two-process model: an **i-PI server** (ring-polymer integrator + socket) and a **force client** that returns UMA energies/forces for each bead configuration.
 
-**Monitoring:** i-PI’s own log is the right place for step/progress (`run_ipi_lammps_uma_rpmd.py` writes **`ipi/i-pi_run.log`** by default). LAMMPS thermo with `fix ipi` is not the main progress indicator; bead trajectories (`ice__i-pi.traj_*.xyz`) also show how many frames have been saved (see `stride` in `ipi/input.xml`).
+Two force-client backends are supported via `--client`:
 
-**Why LAMMPS can look “stuck” at Step 0:** Under `fix ipi`, dynamics are owned by **i-PI** (see LAMMPS docs: initial LAMMPS coordinates are replaced by i-PI). The warning `No fixes with time integration` is expected in this sense—i-PI drives the loop. For a longer explanation, wiring checklist, and references, see **[docs/IPI_LAMMPS_OUTPUT_AND_PROGRESS.md](docs/IPI_LAMMPS_OUTPUT_AND_PROGRESS.md)**.
+| `--client` | Stack | Prerequisites |
+|------------|-------|---------------|
+| `lammps` (default) | LAMMPS Python API + `fix ipi` + `fix external` (FairChem UMA) | `pip install fairchem-lammps fairchem-core lammps` (LAMMPS with MISC package) |
+| `python` | `i-pi-py_driver` + ASE `FAIRChemCalculator` | `pip install ipi fairchem-core` |
 
-1. **Build LAMMPS data** (64 molecules = 2×2×2 cells):  
-   `python lammps/build_lammps_ice_data.py --nx 2 --ny 2 --nz 2 -o lammps/data.ice_uma_64`  
-   (`--nx/--ny/--nz` uses `generate_ice_ih.py` replication; no CIF truncation. For GenIce-based sizing instead, use `-n` with `--input ice.cif`.)
-2. **Convert LAMMPS data → i-PI init**: `python ipi/convert_lammps_to_ipi_xyz.py --data lammps/data.ice_uma_64 -o ipi/init.xyz`
-3. **Run i-PI + LAMMPS UMA**: `python run_ipi_lammps_uma_rpmd.py --molecules 64 --beads 4 --steps 100` (or 1000 for longer run)
-4. **Post-process i-PI trajectory** (path-integral order over beads): `python ipi_order_from_traj.py --traj ipi/ice__i-pi.traj_0.xyz --beads 4 -o pipeline_out/ice_order_ipi_rpmd.csv`
-5. **Run OpenMM RPMD reference**: `python run_openmm_rpmd_reference.py --nx 2 --ny 2 --nz 2 --beads 4 --steps 100`
-6. **Plot comparison (RPMD)**: `python plot_rpmd_comparison.py -o pipeline_out/rpmd_comparison.png` (three panels: ⟨Q6⟩, ⟨q_tet⟩, kinetic T vs time; `--bath-temperature-k` draws the PILE-G target bath line). Add **`--cv-plane pipeline_out/rpmd_cv_plane.png`** for a **2D trajectory** in the order-parameter plane (⟨Q6⟩ vs ⟨q_tet⟩; circle = start, square = end). The suptitle appends **`· N molecules, P beads`**: `N` is read from CSV `n_oxygen` (override with `--molecules`), `P` defaults to **32** (`--beads`; use **`0`** to omit beads).
+The pipeline (`run_rpmd_32x32.sh`) uses **64 molecules** (ice Ih 2x2x2 supercell) and **32 beads** by default. Set `RPMD_IPI_CLIENT=python` to use the ASE driver instead of LAMMPS.
+
+**Monitoring:** i-PI progress lives in `ipi/i-pi_run.log`. Bead trajectories (`ice__i-pi.traj_*.xyz`) show how many frames have been saved (see `stride` in `ipi/input.xml`).
+
+**Why LAMMPS can look "stuck" at Step 0:** Under `fix ipi`, dynamics are owned by **i-PI** (see LAMMPS docs: initial LAMMPS coordinates are replaced by i-PI). The warning `No fixes with time integration` is expected. See **[docs/IPI_LAMMPS_OUTPUT_AND_PROGRESS.md](docs/IPI_LAMMPS_OUTPUT_AND_PROGRESS.md)**.
+
+#### Quick start (orchestrated)
+
+1. **Build LAMMPS data** (64 molecules = 2x2x2 cells):
+   `python lammps/build_lammps_ice_data.py --nx 2 --ny 2 --nz 2 -o lammps/data.ice_uma_64`
+2. **Run i-PI + UMA**:
+   `python run_ipi_lammps_uma_rpmd.py --molecules 64 --beads 4 --steps 100`
+   (uses LAMMPS client by default; add `--client python` for the ASE driver)
+3. **Post-process i-PI trajectory** (path-integral order over beads):
+   `python ipi_order_from_traj.py --traj ipi/ice__i-pi.traj_0.xyz --beads 4 -o pipeline_out/ice_order_ipi_rpmd.csv`
+4. **Run OpenMM RPMD reference**:
+   `python run_openmm_rpmd_reference.py --nx 2 --ny 2 --nz 2 --beads 4 --steps 100`
+5. **Plot comparison (RPMD)**:
+   `python plot_rpmd_comparison.py -o pipeline_out/rpmd_comparison.png`
+
+#### Manual two-terminal workflow (no orchestration script)
+
+If you prefer to run i-PI and the force client yourself:
+
+```bash
+# Terminal 1: prep + i-PI server
+cd tests/uma_ice_rpmd
+python lammps/build_lammps_ice_data.py --nx 2 --ny 2 --nz 2 -o lammps/data.ice_uma_64
+python ipi/convert_lammps_to_ipi_xyz.py --data lammps/data.ice_uma_64 -o ipi/init.xyz
+cd ipi
+i-pi input.xml
+
+# Terminal 2: LAMMPS force client (after i-PI prints "Created inet socket")
+cd tests/uma_ice_rpmd
+python -c "
+from lammps import lammps
+from fairchem.lammps.lammps_fc import FIX_EXT_ID, FIX_EXTERNAL_CMD, FixExternalCallback
+from fairchem.core import pretrained_mlip
+lmp = lammps(cmdargs=['-nocite', '-log', 'none'])
+lmp._predictor = pretrained_mlip.get_predict_unit('uma-s-1p1', device='cuda')
+lmp._task_name = 'omol'
+lmp.commands_list([
+    'units metal', 'atom_style atomic', 'boundary p p p',
+    'read_data lammps/data.ice_uma_64',
+    'comm_modify cutoff 12.0',
+    'pair_style zero 1.0', 'pair_coeff * *',
+])
+lmp.command(FIX_EXTERNAL_CMD)
+lmp.set_fix_external_callback(FIX_EXT_ID, FixExternalCallback(charge=0, spin=1), lmp)
+lmp.command('fix ipi_client all ipi 127.0.0.1 65535')
+lmp.command('run 1000')
+del lmp._predictor; lmp.close()
+"
+```
+
+Edit `ipi/input.xml` to set beads, steps, timestep, thermostat, and port before starting.
+
+#### Troubleshooting: "i-PI did not become ready in time"
+
+If i-PI crashes during startup (before opening its socket), the orchestrator times out. The most common cause is a **broken PyFFTW** installation:
+
+```
+ValueError: cannot reshape array of size 0 into shape (32,576)
+```
+
+Fix: `pip uninstall pyfftw` -- i-PI falls back to NumPy FFT, which works correctly.
+
+The orchestrator also prepends a small `pyfftw` stub on `PYTHONPATH` for the **i-PI subprocess** when it detects broken aligned allocation, so NumPy FFT is used without uninstalling PyFFTW.
+
+#### Troubleshooting: `UMA driver exited with code 1` (Python client)
+
+`fairchem.core` imports `InferenceBatcher`, which pulls **Ray Serve** and **FastAPI**. A **corrupted or mismatched** `pydantic-core` install often surfaces as:
+
+`ImportError: cannot import name 'validate_core_schema' from 'pydantic_core'`
+
+Repair example (sync to versions your `pydantic` package expects; check with `pip show pydantic pydantic-core`):
+
+```bash
+pip install --ignore-installed "pydantic-core==2.41.5" "pydantic==2.12.5"
+```
+
+Use `--ignore-installed` if pip reports a broken `pydantic-core` uninstall (missing `RECORD`).
 
 **Classical MD only** (LAMMPS UMA vs OpenMM UMA vs TIP4P/2005f — **no** RPMD curves): `python plot_md_comparison.py -o pipeline_out/md_order_comparison.png`. Defaults read `ice_order_uma_lammps.csv`, `ice_order_uma_openmm.csv`, `ice_order_classical.csv` from `pipeline_out/` (from `run_ice_pipeline.py` or equivalent). **Kinetic temperature / PE on the LAMMPS curve:** `run_lammps_uma_ice.py` writes **`lammps/lammps_uma_run.log`** (LAMMPS `-log`); `lammps_order_from_dump.py --thermo-log` fills **T_K** and **PE_kj_mol** by matching **Step** to each dump frame (`run_ice_pipeline.py` passes this automatically). Use `--no-log-file` on the LAMMPS runner only if you do not need those columns.
 
@@ -109,13 +188,15 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 python run_openmm_rpmd_reference.py --nx 2 --ny 2 --nz 2 --beads 32 --dt 0.1 --steps 10000 --platform cuda
 ```
 
-End-to-end (**TIP4P RPMD PILE-G → OpenMM UMA RPMD PILE-G → i-PI `pile_g` + LAMMPS UMA → order CSV → 3-way plot**):
+`run_openmm_rpmd_reference.py` passes **`--equil 2.0`** (2 ps ring-polymer thermostat equilibration) by default; use **`--equil 0`** for quick smoke tests. Velocities are drawn **after** energy minimization in `test_uma_ice_rpmd.py` (consistent with TIP4P RPMD). Optional **`--nve-check PS`** on `test_uma_ice_rpmd.py` runs a short NVE segment first and prints energy-drift diagnostics.
+
+End-to-end (**OpenMM UMA RPMD PILE-G → OpenMM UMA RPMD PILE-G → i-PI `pile_g` + LAMMPS UMA → order CSV → 3-way plot**):
 
 ```bash
 bash run_rpmd_32x32.sh
 ```
 
-The script **best-effort kills** prior `run_openmm_*`, `run_ipi_*`, `test_uma_ice_rpmd`, and `i-pi` processes, then runs all three models with matched `RPMD_STEPS` / `RPMD_DT_FS` (default **10000** steps @ 0.1 fs → **1.0 ps**). Outputs include `pipeline_out/ice_order_tip4p_rpmd.csv`, `ice_order_openmm_rpmd.csv`, `ice_order_ipi_rpmd.csv`, and `pipeline_out/rpmd_comparison_32x32.png`.
+The script **best-effort kills** prior `run_openmm_*`, `run_ipi_*`, `test_uma_ice_rpmd`, and `i-pi` processes, then runs both models (LAMMPS client by default; override with `RPMD_IPI_CLIENT=python`) with matched `RPMD_STEPS` / `RPMD_DT_FS` (default **10000** steps @ 0.1 fs → **1.0 ps**). **`RPMD_EQUIL_PS` defaults to 2** (OpenMM NVT equilibration before production order rows, aligned with `run_openmm_rpmd_reference.py`); use **`RPMD_EQUIL_PS=0`** only for quick smoke tests (stderr warning). Outputs include `pipeline_out/ice_order_tip4p_rpmd.csv`, `ice_order_openmm_rpmd.csv`, `ice_order_ipi_rpmd.csv`, and `pipeline_out/rpmd_comparison_32x32.png`.
 
 **OpenMM UMA RPMD only** (skip TIP4P and i-PI): `bash run_openmm_uma_rpmd_only.sh` — writes `pipeline_out/ice_order_openmm_rpmd.csv` with the same defaults as step 2 of `run_rpmd_32x32.sh`. Optional: `RPMD_STEPS`, `RPMD_DT_FS`, `OPENMMML_UMA_RPMD_CHUNK`.
 
@@ -314,21 +395,18 @@ For full rebuild and reinstall on a new machine, see [docs/BUILD_AND_REINSTALL.m
 
 NPT (RPMDMonteCarloBarostat) is supported on CUDA. Ensure OpenMM is built with CUDA (`-DOPENMM_BUILD_CUDA_LIB=ON`). If you encounter `CUDA_ERROR_ILLEGAL_ADDRESS` with NPT, try `--precision double` or report the issue.
 
-### Why OpenMM UMA ice failed while LAMMPS worked (fix: molecular wrap)
+### Per-atom vs molecular wrap (UMA + RPMD)
 
-OpenMM often keeps **unwrapped** Cartesian coordinates (atoms can sit outside the primary cell).
-The old UMA path called **`wrap_positions()` per atom** before the model. That **splits each atom
-independently** across PBC → an H can jump to the opposite face while its O stays put → **fake
-long bonds** → wrong UMA neighbor graph → **catastrophic forces / melting**.
+OpenMM often keeps **unwrapped** Cartesian coordinates. **Per-atom** `wrap_positions` can place O and H on
+different images → long apparent O–H bonds → bad UMA graph. **`_wrap_water_molecules_per_bead`** (molecular)
+avoids that by shifting each whole water into the cell with Hs by MIC from O.
 
-LAMMPS + fairchem also uses per-atom wrap, but short runs from a **wrapped** data file often never
-unwrap enough to break molecules; OpenMM **RPMD / integrator** unwraps aggressively.
+**Current default:** `test_uma_ice_rpmd.py` uses **`use_atom_wrap_for_lammps_parity=True`** (per-atom, LAMMPS /
+Fairchem parity). If you see runaway centroid `T_K` or obvious geometry artifacts, try
+**`--use-molecular-wrap-for-uma`**. Order-parameter CSVs use **per-atom** `wrap_cartesian_orthorhombic` on
+positions before Q6 (aligned with [`ipi_order_from_traj.py`](ipi_order_from_traj.py)).
 
-**Fix (in `umapotential_pythonforce_batch.py`):** `_wrap_water_molecules_per_bead` — for **O,H,H × N**
-(water), put **O in the primary cell** and each **H by minimum-image displacement from that O**.
-**RPMD:** wrapping runs **per bead** (bead `i` uses only `state[i]` positions and box); there is no
-centroid or wrap across beads.
-Reinstall:
+Reinstall openmmml models after editing sources:
 
 ```bash
 cp wrappers/python/openmmml/models/umapotential_pythonforce_batch.py \

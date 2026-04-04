@@ -30,23 +30,43 @@ from typing import Optional, Tuple
 
 import numpy as np
 
-def _sph_harm_batch(l: int, theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
-    """Y_l^m for m=-l..l; shape (2l+1, n).
+def _sph_harm_batch(l: int, colatitude: np.ndarray, azimuth: np.ndarray) -> np.ndarray:
+    """Complex ``Y_l^m`` for m=-l..l; shape ``(2l+1, n)``.
 
-    Prefer SciPy's ``sph_harm_y`` (SciPy >= 1.14); fall back to ``sph_harm`` for older
-    installs (signature ``sph_harm(m, l, theta, phi)``).
+    *colatitude* is polar angle from +z (radians); *azimuth* is angle in the x–y plane
+    from +x (radians). This matches :func:`steinhardt_q6_per_particle` (``arccos(z)``,
+    ``arctan2(y, x)``).
+
+    Uses ``scipy.special.sph_harm_y(n, m, theta, phi)`` (SciPy ≥ 1.15), where *theta*
+    is the polar/colatitudinal angle and *phi* is azimuthal—matching the Steinhardt
+    convention. Older SciPy exposed ``sph_harm(m, n, theta, phi)`` with the same angle
+    meaning; that symbol was removed in favor of ``sph_harm_y``.
+
+    Some SciPy/NumPy builds **segfault** on vectorized harmonic calls with array inputs;
+    we evaluate **scalar-by-scalar** (see i-PI post-process ``ipi_order_from_traj``).
     """
-    out = np.zeros((2 * l + 1, len(theta)), dtype=np.complex128)
+    colat = np.asarray(colatitude, dtype=np.float64).ravel()
+    azim = np.asarray(azimuth, dtype=np.float64).ravel()
+    if colat.shape != azim.shape:
+        raise ValueError("colatitude and azimuth must have the same shape")
+    n = int(colat.shape[0])
+    out = np.zeros((2 * l + 1, n), dtype=np.complex128)
+
     try:
-        from scipy.special import sph_harm_y
-
-        for k, m in enumerate(range(-l, l + 1)):
-            out[k] = sph_harm_y(l, m, theta, phi)
+        from scipy.special import sph_harm as _legacy_sph_harm  # SciPy < 1.15
     except ImportError:
-        from scipy.special import sph_harm
-
+        _legacy_sph_harm = None
+    if _legacy_sph_harm is not None:
         for k, m in enumerate(range(-l, l + 1)):
-            out[k] = sph_harm(m, l, theta, phi)
+            for i in range(n):
+                out[k, i] = _legacy_sph_harm(m, l, colat[i], azim[i])
+        return out
+
+    from scipy.special import sph_harm_y
+
+    for k, m in enumerate(range(-l, l + 1)):
+        for i in range(n):
+            out[k, i] = sph_harm_y(l, m, colat[i], azim[i])
     return out
 
 
@@ -56,6 +76,91 @@ def _mic(dr: np.ndarray, box: np.ndarray) -> np.ndarray:
     for k in range(3):
         L = box[k]
         out[..., k] -= L * np.round(out[..., k] / L)
+    return out
+
+
+def wrap_cartesian_orthorhombic(
+    pos_ang: np.ndarray, box_orth_ang: np.ndarray
+) -> np.ndarray:
+    """Map Cartesian coordinates into the primary cell [0, Lx) × [0, Ly) × [0, Lz).
+
+    i-PI (and other codes) often write **unwrapped** trajectories: coordinates can be
+    many box lengths away from the origin. :func:`_mic` pairwise displacements are
+    still periodic, but **inconsistent** unwrap jumps (e.g. different molecules
+    shifted by arbitrary integers × *L*) can make nearest-neighbor and shell-based
+    order parameters pick the wrong images. Wrapping all sites into one principal
+    cell before Steinhardt / tetrahedral analysis restores sensible O–O neighbor
+    shells for orthorhombic boxes.
+
+    Uses the same rule as ``pos - L * floor(pos / L)`` per axis (diagonal cell only).
+    """
+    pos = np.asarray(pos_ang, dtype=np.float64)
+    box = np.asarray(box_orth_ang, dtype=np.float64).ravel()[:3]
+    out = pos.copy()
+    for k in range(3):
+        L = float(box[k])
+        if L > 0.0:
+            out[..., k] -= L * np.floor(out[..., k] / L)
+    return out
+
+
+def wrap_water_molecules_orthorhombic(
+    pos_ang: np.ndarray, box_orth_ang: np.ndarray
+) -> np.ndarray:
+    """Translate each H₂O (O,H,H triple in file order) by the same ``n * L`` so the O sits in [0,L).
+
+    Independent per-atom wrapping can tear bonds when i-PI writes unwrapped coordinates.
+    Oxygen-only order parameters still benefit from **molecular** shifts: all O–O vectors
+    then match a compact periodic image of the crystal.
+    """
+    pos = np.asarray(pos_ang, dtype=np.float64).copy()
+    boxv = np.asarray(box_orth_ang, dtype=np.float64).ravel()[:3]
+    n = pos.shape[0]
+    if n % 3 != 0:
+        return wrap_cartesian_orthorhombic(pos, boxv)
+    for m in range(0, n, 3):
+        o = pos[m]
+        delta = np.zeros(3, dtype=np.float64)
+        for k in range(3):
+            L = float(boxv[k])
+            if L > 0.0:
+                delta[k] = L * np.floor(o[k] / L)
+        pos[m : m + 3] -= delta
+    return pos
+
+
+def reconcile_water_beads_mic_to_reference(
+    bead_full_positions_ang: list[np.ndarray],
+    box_orth_ang: np.ndarray,
+) -> list[np.ndarray]:
+    """Align each H₂O on beads *b>0* to the same periodic image as bead 0 (O vs O MIC).
+
+    After independent :func:`wrap_water_molecules_orthorhombic` per bead, the same
+    molecule's oxygen can sit on opposite box faces on different RPMD replicas.
+    A naive Cartesian mean of coordinates then smears oxygens and destroys q_tet on
+    the centroid. For each molecule (O,H,H triple in file order), translate O,H,H
+    on bead *b* by the same vector so O_b coincides with the minimum-image position
+    of O_b relative to O on bead 0.
+
+    No-op if fewer than two beads or atom count not divisible by 3.
+    """
+    if len(bead_full_positions_ang) < 2:
+        return [np.asarray(p, dtype=np.float64).copy() for p in bead_full_positions_ang]
+    box = np.asarray(box_orth_ang, dtype=np.float64).ravel()[:3]
+    ref = np.asarray(bead_full_positions_ang[0], dtype=np.float64).copy()
+    n = int(ref.shape[0])
+    if n % 3 != 0:
+        return [np.asarray(p, dtype=np.float64).copy() for p in bead_full_positions_ang]
+    out: list[np.ndarray] = [ref]
+    for b in range(1, len(bead_full_positions_ang)):
+        p = np.asarray(bead_full_positions_ang[b], dtype=np.float64).copy()
+        for m in range(0, n, 3):
+            o_b = p[m]
+            ref_o = ref[m]
+            mic_v = _mic(o_b - ref_o, box)
+            shift = ref_o + mic_v - o_b
+            p[m : m + 3] += shift
+        out.append(p)
     return out
 
 
@@ -194,9 +299,9 @@ def steinhardt_q6_per_particle(
         rhat = qh / dist
         # Colatitude theta from +z, phi from +x
         x, y, zc = rhat[:, 0], rhat[:, 1], rhat[:, 2]
-        theta = np.arccos(np.clip(zc, -1.0, 1.0))
-        phi = np.arctan2(y, x)
-        ylm_block = _sph_harm_batch(l, theta, phi)
+        colatitude = np.arccos(np.clip(zc, -1.0, 1.0))
+        azimuth = np.arctan2(y, x)
+        ylm_block = _sph_harm_batch(l, colatitude, azimuth)
         acc = np.mean(ylm_block, axis=1)
         pref = 4.0 * np.pi / (2 * l + 1)
         q_out[i] = float(np.sqrt(pref * np.sum(np.abs(acc) ** 2)))
@@ -386,6 +491,47 @@ def ice_order_metrics_path_integral(
         n_oxygen=n_o,
         n_q6_valid=nq6,
         n_q_tet_valid=nqt,
+    )
+
+
+def ice_order_metrics_centroid_beads(
+    bead_full_positions_ang: list[np.ndarray],
+    box_orth_ang: np.ndarray,
+    z: Optional[np.ndarray] = None,
+    r_cut_q6: float = 3.7,
+    r_min_q6: float = 2.0,
+) -> IceOrderPiResult:
+    """
+    For one time slice: **average atomic positions over RPMD beads**, then evaluate
+    Q6 and q_tet on that single centroid configuration (same CSV schema as
+    :func:`ice_order_metrics_path_integral`).
+
+    Before averaging, applies :func:`reconcile_water_beads_mic_to_reference` so each
+    molecule uses the same periodic image on every bead (O aligned to bead 0 via MIC).
+    Without this step, centroid q_tet can collapse spuriously after per-bead
+    wrapping when replicas straddle box boundaries.
+
+    This is *not* the usual path-integral estimator mean_b O(x^(b)); nonlinear
+    observables in positions are biased when evaluated on ⟨x⟩_bead. Use
+    :func:`ice_order_metrics_path_integral` when you want the standard RPMD
+    average-over-beads-of-the-observable (recommended for parity with OpenMM RPMD CSVs).
+
+    Parameters
+    ----------
+    bead_full_positions_ang
+        One (n_atoms, 3) array per bead, Cartesian Å, identical atom ordering.
+    """
+    if len(bead_full_positions_ang) < 1:
+        raise ValueError("bead_full_positions_ang must be non-empty")
+    box = np.asarray(box_orth_ang, dtype=np.float64).ravel()[:3]
+    aligned = reconcile_water_beads_mic_to_reference(bead_full_positions_ang, box)
+    stacked = np.stack(
+        [np.asarray(p, dtype=np.float64) for p in aligned],
+        axis=0,
+    )
+    centroid = np.mean(stacked, axis=0)
+    return ice_order_metrics_path_integral(
+        [centroid], box_orth_ang, z=z, r_cut_q6=r_cut_q6, r_min_q6=r_min_q6
     )
 
 

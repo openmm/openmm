@@ -148,26 +148,8 @@ if [[ "$MODEL" == "lammps_uma" ]]; then
     --port "${PORT}" \
     --data "${DATA_FILE}" \
     --device cuda \
-    --ipi-thermostat pile_g
-
-  TRAJ="ipi/ice__i-pi.traj_0.xyz"
-  if [[ ! -f "$TRAJ" ]]; then
-    TRAJ="ipi/ice__i-pi.traj_00.xyz"
-  fi
-  if [[ ! -f "$TRAJ" ]]; then
-    TRAJ="ipi/ice_traj.xyz"
-  fi
-  if [[ ! -f "$TRAJ" ]]; then
-    echo "ERROR: No i-PI trajectory found under ipi/" >&2
-    ls -la ipi/ >&2 || true
-    exit 1
-  fi
-
-  python ipi_order_from_traj.py \
-    --traj "${TRAJ}" \
-    --beads "${beads}" \
-    --dt-fs "${DT_FS}" \
-    -o "${OUTDIR}/order.csv"
+    --ipi-thermostat pile_g \
+    --order-csv "${OUTDIR}/order.csv"
 
   rm -rf "$WORKDIR"
   cd "$UMA_DIR"

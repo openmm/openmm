@@ -31,6 +31,22 @@ if os.getenv('OPENMM_PLUGIN_DIR') is None:
 if '--debug-logs' in sys.argv:
     os.environ['OPENMMML_DEBUG_LOGS'] = '1'
 
+
+def _apply_uma_rpmd_cuda_memory_env(uma_rpmd_chunk_cli=None):
+    """Cap peak VRAM for batched UMA RPMD (OPENMMML_UMA_RPMD_CHUNK in openmmml).
+
+    A full 32-bead forward for 64 H2O can exceed ~12 GB if chunking is disabled.
+    Shell scripts set these; direct ``python test_uma_ice_rpmd.py`` / reference
+    driver did not, which caused CUDA OOM.
+    """
+    if uma_rpmd_chunk_cli is not None:
+        os.environ["OPENMMML_UMA_RPMD_CHUNK"] = str(int(uma_rpmd_chunk_cli))
+    elif not os.environ.get("OPENMMML_UMA_RPMD_CHUNK", "").strip():
+        os.environ["OPENMMML_UMA_RPMD_CHUNK"] = "4"
+    if not os.environ.get("PYTORCH_CUDA_ALLOC_CONF", "").strip():
+        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
+
 import numpy as np
 import time
 from pathlib import Path
@@ -48,13 +64,20 @@ try:
         ICE_ORDER_PI_CSV_HEADER,
         format_ice_order_pi_csv_row,
         ice_order_metrics_path_integral,
+        wrap_cartesian_orthorhombic,
     )
     _HAS_ICE_ORDER = True
 except ImportError:
     ICE_ORDER_PI_CSV_HEADER = ""
     format_ice_order_pi_csv_row = None  # type: ignore
     ice_order_metrics_path_integral = None  # type: ignore
+    wrap_cartesian_orthorhombic = None  # type: ignore
     _HAS_ICE_ORDER = False
+
+from rpmd_thermo_utils import (
+    centroid_kinetic_energy_and_temperature,
+    initialize_rpmd_velocities_nm,
+)
 
 from openmm import app, unit, Vec3
 from openmm import RPMDIntegrator, Context, Platform, RPMDMonteCarloBarostat
@@ -577,19 +600,38 @@ def _mic_centroid(positions_per_bead: list[np.ndarray], box_matrix: np.ndarray) 
     return ref + accum / len(positions_per_bead)
 
 
+def _rpmd_sum_bead_pe_plus_ke_kjmol(integrator: RPMDIntegrator, num_beads: int) -> float:
+    """Sum of per-bead potential + kinetic energy (kJ/mol); excludes thermostat work.
+
+    Used as an approximate conserved quantity for short NVE drift diagnostics.
+    Ring-polymer spring energy between beads is handled inside the integrator and may
+    not appear in this sum; large drift still flags force/timestep issues.
+    """
+    total = 0.0
+    for i in range(num_beads):
+        st = integrator.getState(i, getEnergy=True)
+        total += st.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
+        total += st.getKineticEnergy().value_in_unit(unit.kilojoules_per_mole)
+    return float(total)
+
+
 def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=None,
                    max_molecules=None, ice_supercell=None,
                    num_beads=8, temperature_K=243.0,
                    pressure_bar=1.0, dt_fs=1.0, equilibration_ps=5.0,
                    production_ps=100.0, model_name='uma-s-1-pythonforce-batch',
-                   output_dir='.', report_interval_ps=1.0, pdb_interval_ps=0.2,
+                   output_dir='.', report_interval_ps=1.0, report_every_steps=None,
+                   pdb_interval_ps=0.2,
                    platform_name='cuda', ml_device=None, precision_override=None,
                    minimal_report=False, optimize_inference=False,
                    optimize_inference_tf32_only=False, inference_turbo_rpmd=False,
                    order_csv_path=None, order_every_steps=None, seed=284759,
                    rpmd_thermostat='pile_g',
                    rpmd_friction_ps_inv=1.0,
-                   rpmd_centroid_friction_ps_inv=0.5):
+                   rpmd_centroid_friction_ps_inv=0.5,
+                   nve_check_ps: float = 0.0,
+                   nve_drift_warn_kj_per_mol_per_ps: float = 100.0,
+                   use_atom_wrap_for_lammps_parity: bool = True):
     """
     Run RPMD simulation of ice.
     
@@ -616,7 +658,12 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     output_dir : str
         Output directory for trajectories
     report_interval_ps : float
-        Console reporting interval in picoseconds (default: 1.0)
+        Console reporting interval in picoseconds (default: 1.0). Ignored if
+        ``report_every_steps`` is set and positive.
+    report_every_steps : int, optional
+        If set and positive, print progress every this many integrator steps
+        (overrides ``report_interval_ps``). Expensive with many beads (extra
+        ``getState`` calls per report).
     pdb_interval_ps : float
         PDB frame save interval in picoseconds (default: 0.2, 5 frames/ps)
     platform_name : str
@@ -650,6 +697,16 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
         PILE-G internal branch). Default 1.0.
     rpmd_centroid_friction_ps_inv : float
         For ``pile_g`` only: Bussi centroid coupling in 1/ps. Default 0.5.
+    nve_check_ps : float
+        If > 0, run this many picoseconds with the thermostat disabled (NVE-like RPMD)
+        before equilibration/production and print energy drift. Default 0 (disabled).
+    nve_drift_warn_kj_per_mol_per_ps : float
+        Warn when ``|dE/dt| / N_molecules`` exceeds this threshold (kJ/(mol·ps)) during
+        the NVE check. Default 100.
+    use_atom_wrap_for_lammps_parity : bool
+        If True (default), UMA preprocessing uses ASE ``wrap_positions`` per bead, matching
+        LAMMPS ``fix external`` / Fairchem. If False, use molecular water wrap
+        (``_wrap_water_molecules_per_bead``) instead.
 
     Returns
     -------
@@ -705,9 +762,13 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
         _ml_device = None
 
     print(f"  ML model device: {_ml_device or 'auto (library default)'}")
+    print(
+        f"  UMA PBC wrap: {'per-atom (LAMMPS / Fairchem parity)' if use_atom_wrap_for_lammps_parity else 'molecular water'}"
+    )
 
+    # Default per-atom wrap matches LAMMPS fix external (wrap_positions + atomic_data_from_lammps_data).
     create_kwargs = {'task_name': 'omol', 'charge': 0, 'spin': 1, 'device': _ml_device,
-                     'use_atom_wrap_for_lammps_parity': True}
+                     'use_atom_wrap_for_lammps_parity': use_atom_wrap_for_lammps_parity}
     if inference_turbo_rpmd:
         # Fairchem API accepts string names 'default' | 'turbo' (turbo_rpmd may be unavailable).
         create_kwargs['inference_settings'] = 'turbo'
@@ -825,23 +886,7 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
         perturbed_pos = positions_nm + perturbation
         integrator.setPositions(i, perturbed_pos * unit.nanometer)
         print(f"  Bead {i}: positions set")
-    
-    # Set velocities
-    context.setVelocitiesToTemperature(temperature_K * unit.kelvin)
-    state = context.getState(getVelocities=True)
-    base_velocities = state.getVelocities()
-    
-    for i in range(num_beads):
-        velocities = []
-        for v in base_velocities:
-            vx = v[0].value_in_unit(unit.nanometer/unit.picosecond) + 0.01 * np.random.randn()
-            vy = v[1].value_in_unit(unit.nanometer/unit.picosecond) + 0.01 * np.random.randn()
-            vz = v[2].value_in_unit(unit.nanometer/unit.picosecond) + 0.01 * np.random.randn()
-            velocities.append(Vec3(vx, vy, vz) * unit.nanometer/unit.picosecond)
-        integrator.setVelocities(i, velocities)
-    
-    print(f"  Velocities initialized to {temperature_K} K")
-    
+
     # Energy minimization to relax the structure
     print(f"\n--- Energy Minimization ---")
     print("  Minimizing energy to relax initial structure...")
@@ -869,6 +914,31 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     for i in range(num_beads):
         integrator.setPositions(i, minimized_positions)
     print(f"  Minimized structure copied to all {num_beads} beads")
+
+    # Velocities must be drawn AFTER minimization (match TIP4P RPMD path) so they are
+    # consistent with the minimized geometry; pre-minimize velocities inject spurious KE.
+    # NM thermal draw matches i-PI ``<velocities mode='thermal'>`` (all modes at T_RP = N*T),
+    # not a single Maxwell draw copied to every bead (which leaves internal modes ~cold).
+    context.setPositions(minimized_positions)
+    masses_da = np.array(
+        [
+            system.getParticleMass(i).value_in_unit(unit.dalton)
+            for i in range(n_atoms)
+        ],
+        dtype=np.float64,
+    )
+    initialize_rpmd_velocities_nm(
+        integrator,
+        masses_da,
+        n_beads=num_beads,
+        temperature_k=float(temperature_K),
+        seed=int(seed),
+    )
+
+    print(
+        f"  Velocities initialized (NM thermal, i-PI parity) at {temperature_K} K "
+        f"(after minimization)"
+    )
 
     # Store for NVT RMSD check
     minimized_positions_nm = np.array([[p[0].value_in_unit(unit.nanometer), p[1].value_in_unit(unit.nanometer), p[2].value_in_unit(unit.nanometer)] for p in minimized_positions])
@@ -902,7 +972,10 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     production_steps = int(production_ps / dt_ps)
     total_steps = equilibration_steps + production_steps
     
-    report_interval_steps = max(1, int(report_interval_ps / dt_ps))
+    if report_every_steps is not None and int(report_every_steps) > 0:
+        report_interval_steps = max(1, int(report_every_steps))
+    else:
+        report_interval_steps = max(1, int(report_interval_ps / dt_ps))
     if minimal_report and report_interval_steps < 100:
         report_interval_steps = 100
         print(f"  Minimal mode: report interval clamped to {report_interval_steps} steps for speed")
@@ -940,8 +1013,7 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     temperatures = []
     densities = []
     rmsds = []  # For NVT ice stability
-    minimized_positions_nm = None  # Store for RMSD
-    
+
     pdb_file_handle = open(pdb_file, 'w')
     
     # Write PDB header with proper unit handling (support orthorhombic boxes from GenIce CIF)
@@ -958,9 +1030,21 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     pdb_file_handle.write("CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1\n" % (
         a_ang, b_ang, c_ang, alpha, beta, gamma))
     
-    # Cache masses for temperature calculation
-    masses = [system.getParticleMass(j).value_in_unit(unit.dalton) for j in range(n_atoms)]
-    
+    # Cache masses for temperature calculation (match RPMD centroid thermostat: skip massless sites)
+    n_sys = system.getNumParticles()
+    if n_sys != n_atoms:
+        raise RuntimeError(
+            f"OpenMM system size mismatch: positions/topology n_atoms={n_atoms} "
+            f"but system.getNumParticles()={n_sys}"
+        )
+    masses = np.array(
+        [system.getParticleMass(j).value_in_unit(unit.dalton) for j in range(n_atoms)],
+        dtype=np.float64,
+    )
+    ndof_centroid_ke = int(3 * np.count_nonzero(masses > 0))
+    if ndof_centroid_ke <= 0:
+        raise RuntimeError("No massive particles for centroid kinetic temperature")
+
     # Pre-allocate velocity buffer for reporting
     all_bead_velocities_buffer = np.zeros((num_beads, n_atoms, 3), dtype=np.float64)
     
@@ -972,15 +1056,65 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
             bead_ang_s0.append(
                 np.array(st.getPositions(asNumpy=True).value_in_unit(unit.nanometer)) * 10.0
             )
-        init_om = ice_order_metrics_path_integral(bead_ang_s0, box_orth_ang, z=z_arr)
+        bead_ang_s0_wrapped = [
+            wrap_cartesian_orthorhombic(p, box_orth_ang) for p in bead_ang_s0
+        ]
+        init_om = ice_order_metrics_path_integral(bead_ang_s0_wrapped, box_orth_ang, z=z_arr)
         print(
             f"  Step-0 order (PI avg over beads): Q6={init_om.q6_mean:.4f}  q_tet={init_om.q_tet_mean:.4f} "
             f"(n_O={init_om.n_oxygen}, p50 Q6={init_om.q6_p50:.4f})"
         )
         if order_csv_f and format_ice_order_pi_csv_row:
-            order_csv_f.write(format_ice_order_pi_csv_row(0, 0.0, "", "", init_om))
+            for b in range(num_beads):
+                state_b = integrator.getState(b, getVelocities=True)
+                all_bead_velocities_buffer[b] = state_b.getVelocities(
+                    asNumpy=True
+                ).value_in_unit(unit.nanometer / unit.picosecond)
+            state0 = integrator.getState(0, getEnergy=True)
+            _centroid_ke0, centroid_temp0 = centroid_kinetic_energy_and_temperature(
+                all_bead_velocities_buffer,
+                masses,
+                ndof_centroid_ke=ndof_centroid_ke,
+            )
+            pe0_kj = state0.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
+            order_csv_f.write(
+                format_ice_order_pi_csv_row(
+                    0,
+                    0.0,
+                    f"{centroid_temp0:.4f}",
+                    f"{pe0_kj:.6f}",
+                    init_om,
+                )
+            )
             order_csv_f.flush()
-    
+
+    if nve_check_ps > 0.0 and _ts != "none":
+        print("\n--- NVE drift check (thermostat off) ---")
+        n_nve = max(1, int(round(nve_check_ps / dt_ps)))
+        e0 = _rpmd_sum_bead_pe_plus_ke_kjmol(integrator, num_beads)
+        integrator.setThermostatType(RPMDIntegrator.NoneThermo)
+        for _ in range(n_nve):
+            integrator.step(1)
+        e1 = _rpmd_sum_bead_pe_plus_ke_kjmol(integrator, num_beads)
+        de = e1 - e0
+        rate = abs(de) / max(float(num_molecules), 1.0) / max(nve_check_ps, 1e-12)
+        print(f"  NVE steps: {n_nve}  ({nve_check_ps:.4f} ps @ dt={dt_fs} fs)")
+        print(f"  Sum_bead(PE+KE): E0={e0:.4f}  E1={e1:.4f}  ΔE={de:.4f} kJ/mol")
+        print(
+            f"  |ΔE|/(N_mol·Δt) = {rate:.4f} kJ/(mol·ps)  (warn if > {nve_drift_warn_kj_per_mol_per_ps})"
+        )
+        if rate > nve_drift_warn_kj_per_mol_per_ps:
+            print(
+                "  WARNING: large NVE energy drift — try smaller --dt, check UMA forces, "
+                "or numerical precision (mixed vs double)."
+            )
+        if _ts == "pile_g":
+            integrator.setThermostatType(RPMDIntegrator.PileG)
+            integrator.setCentroidFriction(rpmd_centroid_friction_ps_inv / unit.picosecond)
+        elif _ts == "pile":
+            integrator.setThermostatType(RPMDIntegrator.Pile)
+        print("  Thermostat restored for equilibration/production.\n")
+
     step = 0
     while step < total_steps:
         # Calculate next checkpoint
@@ -1029,29 +1163,17 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
                 
                 # Calculate physical temperature from centroid kinetic energy
                 # Physical T = (2 * KE_centroid) / (3 * N_atoms * k_B)
-                centroid_ke = 0.0
-                
                 # Get velocities for all beads (write into pre-allocated buffer)
                 for b in range(num_beads):
                     state_b = integrator.getState(b, getVelocities=True)
                     all_bead_velocities_buffer[b] = state_b.getVelocities(asNumpy=True).value_in_unit(unit.nanometer/unit.picosecond)
                 
-                centroid_velocities = np.mean(all_bead_velocities_buffer, axis=0)
-                
-                # KE = 0.5 * sum(m * v^2)
-                # v is in nm/ps, m is in dalton (g/mol)
-                # 1 dalton * (nm/ps)^2 = 1 g/mol * (1e-9 m / 1e-12 s)^2 = 1e-3 kg/mol * 1e6 m^2/s^2 = 1000 J/mol = 1 kJ/mol
-                # So the result is directly in kJ/mol
-                for j in range(n_atoms):
-                    v2 = np.sum(centroid_velocities[j]**2)
-                    centroid_ke += 0.5 * masses[j] * v2
-                
-                current_ke = centroid_ke # This is the physical KE
+                current_ke, current_temp = centroid_kinetic_energy_and_temperature(
+                    all_bead_velocities_buffer,
+                    masses,
+                    ndof_centroid_ke=ndof_centroid_ke,
+                )
                 current_total = current_pe + current_ke
-                
-                # Calculate temperature from physical KE
-                # k_B = 8.314e-3 kJ/(mol*K)
-                current_temp = (2.0 * current_ke) / (3.0 * n_atoms * 8.314e-3)
                 
                 # Calculate density if NPT (barostat active)
                 if _use_barostat:
@@ -1137,7 +1259,10 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
                 bead_ang.append(
                     np.array(state.getPositions(asNumpy=True).value_in_unit(unit.nanometer)) * 10.0
                 )
-            om = ice_order_metrics_path_integral(bead_ang, box_orth_ang, z=z_arr)
+            bead_ang_wrapped = [
+                wrap_cartesian_orthorhombic(p, box_orth_ang) for p in bead_ang
+            ]
+            om = ice_order_metrics_path_integral(bead_ang_wrapped, box_orth_ang, z=z_arr)
             sim_time_ps = step * dt_ps
             t_k = ""  # Fill if not minimal
             pe_kj = ""
@@ -1147,9 +1272,12 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
                 for b in range(num_beads):
                     state_b = integrator.getState(b, getVelocities=True)
                     all_bead_velocities_buffer[b] = state_b.getVelocities(asNumpy=True).value_in_unit(unit.nanometer/unit.picosecond)
-                centroid_velocities = np.mean(all_bead_velocities_buffer, axis=0)
-                centroid_ke = sum(0.5 * masses[j] * np.sum(centroid_velocities[j]**2) for j in range(n_atoms))
-                t_k = f"{(2.0 * centroid_ke) / (3.0 * n_atoms * 8.314e-3):.4f}"
+                _centroid_ke, centroid_temp = centroid_kinetic_energy_and_temperature(
+                    all_bead_velocities_buffer,
+                    masses,
+                    ndof_centroid_ke=ndof_centroid_ke,
+                )
+                t_k = f"{centroid_temp:.4f}"
             order_csv_f.write(format_ice_order_pi_csv_row(step, sim_time_ps, t_k, pe_kj, om))
             order_csv_f.flush()
     
@@ -1175,22 +1303,37 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
     else:
         energies = np.array(energies)
         temperatures = np.array(temperatures)
+        prod_start_idx = len(energies) // 2 if energies.size > 0 else 0
         
-        # Production phase only
-        prod_start_idx = len(energies) // 2
-        prod_energies = energies[prod_start_idx:]
-        prod_temps = temperatures[prod_start_idx:]
+        # Production phase only (based on report checkpoints, not integrator steps)
+        if energies.size == 0:
+            print(
+                "\n  No progress-report energy samples "
+                "(simulation may be shorter than --report-interval); skipping drift stats."
+            )
+            is_frozen = True
+        else:
+            prod_energies = energies[prod_start_idx:]
+            prod_temps = temperatures[prod_start_idx:]
+            
+            print(f"\nProduction phase statistics:")
+            print(f"  Energy:")
+            if prod_energies.size == 0:
+                print("    (empty production window — use longer run or smaller --report-interval)")
+            else:
+                print(f"    Mean: {np.mean(prod_energies):.2f} kJ/mol")
+                print(f"    Std:  {np.std(prod_energies):.2f} kJ/mol")
+                print(
+                    f"    Drift: {(prod_energies[-1] - prod_energies[0]) / prod_energies[0] * 100:+.2f}%"
+                )
+            print(f"  Temperature:")
+            if prod_temps.size == 0:
+                print("    (empty production window)")
+            else:
+                print(f"    Mean: {np.mean(prod_temps):.2f} K (target: {temperature_K} K)")
+                print(f"    Std:  {np.std(prod_temps):.2f} K")
         
-        print(f"\nProduction phase statistics:")
-        print(f"  Energy:")
-        print(f"    Mean: {np.mean(prod_energies):.2f} kJ/mol")
-        print(f"    Std:  {np.std(prod_energies):.2f} kJ/mol")
-        print(f"    Drift: {(prod_energies[-1] - prod_energies[0])/prod_energies[0]*100:+.2f}%")
-        print(f"  Temperature:")
-        print(f"    Mean: {np.mean(prod_temps):.2f} K (target: {temperature_K} K)")
-        print(f"    Std:  {np.std(prod_temps):.2f} K")
-        
-        if _use_barostat and len(densities) > 0:
+        if energies.size > 0 and _use_barostat and len(densities) > 0:
             densities = np.array(densities)
             prod_densities = densities[prod_start_idx:]
             print(f"  Density:")
@@ -1328,7 +1471,15 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=str, default='.',
                        help='Output directory (default: current directory)')
     parser.add_argument('--report-interval', type=float, default=1.0,
-                       help='Console report interval in ps (default: 1.0)')
+                       help='Console report interval in ps (default: 1.0). Unused if --report-every-steps > 0.')
+    parser.add_argument(
+        '--report-every-steps',
+        type=int,
+        default=0,
+        metavar='N',
+        help='Print progress every N integrator steps (0 = use --report-interval in ps instead). '
+        'Many beads: each report queries all bead velocities — keep N large for long runs unless debugging.',
+    )
     parser.add_argument('--pdb-interval', type=float, default=0.2,
                        help='PDB frame save interval in ps (default: 0.2, 5 frames/ps)')
     parser.add_argument('--platform', type=str, default='cuda', choices=['cuda', 'cpu'],
@@ -1376,7 +1527,48 @@ if __name__ == '__main__':
         default=0.5,
         help='PILE_G only: Bussi centroid coupling in 1/ps (default: 0.5)',
     )
+    parser.add_argument(
+        '--nve-check',
+        type=float,
+        default=0.0,
+        metavar='PS',
+        help=(
+            'If >0, run this many ps with thermostat off before equilibration/production '
+            'and print approximate PE+KE drift (diagnostic; default: 0 = disabled)'
+        ),
+    )
+    parser.add_argument(
+        '--nve-drift-warn',
+        type=float,
+        default=100.0,
+        metavar='KJ_MOL_PS',
+        help=(
+            'Warn if |dE/dt|/N_molecules exceeds this during --nve-check '
+            '(kJ/(mol·ps); default: 100)'
+        ),
+    )
+    parser.add_argument(
+        '--use-molecular-wrap-for-uma',
+        action='store_true',
+        help=(
+            'Use molecular water PBC wrap inside UMA instead of per-atom wrap. '
+            'Default is per-atom wrap for LAMMPS/Fairchem force parity.'
+        ),
+    )
+    parser.add_argument(
+        '--uma-rpmd-chunk',
+        type=int,
+        default=None,
+        metavar='N',
+        help=(
+            'Beads per UMA GPU sub-batch (sets OPENMMML_UMA_RPMD_CHUNK). '
+            'If omitted and env unset, defaults to 4 for consumer GPUs. '
+            'Use 2 if 32 beads × 64 mol still OOM on ~12 GB.'
+        ),
+    )
     args = parser.parse_args()
+
+    _apply_uma_rpmd_cuda_memory_env(uma_rpmd_chunk_cli=args.uma_rpmd_chunk)
 
     if args.debug_logs:
         import openmmml.models.umapotential_pythonforce_batch as _umab
@@ -1418,6 +1610,7 @@ if __name__ == '__main__':
             model_name=args.model,
             output_dir=args.output,
             report_interval_ps=args.report_interval,
+            report_every_steps=args.report_every_steps if args.report_every_steps > 0 else None,
             pdb_interval_ps=args.pdb_interval,
             minimal_report=args.minimal,
             platform_name=args.platform,
@@ -1432,6 +1625,9 @@ if __name__ == '__main__':
             rpmd_thermostat=args.rpmd_thermostat.replace('-', '_'),
             rpmd_friction_ps_inv=args.rpmd_friction,
             rpmd_centroid_friction_ps_inv=args.rpmd_centroid_friction,
+            nve_check_ps=args.nve_check,
+            nve_drift_warn_kj_per_mol_per_ps=args.nve_drift_warn,
+            use_atom_wrap_for_lammps_parity=not args.use_molecular_wrap_for_uma,
         )
         sys.exit(0 if success else 1)
     except Exception as e:

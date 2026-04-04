@@ -66,13 +66,8 @@ case $model in
       --dt-fs 0.1 \
       --seed "$SEED" \
       --port "$PORT" \
-      --data lammps/data.ice_uma_128
-    # Post-process trajectory to order.csv (i-PI writes ice__i-pi.traj_0.xyz etc)
-    TRAJ="ipi/ice__i-pi.traj_0.xyz"
-    if [[ ! -f "$TRAJ" ]]; then
-      TRAJ="ipi/ice_traj.xyz"
-    fi
-    python ipi_order_from_traj.py --traj "$TRAJ" --beads "$bead" -o "$OUTDIR/order.csv"
+      --data lammps/data.ice_uma_128 \
+      --order-csv "$OUTDIR/order.csv"
     rm -rf "$WORKDIR"
     ;;
   *)

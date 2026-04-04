@@ -20,10 +20,10 @@ INDENT = "   "
 docTags = {'emphasis':'i', 'bold':'b', 'itemizedlist':'ul', 'listitem':'li', 'preformatted':'pre', 'computeroutput':'tt', 
            'superscript': 'sup', 'subscript':'sub', 'verbatim': 'verbatim'}
 typeSubstitutions = {'double':'float', 'long long':'int', 'string':'str'}
-vectorPattern = re.compile("vector\<(.*)>")
-setPattern = re.compile("set\<(.*)>")
-mapPattern = re.compile("map\<(.*)\,(.*)>")
-pairPattern = re.compile("pair\<(.*)\,(.*)>")
+vectorPattern = re.compile(r"vector<(.*)>")
+setPattern = re.compile(r"set<(.*)>")
+mapPattern = re.compile(r"map<(.*),(.*)>")
+pairPattern = re.compile(r"pair<(.*),(.*)>")
 
 def is_method_abstract(argstring):
     return argstring.split(")")[-1].find("=0") >= 0
@@ -56,7 +56,7 @@ def striphtmltags(s):
     s = s.replace('<i>', '_').replace('</i>', '_')
     s = s.replace('<b>', '*').replace('</b>', '*')
 
-    s = re.sub('\s*(<ul>.*?</ul>\s*)', replace_ul_tags, s, flags=re.MULTILINE | re.DOTALL)
+    s = re.sub(r"\s*(<ul>.*?</ul>\s*)", replace_ul_tags, s, flags=re.MULTILINE | re.DOTALL)
     return s
 
 def trimToSingleSpace(text):

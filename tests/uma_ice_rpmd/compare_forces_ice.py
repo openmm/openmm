@@ -83,7 +83,14 @@ def get_openmm_forces(topology: app.Topology, positions_nm: list, box_vectors: t
     ml_dev = "cuda" if platform.getName() == "CUDA" else "cpu"
 
     potential = MLPotential(MODEL_OMM)
-    system = potential.createSystem(topology, task_name="omol", charge=0, spin=1, device=ml_dev)
+    system = potential.createSystem(
+        topology,
+        task_name="omol",
+        charge=0,
+        spin=1,
+        device=ml_dev,
+        use_atom_wrap_for_lammps_parity=True,
+    )
 
     integrator = VerletIntegrator(1.0 * unit.femtoseconds)
     context = Context(system, integrator, platform)

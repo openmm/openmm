@@ -86,14 +86,14 @@ public:
      * Get a reference to the child node with a particular name.  If there is no child
      * with the specified name, this throws an exception.
      *
-     * @param the name of the child node to get
+     * @param name   the name of the child node to get
      */
     const SerializationNode& getChildNode(const std::string& name) const;
     /**
      * Get a reference to the child node with a particular name.  If there is no child
      * with the specified name, this throws an exception.
      *
-     * @param the name of the child node to get
+     * @param name   the name of the child node to get
      */
     SerializationNode& getChildNode(const std::string& name);
     /**

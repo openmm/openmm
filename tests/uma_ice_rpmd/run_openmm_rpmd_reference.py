@@ -12,10 +12,16 @@ identical initial structure. If the data file is missing, it is built automatica
 
 Produces ice_order_openmm_rpmd.csv for plot_rpmd_comparison.py.
 
+Batched UMA RPMD sets ``OPENMMML_UMA_RPMD_CHUNK`` (default 4) and
+``PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`` inside
+``test_uma_ice_rpmd.py`` when unset, so 32 beads × 64 mol fits ~12 GB VRAM.
+Override with ``--uma-rpmd-chunk 2`` or the environment variable if needed.
+
 Usage:
   cd tests/uma_ice_rpmd
   python run_openmm_rpmd_reference.py
   python run_openmm_rpmd_reference.py --nx 2 --ny 2 --nz 2 --beads 4 --steps 100   # short test
+  python run_openmm_rpmd_reference.py --equil 0 --steps 200   # smoke: no equilibration
 """
 from __future__ import annotations
 
@@ -73,6 +79,41 @@ def _lammps_data_to_xyz(data_path: Path, molecules: int) -> Path:
     return xyz_path
 
 
+def _ipi_init_xyz_to_openmm_xyz(ipi_xyz: Path, molecules: int) -> Path:
+    """Convert LAMMPS-minimized i-PI init.xyz ([-L/2, L/2]) to OpenMM XYZ ([0, L)).
+
+    Ensures both codes start from the identical minimized atomic coordinates.
+    """
+    import re
+    import numpy as np
+    from ase import Atoms
+    from ase.io import write as ase_write
+    from ase.geometry import wrap_positions
+
+    with open(ipi_xyz) as f:
+        n = int(f.readline().strip())
+        comment = f.readline().strip()
+        symbols, positions = [], []
+        for _ in range(n):
+            parts = f.readline().split()
+            symbols.append(parts[0])
+            positions.append([float(x) for x in parts[1:4]])
+
+    cell_match = re.search(
+        r"CELL\(abcABC\):\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)", comment
+    )
+    cell = [float(cell_match.group(i)) for i in (1, 2, 3)]
+    pos = np.array(positions, dtype=np.float64)
+    pos = wrap_positions(pos, cell=np.diag(cell), pbc=[True, True, True])
+
+    atoms = Atoms(symbols=symbols, positions=pos, cell=cell, pbc=True)
+    xyz_path = _SCRIPT_DIR / "pipeline_out" / f"init_openmm_rpmd_{molecules}.xyz"
+    xyz_path.parent.mkdir(parents=True, exist_ok=True)
+    ase_write(str(xyz_path), atoms, format="extxyz")
+    print(f"Converted i-PI minimized init.xyz → {xyz_path} ({n} atoms, [0,L) convention)")
+    return xyz_path
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="OpenMM RPMD reference (match i-PI params)")
     ap.add_argument("--steps", type=int, default=None, help="Override: MD steps (default: from --prod and --dt)")
@@ -89,6 +130,13 @@ def main() -> None:
     ap.add_argument("--beads", type=int, default=4, help="RPMD beads (default 4, scaled from 8)")
     ap.add_argument("--seed", type=int, default=284759, help="Random seed for thermostat/velocities")
     ap.add_argument("--order-csv", type=Path, default=_SCRIPT_DIR / "pipeline_out" / "ice_order_openmm_rpmd.csv")
+    ap.add_argument(
+        "--order-every",
+        type=int,
+        default=10,
+        metavar="N",
+        help="Write order CSV every N production steps (use 1 for very short --steps smoke tests).",
+    )
     ap.add_argument("--platform", default="cuda")
     ap.add_argument(
         "--ml-device",
@@ -122,19 +170,47 @@ def main() -> None:
     ap.add_argument(
         "--rpmd-centroid-friction",
         type=float,
-        default=0.5,
-        help="PILE_G centroid (Bussi) coupling 1/ps (default: 0.5)",
+        default=1.0,
+        help="PILE_G centroid (Bussi) coupling 1/ps (default: 1.0; matches i-PI tau=1000 fs)",
+    )
+    ap.add_argument(
+        "--equil",
+        type=float,
+        default=0,
+        help="Equilibration time in ps before production (default: 0 for i-PI parity; use 2.0 for equilibrated sampling)",
+    )
+    ap.add_argument(
+        "--report-every-steps",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Forward to test_uma_ice_rpmd: print progress every N integrator steps (0 = default: "
+        "ps-based --report-interval, auto from production length). Use e.g. 5 for frequent updates "
+        "(costly with many beads).",
+    )
+    ap.add_argument(
+        "--uma-rpmd-chunk",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Forward to test_uma_ice_rpmd: UMA bead sub-batch size (default 4 there if unset). "
+        "Use 2 on ~12 GB GPUs if 32 beads OOM.",
     )
     args = ap.parse_args()
 
     molecules = 8 * args.nx * args.ny * args.nz
-    # Ensure identical initial structure: LAMMPS data → XYZ → --input
-    data_path = _ensure_lammps_data(args.nx, args.ny, args.nz)
-    xyz_path = _lammps_data_to_xyz(data_path, molecules)
-    print(
-        f"Using shared structure (ice Ih {args.nx}x{args.ny}x{args.nz} = {molecules} mol): "
-        f"{data_path} → {xyz_path}"
-    )
+    ipi_init = _SCRIPT_DIR / "ipi" / "init.xyz"
+    if ipi_init.is_file():
+        xyz_path = _ipi_init_xyz_to_openmm_xyz(ipi_init, molecules)
+        print(
+            f"Using LAMMPS-minimized i-PI init.xyz for parity: {ipi_init} → {xyz_path}"
+        )
+    else:
+        data_path = _ensure_lammps_data(args.nx, args.ny, args.nz)
+        xyz_path = _lammps_data_to_xyz(data_path, molecules)
+        print(
+            f"Using raw LAMMPS data (no i-PI init.xyz found): {data_path} → {xyz_path}"
+        )
 
     dt_fs = args.dt
     # test_uma_ice_rpmd uses --prod (ps), not step count; derive prod from --steps when given
@@ -150,11 +226,10 @@ def main() -> None:
         "--beads", str(args.beads),
         "--temperature", "243",
         "--dt", str(dt_fs),
-        "--equil", "0",
+        "--equil", str(args.equil),
         "--prod", str(prod_ps),
         "--order-csv", str(args.order_csv),
-        "--report-interval", str(report_ps),
-        "--order-every", "10",
+        "--order-every", str(args.order_every),
         "--seed", str(args.seed),
         "--platform", args.platform,
         "--model", "uma-s-1p1-pythonforce-batch",
@@ -165,12 +240,18 @@ def main() -> None:
         "--rpmd-centroid-friction",
         str(args.rpmd_centroid_friction),
     ]
+    if args.report_every_steps > 0:
+        cmd.extend(["--report-every-steps", str(args.report_every_steps)])
+    else:
+        cmd.extend(["--report-interval", str(report_ps)])
     if args.ml_device:
         cmd.extend(["--ml-device", args.ml_device])
     if args.inference_turbo_rpmd:
         cmd.append("--inference-turbo-rpmd")
     if args.optimize_inference_tf32_only:
         cmd.append("--optimize-inference-tf32-only")
+    if args.uma_rpmd_chunk is not None:
+        cmd.extend(["--uma-rpmd-chunk", str(args.uma_rpmd_chunk)])
     args.order_csv.parent.mkdir(parents=True, exist_ok=True)
     subprocess.check_call(cmd, cwd=str(_SCRIPT_DIR))
     print(f"Order CSV: {args.order_csv}")

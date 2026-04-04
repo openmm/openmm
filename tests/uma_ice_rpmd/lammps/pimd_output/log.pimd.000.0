@@ -1,0 +1,93 @@
+LAMMPS (22 Jul 2025 - Update 2)
+Processor partition = 0
+  using 2 OpenMP thread(s) per MPI task
+Reading data file ...
+  triclinic box = (0 0 0) to (4.497 7.789 7.322) with tilt (0 0 0)
+  1 by 1 by 1 MPI processor grid
+  reading atoms ...
+  24 atoms
+  read_data CPU = 0.000 seconds
+Initializing PI Langevin equation thermostat...
+  Bead ID    |    omega    |    tau    |    c1    |    c2
+      0     1.27254722e+02 1.00000000e+00 9.99750031e-01 2.23578850e-02
+      1     1.27254722e+02 1.00000000e+00 9.99750031e-01 2.23578850e-02
+      2     1.27254722e+02 1.00000000e+00 9.99750031e-01 2.23578850e-02
+      3     1.27254722e+02 1.00000000e+00 9.99750031e-01 2.23578850e-02
+  PILE_L thermostat successfully initialized!
+
+WARNING: No pairwise cutoff or binsize set. Atom sorting therefore disabled. (src/src/atom.cpp:2499)
+WARNING: Communication cutoff is 0.0. No ghost atoms will be generated. Energies and forces may be wrong and atoms may get lost. (src/src/comm_brick.cpp:212)
+Per MPI rank memory allocation (min/avg/max) = 3.176 | 3.176 | 3.176 Mbytes
+   Step          Time           Temp          PotEng         KinEng       f_rpmd[4]      f_rpmd[5]      f_rpmd[6]      f_rpmd[7]   
+         0   0              243           -16642.89       0.72243495    -66568.671      3.0153807     -5.4984782     -1.9953939    
+         2   0.001          245.82872     -16642.934      0.73084469    -66568.649      2.9925267     -4.2009282     -1.3017927    
+Loop time of 0.241755 on 2 procs for 2 steps with 24 atoms
+
+Performance: 0.357 ns/day, 67.154 hours/ns, 8.273 timesteps/s, 198.548 atom-step/s
+97.2% CPU use with 1 MPI tasks x 2 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 4.557e-06  | 4.557e-06  | 4.557e-06  |   0.0 |  0.00
+Output  | 1.8432e-05 | 1.8432e-05 | 1.8432e-05 |   0.0 |  0.01
+Modify  | 0.24172    | 0.24172    | 0.24172    |   0.0 | 99.98
+Other   |            | 1.395e-05  |            |       |  0.01
+
+Nlocal:             24 ave          24 max          24 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:              8 ave           8 max           8 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:              0 ave           0 max           0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 0
+Ave neighs/atom = 0
+Neighbor list builds = 0
+Dangerous builds = 0
+Initializing PI Langevin equation thermostat...
+  Bead ID    |    omega    |    tau    |    c1    |    c2
+      0     1.27254722e+02 1.00000000e+00 9.99750031e-01 2.23578850e-02
+      1     1.27254722e+02 1.00000000e+00 9.99750031e-01 2.23578850e-02
+      2     1.27254722e+02 1.00000000e+00 9.99750031e-01 2.23578850e-02
+      3     1.27254722e+02 1.00000000e+00 9.99750031e-01 2.23578850e-02
+  PILE_L thermostat successfully initialized!
+
+WARNING: Communication cutoff is 0.0. No ghost atoms will be generated. Energies and forces may be wrong and atoms may get lost. (src/src/comm_brick.cpp:212)
+Per MPI rank memory allocation (min/avg/max) = 4.43 | 4.43 | 4.43 Mbytes
+   Step          Time           Temp          PotEng         KinEng       f_rpmd[4]      f_rpmd[5]      f_rpmd[6]      f_rpmd[7]   
+         2   0.001          245.82872     -16642.934      0.73084469    -66568.649      2.9925267     -4.1780458     -1.2789246    
+         3   0.0015         240.22743     -16642.947      0.71419215    -66568.691      2.967982      -3.244266      -0.79658662   
+         4   0.002          234.34847     -16642.946      0.69671408    -66568.637      2.938234      -2.1443804     -0.23228448   
+         5   0.0025         220.39092     -16642.926      0.65521854    -66568.615      2.9060724     -1.083881       0.29589388   
+         6   0.003          192.83217     -16642.888      0.57328683    -66568.601      2.8728443     -0.13944218     0.757033     
+         7   0.0035         163.75367     -16642.843      0.48683693    -66568.62       2.8400013      0.59903213     1.1161653    
+Loop time of 0.602288 on 2 procs for 5 steps with 24 atoms
+
+Performance: 0.359 ns/day, 66.921 hours/ns, 8.302 timesteps/s, 199.240 atom-step/s
+96.3% CPU use with 1 MPI tasks x 2 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 0          | 0          | 0          |   0.0 |  0.00
+Neigh   | 0          | 0          | 0          |   0.0 |  0.00
+Comm    | 3.465e-06  | 3.465e-06  | 3.465e-06  |   0.0 |  0.00
+Output  | 0.00013067 | 0.00013067 | 0.00013067 |   0.0 |  0.02
+Modify  | 0.60213    | 0.60213    | 0.60213    |   0.0 | 99.97
+Other   |            | 2.24e-05   |            |       |  0.00
+
+Nlocal:             24 ave          24 max          24 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:              0 ave           0 max           0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:              0 ave           0 max           0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 0
+Ave neighs/atom = 0
+Neighbor list builds = 0
+Dangerous builds = 0
+Total wall time: 0:00:02
