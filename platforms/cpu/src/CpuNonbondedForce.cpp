@@ -26,6 +26,8 @@
 
 #include "SimTKOpenMMUtilities.h"
 #include "CpuNonbondedForce.h"
+#include "CpuClusterPairList.h"
+#include "CpuNonbondedForceCluster.h"
 #include "ReferenceForce.h"
 #include "ReferencePME.h"
 #include <algorithm>
@@ -49,7 +51,7 @@ const int CpuNonbondedForce::NUM_TABLE_POINTS = 2048;
 
 CpuNonbondedForce::CpuNonbondedForce(const CpuNeighborList& neighbors) : neighborList(&neighbors), cutoff(false), useSwitch(false), periodic(false),
         periodicExceptions(false), ewald(false), pme(false), ljpme(false), tableIsValid(false), expTableIsValid(false), cutoffDistance(0.0f),
-        alphaDispersionEwald(0.0f), alphaEwald(0.0f) {
+        alphaDispersionEwald(0.0f), alphaEwald(0.0f), clusterPairListValid(false), clusterHandledDirect(false), lastNLGeneration(-1), clusterCallCount(0), stepsSinceClusterRebuild(0) {
 }
 
 CpuNonbondedForce::~CpuNonbondedForce() {
@@ -65,8 +67,10 @@ CpuNonbondedForce::~CpuNonbondedForce() {
      --------------------------------------------------------------------------------------- */
 
 void CpuNonbondedForce::setUseCutoff(float distance, float solventDielectric) {
-    if (distance != cutoffDistance)
+    if (distance != cutoffDistance) {
         tableIsValid = false;
+        clusterPairListValid = false;
+    }
     cutoff = true;
     cutoffDistance = distance;
     inverseRcut6 = pow(cutoffDistance, -6);
@@ -375,8 +379,68 @@ void CpuNonbondedForce::calculateReciprocalIxn(int numberOfAtoms, float* posq, c
 
 void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const vector<Vec3>& atomCoordinates, const vector<pair<float, float> >& atomParameters,
                                            const vector<float>& C6params, const vector<set<int> >& exclusions, vector<AlignedArray<float> >& threadForce, double* totalEnergy, ThreadPool& threads) {
-    // Record the parameters for the threads.
-    
+    // Cluster kernel: always on for supported configurations.
+    // Scope: periodic + cutoff + orthorhombic, excludes LJPME.
+    bool clusterUsed = false;
+    if (!ljpme && cutoff && periodic && !triclinic
+        && neighborList != NULL && CpuNonbondedForceCluster::isSupported()) {
+        neighborList->skipNeighborSearch = true;
+        // Auto-rebuild cluster pair list when atoms drift past half the padding.
+        float paddedCut = cutoffDistance * 1.08f;
+        float clusterPadding = paddedCut - cutoffDistance;
+        float halfPad2 = 0.25f * clusterPadding * clusterPadding;
+        int curGen = neighborList->getGeneration();
+        bool needClusterRebuild = !clusterPairListValid || curGen != lastNLGeneration;
+        if (curGen != lastNLGeneration)
+            lastNLGeneration = curGen;
+        stepsSinceClusterRebuild++;
+        if (!needClusterRebuild && stepsSinceClusterRebuild >= 4
+            && clusterRebuildPosq.size() == (size_t)(4*numberOfAtoms)) {
+            for (int i = 0; i < numberOfAtoms; i++) {
+                float dx = posq[4*i]   - clusterRebuildPosq[4*i];
+                float dy = posq[4*i+1] - clusterRebuildPosq[4*i+1];
+                float dz = posq[4*i+2] - clusterRebuildPosq[4*i+2];
+                if (dx*dx + dy*dy + dz*dz > halfPad2) {
+                    needClusterRebuild = true;
+                    break;
+                }
+            }
+            stepsSinceClusterRebuild = 0;
+        }
+        if (needClusterRebuild) {
+            clusterPairList.buildDirect(*neighborList, numberOfAtoms, posq,
+                                        atomParameters, exclusions,
+                                        paddedCut, periodicBoxVectors, periodic);
+            clusterPairListValid = true;
+            clusterRebuildPosq.assign(posq, posq + 4*numberOfAtoms);
+        } else {
+            // Update cluster positions from current posq.
+            auto& clusters = clusterPairList.getMutableClusters();
+            for (auto& c : clusters) {
+                for (int k = 0; k < c.size; k++) {
+                    int ai = c.atomIndex[k];
+                    c.x[k] = posq[4*ai];
+                    c.y[k] = posq[4*ai+1];
+                    c.z[k] = posq[4*ai+2];
+                    c.q[k] = posq[4*ai+3];
+                }
+            }
+        }
+        CpuNonbondedForceCluster::calculateDirectIxn(
+            clusterPairList, posq, threadForce, totalEnergy, threads,
+            cutoffDistance, periodic, periodicBoxVectors,
+            true, krf, crf, ewald || pme, alphaEwald,
+            erfcTable.data(), ewaldScaleTable.data(),
+            ewaldDXInv, erfcDXInv, NUM_TABLE_POINTS,
+            useSwitch, switchingDistance);
+        clusterUsed = true;
+        // For non-Ewald: we're done (reaction field has no exclusion correction).
+        if (!(ewald || pme))
+            return;
+        // For Ewald/PME: must run exclusion subtraction below.
+    }
+
+    // Set up member state needed by threadComputeDirect.
     this->numberOfAtoms = numberOfAtoms;
     this->posq = posq;
     this->atomCoordinates = &atomCoordinates[0];
@@ -386,16 +450,17 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
     this->threadForce = &threadForce;
     includeEnergy = (totalEnergy != NULL);
     threadEnergy.resize(threads.getNumThreads());
-    atomicCounter = 0;
+    // If cluster kernel handled direct space, skip the NL-based direct loop entirely
+    // by setting atomicCounter past all blocks.
+    atomicCounter = clusterUsed ? neighborList->getNumBlocks() : 0;
     atomicCounter2 = 0;
-    
-    // Signal the threads to start running and wait for them to finish.
-    
+    this->clusterHandledDirect = clusterUsed;
     threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeDirect(threads, threadIndex); });
     threads.waitForThreads();
-    
+    this->clusterHandledDirect = false;
+
     // Combine the energies from all the threads.
-    
+
     if (totalEnergy != NULL) {
         double directEnergy = 0;
         int numThreads = threads.getNumThreads();
@@ -415,15 +480,18 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
     fvec4 boxSize(periodicBoxVectors[0][0], periodicBoxVectors[1][1], periodicBoxVectors[2][2], 0);
     fvec4 invBoxSize(recipBoxSize[0], recipBoxSize[1], recipBoxSize[2], 0);
     if (ewald || pme || ljpme) {
-        // Compute the interactions from the neighbor list.
-        while (true) {
-            int nextBlock = atomicCounter++;
-            if (nextBlock >= neighborList->getNumBlocks())
-                break;
-            calculateBlockEwaldIxn(nextBlock, forces, energyPtr, boxSize, invBoxSize);
+        // Compute the direct-space interactions from the neighbor list.
+        // Skip if the cluster kernel already handled direct space.
+        if (!clusterHandledDirect) {
+            while (true) {
+                int nextBlock = atomicCounter++;
+                if (nextBlock >= neighborList->getNumBlocks())
+                    break;
+                calculateBlockEwaldIxn(nextBlock, forces, energyPtr, boxSize, invBoxSize);
+            }
         }
 
-        // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
+        // Subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
 
         const int groupSize = max(1, numberOfAtoms/(10*numThreads));
         while (true) {

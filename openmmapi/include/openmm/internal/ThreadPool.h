@@ -32,11 +32,15 @@
 
 #define NOMINMAX
 #include "windowsExport.h"
+#include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
 #include <thread>
 #include <vector>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace OpenMM {
 
@@ -62,6 +66,8 @@ public:
      */
     ThreadPool(int numThreads=0);
     ~ThreadPool();
+    ThreadPool(const ThreadPool&) = delete;
+    ThreadPool& operator=(const ThreadPool&) = delete;
     /**
      * Get the number of worker threads in the pool.
      */
@@ -90,13 +96,22 @@ public:
     void resumeThreads();
 private:
     bool isDeleted;
-    int numThreads, waitCount;
+    int numThreads;
     std::vector<std::thread> threads;
     std::vector<ThreadData*> threadData;
-    std::condition_variable startCondition, endCondition;
-    std::mutex lock;
     Task* currentTask;
     std::function<void (ThreadPool& pool, int)> currentFunction;
+#ifdef _WIN32
+    // WaitOnAddress-based synchronization (5x faster than condition_variable on Windows).
+    long _epoch;
+    long _pad1[15]; // Separate cache lines to avoid false sharing.
+    long _doneCount;
+    long _pad2[15];
+#else
+    int waitCount;
+    std::condition_variable startCondition, endCondition;
+    std::mutex lock;
+#endif
 };
 
 /**

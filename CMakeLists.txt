@@ -309,6 +309,11 @@ IF(NOT APPLE)
     ENDIF(DL_LIBRARY)
 ENDIF()
 
+# On Windows, link synchronization.lib for WaitOnAddress/WakeByAddress (ThreadPool).
+IF(WIN32 AND OPENMM_BUILD_SHARED_LIB)
+    TARGET_LINK_LIBRARIES(${SHARED_TARGET} synchronization)
+ENDIF()
+
 IF(BUILD_TESTING)
     INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/tests)
 ENDIF(BUILD_TESTING)

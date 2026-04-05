@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CpuKernels.h"
+#include "CpuNonbondedForceCluster.h"
 #include "ReferenceAngleBondIxn.h"
 #include "ReferenceBondForce.h"
 #include "ReferenceConstantPotential14.h"
@@ -236,7 +237,7 @@ void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
         throw OpenMMException("Particle coordinate is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan");
 
     // Determine whether we need to recompute the neighbor list.
-        
+
     if (data.neighborList != NULL && data.cutoff > 0.0) {
         double padding = data.paddedCutoff-data.cutoff;;
         bool needRecompute = false;
@@ -600,7 +601,10 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         useSwitchingFunction = false;
     }
     else {
-        data.requestNeighborList(nonbondedCutoff, 0.25*nonbondedCutoff, true, exclusions);
+        // Wider NL padding when cluster kernel is available — reduces rebuild frequency
+        // to amortize the cluster pair list build cost. Stock kernel uses original padding.
+        double nlPadding = CpuNonbondedForceCluster::isSupported() ? 0.75*nonbondedCutoff : 0.25*nonbondedCutoff;
+        data.requestNeighborList(nonbondedCutoff, nlPadding, true, exclusions);
         useSwitchingFunction = force.getUseSwitchingFunction();
         switchingDistance = force.getSwitchingDistance();
     }
@@ -807,6 +811,8 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
     NonbondedForce::NonbondedMethod method = force.getNonbondedMethod();
     if (force.getUseDispersionCorrection() && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
+    // Invalidate cluster pair list cache when parameters change.
+    nonbonded->invalidateClusterCache();
 }
 
 void CpuCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
@@ -1224,7 +1230,8 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
         useSwitchingFunction = false;
     }
     else {
-        data.requestNeighborList(nonbondedCutoff, 0.25*nonbondedCutoff, true, exclusions);
+        double nlPadding2 = CpuNonbondedForceCluster::isSupported() ? 0.75*nonbondedCutoff : 0.25*nonbondedCutoff;
+        data.requestNeighborList(nonbondedCutoff, nlPadding2, true, exclusions);
         useSwitchingFunction = force.getUseSwitchingFunction();
         switchingDistance = force.getSwitchingDistance();
     }

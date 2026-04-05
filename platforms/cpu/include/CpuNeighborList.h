@@ -70,6 +70,16 @@ public:
     int getNumBlocks() const;
     int getBlockSize() const;
     /**
+     * Get the generation counter (incremented each time the NL is rebuilt).
+     */
+    int getGeneration() const { return generation; }
+    /**
+     * If true, computeNeighborList skips the expensive neighbor search (phase 2)
+     * and only does Hilbert sorting + voxel hash. Used when the cluster kernel
+     * builds pairs directly via buildDirect instead of from NL neighbors.
+     */
+    mutable bool skipNeighborSearch;
+    /**
      * Get an object for iterating over the neighbors of an atom block.
      */
     NeighborIterator getNeighborIterator(int blockIndex) const;
@@ -112,6 +122,7 @@ private:
     bool usePeriodic, dense;
     float maxDistance;
     std::atomic<int> atomicCounter;
+    int generation = 0;
 };
 
 class OPENMM_EXPORT_CPU CpuNeighborList::NeighborIterator {

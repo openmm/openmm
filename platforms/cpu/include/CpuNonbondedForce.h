@@ -27,6 +27,7 @@
 
 #include "AlignedArray.h"
 #include "CpuNeighborList.h"
+#include "CpuClusterPairList.h"
 #include "ReferencePairIxn.h"
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/vectorize.h"
@@ -173,6 +174,11 @@ class CpuNonbondedForce {
       void calculateDirectIxn(int numberOfAtoms, float* posq, const std::vector<Vec3>& atomCoordinates, const std::vector<std::pair<float, float> >& atomParameters,
             const std::vector<float>& C6params, const std::vector<std::set<int> >& exclusions, std::vector<AlignedArray<float> >& threadForce, double* totalEnergy, ThreadPool& threads);
 
+      /**
+       * Invalidate the cached cluster pair list (call when parameters change).
+       */
+      void invalidateClusterCache() { clusterPairListValid = false; }
+
     /**
      * This routine contains the code executed by each thread.
      */
@@ -211,6 +217,14 @@ protected:
         float inverseRcut6;
         float inverseRcut6Expterm;
         std::atomic<int> atomicCounter, atomicCounter2;
+        // Cluster pair list for optimized direct space computation.
+        CpuClusterPairList clusterPairList;
+        bool clusterPairListValid;
+        bool clusterHandledDirect;
+        int lastNLGeneration;
+        int clusterCallCount;
+        int stepsSinceClusterRebuild;
+        std::vector<float> clusterRebuildPosq; // positions at last cluster rebuild
 
         static const float TWO_OVER_SQRT_PI;
         static const int NUM_TABLE_POINTS;

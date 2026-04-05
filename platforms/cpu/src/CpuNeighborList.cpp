@@ -175,8 +175,10 @@ public:
         periodicBoxVec4[2] = fvec4(periodicBoxVectors[2][0], periodicBoxVectors[2][1], periodicBoxVectors[2][2], 0);
 
         float maxDistanceSquared = maxDistance * maxDistance;
-        float refineCutoff = maxDistance-max(max(blockWidth[0], blockWidth[1]), blockWidth[2]);
-        float refineCutoffSquared = refineCutoff*refineCutoff;
+        // Skip per-atom refinement: accept all atoms passing the block-center check.
+        // The cluster pair list's BB pruning + j-mask refinement filters false positives.
+        // This avoids the expensive per-atom distance check for ~26% of candidates.
+        float refineCutoffSquared = maxDistanceSquared;
 
         int dIndexY = int((maxDistance+blockWidth[1])/voxelSizeY)+1; // How may voxels away do we have to look?
         int dIndexZ = int((maxDistance+blockWidth[2])/voxelSizeZ)+1;
@@ -409,7 +411,7 @@ private:
     vector<vector<vector<pair<float, int> > > > bins;
 };
 
-CpuNeighborList::CpuNeighborList(int blockSize) : blockSize(blockSize) {
+CpuNeighborList::CpuNeighborList(int blockSize) : blockSize(blockSize), skipNeighborSearch(false) {
 }
 
 void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const vector<set<int> >& exclusions,
@@ -426,6 +428,7 @@ template<bool USE_INDICES>
 void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const vector<set<int> >& exclusions,
             const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads) {
     dense = false;
+    generation++;
     int numBlocks = (numAtoms+blockSize-1)/blockSize;
     blockNeighbors.resize(numBlocks);
     blockExclusions.resize(numBlocks);
@@ -474,8 +477,8 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
     if (!usePeriodic)
         edgeSizeY = edgeSizeZ = maxDistance; // TODO - adjust this as needed
     else {
-        edgeSizeY = 0.6f*periodicBoxVectors[1][1]/floorf(periodicBoxVectors[1][1]/maxDistance);
-        edgeSizeZ = 0.6f*periodicBoxVectors[2][2]/floorf(periodicBoxVectors[2][2]/maxDistance);
+        edgeSizeY = 0.8f*periodicBoxVectors[1][1]/floorf(periodicBoxVectors[1][1]/maxDistance);
+        edgeSizeZ = 0.8f*periodicBoxVectors[2][2]/floorf(periodicBoxVectors[2][2]/maxDistance);
     }
     Voxels voxels(blockSize, edgeSizeY, edgeSizeZ, miny, maxy, minz, maxz, periodicBoxVectors, usePeriodic);
     for (int i = 0; i < numAtoms; i++) {
@@ -490,8 +493,9 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
     this->voxels = &voxels;
 
     // Signal the threads to start running and wait for them to finish.
-    
-    atomicCounter = 0;
+    // When skipNeighborSearch is set, workers exit immediately (atomicCounter >= numBlocks).
+
+    atomicCounter = skipNeighborSearch ? numBlocks : 0;
     threads.resumeThreads();
     threads.waitForThreads();
     
