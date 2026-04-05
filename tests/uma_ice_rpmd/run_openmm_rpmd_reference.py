@@ -196,6 +196,12 @@ def main() -> None:
         help="Forward to test_uma_ice_rpmd: UMA bead sub-batch size (default 4 there if unset). "
         "Use 2 on ~12 GB GPUs if 32 beads OOM.",
     )
+    ap.add_argument(
+        "--conservative-forces",
+        action="store_true",
+        help="Use autograd forces (grad(E, pos)) instead of UMA direct force head. "
+        "Slower but energy-conserving; diagnostic for non-conservative force drift.",
+    )
     args = ap.parse_args()
 
     molecules = 8 * args.nx * args.ny * args.nz
@@ -252,6 +258,8 @@ def main() -> None:
         cmd.append("--optimize-inference-tf32-only")
     if args.uma_rpmd_chunk is not None:
         cmd.extend(["--uma-rpmd-chunk", str(args.uma_rpmd_chunk)])
+    if args.conservative_forces:
+        cmd.append("--conservative-forces")
     args.order_csv.parent.mkdir(parents=True, exist_ok=True)
     subprocess.check_call(cmd, cwd=str(_SCRIPT_DIR))
     print(f"Order CSV: {args.order_csv}")

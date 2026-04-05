@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <simulation verbosity="medium">
-  <!-- RPMD: 64 mol, 32 beads, 243 K, thermostat=pile_g, 0.25 fs -->
-  <total_steps>400</total_steps>
+  <!-- RPMD: 64 mol, 32 beads, 243 K, thermostat=pile_g, 0.1 fs -->
+  <total_steps>10000</total_steps>
   <prng>
     <seed>284759</seed>
   </prng>
@@ -11,7 +11,7 @@
     <properties stride="10" filename="md">
       [ step, time{picosecond}, temperature{kelvin}, temperature(nm=0){kelvin}, potential{electronvolt} ]
     </properties>
-    <checkpoint filename="RESTART" stride="400"/>
+    <checkpoint filename="RESTART" stride="10000"/>
   </output>
 
   <ffsocket mode="inet" name="lammps">
@@ -29,7 +29,7 @@
     </ensemble>
     <motion mode="dynamics">
       <dynamics mode="nvt">
-        <timestep units="femtosecond">0.25</timestep>
+        <timestep units="femtosecond">0.1</timestep>
         <thermostat mode="pile_g">
           <tau units="femtosecond">1000.0</tau>
         </thermostat>

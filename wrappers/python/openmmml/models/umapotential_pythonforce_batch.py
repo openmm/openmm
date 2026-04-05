@@ -118,6 +118,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
         spin: int = 1,
         device: Optional[str] = None,
         use_atom_wrap_for_lammps_parity: bool = False,
+        conservative_forces: bool = False,
         **args,
     ) -> None:
         """Add UMA force with batched RPMD support."""
@@ -183,6 +184,7 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
             'charge': charge,
             'spin': spin,
             'isPeriodic': isPeriodic,
+            'conservative_forces': conservative_forces,
         }
 
         def _ensure_model_loaded():
@@ -214,9 +216,44 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                     raise ValueError(f"Multiple datasets: {valid}. Specify task_name.")
             elif task not in predict_unit.dataset_to_tasks:
                 raise ValueError(f"Invalid task_name '{task}'. Valid: {list(predict_unit.dataset_to_tasks.keys())}")
+            if _config.get('conservative_forces', False):
+                _backbone = getattr(predict_unit.model.module, 'backbone', predict_unit.model.module)
+                if hasattr(_backbone, 'regress_config'):
+                    _was_direct = _backbone.regress_config.direct_forces
+                    _backbone.regress_config.direct_forces = False
+                    print(
+                        f"  OpenMM UMA: conservative_forces=True — "
+                        f"backbone.regress_config.direct_forces {_was_direct} → False",
+                        flush=True,
+                    )
+                else:
+                    print(
+                        "  OpenMM UMA: WARNING conservative_forces set but regress_config missing",
+                        flush=True,
+                    )
             cache['predict_unit'] = predict_unit
             cache['valid_dataset_name'] = task
-            print(f"Lazy-loaded UMA model '{_config['model_name']}' on {_config['device']} (OpenMM context)")
+            try:
+                df = bool(predict_unit.direct_forces)
+            except Exception as exc:
+                print(
+                    f"Lazy-loaded UMA model '{_config['model_name']}' on {_config['device']} "
+                    f"(OpenMM context); could not read predict_unit.direct_forces: {exc}",
+                    flush=True,
+                )
+            else:
+                if df:
+                    mode_desc = (
+                        "learned direct force head; FairChem predict() uses torch.no_grad()"
+                    )
+                else:
+                    mode_desc = "autograd forces from model energy (grad-enabled inference path)"
+                print(
+                    f"Lazy-loaded UMA model '{_config['model_name']}' on {_config['device']} "
+                    f"(OpenMM context).\n"
+                    f"  predict_unit.direct_forces={df} — {mode_desc}.",
+                    flush=True,
+                )
         
         # Import modules once for closure scope
         from fairchem.core.datasets.atomic_data import atomicdata_list_to_batch
@@ -472,7 +509,13 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
         system.addForce(force)
 
         wrap_mode = "atom (LAMMPS parity)" if _use_atom_wrap else "molecular (water O-H preserving)"
-        print(f"UMA force added with batched RPMD support (model: {self.model_name}, task: {task_name or 'auto'}, device: {device}, wrap: {wrap_mode})")
+        print(
+            f"UMA force added with batched RPMD support (model: {self.model_name}, "
+            f"task: {task_name or 'auto'}, device: {device}, wrap: {wrap_mode}, "
+            f"conservative_forces CLI={conservative_forces}). "
+            f"Effective predict_unit.direct_forces is printed on first force evaluation.",
+            flush=True,
+        )
 
 
 # No need to register at module level - MLPotential will auto-register from entry points

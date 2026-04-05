@@ -631,7 +631,8 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
                    rpmd_centroid_friction_ps_inv=0.5,
                    nve_check_ps: float = 0.0,
                    nve_drift_warn_kj_per_mol_per_ps: float = 100.0,
-                   use_atom_wrap_for_lammps_parity: bool = True):
+                   use_atom_wrap_for_lammps_parity: bool = True,
+                   conservative_forces: bool = False):
     """
     Run RPMD simulation of ice.
     
@@ -766,9 +767,17 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
         f"  UMA PBC wrap: {'per-atom (LAMMPS / Fairchem parity)' if use_atom_wrap_for_lammps_parity else 'molecular water'}"
     )
 
-    # Default per-atom wrap matches LAMMPS fix external (wrap_positions + atomic_data_from_lammps_data).
     create_kwargs = {'task_name': 'omol', 'charge': 0, 'spin': 1, 'device': _ml_device,
-                     'use_atom_wrap_for_lammps_parity': use_atom_wrap_for_lammps_parity}
+                     'use_atom_wrap_for_lammps_parity': use_atom_wrap_for_lammps_parity,
+                     'conservative_forces': conservative_forces}
+    if conservative_forces:
+        print(
+            "  Forces: conservative_forces CLI=True (OpenMM sets backbone.regress_config.direct_forces=False)"
+        )
+    print(
+        "  Forces: effective FairChem mode is predict_unit.direct_forces "
+        "(logged when UMA loads on first force evaluation)."
+    )
     if inference_turbo_rpmd:
         # Fairchem API accepts string names 'default' | 'turbo' (turbo_rpmd may be unavailable).
         create_kwargs['inference_settings'] = 'turbo'
@@ -1556,6 +1565,14 @@ if __name__ == '__main__':
         ),
     )
     parser.add_argument(
+        '--conservative-forces',
+        action='store_true',
+        help=(
+            'Use autograd forces (grad(E, pos)) instead of UMA direct force head. '
+            'Slower but energy-conserving; diagnostic for non-conservative force drift.'
+        ),
+    )
+    parser.add_argument(
         '--uma-rpmd-chunk',
         type=int,
         default=None,
@@ -1628,6 +1645,7 @@ if __name__ == '__main__':
             nve_check_ps=args.nve_check,
             nve_drift_warn_kj_per_mol_per_ps=args.nve_drift_warn,
             use_atom_wrap_for_lammps_parity=not args.use_molecular_wrap_for_uma,
+            conservative_forces=args.conservative_forces,
         )
         sys.exit(0 if success else 1)
     except Exception as e:

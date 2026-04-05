@@ -132,6 +132,23 @@ class UMADriver(ASEDriver):
         self.ase_calculator = FAIRChemCalculator(
             predict_unit, task_name=self.task_name
         )
+        try:
+            _df = bool(predict_unit.direct_forces)
+        except Exception as exc:
+            print(
+                f"[UMADriver] Could not read predict_unit.direct_forces: {exc}",
+                flush=True,
+            )
+        else:
+            _desc = (
+                "direct force head (predict uses torch.no_grad)"
+                if _df
+                else "autograd from model energy"
+            )
+            print(
+                f"[UMADriver] predict_unit.direct_forces={_df} — {_desc}",
+                flush=True,
+            )
         print(f"[UMADriver] FAIRChemCalculator ready (task={self.task_name})", flush=True)
 
     def compute_structure(self, cell, pos):

@@ -66,6 +66,20 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 _LOCK_PATH = Path("/tmp/run_ipi_uma_rpmd.lock")
 
 
+def _log_uma_predict_unit_force_mode(predictor, *, context: str) -> None:
+    """Log FairChem ``predict_unit.direct_forces`` once after load (experiment record)."""
+    try:
+        df = bool(predictor.direct_forces)
+    except Exception as exc:
+        print(f"[{context}] Could not read predict_unit.direct_forces: {exc}", flush=True)
+        return
+    if df:
+        desc = "direct force head (FairChem predict uses torch.no_grad)"
+    else:
+        desc = "autograd from model energy (grad-enabled inference path)"
+    print(f"[{context}] predict_unit.direct_forces={df} — {desc}", flush=True)
+
+
 def _acquire_run_lock() -> None:
     fh = open(_LOCK_PATH, "w")  # noqa: SIM115 – process lifetime
     try:
@@ -743,6 +757,7 @@ def _lammps_uma_minimize_to_ipi_init(
     )
     print(f"Loading UMA predictor ({model}) on {device} ...", flush=True)
     predictor = pretrained_mlip.get_predict_unit(model, device=device)
+    _log_uma_predict_unit_force_mode(predictor, context="LAMMPS+i-PI minimize")
 
     log_file = str(ipi_log.parent.parent / "pipeline_out" / "lammps_uma_minimize.log")
     Path(log_file).parent.mkdir(parents=True, exist_ok=True)
@@ -862,6 +877,7 @@ def _run_client_lammps(
 
     print(f"Loading UMA predictor ({model}) on {device} ...", flush=True)
     predictor = pretrained_mlip.get_predict_unit(model, device=device)
+    _log_uma_predict_unit_force_mode(predictor, context="LAMMPS+i-PI client")
 
     log_file = str(ipi_log.parent.parent / "pipeline_out" / "lammps_ipi_client.log")
     Path(log_file).parent.mkdir(parents=True, exist_ok=True)
