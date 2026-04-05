@@ -44,7 +44,7 @@ specify values for the same properties.  The following properties are supported.
 - Global variables defined by a CustomIntegrator
 """
 class MultistateSampler(object):
-    def __init__(self, states, context):
+    def __init__(self, states: list, context: openmm.Context):
         """Create a MultistateSampler.
 
         Parameters
@@ -155,7 +155,7 @@ class MultistateSampler(object):
                     self.groups_of_groups[i].append(group_of_groups)
                     all_groups.remove(first)
 
-    def applyState(self, index):
+    def applyState(self, index: int):
         """Modify the Context to match one of the states.
 
         Parameters
@@ -170,7 +170,7 @@ class MultistateSampler(object):
         for name, value in self.variables[index].items():
             self.context.getIntegrator().setGlobalVariableByName(name, value)
 
-    def computeEnergy(self, index):
+    def computeEnergy(self, index: int):
         """Compute the potential energy of one of the states.  This method calls applyState(), so when it returns, the
         Context will be in the specified state.
 
