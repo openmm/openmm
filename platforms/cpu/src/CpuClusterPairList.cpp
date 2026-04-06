@@ -450,7 +450,7 @@ void CpuClusterPairList::buildPairList(const vector<set<int>>& exclusions,
                                     dy8 -= round(dy8*invBoxSizeArr[1])*boxSizeArr[1];
                                     dz8 -= round(dz8*invBoxSizeArr[2])*boxSizeArr[2];
                                     fvec8 r2 = dx8*dx8 + dy8*dy8 + dz8*dz8;
-                                    if (any(ivec8(r2 < cut2v))) jActive |= (1 << kj);
+                                    if (any(ivec8(_mm256_castps_si256(r2 < cut2v)))) jActive |= (1 << kj);
                                 }
                             } else {
                                 // Large box or non-periodic: pre-shift eliminates per-lane wrapping.
@@ -459,7 +459,7 @@ void CpuClusterPairList::buildPairList(const vector<set<int>>& exclusions,
                                     fvec8 dy8 = ciY - fvec8(clusters[cj].y[kj] + shY);
                                     fvec8 dz8 = ciZ - fvec8(clusters[cj].z[kj] + shZ);
                                     fvec8 r2 = dx8*dx8 + dy8*dy8 + dz8*dz8;
-                                    if (any(ivec8(r2 < cut2v))) jActive |= (1 << kj);
+                                    if (any(ivec8(_mm256_castps_si256(r2 < cut2v)))) jActive |= (1 << kj);
                                 }
                             }
                             if (jActive == 0)
@@ -739,7 +739,7 @@ void CpuClusterPairList::buildFromNeighborList(const CpuNeighborList& neighborLi
                             } else {
                                 dx8 = ciX - fvec8(cjRef.x[kj]+shX); dy8 = ciY - fvec8(cjRef.y[kj]+shY); dz8 = ciZ - fvec8(cjRef.z[kj]+shZ);
                             }
-                            if (any(ivec8(dx8*dx8 + dy8*dy8 + dz8*dz8 < cut2v)))
+                            if (any(ivec8(_mm256_castps_si256(dx8*dx8 + dy8*dy8 + dz8*dz8 < cut2v))))
                                 jActive |= (1 << kj);
                         }
                     } else {
@@ -980,7 +980,7 @@ void CpuClusterPairList::buildDirect(const CpuNeighborList& neighborList,
                     } else {
                         dx8 = ciX - fvec8(cjRef.x[kj]+shX); dy8 = ciY - fvec8(cjRef.y[kj]+shY); dz8 = ciZ - fvec8(cjRef.z[kj]+shZ);
                     }
-                    if (any(ivec8(dx8*dx8 + dy8*dy8 + dz8*dz8 < cut2v)))
+                    if (any(ivec8(_mm256_castps_si256(dx8*dx8 + dy8*dy8 + dz8*dz8 < cut2v))))
                         jActive |= (1 << kj);
                 }
                 if (jActive == 0) continue;

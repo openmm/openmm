@@ -157,7 +157,7 @@ static inline void processJCluster(
         if constexpr (USE_EWALD) {
             fvec8 ewaldScaleIdx = r * ewaldDXInv;
             ivec8 ewaldIntIdx = min(floor(ewaldScaleIdx), fvec8((float)numTablePoints));
-            fvec8 ewaldFrac = ewaldScaleIdx - fvec8(ewaldIntIdx);
+            fvec8 ewaldFrac = ewaldScaleIdx - fvec8(_mm256_cvtepi32_ps(ewaldIntIdx));
             __m256i gIdx = ewaldIntIdx;
             __m256i gIdx1 = _mm256_add_epi32(gIdx, _mm256_set1_epi32(1));
             fvec8 es0(_mm256_i32gather_ps(ewaldScaleTable, gIdx, 4));
