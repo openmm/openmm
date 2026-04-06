@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,6 +29,7 @@
 
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/OpenMMException.h"
+#include <cstring>
 #include <sstream>
 
 using namespace OpenMM;
@@ -67,127 +68,141 @@ SerializationNode& SerializationNode::getChildNode(const std::string& name) {
         throw OpenMMException("Unknown child '"+name+"' for node '"+getName()+"'");
 }
 
-const map<string, string>& SerializationNode::getProperties() const {
-    return properties;
+const map<string, string> SerializationNode::getProperties() const {
+    map<string, string> result;
+    int start = 0;
+    while (start < properties.size()) {
+        string name(&properties[start]);
+        start += name.size()+1;
+        string value(&properties[start]);
+        start += value.size()+1;
+        result[name] = value;
+    }
+    return result;
+}
+
+const char* SerializationNode::findPropertyValue(const std::string& name, bool required) const {
+    int start = 0;
+    while (start < properties.size()) {
+        if (strcmp(&properties[start], name.data()) == 0)
+            return &properties[start+name.size()+1];
+
+        // This isn't the property we're looking for.  Skip over the name and value.
+
+        start += strlen(&properties[start])+1;
+        start += strlen(&properties[start])+1;
+    }
+    if (required)
+        throw OpenMMException("Unknown property '"+name+"' in node '"+getName()+"'");
+
+    // We didn't find it, but that's ok.  Report that it wasn't found.
+
+    return nullptr;
 }
 
 bool SerializationNode::hasProperty(const string& name) const {
-    return (properties.find(name) != properties.end());
+    return findPropertyValue(name, false) != nullptr;
 }
 
-const string& SerializationNode::getStringProperty(const string& name) const {
-    map<string, string>::const_iterator iter = properties.find(name);
-    if (iter == properties.end())
-        throw OpenMMException("Unknown property '"+name+"' in node '"+getName()+"'");
-    return iter->second;
+const string SerializationNode::getStringProperty(const string& name) const {
+    return string(findPropertyValue(name, true));
 }
 
-const string& SerializationNode::getStringProperty(const string& name, const string& defaultValue) const {
-    map<string, string>::const_iterator iter = properties.find(name);
-    if (iter == properties.end())
+const string SerializationNode::getStringProperty(const string& name, const string& defaultValue) const {
+    const char* value = findPropertyValue(name, false);
+    if (value == nullptr)
         return defaultValue;
-    return iter->second;
+    return string(value);
 }
 
 SerializationNode& SerializationNode::setStringProperty(const string& name, const string& value) {
-    properties[name] = value;
+    int s = properties.size()+name.size()+value.size()+2;
+    properties.reserve(properties.size()+name.size()+value.size()+2);
+    properties.append(name);
+    properties.push_back(0);
+    properties.append(value);
+    properties.push_back(0);
     return *this;
 }
 
 int SerializationNode::getIntProperty(const string& name) const {
-    map<string, string>::const_iterator iter = properties.find(name);
-    if (iter == properties.end())
-        throw OpenMMException("Unknown property '"+name+"' in node '"+getName()+"'");
     int value;
-    stringstream(iter->second) >> value;
+    stringstream(findPropertyValue(name, true)) >> value;
     return value;
 }
 
 int SerializationNode::getIntProperty(const string& name, int defaultValue) const {
-    map<string, string>::const_iterator iter = properties.find(name);
-    if (iter == properties.end())
+    const char* value = findPropertyValue(name, false);
+    if (value == nullptr)
         return defaultValue;
-    int value;
-    stringstream(iter->second) >> value;
-    return value;
+    int result;
+    stringstream(value) >> result;
+    return result;
 }
 
 SerializationNode& SerializationNode::setIntProperty(const string& name, int value) {
     stringstream s;
     s << value;
-    properties[name] = s.str();
-    return *this;
+    return setStringProperty(name, s.str());
 }
 
 long long SerializationNode::getLongProperty(const string& name) const {
-    map<string, string>::const_iterator iter = properties.find(name);
-    if (iter == properties.end())
-        throw OpenMMException("Unknown property '"+name+"' in node '"+getName()+"'");
     long long value;
-    stringstream(iter->second) >> value;
+    stringstream(findPropertyValue(name, true)) >> value;
     return value;
 }
 
 long long SerializationNode::getLongProperty(const string& name, long long defaultValue) const {
-    map<string, string>::const_iterator iter = properties.find(name);
-    if (iter == properties.end())
+    const char* value = findPropertyValue(name, false);
+    if (value == nullptr)
         return defaultValue;
-    long long value;
-    stringstream(iter->second) >> value;
-    return value;
+    long long result;
+    stringstream(value) >> result;
+    return result;
 }
 
 SerializationNode& SerializationNode::setLongProperty(const string& name, long long value) {
     stringstream s;
     s << value;
-    properties[name] = s.str();
-    return *this;
+    return setStringProperty(name, s.str());
 }
 
 bool SerializationNode::getBoolProperty(const string& name) const {
-    map<string, string>::const_iterator iter = properties.find(name);
-    if (iter == properties.end())
-        throw OpenMMException("Unknown property '"+name+"' in node '"+getName()+"'");
     bool value;
-    stringstream(iter->second) >> value;
+    stringstream(findPropertyValue(name, true)) >> value;
     return value;
 }
 
 bool SerializationNode::getBoolProperty(const string& name, bool defaultValue) const {
-    map<string, string>::const_iterator iter = properties.find(name);
-    if (iter == properties.end())
+    const char* value = findPropertyValue(name, false);
+    if (value == nullptr)
         return defaultValue;
-    bool value;
-    stringstream(iter->second) >> value;
-    return value;
+    bool result;
+    stringstream(value) >> result;
+    return result;
 }
 
 SerializationNode& SerializationNode::setBoolProperty(const string& name, bool value) {
     stringstream s;
     s << value;
-    properties[name] = s.str();
-    return *this;
+    return setStringProperty(name, s.str());
 }
 
 double SerializationNode::getDoubleProperty(const string& name) const {
-    map<string, string>::const_iterator iter = properties.find(name);
-    if (iter == properties.end())
-        throw OpenMMException("Unknown property '"+name+"' in node '"+getName()+"'");
-    return strtod2(iter->second.c_str(), NULL);
+    return strtod2(findPropertyValue(name, true), NULL);
 }
 
 double SerializationNode::getDoubleProperty(const string& name, double defaultValue) const {
-    map<string, string>::const_iterator iter = properties.find(name);
-    if (iter == properties.end())
+    const char* value = findPropertyValue(name, false);
+    if (value == nullptr)
         return defaultValue;
-    return strtod2(iter->second.c_str(), NULL);
+    return strtod2(value, NULL);
 }
 
 SerializationNode& SerializationNode::setDoubleProperty(const string& name, double value) {
     char buffer[32];
     g_fmt(buffer, value);
-    properties[name] = string(buffer);
-    return *this;
+    return setStringProperty(name, string(buffer));
 }
 
 SerializationNode& SerializationNode::createChildNode(const std::string& name) {
