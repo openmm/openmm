@@ -4816,23 +4816,58 @@ public:
     CommonCalcPythonForceKernel& owner;
 };
 
+class CommonCalcPythonForceKernel::ReorderListener : public ComputeContext::ReorderListener {
+public:
+    ReorderListener(CommonCalcPythonForceKernel& owner) : owner(owner) {
+    }
+    void execute() {
+        owner.sortParticles();
+    }
+private:
+    CommonCalcPythonForceKernel& owner;
+};
+
 void CommonCalcPythonForceKernel::initialize(const ContextImpl& context, const PythonForce& force) {
     ContextSelector selector(cc);
     computation = &force.getComputation();
     usePeriodic = force.usesPeriodicBoundaryConditions();
-    int numParticles = context.getSystem().getNumParticles();
+    particles = force.getParticles();
+    numParticles = particles.size();
+    if (numParticles == 0)
+        numParticles = context.getSystem().getNumParticles();
     positionsVec.resize(numParticles);
     forcesVec.resize(3*numParticles);
     int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    positionsArray.initialize(cc, 3*numParticles, elementSize, "positions");
     forcesArray.initialize(cc, 3*numParticles, elementSize, "forces");
     map<string, string> defines;
     defines["NUM_ATOMS"] = cc.intToString(numParticles);
     defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::customCppForce, defines);
-    addForcesKernel = program->createKernel("addForces");
-    addForcesKernel->addArg(forcesArray);
-    addForcesKernel->addArg(cc.getLongForceBuffer());
-    addForcesKernel->addArg(cc.getAtomIndexArray());
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::pythonForce, defines);
+    if (particles.size() > 0) {
+        particlesArray.initialize<int>(cc, numParticles, "particles");
+        reorderedParticles.initialize<int>(cc, numParticles, "reorderedParticles");
+        particlesArray.upload(particles);
+        reorderedParticles.upload(particles);
+        cc.addReorderListener(new ReorderListener(*this));
+        copyPositionsKernel = program->createKernel("copyPositions");
+        copyPositionsKernel->addArg(cc.getPosq());
+        copyPositionsKernel->addArg(positionsArray);
+        copyPositionsKernel->addArg(reorderedParticles);
+        copyPositionsKernel->addArg(numParticles);
+        addForcesKernel = program->createKernel("addForcesSubset");
+        addForcesKernel->addArg(forcesArray);
+        addForcesKernel->addArg(cc.getLongForceBuffer());
+        addForcesKernel->addArg(cc.getAtomIndexArray());
+        addForcesKernel->addArg(reorderedParticles);
+        addForcesKernel->addArg(numParticles);
+    }
+    else {
+        addForcesKernel = program->createKernel("addForcesAll");
+        addForcesKernel->addArg(forcesArray);
+        addForcesKernel->addArg(cc.getLongForceBuffer());
+        addForcesKernel->addArg(cc.getAtomIndexArray());
+    }
     forceGroupFlag = (1<<force.getForceGroup());
     useWorkerThread = (cc.getNumContexts() == 1);
     for (const ForceImpl* impl : context.getForceImpls())
@@ -4858,9 +4893,61 @@ double CommonCalcPythonForceKernel::execute(ContextImpl& context, bool includeFo
 
     if (cc.getContextIndex() != 0)
         return 0.0;
-    contextImpl.getPositions(positionsVec);
+    getPositions();
     executeOnWorkerThread(includeForces);
     return addForces(includeForces, includeEnergy, -1);
+}
+
+void CommonCalcPythonForceKernel::getPositions() {
+    // If the NonbondedUtilities uses periodic boundary conditions, the positions might have been
+    // wrapped to the periodic box.  If this force also applies periodic boundary conditions, that's
+    // alright.  Otherwise, we need to move them back.
+
+    bool fixPeriodic = usePeriodic || !cc.getNonbondedUtilities().getUsePeriodic();
+    if (particles.size() == 0) {
+        // The force applies to the whole system, so we can just use the standard getPositions().
+
+        contextImpl.getPositions(positionsVec, fixPeriodic);
+    }
+    else {
+        // Retrieve positions for the subset of particles the force is applied to.
+
+        ContextSelector selector(cc);
+        copyPositionsKernel->execute(numParticles);
+        if (cc.getUseDoublePrecision()) {
+            vector<double> pos(3*numParticles);
+            positionsArray.download(pos);
+            for (int i = 0; i < numParticles; i++)
+                positionsVec[i] = Vec3(pos[3*i], pos[3*i+1], pos[3*i+2]);
+        }
+        else {
+            vector<float> pos(3*numParticles);
+            positionsArray.download(pos);
+            for (int i = 0; i < numParticles; i++)
+                positionsVec[i] = Vec3((double) pos[3*i], (double) pos[3*i+1], (double) pos[3*i+2]);
+        }
+        if (fixPeriodic) {
+            Vec3 boxVectors[3];
+            cc.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+            for (int i = 0; i < numParticles; ++i) {
+                mm_int4 offset = cc.getPosCellOffsets()[particles[i]];
+                positionsVec[i] -= boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
+            }
+        }
+    }
+}
+
+void CommonCalcPythonForceKernel::sortParticles() {
+    // Update the list of particles to account for reordering.
+
+    const vector<int>& order = cc.getAtomIndex();
+    vector<int> inverseOrder(order.size());
+    for (int i = 0; i < cc.getNumAtoms(); i++)
+        inverseOrder[order[i]] = i;
+    vector<int> reordered(particles.size());
+    for (int i = 0; i < particles.size(); i++)
+        reordered[i] = inverseOrder[particles[i]];
+    reorderedParticles.upload(reordered);
 }
 
 void CommonCalcPythonForceKernel::beginComputation(bool includeForces, bool includeEnergy, int groups) {
@@ -4873,7 +4960,7 @@ void CommonCalcPythonForceKernel::beginComputation(bool includeForces, bool incl
 }
 
 void CommonCalcPythonForceKernel::executeOnWorkerThread(bool includeForces) {
-    contextImpl.getPositions(positionsVec, usePeriodic || !cc.getNonbondedUtilities().getUsePeriodic());
+    getPositions();
     State::StateBuilder builder(contextImpl.getTime(), contextImpl.getStepCount());
     builder.setPositions(positionsVec);
     builder.setParameters(contextImpl.getParameters());

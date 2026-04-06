@@ -2035,7 +2035,9 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     const PythonForceComputation* computation;
-    std::vector<Vec3> forces;
+    std::vector<Vec3> positions, forces;
+    std::vector<int> particles;
+    int numParticles;
     bool usePeriodic;
 };
 
