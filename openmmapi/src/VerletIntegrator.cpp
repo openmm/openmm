@@ -69,11 +69,8 @@ void VerletIntegrator::step(int steps) {
         throw OpenMMException("This Integrator is not bound to a context!");
     IntegrateVerletStepKernel& verletKernel = kernel.getAs<IntegrateVerletStepKernel>();
     for (int i = 0; i < steps; ++i) {
-        context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
-        verletKernel.executePart1(*context, *this);
-        context->setStepPhase(ContextImpl::STEP_PHASE_AFTER_VERLET_PART1);
         context->updateContextState();
-        context->setStepPhase(ContextImpl::STEP_PHASE_NONE);
-        verletKernel.executePart2(*context, *this);
+        context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
+        verletKernel.execute(*context, *this);
     }
 }
