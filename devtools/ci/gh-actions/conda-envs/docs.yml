@@ -10,7 +10,7 @@ dependencies:
 - pip
 - numpy
 - cython
-- swig
+- swig>=4.3
 - doxygen
 - setuptools
 - sphinx

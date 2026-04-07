@@ -423,6 +423,7 @@ jobs:
                 -DCMAKE_CXX_COMPILER=cl.exe ^
                 -DCMAKE_C_COMPILER=cl.exe ^
                 -DSWIG_EXECUTABLE="%SWIG_CMAKE_EXE%" ^
+                -DOPENMM_SWIG_LIB="%SWIG_LIB%" ^
                 -DOPENMM_BUILD_EXAMPLES=OFF ^
                 -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
                 %CMAKE_FLAGS%

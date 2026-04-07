@@ -11,7 +11,7 @@ dependencies:
 # host
 - pypy
 - cython
-- swig
+- swig>=4.3
 - numpy
 - ocl-icd-system
 - doxygen

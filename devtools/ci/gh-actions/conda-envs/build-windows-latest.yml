@@ -11,7 +11,8 @@ dependencies:
 # host
 - python
 - cython
-- swig
+# Python 3.13+ needs SWIG 4.3+ (stdlib / C-API changes)
+- swig>=4.3
 - numpy
 - doxygen
 - setuptools

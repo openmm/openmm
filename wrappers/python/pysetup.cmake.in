@@ -8,7 +8,37 @@ else()
 endif()
 message("OPENMM_LIB_PATH = " $ENV{OPENMM_LIB_PATH})
 message("OPENMM_INCLUDE_PATH = " $ENV{OPENMM_INCLUDE_PATH})
-execute_process(
-    COMMAND "@PYTHON_EXECUTABLE@" setup.py @PYTHON_SETUP_COMMAND@
-    WORKING_DIRECTORY "@PYTHON_PACKAGE_DIR@"
-)
+
+# setup.py install is deprecated and unreliable on Python 3.12+; use pip into the
+# active environment. Keep setup.py --root when DESTDIR is set (distro packaging).
+if("@PYTHON_SETUP_COMMAND@" MATCHES "^install")
+    if(DEFINED ENV{DESTDIR} AND NOT "$ENV{DESTDIR}" STREQUAL "")
+        execute_process(
+            COMMAND "@PYTHON_EXECUTABLE@" setup.py install --root=$ENV{DESTDIR}/
+            WORKING_DIRECTORY "@PYTHON_PACKAGE_DIR@"
+            RESULT_VARIABLE _openmm_py_setup_result
+        )
+    elseif("@PYTHON_SETUP_COMMAND@" STREQUAL "install --user")
+        execute_process(
+            COMMAND "@PYTHON_EXECUTABLE@" -m pip install . --no-build-isolation --user
+            WORKING_DIRECTORY "@PYTHON_PACKAGE_DIR@"
+            RESULT_VARIABLE _openmm_py_setup_result
+        )
+    else()
+        execute_process(
+            COMMAND "@PYTHON_EXECUTABLE@" -m pip install . --no-build-isolation
+            WORKING_DIRECTORY "@PYTHON_PACKAGE_DIR@"
+            RESULT_VARIABLE _openmm_py_setup_result
+        )
+    endif()
+else()
+    execute_process(
+        COMMAND "@PYTHON_EXECUTABLE@" setup.py @PYTHON_SETUP_COMMAND@
+        WORKING_DIRECTORY "@PYTHON_PACKAGE_DIR@"
+        RESULT_VARIABLE _openmm_py_setup_result
+    )
+endif()
+
+if(NOT _openmm_py_setup_result EQUAL 0)
+    message(FATAL_ERROR "OpenMM Python setup failed (exit code ${_openmm_py_setup_result})")
+endif()

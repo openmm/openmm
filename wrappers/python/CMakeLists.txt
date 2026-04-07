@@ -121,6 +121,9 @@ endif(SWIG_EXECUTABLE)
 if(SWIG_VERSION VERSION_LESS "3.0.5")
     message(SEND_ERROR "Swig version must be 3.0.5 or greater! (You have ${SWIG_VERSION})")
 endif(SWIG_VERSION VERSION_LESS "3.0.5")
+if(PYTHON_VERSION_STRING AND PYTHON_VERSION_STRING VERSION_GREATER_EQUAL "3.13" AND SWIG_VERSION VERSION_LESS "4.3")
+    message(SEND_ERROR "Python ${PYTHON_VERSION_STRING} requires SWIG 4.3 or later (found ${SWIG_VERSION}).")
+endif()
 
 find_package(Doxygen REQUIRED)
 mark_as_advanced(CLEAR DOXYGEN_EXECUTABLE)
@@ -196,9 +199,18 @@ INSTALL_FILES(/include/swig FILES "${SWIG_OPENMM_DIR}/OpenMMSwigHeaders.i" "${SW
 #~      OpenMM.i
 
 # Conda installs and some Windows CI setups require SWIG_LIB so swig can find swig.swg.
-# Bake it into this rule so generators (e.g. JOM) invoke SWIG with a reliable environment.
-if(DEFINED ENV{SWIG_LIB} AND NOT "$ENV{SWIG_LIB}" STREQUAL "")
-    set(_OPENMM_SWIG_CMD "${CMAKE_COMMAND}" -E env "SWIG_LIB=$ENV{SWIG_LIB}" "${SWIG_EXECUTABLE}")
+# OPENMM_SWIG_LIB (cache) is preferred so the path is embedded at configure time; Windows
+# cmd/vcvars sometimes makes $ENV{SWIG_LIB} invisible to CMake even when later steps see it.
+set(OPENMM_SWIG_LIB "" CACHE STRING "Directory with SWIG data files (swig.swg); optional, overrides SWIG_LIB env for the Python SWIG step")
+mark_as_advanced(OPENMM_SWIG_LIB)
+set(_openmm_swig_lib_dir "")
+if(OPENMM_SWIG_LIB)
+    set(_openmm_swig_lib_dir "${OPENMM_SWIG_LIB}")
+elseif(DEFINED ENV{SWIG_LIB} AND NOT "$ENV{SWIG_LIB}" STREQUAL "")
+    set(_openmm_swig_lib_dir "$ENV{SWIG_LIB}")
+endif()
+if(_openmm_swig_lib_dir)
+    set(_OPENMM_SWIG_CMD "${CMAKE_COMMAND}" -E env "SWIG_LIB=${_openmm_swig_lib_dir}" "${SWIG_EXECUTABLE}")
 else()
     set(_OPENMM_SWIG_CMD "${SWIG_EXECUTABLE}")
 endif()
