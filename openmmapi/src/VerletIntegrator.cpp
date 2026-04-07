@@ -28,8 +28,10 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/VerletIntegrator.h"
+#include "openmm/BussiThermostat.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
+#include "openmm/System.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/kernels.h"
 #include <string>
@@ -37,6 +39,24 @@
 using namespace OpenMM;
 using std::string;
 using std::vector;
+
+namespace {
+
+/**
+ * BussiThermostat::updateContextState must run after the first velocity kick (Verlet part 1) so
+ * kinetic energy is non-zero (e.g. subset tests start from v=0) and HOOMD-ordered scaling of
+ * posDelta can run. Systems without Bussi keep the classic order (updateContextState before
+ * forces + execute) so Reference regression tests match the monolithic Reference Verlet update.
+ */
+bool systemHasBussiThermostat(const System& system) {
+    for (int i = 0; i < system.getNumForces(); i++) {
+        if (dynamic_cast<const BussiThermostat*>(&system.getForce(i)) != NULL)
+            return true;
+    }
+    return false;
+}
+
+} // namespace
 
 VerletIntegrator::VerletIntegrator(double stepSize) {
     setStepSize(stepSize);
@@ -68,9 +88,20 @@ void VerletIntegrator::step(int steps) {
     if (context == NULL)
         throw OpenMMException("This Integrator is not bound to a context!");
     IntegrateVerletStepKernel& verletKernel = kernel.getAs<IntegrateVerletStepKernel>();
+    const bool bussiOrdering = systemHasBussiThermostat(context->getSystem());
     for (int i = 0; i < steps; ++i) {
-        context->updateContextState();
-        context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
-        verletKernel.execute(*context, *this);
+        if (bussiOrdering) {
+            context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
+            verletKernel.executePart1(*context, *this);
+            context->setStepPhase(ContextImpl::STEP_PHASE_AFTER_VERLET_PART1);
+            context->updateContextState();
+            context->setStepPhase(ContextImpl::STEP_PHASE_NONE);
+            verletKernel.executePart2(*context, *this);
+        }
+        else {
+            context->updateContextState();
+            context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
+            verletKernel.execute(*context, *this);
+        }
     }
 }
