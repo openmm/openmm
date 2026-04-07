@@ -74,6 +74,10 @@ bool Force::usesPeriodicBoundaryConditions() const {
     throw OpenMMException("usesPeriodicBoundaryConditions is not implemented");
 }
 
+bool Force::usesVerletPart1ContextUpdate() const {
+    return false;
+}
+
 ForceImpl& Force::getImplInContext(Context& context) const {
     for (auto impl : context.getImpl().getForceImpls())
         if (&impl->getOwner() == this)

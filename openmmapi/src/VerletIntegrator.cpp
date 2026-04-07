@@ -28,7 +28,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/VerletIntegrator.h"
-#include "openmm/BussiThermostat.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/System.h"
@@ -42,15 +41,9 @@ using std::vector;
 
 namespace {
 
-/**
- * BussiThermostat::updateContextState must run after the first velocity kick (Verlet part 1) so
- * kinetic energy is non-zero (e.g. subset tests start from v=0) and HOOMD-ordered scaling of
- * posDelta can run. Systems without Bussi keep the classic order (updateContextState before
- * forces + execute) so Reference regression tests match the monolithic Reference Verlet update.
- */
-bool systemHasBussiThermostat(const System& system) {
+bool systemUsesVerletPart1ContextUpdate(const System& system) {
     for (int i = 0; i < system.getNumForces(); i++) {
-        if (dynamic_cast<const BussiThermostat*>(&system.getForce(i)) != NULL)
+        if (system.getForce(i).usesVerletPart1ContextUpdate())
             return true;
     }
     return false;
@@ -88,9 +81,9 @@ void VerletIntegrator::step(int steps) {
     if (context == NULL)
         throw OpenMMException("This Integrator is not bound to a context!");
     IntegrateVerletStepKernel& verletKernel = kernel.getAs<IntegrateVerletStepKernel>();
-    const bool bussiOrdering = systemHasBussiThermostat(context->getSystem());
+    const bool splitForContextUpdate = systemUsesVerletPart1ContextUpdate(context->getSystem());
     for (int i = 0; i < steps; ++i) {
-        if (bussiOrdering) {
+        if (splitForContextUpdate) {
             context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
             verletKernel.executePart1(*context, *this);
             context->setStepPhase(ContextImpl::STEP_PHASE_AFTER_VERLET_PART1);

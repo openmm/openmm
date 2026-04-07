@@ -256,6 +256,9 @@ public:
     bool usesPeriodicBoundaryConditions() const {
         return false;
     }
+    bool usesVerletPart1ContextUpdate() const override {
+        return true;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:
