@@ -29,6 +29,7 @@
 #include "openmm/Context.h"
 #include "openmm/internal/AndersenThermostatImpl.h"
 #include "openmm/internal/BussiThermostatImpl.h"
+#include "openmm/internal/BussiRescale.h"
 #include "openmm/internal/CavityForceImpl.h"
 #include "openmm/internal/CavityParticleDisplacerImpl.h"
 #include "openmm/internal/CMAPTorsionForceImpl.h"
@@ -4408,9 +4409,6 @@ void CommonApplyBussiThermostatKernel::execute(ContextImpl& context) {
     
     // Compute rescaling factor using Bussi's algorithm (Bussi et al. 2007, J. Chem. Phys. 126, 014101)
     // Matches cav-hoomd's BussiThermostat::compute_rescale_factor in Thermostat.h
-    double c = exp(-dt / tau);
-    double targetKE = 0.5 * dof * BOLTZ * temperature;
-    
     double R1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
     
     // Sample chi^2(dof-1) via Gamma distribution: chi^2(k) = 2*Gamma(k/2, 1)
@@ -4435,23 +4433,10 @@ void CommonApplyBussiThermostatKernel::execute(ContextImpl& context) {
         }
         rGamma *= 2.0;  // chi^2(dof-1) = 2 * Gamma((dof-1)/2, 1)
     }
-    
-    double ratio = targetKE / (dof * kineticEnergy);
-    // Correct formula includes R1^2 in the chi-squared component (non-central chi-squared decomposition)
-    double alphaSquared = c + (1 - c) * ratio * (rGamma + R1 * R1)
-                         + 2.0 * R1 * sqrt(c * (1 - c) * ratio);
-    
-    if (alphaSquared < 0)
-        alphaSquared = 0;
-    
-    double alphaMagnitude = sqrt(alphaSquared);
-    // Signed alpha per Bussi et al. 2009 Eq. (A8)
-    double signTerm = R1 + sqrt(c * dof * kineticEnergy / ((1.0 - c) * targetKE));
-    double alpha = (signTerm >= 0.0) ? alphaMagnitude : -alphaMagnitude;
-    
-    // Track reservoir energy
-    double deltaE = kineticEnergy * (1.0 - alphaSquared);
-    reservoirEnergyTranslational += deltaE;
+
+    BussiRescale::Result bussi = BussiRescale::computeRescale(dof, kineticEnergy, temperature, tau, dt, R1, rGamma);
+    double alpha = bussi.alpha;
+    reservoirEnergyTranslational += bussi.deltaE;
     
     // Rescale velocities
     rescaleKernel->setArg(3, (float) alpha);

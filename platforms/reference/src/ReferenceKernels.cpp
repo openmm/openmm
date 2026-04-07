@@ -77,6 +77,7 @@
 #include "openmm/System.h"
 #include "openmm/internal/AndersenThermostatImpl.h"
 #include "openmm/internal/BussiThermostatImpl.h"
+#include "openmm/internal/BussiRescale.h"
 #include "openmm/internal/CavityForceImpl.h"
 #include "openmm/internal/CavityParticleDisplacerImpl.h"
 #include "openmm/internal/ContextImpl.h"
@@ -3420,9 +3421,6 @@ void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
     
     // Compute rescaling factor using Bussi's algorithm (Bussi et al. 2007, J. Chem. Phys. 126, 014101)
     // Matches cav-hoomd's BussiThermostat::compute_rescale_factor in Thermostat.h
-    double c = exp(-dt / tau);
-    double targetKE = 0.5 * dof * BOLTZ * temperature;
-    
     double R1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
     
     // Sample chi^2(dof-1) via Gamma distribution: chi^2(k) = 2*Gamma(k/2, 1)
@@ -3447,24 +3445,10 @@ void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
         }
         rGamma *= 2.0;  // chi^2(dof-1) = 2 * Gamma((dof-1)/2, 1)
     }
-    
-    // Correct formula includes R1^2 in the chi-squared component (non-central chi-squared decomposition)
-    double ratio = targetKE / (dof * kineticEnergy);
-    double alphaSquared = c + (1 - c) * ratio * (rGamma + R1 * R1)
-                         + 2.0 * R1 * sqrt(c * (1 - c) * ratio);
-    
-    // Ensure alpha^2 is positive
-    if (alphaSquared < 0)
-        alphaSquared = 0;
-    
-    double alphaMagnitude = sqrt(alphaSquared);
-    // Signed alpha per Bussi et al. 2009 Eq. (A8): sign[alpha] = sign[R1 + sqrt(c*dof*K/((1-c)*K_bar))]
-    double signTerm = R1 + sqrt(c * dof * kineticEnergy / ((1.0 - c) * targetKE));
-    double alpha = (signTerm >= 0.0) ? alphaMagnitude : -alphaMagnitude;
-    
-    // Track reservoir energy: delta_E = K * (1 - alpha^2)
-    double deltaE = kineticEnergy * (1.0 - alphaSquared);
-    reservoirEnergyTranslational += deltaE;
+
+    BussiRescale::Result bussi = BussiRescale::computeRescale(dof, kineticEnergy, temperature, tau, dt, R1, rGamma);
+    double alpha = bussi.alpha;
+    reservoirEnergyTranslational += bussi.deltaE;
     
     // Rescale velocities for particles in the subset
     for (size_t i = 0; i < particleIndices.size(); ++i) {
