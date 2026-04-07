@@ -77,3 +77,17 @@ ml-experimental.backup/
 
 # macOS
 .DS_Store
+
+# UMA ice RPMD workflow: generated runs (keep small fixtures under fixtures/golden/)
+tests/uma_ice_rpmd/pipeline_out/
+tests/uma_ice_rpmd/ipi/*.xyz
+!tests/uma_ice_rpmd/ipi/init.xyz
+tests/uma_ice_rpmd/ipi/*.vxyz
+tests/uma_ice_rpmd/ipi/RESTART
+tests/uma_ice_rpmd/ipi/#i-pi.RESTART#*
+tests/uma_ice_rpmd/ipi/i-pi_run_backup_*.log
+tests/uma_ice_rpmd/*.pdb
+tests/uma_ice_rpmd/nohup.out
+tests/uma_ice_rpmd/.pytest_cache/
+
+# Optional: keep golden CSVs tracked under fixtures/golden/ (not ignored)

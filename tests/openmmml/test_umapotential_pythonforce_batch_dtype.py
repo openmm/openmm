@@ -6,6 +6,10 @@ which caused large drift vs sequential ``from_ase`` (see ``test_uma_fairchem_bat
 
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.openmmml
+
 
 def test_batch_return_forces_are_float64_in_source() -> None:
     root = Path(__file__).resolve().parents[2]

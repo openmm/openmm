@@ -7,6 +7,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+pytestmark = pytest.mark.fairchem
+
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _DATA_SMALL = _SCRIPT_DIR / "lammps" / "data.ice_uma_8"
 

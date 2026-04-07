@@ -22,6 +22,8 @@ from fairchem.core.calculate import pretrained_mlip  # noqa: E402
 from fairchem.core.datasets.atomic_data import AtomicData, atomicdata_list_to_batch  # noqa: E402
 from ase import Atoms  # noqa: E402
 
+pytestmark = [pytest.mark.openmmml, pytest.mark.fairchem, pytest.mark.slow]
+
 
 def _parity_device() -> str:
     d = os.environ.get("OPENMMML_FAIRCHEM_PARITY_DEVICE", "cpu").strip().lower()

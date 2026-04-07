@@ -20,6 +20,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = [pytest.mark.cuda, pytest.mark.slow]
+
 _SCRIPT_DIR = Path(__file__).resolve().parent
 
 

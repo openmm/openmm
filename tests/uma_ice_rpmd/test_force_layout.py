@@ -31,9 +31,17 @@ for _plugdir in (os.path.join(_root, 'build'), os.path.join(_root, 'build', 'lib
         break
 
 import numpy as np
+import openmm
+import pytest
 from openmm import app, unit, Vec3, Context, Platform
 from openmm import VerletIntegrator, RPMDIntegrator
 from openmmml import MLPotential
+
+if not hasattr(openmm, "PythonForce"):
+    pytest.skip(
+        "OpenMM without PythonForce (use project build with Python ML plugin)",
+        allow_module_level=True,
+    )
 
 
 def _get_platform():

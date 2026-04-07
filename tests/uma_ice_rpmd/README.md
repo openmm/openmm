@@ -2,6 +2,37 @@
 
 Test if ice remains frozen at 243K using UMA potential with RPMD.
 
+## Layout (repo organization)
+
+| Path | Role |
+|------|------|
+| [`scripts/`](scripts/) | Primary CLIs: OpenMM reference driver, i-PI/LAMMPS driver, plotting. |
+| [`ice_rpmd_workflow/`](ice_rpmd_workflow/) | Importable helpers (`ice_order_parameters`, `rpmd_thermo_utils`, LAMMPS/OpenMM geometry). Flat shims at the parent directory keep legacy `from ice_order_parameters import …` working. |
+| [`fixtures/golden/`](fixtures/golden/) | Small committed reference files for regression tests (optional). |
+| [`ipi/`](ipi/) | i-PI XML and inputs; trajectory `*.xyz`, `RESTART`, and logs are **gitignored**—regenerate with `scripts/run_ipi_lammps_uma_rpmd.py`. |
+| [`pipeline_out/`](pipeline_out/) | Default CSV/plot output directory (**gitignored**). Create it locally when running workflows. |
+
+Thin **shims** at the old names (`run_openmm_rpmd_reference.py`, `run_ipi_lammps_uma_rpmd.py`, `plot_rpmd_comparison.py`, …) delegate to `scripts/` so existing commands keep working.
+
+### Pytest (repo root)
+
+```bash
+# Fast subset (no FairChem download, no CUDA-marked tests, no slow tests)
+python -m pytest tests/openmmml tests/uma_ice_rpmd -m "not cuda and not slow and not fairchem" -q
+
+# OpenMMML static / source guards only
+python -m pytest tests/openmmml -m "openmmml and not fairchem" -q
+
+# Full FairChem parity (downloads UMA checkpoint; slow)
+python -m pytest tests/openmmml/test_uma_fairchem_batch_parity.py -q
+```
+
+Requires **OpenMM with PythonForce** and matching plugins for GPU and many integration tests; without them, pytest skips or fails only those modules.
+
+### Regenerating reference outputs
+
+After changing order-parameter code or simulation settings, re-run your drivers and replace files under `fixtures/golden/` only when you intend to update baselines. Do not commit large trajectories; keep `pipeline_out/` and `ipi/*.xyz` local.
+
 ## Overview
 
 This simulation tests the stability of ice at sub-freezing temperatures using:

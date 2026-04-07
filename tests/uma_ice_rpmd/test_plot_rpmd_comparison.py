@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from plot_rpmd_comparison import (
+from scripts.plot_rpmd_comparison import (
     _enrich_title_with_system,
     _format_title_two_lines,
     _read_csv,
@@ -121,6 +121,8 @@ def test_save_cv_plane_writes_png(tmp_path: Path) -> None:
         has_openmm=True,
         q6_o=q6,
         qt_o=qt,
+        reference_data=None,
+        cuda_sequential_data=None,
         has_ipi=False,
         q6_i=np.array([]),
         qt_i=np.array([]),
