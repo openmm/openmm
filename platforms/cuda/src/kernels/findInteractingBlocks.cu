@@ -109,7 +109,8 @@ extern "C" __global__ void computeSortKeys(const real4* __restrict__ blockBoundi
         sizeRange = blockSizeRange[0];
         for (int i = 1; i < numSizes; i++) {
             real2 size = blockSizeRange[i];
-            sizeRange.x = min(sizeRange.x, size.x);
+            if (size.x > 0)
+                sizeRange.x = min(sizeRange.x, size.x);
             sizeRange.y = max(sizeRange.y, size.y);
         }
         sizeRange.x = LOG(sizeRange.x);

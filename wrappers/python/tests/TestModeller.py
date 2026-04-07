@@ -1230,6 +1230,46 @@ class TestModeller(unittest.TestCase):
                 self.assertTrue(dist > (expectedDist-0.01)*nanometers and dist < (expectedDist+0.01)*nanometers)
 
 
+    def testWholeMoleculeExtraParticles(self):
+        """Test adding extra particles based on matching a template to a whole molecule."""
+        pdb = PDBFile(StringIO("""
+ATOM      1  C   AAA     1A    0.000     0.000   0.000  1.00  0.00           C
+ATOM      2  C   BBB     2A    1.000     0.000   0.000  1.00  0.00           C
+ATOM      3  O   BBB     2A    2.000     0.000   0.000  1.00  0.00           O
+CONECT    1    2
+CONECT    2    1    3
+CONECT    3    2
+END"""))
+        ff = ForceField(StringIO("""
+<ForceField>
+  <AtomTypes>
+    <Type class="C" element="C" mass="12.01" name="C" />
+    <Type class="O" element="O" mass="16.0" name="O" />
+    <Type class="V" mass="0.0" name="V" />
+  </AtomTypes>
+  <Residues>
+    <Residue name="Molecule">
+      <Atom name="C1" type="C" />
+      <Atom name="C2" type="C" />
+      <Atom name="O" type="O" />
+      <Atom name="V" type="V" />
+      <Bond atomName1="C1" atomName2="C2"/>
+      <Bond atomName1="C2" atomName2="O"/>
+      <VirtualSite type="average2" siteName="V" atomName1="C2" atomName2="O" weight1="0.25" weight2="0.75"/>
+    </Residue>
+  </Residues>
+</ForceField>"""))
+        modeller = Modeller(pdb.topology, pdb.positions)
+        modeller.addExtraParticles(ff)
+        residues = list(modeller.topology.residues())
+        self.assertEqual(2, len(residues))
+        self.assertEqual(1, len(residues[0]))
+        self.assertEqual(3, len(residues[1]))
+        self.assertVecAlmostEqual(Vec3(1.75, 0.0, 0.0), modeller.positions[3].value_in_unit(angstrom))
+        system = ff.createSystem(modeller.topology)
+        self.assertTrue(system.isVirtualSite(3))
+
+
     def test_addMembrane(self):
         """Test adding a membrane to a realistic system."""
 

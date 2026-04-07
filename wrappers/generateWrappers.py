@@ -73,6 +73,7 @@ class WrapperGenerator:
                             'const std::vector<std::vector<int> >& OpenMM::Context::getMolecules',
                             'static std::vector<std::string> OpenMM::Platform::getPluginLoadFailures',
                             'static std::vector<std::string> OpenMM::Platform::loadPluginsFromDirectory',
+                            'virtual std::vector<std::map<std::string, std::string> > OpenMM::Platform::getDevices',
                             'Vec3 OpenMM::LocalCoordinatesSite::getOriginWeights',
                             'Vec3 OpenMM::LocalCoordinatesSite::getXWeights',
                             'Vec3 OpenMM::LocalCoordinatesSite::getYWeights',

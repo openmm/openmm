@@ -455,10 +455,13 @@ int lbfgs(
             goto lbfgs_exit;
         }
 
-        /* Compute the initial step:
-            step = 1.0 / sqrt(vecdot(d, d, n))
+        /*
+            Normalize the initial steepest descent direction and set the initial
+            step to 1 to avoid underflow/overflow issues with large gradients.
          */
         vec2norminv(&step, d, n);
+        vecscale(d, step, n);
+        step = 1.0;
 
         k = 1;
         end = 0;

@@ -30887,9 +30887,9 @@ def find_improper(improper_types, atom_classes):
 
 residue_data = []
 
-for residue_index, residue in enumerate(topology.residues()):
+for residue in topology.residues():
     # Extract the residue or patch names and atom names.
-    template_data = templateForResidue[residue_index]
+    template_data = templateForResidue[residue]
     templates = set()
     if template_data is None:
         # Multi-residue patch; fall back to parsing atom names because OpenMM
@@ -31531,9 +31531,9 @@ def extract_atom_name(raw_atom_name, templates):
 
 residue_data = []
 
-for residue_index, residue in enumerate(topology.residues()):
+for residue in topology.residues():
     # Extract the residue or patch names and atom names.
-    template_data = templateForResidue[residue_index]
+    template_data = templateForResidue[residue]
     templates = set()
     if template_data is None:
         # Multi-residue patch; fall back to parsing atom names because OpenMM

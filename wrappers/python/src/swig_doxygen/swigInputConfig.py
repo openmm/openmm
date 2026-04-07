@@ -544,6 +544,7 @@ UNITS = {
 ("GayBerneForce", "addParticle") : (None, ("unit.nanometer", "unit.kilojoule_per_mole", None, None, "unit.nanometer", "unit.nanometer", "unit.nanometer", None, None, None)),
 ("GayBerneForce", "getParticleParameters") : (None, ("unit.nanometer", "unit.kilojoule_per_mole", None, None, "unit.nanometer", "unit.nanometer", "unit.nanometer", None, None, None)),
 ("GayBerneForce", "setParticleParameters") : (None, (None, "unit.nanometer", "unit.kilojoule_per_mole", None, None, "unit.nanometer", "unit.nanometer", "unit.nanometer", None, None, None)),
+("Platform", "getDevices") : (None, (None,)),
 ("Platform", "getDefaultPluginsDirectory") : (None, ()),
 ("Platform", "getPropertyDefaultValue") : (None, ()),
 ("Platform", "getPropertyNames") : (None, ()),
@@ -665,5 +666,6 @@ UNITS = {
 ("FixedDisplacement", "getFixedDisplacement0") : ("unit.nanometer", ()),
 ("PythonForce", "getComputation") : (None, ()),
 ("PythonForce", "getGlobalParameters") : (None, ()),
+("PythonForce", "getParticles") : (None, ()),
 ("PythonForce", "getPickledFunction") : (None, ()),
 }

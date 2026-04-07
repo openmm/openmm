@@ -75,7 +75,8 @@ __kernel void computeSortKeys(__global const real4* restrict blockBoundingBox, _
         sizeRange = blockSizeRange[0];
         for (int i = 1; i < numSizes; i++) {
             real2 size = blockSizeRange[i];
-            sizeRange.x = min(sizeRange.x, size.x);
+            if (size.x > 0)
+                sizeRange.x = min(sizeRange.x, size.x);
             sizeRange.y = max(sizeRange.y, size.y);
         }
         sizeRange.x = LOG(sizeRange.x);

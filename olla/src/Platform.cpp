@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -107,6 +107,10 @@ void Platform::setPropertyDefaultValue(const string& property, const string& val
             return;
         }
     throw OpenMMException("setPropertyDefaultValue: Illegal property name");
+}
+
+vector<map<string, string> > Platform::getDevices(const map<string, string>& filters) const {
+    return {{}};
 }
 
 void Platform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
