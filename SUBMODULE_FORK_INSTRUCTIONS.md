@@ -1,7 +1,3 @@
-# Submodule layout for muhammadhasyim
+# Submodule layout (FairChem)
 
-**fairchem** uses your repo: `https://github.com/muhammadhasyim/fairchem.git` — no change needed.
-
-## Layout
-
-- **fairchem**: Your repo at `muhammadhasyim/fairchem` (branch `les_branch`).
+This note is folded into the root **[README.md](README.md)** under **About this fork → Submodule layout (FairChem)**. Open that file for the full project overview and links.
