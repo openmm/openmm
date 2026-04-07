@@ -420,10 +420,15 @@ script, and can even run it for you.
 
    :autonumber:`Figure,openmm setup`:  The OpenMM-Setup application
 
-To install OpenMM-Setup, open a command line terminal and type the following command
+You can install OpenMM-Setup using the conda package manager with the command
 ::
 
     conda install -c conda-forge openmm-setup
+
+or using the pip package manager with the command
+::
+
+    pip install openmm-setup
 
 You can then launch it by typing the command
 ::

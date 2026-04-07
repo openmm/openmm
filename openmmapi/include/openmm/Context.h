@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -287,6 +287,7 @@ private:
     friend class Force;
     friend class ForceImpl;
     friend class Platform;
+    friend class LocalEnergyMinimizer;
     Context(const System& system, Integrator& integrator, ContextImpl& linked);
     ContextImpl& getImpl();
     const ContextImpl& getImpl() const;

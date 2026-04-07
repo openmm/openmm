@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -90,6 +90,8 @@ private:
     std::vector<std::string> paramNames, computedValueNames;
     std::vector<ComputeParameterInfo> paramBuffers, computedValueBuffers;
     double longRangeCoefficient;
+    std::map<std::vector<float>, double> longRangeCoefficientCache;
+    std::map<std::vector<float>, std::vector<double> > longRangeCoefficientDerivsCache;
     std::vector<double> longRangeCoefficientDerivs;
     bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList, needGlobalParams;
     int numGroupThreadBlocks;

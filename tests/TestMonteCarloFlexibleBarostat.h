@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Lee-Ping Wang                                      *
  * Contributors:                                                              *
  *                                                                            *
@@ -180,12 +180,12 @@ void testMoleculeScaling(bool rigid) {
 }
 
 void testMolecularGas(bool rigid) {
-    const int numMolecules = 64;
+    const int numMolecules = 256;
     const int frequency = 5;
     const int steps = 5000;
     const double pressure = 3.0;
     const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
-    const double temp =300.0;
+    const double temp = 300.0;
     const double initialVolume = numMolecules*BOLTZ*temp/pressureInMD;
     const double initialLength = std::pow(initialVolume, 1.0/3.0);
 
@@ -206,8 +206,8 @@ void testMolecularGas(bool rigid) {
         system.addParticle(1.0);
         system.addParticle(1.0);
         Vec3 pos(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
-        bonds->addBond(positions.size(), positions.size()+1, 0.1, 0.0);
-        bonds->addBond(positions.size(), positions.size()+2, 0.1, 0.0);
+        bonds->addBond(positions.size(), positions.size()+1, 0.1, 1.0);
+        bonds->addBond(positions.size(), positions.size()+2, 0.1, 1.0);
         positions.push_back(pos);
         positions.push_back(pos+Vec3(0.1, 0.0, 0.0));
         positions.push_back(pos+Vec3(0.0, 0.1, 0.0));

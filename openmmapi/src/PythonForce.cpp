@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2025 Stanford University and the Authors.           *
+ * Portions copyright (c) 2025-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,8 +33,8 @@
 using namespace OpenMM;
 using namespace std;
 
-PythonForce::PythonForce(PythonForceComputation* computation, const map<string, double>& globalParameters) :
-        computation(computation), globalParameters(globalParameters), usePeriodic(false) {
+PythonForce::PythonForce(PythonForceComputation* computation, const map<string, double>& globalParameters, const vector<int>& particles) :
+        computation(computation), globalParameters(globalParameters), usePeriodic(false), particles(particles) {
 }
 
 PythonForce::~PythonForce() {
@@ -47,6 +47,10 @@ const PythonForceComputation& PythonForce::getComputation() const {
 
 const map<string, double>& PythonForce::getGlobalParameters() const {
     return globalParameters;
+}
+
+void PythonForce::setParticles(const std::vector<int>& particles) {
+    this->particles = particles;
 }
 
 bool PythonForce::usesPeriodicBoundaryConditions() const {

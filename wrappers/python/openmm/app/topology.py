@@ -4,7 +4,7 @@ topology.py: Used for storing topological information about a system.
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2012-2025 Stanford University and the Authors.
+Portions copyright (c) 2012-2026 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -515,3 +515,32 @@ class Bond(namedtuple('Bond', ['atom1', 'atom2'])):
             s = "%s, order=%d" % (s, self.order)
         s += ")"
         return s
+
+class MergedResidue(Residue):
+    """A MergedResidue is a pseudo-residue created by merging multiple Residues into a single object.  It is never
+    contained in a Topology, but is sometimes created for use in parameterization and modelling.  A MergedResidue
+    differs from an ordinary Residue in the follow ways.
+
+    1. It contains a list of the Residue objects that were merged to create it.
+    2. It does not own its Atoms.  They are the same objects found in the original Residues.
+    3. Its chain field refers to the Chain containing the first Residue that was merged.  Because a MergedResidue might
+       span multiple chains, it may not be contained entirely in that Chain.
+    4. Its index field is set to -1, since it has no index within the Topology.
+    """
+    def __init__(self, residues: list[Residue]):
+        """Create a MergedResidue by combining a list of Residues."""
+        if len(residues) == 0:
+            raise ValueError('A MergedResidue must contain at least one Residue')
+        for res in residues[1:]:
+            if res.chain.topology != residues[0].chain.topology:
+                raise ValueError('All Residues in a MergedResidue must belong to the same Topology')
+        ## The list of Residues that were merged.
+        self.residues = residues
+        self.name = 'Merged'
+        self.index = -1
+        self.chain = residues[0].chain
+        self.id = None
+        self.insertionCode = ''
+        self._atoms = []
+        for res in residues:
+            self._atoms += res._atoms

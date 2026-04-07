@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1660,10 +1660,10 @@ public:
     /**
      * Initialize the kernel.
      *
-     * @param system     the System this kernel will be applied to
+     * @param context    the ContextImpl this kernel will be applied to
      * @param force      the CustomCPPForceImpl this kernel will be used for
      */
-    void initialize(const System& system, CustomCPPForceImpl& force);
+    void initialize(const ContextImpl& context, CustomCPPForceImpl& force);
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -1698,6 +1698,7 @@ private:
     std::vector<float> floatForces;
     int forceGroupFlag;
     double energy;
+    bool useWorkerThread;
 };
 
 /**
@@ -1711,10 +1712,10 @@ public:
     /**
      * Initialize the kernel.
      *
-     * @param system     the System this kernel will be applied to
+     * @param context    the ContextImpl this kernel will be applied to
      * @param force      the PythonForce this kernel will be used for
      */
-    void initialize(const System& system, const PythonForce& force);
+    void initialize(const ContextImpl& context, const PythonForce& force);
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -1750,16 +1751,20 @@ private:
     class ExecuteTask;
     class StartCalculationPreComputation;
     class AddForcesPostComputation;
+    class ReorderListener;
+    void getPositions();
+    void sortParticles();
     OpenMM::ContextImpl& contextImpl;
     ComputeContext& cc;
     const PythonForceComputation* computation;
-    ComputeArray forcesArray;
-    ComputeKernel addForcesKernel;
+    ComputeArray positionsArray, forcesArray, particlesArray, reorderedParticles;
+    ComputeKernel copyPositionsKernel, addForcesKernel;
     std::vector<Vec3> positionsVec;
     std::vector<double> forcesVec;
-    int forceGroupFlag;
+    std::vector<int> particles;
+    int numParticles, forceGroupFlag;
     double energy;
-    bool usePeriodic;
+    bool usePeriodic, useWorkerThread;
 };
 
 } // namespace OpenMM

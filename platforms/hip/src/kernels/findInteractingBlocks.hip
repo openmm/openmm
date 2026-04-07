@@ -115,7 +115,8 @@ extern "C" __global__ void findBlockBounds(int numAtoms, real4 periodicBoxSize, 
 
         // Record the range of sizes.
         real totalSize = blockSize.x+blockSize.y+blockSize.z;
-        atomicMin(&blockSizeRange->x, totalSize);
+        if (totalSize > 0)
+            atomicMin(&blockSizeRange->x, totalSize);
         atomicMax(&blockSizeRange->y, totalSize);
     }
     if (blockIdx.x == 0 && threadIdx.x == 0)

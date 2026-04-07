@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -56,6 +56,7 @@
 #include "ReferenceLCPOIxn.h"
 #include "ReferenceLJCoulomb14.h"
 #include "ReferenceLJCoulombIxn.h"
+#include "ReferenceMinimize.h"
 #include "ReferenceMonteCarloBarostat.h"
 #include "ReferenceNoseHooverChain.h"
 #include "ReferenceNoseHooverDynamics.h"
@@ -348,6 +349,13 @@ void ReferenceVirtualSitesKernel::initialize(const System& system) {
 void ReferenceVirtualSitesKernel::computePositions(ContextImpl& context) {
     vector<Vec3>& positions = extractPositions(context);
     extractVirtualSites(context).computePositions(context.getSystem(), positions, extractBoxVectors(context));
+}
+
+void ReferenceMinimizeKernel::initialize(const System& system) {
+}
+
+void ReferenceMinimizeKernel::execute(ContextImpl& context, double tolerance, int maxIterations, MinimizationReporter* reporter) {
+    ReferenceMinimize::minimize(context, tolerance, maxIterations, reporter);
 }
 
 void ReferenceCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
@@ -4159,9 +4167,9 @@ void ReferenceCalcATMForceKernel::copyParametersToContext(ContextImpl& context, 
     loadParams(numParticles, force);
 }
 
-void ReferenceCalcCustomCPPForceKernel::initialize(const System& system, CustomCPPForceImpl& force) {
+void ReferenceCalcCustomCPPForceKernel::initialize(const ContextImpl& context, CustomCPPForceImpl& force) {
     this->force = &force;
-    forces.resize(system.getNumParticles());
+    forces.resize(context.getSystem().getNumParticles());
 }
 
 double ReferenceCalcCustomCPPForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -4174,9 +4182,15 @@ double ReferenceCalcCustomCPPForceKernel::execute(ContextImpl& context, bool inc
     return energy;
 }
 
-void ReferenceCalcPythonForceKernel::initialize(const System& system, const PythonForce& force) {
+void ReferenceCalcPythonForceKernel::initialize(const ContextImpl& context, const PythonForce& force) {
     computation = &force.getComputation();
-    forces.resize(system.getNumParticles());
+    particles = force.getParticles();
+    numParticles = particles.size();
+    if (numParticles == 0)
+        numParticles = context.getSystem().getNumParticles();
+    else
+        positions.resize(numParticles);
+    forces.resize(numParticles);
     usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
@@ -4184,7 +4198,13 @@ double ReferenceCalcPythonForceKernel::execute(ContextImpl& context, bool includ
     vector<Vec3>& posData = extractPositions(context);
     vector<Vec3>& forceData = extractForces(context);
     State::StateBuilder builder(context.getTime(), context.getStepCount());
-    builder.setPositions(posData);
+    if (particles.size() == 0)
+        builder.setPositions(posData);
+    else {
+        for (int i = 0; i < particles.size(); i++)
+            positions[i] = posData[particles[i]];
+        builder.setPositions(positions);
+    }
     builder.setParameters(context.getParameters());
     if (usePeriodic) {
         Vec3 a, b, c;
@@ -4194,8 +4214,15 @@ double ReferenceCalcPythonForceKernel::execute(ContextImpl& context, bool includ
     double energy;
     State state = builder.getState();
     computation->compute(state, energy, forces.data(), true);
-    if (includeForces)
-        for (int i = 0; i < forces.size(); i++)
-            forceData[i] += forces[i];
+    if (includeForces) {
+        if (particles.size() == 0) {
+            for (int i = 0; i < forces.size(); i++)
+                forceData[i] += forces[i];
+        }
+        else {
+            for (int i = 0; i < forces.size(); i++)
+                forceData[particles[i]] += forces[i];
+        }
+    }
     return energy;
 }

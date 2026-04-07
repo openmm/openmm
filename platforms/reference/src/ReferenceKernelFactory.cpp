@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceApplyConstraintsKernel(name, platform, data);
     if (name == VirtualSitesKernel::Name())
         return new ReferenceVirtualSitesKernel(name, platform);
+    if (name == MinimizeKernel::Name())
+        return new ReferenceMinimizeKernel(name, platform);
     if (name == CalcNonbondedForceKernel::Name())
         return new ReferenceCalcNonbondedForceKernel(name, platform);
     if (name == CalcConstantPotentialForceKernel::Name())

@@ -18,6 +18,7 @@ namespace std {
   %template(vectorstring) vector<string>;
   %template(mapstringstring) map<string,string>;
   %template(mapstringdouble) map<string,double>;
+  %template(vectormapstringstring) vector<map<string,string> >;
   %template(mapii) map<int,int>;
   %template(seti) set<int>;
 };

@@ -156,7 +156,7 @@ void* AmoebaMultipoleForceProxy::deserialize(const SerializationNode& node) cons
             for (int i = 0; ; i++) {
                 stringstream key;
                 key << "c" << i;
-                if (coefficients.getProperties().find(key.str()) == coefficients.getProperties().end())
+                if (!coefficients.hasProperty(key.str()))
                     break;
                 coeff.push_back(coefficients.getDoubleProperty(key.str()));
             }

@@ -190,6 +190,8 @@ namespace OpenMM {
      */
     PythonForce* _createPythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters={}, PyObject* batchComputation=nullptr) {
         PythonForce* force = new PythonForce(new ComputationWrapper(computation, batchComputation), globalParameters);
+    PythonForce* _createPythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters={}, const std::vector<int>& particles={}) {
+        PythonForce* force = new PythonForce(new ComputationWrapper(computation), globalParameters, particles);
         PyObject* pickle = PyImport_ImportModule("pickle");
         PyObject* dumps = PyUnicode_FromString("dumps");
         PyObject* result = PyObject_CallMethodOneArg(pickle, dumps, computation);
@@ -235,7 +237,7 @@ namespace OpenMM {
         }
 
         void serialize(const void* object, SerializationNode& node) const {
-            node.setIntProperty("version", 1);
+            node.setIntProperty("version", 2);
             const PythonForce& force = *reinterpret_cast<const PythonForce*>(object);
             if (force.getPickledFunction().size() == 0)
                 throw OpenMMException("PythonForceProxy: Could not serialize PythonForce because its function could not be pickled.");
@@ -245,11 +247,14 @@ namespace OpenMM {
             SerializationNode& globalParams = node.createChildNode("GlobalParameters");
             for (auto param : force.getGlobalParameters())
                 globalParams.createChildNode("Parameter").setStringProperty("name", param.first).setDoubleProperty("default", param.second);
+            SerializationNode& particlesNode = node.createChildNode("Particles");
+            for (int i : force.getParticles())
+               particlesNode.createChildNode("Particle").setIntProperty("index", i);
         }
 
         void* deserialize(const SerializationNode& node) const {
             int version = node.getIntProperty("version");
-            if (version != 1)
+            if (version < 1 || version > 2)
                 throw OpenMMException("Unsupported version number");
             std::vector<char> pickledFunction = hexDecode(node.getStringProperty("function"));
             PyObject* pickle = PyImport_ImportModule("pickle");
@@ -261,7 +266,11 @@ namespace OpenMM {
             std::map<std::string, double> params;
             for (auto& parameter : paramsNode.getChildren())
                 params[parameter.getStringProperty("name")] = parameter.getDoubleProperty("default");
-            PythonForce* force = _createPythonForce(function, params);
+            std::vector<int> particles;
+            if (version > 1)
+                for (auto& particle : node.getChildNode("Particles").getChildren())
+                    particles.push_back(particle.getIntProperty("index"));
+            PythonForce* force = _createPythonForce(function, params, particles);
             if (node.hasProperty("forceGroup"))
                 force->setForceGroup(node.getIntProperty("forceGroup", 0));
             if (node.hasProperty("usesPeriodic"))
@@ -297,5 +306,7 @@ batchComputation : function, optional
 "
     PythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters={}, PyObject* batchComputation=nullptr) {
         return _createPythonForce(computation, globalParameters, batchComputation);
+    PythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters={}, const std::vector<int>& particles={}) {
+        return _createPythonForce(computation, globalParameters, particles);
     }
 }

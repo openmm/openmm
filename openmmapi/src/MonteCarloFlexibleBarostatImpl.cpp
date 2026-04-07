@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Sander Vandenhaute                                 *
  * Contributors:                                                              *
  *                                                                            *
@@ -159,7 +159,7 @@ void MonteCarloFlexibleBarostatImpl::computeCurrentPressure(ContextImpl& context
     // Compute each component of the pressure tensor.
 
     for (int component = 0; component < 6; component++)
-        pressure[component] = (2.0*ke[component] - computePressureComponent(context, delta, component))/(volume*AVOGADRO*1e-25);
+        pressure[component] = (2.0*ke[component]/volume - computePressureComponent(context, delta, component))/(AVOGADRO*1e-25);
 
     // Restore the context to its original state.
 
@@ -223,7 +223,7 @@ double MonteCarloFlexibleBarostatImpl::computePressureComponent(ContextImpl& con
     // Compute the potential energy contribution to this element of the pressure tensor.
 
     double volume = box[0][0]*box[1][1]*box[2][2];
-    return (energy2-energy1)/(volume*2*delta);
+    return (energy1-energy2)/(volume*2*delta);
 }
 
 void MonteCarloFlexibleBarostatImpl::setBoxVectors(ContextImpl& context, Vec3 a, Vec3 b, Vec3 c) {
