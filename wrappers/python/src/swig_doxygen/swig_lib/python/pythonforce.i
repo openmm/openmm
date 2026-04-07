@@ -306,6 +306,7 @@ batchComputation : function, optional
 "
     PythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters={}, PyObject* batchComputation=nullptr) {
         return _createPythonForce(computation, globalParameters, batchComputation);
+    }
     PythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters={}, const std::vector<int>& particles={}) {
         return _createPythonForce(computation, globalParameters, particles);
     }
