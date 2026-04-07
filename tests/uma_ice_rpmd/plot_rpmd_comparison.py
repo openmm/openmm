@@ -26,6 +26,14 @@ Usage:
   # Same inputs, plus CV-plane (Q6 vs q_tet) trajectory:
   python plot_rpmd_comparison.py ... -o rpmd_comparison.png --cv-plane pipeline_out/rpmd_cv_plane.png
 
+  # Three RPMD curves (unstable CUDA vs stable Reference CPU integrator vs i-PI+LAMMPS):
+  python plot_rpmd_comparison.py --openmm pipeline_out/ice_order_openmm_rpmd_1ps.csv \\
+    --openmm-reference pipeline_out/reference_platform_test.csv \\
+    --ipi pipeline_out/ice_order_ipi_rpmd.csv -o pipeline_out/rpmd_comparison.png \\
+    --cv-plane pipeline_out/rpmd_cv_plane.png
+
+  # Time window (default ``--time-max-ps`` is 0.1); full span: ``--time-max-ps 0``.
+
 For **classical (single-bead) MD** only — LAMMPS vs OpenMM vs TIP4P — use ``plot_md_comparison.py`` (not this script).
 """
 from __future__ import annotations
@@ -174,12 +182,31 @@ def _read_csv(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarra
     return t_arr, q6_arr, qt_arr, tk_arr
 
 
+def _apply_time_max_ps(
+    t_max_ps: float | None,
+    t_arr: np.ndarray,
+    q6: np.ndarray,
+    qt: np.ndarray,
+    tk: np.ndarray | None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray | None]:
+    """Return arrays restricted to ``0 <= time_ps <= t_max_ps`` when *t_max_ps* > 0."""
+    if t_max_ps is None or t_max_ps <= 0 or t_arr.size == 0:
+        return t_arr, q6, qt, tk
+    mask = (t_arr >= 0.0) & (t_arr <= float(t_max_ps))
+    if not np.any(mask):
+        return t_arr, q6, qt, tk
+    tk_out = tk[mask] if tk is not None else None
+    return t_arr[mask], q6[mask], qt[mask], tk_out
+
+
 def _save_cv_plane_figure(
     output: Path,
     *,
     has_openmm: bool,
     q6_o: np.ndarray,
     qt_o: np.ndarray,
+    reference_data: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray | None] | None,
+    cuda_sequential_data: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray | None] | None,
     has_ipi: bool,
     q6_i: np.ndarray,
     qt_i: np.ndarray,
@@ -193,9 +220,28 @@ def _save_cv_plane_figure(
     with plt.rc_context(_PLOT_RC):
         fig, ax = plt.subplots(1, 1, figsize=(6.0, 5.0), constrained_layout=True)
         if has_openmm and q6_o.size:
-            ax.plot(q6_o, qt_o, "b-", label="OpenMM UMA RPMD", alpha=0.8, lw=1.8)
+            ax.plot(q6_o, qt_o, "b-", label="OpenMM CUDA + UMA", alpha=0.8, lw=1.8)
             ax.scatter(q6_o[0], qt_o[0], c="blue", s=36, marker="o", zorder=5, edgecolors="k", linewidths=0.4)
             ax.scatter(q6_o[-1], qt_o[-1], c="blue", s=36, marker="s", zorder=5, edgecolors="k", linewidths=0.4)
+        if reference_data is not None:
+            _, q6_r, qt_r, _ = reference_data
+            if q6_r.size:
+                ax.plot(q6_r, qt_r, "c-", label="OpenMM Reference + UMA", alpha=0.85, lw=1.8)
+                ax.scatter(q6_r[0], qt_r[0], c="cyan", s=36, marker="o", zorder=5, edgecolors="k", linewidths=0.4)
+                ax.scatter(q6_r[-1], qt_r[-1], c="cyan", s=36, marker="s", zorder=5, edgecolors="k", linewidths=0.4)
+        if cuda_sequential_data is not None:
+            _, q6_s, qt_s, _ = cuda_sequential_data
+            if q6_s.size:
+                ax.plot(
+                    q6_s,
+                    qt_s,
+                    "m-.",
+                    label="OpenMM CUDA + UMA (sequential)",
+                    alpha=0.85,
+                    lw=1.6,
+                )
+                ax.scatter(q6_s[0], qt_s[0], c="magenta", s=36, marker="o", zorder=5, edgecolors="k", linewidths=0.4)
+                ax.scatter(q6_s[-1], qt_s[-1], c="magenta", s=36, marker="s", zorder=5, edgecolors="k", linewidths=0.4)
         if has_ipi and q6_i.size:
             ax.plot(q6_i, qt_i, "r--", label="i-PI + LAMMPS UMA", alpha=0.8, lw=1.8)
             ax.scatter(q6_i[0], qt_i[0], c="red", s=36, marker="o", zorder=5, edgecolors="k", linewidths=0.4)
@@ -224,6 +270,26 @@ def main() -> None:
         type=Path,
         default=_SCRIPT_DIR / "pipeline_out" / "ice_order_openmm_rpmd.csv",
         help="OpenMM UMA RPMD order CSV (test_uma_ice_rpmd / run_openmm_rpmd_reference).",
+    )
+    ap.add_argument(
+        "--openmm-reference",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help=(
+            "Optional second OpenMM curve (same CSV schema), e.g. Reference CPU integrator "
+            "with UMA forces — plotted cyan for comparison to --openmm (often CUDA)."
+        ),
+    )
+    ap.add_argument(
+        "--openmm-sequential",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help=(
+            "Optional third OpenMM CUDA curve: same schema as --openmm, e.g. "
+            "OPENMMML_RPMD_NO_BATCH=1 sequential per-bead forces — plotted magenta."
+        ),
     )
     ap.add_argument(
         "--ipi",
@@ -267,6 +333,16 @@ def main() -> None:
         help="Target bath temperature (K) for horizontal reference line on the T_K panel (PILE-G).",
     )
     ap.add_argument(
+        "--tk-ymax-factor",
+        type=float,
+        default=1.1,
+        metavar="F",
+        help=(
+            "T_K panel only: y-axis top = F × bath temperature (default 1.1 = bath +10%%). "
+            "Data above this are clipped from view."
+        ),
+    )
+    ap.add_argument(
         "--no-temperature-line",
         action="store_true",
         help="Do not draw the bath-temperature reference line on the kinetic T panel.",
@@ -294,6 +370,16 @@ def main() -> None:
             "Use 0 to omit beads from the annotation."
         ),
     )
+    ap.add_argument(
+        "--time-max-ps",
+        type=float,
+        default=0.1,
+        metavar="T",
+        help=(
+            "Clip all time-series curves to 0…T ps and fix the x-axis to [0, T] (default 0.1). "
+            "Use 0 or a negative value to plot each series over its full recorded time range."
+        ),
+    )
     args = ap.parse_args()
 
     if not _HAS_MPL:
@@ -307,9 +393,26 @@ def main() -> None:
     if args.tip4p is not None and args.tip4p.is_file():
         tip4p_data = _read_csv(args.tip4p)
 
-    if not has_openmm and not has_ipi and tip4p_data is None:
+    ref_path = args.openmm_reference
+    reference_data: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray | None] | None = None
+    if ref_path is not None and Path(ref_path).is_file():
+        reference_data = _read_csv(Path(ref_path))
+
+    seq_path = args.openmm_sequential
+    cuda_sequential_data: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray | None] | None = None
+    if seq_path is not None and Path(seq_path).is_file():
+        cuda_sequential_data = _read_csv(Path(seq_path))
+
+    if (
+        not has_openmm
+        and not has_ipi
+        and tip4p_data is None
+        and reference_data is None
+        and cuda_sequential_data is None
+    ):
         print(
-            "Need at least one of: existing --openmm CSV, existing --ipi CSV, or --tip4p CSV.",
+            "Need at least one of: existing --openmm CSV, existing --ipi CSV, "
+            "--openmm-reference CSV, --openmm-sequential CSV, or --tip4p CSV.",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -322,6 +425,24 @@ def main() -> None:
     tk_i: np.ndarray | None = None
     if has_ipi:
         t_i, q6_i, qt_i, tk_i = _read_csv(Path(ipi_path))
+
+    t_max = args.time_max_ps if args.time_max_ps > 0 else None
+    if has_openmm:
+        t_o, q6_o, qt_o, tk_o = _apply_time_max_ps(t_max, t_o, q6_o, qt_o, tk_o)
+    if has_ipi:
+        t_i, q6_i, qt_i, tk_i = _apply_time_max_ps(t_max, t_i, q6_i, qt_i, tk_i)
+    if reference_data is not None:
+        t_r, q6_r, qt_r, tk_r = reference_data
+        t_r, q6_r, qt_r, tk_r = _apply_time_max_ps(t_max, t_r, q6_r, qt_r, tk_r)
+        reference_data = (t_r, q6_r, qt_r, tk_r)
+    if cuda_sequential_data is not None:
+        t_s, q6_s, qt_s, tk_s = cuda_sequential_data
+        t_s, q6_s, qt_s, tk_s = _apply_time_max_ps(t_max, t_s, q6_s, qt_s, tk_s)
+        cuda_sequential_data = (t_s, q6_s, qt_s, tk_s)
+    if tip4p_data is not None:
+        t_t, q6_t, qt_t, tk_t = tip4p_data
+        t_t, q6_t, qt_t, tk_t = _apply_time_max_ps(t_max, t_t, q6_t, qt_t, tk_t)
+        tip4p_data = (t_t, q6_t, qt_t, tk_t)
 
     def _plot_tk(
         ax: "plt.Axes",
@@ -347,6 +468,10 @@ def main() -> None:
             n_mol = _read_n_oxygen_from_csv(args.tip4p)
         if n_mol is None and has_ipi and ipi_path is not None:
             n_mol = _read_n_oxygen_from_csv(Path(ipi_path))
+        if n_mol is None and ref_path is not None:
+            n_mol = _read_n_oxygen_from_csv(Path(ref_path))
+        if n_mol is None and seq_path is not None:
+            n_mol = _read_n_oxygen_from_csv(Path(seq_path))
     n_beads_ann: int | None = args.beads if args.beads > 0 else None
 
     with plt.rc_context(_PLOT_RC):
@@ -360,8 +485,25 @@ def main() -> None:
             constrained_layout=True,
         )
         if has_openmm and t_o.size:
-            ax1.plot(t_o, q6_o, "b-", label="OpenMM UMA RPMD", alpha=0.8)
-            ax2.plot(t_o, qt_o, "b-", label="OpenMM UMA RPMD", alpha=0.8)
+            ax1.plot(t_o, q6_o, "b-", label="OpenMM CUDA + UMA", alpha=0.8)
+            ax2.plot(t_o, qt_o, "b-", label="OpenMM CUDA + UMA", alpha=0.8)
+        if reference_data is not None:
+            t_r, q6_r, qt_r, tk_r = reference_data
+            if t_r.size:
+                ax1.plot(t_r, q6_r, "c-", label="OpenMM Reference + UMA", alpha=0.85)
+                ax2.plot(t_r, qt_r, "c-", label="OpenMM Reference + UMA", alpha=0.85)
+        if cuda_sequential_data is not None:
+            t_s, q6_s, qt_s, _ = cuda_sequential_data
+            if t_s.size:
+                ax1.plot(
+                    t_s,
+                    q6_s,
+                    "m-.",
+                    label="OpenMM CUDA + UMA (sequential)",
+                    alpha=0.85,
+                    lw=1.6,
+                )
+                ax2.plot(t_s, qt_s, "m-.", label="OpenMM CUDA + UMA (sequential)", alpha=0.85, lw=1.6)
         if has_ipi and t_i.size:
             ax1.plot(t_i, q6_i, "r--", label="i-PI + LAMMPS UMA", alpha=0.8)
             ax2.plot(t_i, qt_i, "r--", label="i-PI + LAMMPS UMA", alpha=0.8)
@@ -378,7 +520,15 @@ def main() -> None:
         ax2.grid(True, alpha=0.3)
 
         if has_openmm and t_o.size:
-            _plot_tk(ax3, t_o, tk_o, "OpenMM UMA RPMD", "b-")
+            _plot_tk(ax3, t_o, tk_o, "OpenMM CUDA + UMA", "b-")
+        if reference_data is not None:
+            t_r, _, _, tk_r = reference_data
+            if t_r.size:
+                _plot_tk(ax3, t_r, tk_r, "OpenMM Reference + UMA", "c-")
+        if cuda_sequential_data is not None:
+            t_s, _, _, tk_s = cuda_sequential_data
+            if t_s.size:
+                _plot_tk(ax3, t_s, tk_s, "OpenMM CUDA + UMA (sequential)", "m-.", lw=1.6)
         if has_ipi and t_i.size:
             _plot_tk(ax3, t_i, tk_i, "i-PI + LAMMPS UMA", "r--")
         if tip4p_data is not None:
@@ -397,6 +547,11 @@ def main() -> None:
         ax3.set_xlabel("Time (ps)")
         ax3.legend()
         ax3.grid(True, alpha=0.3)
+        tk_y_top = float(args.bath_temperature_k) * float(args.tk_ymax_factor)
+        y_bottom, _ = ax3.get_ylim()
+        ax3.set_ylim(bottom=max(0.0, float(y_bottom)), top=tk_y_top)
+        if t_max is not None:
+            ax3.set_xlim(0.0, float(t_max))
 
         fig.suptitle(_enrich_title_with_system(title_fmt, n_mol, n_beads_ann))
         # Tighter vertical packing between stacked axes (title spacing is handled above).
@@ -411,6 +566,8 @@ def main() -> None:
             has_openmm=has_openmm and bool(t_o.size),
             q6_o=q6_o,
             qt_o=qt_o,
+            reference_data=reference_data,
+            cuda_sequential_data=cuda_sequential_data,
             has_ipi=has_ipi and bool(t_i.size),
             q6_i=q6_i,
             qt_i=qt_i,

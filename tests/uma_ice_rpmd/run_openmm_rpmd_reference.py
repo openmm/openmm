@@ -17,6 +17,10 @@ Batched UMA RPMD sets ``OPENMMML_UMA_RPMD_CHUNK`` (default 4) and
 ``test_uma_ice_rpmd.py`` when unset, so 32 beads × 64 mol fits ~12 GB VRAM.
 Override with ``--uma-rpmd-chunk 2`` or the environment variable if needed.
 
+For ``--platform cuda``, OpenMM must find plugin libraries (e.g. ``libOpenMMCUDA.so``).
+This script sets ``OPENMM_PLUGIN_DIR`` from ``CONDA_PREFIX`` when needed. Do not use a
+literal ``...`` path; use e.g. ``export OPENMM_PLUGIN_DIR="${CONDA_PREFIX}/lib/plugins"``.
+
 Usage:
   cd tests/uma_ice_rpmd
   python run_openmm_rpmd_reference.py
@@ -26,11 +30,61 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
+
+
+def _cuda_openmm_plugin_in_dir(plugin_dir: Path) -> bool:
+    """True if this directory contains the OpenMM CUDA platform shared library."""
+    if not plugin_dir.is_dir():
+        return False
+    for pat in ("libOpenMMCUDA.so*", "libOpenMMCUDA.dylib*", "OpenMMCUDA.dll"):
+        if any(plugin_dir.glob(pat)):
+            return True
+    return False
+
+
+def ensure_openmm_plugin_dir() -> None:
+    """Set OPENMM_PLUGIN_DIR so Platform CUDA / RPMD CUDA load (subprocess inherits this).
+
+    Docs often abbreviate ``.../lib/plugins``; a missing or wrong path yields
+    ``There is no registered Platform called "CUDA"``.
+    """
+    cur = os.environ.get("OPENMM_PLUGIN_DIR", "").strip()
+    if cur:
+        p = Path(cur)
+        if _cuda_openmm_plugin_in_dir(p):
+            return
+        print(
+            f"[run_openmm_rpmd_reference] OPENMM_PLUGIN_DIR={cur!r} is missing CUDA plugins "
+            f"(or path invalid); searching CONDA_PREFIX.",
+            flush=True,
+        )
+    for base in (
+        os.environ.get("CONDA_PREFIX"),
+        str(Path(sys.executable).resolve().parent.parent),
+        os.path.expanduser("~/miniconda3/envs/fairchem"),
+    ):
+        if not base:
+            continue
+        cand = Path(base) / "lib" / "plugins"
+        if _cuda_openmm_plugin_in_dir(cand):
+            os.environ["OPENMM_PLUGIN_DIR"] = str(cand)
+            print(
+                f"[run_openmm_rpmd_reference] Set OPENMM_PLUGIN_DIR={cand}",
+                flush=True,
+            )
+            return
+    print(
+        "[run_openmm_rpmd_reference] WARNING: Could not auto-detect OpenMM plugins with CUDA. "
+        "Set OPENMM_PLUGIN_DIR to the directory containing libOpenMMCUDA.so "
+        "(e.g. export OPENMM_PLUGIN_DIR=\"${CONDA_PREFIX}/lib/plugins\").",
+        flush=True,
+    )
 _LAMMPS_DIR = _SCRIPT_DIR / "lammps"
 
 
@@ -139,6 +193,15 @@ def main() -> None:
     )
     ap.add_argument("--platform", default="cuda")
     ap.add_argument(
+        "--precision",
+        type=str,
+        default=None,
+        choices=["single", "mixed", "double"],
+        help="CUDA Context precision (default: mixed in test_uma_ice_rpmd). Use double to reduce RPMD drift. "
+        "Does not remove fixed-point force upload in the CUDA RPMD plugin for batched PythonForce; "
+        "use --platform reference for integrator parity without that path.",
+    )
+    ap.add_argument(
         "--ml-device",
         default=None,
         help="UMA compute device: cuda (default with CUDA platform), cpu (slower; use if 32 beads OOM on GPU).",
@@ -178,6 +241,14 @@ def main() -> None:
         type=float,
         default=0,
         help="Equilibration time in ps before production (default: 0 for i-PI parity; use 2.0 for equilibrated sampling)",
+    )
+    ap.add_argument(
+        "--report-interval",
+        type=float,
+        default=None,
+        metavar="PS",
+        help="Forward to test_uma_ice_rpmd: progress report spacing in ps (overrides auto from --prod). "
+        "Ignored if --report-every-steps > 0.",
     )
     ap.add_argument(
         "--report-every-steps",
@@ -224,7 +295,10 @@ def main() -> None:
         prod_ps = args.steps * dt_fs / 1000.0
     else:
         prod_ps = args.prod
-    report_ps = max(0.01, min(0.1, max(prod_ps / 5.0, 0.02)))
+    if args.report_interval is not None:
+        report_ps = float(args.report_interval)
+    else:
+        report_ps = max(0.01, min(0.1, max(prod_ps / 5.0, 0.02)))
     cmd = [
         sys.executable,
         str(_SCRIPT_DIR / "test_uma_ice_rpmd.py"),
@@ -252,6 +326,8 @@ def main() -> None:
         cmd.extend(["--report-interval", str(report_ps)])
     if args.ml_device:
         cmd.extend(["--ml-device", args.ml_device])
+    if args.precision:
+        cmd.extend(["--precision", args.precision])
     if args.inference_turbo_rpmd:
         cmd.append("--inference-turbo-rpmd")
     if args.optimize_inference_tf32_only:
@@ -261,7 +337,8 @@ def main() -> None:
     if args.conservative_forces:
         cmd.append("--conservative-forces")
     args.order_csv.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.check_call(cmd, cwd=str(_SCRIPT_DIR))
+    ensure_openmm_plugin_dir()
+    subprocess.check_call(cmd, cwd=str(_SCRIPT_DIR), env=os.environ.copy())
     print(f"Order CSV: {args.order_csv}")
 
 

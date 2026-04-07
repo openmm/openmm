@@ -81,6 +81,14 @@ from rpmd_thermo_utils import (
 
 from openmm import app, unit, Vec3
 from openmm import RPMDIntegrator, Context, Platform, RPMDMonteCarloBarostat
+
+# After OpenMM (conda/site-packages), prefer this repo's ``openmmml`` so batched UMA
+# matches ``wrappers/python/openmmml`` without a manual site-packages copy.
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+_WRAPPERS_PY = _REPO_ROOT / "wrappers" / "python"
+if _WRAPPERS_PY.is_dir():
+    sys.path.insert(0, str(_WRAPPERS_PY))
+
 from openmmml import MLPotential
 
 # Embedded ice Ih CIF from Avogadro/COD (12 water molecules) - fallback when GenIce2 unavailable
@@ -866,16 +874,24 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
         if torch.cuda.is_available():
             torch.cuda.init()
             print(f"  PyTorch CUDA initialized before OpenMM Context (context-order fix)")
-    platform = Platform.getPlatformByName(platform_name.upper())
-    if platform_name.lower() == 'cuda':
-        # Barostat disabled on CUDA (see above). Use mixed precision for NVT.
+    _plat_key = platform_name.lower()
+    if _plat_key == 'reference':
+        platform = Platform.getPlatformByName('Reference')
+    else:
+        platform = Platform.getPlatformByName(platform_name.upper())
+    if _plat_key == 'cuda':
         precision = precision_override or 'mixed'
         properties = {
             'Precision': precision,
             'DeviceIndex': '0',
             'DisablePmeStream': 'true',
         }
-        print(f"  Using CUDA platform (GPU acceleration, DeviceIndex=0)")
+        print(
+            f"  Using CUDA platform (GPU acceleration, DeviceIndex=0, Precision={precision})"
+        )
+    elif _plat_key == 'reference':
+        properties = {}
+        print(f"  Using Reference platform (full double-precision CPU)")
     else:
         properties = {}
         print(f"  Using CPU platform")
@@ -1213,6 +1229,12 @@ def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=No
                       f"{ns_per_day:6.2f} ns/day")
                 print(f"         PE={current_pe:10.1f} KE={current_ke:8.1f} Total={current_total:10.1f} kJ/mol | "
                       f"T={current_temp:6.1f} K | ρ={current_density:.3f} g/cm³")
+                if _ts == "none":
+                    e_sum_beads = _rpmd_sum_bead_pe_plus_ke_kjmol(integrator, num_beads)
+                    print(
+                        f"         NVE_diag: sum_bead(PE+KE)={e_sum_beads:.6f} kJ/mol "
+                        f"(approximate conserved quantity for short NVE checks)"
+                    )
             print("")
         
         # Save PDB frame (production only, at specified interval)
@@ -1491,13 +1513,20 @@ if __name__ == '__main__':
     )
     parser.add_argument('--pdb-interval', type=float, default=0.2,
                        help='PDB frame save interval in ps (default: 0.2, 5 frames/ps)')
-    parser.add_argument('--platform', type=str, default='cuda', choices=['cuda', 'cpu'],
-                       help='OpenMM platform: cuda (GPU) or cpu (default: cuda)')
+    parser.add_argument('--platform', type=str, default='cuda', choices=['cuda', 'cpu', 'reference'],
+                       help='OpenMM platform: cuda (GPU), cpu, or reference (full double-precision CPU, default: cuda)')
     parser.add_argument('--ml-device', type=str, default=None,
                        help='ML model device: cuda (default with CUDA platform), cpu, or auto. '
                             'Lazy-load enables single-GPU use.')
-    parser.add_argument('--precision', type=str, default=None,
-                       help='OpenMM precision: single, mixed, or double. Default: double for NPT+CUDA, mixed otherwise.')
+    parser.add_argument(
+        '--precision',
+        type=str,
+        default=None,
+        choices=['single', 'mixed', 'double'],
+        help='CUDA platform only: Context Precision (single / mixed / double). Default: mixed. '
+        'Note: batched PythonForce on CUDA RPMD still uploads forces via fixed-point int64 in the '
+        'RPMD plugin; double precision improves state integration but does not remove that encoding.',
+    )
     parser.add_argument('--minimal', action='store_true',
                        help='Minimal reporting: only progress and ns/day. Avoids getState(Energy) for faster runs. '
                             'With CUDA, set OPENMM_CUDA_FAST_EXTERNAL_CALL=1 for extra speed. Use --report-interval 1.0 or higher.')

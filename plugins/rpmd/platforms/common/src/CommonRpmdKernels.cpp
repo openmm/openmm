@@ -39,9 +39,20 @@
 #include "openmm/CMMotionRemover.h"
 #include "SimTKOpenMMRealType.h"
 #include "SimTKOpenMMUtilities.h"
+#include <cmath>
+#include <climits>
 
 using namespace OpenMM;
 using namespace std;
+
+/** Convert a force component to OpenMM fixed-point (mm_long) units for RPMD GPU kernels. */
+static long long scaledForceComponentToFixedPoint(double valueTimesScale) {
+    if (valueTimesScale >= (double) LLONG_MAX)
+        return LLONG_MAX;
+    if (valueTimesScale <= (double) LLONG_MIN)
+        return LLONG_MIN;
+    return (long long) std::llround(valueTimesScale);
+}
 
 
 /**
@@ -654,7 +665,9 @@ void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         cc.pushPrimaryContextForExternalCall();
         double energy = pyImpl.calcForcesAndEnergyBatched(context, allBeadPositions, allBeadForces);
         cc.popPrimaryContextAfterExternalCall();
-        
+        // Batched PythonForce returns forces as double-precision Vec3 per bead; upload converts
+        // to platform force buffers (CUDA mixed: mm_long with scale 1/2^32 in integrateStep).
+
         // 3. Upload all forces back to GPU in one shot
         uploadAllForcesToGPU(allBeadForces);
         
@@ -1199,9 +1212,9 @@ void CommonIntegrateRPMDStepKernel::uploadAllForcesToGPU(const std::vector<std::
         
         int offset = b * paddedParticles * 3;
         for (int i = 0; i < numParticles; i++) {
-            forceData[offset + i] = (long long)(allBeadForces[b][i][0] * forceScale);
-            forceData[offset + paddedParticles + i] = (long long)(allBeadForces[b][i][1] * forceScale);
-            forceData[offset + 2*paddedParticles + i] = (long long)(allBeadForces[b][i][2] * forceScale);
+            forceData[offset + i] = scaledForceComponentToFixedPoint(allBeadForces[b][i][0] * forceScale);
+            forceData[offset + paddedParticles + i] = scaledForceComponentToFixedPoint(allBeadForces[b][i][1] * forceScale);
+            forceData[offset + 2*paddedParticles + i] = scaledForceComponentToFixedPoint(allBeadForces[b][i][2] * forceScale);
         }
         // Padded atoms (from numParticles to paddedParticles) remain zero
     }

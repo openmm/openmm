@@ -14,6 +14,32 @@ Profiling: set OPENMMML_DEBUG_LOGS=1 to enable per-callback timing breakdown
 
 Memory: for many RPMD beads, set OPENMMML_UMA_RPMD_CHUNK to a positive integer
 (e.g. 4 or 8) to evaluate UMA on bead subsets and cap peak GPU memory.
+
+Diagnostics / experiments:
+
+- ``OPENMMML_RPMD_NO_BATCH=1``: register ``PythonForce`` **without** a batch callback so
+  CUDA RPMD uses the sequential per-bead path (``copyToContext`` → ``calcForcesAndEnergy``).
+  ML still runs on GPU if ``device='cuda'``; only the OpenMM force dispatch changes.
+
+- ``OPENMMML_FORCE_COMPARE=0``: disable the one-shot batch-vs-single force comparison print
+  on the first batched evaluation (default: comparison enabled when batching is on).
+
+**TF32 / cuBLAS:** global ``torch.backends.cuda.matmul.allow_tf32`` is set to match
+``predict_unit.inference_settings.tf32`` after load. Enabling TF32 unconditionally (older
+behavior) made batched vs single ``predict`` disagree at ~1 kJ/(mol·nm) on large systems
+because problem shapes differ; with default FairChem settings (``tf32=False``) the one-shot
+comparison should sit near float32 noise (~1e-3 kJ/(mol·nm) scale).
+
+**Parity with sequential RPMD:** each bead is built with a **fresh** ``AtomicData.from_ase`` call
+(matching ``compute_uma_forces_single``), with **float64** positions/cell tensors passed to the
+model. The old float32 template-mutation path caused large force drift vs the per-bead single
+callback.
+
+CUDA RPMD: batched forces flow through ``PythonForceImpl::calcForcesAndEnergyBatched`` and
+``CommonIntegrateRPMDStepKernel::computeForces`` (``plugins/rpmd/.../CommonRpmdKernels.cpp``),
+then ``integrateStep`` consumes ``mm_long`` fixed-point forces with ``forceScale = 1/0x100000000``
+(``plugins/rpmd/.../kernels/rpmd.cc``). Returning **float64** force arrays from this module
+reduces rounding before that conversion versus float32 (Reference integrator path stayed stable).
 """
 import os
 import openmm
@@ -159,7 +185,9 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
 
         # Pre-allocate buffers (no device dependency)
         total_particles = system.getNumParticles()
-        full_forces_buffer = np.zeros((total_particles, 3), dtype=np.float32) if total_particles > n_atoms or atom_indices is not None else None
+        # float64: CUDA mixed-precision stores forces as fixed-point from Python; float32
+        # handoff was suspected of biasing RPMD bead integration (Reference CPU path stable).
+        full_forces_buffer = np.zeros((total_particles, 3), dtype=np.float64) if total_particles > n_atoms or atom_indices is not None else None
         
         # Cache for closures. Model and valid_dataset_name loaded lazily on first compute.
         cache = {
@@ -169,8 +197,6 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
             'batch_pos_buffer': None,
             'batch_box_buffer': None,
             'max_beads': 0,
-            'ase_atoms_templates': [],
-            'atomic_data_templates': [],  # Reused across steps; only pos/cell updated
         }
 
         # Config for lazy load (stored in closure scope)
@@ -194,8 +220,6 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
             dev = _config['device']
             if dev == 'cuda':
                 torch.backends.cudnn.benchmark = True
-                torch.backends.cuda.matmul.allow_tf32 = True
-                torch.backends.cudnn.allow_tf32 = True
                 # Workaround for gradual simulation slowdown (NVFuser fallback). Set
                 # PYTORCH_NVFUSER_DISABLE=fallback or torch._C._jit_set_nvfuser_enabled(False).
                 try:
@@ -207,6 +231,14 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                 inference_settings=_config['inference_settings'],
                 device=_config['device'],
             )
+            if dev == 'cuda':
+                # Align global TF32 with FairChem ``inference_settings.tf32``. Forcing
+                # matmul/cudnn TF32 on for all forwards made batched vs single ``predict``
+                # disagree at ~kJ/(mol·nm) (different BLAS problem shapes) even when
+                # ``InferenceSettings.tf32`` was False.
+                use_tf32 = bool(getattr(predict_unit.inference_settings, "tf32", False))
+                torch.backends.cuda.matmul.allow_tf32 = use_tf32
+                torch.backends.cudnn.allow_tf32 = use_tf32
             task = _config['task_name']
             if task is None:
                 valid = list(predict_unit.dataset_to_tasks.keys())
@@ -323,7 +355,9 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                 del pred, data
 
                 energy_kj = energy_ev * 96.4853
-                molecular_forces = forces_ev_ang * EV_ANG_TO_KJ_NM
+                molecular_forces = np.asarray(
+                    forces_ev_ang * EV_ANG_TO_KJ_NM, dtype=np.float64
+                )
 
                 if cache['full_forces_buffer'] is not None:
                     forces_kj_nm = cache['full_forces_buffer'].copy()
@@ -403,42 +437,29 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                 t_prep = time.time() - batch_start
                 t_atomic_start = time.time()
 
-                if len(cache['ase_atoms_templates']) < num_copies:
-                    cache['ase_atoms_templates'] = []
-                    for i in range(num_copies):
-                        atoms_ase = Atoms(symbols=symbols, pbc=has_box)
-                        atoms_ase.info['charge'] = charge
-                        atoms_ase.info['spin'] = spin
-                        cache['ase_atoms_templates'].append(atoms_ase)
-
-                atomic_templates = cache['atomic_data_templates']
-                if len(atomic_templates) < num_copies:
-                    for i in range(len(atomic_templates), num_copies):
-                        atoms_ase = cache['ase_atoms_templates'][i]
-                        atoms_ase.set_positions(all_pos_angstrom[i])
-                        if has_box:
-                            atoms_ase.set_cell(all_boxes[i] * 10.0)
-                        data = AtomicData.from_ase(
-                            atoms_ase,
-                            task_name=valid_dataset_name,
-                            r_edges=False,
-                            r_data_keys=['spin', 'charge'],
-                        )
-                        data.sid = [f"bead-{i}"]
-                        atomic_templates.append(data)
-
+                # Fresh AtomicData per bead (same as compute_uma_forces_single): avoids float32
+                # template mutation drift vs sequential RPMD / Reference.
+                data_list = []
                 for i in range(num_copies):
-                    atomic_templates[i].pos = torch.from_numpy(
-                        np.ascontiguousarray(all_pos_angstrom[i], dtype=np.float32)
-                    ).float()
+                    atoms_ase = Atoms(
+                        symbols=symbols,
+                        positions=np.ascontiguousarray(all_pos_angstrom[i], dtype=np.float64),
+                        pbc=has_box,
+                    )
+                    atoms_ase.info["charge"] = charge
+                    atoms_ase.info["spin"] = spin
                     if has_box:
-                        cell_np = np.ascontiguousarray(all_boxes[i] * 10.0, dtype=np.float32)
-                        atomic_templates[i].cell = torch.from_numpy(cell_np).float().unsqueeze(0)
-                    co = getattr(atomic_templates[i], "cell_offsets", None)
-                    if co is not None and co.numel() > 0:
-                        atomic_templates[i].cell_offsets = co.float()
+                        atoms_ase.set_cell(np.ascontiguousarray(all_boxes[i] * 10.0, dtype=np.float64))
+                    data = AtomicData.from_ase(
+                        atoms_ase,
+                        task_name=valid_dataset_name,
+                        r_edges=False,
+                        r_data_keys=["spin", "charge"],
+                    )
+                    # Keep default sid=[""] like compute_uma_forces_single (do not set bead ids);
+                    # custom sids can skew UMA batch vs single OPENMMML_FORCE_COMPARE.
+                    data_list.append(data)
 
-                data_list = atomic_templates[:num_copies]
                 t_atomicdata = time.time() - t_atomic_start
                 t_inference_start = time.time()
 
@@ -477,7 +498,9 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                     forces_ev_ang_list = [forces_ev_ang[batch_indices == i] for i in range(n_sub)]
 
                     for i, forces_ev_ang_i in enumerate(forces_ev_ang_list):
-                        forces_kj_nm = forces_ev_ang_i * EV_ANG_TO_KJ_NM
+                        forces_kj_nm = np.asarray(
+                            forces_ev_ang_i * EV_ANG_TO_KJ_NM, dtype=np.float64
+                        )
 
                         if cache['full_forces_buffer'] is not None:
                             forces_full = cache['full_forces_buffer'].copy()
@@ -493,7 +516,40 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
 
                 t_inference = time.time() - t_inference_start
 
-                forces_cpu = np.array(forces_kj_nm_list, dtype=np.float32)
+                forces_cpu = np.array(forces_kj_nm_list, dtype=np.float64)
+
+                _fc = os.environ.get("OPENMMML_FORCE_COMPARE", "1").strip().lower()
+                _do_compare = _fc not in ("0", "false", "no")
+                if _do_compare and not cache.get("_force_comparison_done", False):
+                    try:
+                        single_result = compute_uma_forces_single(states[0])
+                        single_f_np = np.asarray(
+                            single_result[1].value_in_unit(
+                                unit.kilojoules_per_mole / unit.nanometer
+                            ),
+                            dtype=np.float64,
+                        )
+                        batch_f_bead0 = np.asarray(forces_cpu[0], dtype=np.float64)
+                        ncmp = min(single_f_np.shape[0], batch_f_bead0.shape[0])
+                        s_cmp = single_f_np[:ncmp]
+                        b_cmp = batch_f_bead0[:ncmp]
+                        abs_diff = np.abs(s_cmp - b_cmp)
+                        rel_denom = np.maximum(np.abs(b_cmp), 1e-30)
+                        rel_diff = abs_diff / rel_denom
+                        print(
+                            "\n  === FORCE COMPARISON (batch vs single, bead 0) ===\n"
+                            f"  max |abs diff|   = {abs_diff.max():.6e} kJ/(mol*nm)\n"
+                            f"  mean |abs diff|  = {abs_diff.mean():.6e} kJ/(mol*nm)\n"
+                            f"  max |rel diff|   = {rel_diff.max():.6e}\n"
+                            f"  mean |rel diff|  = {rel_diff.mean():.6e}\n"
+                            f"  max |batch F|    = {np.abs(b_cmp).max():.6e}\n"
+                            f"  max |single F|   = {np.abs(s_cmp).max():.6e}\n"
+                            "  ===================================================\n",
+                            flush=True,
+                        )
+                    except Exception as exc:
+                        print(f"  FORCE COMPARISON failed: {exc}", flush=True)
+                    cache["_force_comparison_done"] = True
 
                 return (total_energy * unit.kilojoules_per_mole,
                         forces_cpu * unit.kilojoules_per_mole / unit.nanometer)
@@ -502,15 +558,23 @@ class UMAPotentialPythonForceBatchedImpl(MLPotentialImpl):
                     raise openmm.OpenMMException(f"UMA batch computation failed (from single-copy): {e}")
                 raise openmm.OpenMMException(f"UMA batch computation failed: {e}")
 
-        # Create PythonForce with both single and batch callbacks
-        force = openmm.PythonForce(compute_uma_forces_single, {}, compute_uma_forces_batch)
+        _no_batch = os.environ.get("OPENMMML_RPMD_NO_BATCH", "").strip() == "1"
+        if _no_batch:
+            force = openmm.PythonForce(compute_uma_forces_single, {})
+        else:
+            force = openmm.PythonForce(compute_uma_forces_single, {}, compute_uma_forces_batch)
         force.setForceGroup(forceGroup)
         force.setUsesPeriodicBoundaryConditions(True)
         system.addForce(force)
 
         wrap_mode = "atom (LAMMPS parity)" if _use_atom_wrap else "molecular (water O-H preserving)"
+        _rpmd_mode = (
+            "sequential per-bead (OPENMMML_RPMD_NO_BATCH=1)"
+            if _no_batch
+            else "batched RPMD (tensor batch over beads)"
+        )
         print(
-            f"UMA force added with batched RPMD support (model: {self.model_name}, "
+            f"UMA force added ({_rpmd_mode}; model: {self.model_name}, "
             f"task: {task_name or 'auto'}, device: {device}, wrap: {wrap_mode}, "
             f"conservative_forces CLI={conservative_forces}). "
             f"Effective predict_unit.direct_forces is printed on first force evaluation.",
