@@ -377,6 +377,33 @@ jobs:
           restore-keys: |
             ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
 
+      # SWIG_LIB must reach cmd/jom steps; cmd's `>>file echo` is unreliable for GITHUB_ENV.
+      # bash -l matches conda-incubator activation; pin SWIG_EXECUTABLE so CMake does not pick a stray swig.
+      - name: "Set SWIG_LIB and SWIG_EXECUTABLE for conda SWIG (Windows)"
+        shell: bash -l {0}
+        run: |
+          set -euo pipefail
+          SWIG_EXE=""
+          if command -v swig >/dev/null 2>&1; then
+            SWIG_EXE="$(command -v swig)"
+          fi
+          for cand in "${CONDA_PREFIX:-}/Library/bin/swig.exe" "${CONDA_PREFIX:-}/Scripts/swig.exe"; do
+            if [[ -f "$cand" ]]; then SWIG_EXE="$cand"; break; fi
+          done
+          if [[ -z "$SWIG_EXE" || ! -f "$SWIG_EXE" ]]; then
+            echo "swig not found (CONDA_PREFIX=${CONDA_PREFIX:-})"
+            exit 1
+          fi
+          SWIG_LIB="$("$SWIG_EXE" -swiglib | tr -d '\r')"
+          if [[ ! -f "$SWIG_LIB/swig.swg" ]]; then
+            echo "SWIG_LIB=$SWIG_LIB missing swig.swg"
+            exit 1
+          fi
+          echo "SWIG_LIB=$SWIG_LIB" >> "$GITHUB_ENV"
+          SWIG_CMAKE="${SWIG_EXE//\\//}"
+          echo "SWIG_CMAKE_EXE=$SWIG_CMAKE" >> "$GITHUB_ENV"
+          echo "Using SWIG_EXECUTABLE=$SWIG_CMAKE SWIG_LIB=$SWIG_LIB"
+
       - name: "Configure build with CMake"
         shell: cmd /C call {0}
         env:
@@ -395,6 +422,7 @@ jobs:
                 -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ^
                 -DCMAKE_CXX_COMPILER=cl.exe ^
                 -DCMAKE_C_COMPILER=cl.exe ^
+                -DSWIG_EXECUTABLE="%SWIG_CMAKE_EXE%" ^
                 -DOPENMM_BUILD_EXAMPLES=OFF ^
                 -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
                 %CMAKE_FLAGS%

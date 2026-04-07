@@ -2,6 +2,7 @@ __pycache__
 build
 build?
 build_*
+build-judge*
 *.log
 
 # Cursor IDE

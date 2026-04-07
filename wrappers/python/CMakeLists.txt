@@ -195,10 +195,18 @@ INSTALL_FILES(/include/swig FILES "${SWIG_OPENMM_DIR}/OpenMMSwigHeaders.i" "${SW
 #~      -o OpenMMSwig.cxx \
 #~      OpenMM.i
 
+# Conda installs and some Windows CI setups require SWIG_LIB so swig can find swig.swg.
+# Bake it into this rule so generators (e.g. JOM) invoke SWIG with a reliable environment.
+if(DEFINED ENV{SWIG_LIB} AND NOT "$ENV{SWIG_LIB}" STREQUAL "")
+    set(_OPENMM_SWIG_CMD "${CMAKE_COMMAND}" -E env "SWIG_LIB=$ENV{SWIG_LIB}" "${SWIG_EXECUTABLE}")
+else()
+    set(_OPENMM_SWIG_CMD "${SWIG_EXECUTABLE}")
+endif()
+
 # Run swig
 add_custom_command(
     OUTPUT "${SWIG_OPENMM_DIR}/OpenMMSwig.cxx" "${OPENMM_PYTHON_STAGING_DIR}/openmm/openmm.py"
-    COMMAND ${SWIG_EXECUTABLE}
+    COMMAND ${_OPENMM_SWIG_CMD}
         -python -c++
         # Suppress known-noisy warnings from large auto-generated OpenMM.i (typemaps, shadowed overloads, PythonForce bases).
         -w314 -w401 -w453 -w509
