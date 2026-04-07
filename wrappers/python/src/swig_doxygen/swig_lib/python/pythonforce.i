@@ -190,6 +190,21 @@ namespace OpenMM {
      */
     PythonForce* _createPythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters={}, PyObject* batchComputation=nullptr) {
         PythonForce* force = new PythonForce(new ComputationWrapper(computation, batchComputation), globalParameters);
+        PyObject* pickle = PyImport_ImportModule("pickle");
+        PyObject* dumps = PyUnicode_FromString("dumps");
+        PyObject* result = PyObject_CallMethodOneArg(pickle, dumps, computation);
+        if (result == NULL) {
+            // It couldn't be pickled.  It will still work, but can't be serialized.  Clear the error flag.
+            PyErr_Clear();
+        }
+        else {
+            char* buffer;
+            Py_ssize_t len;
+            if (PyBytes_AsStringAndSize(result, &buffer, &len) == 0)
+                force->setPickledFunction(buffer, len);
+        }
+        return force;
+    }
     PythonForce* _createPythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters={}, const std::vector<int>& particles={}) {
         PythonForce* force = new PythonForce(new ComputationWrapper(computation), globalParameters, particles);
         PyObject* pickle = PyImport_ImportModule("pickle");
