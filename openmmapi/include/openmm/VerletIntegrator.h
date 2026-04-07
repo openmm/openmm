@@ -83,6 +83,12 @@ protected:
     }
 private:
     Kernel kernel;
+    /**
+     * Cached in initialize(): split Verlet (part1 -> updateContextState -> part2) when any
+     * Force reports usesVerletPart1ContextUpdate() or a ForceImpl uses ApplyBussiThermostat.
+     * The kernel-name check is a fallback when virtual dispatch is unreliable (some static/LTO builds).
+     */
+    bool useVerletPart1ContextUpdate_;
 };
 
 } // namespace OpenMM
