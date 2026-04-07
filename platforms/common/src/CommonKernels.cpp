@@ -3725,10 +3725,30 @@ void CommonRemoveCMMotionKernel::initialize(const System& system, const CMMotion
     kernel2->addArg(numAtoms);
     kernel2->addArg(cc.getVelm());
     kernel2->addArg(cmMomentum);
+    kernel2->addArg(); // adjustPosDelta (0 or 1), set in execute()
+    kernel2->addArg(); // dtPos for position delta correction, set in execute()
+    kernel2->addArg(cc.getIntegrationUtilities().getPosDelta());
 }
 
 void CommonRemoveCMMotionKernel::execute(ContextImpl& context) {
     ContextSelector selector(cc);
+    IntegrationUtilities& integration = cc.getIntegrationUtilities();
+    int adjustPosDelta = (context.getStepPhase() == ContextImpl::STEP_PHASE_AFTER_VERLET_PART1) ? 1 : 0;
+    bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
+    if (adjustPosDelta) {
+        double dtPos = integration.getLastStepSize();
+        if (useDouble)
+            kernel2->setArg(4, dtPos);
+        else
+            kernel2->setArg(4, (float) dtPos);
+    }
+    else {
+        if (useDouble)
+            kernel2->setArg(4, 0.0);
+        else
+            kernel2->setArg(4, 0.0f);
+    }
+    kernel2->setArg(3, adjustPosDelta);
     kernel1->execute(cc.getNumAtoms(), 64);
     kernel2->execute(cc.getNumAtoms(), 64);
 }

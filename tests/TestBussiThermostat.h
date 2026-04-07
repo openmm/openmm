@@ -62,6 +62,7 @@ void testBussiTemperature() {
     }
     system.addForce(forceField);
     BussiThermostat* thermostat = new BussiThermostat(temp, tau);
+    thermostat->setRandomNumberSeed(12345);
     system.addForce(thermostat);
     ASSERT(!thermostat->usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
@@ -83,7 +84,7 @@ void testBussiTemperature() {
     }
     ke /= numSteps;
     double expected = 0.5 * numParticles * 3 * BOLTZ * temp;
-    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.1);
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 8/std::sqrt((double) numSteps));
 }
 
 /**
@@ -272,6 +273,7 @@ void testBussiStepOrderTemperature() {
     }
     system.addForce(forceField);
     BussiThermostat* thermostat = new BussiThermostat(temp, tau);
+    thermostat->setRandomNumberSeed(12347);
     system.addForce(thermostat);
     Context context(system, integrator, platform);
     std::vector<Vec3> positions(numParticles);
@@ -288,7 +290,7 @@ void testBussiStepOrderTemperature() {
     }
     ke /= numSteps;
     double expected = 0.5 * numParticles * 3 * BOLTZ * temp;
-    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.15);
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 8/std::sqrt((double) numSteps));
 }
 
 void runPlatformTests();

@@ -35,6 +35,7 @@
 #include "openmm/VerletIntegrator.h"
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
+#include <cmath>
 #include <iostream>
 #include <vector>
 
@@ -55,6 +56,7 @@ void testTemperature() {
     }
     system.addForce(forceField);
     AndersenThermostat* thermostat = new AndersenThermostat(temp, collisionFreq);
+    thermostat->setRandomNumberSeed(12345);
     system.addForce(thermostat);
     ASSERT(!thermostat->usesPeriodicBoundaryConditions());
     Context context(system, integrator, platform);
@@ -78,7 +80,8 @@ void testTemperature() {
     }
     ke /= numSteps;
     double expected = 0.5*numParticles*3*BOLTZ*temp;
-    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.1);
+    // Mean kinetic energy fluctuation ~ 1/sqrt(numSteps) of the scale of KE; avoid fixed 10% "stochastic" gate.
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 8/std::sqrt((double) numSteps));
 }
 
 void testConstraints() {
@@ -103,6 +106,7 @@ void testConstraints() {
     system.addConstraint(6, 7, 1);
     system.addConstraint(7, 4, 1);
     AndersenThermostat* thermostat = new AndersenThermostat(temp, collisionFreq);
+    thermostat->setRandomNumberSeed(12346);
     system.addForce(thermostat);
     Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
@@ -131,7 +135,7 @@ void testConstraints() {
     }
     ke /= numSteps;
     double expected = 0.5*(numParticles*3-system.getNumConstraints())*BOLTZ*temp;
-    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.1);
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 8/std::sqrt((double) numSteps));
 }
 
 void testRandomSeed() {

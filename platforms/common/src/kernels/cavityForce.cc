@@ -2,8 +2,11 @@
  * Unit conversion: picoseconds to atomic time units
  * 1 ps = 1e-12 s, 1 a.u. time = 2.418884326509e-17 s
  * So 1 ps = 1e-12 / 2.418884326509e-17 = 4.134137333e4 a.u.
+ *
+ * Use a macro (not a file-scope const) so OpenCL accepts the source: program-scope
+ * const variables must live in __constant address space.
  */
-const float PS_TO_AU = 4.134137333e4f;
+#define PS_TO_AU 4.134137333e4f
 
 /**
  * Envelope type constants

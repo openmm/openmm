@@ -43,7 +43,7 @@ KERNEL void calcCenterOfMassMomentum(int numAtoms, GLOBAL const mixed4* RESTRICT
  * Remove center of mass motion.
  */
 
-KERNEL void removeCenterOfMassMomentum(int numAtoms, GLOBAL mixed4* RESTRICT velm, GLOBAL const float4* RESTRICT cmMomentum) {
+KERNEL void removeCenterOfMassMomentum(int numAtoms, GLOBAL mixed4* RESTRICT velm, GLOBAL const float4* RESTRICT cmMomentum, int adjustPosDelta, mixed dtPos, GLOBAL mixed4* RESTRICT posDelta) {
     // First sum all of the momenta that were calculated by individual groups.
 
     LOCAL float4 temp[64];
@@ -76,5 +76,12 @@ KERNEL void removeCenterOfMassMomentum(int numAtoms, GLOBAL mixed4* RESTRICT vel
         velm[index].x -= cm.x;
         velm[index].y -= cm.y;
         velm[index].z -= cm.z;
+        // Verlet part2 rebuilds velocities from posDelta; if we only change velm, that step
+        // would restore the pre-removal CM. Subtract the same CM displacement from posDelta.
+        if (adjustPosDelta != 0) {
+            posDelta[index].x -= cm.x * dtPos;
+            posDelta[index].y -= cm.y * dtPos;
+            posDelta[index].z -= cm.z * dtPos;
+        }
     }
 }
