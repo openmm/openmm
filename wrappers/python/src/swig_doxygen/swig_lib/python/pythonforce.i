@@ -305,24 +305,17 @@ namespace OpenMM {
 %}
 
 %extend OpenMM::PythonForce {
-    %feature("docstring") PythonForce "Create a PythonForce.
-
-Parameters
-----------
-computation : function
-    A function that performs the computation.  It should take a State as its argument
-    and return two values: the potential energy (a scalar) and the forces (a NumPy array).
-globalParameters : dict
-    Any global parameters the function depends on.  Keys are the parameter names, and the
-    corresponding values are their default values.
-batchComputation : function, optional
-    Optional batched computation function for RPMD. Takes a list of States and returns
-    (total_energy, forces_array) where forces_array has shape (numCopies, numParticles, 3).
-"
-    PythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters={}, PyObject* batchComputation=nullptr) {
+    %feature("docstring") PythonForce "Create a PythonForce.\n\nParameters\n----------\ncomputation : function\n    A function that performs the computation.  It should take a State as its argument\n    and return two values: the potential energy (a scalar) and the forces (a NumPy array).\nglobalParameters : dict\n    Any global parameters the function depends on.  Keys are the parameter names, and the\n    corresponding values are their default values.\nbatchComputation : function, optional\n    Optional batched computation function for RPMD. Takes a list of States and returns\n    (total_energy, forces_array) where forces_array has shape (numCopies, numParticles, 3)."
+    PythonForce(PyObject* computation) {
+        return _createPythonForce(computation, {}, nullptr);
+    }
+    PythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters) {
+        return _createPythonForce(computation, globalParameters, nullptr);
+    }
+    PythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters, PyObject* batchComputation) {
         return _createPythonForce(computation, globalParameters, batchComputation);
     }
-    PythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters={}, const std::vector<int>& particles={}) {
+    PythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters, const std::vector<int>& particles) {
         return _createPythonForce(computation, globalParameters, particles);
     }
 }

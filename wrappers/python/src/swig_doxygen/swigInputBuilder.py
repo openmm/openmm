@@ -223,22 +223,22 @@ class SwigInputBuilder:
                     self.doc.getroot().append(node)
 
         if outputFilename:
-            self.fOut = open(outputFilename, 'w')
+            self.fOut = open(outputFilename, 'w', encoding='utf-8')
         else:
             self.fOut = sys.stdout
 
         if docstringFilename:
-            self.fOutDocstring = open(docstringFilename, 'w')
+            self.fOutDocstring = open(docstringFilename, 'w', encoding='utf-8')
         else:
             self.fOutDocstring = None
 
         if pythonprependFilename:
-            self.fOutPythonprepend = open(pythonprependFilename, 'w')
+            self.fOutPythonprepend = open(pythonprependFilename, 'w', encoding='utf-8')
         else:
             self.fOutPythonprepend = None
 
         if pythonappendFilename:
-            self.fOutPythonappend = open(pythonappendFilename, 'w')
+            self.fOutPythonappend = open(pythonappendFilename, 'w', encoding='utf-8')
         else:
             self.fOutPythonappend = None
 
