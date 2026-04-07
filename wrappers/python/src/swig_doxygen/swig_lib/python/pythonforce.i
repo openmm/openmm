@@ -205,7 +205,11 @@ namespace OpenMM {
         }
         return force;
     }
-    PythonForce* _createPythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters={}, const std::vector<int>& particles={}) {
+    /**
+     * Separate name avoids overload ambiguity with _createPythonForce(..., PyObject* batchComputation):
+     * both looked like (PyObject*, map={}, ?={}) to the compiler for 1- and 2-argument calls (e.g. SWIG output).
+     */
+    PythonForce* _createPythonForceWithParticles(PyObject* computation, const std::map<std::string, double>& globalParameters, const std::vector<int>& particles) {
         PythonForce* force = new PythonForce(new ComputationWrapper(computation), globalParameters, particles);
         PyObject* pickle = PyImport_ImportModule("pickle");
         PyObject* dumps = PyUnicode_FromString("dumps");
@@ -285,7 +289,7 @@ namespace OpenMM {
             if (version > 1)
                 for (auto& particle : node.getChildNode("Particles").getChildren())
                     particles.push_back(particle.getIntProperty("index"));
-            PythonForce* force = _createPythonForce(function, params, particles);
+            PythonForce* force = _createPythonForceWithParticles(function, params, particles);
             if (node.hasProperty("forceGroup"))
                 force->setForceGroup(node.getIntProperty("forceGroup", 0));
             if (node.hasProperty("usesPeriodic"))
@@ -316,6 +320,6 @@ namespace OpenMM {
         return _createPythonForce(computation, globalParameters, batchComputation);
     }
     PythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters, const std::vector<int>& particles) {
-        return _createPythonForce(computation, globalParameters, particles);
+        return _createPythonForceWithParticles(computation, globalParameters, particles);
     }
 }
