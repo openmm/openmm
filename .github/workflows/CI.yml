@@ -708,7 +708,8 @@ jobs:
         shell: bash -l {0}
         env:
           # Pipe-separated list of domains that often return 403/404 to automated link checks (not wrong for browsers).
-          SKIP_DOMAIN: support.amd.com|www.pnas.org|commonfund.nih.gov
+          # doi.org: 403 to link checkers; img.shields.io: occasional 408 (rate / bot filtering)
+          SKIP_DOMAIN: support.amd.com|www.pnas.org|commonfund.nih.gov|doi.org|img.shields.io
         run: |
           set +e
           # Linkinator accepts regex for its --skip argument, so we

@@ -20,6 +20,9 @@ FOREACH(TEST_PROG ${TEST_PROGS})
 
 ENDFOREACH(TEST_PROG ${TEST_PROGS})
 
+# These can exceed default CTest timeouts on emulated or very slow CPUs (e.g. ppc64le CI).
+SET_TESTS_PROPERTIES(TestReferenceQTBIntegrator TestReferenceConstantPotentialForce PROPERTIES TIMEOUT 7200)
+
 install(TARGETS TestReferenceHarmonicBondForce
     RUNTIME DESTINATION bin)
 
