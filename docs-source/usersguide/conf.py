@@ -20,6 +20,12 @@ import sys
 sys.path.insert(0, os.path.abspath("."))
 sys.path.append(os.path.abspath("../sphinx"))
 
+from pybtex.plugin import register_plugin
+
+from openmm_bibtex_style import Style as _OpenMMUnsrtBibStyle
+
+register_plugin("pybtex.style.formatting", "openmm_unsrt", _OpenMMUnsrtBibStyle, force=True)
+
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.

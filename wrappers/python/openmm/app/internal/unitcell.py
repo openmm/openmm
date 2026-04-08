@@ -2,7 +2,7 @@
 unitcell.py: Routines for converting between different representations of the periodic unit cell.
 
 This is part of the OpenMM molecular simulation toolkit.
-See https://openmm.org/development.
+See https://openmm.org.
 
 Portions copyright (c) 2015 Stanford University and the Authors.
 Authors: Peter Eastman

@@ -5,7 +5,7 @@ topology files and extracts all parameters from the parameter files
 
 This is part of the OpenMM molecular simulation toolkit.  This code was
 originally part of the ParmEd program and was ported for use with OpenMM.
-See https://openmm.org/development.
+See https://openmm.org.
 
 Copyright (c) 2014-2020 the Authors
 

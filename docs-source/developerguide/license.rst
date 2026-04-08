@@ -27,5 +27,5 @@ Acknowledgments
 ***************
 
 OpenMM research and development activities are supported by various individuals
-and funded from a number of sources: for up-to-date information, consult
-https://openmm.org/development.
+and funded from a number of sources: for up-to-date information, consult the
+`OpenMM website <https://openmm.org/>`__.

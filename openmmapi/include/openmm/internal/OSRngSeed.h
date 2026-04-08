@@ -6,7 +6,7 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2013 Stanford University and the Authors.           *
  * Authors: Robert T. McGibbon                                                *

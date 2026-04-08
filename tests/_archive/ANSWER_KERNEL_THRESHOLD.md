@@ -116,4 +116,4 @@ For the full implementation, see:
 
 The OpenMM developers maintain excellent documentation at:
 - https://github.com/openmm/openmm
-- https://openmm.org/development
+- https://openmm.org

@@ -143,7 +143,7 @@ Visualizing the results
 ------------------------
 
 You can output the results to a PDB file that could be visualized using programs
-like VMD (http://www.ks.uiuc.edu/Research/vmd/) or PyMol
+like VMD (https://en.wikipedia.org/wiki/Visual_molecular_dynamics) or PyMol
 (https://www.pymol.org).  To do this within Visual Studios:
 
 #. Right-click on the project name HelloArgon (not one of the files) and select
@@ -233,7 +233,7 @@ Visualizing the results
 ------------------------
 
 You can output the results to a PDB file that could be visualized using programs
-like VMD (http://www.ks.uiuc.edu/Research/vmd/) or PyMol
+like VMD (https://en.wikipedia.org/wiki/Visual_molecular_dynamics) or PyMol
 (https://www.pymol.org) by typing:
 ::
 

@@ -2,7 +2,7 @@
 safesave.py: Helper module to ensure atomic overwrite/backup of existing files.
 
 This is part of the OpenMM molecular simulation toolkit.
-See https://openmm.org/development.
+See https://openmm.org.
 
 Portions copyright (c) 2025 Stanford University and the Authors.
 Authors: Evan Pretti
