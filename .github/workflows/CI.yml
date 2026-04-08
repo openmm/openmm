@@ -396,11 +396,25 @@ jobs:
             echo "swig not found (CONDA_PREFIX=${CONDA_PREFIX:-})"
             exit 1
           fi
-          SWIG_LIB="$("$SWIG_EXE" -swiglib | tr -d '\r')"
+          # Prefer conda-forge layout: Library/share/swig/<version>/swig.swg
+          # (swig -swiglib on Windows often reports Library/bin/Lib, which breaks cmake -E env SWIG_LIB=...)
+          SWIG_LIB=""
+          SHARE_ROOT="${CONDA_PREFIX}/Library/share/swig"
+          if [[ -d "$SHARE_ROOT" ]]; then
+            cand="$(find "$SHARE_ROOT" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -V | tail -n 1)"
+            if [[ -n "$cand" && -f "$cand/swig.swg" ]]; then
+              SWIG_LIB="$cand"
+            fi
+          fi
+          if [[ -z "$SWIG_LIB" ]]; then
+            SWIG_LIB="$("$SWIG_EXE" -swiglib | tr -d '\r')"
+          fi
           if [[ ! -f "$SWIG_LIB/swig.swg" ]]; then
             echo "SWIG_LIB=$SWIG_LIB missing swig.swg"
             exit 1
           fi
+          # Forward slashes for cmd.exe / CMake cache (matches OPENMM_SWIG_LIB normalization in CMakeLists)
+          SWIG_LIB="${SWIG_LIB//\\//}"
           echo "SWIG_LIB=$SWIG_LIB" >> "$GITHUB_ENV"
           SWIG_CMAKE="${SWIG_EXE//\\//}"
           echo "SWIG_CMAKE_EXE=$SWIG_CMAKE" >> "$GITHUB_ENV"
@@ -436,13 +450,10 @@ jobs:
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           cd build
-          rem Run SWIG target first with verbose output so failures show the full swig command line + stderr
-          rem (parallel jom often hides the real error behind "Error 2").
-          cmake --build . --target RunSwig --parallel 1 --verbose
+          rem Single-threaded build: clearer MSVC/SWIG logs on JOM; avoids interleaved OpenMM.dir + RunSwig output.
+          cmake --build . --parallel 1
           if errorlevel 1 exit 1
-          cmake --build . --parallel 2
-          if errorlevel 1 exit 1
-          cmake --build . --parallel 2 --target install
+          cmake --build . --parallel 1 --target install
           if errorlevel 1 exit 1
 
       - name: "Build Python wrappers"
@@ -451,7 +462,7 @@ jobs:
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           cd build
-          cmake --build . --parallel 2 --target PythonInstall
+          cmake --build . --parallel 1 --target PythonInstall
 
       - name: "Check ccache performance"
         shell: cmd /C call {0}
