@@ -43,7 +43,7 @@ namespace OpenMM {
  * This is the internal implementation of PythonForce.
  */
 
-class PythonForceImpl : public ForceImpl {
+class OPENMM_EXPORT PythonForceImpl : public ForceImpl {
 public:
     PythonForceImpl(const PythonForce& owner);
     ~PythonForceImpl();
