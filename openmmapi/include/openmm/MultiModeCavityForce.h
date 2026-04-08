@@ -32,10 +32,11 @@
 
 #include "Force.h"
 #include "Vec3.h"
+#include "internal/MathConstants.h"
+#include "internal/windowsExport.h"
 #include <string>
 #include <vector>
 #include <cmath>
-#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -210,7 +211,7 @@ public:
      * @return f_n (dimensionless, between -1 and 1)
      */
     double getSpatialProfile(int n) const {
-        return std::sin(n * M_PI * moleculeZ / cavityLength);
+        return std::sin(n * OpenMM_Pi * moleculeZ / cavityLength);
     }
     /**
      * Get the precomputed spatial profiles for all modes.

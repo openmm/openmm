@@ -137,3 +137,9 @@ to avoid starting from scratch.
 ```bash
 bash /home/conda/workspace/devtools/ci/gh-actions/scripts/run_steps_inside_docker_image.sh
 ```
+
+### MSVC / Windows C++ notes
+
+- MSVC does not define `M_PI` in `<cmath>` unless `_USE_MATH_DEFINES` is defined before that include. The top-level [`CMakeLists.txt`](../CMakeLists.txt) adds `/D_USE_MATH_DEFINES` for MSVC so implementation files match Linux behavior.
+- **Public** headers under `openmmapi/include/openmm/*.h` (not `internal/`) must **not** use `M_PI`, because downstream translation units may not define `_USE_MATH_DEFINES`. Use `OpenMM::OpenMM_Pi` from [`openmm/internal/MathConstants.h`](../openmmapi/include/openmm/internal/MathConstants.h) instead.
+- The `unix` GitHub Actions job runs a grep guard on those public headers so MSVC-only breaks are caught before the Windows job.

@@ -120,7 +120,9 @@ IF(APPLE)
     ENDIF()
     SET(EXTRA_COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -stdlib=libc++")
 ELSEIF(MSVC)
-    SET(EXTRA_COMPILE_FLAGS)
+    # Expose M_PI in <cmath> for implementation files (MSVC omits it unless this is set).
+    # Public API headers should still use OpenMM::OpenMM_Pi (internal/MathConstants.h), not M_PI.
+    SET(EXTRA_COMPILE_FLAGS "/D_USE_MATH_DEFINES")
     # Use warning level 2, not whatever warning level CMake picked.
     STRING(REGEX REPLACE "/W[0-4]" "/W2" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     # Explicitly suppress warnings 4305 and 4244.

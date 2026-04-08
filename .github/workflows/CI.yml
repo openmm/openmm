@@ -184,6 +184,18 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: "Guard: no M_PI in public OpenMM headers (MSVC)"
+        run: |
+          set -euo pipefail
+          # openmmapi/include/openmm/*.h only — not internal/ (MSVC <cmath> has no M_PI by default).
+          if compgen -G "openmmapi/include/openmm/*.h" > /dev/null; then
+            if grep -l -E '\bM_PI\b' openmmapi/include/openmm/*.h 2>/dev/null | grep -q .; then
+              echo "::error::Public headers under openmmapi/include/openmm/ must not use M_PI. Use OpenMM::OpenMM_Pi from openmm/internal/MathConstants.h" >&2
+              grep -n -E '\bM_PI\b' openmmapi/include/openmm/*.h || true
+              exit 1
+            fi
+          fi
+
       - uses: conda-incubator/setup-miniconda@v3
         name: "Prepare base dependencies"
         with:

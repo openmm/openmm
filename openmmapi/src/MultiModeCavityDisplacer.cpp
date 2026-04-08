@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/MultiModeCavityDisplacer.h"
+#include "openmm/internal/MathConstants.h"
 #include "openmm/OpenMMException.h"
 #include <cmath>
 
@@ -58,7 +59,7 @@ MultiModeCavityDisplacer::MultiModeCavityDisplacer(int numModes, double omega1, 
         double lambda_n = lambda1;
         
         // Spatial profile: f_n = sin(n * pi * z0 / L)
-        spatialProfiles[i] = std::sin(n * M_PI * moleculeZ / cavityLength);
+        spatialProfiles[i] = std::sin(n * OpenMM_Pi * moleculeZ / cavityLength);
         
         // Displacement factor: -(lambda_n / (photonMass_au * omega_n))
         // This has units that, when multiplied by dipole (e*nm), give position (nm)
