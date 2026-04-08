@@ -42,6 +42,21 @@ namespace OpenMM {
 
 void OPENMM_EXPORT throwException(const char* file, int line, const std::string& details);
 
+/**
+ * Relative tolerance for ASSERT_USUALLY_EQUAL_TOL when comparing a single-sample temperature
+ * from Maxwell-drawn velocities (via setVelocitiesToTemperature) to the target temperature.
+ *
+ * For large nDoF, 2*KE/(nDoF*kB) is approximately normal around T with relative standard deviation
+ * sqrt(2/nDoF) (chi-square / n limit). A two-sided ~99.999% band uses z such that Phi(z)=0.999995,
+ * i.e. z * sqrt(2/nDoF). (Normal approximation to chi-square; adequate for the large systems in these tests.)
+ */
+inline double stochasticInitialTemperatureRelativeTol(int nDoF) {
+    if (nDoF < 1)
+        return 1.0;
+    const double zTwoSided99999 = 4.417173413464004; // Phi^{-1}(0.999995), standard normal
+    return zTwoSided99999 * std::sqrt(2.0 / static_cast<double>(nDoF));
+}
+
 } // namespace OpenMM
 
 #define ASSERT(cond) {if (!(cond)) throwException(__FILE__, __LINE__, "");};

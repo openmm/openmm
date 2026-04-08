@@ -1160,7 +1160,7 @@ void testInitialTemperature() {
     double kineticEnergy = 0;
     for(const auto &v : velocities) kineticEnergy += 0.5 * v.dot(v);
     double temperature = (2*kineticEnergy / (nDoF*BOLTZ));
-    ASSERT_USUALLY_EQUAL_TOL(targetTemperature, temperature, 0.01);
+    ASSERT_USUALLY_EQUAL_TOL(targetTemperature, temperature, stochasticInitialTemperatureRelativeTol(nDoF));
 }
 
 void testCheckpoint() {

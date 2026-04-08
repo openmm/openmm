@@ -4418,13 +4418,17 @@ void CommonApplyBussiThermostatKernel::execute(ContextImpl& context) {
         sumKineticEnergyKernel->execute(numParticles);
     }
     
-    // Download kinetic energy (this is a synchronization point)
+    // Download kinetic energy (this is a synchronization point).
+    // Only the first numBlocksUsed slots are written by the reduction kernel; the buffer is
+    // sized to numThreadBlocks and launch uses min(ceil(n/wg), numThreadBlocks) blocks
+    // (see OpenCLContext/CudaContext::executeKernel), so trailing elements are uninitialized.
     vector<float> keBuffer(kineticEnergyBuffer.getSize());
     kineticEnergyBuffer.download(keBuffer);
-    
+    const int wg = ComputeContext::ThreadBlockSize;
+    int numBlocksUsed = std::min((numParticles + wg - 1) / wg, cc.getNumThreadBlocks());
     double kineticEnergy = 0.0;
-    for (float ke : keBuffer)
-        kineticEnergy += ke;
+    for (int bi = 0; bi < numBlocksUsed; bi++)
+        kineticEnergy += keBuffer[bi];
     
     int dof = numDof;
     
@@ -4717,14 +4721,13 @@ double CommonCalcCavityForceKernel::execute(ContextImpl& context, bool includeFo
         cavityDriveEnergy = 0.0;
         directLaserEnergy = 0.0;
         
-        int numBlocks = cc.getNumThreadBlocks();
-        for (int i = 0; i < numBlocks; i++) {
-            harmonicEnergy += energies[i * 5];
-            couplingEnergy += energies[i * 5 + 1];
-            dipoleSelfEnergy += energies[i * 5 + 2];
-            cavityDriveEnergy += energies[i * 5 + 3];
-            directLaserEnergy += energies[i * 5 + 4];
-        }
+        // computeCavityForces writes a single [harmonic..directLaser] vector at energyBuffer[0..4]
+        // (GLOBAL_ID == 0 only). Do not sum numBlocks slices — other slots are uninitialized.
+        harmonicEnergy = energies[0];
+        couplingEnergy = energies[1];
+        dipoleSelfEnergy = energies[2];
+        cavityDriveEnergy = energies[3];
+        directLaserEnergy = energies[4];
     }
     
     return harmonicEnergy + couplingEnergy + dipoleSelfEnergy + cavityDriveEnergy + directLaserEnergy;
