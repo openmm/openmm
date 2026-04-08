@@ -1363,10 +1363,13 @@ public:
         reservoirEnergyRotational = 0.0;
     }
 private:
+    class ReorderListener;
     ComputeContext& cc;
     int randomSeed;
     int numParticles;
     int numDof;
+    /** User particle indices (stable); GPU buffer uses remapped indices after atom reorder. */
+    std::vector<int> userParticleIndices;
     ComputeArray particleIndicesArray;
     ComputeArray massesArray;
     ComputeArray kineticEnergyBuffer;

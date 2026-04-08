@@ -209,6 +209,11 @@ if(OPENMM_SWIG_LIB)
 elseif(DEFINED ENV{SWIG_LIB} AND NOT "$ENV{SWIG_LIB}" STREQUAL "")
     set(_openmm_swig_lib_dir "$ENV{SWIG_LIB}")
 endif()
+# Windows: backslashes in SWIG_LIB can break `cmake -E env "SWIG_LIB=..." swig` (cmd/CRT parsing).
+# SWIG accepts forward slashes for its library directory.
+if(WIN32 AND _openmm_swig_lib_dir)
+    string(REPLACE "\\" "/" _openmm_swig_lib_dir "${_openmm_swig_lib_dir}")
+endif()
 if(_openmm_swig_lib_dir)
     set(_OPENMM_SWIG_CMD "${CMAKE_COMMAND}" -E env "SWIG_LIB=${_openmm_swig_lib_dir}" "${SWIG_EXECUTABLE}")
 else()

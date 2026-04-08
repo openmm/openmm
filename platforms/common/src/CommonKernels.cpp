@@ -4299,6 +4299,27 @@ void CommonApplyAndersenThermostatKernel::execute(ContextImpl& context) {
 
 // ==================== BussiThermostat Kernel Implementation ====================
 
+class CommonApplyBussiThermostatKernel::ReorderListener : public ComputeContext::ReorderListener {
+public:
+    ReorderListener(ComputeContext& cc, const vector<int>& userParticleIndices, ComputeArray& particleIndicesArray) :
+            cc(cc), userParticleIndices(userParticleIndices), particleIndicesArray(particleIndicesArray) {
+    }
+    void execute() {
+        vector<int> particleVec(particleIndicesArray.getSize());
+        const vector<int>& order = cc.getAtomIndex();
+        vector<int> invOrder(cc.getPaddedNumAtoms());
+        for (int i = 0; i < (int) order.size(); i++)
+            invOrder[order[i]] = i;
+        for (int i = 0; i < (int) userParticleIndices.size(); i++)
+            particleVec[i] = invOrder[userParticleIndices[i]];
+        particleIndicesArray.upload(particleVec);
+    }
+private:
+    ComputeContext& cc;
+    const vector<int>& userParticleIndices;
+    ComputeArray& particleIndicesArray;
+};
+
 void CommonApplyBussiThermostatKernel::initialize(const System& system, const BussiThermostat& thermostat,
                                                    const vector<int>& particleIndices) {
     ContextSelector selector(cc);
@@ -4306,14 +4327,17 @@ void CommonApplyBussiThermostatKernel::initialize(const System& system, const Bu
     if (randomSeed == 0)
         randomSeed = (unsigned int) time(NULL);
     numParticles = particleIndices.size();
+    userParticleIndices = particleIndices;
     
     // Reset global SimTK RNG so reinitialize() gives reproducible trajectories (match Reference)
     SimTKOpenMMUtilities::setRandomNumberSeed(randomSeed);
     cc.getIntegrationUtilities().initRandomNumberGenerator(randomSeed);
     
-    // Create array for particle indices
+    // Create array for particle indices (remapped on GPU when atoms are reordered for cutoff)
     particleIndicesArray.initialize<int>(cc, numParticles, "bussiParticleIndices");
-    particleIndicesArray.upload(particleIndices);
+    ReorderListener* reorderListener = new ReorderListener(cc, userParticleIndices, particleIndicesArray);
+    cc.addReorderListener(reorderListener);
+    reorderListener->execute();
     
     // Create array for masses and count DOF (only particles with mass > 0),
     // optionally subtracting COM translational DOF to match HOOMD.

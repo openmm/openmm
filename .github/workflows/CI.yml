@@ -436,9 +436,13 @@ jobs:
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           cd build
-          jom -j 2
+          rem Run SWIG target first with verbose output so failures show the full swig command line + stderr
+          rem (parallel jom often hides the real error behind "Error 2").
+          cmake --build . --target RunSwig --parallel 1 --verbose
           if errorlevel 1 exit 1
-          jom -j 2 install
+          cmake --build . --parallel 2
+          if errorlevel 1 exit 1
+          cmake --build . --parallel 2 --target install
           if errorlevel 1 exit 1
 
       - name: "Build Python wrappers"
@@ -447,7 +451,7 @@ jobs:
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           cd build
-          jom -j 2 PythonInstall
+          cmake --build . --parallel 2 --target PythonInstall
 
       - name: "Check ccache performance"
         shell: cmd /C call {0}
