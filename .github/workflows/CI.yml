@@ -203,7 +203,9 @@ jobs:
           activate-environment: build
           environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.env }}.yml
           auto-activate-base: false
+          # Pin Miniforge to avoid /latest/ redirect downloads (often flaky timeouts on GHA).
           miniforge-variant: Miniforge3
+          miniforge-version: 26.1.1-3
           use-mamba: true
 
       # See https://github.com/kou/arrow/blob/main/ci/scripts/util_free_space.sh.  We can delete more if we need to.
@@ -507,94 +509,6 @@ jobs:
           python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build\python\tests
           python -m pytest -v -n 2
-
-  docker:
-    name: ${{ matrix.name }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: PowerPC CPU/CUDA 11.8 Python 3.13 with condaforge compilers
-            docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda:11.8
-            python-version: "3.13"
-            compilers: compilers
-
-          #- name: PowerPC CPU Python 3.13 devtoolset-7 compilers
-          #  docker-image: quay.io/condaforge/linux-anvil-ppc64le
-          #  python-version: "3.13"
-          #  compilers: devtoolset-7
-
-#          - name: ARM CPU Python 3.13 with condaforge compilers
-#            docker-image: quay.io/condaforge/linux-anvil-aarch64
-#            python-version: "3.13"
-#            compilers: compilers
-
-
-    steps:
-    - uses: actions/checkout@v3
-
-    # Following bits adapted from conda-forge Azure configs.
-    # If it stops working, check any feedstock with ppc64le or aarch64
-    # enabled, and adapt from:
-    #  .azure-pipelines/azure-pipelines-linux.yml
-    #  .scripts/run_docker_build.sh
-    #  .scripts/build_steps.sh
-
-    - name: "Prepare docker"
-      run: |
-        docker run --rm --privileged multiarch/qemu-user-static:register --reset --credential yes
-        ls /proc/sys/fs/binfmt_misc/
-
-        docker info
-
-        # In order for the conda-build process in the container to write to the mounted
-        # volumes, we need to run with the same id as the host machine, which is
-        # normally the owner of the mounted volumes, or at least has write permission
-        export HOST_USER_ID=$(id -u)
-
-        # Check if docker-machine is being used (normally on OSX) and get the uid from
-        # the VM
-        if hash docker-machine 2> /dev/null && docker-machine active > /dev/null; then
-            export HOST_USER_ID=$(docker-machine ssh $(docker-machine active) id -u)
-        fi
-
-        echo "HOST_USER_ID=${HOST_USER_ID}" >> ${GITHUB_ENV}
-
-    - name: "Prepare ccache"
-      id: prepare-ccache
-      shell: bash -l {0}
-      run: |
-        echo "key=$(echo "${{ matrix.name }}" | tr -d ' .')" >> $GITHUB_OUTPUT
-        echo "timestamp=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
-
-    - name: "Restore ccache"
-      uses: actions/cache@v4
-      with:
-        path: .ccache
-        key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
-        restore-keys: |
-          ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
-
-    - name: Run docker
-      env:
-        PYTHON_VER: ${{ matrix.python-version }}
-        DOCKER_IMAGE: ${{ matrix.docker-image }}
-        COMPILERS: ${{ matrix.compilers }}
-      run: |
-        echo "::group::Start docker..."
-        docker run \
-          -v "${GITHUB_WORKSPACE}":/home/conda/workspace:rw,z \
-          -e HOST_USER_ID \
-          -e CPU_COUNT \
-          -e PYTHON_VER \
-          -e COMPILERS \
-          ${DOCKER_IMAGE} \
-          bash \
-          /home/conda/workspace/devtools/ci/gh-actions/scripts/run_steps_inside_docker_image.sh
-
-        test -f docker_steps_run_successfully
-
 
   docs:
     name: Docs

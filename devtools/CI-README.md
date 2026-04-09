@@ -14,12 +14,10 @@ The build matrix covers:
   - Linux x64
   - MacOS Intel
   - Windows
-  - Linux ppc64le (PowerPC)
-  - Linux aarch64 (ARM)
 - Python
   - CPython 3.6, 3.7, 3.8, 3.9
 - CUDA versions
-  - 10.0 and above (Linux x64, Linux ppc64le, Windows)
+  - 10.0 and above (Linux x64, Windows)
 - OpenCL implementations
   - Nvidia (tested along CUDA)
   - AMD 3.0
@@ -35,7 +33,7 @@ Before I describe the pipelines, I will clarify some concepts and idiosyncrasies
   - Pushes to `master`
   - Pull requests targetting `master`
   - Nightlies
-- Currently, the workflow contains four jobs: `unix`, `windows`, `docker`, `docs`. Each job can be run several times, depending on the configuration of `jobs.*.strategy.matrix`. All those jobs replicas will run in parallel and individually. The [`Actions > Summary`](https://github.com/openmm/openmm/actions/runs/451301350) overview can help visualize this.
+- Currently, the workflow contains three jobs: `unix`, `windows`, `docs`. Each job can be run several times, depending on the configuration of `jobs.*.strategy.matrix`. All those jobs replicas will run in parallel and individually. The [`Actions > Summary`](https://github.com/openmm/openmm/actions/runs/451301350) overview can help visualize this.
 - Within each job, you find `steps`. A step can either run a script on a `shell` or use a GitHub `action` to perform a task.
   - For example, cloning the repo or setting up Miniconda are both independent GitHub _actions_. You will recognize this because they contain the keyword `uses:`.
   - Running CMake is a shell step, which uses `run:`.
@@ -78,24 +76,6 @@ The different implementations are very similar to what we do on Linux x64, so I 
 - Installs CUDA with the Nvidia installers using `devtools/ci/gh-actions/scripts/install_cuda.bat`, which requires an environment variable `CUDA_VERSION`, exported from the corresponding matrix entry. Again, this only runs if `matrix.cuda-version` is not empty.
 - Everything else is the same.
 
-### PowerPC & ARM
-
-- Part of the `docker` pipeline.
-- These run on a Docker image on top of `ubuntu-latest`. The Docker image itself depends on the architecture chosen (ppc64le, aarch64) and what CUDA version we want. These are provided by Conda Forge, so they have `conda` preinstalled and ready to go.
-- Since it's a different architecture, we need to configure QEMU first. This is done automatically with a Docker image, mimicking what Conda Forge does.
-- We start the Docker image. The working directory (`$GITHUB_WORKSPACE`) is mounted with read/write permissions on `/home/conda/workspace`, so we can communicate back with the host using files, and also use CCache.
-- The Docker image will run `devtools/ci/gh-actions/scripts/run_steps_inside_docker_image.sh`. This script mostly does what you saw for Linux x64, with some differences:
-  - We don't need to install CUDA or setup Miniconda, because they are preinstalled in the Docker image.
-  - We patch some dependencies from the environment file because they are not available for this architecture. To save one conda environment solve, we also patch the Python version in the environment file.
-  - These images don't come with a system compiler, so we specify one in the matrix configuration:
-    - If `compilers` contains a value that starts with `devtoolset-`, we understand we want a CentOS devtoolse. So far, we specify `devtoolset-7`.
-    - If `compilers` is any other thing, we understand that's a (space-separated series of) Conda packages. Since Conda Forge provides a metapackage named `compilers` that will install all of them for the current platform, we use that one. That's why some entries have a `compilers: compilers` entry.
-  - Everything else runs as usual.
-- Do note that the whole Docker run is a single GitHub Actions step, so it's not as visually appealing. I tried my best to group the commands with the `::group::` syntax so it's easier to follow, but it's not the same.
-- If the script runs successfully, it will create an empty file. We test for existence after the Docker run to make sure.
-
-> Note: Since these use software emulation, they are really slow. Still, they can run successfully within the 6h GHA provides. If GHA upgrades to better CI machines with hardware based virtualization, they might be able to run with close-to-native performance.
-
 ### Docs
 
 This is a Linux-x64 pipeline optimized for building the documentation only. It's provided as a separate entry because I didn't want to overcomplicate the `if:` logic in the `unix` pipeline. It's essentially the same, but:
@@ -117,10 +97,10 @@ There are some limitations when compared to other CI services, but I guess this 
 
 ## Extra content
 
-### How to debug PowerPC / ARM locally
+### How to debug cross-arch Linux builds locally (Docker)
 
 From the root of the repository, run the following script. There are
-some variables you might want to edit (PPC vs ARM, Python version, etc).
+some variables you might want to edit (architecture, Python version, etc).
 Take a look to the script first in that case.
 
 ```bash
