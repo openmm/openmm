@@ -111,7 +111,7 @@ void ReferencePlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 ReferencePlatform::PlatformData::PlatformData(const System& system, int numThreads) : time(0.0), stepCount(0),
-        numParticles(system.getNumParticles()), threads(numThreads) {
+        numParticles(system.getNumParticles()), threads(numThreads), verletPart1KickDuration(0.0) {
     positions = new vector<Vec3>(numParticles);
     velocities = new vector<Vec3>(numParticles);
     forces = new vector<Vec3>(numParticles);

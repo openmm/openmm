@@ -44,7 +44,7 @@ using namespace OpenMM;
    --------------------------------------------------------------------------------------- */
 
 ReferenceVariableVerletDynamics::ReferenceVariableVerletDynamics(int numberOfAtoms, double accuracy) :
-           ReferenceDynamics(numberOfAtoms, 0.0f, 0.0f), _accuracy(accuracy) {
+           ReferenceDynamics(numberOfAtoms, 0.0f, 0.0f), _accuracy(accuracy), lastPart1KickDuration(0.0) {
     xPrime.resize(numberOfAtoms);
     inverseMasses.resize(numberOfAtoms);
 }
@@ -193,6 +193,7 @@ void ReferenceVariableVerletDynamics::updatePart1(const OpenMM::System& system, 
         else
             posDelta[i] = Vec3(0, 0, 0);
     }
+    lastPart1KickDuration = vstep;
 }
 
 void ReferenceVariableVerletDynamics::updatePart2(const OpenMM::System& system, vector<Vec3>& atomCoordinates,

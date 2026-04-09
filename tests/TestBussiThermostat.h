@@ -242,7 +242,7 @@ void testBussiWithVariableVerletIntegrator() {
     const int numParticles = 8;
     const double temp = 300.0;
     const double tau = 1.0; // ps
-    const int numSteps = 3000;
+    const int numSteps = 12000;
     System system;
     VariableVerletIntegrator integrator(1e-5);
     integrator.setMaximumStepSize(0.002);  // cap step size for stability
@@ -253,6 +253,9 @@ void testBussiWithVariableVerletIntegrator() {
     }
     system.addForce(forceField);
     BussiThermostat* thermostat = new BussiThermostat(temp, tau);
+    // Deterministic seed: default (0) uses time() in the kernel and makes this stochastic
+    // check flaky across CI platforms and reruns.
+    thermostat->setRandomNumberSeed(12345);
     system.addForce(thermostat);
     Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
@@ -261,7 +264,9 @@ void testBussiWithVariableVerletIntegrator() {
     context.setPositions(positions);
     context.setVelocitiesToTemperature(temp);
 
-    integrator.step(5000);
+    // Long equilibration and many uncorrelated samples so time-averaged KE is near kT/2 per dof
+    // within ASSERT_USUALLY_EQUAL_TOL (variable timestep increases correlation vs fixed dt).
+    integrator.step(15000);
 
     double ke = 0.0;
     for (int i = 0; i < numSteps; ++i) {
@@ -291,6 +296,7 @@ void testBussiStepOrderTemperature() {
     }
     system.addForce(forceField);
     BussiThermostat* thermostat = new BussiThermostat(temp, tau);
+    thermostat->setRandomNumberSeed(54321);
     system.addForce(thermostat);
     Context context(system, integrator, platform);
     std::vector<Vec3> positions(numParticles);

@@ -72,6 +72,7 @@
 #include "ReferenceVariableVerletDynamics.h"
 #include "ReferenceVerletDynamics.h"
 #include "ReferenceVirtualSites.h"
+#include "ReferencePlatform.h"
 #include "openmm/CMMotionRemover.h"
 #include "openmm/Context.h"
 #include "openmm/System.h"
@@ -2682,6 +2683,7 @@ void ReferenceIntegrateVerletStepKernel::executePart1(ContextImpl& context, cons
         prevStepSize = stepSize;
     }
     dynamics->updatePart1(context.getSystem(), posData, velData, forceData, masses, data.verletPosDelta);
+    data.verletPart1KickDuration = 0.5 * integrator.getStepSize();
 }
 
 void ReferenceIntegrateVerletStepKernel::executePart2(ContextImpl& context, const VerletIntegrator& integrator) {
@@ -3151,6 +3153,7 @@ double ReferenceIntegrateVariableVerletStepKernel::executePart1(ContextImpl& con
         maxStepSize = min(integrator.getMaximumStepSize(), maxStepSize);
     lastMaxStepSize = maxStepSize;
     dynamics->updatePart1(context.getSystem(), posData, velData, forceData, masses, maxStepSize, data.verletPosDelta);
+    data.verletPart1KickDuration = dynamics->getLastPart1KickDuration();
     return dynamics->getDeltaT();
 }
 
@@ -3387,6 +3390,12 @@ void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
     vector<Vec3>* forceData = nullptr;
     if (afterVerletPart1)
         forceData = &extractForces(context);
+    ReferencePlatform::PlatformData& platformData = *reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    double kickPs = 0.5 * dt;
+    if (afterVerletPart1) {
+        if (platformData.verletPart1KickDuration > 0.0)
+            kickPs = platformData.verletPart1KickDuration;
+    }
     
     double kineticEnergy = 0.0;
     for (size_t i = 0; i < particleIndices.size(); ++i) {
@@ -3395,10 +3404,10 @@ void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
         if (m > 0) {
             double vx, vy, vz;
             if (afterVerletPart1) {
-                double halfDtOverM = 0.5 * dt / m;
-                vx = velData[idx][0] - (*forceData)[idx][0] * halfDtOverM;
-                vy = velData[idx][1] - (*forceData)[idx][1] * halfDtOverM;
-                vz = velData[idx][2] - (*forceData)[idx][2] * halfDtOverM;
+                double kickOverM = kickPs / m;
+                vx = velData[idx][0] - (*forceData)[idx][0] * kickOverM;
+                vy = velData[idx][1] - (*forceData)[idx][1] * kickOverM;
+                vz = velData[idx][2] - (*forceData)[idx][2] * kickOverM;
             } else {
                 vx = velData[idx][0];
                 vy = velData[idx][1];

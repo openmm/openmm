@@ -36,6 +36,7 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
       std::vector<OpenMM::Vec3> xPrime;
       std::vector<double> inverseMasses;
       double _accuracy;
+      double lastPart1KickDuration;
 
    public:
 
@@ -103,6 +104,11 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
       void updatePart2(const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
                        std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& posDelta,
                        std::vector<double>& masses, double tolerance, const Vec3* boxVectors);
+
+      /** Duration (ps) of the F/m factor applied in the most recent updatePart1 (vstep). */
+      double getLastPart1KickDuration() const {
+          return lastPart1KickDuration;
+      }
 
 };
 

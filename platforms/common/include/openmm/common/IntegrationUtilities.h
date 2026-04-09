@@ -72,6 +72,16 @@ public:
      */
     double getLastStepSize();
     /**
+     * After getLastStepSize() following variable Verlet step-size selection, returns 0.5*(stepBuffer.x+stepBuffer.y),
+     * matching dtVel in integrateVerletPart1 (verlet.cc).
+     */
+    double getMixedStepBufferDtVelKick() const;
+    /**
+     * Duration (ps) of the velocity kick in the most recent Common Verlet part 1, for Bussi on-step velocity reconstruction.
+     */
+    void setVerletPart1KickDuration(double ps);
+    double getVerletPart1KickDuration() const;
+    /**
      * Apply constraints to the atom positions.  When calling this method, the
      * context's array of positions should contain the positions at the start of the
      * step, and the array returned by getPosDelta() should contain the intended
@@ -174,6 +184,7 @@ protected:
     int randomPos, lastSeed, numVsites, numVsiteStages, keWorkGroupSize;
     bool hasOverlappingVsites;
     mm_double2 lastStepSize;
+    double verletPart1KickDuration;
     struct ShakeCluster;
     struct ConstraintOrderer;
 };

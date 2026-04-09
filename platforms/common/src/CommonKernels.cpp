@@ -3132,6 +3132,8 @@ void CommonIntegrateVerletStepKernel::executePart1(ContextImpl& context, const V
     }
     integration.setNextStepSize(dt);
     kernel1->execute(numAtoms);
+    // integrateVerletPart1 uses dtVel = 0.5*(x+y); after setNextStepSize(dt) and kernel, matches getLastStepSize().
+    integration.setVerletPart1KickDuration(integration.getLastStepSize());
 }
 
 void CommonIntegrateVerletStepKernel::executePart2(ContextImpl& context, const VerletIntegrator& integrator) {
@@ -3392,7 +3394,9 @@ double CommonIntegrateVariableVerletStepKernel::executePart1(ContextImpl& contex
     selectSizeKernel->execute(blockSize, blockSize);
 
     double dt = integration.getLastStepSize();
+    double kick = integration.getMixedStepBufferDtVelKick();
     integration.setNextStepSize(dt);
+    integration.setVerletPart1KickDuration(kick);
     kernel1->execute(numAtoms);
     return dt;
 }
@@ -4382,7 +4386,7 @@ void CommonApplyBussiThermostatKernel::initialize(const System& system, const Bu
     sumKineticEnergyPreKickKernel->addArg(kineticEnergyBuffer);
     sumKineticEnergyPreKickKernel->addArg(cc.getLongForceBuffer());
     sumKineticEnergyPreKickKernel->addArg(cc.getPaddedNumAtoms());
-    sumKineticEnergyPreKickKernel->addArg(); // halfDt - set at runtime
+    sumKineticEnergyPreKickKernel->addArg(); // kickDuration - set at runtime
 
     rescaleKernel->addArg(numParticles);
     rescaleKernel->addArg(cc.getVelm());
@@ -4408,11 +4412,14 @@ void CommonApplyBussiThermostatKernel::execute(ContextImpl& context) {
     // Reconstruct the on-step v(t) = v(t+dt/2) - F(t)*dt/(2m), matching
     // HOOMD's TwoStepConstantVolume which computes alpha from KE(v(t)).
     if (context.getStepPhase() == ContextImpl::STEP_PHASE_AFTER_VERLET_PART1) {
+        double kickPs = cc.getIntegrationUtilities().getVerletPart1KickDuration();
+        if (kickPs <= 0.0)
+            kickPs = 0.5*dt;
         bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
         if (useDouble)
-            sumKineticEnergyPreKickKernel->setArg(7, 0.5*dt);
+            sumKineticEnergyPreKickKernel->setArg(7, kickPs);
         else
-            sumKineticEnergyPreKickKernel->setArg(7, (float)(0.5*dt));
+            sumKineticEnergyPreKickKernel->setArg(7, (float)kickPs);
         sumKineticEnergyPreKickKernel->execute(numParticles);
     } else {
         sumKineticEnergyKernel->execute(numParticles);

@@ -330,15 +330,23 @@ def main() -> None:
         dt_fs * unit.femtoseconds,
     )
     integrator.setRandomNumberSeed(args.seed)
-    if _ts == "pile_g":
-        integrator.setThermostatType(RPMDIntegrator.PileG)
-        integrator.setCentroidFriction(args.rpmd_centroid_friction / unit.picosecond)
-    elif _ts == "pile":
-        integrator.setThermostatType(RPMDIntegrator.Pile)
-    elif _ts == "none":
-        integrator.setThermostatType(RPMDIntegrator.NoneThermo)
+    if hasattr(integrator, "setThermostatType"):
+        if _ts == "pile_g":
+            integrator.setThermostatType(RPMDIntegrator.PileG)
+            if hasattr(integrator, "setCentroidFriction"):
+                integrator.setCentroidFriction(args.rpmd_centroid_friction / unit.picosecond)
+        elif _ts == "pile":
+            integrator.setThermostatType(RPMDIntegrator.Pile)
+        elif _ts == "none":
+            integrator.setThermostatType(RPMDIntegrator.NoneThermo)
+        else:
+            raise ValueError(f"Invalid --rpmd-thermostat: {args.rpmd_thermostat!r}")
     else:
-        raise ValueError(f"Invalid --rpmd-thermostat: {args.rpmd_thermostat!r}")
+        print(
+            "WARNING: RPMDIntegrator has no setThermostatType (need RPMD plugin from this repo "
+            "for PILE_G / --rpmd-thermostat). Using integrator default bath.",
+            flush=True,
+        )
 
     platform = Platform.getPlatformByName(args.platform.upper())
     props = {"Precision": "mixed", "DeviceIndex": "0"} if args.platform == "cuda" else {}

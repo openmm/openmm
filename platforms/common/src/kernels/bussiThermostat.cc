@@ -33,9 +33,9 @@ KERNEL void sumBussiKineticEnergy(int numParticles, GLOBAL const mixed4* RESTRIC
 
 /**
  * Sum kinetic energy using on-step velocities v(t) reconstructed from the
- * half-step velocities v(t+dt/2) = v_stored + F(t)*dt/(2m) after Verlet Part1.
+ * post-part-1 velocities v_stored = v_before + F(t) * kickDuration / m after Verlet Part1.
  *
- * v(t) = v(t+dt/2) - F(t) * dt / (2m)
+ * v(t) = v_stored - F(t) * kickDuration / m
  *
  * This matches HOOMD's TwoStepConstantVolume, where the Bussi thermostat
  * computes alpha from KE(v(t)) (the on-step velocity), not from KE(v(t+dt/2)).
@@ -43,10 +43,10 @@ KERNEL void sumBussiKineticEnergy(int numParticles, GLOBAL const mixed4* RESTRIC
 KERNEL void sumBussiKineticEnergyPreKick(int numParticles, GLOBAL const mixed4* RESTRICT velm,
         GLOBAL const int* RESTRICT particleIndices, GLOBAL const float* RESTRICT masses,
         GLOBAL float* RESTRICT kineticEnergy, GLOBAL const mm_long* RESTRICT force,
-        int paddedNumAtoms, mixed halfDt) {
+        int paddedNumAtoms, mixed kickDuration) {
     LOCAL float localKE[WORK_GROUP_SIZE];
     int localId = LOCAL_ID;
-    const mixed forceScale = halfDt / (mixed) 0x100000000;
+    const mixed forceScale = kickDuration / (mixed) 0x100000000;
 
     float ke = 0.0f;
     for (int i = GLOBAL_ID; i < numParticles; i += GLOBAL_SIZE) {
