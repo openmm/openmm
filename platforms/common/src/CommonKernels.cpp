@@ -3395,7 +3395,8 @@ double CommonIntegrateVariableVerletStepKernel::executePart1(ContextImpl& contex
 
     double dt = integration.getLastStepSize();
     double kick = integration.getMixedStepBufferDtVelKick();
-    integration.setNextStepSize(dt);
+    // Do not setNextStepSize(dt) before kernel1: that uploads (dt,dt) and erases h_old in the mixed2
+    // buffer; integrateVerletPart1 needs dt.x = previous step and dt.y = selected step (see verlet.cc).
     integration.setVerletPart1KickDuration(kick);
     kernel1->execute(numAtoms);
     return dt;
