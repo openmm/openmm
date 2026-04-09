@@ -1389,7 +1389,7 @@ class CommonCalcCavityForceKernel : public CalcCavityForceKernel {
 public:
     CommonCalcCavityForceKernel(std::string name, const Platform& platform, ComputeContext& cc) : 
         CalcCavityForceKernel(name, platform), cc(cc),
-        harmonicEnergy(0.0), couplingEnergy(0.0), dipoleSelfEnergy(0.0), stepCount(0) {
+        harmonicEnergy(0.0), couplingEnergy(0.0), dipoleSelfEnergy(0.0) {
     }
     void initialize(const System& system, const CavityForce& force);
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
@@ -1443,7 +1443,6 @@ private:
     int directLaserEnvelopeType;
     double directLaserEnvParam1;
     double directLaserEnvParam2;
-    int stepCount;
 };
 
 /**

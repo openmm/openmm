@@ -4517,7 +4517,6 @@ void CommonCalcCavityForceKernel::initialize(const System& system, const CavityF
     lambdaCoupling = force.getLambdaCoupling();
     photonMass = force.getPhotonMass();
     couplingSchedule = force.getLambdaCouplingSchedule();
-    stepCount = 0;
     
     int numParticles = system.getNumParticles();
     
@@ -4626,17 +4625,17 @@ void CommonCalcCavityForceKernel::initialize(const System& system, const CavityF
 double CommonCalcCavityForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     ContextSelector selector(cc);
     
-    // Get current lambda from schedule
+    // Use context step count for schedule (canonical; immune to extra getState/getEnergy calls)
+    long long step = cc.getStepCount();
     double currentLambda = lambdaCoupling;
     if (!couplingSchedule.empty()) {
         for (const auto& entry : couplingSchedule) {
-            if (entry.first <= stepCount)
+            if (entry.first <= step)
                 currentLambda = entry.second;
             else
                 break;
         }
     }
-    stepCount++;
     
     // Get reordered index of the cavity particle (OpenMM may reorder atoms internally)
     const vector<int>& atomIndex = cc.getAtomIndex();

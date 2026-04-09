@@ -1964,7 +1964,6 @@ private:
     int directLaserEnvelopeType;
     double directLaserEnvParam1;
     double directLaserEnvParam2;
-    int stepCount;
     // Helper functions for laser field computation
     double computeEnvelope(double time_ps, int envelope_type, double env_param1, double env_param2) const;
     double computeCavityDrive(double time_ps) const;

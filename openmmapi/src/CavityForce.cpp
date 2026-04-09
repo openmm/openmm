@@ -51,6 +51,13 @@ CavityForce::CavityForce(int cavityParticleIndex, double omegac, double lambdaCo
 void CavityForce::setCouplingOnStep(int step, double value) {
     couplingOnStep = step;
     couplingOnValue = value;
+    // Populate couplingSchedule so kernels see the switch. Kernels run during calcForcesAndEnergy,
+    // before the integrator increments stepCount. So "step N" = forces for the step that will
+    // advance to N: at that moment stepCount=N-1. Store (N-1, value) so 0<=N-1 triggers coupling.
+    if (step >= 0) {
+        couplingSchedule.clear();
+        couplingSchedule.push_back(std::make_pair(step - 1, value));
+    }
 }
 
 void CavityForce::setLambdaCouplingSchedule(const std::vector<std::pair<int, double>>& schedule) {

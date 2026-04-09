@@ -80,10 +80,15 @@ double VariableVerletIntegrator::computeKineticEnergy() {
 void VariableVerletIntegrator::step(int steps) {
     if (context == NULL)
         throw OpenMMException("This Integrator is not bound to a context!");
+    IntegrateVariableVerletStepKernel& verletKernel = kernel.getAs<IntegrateVariableVerletStepKernel>();
     for (int i = 0; i < steps; ++i) {
-        context->updateContextState();
         context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
-        setStepSize(kernel.getAs<IntegrateVariableVerletStepKernel>().execute(*context, *this, std::numeric_limits<double>::infinity()));
+        double dt = verletKernel.executePart1(*context, *this, std::numeric_limits<double>::infinity());
+        setStepSize(dt);
+        context->setStepPhase(ContextImpl::STEP_PHASE_AFTER_VERLET_PART1);
+        context->updateContextState();
+        context->setStepPhase(ContextImpl::STEP_PHASE_NONE);
+        verletKernel.executePart2(*context, *this);
     }
 }
 

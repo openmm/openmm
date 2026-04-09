@@ -1,0 +1,144 @@
+=== Finite-Size Scaling Campaign (local) ===
+Sizes: 4000
+Baseline: false
+Parallel jobs: 0 (0 = sequential)
+
+[N=4000] Running 32 replicas ...
+  [N=4000, replica=0/32]
+OpenMM loaded successfully
+Constant density: 4000 dimers → box 5.3338 nm (ref: 250 in 40 Bohr)
+============================================================
+Cavity OpenMM Diamer Test
+============================================================
+
+--- Initial structure from GSD ---
+  File: /media/extradrive/Trajectories/openmm/experiments/finite_size_scaling/configs/N4000/molecular-0.gsd, frame: 0
+  Box from GSD: 5.3338 nm (cubic)
+  Positions: 8001 particles (topology from GSD; order matches file; cavity added at origin (GSD had molecular particles only)); energy minimization will be skipped
+
+Simulation parameters:
+  Temperature: 100.0 K
+  Timestep: 0.001 ps
+  Cavity frequency: 1560.0 cm⁻¹ (0.007108 Hartree)
+  Coupling: λ = 0.0245 (g = λ√N = 1.54952)
+  Equilibration: 0.0 ps (0 steps)
+  Production: 3000.0 ps (3000000 steps)
+  Total time: 3000.0 ps
+  Dipole output: DISABLED (benchmark mode)
+  Console report interval: every 10000 steps
+  PDB trajectory: disabled
+  F(k,t): enabled, prefix=fkt_lambda0.0245, k=113.4 nm⁻¹
+    tracking starts at t=1500.0 ps (after cavity switch)
+    wrapped molecular positions (cav-hoomd parity; correct at 0 K)
+    reference interval (new file every): 200.0 ps
+    max reference files (FIFO drop): 15
+    F(k,t) output period: 0.1 ps
+
+--- Creating Diamer System ---
+Created system with 8001 particles (4000 molecules)
+  Box size: 5.3338 nm
+  Topology from GSD (particle order matches file)
+  Cavity particle at index 8000, mass set to 0.000549 amu
+
+--- Adding Cavity Force ---
+  CavityForce added successfully
+  Omega_c: 0.007108 a.u.
+  Photon mass: 0.000549 amu = 1.0 a.u.
+  Expected spring constant K: 47 kJ/(mol·nm^2)
+  Lambda coupling: 0.0245 (DELAYED, activates at step 1500000 = 1500.0 ps)
+  CavityParticleDisplacer added (finite-Q mode)
+
+--- Adding Bussi Thermostat ---
+  BussiThermostat added for 8000 particles
+  Temperature: 100.0 K
+  Tau: 1.0 ps (cav-hoomd parity)
+  DOF: 24000 (subtractCMMotion=False)
+
+--- Creating Integrator ---
+  VariableVerletIntegrator (adaptive, for delayed coupling)
+  Error tol: 1e-05 nm at t0=1500.0 ps, ramps to 1.0 nm (tau=50.0 ps)
+
+--- Creating Simulation ---
+  Using CUDA platform (GPU acceleration)
+
+--- Skipping energy minimization (--no-minimize) ---
+
+--- Cavity Position Initialization (cav-hoomd parity) ---
+  Cavity position before: (0.000000, -0.000000, -0.000000) nm
+  Thermal sigma: 2.503708 Bohr = 0.132490 nm
+  Cavity position after:  (0.134543, -0.091554, 0.161567) nm
+
+--- Running Simulation ---
+  Equilibration: 0.0 ps (0 steps)
+  Production:    3000.0 ps (3000000 steps)
+  Total:         3000.0 ps (3000000 steps)
+  F(k,t) tracking starts after equilibration (production t=0)
+
+  [  0.3%] Step   10000/3000000 | Sim time:   10.0 ps | Speed:   0.16 μs/day | ETA:   0.4 hr
+         PE: -61582.30 kJ/mol | T_kin:  105.7 K | Cavity: H=  0.77, C=  0.00, D=  0.00
+         Cavity: ( 0.0332,  0.0378, -0.1732) nm
+
+  [  0.7%] Step   20000/3000000 | Sim time:   20.0 ps | Speed:   0.16 μs/day | ETA:   0.5 hr
+         PE: -62613.96 kJ/mol | T_kin:  101.6 K | Cavity: H=  0.98, C=  0.00, D=  0.00
+         Cavity: (-0.1816,  0.0380,  0.0840) nm
+
+  [  1.0%] Step   30000/3000000 | Sim time:   30.0 ps | Speed:   0.21 μs/day | ETA:   0.3 hr
+         PE: -62995.61 kJ/mol | T_kin:  100.5 K | Cavity: H=  1.46, C=  0.00, D=  0.00
+         Cavity: ( 0.2243, -0.0916,  0.0541) nm
+
+  [  1.3%] Step   40000/3000000 | Sim time:   40.0 ps | Speed:   0.28 μs/day | ETA:   0.3 hr
+         PE: -63051.36 kJ/mol | T_kin:  100.6 K | Cavity: H=  1.25, C=  0.00, D=  0.00
+         Cavity: (-0.1365,  0.0920, -0.1607) nm
+
+  [  1.7%] Step   50000/3000000 | Sim time:   50.0 ps | Speed:   0.28 μs/day | ETA:   0.3 hr
+         PE: -62835.99 kJ/mol | T_kin:   99.2 K | Cavity: H=  0.77, C=  0.00, D=  0.00
+         Cavity: (-0.0307, -0.0388,  0.1738) nm
+
+  [  2.0%] Step   60000/3000000 | Sim time:   60.0 ps | Speed:   0.28 μs/day | ETA:   0.3 hr
+         PE: -63004.01 kJ/mol | T_kin:   99.7 K | Cavity: H=  0.97, C=  0.00, D=  0.00
+         Cavity: ( 0.1801, -0.0370, -0.0857) nm
+
+  [  2.3%] Step   70000/3000000 | Sim time:   70.0 ps | Speed:   0.28 μs/day | ETA:   0.3 hr
+         PE: -63040.41 kJ/mol | T_kin:  100.6 K | Cavity: H=  1.46, C=  0.00, D=  0.00
+         Cavity: (-0.2247,  0.0912, -0.0523) nm
+
+  [  2.7%] Step   80000/3000000 | Sim time:   80.0 ps | Speed:   0.28 μs/day | ETA:   0.3 hr
+         PE: -63086.19 kJ/mol | T_kin:   99.8 K | Cavity: H=  1.26, C=  0.00, D=  0.00
+         Cavity: ( 0.1385, -0.0923,  0.1598) nm
+
+  [  3.0%] Step   90000/3000000 | Sim time:   90.0 ps | Speed:   0.28 μs/day | ETA:   0.3 hr
+         PE: -63118.15 kJ/mol | T_kin:   99.7 K | Cavity: H=  0.78, C=  0.00, D=  0.00
+         Cavity: ( 0.0283,  0.0397, -0.1744) nm
+
+  [  3.3%] Step  100000/3000000 | Sim time:  100.0 ps | Speed:   0.28 μs/day | ETA:   0.3 hr
+         PE: -62858.33 kJ/mol | T_kin:  100.3 K | Cavity: H=  0.97, C=  0.00, D=  0.00
+         Cavity: (-0.1786,  0.0360,  0.0874) nm
+
+  [  3.7%] Step  110000/3000000 | Sim time:  110.0 ps | Speed:   0.27 μs/day | ETA:   0.3 hr
+         PE: -62906.85 kJ/mol | T_kin:   99.3 K | Cavity: H=  1.45, C=  0.00, D=  0.00
+         Cavity: ( 0.2250, -0.0908,  0.0504) nm
+
+  [  4.0%] Step  120000/3000000 | Sim time:  120.0 ps | Speed:   0.27 μs/day | ETA:   0.3 hr
+         PE: -62978.33 kJ/mol | T_kin:  100.0 K | Cavity: H=  1.27, C=  0.00, D=  0.00
+         Cavity: (-0.1404,  0.0927, -0.1589) nm
+
+  [  4.3%] Step  130000/3000000 | Sim time:  130.0 ps | Speed:   0.17 μs/day | ETA:   0.4 hr
+         PE: -62942.68 kJ/mol | T_kin:   98.5 K | Cavity: H=  0.78, C=  0.00, D=  0.00
+         Cavity: (-0.0259, -0.0407,  0.1749) nm
+
+  [  4.7%] Step  140000/3000000 | Sim time:  140.0 ps | Speed:   0.14 μs/day | ETA:   0.5 hr
+         PE: -63035.05 kJ/mol | T_kin:  102.5 K | Cavity: H=  0.96, C=  0.00, D=  0.00
+         Cavity: ( 0.1771, -0.0350, -0.0891) nm
+
+  [  5.0%] Step  150000/3000000 | Sim time:  150.0 ps | Speed:   0.14 μs/day | ETA:   0.5 hr
+         PE: -62977.86 kJ/mol | T_kin:  100.6 K | Cavity: H=  1.45, C=  0.00, D=  0.00
+         Cavity: (-0.2253,  0.0903, -0.0486) nm
+
+  [  5.3%] Step  160000/3000000 | Sim time:  160.0 ps | Speed:   0.14 μs/day | ETA:   0.5 hr
+         PE: -62981.66 kJ/mol | T_kin:  100.9 K | Cavity: H=  1.28, C=  0.00, D=  0.00
+         Cavity: ( 0.1424, -0.0931,  0.1579) nm
+
+  [  5.7%] Step  170000/3000000 | Sim time:  170.0 ps | Speed:   0.20 μs/day | ETA:   0.3 hr
+         PE: -63166.59 kJ/mol | T_kin:   99.3 K | Cavity: H=  0.78, C=  0.00, D=  0.00
+         Cavity: ( 0.0234,  0.0417, -0.1754) nm
+

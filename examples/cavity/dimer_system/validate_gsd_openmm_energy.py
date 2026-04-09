@@ -30,7 +30,7 @@ def main():
     gsd_path = sys.argv[1] if len(sys.argv) > 1 else "init-0.gsd"
     frame = int(sys.argv[2]) if len(sys.argv) > 2 else 0
 
-    system, positions, topology, cavity_index, n_mol, box_nm = run_simulation._build_system_from_gsd(
+    system, positions, topology, cavity_index, n_mol, box_nm, _ = run_simulation._build_system_from_gsd(
         gsd_path, frame, gsd_in_nm=False, no_cavity=True, ff_dir=script_dir
     )
     n_particles = system.getNumParticles()
