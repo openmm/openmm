@@ -2,9 +2,9 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,6 +29,7 @@
 #include "openmm/Context.h"
 #include "openmm/internal/AndersenThermostatImpl.h"
 #include "openmm/internal/BussiThermostatImpl.h"
+#include "openmm/internal/BussiRescale.h"
 #include "openmm/internal/CavityForceImpl.h"
 #include "openmm/internal/CavityParticleDisplacerImpl.h"
 #include "openmm/internal/CMAPTorsionForceImpl.h"
@@ -38,6 +39,7 @@
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/DPDIntegratorUtilities.h"
 #include "openmm/internal/OSRngSeed.h"
+#include "openmm/internal/PythonForceImpl.h"
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/timer.h"
 #include "CommonKernelSources.h"
@@ -106,6 +108,7 @@ void CommonUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3
         cc.getPosq().download(posq);
     }
     else if (cc.getUseMixedPrecision()) {
+        cc.flushQueue();  // Ensure posq/posqCorrection are ready before download
         mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
         cc.getPosq().download(posq, false);
         posCorrection.resize(numParticles);
@@ -3129,6 +3132,8 @@ void CommonIntegrateVerletStepKernel::executePart1(ContextImpl& context, const V
     }
     integration.setNextStepSize(dt);
     kernel1->execute(numAtoms);
+    // integrateVerletPart1 uses dtVel = 0.5*(x+y); after setNextStepSize(dt) and kernel, matches getLastStepSize().
+    integration.setVerletPart1KickDuration(integration.getLastStepSize());
 }
 
 void CommonIntegrateVerletStepKernel::executePart2(ContextImpl& context, const VerletIntegrator& integrator) {
@@ -3389,7 +3394,10 @@ double CommonIntegrateVariableVerletStepKernel::executePart1(ContextImpl& contex
     selectSizeKernel->execute(blockSize, blockSize);
 
     double dt = integration.getLastStepSize();
-    integration.setNextStepSize(dt);
+    double kick = integration.getMixedStepBufferDtVelKick();
+    // Do not setNextStepSize(dt) before kernel1: that uploads (dt,dt) and erases h_old in the mixed2
+    // buffer; integrateVerletPart1 needs dt.x = previous step and dt.y = selected step (see verlet.cc).
+    integration.setVerletPart1KickDuration(kick);
     kernel1->execute(numAtoms);
     return dt;
 }
@@ -3723,10 +3731,30 @@ void CommonRemoveCMMotionKernel::initialize(const System& system, const CMMotion
     kernel2->addArg(numAtoms);
     kernel2->addArg(cc.getVelm());
     kernel2->addArg(cmMomentum);
+    kernel2->addArg(); // adjustPosDelta (0 or 1), set in execute()
+    kernel2->addArg(); // dtPos for position delta correction, set in execute()
+    kernel2->addArg(cc.getIntegrationUtilities().getPosDelta());
 }
 
 void CommonRemoveCMMotionKernel::execute(ContextImpl& context) {
     ContextSelector selector(cc);
+    IntegrationUtilities& integration = cc.getIntegrationUtilities();
+    int adjustPosDelta = (context.getStepPhase() == ContextImpl::STEP_PHASE_AFTER_VERLET_PART1) ? 1 : 0;
+    bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
+    if (adjustPosDelta) {
+        double dtPos = integration.getLastStepSize();
+        if (useDouble)
+            kernel2->setArg(4, dtPos);
+        else
+            kernel2->setArg(4, (float) dtPos);
+    }
+    else {
+        if (useDouble)
+            kernel2->setArg(4, 0.0);
+        else
+            kernel2->setArg(4, 0.0f);
+    }
+    kernel2->setArg(3, adjustPosDelta);
     kernel1->execute(cc.getNumAtoms(), 64);
     kernel2->execute(cc.getNumAtoms(), 64);
 }
@@ -4276,6 +4304,27 @@ void CommonApplyAndersenThermostatKernel::execute(ContextImpl& context) {
 
 // ==================== BussiThermostat Kernel Implementation ====================
 
+class CommonApplyBussiThermostatKernel::ReorderListener : public ComputeContext::ReorderListener {
+public:
+    ReorderListener(ComputeContext& cc, const vector<int>& userParticleIndices, ComputeArray& particleIndicesArray) :
+            cc(cc), userParticleIndices(userParticleIndices), particleIndicesArray(particleIndicesArray) {
+    }
+    void execute() {
+        vector<int> particleVec(particleIndicesArray.getSize());
+        const vector<int>& order = cc.getAtomIndex();
+        vector<int> invOrder(cc.getPaddedNumAtoms());
+        for (int i = 0; i < (int) order.size(); i++)
+            invOrder[order[i]] = i;
+        for (int i = 0; i < (int) userParticleIndices.size(); i++)
+            particleVec[i] = invOrder[userParticleIndices[i]];
+        particleIndicesArray.upload(particleVec);
+    }
+private:
+    ComputeContext& cc;
+    const vector<int>& userParticleIndices;
+    ComputeArray& particleIndicesArray;
+};
+
 void CommonApplyBussiThermostatKernel::initialize(const System& system, const BussiThermostat& thermostat,
                                                    const vector<int>& particleIndices) {
     ContextSelector selector(cc);
@@ -4283,14 +4332,17 @@ void CommonApplyBussiThermostatKernel::initialize(const System& system, const Bu
     if (randomSeed == 0)
         randomSeed = (unsigned int) time(NULL);
     numParticles = particleIndices.size();
+    userParticleIndices = particleIndices;
     
     // Reset global SimTK RNG so reinitialize() gives reproducible trajectories (match Reference)
     SimTKOpenMMUtilities::setRandomNumberSeed(randomSeed);
     cc.getIntegrationUtilities().initRandomNumberGenerator(randomSeed);
     
-    // Create array for particle indices
+    // Create array for particle indices (remapped on GPU when atoms are reordered for cutoff)
     particleIndicesArray.initialize<int>(cc, numParticles, "bussiParticleIndices");
-    particleIndicesArray.upload(particleIndices);
+    ReorderListener* reorderListener = new ReorderListener(cc, userParticleIndices, particleIndicesArray);
+    cc.addReorderListener(reorderListener);
+    reorderListener->execute();
     
     // Create array for masses and count DOF (only particles with mass > 0),
     // optionally subtracting COM translational DOF to match HOOMD.
@@ -4335,7 +4387,7 @@ void CommonApplyBussiThermostatKernel::initialize(const System& system, const Bu
     sumKineticEnergyPreKickKernel->addArg(kineticEnergyBuffer);
     sumKineticEnergyPreKickKernel->addArg(cc.getLongForceBuffer());
     sumKineticEnergyPreKickKernel->addArg(cc.getPaddedNumAtoms());
-    sumKineticEnergyPreKickKernel->addArg(); // halfDt - set at runtime
+    sumKineticEnergyPreKickKernel->addArg(); // kickDuration - set at runtime
 
     rescaleKernel->addArg(numParticles);
     rescaleKernel->addArg(cc.getVelm());
@@ -4361,23 +4413,30 @@ void CommonApplyBussiThermostatKernel::execute(ContextImpl& context) {
     // Reconstruct the on-step v(t) = v(t+dt/2) - F(t)*dt/(2m), matching
     // HOOMD's TwoStepConstantVolume which computes alpha from KE(v(t)).
     if (context.getStepPhase() == ContextImpl::STEP_PHASE_AFTER_VERLET_PART1) {
+        double kickPs = cc.getIntegrationUtilities().getVerletPart1KickDuration();
+        if (kickPs <= 0.0)
+            kickPs = 0.5*dt;
         bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
         if (useDouble)
-            sumKineticEnergyPreKickKernel->setArg(7, 0.5*dt);
+            sumKineticEnergyPreKickKernel->setArg(7, kickPs);
         else
-            sumKineticEnergyPreKickKernel->setArg(7, (float)(0.5*dt));
+            sumKineticEnergyPreKickKernel->setArg(7, (float)kickPs);
         sumKineticEnergyPreKickKernel->execute(numParticles);
     } else {
         sumKineticEnergyKernel->execute(numParticles);
     }
     
-    // Download kinetic energy (this is a synchronization point)
+    // Download kinetic energy (this is a synchronization point).
+    // Only the first numBlocksUsed slots are written by the reduction kernel; the buffer is
+    // sized to numThreadBlocks and launch uses min(ceil(n/wg), numThreadBlocks) blocks
+    // (see OpenCLContext/CudaContext::executeKernel), so trailing elements are uninitialized.
     vector<float> keBuffer(kineticEnergyBuffer.getSize());
     kineticEnergyBuffer.download(keBuffer);
-    
+    const int wg = ComputeContext::ThreadBlockSize;
+    int numBlocksUsed = std::min((numParticles + wg - 1) / wg, cc.getNumThreadBlocks());
     double kineticEnergy = 0.0;
-    for (float ke : keBuffer)
-        kineticEnergy += ke;
+    for (int bi = 0; bi < numBlocksUsed; bi++)
+        kineticEnergy += keBuffer[bi];
     
     int dof = numDof;
     
@@ -4386,9 +4445,6 @@ void CommonApplyBussiThermostatKernel::execute(ContextImpl& context) {
     
     // Compute rescaling factor using Bussi's algorithm (Bussi et al. 2007, J. Chem. Phys. 126, 014101)
     // Matches cav-hoomd's BussiThermostat::compute_rescale_factor in Thermostat.h
-    double c = exp(-dt / tau);
-    double targetKE = 0.5 * dof * BOLTZ * temperature;
-    
     double R1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
     
     // Sample chi^2(dof-1) via Gamma distribution: chi^2(k) = 2*Gamma(k/2, 1)
@@ -4413,23 +4469,10 @@ void CommonApplyBussiThermostatKernel::execute(ContextImpl& context) {
         }
         rGamma *= 2.0;  // chi^2(dof-1) = 2 * Gamma((dof-1)/2, 1)
     }
-    
-    double ratio = targetKE / (dof * kineticEnergy);
-    // Correct formula includes R1^2 in the chi-squared component (non-central chi-squared decomposition)
-    double alphaSquared = c + (1 - c) * ratio * (rGamma + R1 * R1)
-                         + 2.0 * R1 * sqrt(c * (1 - c) * ratio);
-    
-    if (alphaSquared < 0)
-        alphaSquared = 0;
-    
-    double alphaMagnitude = sqrt(alphaSquared);
-    // Signed alpha per Bussi et al. 2009 Eq. (A8)
-    double signTerm = R1 + sqrt(c * dof * kineticEnergy / ((1.0 - c) * targetKE));
-    double alpha = (signTerm >= 0.0) ? alphaMagnitude : -alphaMagnitude;
-    
-    // Track reservoir energy
-    double deltaE = kineticEnergy * (1.0 - alphaSquared);
-    reservoirEnergyTranslational += deltaE;
+
+    BussiRescale::Result bussi = BussiRescale::computeRescale(dof, kineticEnergy, temperature, tau, dt, R1, rGamma);
+    double alpha = bussi.alpha;
+    reservoirEnergyTranslational += bussi.deltaE;
     
     // Rescale velocities
     rescaleKernel->setArg(3, (float) alpha);
@@ -4685,14 +4728,13 @@ double CommonCalcCavityForceKernel::execute(ContextImpl& context, bool includeFo
         cavityDriveEnergy = 0.0;
         directLaserEnergy = 0.0;
         
-        int numBlocks = cc.getNumThreadBlocks();
-        for (int i = 0; i < numBlocks; i++) {
-            harmonicEnergy += energies[i * 5];
-            couplingEnergy += energies[i * 5 + 1];
-            dipoleSelfEnergy += energies[i * 5 + 2];
-            cavityDriveEnergy += energies[i * 5 + 3];
-            directLaserEnergy += energies[i * 5 + 4];
-        }
+        // computeCavityForces writes a single [harmonic..directLaser] vector at energyBuffer[0..4]
+        // (GLOBAL_ID == 0 only). Do not sum numBlocks slices — other slots are uninitialized.
+        harmonicEnergy = energies[0];
+        couplingEnergy = energies[1];
+        dipoleSelfEnergy = energies[2];
+        cavityDriveEnergy = energies[3];
+        directLaserEnergy = energies[4];
     }
     
     return harmonicEnergy + couplingEnergy + dipoleSelfEnergy + cavityDriveEnergy + directLaserEnergy;
@@ -5168,6 +5210,11 @@ void CommonApplyMonteCarloBarostatKernel::computeKineticEnergy(ContextImpl& cont
     }
 }
 
+void CommonApplyMonteCarloBarostatKernel::synchronize(ContextImpl& context) {
+    ContextSelector selector(cc);
+    cc.flushQueue();
+}
+
 class CommonCalcATMForceKernel::ReorderListener : public ComputeContext::ReorderListener {
 public:
     ReorderListener(ComputeContext& cc, ArrayInterface& invAtomOrder) : cc(cc), invAtomOrder(invAtomOrder) {
@@ -5473,10 +5520,10 @@ public:
     CommonCalcCustomCPPForceKernel& owner;
 };
 
-void CommonCalcCustomCPPForceKernel::initialize(const System& system, CustomCPPForceImpl& force) {
+void CommonCalcCustomCPPForceKernel::initialize(const ContextImpl& context, CustomCPPForceImpl& force) {
     ContextSelector selector(cc);
     this->force = &force;
-    int numParticles = system.getNumParticles();
+    int numParticles = context.getSystem().getNumParticles();
     forcesVec.resize(numParticles);
     positionsVec.resize(numParticles);
     floatForces.resize(3*numParticles);
@@ -5491,14 +5538,18 @@ void CommonCalcCustomCPPForceKernel::initialize(const System& system, CustomCPPF
     addForcesKernel->addArg(cc.getLongForceBuffer());
     addForcesKernel->addArg(cc.getAtomIndexArray());
     forceGroupFlag = (1<<force.getOwner().getForceGroup());
-    if (cc.getNumContexts() == 1) {
+    useWorkerThread = (cc.getNumContexts() == 1);
+    for (const ForceImpl* impl : context.getForceImpls())
+        if (dynamic_cast<const CustomCPPForceImpl*>(impl) != NULL || dynamic_cast<const PythonForceImpl*>(impl) != NULL)
+            useWorkerThread = false;
+    if (useWorkerThread) {
         cc.addPreComputation(new StartCalculationPreComputation(*this));
         cc.addPostComputation(new AddForcesPostComputation(*this));
     }
 }
 
 double CommonCalcCustomCPPForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    if (cc.getNumContexts() == 1) {
+    if (useWorkerThread) {
         // This method does nothing.  The actual calculation is started by the pre-computation, continued on
         // the worker thread, and finished by the post-computation.
 
@@ -5550,7 +5601,7 @@ double CommonCalcCustomCPPForceKernel::addForces(bool includeForces, bool includ
 
     // Wait until executeOnWorkerThread() is finished.
 
-    if (cc.getNumContexts() == 1)
+    if (useWorkerThread)
         cc.getWorkThread().flush();
 
     // Add in the forces.
@@ -5596,32 +5647,71 @@ public:
     CommonCalcPythonForceKernel& owner;
 };
 
-void CommonCalcPythonForceKernel::initialize(const System& system, const PythonForce& force) {
+class CommonCalcPythonForceKernel::ReorderListener : public ComputeContext::ReorderListener {
+public:
+    ReorderListener(CommonCalcPythonForceKernel& owner) : owner(owner) {
+    }
+    void execute() {
+        owner.sortParticles();
+    }
+private:
+    CommonCalcPythonForceKernel& owner;
+};
+
+void CommonCalcPythonForceKernel::initialize(const ContextImpl& context, const PythonForce& force) {
     ContextSelector selector(cc);
     computation = &force.getComputation();
     usePeriodic = force.usesPeriodicBoundaryConditions();
-    int numParticles = system.getNumParticles();
+    particles = force.getParticles();
+    numParticles = particles.size();
+    if (numParticles == 0)
+        numParticles = context.getSystem().getNumParticles();
     positionsVec.resize(numParticles);
     forcesVec.resize(3*numParticles);
     int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    positionsArray.initialize(cc, 3*numParticles, elementSize, "positions");
     forcesArray.initialize(cc, 3*numParticles, elementSize, "forces");
     map<string, string> defines;
     defines["NUM_ATOMS"] = cc.intToString(numParticles);
     defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::customCppForce, defines);
-    addForcesKernel = program->createKernel("addForces");
-    addForcesKernel->addArg(forcesArray);
-    addForcesKernel->addArg(cc.getLongForceBuffer());
-    addForcesKernel->addArg(cc.getAtomIndexArray());
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::pythonForce, defines);
+    if (particles.size() > 0) {
+        particlesArray.initialize<int>(cc, numParticles, "particles");
+        reorderedParticles.initialize<int>(cc, numParticles, "reorderedParticles");
+        particlesArray.upload(particles);
+        reorderedParticles.upload(particles);
+        cc.addReorderListener(new ReorderListener(*this));
+        copyPositionsKernel = program->createKernel("copyPositions");
+        copyPositionsKernel->addArg(cc.getPosq());
+        copyPositionsKernel->addArg(positionsArray);
+        copyPositionsKernel->addArg(reorderedParticles);
+        copyPositionsKernel->addArg(numParticles);
+        addForcesKernel = program->createKernel("addForcesSubset");
+        addForcesKernel->addArg(forcesArray);
+        addForcesKernel->addArg(cc.getLongForceBuffer());
+        addForcesKernel->addArg(cc.getAtomIndexArray());
+        addForcesKernel->addArg(reorderedParticles);
+        addForcesKernel->addArg(numParticles);
+    }
+    else {
+        addForcesKernel = program->createKernel("addForcesAll");
+        addForcesKernel->addArg(forcesArray);
+        addForcesKernel->addArg(cc.getLongForceBuffer());
+        addForcesKernel->addArg(cc.getAtomIndexArray());
+    }
     forceGroupFlag = (1<<force.getForceGroup());
-    if (cc.getNumContexts() == 1) {
+    useWorkerThread = (cc.getNumContexts() == 1);
+    for (const ForceImpl* impl : context.getForceImpls())
+        if (dynamic_cast<const CustomCPPForceImpl*>(impl) != NULL || dynamic_cast<const PythonForceImpl*>(impl) != NULL)
+            useWorkerThread = false;
+    if (useWorkerThread) {
         cc.addPreComputation(new StartCalculationPreComputation(*this));
         cc.addPostComputation(new AddForcesPostComputation(*this));
     }
 }
 
 double CommonCalcPythonForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    if (cc.getNumContexts() == 1) {
+    if (useWorkerThread) {
         // This method does nothing.  The actual calculation is started by the pre-computation, continued on
         // the worker thread, and finished by the post-computation.
 
@@ -5634,22 +5724,74 @@ double CommonCalcPythonForceKernel::execute(ContextImpl& context, bool includeFo
 
     if (cc.getContextIndex() != 0)
         return 0.0;
-    contextImpl.getPositions(positionsVec);
+    getPositions();
     executeOnWorkerThread(includeForces);
     return addForces(includeForces, includeEnergy, -1);
+}
+
+void CommonCalcPythonForceKernel::getPositions() {
+    // If the NonbondedUtilities uses periodic boundary conditions, the positions might have been
+    // wrapped to the periodic box.  If this force also applies periodic boundary conditions, that's
+    // alright.  Otherwise, we need to move them back.
+
+    bool fixPeriodic = usePeriodic || !cc.getNonbondedUtilities().getUsePeriodic();
+    if (particles.size() == 0) {
+        // The force applies to the whole system, so we can just use the standard getPositions().
+
+        contextImpl.getPositions(positionsVec, fixPeriodic);
+    }
+    else {
+        // Retrieve positions for the subset of particles the force is applied to.
+
+        ContextSelector selector(cc);
+        copyPositionsKernel->execute(numParticles);
+        if (cc.getUseDoublePrecision()) {
+            vector<double> pos(3*numParticles);
+            positionsArray.download(pos);
+            for (int i = 0; i < numParticles; i++)
+                positionsVec[i] = Vec3(pos[3*i], pos[3*i+1], pos[3*i+2]);
+        }
+        else {
+            vector<float> pos(3*numParticles);
+            positionsArray.download(pos);
+            for (int i = 0; i < numParticles; i++)
+                positionsVec[i] = Vec3((double) pos[3*i], (double) pos[3*i+1], (double) pos[3*i+2]);
+        }
+        if (fixPeriodic) {
+            Vec3 boxVectors[3];
+            cc.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+            for (int i = 0; i < numParticles; ++i) {
+                mm_int4 offset = cc.getPosCellOffsets()[particles[i]];
+                positionsVec[i] -= boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
+            }
+        }
+    }
+}
+
+void CommonCalcPythonForceKernel::sortParticles() {
+    // Update the list of particles to account for reordering.
+
+    const vector<int>& order = cc.getAtomIndex();
+    vector<int> inverseOrder(order.size());
+    for (int i = 0; i < cc.getNumAtoms(); i++)
+        inverseOrder[order[i]] = i;
+    vector<int> reordered(particles.size());
+    for (int i = 0; i < particles.size(); i++)
+        reordered[i] = inverseOrder[particles[i]];
+    reorderedParticles.upload(reordered);
 }
 
 void CommonCalcPythonForceKernel::beginComputation(bool includeForces, bool includeEnergy, int groups) {
     if ((groups&forceGroupFlag) == 0)
         return;
-    
+
     // The actual force computation will be done on a different thread.
-    
+
     cc.getWorkThread().addTask(new ExecuteTask(*this, includeForces));
 }
 
 void CommonCalcPythonForceKernel::executeOnWorkerThread(bool includeForces) {
-    contextImpl.getPositions(positionsVec, usePeriodic || !cc.getNonbondedUtilities().getUsePeriodic());
+    getPositions();
     State::StateBuilder builder(contextImpl.getTime(), contextImpl.getStepCount());
     builder.setPositions(positionsVec);
     builder.setParameters(contextImpl.getParameters());
@@ -5676,8 +5818,8 @@ double CommonCalcPythonForceKernel::addForces(bool includeForces, bool includeEn
         return 0;
 
     // Wait until executeOnWorkerThread() is finished.
-    
-    if (cc.getNumContexts() == 1)
+
+    if (useWorkerThread)
         cc.getWorkThread().flush();
 
     // Add in the forces.
@@ -5686,7 +5828,7 @@ double CommonCalcPythonForceKernel::addForces(bool includeForces, bool includeEn
         ContextSelector selector(cc);
         addForcesKernel->execute(cc.getNumAtoms());
     }
-    
+
     // Return the energy.
     
     return energy;

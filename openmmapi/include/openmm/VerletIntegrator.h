@@ -5,7 +5,7 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
@@ -83,6 +83,12 @@ protected:
     }
 private:
     Kernel kernel;
+    /**
+     * Cached in initialize(): split Verlet (part1 -> updateContextState -> part2) when any
+     * Force reports usesVerletPart1ContextUpdate() or a ForceImpl uses ApplyBussiThermostat.
+     * The kernel-name check is a fallback when virtual dispatch is unreliable (some static/LTO builds).
+     */
+    bool useVerletPart1ContextUpdate_;
 };
 
 } // namespace OpenMM

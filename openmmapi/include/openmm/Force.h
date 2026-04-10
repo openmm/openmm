@@ -5,7 +5,7 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
@@ -95,6 +95,13 @@ public:
      * @return true if Force uses periodic boundaries or false if it does not
      */
     virtual bool usesPeriodicBoundaryConditions() const;
+    /**
+     * For fixed-step VerletIntegrator: if true, updateContextState() is invoked after the
+     * first velocity kick of each step (between Verlet part 1 and part 2). BussiThermostat
+     * uses this so the thermostat sees non-zero kinetic energy when starting from rest and
+     * so HOOMD-ordered GPU kernels can adjust position deltas. Default is false.
+     */
+    virtual bool usesVerletPart1ContextUpdate() const;
 protected:
     friend class ContextImpl;
     /**

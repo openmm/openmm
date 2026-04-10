@@ -2,7 +2,7 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
@@ -1188,7 +1188,7 @@ void CommonCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
 
     // Record the exceptions.
 
-    if (firstException <= lastException) {
+    if (firstException <= lastException && numExceptions > 0) {
         vector<mm_float4> baseExceptionParamsVec(numExceptions);
         for (int i = 0; i < numExceptions; i++) {
             int particle1, particle2;

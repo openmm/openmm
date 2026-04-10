@@ -2,7 +2,7 @@
  *                                OpenMMAmoeba                                *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2010-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
@@ -133,7 +133,7 @@ void* HippoNonbondedForceProxy::deserialize(const SerializationNode& node) const
         for (int i = 0; ; i++) {
             stringstream key;
             key << "c" << i;
-            if (coefficients.getProperties().find(key.str()) == coefficients.getProperties().end())
+            if (!coefficients.hasProperty(key.str()))
                 break;
             coeff.push_back(coefficients.getDoubleProperty(key.str()));
         }

@@ -2,7 +2,7 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2011-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
@@ -39,9 +39,20 @@
 #include "openmm/CMMotionRemover.h"
 #include "SimTKOpenMMRealType.h"
 #include "SimTKOpenMMUtilities.h"
+#include <cmath>
+#include <climits>
 
 using namespace OpenMM;
 using namespace std;
+
+/** Convert a force component to OpenMM fixed-point (mm_long) units for RPMD GPU kernels. */
+static long long scaledForceComponentToFixedPoint(double valueTimesScale) {
+    if (valueTimesScale >= (double) LLONG_MAX)
+        return LLONG_MAX;
+    if (valueTimesScale <= (double) LLONG_MIN)
+        return LLONG_MIN;
+    return (long long) std::llround(valueTimesScale);
+}
 
 
 /**
@@ -156,24 +167,59 @@ void CommonIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     cc.getIntegrationUtilities().initRandomNumberGenerator((unsigned int) integrator.getRandomNumberSeed());
     
     // Fill in the posq and velm arrays with safe values to avoid a risk of nans.
-    
-    if (useDoublePrecision) {
-        vector<mm_double4> temp(positions.getSize());
-        for (int i = 0; i < positions.getSize(); i++)
-            temp[i] = mm_double4(0, 0, 0, 0);
-        positions.upload(temp);
-        for (int i = 0; i < velocities.getSize(); i++)
-            temp[i] = mm_double4(0, 0, 0, 1);
-        velocities.upload(temp);
-    }
-    else {
-        vector<mm_float4> temp(positions.getSize());
-        for (int i = 0; i < positions.getSize(); i++)
-            temp[i] = mm_float4(0, 0, 0, 0);
-        positions.upload(temp);
-        for (int i = 0; i < velocities.getSize(); i++)
-            temp[i] = mm_float4(0, 0, 0, 1);
-        velocities.upload(temp);
+    // IMPORTANT: velocities.w must be initialised with the correct per-atom inverse
+    // masses (1/m) so that copyToContextKernel does not corrupt context.velm.w.
+    // Seeding with w=1 (the old code) writes H-mass inverse masses for all atoms,
+    // which causes O atoms to be integrated with 16x too large velocity increments
+    // and produces an incorrect kinetic-energy readout after energy minimisation.
+    //
+    // The atom-index mapping (sorted GPU position p → original atom j) is used so
+    // that velocities[copy*padded + j].w = 1/mass[j] for every original atom j,
+    // matching the expectation of copyToContextKernel which reads
+    //   context.velm[p] = velocities[base + order[p]]
+    // where order[p] == j.
+
+    {
+        // Retrieve the sorted→original atom mapping and the current context inverse masses.
+        int paddedAtoms = cc.getPaddedNumAtoms();
+        vector<int> atomIndex(paddedAtoms, 0);
+        cc.getAtomIndexArray().download(atomIndex);   // atomIndex[sorted_p] = original_j
+
+        if (useDoublePrecision) {
+            vector<mm_double4> ctxVelm(paddedAtoms);
+            cc.getVelm().download(ctxVelm);  // ctxVelm[sorted_p].w = 1/mass[original_j]
+
+            // Zero-fill positions; fill velocity buffer with correct 1/mass per original atom.
+            vector<mm_double4> tempPos(positions.getSize(), mm_double4(0, 0, 0, 0));
+            positions.upload(tempPos);
+
+            vector<mm_double4> tempVel(velocities.getSize(), mm_double4(0, 0, 0, 0));
+            for (int copy = 0; copy < numCopies; copy++) {
+                int base = copy * paddedAtoms;
+                for (int sorted_p = 0; sorted_p < paddedAtoms; sorted_p++) {
+                    int orig_j = atomIndex[sorted_p];
+                    tempVel[base + orig_j].w = ctxVelm[sorted_p].w;  // 1/mass[orig_j]
+                }
+            }
+            velocities.upload(tempVel);
+        }
+        else {
+            vector<mm_float4> ctxVelm(paddedAtoms);
+            cc.getVelm().download(ctxVelm);
+
+            vector<mm_float4> tempPos(positions.getSize(), mm_float4(0, 0, 0, 0));
+            positions.upload(tempPos);
+
+            vector<mm_float4> tempVel(velocities.getSize(), mm_float4(0, 0, 0, 0));
+            for (int copy = 0; copy < numCopies; copy++) {
+                int base = copy * paddedAtoms;
+                for (int sorted_p = 0; sorted_p < paddedAtoms; sorted_p++) {
+                    int orig_j = atomIndex[sorted_p];
+                    tempVel[base + orig_j].w = ctxVelm[sorted_p].w;
+                }
+            }
+            velocities.upload(tempVel);
+        }
     }
     
     // Build a list of contractions.
@@ -579,10 +625,30 @@ void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         // NEW BATCHED PATH: Evaluate all copies at once
         // printf("DEBUG: Using batched RPMD evaluation for %d beads\n", numCopies);
         
-        // 1. Collect all bead positions from GPU
+        // 1. Collect all bead positions from GPU (single download, then slice - avoids 8x redundant transfers)
         std::vector<std::vector<Vec3>> allBeadPositions(numCopies);
-        for (int i = 0; i < numCopies; i++) {
-            downloadPositionsFromGPU(i, allBeadPositions[i]);
+        int paddedParticles = cc.getPaddedNumAtoms();
+        bool useDoublePrecision = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision());
+        if (useDoublePrecision) {
+            vector<mm_double4> posData(paddedParticles * numCopies);
+            positions.download(posData);
+            for (int i = 0; i < numCopies; i++) {
+                allBeadPositions[i].resize(numParticles);
+                int offset = i * paddedParticles;
+                for (int j = 0; j < numParticles; j++) {
+                    allBeadPositions[i][j] = Vec3(posData[offset + j].x, posData[offset + j].y, posData[offset + j].z);
+                }
+            }
+        } else {
+            vector<mm_float4> posData(paddedParticles * numCopies);
+            positions.download(posData);
+            for (int i = 0; i < numCopies; i++) {
+                allBeadPositions[i].resize(numParticles);
+                int offset = i * paddedParticles;
+                for (int j = 0; j < numParticles; j++) {
+                    allBeadPositions[i][j] = Vec3(posData[offset + j].x, posData[offset + j].y, posData[offset + j].z);
+                }
+            }
         }
         
         // 2. Get the PythonForce implementation and call batched evaluation
@@ -599,7 +665,9 @@ void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         cc.pushPrimaryContextForExternalCall();
         double energy = pyImpl.calcForcesAndEnergyBatched(context, allBeadPositions, allBeadForces);
         cc.popPrimaryContextAfterExternalCall();
-        
+        // Batched PythonForce returns forces as double-precision Vec3 per bead; upload converts
+        // to platform force buffers (CUDA mixed: mm_long with scale 1/2^32 in integrateStep).
+
         // 3. Upload all forces back to GPU in one shot
         uploadAllForcesToGPU(allBeadForces);
         
@@ -699,14 +767,15 @@ double CommonIntegrateRPMDStepKernel::computeKineticEnergy(ContextImpl& context,
 }
 
 void CommonIntegrateRPMDStepKernel::applyBussiCentroidThermostat(const System& system, const RPMDIntegrator& integrator, double halfdt) {
-    // Bussi stochastic velocity rescaling thermostat for centroid mode ONLY
-    // Reference: Bussi, Donadio, Parrinello, J. Chem. Phys. 126, 014101 (2007)
-    //
-    // This implementation uses GPU kernels to compute centroid kinetic energy
-    // and apply the Bussi scaling factor, keeping all data on the GPU.
-    
+    // i-PI ThermoPILE_G binds ThermoSVR to the centroid normal mode.
+    // Mirror the ThermoSVR.step() update literally:
+    //   et = exp(-dt/tau)
+    //   alpha2 = et + (Kbar/K)*(1-et)*(r1^2+rg) + 2*r1*sqrt((Kbar/K)*et*(1-et))
+    // with Kbar = 0.5*kB*T and rg ~ chi^2(ndof-1).
+    // The thermostat is skipped when the centroid KE is exactly zero, matching i-PI.
     const double kT = BOLTZ * integrator.getTemperature();
-    const double c1 = exp(-halfdt * integrator.getCentroidFriction());
+    const double et = exp(-halfdt * integrator.getCentroidFriction());
+    const double kPerDof = 0.5 * kT;
     bool useDoublePrecision = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision());
     
     // Step 1: Compute centroid kinetic energy on GPU
@@ -738,132 +807,28 @@ void CommonIntegrateRPMDStepKernel::applyBussiCentroidThermostat(const System& s
     if (ndof == 0)
         return;
     
-    double K_target = 0.5 * ndof * kT;
-    
-    if (totalKE > 0.0) {
-        // Bussi rescaling factor (Bussi et al. 2007, J. Chem. Phys. 126, 014101)
-        // Uses Marsaglia-Tsang Gamma sampling for chi^2(ndof-1), matching standalone thermostat
-        double R1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-        
-        // Sample chi^2(ndof-1) via Gamma distribution: chi^2(k) = 2*Gamma(k/2, 1)
-        // Marsaglia-Tsang method for Gamma(a, 1) with a = (ndof-1)/2 >= 1
-        double rGamma = 0.0;
-        if (ndof > 1) {
-            double a = (ndof - 1.0) / 2.0;
-            double d = a - 1.0/3.0;
-            double cc_mt = 1.0 / sqrt(9.0 * d);
-            while (true) {
-                double x, v;
-                do {
-                    x = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-                    v = 1.0 + cc_mt * x;
-                } while (v <= 0.0);
-                v = v * v * v;
-                double u = SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber();
-                if (u < 1.0 - 0.0331 * (x*x) * (x*x))
-                    { rGamma = d * v; break; }
-                if (log(u) < 0.5*x*x + d*(1.0 - v + log(v)))
-                    { rGamma = d * v; break; }
-            }
-            rGamma *= 2.0;  // chi^2(ndof-1) = 2 * Gamma((ndof-1)/2, 1)
-        }
-        
-        double ratio = K_target / (ndof * totalKE);
-        double alphaSquared = c1 + (1.0 - c1) * ratio * (rGamma + R1 * R1)
-                             + 2.0 * R1 * sqrt(c1 * (1.0 - c1) * ratio);
-        
-        if (alphaSquared < 0)
-            alphaSquared = 0;
-        
-        double alphaMagnitude = sqrt(alphaSquared);
-        // Signed alpha per Bussi et al. 2009 Eq. (A8)
-        double signTerm = R1 + sqrt(c1 * ndof * totalKE / ((1.0 - c1) * K_target));
-        double alpha = (signTerm >= 0.0) ? alphaMagnitude : -alphaMagnitude;
-        
-        // Apply scaling on GPU
-        if (useDoublePrecision)
-            applyBussiScalingKernel->setArg(1, alpha);
-        else
-            applyBussiScalingKernel->setArg(1, (float) alpha);
-        
-        applyBussiScalingKernel->execute(numParticles);
-    } else {
-        // Cold start: centroid KE is zero, cannot rescale on GPU.
-        // Initialize centroid velocities from Maxwell-Boltzmann on CPU, scale to
-        // K_target, then upload the modified velocities back to GPU.
-        double K_new = K_target;
-        int paddedAtoms = cc.getPaddedNumAtoms();
-        
-        if (useDoublePrecision) {
-            vector<mm_double4> allVelm(numCopies * paddedAtoms);
-            velocities.download(allVelm);
-            
-            vector<Vec3> randVel(numParticles, Vec3(0.0, 0.0, 0.0));
-            double K_rand = 0.0;
-            for (int i = 0; i < numParticles; i++) {
-                double invMass = allVelm[i].w;
-                if (invMass == 0.0) continue;
-                double mass = 1.0 / invMass;
-                double sigma = sqrt(kT / mass);
-                randVel[i] = Vec3(sigma * SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
-                                  sigma * SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
-                                  sigma * SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
-                K_rand += 0.5 * mass * (randVel[i][0]*randVel[i][0] + randVel[i][1]*randVel[i][1] + randVel[i][2]*randVel[i][2]);
-            }
-            
-            if (K_rand > 0.0) {
-                double scaleFactor = sqrt(K_new / K_rand);
-                for (int i = 0; i < numParticles; i++) {
-                    double invMass = allVelm[i].w;
-                    if (invMass == 0.0) continue;
-                    double dvx = randVel[i][0] * scaleFactor;
-                    double dvy = randVel[i][1] * scaleFactor;
-                    double dvz = randVel[i][2] * scaleFactor;
-                    for (int copy = 0; copy < numCopies; copy++) {
-                        int idx = copy * paddedAtoms + i;
-                        allVelm[idx].x += dvx;
-                        allVelm[idx].y += dvy;
-                        allVelm[idx].z += dvz;
-                    }
-                }
-                velocities.upload(allVelm);
-            }
-        } else {
-            vector<mm_float4> allVelm(numCopies * paddedAtoms);
-            velocities.download(allVelm);
-            
-            vector<Vec3> randVel(numParticles, Vec3(0.0, 0.0, 0.0));
-            double K_rand = 0.0;
-            for (int i = 0; i < numParticles; i++) {
-                double invMass = (double) allVelm[i].w;
-                if (invMass == 0.0) continue;
-                double mass = 1.0 / invMass;
-                double sigma = sqrt(kT / mass);
-                randVel[i] = Vec3(sigma * SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
-                                  sigma * SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
-                                  sigma * SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
-                K_rand += 0.5 * mass * (randVel[i][0]*randVel[i][0] + randVel[i][1]*randVel[i][1] + randVel[i][2]*randVel[i][2]);
-            }
-            
-            if (K_rand > 0.0) {
-                double scaleFactor = sqrt(K_new / K_rand);
-                for (int i = 0; i < numParticles; i++) {
-                    double invMass = (double) allVelm[i].w;
-                    if (invMass == 0.0) continue;
-                    float dvx = (float)(randVel[i][0] * scaleFactor);
-                    float dvy = (float)(randVel[i][1] * scaleFactor);
-                    float dvz = (float)(randVel[i][2] * scaleFactor);
-                    for (int copy = 0; copy < numCopies; copy++) {
-                        int idx = copy * paddedAtoms + i;
-                        allVelm[idx].x += dvx;
-                        allVelm[idx].y += dvy;
-                        allVelm[idx].z += dvz;
-                    }
-                }
-                velocities.upload(allVelm);
-            }
-        }
+    if (totalKE <= 0.0)
+        return;
+    double r1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+    double rg = 0.0;
+    for (int i = 0; i < ndof-1; i++) {
+        double rnd = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+        rg += rnd*rnd;
     }
+    double alphaSquared = et + (kPerDof / totalKE) * (1.0-et) * (r1*r1 + rg)
+                        + 2.0*r1*sqrt((kPerDof / totalKE) * et * (1.0-et));
+    if (alphaSquared < 0.0)
+        alphaSquared = 0.0;
+    double alpha = sqrt(alphaSquared);
+    double signTerm = r1 + sqrt(2.0*totalKE / kPerDof * et / (1.0-et));
+    if (signTerm < 0.0)
+        alpha = -alpha;
+
+    if (useDoublePrecision)
+        applyBussiScalingKernel->setArg(1, alpha);
+    else
+        applyBussiScalingKernel->setArg(1, (float) alpha);
+    applyBussiScalingKernel->execute(numParticles);
 }
 
 void CommonIntegrateRPMDStepKernel::applyBussiClassicalThermostat(const System& system, const RPMDIntegrator& integrator, double halfdt) {
@@ -1002,19 +967,25 @@ void CommonIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& 
     ContextSelector selector(cc);
     
     // Uniform layout - all particles × all beads
+    // Download from the integrator's OWN velocity buffer so that the inverse-mass
+    // field (velm.w = 1/mass) is taken from the correctly-initialised buffer rather
+    // than from cc.getVelm(), which may have been temporarily overwritten by
+    // copyToContextKernel during force evaluation (e.g. energy minimisation).
     if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
-        vector<mm_double4> velm(cc.getPaddedNumAtoms());
-        cc.getVelm().download(velm);
+        vector<mm_double4> allVelm(velocities.getSize());
+        velocities.download(allVelm);
+        int base = copy * cc.getPaddedNumAtoms();
         for (int i = 0; i < numParticles; i++)
-            velm[i] = mm_double4(vel[i][0], vel[i][1], vel[i][2], velm[i].w);
-        velocities.uploadSubArray(&velm[0], copy*cc.getPaddedNumAtoms(), numParticles);
+            allVelm[base + i] = mm_double4(vel[i][0], vel[i][1], vel[i][2], allVelm[base + i].w);
+        velocities.uploadSubArray(&allVelm[base], base, numParticles);
     }
     else {
-        vector<mm_float4> velm(cc.getPaddedNumAtoms());
-        cc.getVelm().download(velm);
+        vector<mm_float4> allVelm(velocities.getSize());
+        velocities.download(allVelm);
+        int base = copy * cc.getPaddedNumAtoms();
         for (int i = 0; i < numParticles; i++)
-            velm[i] = mm_float4((float) vel[i][0], (float) vel[i][1], (float) vel[i][2], velm[i].w);
-        velocities.uploadSubArray(&velm[0], copy*cc.getPaddedNumAtoms(), numParticles);
+            allVelm[base + i] = mm_float4((float) vel[i][0], (float) vel[i][1], (float) vel[i][2], allVelm[base + i].w);
+        velocities.uploadSubArray(&allVelm[base], base, numParticles);
     }
 }
 
@@ -1219,27 +1190,31 @@ void CommonIntegrateRPMDStepKernel::uploadForcesToGPU(int beadIndex, const std::
 }
 
 void CommonIntegrateRPMDStepKernel::uploadAllForcesToGPU(const std::vector<std::vector<Vec3>>& allBeadForces) {
-    // Upload all bead forces at once to avoid multiple download/upload cycles
-    // forces array layout: [bead0_atom0_x, bead0_atom0_y, bead0_atom0_z, bead0_atom1_x, ...]
+    // Upload all bead forces at once to avoid multiple download/upload cycles.
+    // RPMD kernel expects structure-of-arrays layout per bead:
+    //   [all_x_at_base+0..PADDED-1, all_y_at_base+PADDED..2*PADDED-1, all_z_at_base+2*PADDED..3*PADDED-1]
     // forces is stored as long long (fixed point for atomics)
     
     int paddedParticles = cc.getPaddedNumAtoms();
     int totalSize = paddedParticles * numCopies * 3;
     vector<long long> forceData(totalSize, 0);  // Initialize to zero (important for padded atoms)
     
-    double forceScale = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? 1.0 : 0x100000000);
+    // The RPMD force buffer is long long fixed-point: the GPU integrator kernel
+    // always divides by 0x100000000 (see rpmd.cc integrateStep*).  We must apply
+    // the same scale when uploading forces, regardless of precision mode.
+    double forceScale = (double) 0x100000000;
     
-    // Pack all bead forces into flat array
+    // Pack all bead forces into flat array (SoA layout to match integrateStep kernel)
     for (int b = 0; b < numCopies; b++) {
         if (allBeadForces[b].size() != (size_t)numParticles) {
             throw OpenMMException("uploadAllForcesToGPU: force vector size mismatch for bead " + std::to_string(b));
         }
         
-        int offset = b * paddedParticles * 3;  // Use paddedParticles, not numParticles
+        int offset = b * paddedParticles * 3;
         for (int i = 0; i < numParticles; i++) {
-            forceData[offset + i*3 + 0] = (long long)(allBeadForces[b][i][0] * forceScale);
-            forceData[offset + i*3 + 1] = (long long)(allBeadForces[b][i][1] * forceScale);
-            forceData[offset + i*3 + 2] = (long long)(allBeadForces[b][i][2] * forceScale);
+            forceData[offset + i] = scaledForceComponentToFixedPoint(allBeadForces[b][i][0] * forceScale);
+            forceData[offset + paddedParticles + i] = scaledForceComponentToFixedPoint(allBeadForces[b][i][1] * forceScale);
+            forceData[offset + 2*paddedParticles + i] = scaledForceComponentToFixedPoint(allBeadForces[b][i][2] * forceScale);
         }
         // Padded atoms (from numParticles to paddedParticles) remain zero
     }

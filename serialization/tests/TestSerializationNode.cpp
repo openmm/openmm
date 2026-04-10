@@ -2,7 +2,7 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2010 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
@@ -65,12 +65,12 @@ void testProperties() {
     ASSERT_EQUAL("abc", node.getStringProperty("prop1", "abc"));
     node.setIntProperty("prop1", 1);
     ASSERT_EQUAL(1, node.getIntProperty("prop1"));
-    node.setDoubleProperty("prop1", 1.5);
-    ASSERT_EQUAL(1.5, node.getDoubleProperty("prop1"));
-    node.setStringProperty("prop1", "hello");
-    ASSERT_EQUAL("hello", node.getStringProperty("prop1"));
+    node.setDoubleProperty("prop2", 1.5);
+    ASSERT_EQUAL(1.5, node.getDoubleProperty("prop2"));
+    node.setStringProperty("prop3", "hello");
+    ASSERT_EQUAL("hello", node.getStringProperty("prop3"));
     ASSERT_EQUAL(true, node.hasProperty("prop1"));
-    ASSERT_EQUAL(false, node.hasProperty("prop2"));
+    ASSERT_EQUAL(false, node.hasProperty("prop4"));
 }
 
 int main() {

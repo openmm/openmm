@@ -1,0 +1,26 @@
+# Optional ML / openmmml checks (does not replace upstream OpenMM CI).
+# Runs static openmmml regression tests that need only Python + NumPy.
+
+name: ML auxiliary tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "tests/openmmml/**"
+      - "wrappers/python/openmmml/**"
+      - "pytest.ini"
+
+jobs:
+  openmmml-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test deps
+        run: pip install pytest numpy
+      - name: UMA batch source regression (no FairChem / no OpenMM runtime)
+        run: |
+          python -m pytest tests/openmmml/test_umapotential_pythonforce_batch_dtype.py -v

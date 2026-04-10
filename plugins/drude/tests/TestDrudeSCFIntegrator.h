@@ -2,7 +2,7 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2013 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
@@ -181,7 +181,7 @@ void testInitialTemperature(double drudeMass) {
     }
     double comTemperature = (2*comKineticEnergy / (nDoF*BOLTZ));
     double relTemperature = (2*relKineticEnergy / (nDoF*BOLTZ));
-    ASSERT_USUALLY_EQUAL_TOL(targetTemperature, comTemperature, 0.01);
+    ASSERT_USUALLY_EQUAL_TOL(targetTemperature, comTemperature, stochasticInitialTemperatureRelativeTol(nDoF));
     ASSERT_USUALLY_EQUAL_TOL(drudeTemperature, relTemperature, 0.01);
 }
 

@@ -2,7 +2,7 @@
 amoebaforces.py: AMOEBA force field classes.
 
 This is part of the OpenMM molecular simulation toolkit.
-See https://openmm.org/development.
+See https://openmm.org.
 
 Portions copyright (c) 2025 Stanford University and the Authors.
 Authors: Joao Morado, Peter Eastman

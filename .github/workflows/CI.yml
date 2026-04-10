@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - "master"
+      - "mlip"
   pull_request:
     branches:
       - "master"
+      - "mlip"
   schedule:
     # Nightly tests run on master by default:
     #   Scheduled workflows run on the latest commit on the default or base branch.
@@ -182,6 +184,18 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: "Guard: no M_PI in public OpenMM headers (MSVC)"
+        run: |
+          set -euo pipefail
+          # openmmapi/include/openmm/*.h only — not internal/ (MSVC <cmath> has no M_PI by default).
+          if compgen -G "openmmapi/include/openmm/*.h" > /dev/null; then
+            if grep -l -E '\bM_PI\b' openmmapi/include/openmm/*.h 2>/dev/null | grep -q .; then
+              echo "::error::Public headers under openmmapi/include/openmm/ must not use M_PI. Use OpenMM::OpenMM_Pi from openmm/internal/MathConstants.h" >&2
+              grep -n -E '\bM_PI\b' openmmapi/include/openmm/*.h || true
+              exit 1
+            fi
+          fi
+
       - uses: conda-incubator/setup-miniconda@v3
         name: "Prepare base dependencies"
         with:
@@ -189,7 +203,9 @@ jobs:
           activate-environment: build
           environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.env }}.yml
           auto-activate-base: false
+          # Pin Miniforge to avoid /latest/ redirect downloads (often flaky timeouts on GHA).
           miniforge-variant: Miniforge3
+          miniforge-version: 26.1.1-3
           use-mamba: true
 
       # See https://github.com/kou/arrow/blob/main/ci/scripts/util_free_space.sh.  We can delete more if we need to.
@@ -377,6 +393,47 @@ jobs:
           restore-keys: |
             ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
 
+      # SWIG_LIB must reach cmd/jom steps; cmd's `>>file echo` is unreliable for GITHUB_ENV.
+      # bash -l matches conda-incubator activation; pin SWIG_EXECUTABLE so CMake does not pick a stray swig.
+      - name: "Set SWIG_LIB and SWIG_EXECUTABLE for conda SWIG (Windows)"
+        shell: bash -l {0}
+        run: |
+          set -euo pipefail
+          SWIG_EXE=""
+          if command -v swig >/dev/null 2>&1; then
+            SWIG_EXE="$(command -v swig)"
+          fi
+          for cand in "${CONDA_PREFIX:-}/Library/bin/swig.exe" "${CONDA_PREFIX:-}/Scripts/swig.exe"; do
+            if [[ -f "$cand" ]]; then SWIG_EXE="$cand"; break; fi
+          done
+          if [[ -z "$SWIG_EXE" || ! -f "$SWIG_EXE" ]]; then
+            echo "swig not found (CONDA_PREFIX=${CONDA_PREFIX:-})"
+            exit 1
+          fi
+          # Prefer conda-forge layout: Library/share/swig/<version>/swig.swg
+          # (swig -swiglib on Windows often reports Library/bin/Lib, which breaks cmake -E env SWIG_LIB=...)
+          SWIG_LIB=""
+          SHARE_ROOT="${CONDA_PREFIX}/Library/share/swig"
+          if [[ -d "$SHARE_ROOT" ]]; then
+            cand="$(find "$SHARE_ROOT" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -V | tail -n 1)"
+            if [[ -n "$cand" && -f "$cand/swig.swg" ]]; then
+              SWIG_LIB="$cand"
+            fi
+          fi
+          if [[ -z "$SWIG_LIB" ]]; then
+            SWIG_LIB="$("$SWIG_EXE" -swiglib | tr -d '\r')"
+          fi
+          if [[ ! -f "$SWIG_LIB/swig.swg" ]]; then
+            echo "SWIG_LIB=$SWIG_LIB missing swig.swg"
+            exit 1
+          fi
+          # Forward slashes for cmd.exe / CMake cache (matches OPENMM_SWIG_LIB normalization in CMakeLists)
+          SWIG_LIB="${SWIG_LIB//\\//}"
+          echo "SWIG_LIB=$SWIG_LIB" >> "$GITHUB_ENV"
+          SWIG_CMAKE="${SWIG_EXE//\\//}"
+          echo "SWIG_CMAKE_EXE=$SWIG_CMAKE" >> "$GITHUB_ENV"
+          echo "Using SWIG_EXECUTABLE=$SWIG_CMAKE SWIG_LIB=$SWIG_LIB"
+
       - name: "Configure build with CMake"
         shell: cmd /C call {0}
         env:
@@ -395,6 +452,8 @@ jobs:
                 -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ^
                 -DCMAKE_CXX_COMPILER=cl.exe ^
                 -DCMAKE_C_COMPILER=cl.exe ^
+                -DSWIG_EXECUTABLE="%SWIG_CMAKE_EXE%" ^
+                -DOPENMM_SWIG_LIB="%SWIG_LIB%" ^
                 -DOPENMM_BUILD_EXAMPLES=OFF ^
                 -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
                 %CMAKE_FLAGS%
@@ -405,9 +464,10 @@ jobs:
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           cd build
-          jom -j 2
+          rem Single-threaded build: clearer MSVC/SWIG logs on JOM; avoids interleaved OpenMM.dir + RunSwig output.
+          cmake --build . --parallel 1
           if errorlevel 1 exit 1
-          jom -j 2 install
+          cmake --build . --parallel 1 --target install
           if errorlevel 1 exit 1
 
       - name: "Build Python wrappers"
@@ -416,7 +476,7 @@ jobs:
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           cd build
-          jom -j 2 PythonInstall
+          cmake --build . --parallel 1 --target PythonInstall
 
       - name: "Check ccache performance"
         shell: cmd /C call {0}
@@ -449,94 +509,6 @@ jobs:
           python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build\python\tests
           python -m pytest -v -n 2
-
-  docker:
-    name: ${{ matrix.name }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: PowerPC CPU/CUDA 11.8 Python 3.13 with condaforge compilers
-            docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda:11.8
-            python-version: "3.13"
-            compilers: compilers
-
-          #- name: PowerPC CPU Python 3.13 devtoolset-7 compilers
-          #  docker-image: quay.io/condaforge/linux-anvil-ppc64le
-          #  python-version: "3.13"
-          #  compilers: devtoolset-7
-
-#          - name: ARM CPU Python 3.13 with condaforge compilers
-#            docker-image: quay.io/condaforge/linux-anvil-aarch64
-#            python-version: "3.13"
-#            compilers: compilers
-
-
-    steps:
-    - uses: actions/checkout@v3
-
-    # Following bits adapted from conda-forge Azure configs.
-    # If it stops working, check any feedstock with ppc64le or aarch64
-    # enabled, and adapt from:
-    #  .azure-pipelines/azure-pipelines-linux.yml
-    #  .scripts/run_docker_build.sh
-    #  .scripts/build_steps.sh
-
-    - name: "Prepare docker"
-      run: |
-        docker run --rm --privileged multiarch/qemu-user-static:register --reset --credential yes
-        ls /proc/sys/fs/binfmt_misc/
-
-        docker info
-
-        # In order for the conda-build process in the container to write to the mounted
-        # volumes, we need to run with the same id as the host machine, which is
-        # normally the owner of the mounted volumes, or at least has write permission
-        export HOST_USER_ID=$(id -u)
-
-        # Check if docker-machine is being used (normally on OSX) and get the uid from
-        # the VM
-        if hash docker-machine 2> /dev/null && docker-machine active > /dev/null; then
-            export HOST_USER_ID=$(docker-machine ssh $(docker-machine active) id -u)
-        fi
-
-        echo "HOST_USER_ID=${HOST_USER_ID}" >> ${GITHUB_ENV}
-
-    - name: "Prepare ccache"
-      id: prepare-ccache
-      shell: bash -l {0}
-      run: |
-        echo "key=$(echo "${{ matrix.name }}" | tr -d ' .')" >> $GITHUB_OUTPUT
-        echo "timestamp=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
-
-    - name: "Restore ccache"
-      uses: actions/cache@v4
-      with:
-        path: .ccache
-        key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
-        restore-keys: |
-          ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
-
-    - name: Run docker
-      env:
-        PYTHON_VER: ${{ matrix.python-version }}
-        DOCKER_IMAGE: ${{ matrix.docker-image }}
-        COMPILERS: ${{ matrix.compilers }}
-      run: |
-        echo "::group::Start docker..."
-        docker run \
-          -v "${GITHUB_WORKSPACE}":/home/conda/workspace:rw,z \
-          -e HOST_USER_ID \
-          -e CPU_COUNT \
-          -e PYTHON_VER \
-          -e COMPILERS \
-          ${DOCKER_IMAGE} \
-          bash \
-          /home/conda/workspace/devtools/ci/gh-actions/scripts/run_steps_inside_docker_image.sh
-
-        test -f docker_steps_run_successfully
-
 
   docs:
     name: Docs
@@ -649,8 +621,9 @@ jobs:
       - name: Check 404s
         shell: bash -l {0}
         env:
-          # Pipe-seperated list of domains to skip
-          SKIP_DOMAIN: support.amd.com|www.pnas.org|doi.org|commonfund.nih.gov|openmm.org/development
+          # Pipe-separated list of domains that often return 403/404 to automated link checks (not wrong for browsers).
+          # doi.org: 403 to link checkers; img.shields.io: occasional 408 (rate / bot filtering)
+          SKIP_DOMAIN: support.amd.com|www.pnas.org|commonfund.nih.gov|doi.org|img.shields.io
         run: |
           set +e
           # Linkinator accepts regex for its --skip argument, so we

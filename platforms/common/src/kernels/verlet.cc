@@ -1,5 +1,8 @@
 /**
  * Perform the first step of Verlet integration.
+ * dtVel = 0.5*(dt.x+dt.y) matches the leapfrog/staggered scheme used with variable step (see selectVerletStepSize).
+ * CommonApplyBussiThermostatKernel uses IntegrationUtilities::verletPart1KickDuration (set in executePart1)
+ * for on-step KE, not this expression directly.
  */
 
 KERNEL void integrateVerletPart1(int numAtoms, int paddedNumAtoms, GLOBAL const mixed2* RESTRICT dt, GLOBAL const real4* RESTRICT posq,

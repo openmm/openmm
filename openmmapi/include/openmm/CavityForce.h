@@ -5,7 +5,7 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Muhammad Hasyim                                                   *
@@ -50,11 +50,11 @@ namespace OpenMM {
  * where:
  *   - q is the cavity mode position (unwrapped coordinates of the cavity particle)
  *   - d is the molecular dipole moment (sum of charge * position for all molecular particles)
- *   - K = photonMass * omegac^2 is the cavity spring constant (converted to kJ/(mol·nm²))
- *   - epsilon = lambdaCoupling * omegac is the effective coupling strength (converted to kJ/(mol·nm²·e))
+ *   - K = photonMass * omegac^2 is the cavity spring constant (converted to kJ/(mol nm^2))
+ *   - epsilon = lambdaCoupling * omegac is the effective coupling strength (converted to kJ/(mol nm^2 e))
  *   - lambdaCoupling is the dimensionless coupling parameter
  *   - omegac is the cavity frequency in atomic units (Hartree)
- *   - photonMass is in amu, converted internally to atomic units (1 amu = 1822.888 mₑ)
+ *   - photonMass is in amu, converted internally to atomic units (1 amu = 1822.888 electron masses)
  *   
  * Note: All atomic unit parameters are converted internally to OpenMM units (kJ/mol, nm, ps).
  * 

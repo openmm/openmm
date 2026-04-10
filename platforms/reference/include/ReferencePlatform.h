@@ -5,7 +5,7 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
@@ -77,6 +77,12 @@ public:
     std::map<std::string, double>* energyParameterDerivatives;
     /** Position deltas from Verlet part1 (for Bussi to scale when phase is AFTER_VERLET_PART1). */
     std::vector<Vec3> verletPosDelta;
+    /**
+     * F·Δt/m duration (ps) applied in the most recent Reference Verlet part 1 velocity kick.
+     * Used by BussiThermostat to reconstruct on-step velocity v(t) from stored v after part 1.
+     * Zero means unknown (fallback to 0.5*integrator step).
+     */
+    double verletPart1KickDuration;
 };
 } // namespace OpenMM
 

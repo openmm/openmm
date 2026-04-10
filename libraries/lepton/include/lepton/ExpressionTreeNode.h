@@ -5,7 +5,7 @@
  *                                   Lepton                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the Lepton expression parser.                              *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *

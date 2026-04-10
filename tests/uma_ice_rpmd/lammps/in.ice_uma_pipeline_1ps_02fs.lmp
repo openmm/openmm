@@ -1,0 +1,28 @@
+# Pipeline 1 ps @ 0.2 fs: NVT Langevin tau=0.1 ps, timestep 0.2 fs, 5000 steps = 1 ps.
+#   thermo/dump every 50 steps (10 fs). Order post-process: lammps_order_from_dump.py --dt-fs 0.2
+#
+# Build data:  python build_lammps_ice_data.py -n 128
+# Run:         python run_lammps_uma_ice.py --infile in.ice_uma_pipeline_1ps_02fs.lmp
+# Post-process: python lammps_order_from_dump.py --dump lammps/dump.pipeline_1ps_02fs.lammpstrj --dt-fs 0.2 -o ice_order_uma_lammps.csv
+
+units           metal
+atom_style      atomic
+boundary        p p p
+read_data       data.ice_uma
+comm_modify     cutoff 12.0
+timestep        0.0002
+
+minimize        0.0 1.0e-6 500 150
+
+velocity        all create 243.0 284759 dist gaussian
+velocity        all scale 243.0
+fix             nve all nve
+fix             lang all langevin 243.0 243.0 0.1 284759 zero yes
+thermo_style    custom step time temp pe ke etotal
+thermo          50
+
+dump            traj all custom 50 dump.pipeline_1ps_02fs.lammpstrj id type mass x y z
+dump_modify     traj sort id flush yes
+dump            ovito all xyz 50 dump.pipeline_1ps_02fs_ovito.xyz
+dump_modify     ovito element O H sort id append yes
+run             5000

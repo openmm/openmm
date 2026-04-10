@@ -151,6 +151,15 @@ contains the following tags:
   (Alternatively, the deprecated :code:`from` tag may indicate the atom by
   index instead of name.)
 
+The :code:`<Residue>` tag may also contain :code:`<Constraint>` tags to specify
+pairs of atoms whose distance should be constrained.  Each one should include the
+attibutes :code:`atomName1` and :code:`atomName2` with the names of the two connected
+atoms, and a :code:`distance` attribute with the distance between them in nanometers.
+:code:`<Constraint>` tags are only used for constraints that are required by the
+force field and should always be included.  The more common situation is that a bond
+can be either flexible or constrained based on the options the user specifies when
+calling :code:`createSystem()`.  Bonds of that sort should not have :code:`<Constraint>`
+tags.
 
 The :code:`<Residue>` tag may also contain :code:`<VirtualSite>` tags,
 as in the following example:
@@ -193,13 +202,15 @@ of the site position in the local coordinate system), and :code:`wo1`\ ,
 <Patches>
 =========
 
-A "patch" is a set of rules for modifying a residue template (or possibly multiple
-templates at once).  For example a terminal amino acid is slightly different from
+A "patch" is a set of rules for creating new residue templates from existing ones.
+These new templates should match a different set of residues contained in the topology;
+therefore a patch must specify a change in atoms and bonds.
+For example a terminal amino acid contains slightly different atoms than
 one in the middle of a chain.  A force field could of course define multiple
 templates for each amino acid (standard, N-terminal, C-terminal, and monomer),
 but since the modifications are the same for nearly all amino acids, it is simpler
-to include only the "standard" templates, along with a set of patches for
-modifying terminal residues.
+to include only the "standard" templates, along with a set of patches which are used to
+create templates matching terminal residues.
 
 Here is an example of a patch definition:
 
@@ -236,7 +247,7 @@ contain any of the following tags:
    template should be removed.  It specifies the names of the two bonded atoms.
  * An :code:`<AddExternalBond>` tag indicates that a new external bond should be
    added to the template.  It specifies the name of the bonded atom.
- * A :code:`<RemoveExternalBond>` tag indicates that an external bond aleady
+ * A :code:`<RemoveExternalBond>` tag indicates that an external bond already
    present in the template should be removed.  It specifies the name of the
    bonded atom.
 
@@ -264,7 +275,7 @@ is done with an :code:`<ApplyToResidue>` tag:
      ...
     </Patch>
 
-A patch can alter multiple templates at once.  This is useful for creating bonds
+A patch can be applied to multiple templates at once.  This is useful for creating bonds
 between molecules, and allows the atom types in one residue to depend on the
 identity of the other residue it is bonded to.  To create a multi-residue patch,
 added a :code:`residues` attribute to the :code:`<Patch>` tag specifying how many
@@ -1154,6 +1165,28 @@ The :code:`file` attribute gives the path of the file to include.  It may be
 relative either to the directory containing the parent XML file (the one with
 the :code:`<Include>` tag) or the OpenMM data directory (the one containing
 built in force fields).
+
+
+Molecule Templates
+==================
+
+Although templates are normally matched to individual residues, it is also possible
+to write templates that are intended to be matched to entire molecules. This is a
+less common feature that is useful for force fields that parameterize, for example,
+an entire multi-residue peptide as a single unit.  It is especially useful in
+combination with template generators, which are discussed below.
+
+A force field first tries to assign atom types by matching each residue to a template.
+If it is unable to match some residues this way, it then tries merging all the
+residues in a molecule together and looks for a template that matches the complete
+molecule.
+
+When defining templates, you do not need to distinguish between residue and molecule
+templates.  They are all defined with the :code:`<Residue>` tag.  A molecule template
+can be recognized by the lack of any :code:`<ExternalBond>` tags, since a whole
+molecule by definition never has any external bonds.  When a molecule consists of
+only a single residue, there is of course no difference between a residue template
+and a molecule template.  The distinction only matters for multi-residue molecules.
 
 
 Using Multiple Files

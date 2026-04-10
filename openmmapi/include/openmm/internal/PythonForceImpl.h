@@ -5,7 +5,7 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
@@ -43,7 +43,7 @@ namespace OpenMM {
  * This is the internal implementation of PythonForce.
  */
 
-class PythonForceImpl : public ForceImpl {
+class OPENMM_EXPORT PythonForceImpl : public ForceImpl {
 public:
     PythonForceImpl(const PythonForce& owner);
     ~PythonForceImpl();

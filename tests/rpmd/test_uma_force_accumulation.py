@@ -60,7 +60,8 @@ def test_uma_force_accumulation():
             topology,
             task_name='omol',
             charge=0,
-            spin=1
+            spin=1,
+            use_atom_wrap_for_lammps_parity=True,
         )
     except Exception as e:
         print(f"Could not create UMA potential: {e}")

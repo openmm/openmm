@@ -5,7 +5,7 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
@@ -37,8 +37,11 @@
 namespace OpenMM {
 
 /**
- * This class prevents the center of mass of a System from drifting.  At each time step, it calculates the
+ * This class prevents the center of mass of a System from drifting.  It periodically calculates the
  * center of mass momentum, then adjusts the individual particle velocities to make it zero.
+ *
+ * CMMotionRemover is an effective way to prevent the system from drifting, but it is not a rigorous constraint.
+ * The center of mass may still move slightly, and may still be observed to have a small nonzero velocity.
  */
 
 class OPENMM_EXPORT CMMotionRemover : public Force {

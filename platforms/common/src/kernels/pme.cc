@@ -105,7 +105,7 @@ KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq,
                 if (fabs(add) > 2.3e-10f) { // Smallest value representable in 64 bit fixed point
 #ifdef USE_FIXED_POINT_CHARGE_SPREADING
                     ATOMIC_ADD(&pmeGrid[index], (mm_ulong) realToFixedPoint(add));
-#if defined(__GFX12__)
+#if defined(__GFX12__) && defined(USE_HIP)
                     // Workaround for rare cases when few values of pmeGrid are very large and
                     // incorrect. The cause is unknown. Why this workaround or other irrelevant
                     // changes like printf help is also unknown.

@@ -2,9 +2,9 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2026 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -294,6 +294,7 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
     compilationDefines["ERF"] = useDoublePrecision ? "erf" : "erff";
     compilationDefines["ERFC"] = useDoublePrecision ? "erfc" : "erfcf";
     compilationDefines["FMA"] = useDoublePrecision ? "fma" : "fmaf";
+    compilationDefines["FABS"] = useDoublePrecision ? "fabs" : "fabsf";
 
     // Set defines for applying periodic boundary conditions.
 

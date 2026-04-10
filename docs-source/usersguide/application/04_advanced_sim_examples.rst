@@ -116,7 +116,7 @@ not an arbitrary choice.
 Extracting and Reporting Forces (and other data)
 ************************************************
 
-OpenMM provides reporters for three output formats: `PDB <https://www.wwpdb.org/documentation/file-format-content/format33/v3.3.html>`_, `PDBx/mmCIF <https://mmcif.wwpdb.org/pdbx-mmcif-home-page.html>`_ and `DCD <https://www.ks.uiuc.edu/Research/namd/2.6/ug/node13.html>`_.
+OpenMM provides reporters for three output formats: `PDB <https://www.wwpdb.org/documentation/file-format-content/format33/v3.3.html>`_, `PDBx/mmCIF <https://mmcif.wwpdb.org/pdbx-mmcif-home-page.html>`_ and `DCD <https://manual.gromacs.org/current/reference-manual/file-formats.html>`_.
 All of those formats store only positions, not velocities, forces, or other data.  In this
 section, we create a new reporter that outputs forces.  This illustrates two
 important things: how to write a reporter, and how to query the simulation for

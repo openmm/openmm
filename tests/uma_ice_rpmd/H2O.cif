@@ -1,0 +1,80 @@
+#------------------------------------------------------------------------------
+#$Date: 2012-02-28 12:14:52 +0000 (Tue, 28 Feb 2012) $
+#$Revision: 35911 $
+#$URL: file:///home/coder/svn-repositories/cod/cif/1/01/10/1011023.cif $
+#------------------------------------------------------------------------------
+#
+# This file is available in the Crystallography Open Database (COD),
+# http://www.crystallography.net/
+#
+# All data on this site have been placed in the public domain by the
+# contributors.
+#
+data_1011023
+_chemical_name_systematic          'Dihydrogen oxide'
+_chemical_name_mineral             'Ice Ih'
+_chemical_formula_structural       'H2 O'
+_chemical_formula_sum              'H2 O'
+_publ_section_title
+;
+A Theory of Water and Ionic Solution, with Particular Reference to
+Hydrogen and Hydroxyl Ions
+;
+loop_
+_publ_author_name
+  'Bernal, J D'
+  'Fowler, R H'
+_journal_name_full                 'Journal of Chemical Physics'
+_journal_coden_ASTM                JCPSA6
+_journal_volume                    1
+_journal_year                      1933
+_journal_page_first                515
+_journal_page_last                 548
+_cell_length_a                     7.82
+_cell_length_b                     7.82
+_cell_length_c                     7.36
+_cell_angle_alpha                  90
+_cell_angle_beta                   90
+_cell_angle_gamma                  120
+_cell_volume                       389.8
+_cell_formula_units_Z              12
+_exptl_crystal_density_meas        0.92
+_symmetry_space_group_name_H-M     'P 63 c m'
+_symmetry_Int_Tables_number        185
+_symmetry_cell_setting             hexagonal
+loop_
+_symmetry_equiv_pos_as_xyz
+  'x,y,z'
+  '-y,x-y,z'
+  'y-x,-x,z'
+  'y,x,z'
+  'x-y,-y,z'
+  '-x,y-x,z'
+  '-x,-y,1/2+z'
+  'y,y-x,1/2+z'
+  'x-y,x,1/2+z'
+  '-y,-x,1/2+z'
+  'y-x,y,1/2+z'
+  'x,x-y,1/2+z'
+loop_
+_atom_type_symbol
+_atom_type_oxidation_number
+  O2-   -2.000
+  H1+    1.000
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_symmetry_multiplicity
+_atom_site_Wyckoff_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_occupancy
+_atom_site_attached_hydrogens
+_atom_site_calc_flag
+  O1    O2-    6 c 0.3333 0. 0.0625 1.  0 d
+  O2    O2-    6 c 0.6667 0. 0.9375 1.  0 d
+  H1    H1+    6 c 0.3333 0. 0.174 1.  0 d
+  H2    H1+    6 c 0.438 0. 0.026 1.  0 d
+  H3    H1+   12 d 0.772 0.105 0.975 1.  0 d
+_cod_database_code 1011023

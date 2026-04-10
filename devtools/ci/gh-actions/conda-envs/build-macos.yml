@@ -9,7 +9,7 @@ dependencies:
 # host
 - python
 - cython
-- swig
+- swig>=4.3
 - numpy
 - doxygen
 - setuptools

@@ -2,7 +2,7 @@
 vec3.py: Defines the Vec3 class used by OpenMM
 
 This is part of the OpenMM molecular simulation toolkit.
-See https://openmm.org/development.
+See https://openmm.org.
 
 Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Peter Eastman

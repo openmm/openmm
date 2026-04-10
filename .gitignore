@@ -1,12 +1,14 @@
 forcebalance/
 __pycache__
-build
+build*
 build?
 build_*
+build-judge*
 *.log
 
 # Cursor IDE
 .cursor/
+forcebalance/
 
 # Simulation output files
 *.npy
@@ -43,10 +45,6 @@ tests/protein_system/protein_cavity_*_metadata.json
 tests/protein_system/protein_cavity_*_stream.npy
 tests/protein_system/protein_ir_spectrum_*
 tests/protein_system/protein_cavity_*.pdb
-tests/cace-lr_water/*.npz
-tests/cace-lr_water/*.png
-tests/cace-lr_water/*.log
-tests/cace-lr_water/*.pdb
 tests/cavity_ir_spectrum*
 tests/rabi_*
 tests/bond_vibration_test.png
@@ -81,3 +79,17 @@ ml-experimental.backup/
 
 # macOS
 .DS_Store
+
+# UMA ice RPMD workflow: generated runs (keep small fixtures under fixtures/golden/)
+tests/uma_ice_rpmd/pipeline_out/
+tests/uma_ice_rpmd/ipi/*.xyz
+!tests/uma_ice_rpmd/ipi/init.xyz
+tests/uma_ice_rpmd/ipi/*.vxyz
+tests/uma_ice_rpmd/ipi/RESTART
+tests/uma_ice_rpmd/ipi/#i-pi.RESTART#*
+tests/uma_ice_rpmd/ipi/i-pi_run_backup_*.log
+tests/uma_ice_rpmd/*.pdb
+tests/uma_ice_rpmd/nohup.out
+tests/uma_ice_rpmd/.pytest_cache/
+
+# Optional: keep golden CSVs tracked under fixtures/golden/ (not ignored)

@@ -2,7 +2,7 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2012-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
@@ -72,6 +72,10 @@ void Force::setName(const string& name) {
 
 bool Force::usesPeriodicBoundaryConditions() const {
     throw OpenMMException("usesPeriodicBoundaryConditions is not implemented");
+}
+
+bool Force::usesVerletPart1ContextUpdate() const {
+    return false;
 }
 
 ForceImpl& Force::getImplInContext(Context& context) const {

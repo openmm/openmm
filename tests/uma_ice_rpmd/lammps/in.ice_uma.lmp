@@ -1,0 +1,22 @@
+# Full ice run: minimize (UMA) → Langevin MD @ 243 K, 1 fs
+units           metal
+atom_style      atomic
+boundary        p p p
+read_data       data.ice_uma
+comm_modify     cutoff 12.0
+timestep        0.001
+
+minimize        0.0 1.0e-6 2000 50000
+
+velocity        all create 243.0 284759 dist gaussian
+velocity        all scale 243.0
+fix             nve all nve
+fix             lang all langevin 243.0 243.0 1.0 284759 zero yes
+thermo_style    custom step time temp pe ke etotal press
+thermo          500
+dump            traj all custom 1000 dump.ice_uma.lammpstrj id type mass x y z vx vy vz
+dump_modify     traj sort id flush yes
+dump            ovito all xyz 1000 dump.ice_uma_ovito.xyz
+dump_modify     ovito element O H sort id append yes
+run             5000
+run             50000

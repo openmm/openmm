@@ -2,7 +2,7 @@
  *                              OpenMMAmoeba                                  *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2011-2021 Stanford University and the Authors.      *
  * Portions copyright (c) 2021 Advanced Micro Devices, Inc.                   *

@@ -4,4 +4,4 @@
    ############
 
 .. bibliography:: references.bib
-   :style: unsrt
+   :style: openmm_unsrt

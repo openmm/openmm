@@ -5,7 +5,7 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
@@ -155,7 +155,7 @@ private:
     double data[3];
 };
 
-static Vec3 operator*(double lhs, Vec3 rhs) {
+inline Vec3 operator*(double lhs, Vec3 rhs) {
     return Vec3(rhs[0]*lhs, rhs[1]*lhs, rhs[2]*lhs);
 }
 

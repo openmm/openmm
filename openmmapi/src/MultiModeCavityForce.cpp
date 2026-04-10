@@ -2,7 +2,7 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Muhammad Hasyim                                                   *
@@ -99,7 +99,7 @@ void MultiModeCavityForce::recomputeDerivedQuantities() {
     spatialProfiles.resize(numModes);
     for (int i = 0; i < numModes; i++) {
         int n = i + 1;
-        spatialProfiles[i] = std::sin(n * M_PI * moleculeZ / cavityLength);
+        spatialProfiles[i] = std::sin(n * OpenMM_Pi * moleculeZ / cavityLength);
     }
     
     // Precompute DSE prefactor: (1/2) * sum_n( eps_n^2 / K_n * f_n^2 )

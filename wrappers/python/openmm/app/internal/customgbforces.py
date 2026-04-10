@@ -2,7 +2,7 @@
 A recreation of the various GB variants implemented via CustomGBForce
 
 This is part of the OpenMM molecular simulation toolkit.
-See https://openmm.org/development.
+See https://openmm.org.
 
 Portions copyright (c) 2012-2022 University of Virginia and the Authors.
 Authors: Christoph Klein, Michael R. Shirts

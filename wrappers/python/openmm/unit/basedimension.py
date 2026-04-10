@@ -6,7 +6,7 @@ BaseDimension class for use by units and quantities.
 BaseDimensions are things like "length" and "mass".
 
 This is part of the OpenMM molecular simulation toolkit.
-See https://openmm.org/development.
+See https://openmm.org.
 
 Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Christopher M. Bruns

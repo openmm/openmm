@@ -178,9 +178,9 @@ Finally, we run the simulation, integrating the equations of motion for 10,000
 time steps.  Once it is finished, you can load the DCD file into any program you
 want for analysis and visualization (VMD_, PyMol_, AmberTools_, etc.).
 
-.. _VMD: http://www.ks.uiuc.edu/Research/vmd/
-.. _PyMol: http://www.pymol.org
-.. _AmberTools: http://ambermd.org
+.. _VMD: https://en.wikipedia.org/wiki/Visual_molecular_dynamics
+.. _PyMol: https://pymol.org/
+.. _AmberTools: https://ambermd.org/
 
 .. _using_amber_files:
 
@@ -420,10 +420,15 @@ script, and can even run it for you.
 
    :autonumber:`Figure,openmm setup`:  The OpenMM-Setup application
 
-To install OpenMM-Setup, open a command line terminal and type the following command
+You can install OpenMM-Setup using the conda package manager with the command
 ::
 
     conda install -c conda-forge openmm-setup
+
+or using the pip package manager with the command
+::
+
+    pip install openmm-setup
 
 You can then launch it by typing the command
 ::
@@ -610,8 +615,9 @@ CHARMM36
 --------
 
 The CHARMM36\ :cite:`Best2012` force field provides parameters for proteins, DNA,
-RNA, lipids, carbohydrates, water, ions, and various small molecules (see `here <http://mackerell.umaryland.edu/charmm_ff.shtml#refs>`_
-for full references).
+RNA, lipids, carbohydrates, water, ions, and various small molecules (see the
+`CHARMM force field documentation <https://www.charmm.org/force-fields/>`_
+for further references).
 
 .. tabularcolumns:: |l|L|
 
@@ -681,9 +687,9 @@ such as :file:`charmm36_2024/water.xml`, which specifies the default CHARMM wate
              includes residues and patches not present in this port within
              additional force field XML files that can be loaded as needed.
 
-The converted parameter sets come from the
-`CHARMM36 July 2024 update <http://mackerell.umaryland.edu/charmm_ff.shtml>`_,
-which includes the CHARMM36m protein parameters.  They were converted using the
+The converted parameter sets follow the
+`CHARMM project force field releases <https://www.charmm.org/force-fields/>`_
+(including the CHARMM36m protein parameters).  They were converted using the
 openmmforcefields_ package and `ParmEd <https://github.com/parmed/parmed>`_.
 
 Implicit Solvent
@@ -1491,7 +1497,7 @@ should be able to read them into most analysis and visualization programs.
 
 .. _PDB: http://www.wwpdb.org/documentation/format33/v3.3.html
 .. _PDBx/mmCIF: http://mmcif.wwpdb.org
-.. _DCD: http://www.ks.uiuc.edu/Research/vmd/plugins/molfile/dcdplugin.html
+.. _DCD: https://manual.gromacs.org/current/reference-manual/file-formats.html
 .. _XTC: https://manual.gromacs.org/archive/5.0.4/online/xtc.html
 
 To save a trajectory, just add a “reporter” to the simulation, as shown in the

@@ -65,11 +65,16 @@ potentials, or to otherwise modify the simulation from step to step.
 
     generated/AndersenThermostat
     generated/ATMForce
+    generated/BussiThermostat
+    generated/CavityForce
+    generated/CavityParticleDisplacer
     generated/CMMotionRemover
     generated/MonteCarloAnisotropicBarostat
     generated/MonteCarloBarostat
     generated/MonteCarloFlexibleBarostat
     generated/MonteCarloMembraneBarostat
+    generated/MultiModeCavityDisplacer
+    generated/MultiModeCavityForce
     generated/OrientationRestraintForce
     generated/RGForce
     generated/RMSDForce

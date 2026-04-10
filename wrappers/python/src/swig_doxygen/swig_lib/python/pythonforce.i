@@ -205,6 +205,27 @@ namespace OpenMM {
         }
         return force;
     }
+    /**
+     * Separate name avoids overload ambiguity with _createPythonForce(..., PyObject* batchComputation):
+     * both looked like (PyObject*, map={}, ?={}) to the compiler for 1- and 2-argument calls (e.g. SWIG output).
+     */
+    PythonForce* _createPythonForceWithParticles(PyObject* computation, const std::map<std::string, double>& globalParameters, const std::vector<int>& particles) {
+        PythonForce* force = new PythonForce(new ComputationWrapper(computation), globalParameters, particles);
+        PyObject* pickle = PyImport_ImportModule("pickle");
+        PyObject* dumps = PyUnicode_FromString("dumps");
+        PyObject* result = PyObject_CallMethodOneArg(pickle, dumps, computation);
+        if (result == NULL) {
+            // It couldn't be pickled.  It will still work, but can't be serialized.  Clear the error flag.
+            PyErr_Clear();
+        }
+        else {
+            char* buffer;
+            Py_ssize_t len;
+            if (PyBytes_AsStringAndSize(result, &buffer, &len) == 0)
+                force->setPickledFunction(buffer, len);
+        }
+        return force;
+    }
 
     /**
      * This is the serialization proxy used to serialize PythonForce objects.
@@ -235,7 +256,7 @@ namespace OpenMM {
         }
 
         void serialize(const void* object, SerializationNode& node) const {
-            node.setIntProperty("version", 1);
+            node.setIntProperty("version", 2);
             const PythonForce& force = *reinterpret_cast<const PythonForce*>(object);
             if (force.getPickledFunction().size() == 0)
                 throw OpenMMException("PythonForceProxy: Could not serialize PythonForce because its function could not be pickled.");
@@ -245,11 +266,14 @@ namespace OpenMM {
             SerializationNode& globalParams = node.createChildNode("GlobalParameters");
             for (auto param : force.getGlobalParameters())
                 globalParams.createChildNode("Parameter").setStringProperty("name", param.first).setDoubleProperty("default", param.second);
+            SerializationNode& particlesNode = node.createChildNode("Particles");
+            for (int i : force.getParticles())
+               particlesNode.createChildNode("Particle").setIntProperty("index", i);
         }
 
         void* deserialize(const SerializationNode& node) const {
             int version = node.getIntProperty("version");
-            if (version != 1)
+            if (version < 1 || version > 2)
                 throw OpenMMException("Unsupported version number");
             std::vector<char> pickledFunction = hexDecode(node.getStringProperty("function"));
             PyObject* pickle = PyImport_ImportModule("pickle");
@@ -261,7 +285,11 @@ namespace OpenMM {
             std::map<std::string, double> params;
             for (auto& parameter : paramsNode.getChildren())
                 params[parameter.getStringProperty("name")] = parameter.getDoubleProperty("default");
-            PythonForce* force = _createPythonForce(function, params);
+            std::vector<int> particles;
+            if (version > 1)
+                for (auto& particle : node.getChildNode("Particles").getChildren())
+                    particles.push_back(particle.getIntProperty("index"));
+            PythonForce* force = _createPythonForceWithParticles(function, params, particles);
             if (node.hasProperty("forceGroup"))
                 force->setForceGroup(node.getIntProperty("forceGroup", 0));
             if (node.hasProperty("usesPeriodic"))
@@ -281,21 +309,17 @@ namespace OpenMM {
 %}
 
 %extend OpenMM::PythonForce {
-    %feature("docstring") PythonForce "Create a PythonForce.
-
-Parameters
-----------
-computation : function
-    A function that performs the computation.  It should take a State as its argument
-    and return two values: the potential energy (a scalar) and the forces (a NumPy array).
-globalParameters : dict
-    Any global parameters the function depends on.  Keys are the parameter names, and the
-    corresponding values are their default values.
-batchComputation : function, optional
-    Optional batched computation function for RPMD. Takes a list of States and returns
-    (total_energy, forces_array) where forces_array has shape (numCopies, numParticles, 3).
-"
-    PythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters={}, PyObject* batchComputation=nullptr) {
+    %feature("docstring") PythonForce "Create a PythonForce.\n\nParameters\n----------\ncomputation : function\n    A function that performs the computation.  It should take a State as its argument\n    and return two values: the potential energy (a scalar) and the forces (a NumPy array).\nglobalParameters : dict\n    Any global parameters the function depends on.  Keys are the parameter names, and the\n    corresponding values are their default values.\nbatchComputation : function, optional\n    Optional batched computation function for RPMD. Takes a list of States and returns\n    (total_energy, forces_array) where forces_array has shape (numCopies, numParticles, 3)."
+    PythonForce(PyObject* computation) {
+        return _createPythonForce(computation, {}, nullptr);
+    }
+    PythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters) {
+        return _createPythonForce(computation, globalParameters, nullptr);
+    }
+    PythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters, PyObject* batchComputation) {
         return _createPythonForce(computation, globalParameters, batchComputation);
+    }
+    PythonForce(PyObject* computation, const std::map<std::string, double>& globalParameters, const std::vector<int>& particles) {
+        return _createPythonForceWithParticles(computation, globalParameters, particles);
     }
 }

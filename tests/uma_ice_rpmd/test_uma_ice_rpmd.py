@@ -1,0 +1,1685 @@
+#!/usr/bin/env python3
+"""
+RPMD simulation testing if ice stays frozen at 243K with UMA or eSEN potentials.
+Proton-ordered ice Ih from :mod:`generate_ice_ih` via ``--nx/--ny/--nz`` (8 molecules/cell);
+otherwise GenIce / embedded CIF. PILE thermostat, NVT/NPT.
+
+Run:
+  python test_uma_ice_rpmd.py --input ice.cif --beads 8 --temperature 243 --dt 1.0 --equil 5 --prod 50
+  python test_uma_ice_rpmd.py --box 1.0 --beads 8 ...
+  python test_uma_ice_rpmd.py --nx 2 --ny 2 --nz 2 --beads 8 ...
+  python test_uma_ice_rpmd.py --molecules 48 --beads 8 ...   # GenIce path (no --nx/--ny/--nz)
+
+Input from GenIce: genice 1h --rep 2 2 2 --format cif > ice.cif
+"""
+
+import sys
+import os
+import subprocess
+import tempfile
+
+# Set plugin dir before openmm import. Try CONDA_PREFIX, then miniconda3, then build.
+if os.getenv('OPENMM_PLUGIN_DIR') is None:
+    for _base in [os.getenv('CONDA_PREFIX'), os.path.expanduser('~/miniconda3')]:
+        if _base:
+            _plugins = os.path.join(_base, 'lib', 'plugins')
+            if os.path.isdir(_plugins):
+                os.environ['OPENMM_PLUGIN_DIR'] = _plugins
+                break
+
+# Set DEBUG_LOGS before openmmml import so UMA batch profiling is enabled
+if '--debug-logs' in sys.argv:
+    os.environ['OPENMMML_DEBUG_LOGS'] = '1'
+
+
+def _apply_uma_rpmd_cuda_memory_env(uma_rpmd_chunk_cli=None):
+    """Cap peak VRAM for batched UMA RPMD (OPENMMML_UMA_RPMD_CHUNK in openmmml).
+
+    A full 32-bead forward for 64 H2O can exceed ~12 GB if chunking is disabled.
+    Shell scripts set these; direct ``python test_uma_ice_rpmd.py`` / reference
+    driver did not, which caused CUDA OOM.
+    """
+    if uma_rpmd_chunk_cli is not None:
+        os.environ["OPENMMML_UMA_RPMD_CHUNK"] = str(int(uma_rpmd_chunk_cli))
+    elif not os.environ.get("OPENMMML_UMA_RPMD_CHUNK", "").strip():
+        os.environ["OPENMMML_UMA_RPMD_CHUNK"] = "4"
+    if not os.environ.get("PYTORCH_CUDA_ALLOC_CONF", "").strip():
+        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
+
+import numpy as np
+import time
+from pathlib import Path
+
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    _HAS_MATPLOTLIB = True
+except ImportError:
+    _HAS_MATPLOTLIB = False
+
+try:
+    from ice_order_parameters import (
+        ICE_ORDER_PI_CSV_HEADER,
+        format_ice_order_pi_csv_row,
+        ice_order_metrics_path_integral,
+        wrap_cartesian_orthorhombic,
+    )
+    _HAS_ICE_ORDER = True
+except ImportError:
+    ICE_ORDER_PI_CSV_HEADER = ""
+    format_ice_order_pi_csv_row = None  # type: ignore
+    ice_order_metrics_path_integral = None  # type: ignore
+    wrap_cartesian_orthorhombic = None  # type: ignore
+    _HAS_ICE_ORDER = False
+
+from rpmd_thermo_utils import (
+    centroid_kinetic_energy_and_temperature,
+    initialize_rpmd_velocities_nm,
+)
+
+from openmm import app, unit, Vec3
+from openmm import RPMDIntegrator, Context, Platform, RPMDMonteCarloBarostat
+
+# After OpenMM (conda/site-packages), prefer this repo's ``openmmml`` so batched UMA
+# matches ``wrappers/python/openmmml`` without a manual site-packages copy.
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+_WRAPPERS_PY = _REPO_ROOT / "wrappers" / "python"
+if _WRAPPERS_PY.is_dir():
+    sys.path.insert(0, str(_WRAPPERS_PY))
+
+from openmmml import MLPotential
+
+# Embedded ice Ih CIF from Avogadro/COD (12 water molecules) - fallback when GenIce2 unavailable
+# P 63 c m, a=b=7.82 A, c=7.36 A, gamma=120
+_ICE_IH_CIF = """
+data_1011023
+_cell_length_a 7.82
+_cell_length_b 7.82
+_cell_length_c 7.36
+_cell_angle_alpha 90
+_cell_angle_beta 90
+_cell_angle_gamma 120
+_symmetry_space_group_name_H-M 'P 63 c m'
+loop_
+_symmetry_equiv_pos_as_xyz
+ x,y,z
+ -y,x-y,z
+ y-x,-x,z
+ y,x,z
+ x-y,-y,z
+ -x,y-x,z
+ -x,-y,1/2+z
+ y,y-x,1/2+z
+ x-y,x,1/2+z
+ -y,-x,1/2+z
+ y-x,y,1/2+z
+ x,x-y,1/2+z
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+ O1 O 0.3333 0. 0.0625
+ O2 O 0.6667 0. 0.9375
+ H1 H 0.3333 0. 0.174
+ H2 H 0.438 0. 0.026
+ H3 H 0.772 0.105 0.975
+"""
+
+
+def _molecules_for_box(box_nm, density_g_cm3=0.92):
+    """Number of water molecules for cubic box L×L×L at ice Ih density."""
+    vol_cm3 = (box_nm * 1e-7) ** 3  # 1 nm = 1e-7 cm, so 1 nm³ = 1e-21 cm³
+    return max(1, int(round(density_g_cm3 * vol_cm3 / 18.015 * 6.022e23)))
+
+
+def _hexagonal_to_orthorhombic(atoms_ase):
+    """Transform hexagonal ice Ih cell to orthorhombic. Preserves Cartesian positions."""
+    cell = np.array(atoms_ase.get_cell())
+    pos = atoms_ase.get_positions()
+    # Orthorhombic: a' = a, b' = 2b - a, c' = c (IUCr convention)
+    cell_ortho = np.array([
+        cell[0],
+        2.0 * cell[1] - cell[0],
+        cell[2],
+    ])
+    # frac_new @ cell_ortho = frac_old @ cell  =>  frac_new = pos @ inv(cell_ortho)
+    frac_new = pos @ np.linalg.inv(cell_ortho.T)
+    frac_wrapped = frac_new % 1.0
+    from ase import Atoms
+    out = Atoms(
+        symbols=atoms_ase.get_chemical_symbols(),
+        positions=frac_wrapped @ cell_ortho,  # back to Cartesian (same as pos, wrapped)
+        cell=cell_ortho,
+        pbc=True,
+    )
+    return out
+
+
+def _factor_supercell_cells(n_cells: int) -> tuple[int, int, int]:
+    """Integer na,nb,nc with na*nb*nc == n_cells, preferring compact aspect ratio."""
+    best = (1, 1, n_cells)
+    best_score = n_cells  # max side length
+    lim = int(np.ceil(n_cells ** (1.0 / 3.0))) + 2
+    for na in range(1, min(lim, n_cells) + 1):
+        if n_cells % na != 0:
+            continue
+        r1 = n_cells // na
+        for nb in range(1, min(lim, r1) + 1):
+            if r1 % nb != 0:
+                continue
+            nc = r1 // nb
+            score = max(na, nb, nc)
+            if score < best_score:
+                best_score = score
+                best = (na, nb, nc)
+    return best
+
+
+def _trim_molecules_spatial(mol_list: list, pos_full: np.ndarray, n_keep: int) -> list:
+    """Keep n_keep molecules in a spatially contiguous set (BFS on O–O neighbors)."""
+    if n_keep >= len(mol_list):
+        return mol_list
+    o_pos = np.array([pos_full[mol[0]] for mol in mol_list])
+    n = len(mol_list)
+    # Neighbor graph: O within ~3.5 Å (ice first-shell) in minimum image of supercell
+    # Approximation: use raw distance (supercell already large enough for inner cluster)
+    cutoff = 3.6  # Angstrom
+    neighbors = [[] for _ in range(n)]
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = float(np.linalg.norm(o_pos[i] - o_pos[j]))
+            if d < cutoff:
+                neighbors[i].append(j)
+                neighbors[j].append(i)
+    from collections import deque
+
+    start = 0
+    q = deque([start])
+    seen = {start}
+    while q and len(seen) < n_keep:
+        i = q.popleft()
+        for j in neighbors[i]:
+            if j not in seen and len(seen) < n_keep:
+                seen.add(j)
+                q.append(j)
+    if len(seen) < n_keep:
+        # Fallback: add by nearest O–O to any chosen
+        rest = [j for j in range(n) if j not in seen]
+        while len(seen) < n_keep and rest:
+            best_j, best_d = None, 1e9
+            for j in rest:
+                dmin = min(np.linalg.norm(o_pos[j] - o_pos[k]) for k in seen)
+                if dmin < best_d:
+                    best_d, best_j = dmin, j
+            seen.add(best_j)
+            rest.remove(best_j)
+    order = sorted(seen)[:n_keep]
+    return [mol_list[k] for k in order]
+
+
+def _ice_to_orthorhombic_then_scale(atoms_ase, num_molecules, box_nm=None, ice_type='1h'):
+    """
+    Transform ice to orthorhombic (1h only), replicate for roughly cubic supercell, uniformly scale.
+    Preserves O-O distances (~2.75 A) and tetrahedral angles.
+    For ice_type='1c', cell is already cubic; skip orthorhombic transform.
+    Returns (topology, positions_nm, box_vectors).
+    """
+    from ase.build import make_supercell
+
+    if ice_type == '1c':
+        atoms_ortho = atoms_ase.copy()
+    else:
+        atoms_ortho = _hexagonal_to_orthorhombic(atoms_ase)
+    cell = np.array(atoms_ortho.get_cell())
+    Lx, Ly, Lz = np.linalg.norm(cell[0]), np.linalg.norm(cell[1]), np.linalg.norm(cell[2])
+
+    n_mol_per_cell = len(atoms_ortho) // 3
+    # Prefer exact supercell na*nb*nc*n_mol_per_cell == num_molecules (no trim → no clashes).
+    exact_cells = None
+    if num_molecules % n_mol_per_cell == 0:
+        n_cells = num_molecules // n_mol_per_cell
+        na, nb, nc = _factor_supercell_cells(n_cells)
+        if na * nb * nc == n_cells:
+            exact_cells = (na, nb, nc)
+    if exact_cells is not None:
+        na, nb, nc = exact_cells
+        P = np.diag([na, nb, nc])
+    else:
+        # Replicate to get roughly cubic supercell with at least num_molecules
+        r_min = max(1, int(np.ceil((num_molecules / n_mol_per_cell) ** (1.0 / 3.0))))
+        ratios = np.array([Lx, Ly, Lz])
+        ratios = ratios / np.min(ratios)
+        r_approx = max(r_min, 1)
+        na = max(1, int(round(r_approx / ratios[0])))
+        nb = max(1, int(round(r_approx / ratios[1])))
+        nc = max(1, int(round(r_approx / ratios[2])))
+        P = np.diag([na, nb, nc])
+    supercell = make_supercell(atoms_ortho, P)
+
+    mol_list = []
+    symbols = supercell.get_chemical_symbols()
+    pos_full = supercell.get_positions()
+    seen = set()
+    for i, s in enumerate(symbols):
+        if s == 'O' and i not in seen:
+            oidx = i
+            dists = [(np.linalg.norm(pos_full[oidx] - pos_full[j]), j)
+                     for j, sj in enumerate(symbols) if sj == 'H']
+            dists.sort(key=lambda x: x[0])
+            h1, h2 = dists[0][1], dists[1][1]
+            mol_list.append([oidx, h1, h2])
+            seen.update([oidx, h1, h2])
+    n_mol_super = len(mol_list)
+    if num_molecules < n_mol_super:
+        mol_list = _trim_molecules_spatial(mol_list, pos_full, num_molecules)
+    elif num_molecules == n_mol_super:
+        pass
+    else:
+        raise ValueError(
+            f"Supercell has {n_mol_super} molecules < requested {num_molecules}"
+        )
+
+    pos_ang = np.array([pos_full[idx] for mol in mol_list for idx in mol])
+    cell_super = np.array(supercell.get_cell())
+    vol_angstrom3 = np.abs(np.linalg.det(cell_super))
+    # Volume that corresponds to the kept molecules at the same number density as the
+    # full supercell (avoids huge empty boxes when trimming to num_molecules < n_mol_super).
+    vol_effective = vol_angstrom3 * (num_molecules / float(n_mol_super))
+
+    if box_nm is not None:
+        vol_target = (box_nm * 10.0) ** 3
+        scale = (vol_target / vol_effective) ** (1.0 / 3.0)
+    else:
+        scale = (num_molecules / float(n_mol_super)) ** (1.0 / 3.0)
+
+    pos_scaled = pos_ang * scale
+    cell_scaled = cell_super * scale
+
+    # OpenMM requires reduced-form box vectors: a=(x,0,0), b=(bx,by,0), c=(cx,cy,cz)
+    raw_vectors = (
+        Vec3(cell_scaled[0, 0] * 0.1, cell_scaled[0, 1] * 0.1, cell_scaled[0, 2] * 0.1),
+        Vec3(cell_scaled[1, 0] * 0.1, cell_scaled[1, 1] * 0.1, cell_scaled[1, 2] * 0.1),
+        Vec3(cell_scaled[2, 0] * 0.1, cell_scaled[2, 1] * 0.1, cell_scaled[2, 2] * 0.1),
+    )
+    from openmm.app.internal.unitcell import reducePeriodicBoxVectors
+    reduced = reducePeriodicBoxVectors(raw_vectors)
+    vals = reduced.value_in_unit(unit.nanometer)
+    box_vectors = tuple(Vec3(v[0], v[1], v[2]) * unit.nanometer for v in vals)
+    positions_nm = (pos_scaled * 0.1).tolist()
+
+    topology = app.Topology()
+    for _ in mol_list:
+        chain = topology.addChain()
+        residue = topology.addResidue('HOH', chain)
+        o_atom = topology.addAtom('O', app.Element.getBySymbol('O'), residue)
+        h1_atom = topology.addAtom('H', app.Element.getBySymbol('H'), residue)
+        h2_atom = topology.addAtom('H', app.Element.getBySymbol('H'), residue)
+        topology.addBond(o_atom, h1_atom)
+        topology.addBond(o_atom, h2_atom)
+
+    topology.setPeriodicBoxVectors(box_vectors)
+    return topology, positions_nm, box_vectors
+
+
+def _ase_water_to_openmm(atoms_ase):
+    """
+    Convert ASE Atoms (water only) to OpenMM (topology, positions_nm, box_vectors).
+    Uses structure as-is; no replication, trimming, or scaling.
+    Assigns H to O by distance (nearest 2 H per O).
+    """
+    symbols = np.array(atoms_ase.get_chemical_symbols())
+    pos_ang = np.array(atoms_ase.get_positions())
+    cell = np.array(atoms_ase.get_cell())
+
+    mol_list = []
+    seen = set()
+    for i, s in enumerate(symbols):
+        if s == 'O' and i not in seen:
+            dists = [(np.linalg.norm(pos_ang[i] - pos_ang[j]), j)
+                     for j, sj in enumerate(symbols) if sj == 'H' and j not in seen]
+            dists.sort(key=lambda x: x[0])
+            if len(dists) < 2:
+                raise ValueError(f"O at index {i} has < 2 H neighbors")
+            h1, h2 = dists[0][1], dists[1][1]
+            mol_list.append([i, h1, h2])
+            seen.update([i, h1, h2])
+
+    pos_ordered = np.array([pos_ang[idx] for mol in mol_list for idx in mol])
+
+    raw_vectors = (
+        Vec3(cell[0, 0] * 0.1, cell[0, 1] * 0.1, cell[0, 2] * 0.1),
+        Vec3(cell[1, 0] * 0.1, cell[1, 1] * 0.1, cell[1, 2] * 0.1),
+        Vec3(cell[2, 0] * 0.1, cell[2, 1] * 0.1, cell[2, 2] * 0.1),
+    )
+    from openmm.app.internal.unitcell import reducePeriodicBoxVectors
+    reduced = reducePeriodicBoxVectors(raw_vectors)
+    vals = reduced.value_in_unit(unit.nanometer)
+    box_vectors = tuple(Vec3(v[0], v[1], v[2]) * unit.nanometer for v in vals)
+
+    topology = app.Topology()
+    for _ in mol_list:
+        chain = topology.addChain()
+        residue = topology.addResidue('HOH', chain)
+        o_atom = topology.addAtom('O', app.Element.getBySymbol('O'), residue)
+        h1_atom = topology.addAtom('H', app.Element.getBySymbol('H'), residue)
+        h2_atom = topology.addAtom('H', app.Element.getBySymbol('H'), residue)
+        topology.addBond(o_atom, h1_atom)
+        topology.addBond(o_atom, h2_atom)
+
+    topology.setPeriodicBoxVectors(box_vectors)
+    positions_nm = (pos_ordered * 0.1).tolist()
+    return topology, positions_nm, box_vectors
+
+
+def _load_structure_from_file(filepath, max_molecules=None):
+    """
+    Load ice/water structure from CIF or PDB file.
+    Returns (topology, positions_nm, box_vectors).
+    Supports GenIce CIF output (fractional coords) and standard PDB.
+    max_molecules: if set, trim to first N molecules and scale box. **Unsafe for small N**:
+    the first N molecules in file order are not a spatially valid ice fragment (can yield
+    O–O ~1.7 Å). Prefer :func:`create_ice_structure` / :func:`lammps.build_lammps_ice_data.main`
+    with ``-n`` for target molecule counts.
+    """
+    from ase.io import read
+
+    path = Path(filepath)
+    if not path.exists():
+        raise FileNotFoundError(f"Structure file not found: {filepath}")
+
+    suffix = path.suffix.lower()
+    if suffix in ('.cif', '.pdb', '.xyz'):
+        atoms = read(str(path))
+    else:
+        raise ValueError(f"Unsupported structure format: {suffix}. Use .cif, .pdb, or .xyz")
+
+    # XYZ and some formats lack cell; set cubic box for gas-phase structures.
+    # ASE set_cell() uses Angstroms.
+    # Single molecule (3 atoms): use 5 Å box to keep molecule stable (avoids "no edges" when H drifts in large box).
+    # Multi-molecule: use 12 Å (1.2 nm) per molecule region.
+    cell = np.array(atoms.get_cell())
+    if cell.size < 9 or np.abs(np.linalg.det(cell)) < 1e-10:
+        box_angstrom = 5.0 if len(atoms) == 3 else 12.0
+        atoms.set_cell([box_angstrom, box_angstrom, box_angstrom])
+        atoms.set_pbc(True)
+        atoms.center()
+
+    topo, positions, box = _ase_water_to_openmm(atoms)
+    if max_molecules is not None:
+        n_mol = len(positions) // 3
+        if n_mol > max_molecules:
+            n_keep = max_molecules
+            n_atoms_keep = n_keep * 3
+            positions = positions[:n_atoms_keep]
+            box_matrix = np.array([[box[i][j].value_in_unit(unit.nanometer) for j in range(3)] for i in range(3)])
+            scale = (n_keep / n_mol) ** (1.0 / 3.0)
+            box_matrix *= scale
+            positions_nm = np.array([[p[0], p[1], p[2]] for p in positions]) * scale
+            box_vectors = (
+                Vec3(box_matrix[0, 0], box_matrix[0, 1], box_matrix[0, 2]) * unit.nanometer,
+                Vec3(box_matrix[1, 0], box_matrix[1, 1], box_matrix[1, 2]) * unit.nanometer,
+                Vec3(box_matrix[2, 0], box_matrix[2, 1], box_matrix[2, 2]) * unit.nanometer,
+            )
+            topo = app.Topology()
+            for _ in range(n_keep):
+                chain = topo.addChain()
+                res = topo.addResidue('HOH', chain)
+                o_atom = topo.addAtom('O', app.Element.getBySymbol('O'), res)
+                h1 = topo.addAtom('H', app.Element.getBySymbol('H'), res)
+                h2 = topo.addAtom('H', app.Element.getBySymbol('H'), res)
+                topo.addBond(o_atom, h1)
+                topo.addBond(o_atom, h2)
+            topo.setPeriodicBoxVectors(box_vectors)
+            return topo, positions_nm.tolist(), box_vectors
+    return topo, positions, box
+
+
+def _create_ice_from_ase(atoms_ase, num_molecules, box_nm=None, ice_type='1h'):
+    """Convert ASE Atoms (ice Ih or Ic) to OpenMM topology and positions.
+    Uses orthorhombic transformation (1h only) + uniform scale to preserve structure.
+    """
+    return _ice_to_orthorhombic_then_scale(atoms_ase, num_molecules, box_nm=box_nm, ice_type=ice_type)
+
+
+def _create_ice_genice(num_molecules, box_nm=None, ice_type='1h'):
+    """Try GenIce (or GenIce2) subprocess. Returns (topology, positions, box_vectors) or None on failure.
+    ice_type: '1h' (hexagonal) or '1c' (cubic ice, natural cubic box).
+    Tries GenIce 1.x first (genice --format cif), then GenIce2, then embedded CIF.
+    """
+    from ase.io import read
+
+    n_per_cell = 12 if ice_type == '1h' else 8  # ice Ic has 8 molecules per cubic cell (Fd-3m)
+    r = max(1, int(np.ceil((num_molecules / n_per_cell) ** (1 / 3))))
+    rep_args = [str(r), str(r), str(r)]
+
+    # Try GenIce 1.x (genice): outputs CIF to stdout
+    for cmd, out_format in [
+        (['genice', ice_type, '--rep'] + rep_args + ['--format', 'cif'], 'cif'),
+        (['genice2', ice_type, '--rep'] + rep_args + ['--format', 'cif'], 'cif'),
+        (['genice2', ice_type, '--rep'] + rep_args + ['-f', 'y'], 'yaml'),
+    ]:
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            stdout = result.stdout.strip()
+            if result.returncode != 0 or not stdout:
+                continue
+            with tempfile.NamedTemporaryFile(suffix='.cif' if out_format == 'cif' else '.y', delete=False, mode='w') as f:
+                f.write(stdout)
+                outpath = f.name
+            try:
+                atoms = read(outpath, format=out_format)
+            finally:
+                os.unlink(outpath)
+            if len(atoms) >= num_molecules * 3:
+                return _create_ice_from_ase(atoms, num_molecules, box_nm=box_nm, ice_type=ice_type)
+        except Exception:
+            continue
+    return None
+
+
+def _create_ice_embedded(num_molecules, box_nm=None):
+    """Create ice Ih from embedded CIF (12 molecules) + replication."""
+    from ase.io import read
+    from io import StringIO
+
+    atoms = read(StringIO(_ICE_IH_CIF), format='cif')
+    n_base = len(atoms) // 3
+    if num_molecules <= n_base:
+        return _create_ice_from_ase(atoms, num_molecules, box_nm=box_nm, ice_type='1h')
+    r = max(1, int(np.ceil((num_molecules / n_base) ** (1 / 3))))
+    from ase.build import make_supercell
+    P = np.diag([r, r, r])
+    supercell = make_supercell(atoms, P)
+    return _create_ice_from_ase(supercell, num_molecules, box_nm=box_nm, ice_type='1h')
+
+
+def create_ice_structure(num_molecules=None, box_nm=None, ice_type='1h', input_file=None,
+                         max_molecules=None, ice_supercell=None):
+    """
+    Create ice structure with tetrahedral hydrogen-bonding network.
+
+    If input_file is given, load structure directly from CIF/PDB/XYZ (e.g. GenIce output).
+    max_molecules: when loading from file, trim to first N molecules and scale box (for CUDA OOM).
+
+    If ``ice_supercell`` is ``(nx, ny, nz)``, build **ice Ih proton-ordered** using
+    :mod:`generate_ice_ih` replicated ``nx * ny * nz`` times (8 molecules per cell) via
+    :func:`ice_ih_openmm.openmm_from_ice_supercell`. This is the preferred path when you want
+    explicit supercell factors (no ambiguity from molecule count alone).
+
+    Otherwise specify num_molecules OR box_nm; ``ice_type`` selects GenIce ice Ih or Ic, then
+    embedded CIF fallback.
+
+    Returns
+    -------
+    topology : app.Topology
+    positions : list of Vec3
+    box_vectors : tuple of Vec3
+    """
+    if input_file is not None:
+        print(f"\n--- Loading Ice Structure from File ---")
+        print(f"  Input: {input_file}")
+        topology, positions, box_vectors = _load_structure_from_file(input_file, max_molecules=max_molecules)
+        n_atoms = len(positions)
+        if max_molecules is not None:
+            print(f"  Trimmed to {max_molecules} molecules (--molecules, for GPU memory)")
+    else:
+        print(f"\n--- Creating Ice Structure ---")
+        if ice_supercell is not None:
+            nx, ny, nz = ice_supercell
+            n_mol_expected = 8 * nx * ny * nz
+            print(f"  Ice Ih supercell: nx={nx} ny={ny} nz={nz}  ({n_mol_expected} molecules)")
+            from ice_ih_openmm import openmm_from_ice_supercell
+
+            topology, positions, box_vectors = openmm_from_ice_supercell(nx, ny, nz)
+            print("  Source: generate_ice_ih.py (proton-ordered)")
+        else:
+            if box_nm is not None:
+                num_molecules = _molecules_for_box(box_nm)
+            elif num_molecules is None:
+                num_molecules = 32
+            print(f"  Ice type: {ice_type}")
+            if box_nm is not None:
+                print(f"  Target box volume: {box_nm**3:.4f} nm³")
+            print(f"  Target molecules: {num_molecules}")
+            result = _create_ice_genice(num_molecules, box_nm=box_nm, ice_type=ice_type)
+            if result is not None:
+                topology, positions, box_vectors = result
+                print("  Source: GenIce (proton-disordered)")
+            else:
+                if ice_type == '1c':
+                    print("  GenIce2 failed for 1c; falling back to 1h")
+                    ice_type = '1h'
+                topology, positions, box_vectors = _create_ice_embedded(num_molecules, box_nm=box_nm)
+                print("  Source: Embedded CIF (ice Ih from Avogadro/COD)")
+
+        n_atoms = len(positions)
+    mol_count = n_atoms // 3
+    print(f"  Actual molecules: {mol_count}")
+    print(f"  Total atoms: {n_atoms}")
+
+    box_matrix = np.array([[box_vectors[i][j].value_in_unit(unit.nanometer) for j in range(3)] for i in range(3)])
+    vol_nm3 = np.abs(np.linalg.det(box_matrix))
+    L_sides = np.linalg.norm(box_matrix, axis=1) * 10  # nm to Angstrom
+    total_mass_g = (mol_count * 18.015) * 1.66054e-24
+    density = total_mass_g / (vol_nm3 * 1e-21)  # 1 nm³ = 1e-21 cm³
+    print(f"  Box: {L_sides[0]:.2f} x {L_sides[1]:.2f} x {L_sides[2]:.2f} Å")
+    print(f"  Initial density: {density:.3f} g/cm³")
+    print(f"  Expected ice Ih: ~0.92 g/cm³")
+
+    return topology, positions, box_vectors
+
+
+print("All required packages loaded successfully")
+
+
+def _mic_centroid(positions_per_bead: list[np.ndarray], box_matrix: np.ndarray) -> np.ndarray:
+    """MIC-aware centroid of RPMD bead positions.
+
+    Uses bead 0 as reference frame.  For each subsequent bead, the displacement
+    from bead 0 is folded via minimum-image convention before averaging.
+    This prevents PBC-wrap artifacts when beads straddle a cell boundary.
+
+    Parameters
+    ----------
+    positions_per_bead : list of (n_atoms, 3) arrays in nm
+    box_matrix : (3, 3) cell vectors in nm (rows = a, b, c)
+
+    Returns
+    -------
+    centroid : (n_atoms, 3) array in nm
+    """
+    ref = positions_per_bead[0]
+    inv_box = np.linalg.inv(box_matrix)
+    accum = np.zeros_like(ref)
+    for b in range(len(positions_per_bead)):
+        delta = positions_per_bead[b] - ref
+        frac = delta @ inv_box.T
+        frac -= np.round(frac)
+        accum += frac @ box_matrix
+    return ref + accum / len(positions_per_bead)
+
+
+def _rpmd_sum_bead_pe_plus_ke_kjmol(integrator: RPMDIntegrator, num_beads: int) -> float:
+    """Sum of per-bead potential + kinetic energy (kJ/mol); excludes thermostat work.
+
+    Used as an approximate conserved quantity for short NVE drift diagnostics.
+    Ring-polymer spring energy between beads is handled inside the integrator and may
+    not appear in this sum; large drift still flags force/timestep issues.
+    """
+    total = 0.0
+    for i in range(num_beads):
+        st = integrator.getState(i, getEnergy=True)
+        total += st.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
+        total += st.getKineticEnergy().value_in_unit(unit.kilojoules_per_mole)
+    return float(total)
+
+
+def run_simulation(num_molecules=None, box_nm=None, ice_type='1h', input_file=None,
+                   max_molecules=None, ice_supercell=None,
+                   num_beads=8, temperature_K=243.0,
+                   pressure_bar=1.0, dt_fs=1.0, equilibration_ps=5.0,
+                   production_ps=100.0, model_name='uma-s-1-pythonforce-batch',
+                   output_dir='.', report_interval_ps=1.0, report_every_steps=None,
+                   pdb_interval_ps=0.2,
+                   platform_name='cuda', ml_device=None, precision_override=None,
+                   minimal_report=False, optimize_inference=False,
+                   optimize_inference_tf32_only=False, inference_turbo_rpmd=False,
+                   order_csv_path=None, order_every_steps=None, seed=284759,
+                   rpmd_thermostat='pile_g',
+                   rpmd_friction_ps_inv=1.0,
+                   rpmd_centroid_friction_ps_inv=0.5,
+                   nve_check_ps: float = 0.0,
+                   nve_drift_warn_kj_per_mol_per_ps: float = 100.0,
+                   use_atom_wrap_for_lammps_parity: bool = True,
+                   conservative_forces: bool = False):
+    """
+    Run RPMD simulation of ice.
+    
+    Parameters
+    ----------
+    num_molecules : int, optional
+        Number of water molecules (ignored if box_nm given)
+    box_nm : float, optional
+        Cubic box side in nm; overrides num_molecules
+    num_beads : int
+        Number of RPMD beads
+    temperature_K : float
+        Temperature in Kelvin
+    pressure_bar : float
+        Pressure in bar (0 = NVT, >0 = NPT)
+    dt_fs : float
+        Timestep in femtoseconds
+    equilibration_ps : float
+        Equilibration time in picoseconds
+    production_ps : float
+        Production time in picoseconds
+    model_name : str
+        UMA or eSEN model name
+    output_dir : str
+        Output directory for trajectories
+    report_interval_ps : float
+        Console reporting interval in picoseconds (default: 1.0). Ignored if
+        ``report_every_steps`` is set and positive.
+    report_every_steps : int, optional
+        If set and positive, print progress every this many integrator steps
+        (overrides ``report_interval_ps``). Expensive with many beads (extra
+        ``getState`` calls per report).
+    pdb_interval_ps : float
+        PDB frame save interval in picoseconds (default: 0.2, 5 frames/ps)
+    platform_name : str
+        OpenMM platform: 'cuda' (GPU) or 'cpu' (default: 'cuda')
+    ml_device : str or None
+        ML model device: 'cpu', 'cuda', or None. When None with CUDA platform,
+        defaults to 'cpu' to avoid PyTorch/OpenMM CUDA context conflict.
+    minimal_report : bool
+        If True, skip getState(Energy) in report block; only print progress and
+        ns/day. Reduces extra UMA inference for faster runs (default: False).
+    optimize_inference : bool
+        If True, use fast inference settings (no activation checkpointing,
+        TF32) to speed up UMA force evaluation. Increases GPU memory; reduce
+        beads/molecules if OOM. Use optimize_inference_tf32_only on constrained GPUs.
+    optimize_inference_tf32_only : bool
+        If True, enable only TF32 (keeps activation checkpointing). Lower memory,
+        some speedup (default: False).
+    inference_turbo_rpmd : bool
+        If True, use Fairchem **turbo** string preset (``turbo_rpmd`` is not always
+        a valid Fairchem name). **Warning:** ``turbo`` may enable merge_mole, which
+        is incompatible with multi-system batched RPMD on some stacks; prefer
+        ``--optimize-inference-tf32-only`` for high bead counts.
+    rpmd_thermostat : str
+        ``pile_g`` (default): OpenMM ``RPMDIntegrator.PileG`` — Bussi stochastic
+        velocity rescaling on the **centroid** normal mode and PILE Langevin on
+        internal modes (canonical ring-polymer bath; matches OpenMM/i-PI docs for
+        centroid kinetic ergodicity). ``pile``: PILE on all modes including centroid.
+        ``none``: no thermostat (NVE-like for RPMD; rarely used for equilibration).
+    rpmd_friction_ps_inv : float
+        Friction in 1/ps coupling internal ring-polymer modes to the bath (PILE /
+        PILE-G internal branch). Default 1.0.
+    rpmd_centroid_friction_ps_inv : float
+        For ``pile_g`` only: Bussi centroid coupling in 1/ps. Default 0.5.
+    nve_check_ps : float
+        If > 0, run this many picoseconds with the thermostat disabled (NVE-like RPMD)
+        before equilibration/production and print energy drift. Default 0 (disabled).
+    nve_drift_warn_kj_per_mol_per_ps : float
+        Warn when ``|dE/dt| / N_molecules`` exceeds this threshold (kJ/(mol·ps)) during
+        the NVE check. Default 100.
+    use_atom_wrap_for_lammps_parity : bool
+        If True (default), UMA preprocessing uses ASE ``wrap_positions`` per bead, matching
+        LAMMPS ``fix external`` / Fairchem. If False, use molecular water wrap
+        (``_wrap_water_molecules_per_bead``) instead.
+
+    Returns
+    -------
+    success : bool
+        True if simulation completed successfully
+    """
+    
+    print("=" * 80)
+    print("UMA/eSEN Ice RPMD Simulation")
+    print("=" * 80)
+    print(f"Model: {model_name}")
+    print(f"Temperature: {temperature_K} K")
+    print(f"Pressure: {pressure_bar} bar {'(NPT)' if pressure_bar > 0 else '(NVT)'}")
+    print(f"RPMD beads: {num_beads}")
+    print(f"Timestep: {dt_fs} fs")
+    if input_file is not None:
+        print(f"Input structure: {input_file}")
+    elif ice_supercell is not None:
+        _nx, _ny, _nz = ice_supercell
+        _nmol = 8 * _nx * _ny * _nz
+        print(f"Ice Ih supercell: {_nx} x {_ny} x {_nz}  ({_nmol} molecules)")
+    else:
+        if box_nm is not None:
+            num_molecules = _molecules_for_box(box_nm)
+        if num_molecules is None:
+            num_molecules = 32
+        print(f"Molecules: {num_molecules}" + (f" (from box {box_nm} nm)" if box_nm else ""))
+    print(f"Equilibration: {equilibration_ps} ps")
+    print(f"Production: {production_ps} ps")
+    
+    # Create output directory
+    output_path = Path(output_dir)
+    output_path.mkdir(exist_ok=True)
+    
+    # Create structure
+    topology, positions, box_vectors = create_ice_structure(
+        num_molecules=num_molecules, box_nm=box_nm, ice_type=ice_type, input_file=input_file,
+        max_molecules=max_molecules, ice_supercell=ice_supercell,
+    )
+    n_atoms = len(positions)
+    num_molecules = n_atoms // 3
+    
+    # Create potential
+    print(f"\n--- Creating ML Potential ---")
+    print("Creating OpenMM system...")
+    potential = MLPotential(model_name)
+    
+    if ml_device is not None:
+        _ml_device = ml_device if ml_device != 'auto' else None
+    elif platform_name.lower() == 'cuda':
+        _ml_device = 'cuda'  # Lazy-load allows single GPU; use --ml-device cpu to force CPU
+    else:
+        _ml_device = None
+
+    print(f"  ML model device: {_ml_device or 'auto (library default)'}")
+    print(
+        f"  UMA PBC wrap: {'per-atom (LAMMPS / Fairchem parity)' if use_atom_wrap_for_lammps_parity else 'molecular water'}"
+    )
+
+    create_kwargs = {'task_name': 'omol', 'charge': 0, 'spin': 1, 'device': _ml_device,
+                     'use_atom_wrap_for_lammps_parity': use_atom_wrap_for_lammps_parity,
+                     'conservative_forces': conservative_forces}
+    if conservative_forces:
+        print(
+            "  Forces: conservative_forces CLI=True (OpenMM sets backbone.regress_config.direct_forces=False)"
+        )
+    print(
+        "  Forces: effective FairChem mode is predict_unit.direct_forces "
+        "(logged when UMA loads on first force evaluation)."
+    )
+    if inference_turbo_rpmd:
+        # Fairchem API accepts string names 'default' | 'turbo' (turbo_rpmd may be unavailable).
+        create_kwargs['inference_settings'] = 'turbo'
+        print(
+            "  Inference: turbo (TF32-friendly preset; pairs with batched RPMD when supported)"
+        )
+    elif optimize_inference or optimize_inference_tf32_only:
+        from dataclasses import replace
+        from fairchem.core.units.mlip_unit.api.inference import inference_settings_default
+        d = inference_settings_default()
+        if optimize_inference_tf32_only and not optimize_inference:
+            create_kwargs['inference_settings'] = replace(d, compile=False, tf32=True)
+            print(f"  Inference optimizations: tf32=on only (lower memory)")
+        else:
+            create_kwargs['inference_settings'] = replace(
+                d, activation_checkpointing=False, compile=False, tf32=True
+            )
+            print(f"  Inference optimizations: checkpoint=off, tf32=on (compile=off, UMA equivariant layers incompatible)")
+    system = potential.createSystem(topology, **create_kwargs)
+    
+    print(f"  System uses PBC: {system.usesPeriodicBoundaryConditions()}")
+    
+    # Add barostat if NPT. Use on all platforms including CUDA.
+    _use_barostat = pressure_bar > 0
+    if _use_barostat:
+        barostat = RPMDMonteCarloBarostat(
+            pressure_bar * unit.bar,
+            25  # Attempt every 25 steps
+        )
+        system.addForce(barostat)
+        print(f"  Added RPMDMonteCarloBarostat (NPT ensemble)")
+        print(f"  Pressure: {pressure_bar} bar")
+    else:
+        print(f"  Running NVT (no barostat)")
+    
+    # Calculate density (use determinant for hexagonal/triclinic boxes)
+    mass_per_molecule = 18.015
+    total_mass_g = (num_molecules * mass_per_molecule) * 1.66054e-24
+    box_matrix = np.array([[box_vectors[i][j].value_in_unit(unit.nanometer) for j in range(3)] for i in range(3)])
+    vol_nm3 = np.abs(np.linalg.det(box_matrix))
+    density = total_mass_g / (vol_nm3 * 1e-21)
+    print(f"  Initial density: {density:.3f} g/cm³")
+    print(f"  Expected ice density: ~0.92 g/cm³")
+    
+    # Create RPMD integrator (PILE_G recommended: Bussi on centroid + PILE on internals)
+    print(f"\n--- Creating RPMD Integrator ---")
+    print(f"  Beads: {num_beads}")
+    print(f"  Temperature: {temperature_K} K")
+    print(f"  Timestep: {dt_fs} fs")
+
+    _ts = (rpmd_thermostat or "pile_g").strip().lower().replace("-", "_")
+    if _ts not in ("pile", "pile_g", "none"):
+        raise ValueError(
+            f"rpmd_thermostat must be 'pile', 'pile_g', or 'none', got {rpmd_thermostat!r}"
+        )
+
+    integrator = RPMDIntegrator(
+        num_beads,
+        temperature_K * unit.kelvin,
+        rpmd_friction_ps_inv / unit.picosecond,
+        dt_fs * unit.femtoseconds,
+    )
+    integrator.setRandomNumberSeed(seed)
+    if _ts == "pile_g":
+        integrator.setThermostatType(RPMDIntegrator.PileG)
+        integrator.setCentroidFriction(rpmd_centroid_friction_ps_inv / unit.picosecond)
+        print("  Thermostat: PILE_G (Bussi/SVR on centroid + PILE on internal modes)")
+        print(f"  Internal friction: {rpmd_friction_ps_inv} ps^-1")
+        print(f"  Centroid friction (Bussi): {rpmd_centroid_friction_ps_inv} ps^-1")
+    elif _ts == "pile":
+        integrator.setThermostatType(RPMDIntegrator.Pile)
+        print("  Thermostat: PILE (Langevin-like on all normal modes, including centroid)")
+        print(f"  Friction: {rpmd_friction_ps_inv} ps^-1")
+    else:
+        integrator.setThermostatType(RPMDIntegrator.NoneThermo)
+        print("  Thermostat: none (NVE RPMD — no stochastic bath)")
+    
+    # Create context
+    print(f"\n--- Creating Simulation Context ---")
+    # CRITICAL: Initialize PyTorch CUDA before OpenMM creates its Context.
+    # torch.cuda.init() pops existing contexts from the stack; if OpenMM creates
+    # first, PyTorch later corrupts the context (CUDA_ERROR_ILLEGAL_ADDRESS).
+    # Init PyTorch first so both share the primary context (pytorch#75025).
+    if platform_name.lower() == 'cuda' and _ml_device == 'cuda':
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.init()
+            print(f"  PyTorch CUDA initialized before OpenMM Context (context-order fix)")
+    _plat_key = platform_name.lower()
+    if _plat_key == 'reference':
+        platform = Platform.getPlatformByName('Reference')
+    else:
+        platform = Platform.getPlatformByName(platform_name.upper())
+    if _plat_key == 'cuda':
+        precision = precision_override or 'mixed'
+        properties = {
+            'Precision': precision,
+            'DeviceIndex': '0',
+            'DisablePmeStream': 'true',
+        }
+        print(
+            f"  Using CUDA platform (GPU acceleration, DeviceIndex=0, Precision={precision})"
+        )
+    elif _plat_key == 'reference':
+        properties = {}
+        print(f"  Using Reference platform (full double-precision CPU)")
+    else:
+        properties = {}
+        print(f"  Using CPU platform")
+    context = Context(system, integrator, platform, properties)
+    
+    # Initialize beads
+    print(f"\n--- Initializing RPMD Beads ---")
+    np.random.seed(seed)
+    positions_nm = np.array(positions)
+    
+    # Set context positions first (required before getting velocities)
+    pos_with_units = [Vec3(float(p[0]), float(p[1]), float(p[2])) * unit.nanometer for p in positions_nm]
+    context.setPositions(pos_with_units)
+    
+    for i in range(num_beads):
+        perturbation = np.random.randn(n_atoms, 3) * 0.001
+        perturbed_pos = positions_nm + perturbation
+        integrator.setPositions(i, perturbed_pos * unit.nanometer)
+        print(f"  Bead {i}: positions set")
+
+    # Energy minimization to relax the structure
+    print(f"\n--- Energy Minimization ---")
+    print("  Minimizing energy to relax initial structure...")
+    initial_state = integrator.getState(0, getEnergy=True)
+    initial_pe = initial_state.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
+    print(f"  Initial PE: {initial_pe:.2f} kJ/mol")
+
+    # Sync context with bead 0 positions before minimization (RPMD stores positions in integrator)
+    state0 = integrator.getState(0, getPositions=True)
+    bead0_positions = state0.getPositions()
+    context.setPositions(bead0_positions)
+
+    # Perform energy minimization on bead 0, then copy to all beads
+    from openmm import LocalEnergyMinimizer
+    max_min_iter = 200 if n_atoms <= 3 else 2000  # Faster for single-molecule smoke tests
+    LocalEnergyMinimizer.minimize(context, tolerance=1.0, maxIterations=max_min_iter)
+    
+    # Get minimized positions and copy to all beads
+    minimized_state = context.getState(getPositions=True, getEnergy=True)
+    minimized_positions = minimized_state.getPositions()
+    minimized_pe = minimized_state.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
+    print(f"  Minimized PE: {minimized_pe:.2f} kJ/mol")
+    print(f"  Energy reduction: {initial_pe - minimized_pe:.2f} kJ/mol")
+    
+    for i in range(num_beads):
+        integrator.setPositions(i, minimized_positions)
+    print(f"  Minimized structure copied to all {num_beads} beads")
+
+    # Velocities must be drawn AFTER minimization (match TIP4P RPMD path) so they are
+    # consistent with the minimized geometry; pre-minimize velocities inject spurious KE.
+    # NM thermal draw matches i-PI ``<velocities mode='thermal'>`` (all modes at T_RP = N*T),
+    # not a single Maxwell draw copied to every bead (which leaves internal modes ~cold).
+    context.setPositions(minimized_positions)
+    masses_da = np.array(
+        [
+            system.getParticleMass(i).value_in_unit(unit.dalton)
+            for i in range(n_atoms)
+        ],
+        dtype=np.float64,
+    )
+    initialize_rpmd_velocities_nm(
+        integrator,
+        masses_da,
+        n_beads=num_beads,
+        temperature_k=float(temperature_K),
+        seed=int(seed),
+    )
+
+    print(
+        f"  Velocities initialized (NM thermal, i-PI parity) at {temperature_K} K "
+        f"(after minimization)"
+    )
+
+    # Store for NVT RMSD check
+    minimized_positions_nm = np.array([[p[0].value_in_unit(unit.nanometer), p[1].value_in_unit(unit.nanometer), p[2].value_in_unit(unit.nanometer)] for p in minimized_positions])
+    
+    # Get initial energies
+    print(f"\n--- Initial Bead Energies ---")
+    print("  Getting initial bead energies...")
+    
+    bead_energies = []
+    for i in range(num_beads):
+        state = integrator.getState(i, getEnergy=True)
+        pe = state.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
+        ke = state.getKineticEnergy().value_in_unit(unit.kilojoules_per_mole)
+        total = pe + ke
+        bead_energies.append((pe, ke, total))
+        print(f"  Bead {i:2d}: PE = {pe:10.2f} kJ/mol, KE = {ke:8.2f} kJ/mol, Total = {total:10.2f} kJ/mol")
+    
+    mean_pe = np.mean([e[0] for e in bead_energies])
+    mean_ke = np.mean([e[1] for e in bead_energies])
+    mean_total = np.mean([e[2] for e in bead_energies])
+    print(f"\n  Mean: PE = {mean_pe:10.2f} kJ/mol, KE = {mean_ke:8.2f} kJ/mol, Total = {mean_total:10.2f} kJ/mol")
+    
+    # Setup PDB reporter (centroid only)
+    print(f"\n--- Setting up PDB Reporter ---")
+    pdb_file = output_path / f"ice_rpmd_{model_name.split('-')[0]}_T{temperature_K:.0f}_b{num_beads}.pdb"
+    print(f"  PDB output: {pdb_file}")
+    
+    # Calculate steps
+    dt_ps = dt_fs / 1000.0
+    equilibration_steps = int(equilibration_ps / dt_ps)
+    production_steps = int(production_ps / dt_ps)
+    total_steps = equilibration_steps + production_steps
+    
+    if report_every_steps is not None and int(report_every_steps) > 0:
+        report_interval_steps = max(1, int(report_every_steps))
+    else:
+        report_interval_steps = max(1, int(report_interval_ps / dt_ps))
+    if minimal_report and report_interval_steps < 100:
+        report_interval_steps = 100
+        print(f"  Minimal mode: report interval clamped to {report_interval_steps} steps for speed")
+    pdb_interval_steps = max(1, int(pdb_interval_ps / dt_ps))
+    
+    print(f"  Report interval: {report_interval_steps} steps ({report_interval_steps * dt_ps:.2f} ps)")
+    print(f"  PDB save interval: {pdb_interval_steps} steps ({pdb_interval_steps * dt_ps:.2f} ps)")
+    
+    order_csv_f = None
+    order_every_steps = order_every_steps or 0
+    if order_csv_path and order_every_steps > 0 and _HAS_ICE_ORDER:
+        order_csv_f = open(Path(order_csv_path), "w", encoding="utf-8", newline="\n")
+        order_csv_f.write(ICE_ORDER_PI_CSV_HEADER)
+        order_csv_f.flush()
+        print(f"  Order CSV: {order_csv_path} (every {order_every_steps} steps; path-integral Q6/q_tet; line-flushed)")
+    elif order_csv_path and not _HAS_ICE_ORDER:
+        print(f"  Order CSV skipped: ice_order_parameters not available")
+    box_orth_ang = np.linalg.norm(box_matrix, axis=1) * 10.0  # nm -> Angstrom
+    z_arr = np.array([8 if a.element.symbol == 'O' else 1 for a in topology.atoms()], dtype=np.int64)
+    
+    # Run simulation
+    print("\n" + "=" * 80)
+    print("RUNNING SIMULATION")
+    print("=" * 80)
+    if minimal_report and platform_name.lower() == 'cuda' and os.environ.get('OPENMM_CUDA_FAST_EXTERNAL_CALL') != '1':
+        print("  Tip: OPENMM_CUDA_FAST_EXTERNAL_CALL=1 may improve speed (reduces GPU sync before Python callback)")
+    
+    start_time = time.time()
+    last_report_time = start_time
+    
+    step_counter = 0
+    phase = "Production" if equilibration_steps == 0 else "Equilibration"
+
+    energies = []
+    temperatures = []
+    densities = []
+    rmsds = []  # For NVT ice stability
+
+    pdb_file_handle = open(pdb_file, 'w')
+    
+    # Write PDB header with proper unit handling (support orthorhombic boxes from GenIce CIF)
+    _bm = box_matrix  # nm, 3x3
+    a_ang = np.linalg.norm(_bm[0]) * 10.0
+    b_ang = np.linalg.norm(_bm[1]) * 10.0
+    c_ang = np.linalg.norm(_bm[2]) * 10.0
+    alpha = np.degrees(np.arccos(np.clip(np.dot(_bm[1], _bm[2]) / (np.linalg.norm(_bm[1]) * np.linalg.norm(_bm[2]) + 1e-10), -1, 1)))
+    beta = np.degrees(np.arccos(np.clip(np.dot(_bm[0], _bm[2]) / (np.linalg.norm(_bm[0]) * np.linalg.norm(_bm[2]) + 1e-10), -1, 1)))
+    gamma = np.degrees(np.arccos(np.clip(np.dot(_bm[0], _bm[1]) / (np.linalg.norm(_bm[0]) * np.linalg.norm(_bm[1]) + 1e-10), -1, 1)))
+    pdb_file_handle.write("REMARK   Ice RPMD simulation - centroid trajectory\n")
+    pdb_file_handle.write("REMARK   Model: %s\n" % model_name)
+    pdb_file_handle.write("REMARK   Temperature: %.1f K, Beads: %d\n" % (temperature_K, num_beads))
+    pdb_file_handle.write("CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           1\n" % (
+        a_ang, b_ang, c_ang, alpha, beta, gamma))
+    
+    # Cache masses for temperature calculation (match RPMD centroid thermostat: skip massless sites)
+    n_sys = system.getNumParticles()
+    if n_sys != n_atoms:
+        raise RuntimeError(
+            f"OpenMM system size mismatch: positions/topology n_atoms={n_atoms} "
+            f"but system.getNumParticles()={n_sys}"
+        )
+    masses = np.array(
+        [system.getParticleMass(j).value_in_unit(unit.dalton) for j in range(n_atoms)],
+        dtype=np.float64,
+    )
+    ndof_centroid_ke = int(3 * np.count_nonzero(masses > 0))
+    if ndof_centroid_ke <= 0:
+        raise RuntimeError("No massive particles for centroid kinetic temperature")
+
+    # Pre-allocate velocity buffer for reporting
+    all_bead_velocities_buffer = np.zeros((num_beads, n_atoms, 3), dtype=np.float64)
+    
+    # Step-0 diagnostic: path-integral order (mean over beads of per-bead observable, then stats over O)
+    if _HAS_ICE_ORDER and ice_order_metrics_path_integral:
+        bead_ang_s0 = []
+        for b in range(num_beads):
+            st = integrator.getState(b, getPositions=True)
+            bead_ang_s0.append(
+                np.array(st.getPositions(asNumpy=True).value_in_unit(unit.nanometer)) * 10.0
+            )
+        bead_ang_s0_wrapped = [
+            wrap_cartesian_orthorhombic(p, box_orth_ang) for p in bead_ang_s0
+        ]
+        init_om = ice_order_metrics_path_integral(bead_ang_s0_wrapped, box_orth_ang, z=z_arr)
+        print(
+            f"  Step-0 order (PI avg over beads): Q6={init_om.q6_mean:.4f}  q_tet={init_om.q_tet_mean:.4f} "
+            f"(n_O={init_om.n_oxygen}, p50 Q6={init_om.q6_p50:.4f})"
+        )
+        if order_csv_f and format_ice_order_pi_csv_row:
+            for b in range(num_beads):
+                state_b = integrator.getState(b, getVelocities=True)
+                all_bead_velocities_buffer[b] = state_b.getVelocities(
+                    asNumpy=True
+                ).value_in_unit(unit.nanometer / unit.picosecond)
+            state0 = integrator.getState(0, getEnergy=True)
+            _centroid_ke0, centroid_temp0 = centroid_kinetic_energy_and_temperature(
+                all_bead_velocities_buffer,
+                masses,
+                ndof_centroid_ke=ndof_centroid_ke,
+            )
+            pe0_kj = state0.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
+            order_csv_f.write(
+                format_ice_order_pi_csv_row(
+                    0,
+                    0.0,
+                    f"{centroid_temp0:.4f}",
+                    f"{pe0_kj:.6f}",
+                    init_om,
+                )
+            )
+            order_csv_f.flush()
+
+    if nve_check_ps > 0.0 and _ts != "none":
+        print("\n--- NVE drift check (thermostat off) ---")
+        n_nve = max(1, int(round(nve_check_ps / dt_ps)))
+        e0 = _rpmd_sum_bead_pe_plus_ke_kjmol(integrator, num_beads)
+        integrator.setThermostatType(RPMDIntegrator.NoneThermo)
+        for _ in range(n_nve):
+            integrator.step(1)
+        e1 = _rpmd_sum_bead_pe_plus_ke_kjmol(integrator, num_beads)
+        de = e1 - e0
+        rate = abs(de) / max(float(num_molecules), 1.0) / max(nve_check_ps, 1e-12)
+        print(f"  NVE steps: {n_nve}  ({nve_check_ps:.4f} ps @ dt={dt_fs} fs)")
+        print(f"  Sum_bead(PE+KE): E0={e0:.4f}  E1={e1:.4f}  ΔE={de:.4f} kJ/mol")
+        print(
+            f"  |ΔE|/(N_mol·Δt) = {rate:.4f} kJ/(mol·ps)  (warn if > {nve_drift_warn_kj_per_mol_per_ps})"
+        )
+        if rate > nve_drift_warn_kj_per_mol_per_ps:
+            print(
+                "  WARNING: large NVE energy drift — try smaller --dt, check UMA forces, "
+                "or numerical precision (mixed vs double)."
+            )
+        if _ts == "pile_g":
+            integrator.setThermostatType(RPMDIntegrator.PileG)
+            integrator.setCentroidFriction(rpmd_centroid_friction_ps_inv / unit.picosecond)
+        elif _ts == "pile":
+            integrator.setThermostatType(RPMDIntegrator.Pile)
+        print("  Thermostat restored for equilibration/production.\n")
+
+    step = 0
+    while step < total_steps:
+        # Calculate next checkpoint
+        next_report = ((step // report_interval_steps) + 1) * report_interval_steps
+        next_pdb = ((step // pdb_interval_steps) + 1) * pdb_interval_steps if step >= equilibration_steps else total_steps
+        next_order = total_steps
+        if order_csv_f and step >= equilibration_steps and order_every_steps > 0:
+            prod_step = step - equilibration_steps
+            next_order = equilibration_steps + ((prod_step // order_every_steps) + 1) * order_every_steps
+            if next_order > total_steps:
+                next_order = total_steps
+        next_stop = min(next_report, next_pdb, next_order, total_steps)
+        chunk = next_stop - step
+        
+        # Run chunked steps
+        integrator.step(chunk)
+        step = next_stop
+        step_counter = step
+        
+        # Switch to production phase (use >= so we catch it even if a chunk skips over equilibration_steps)
+        if step >= equilibration_steps and phase == "Equilibration":
+            phase = "Production"
+            print(f"\n{'=' * 80}")
+            print(f"PRODUCTION PHASE STARTED")
+            print(f"{'=' * 80}\n")
+        
+        # Report progress
+        if step % report_interval_steps == 0:
+            current_wall_time = time.time()
+            elapsed_since_last = current_wall_time - last_report_time
+            last_report_time = current_wall_time
+            
+            sim_time_ps = step * dt_ps
+            progress_pct = (step / total_steps) * 100
+            steps_per_sec = report_interval_steps / elapsed_since_last
+            ns_per_day = steps_per_sec * dt_ps * 86400.0 / 1000.0
+            
+            if minimal_report:
+                print(f"[{progress_pct:5.1f}%] {phase:13s} | "
+                      f"Step {step:7d}/{total_steps} ({sim_time_ps:6.1f} ps) | "
+                      f"{ns_per_day:6.2f} ns/day")
+            else:
+                # Get state from bead 0 for PE and positions
+                state0 = integrator.getState(0, getEnergy=True, getPositions=True)
+                current_pe = state0.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
+                
+                # Calculate physical temperature from centroid kinetic energy
+                # Physical T = (2 * KE_centroid) / (3 * N_atoms * k_B)
+                # Get velocities for all beads (write into pre-allocated buffer)
+                for b in range(num_beads):
+                    state_b = integrator.getState(b, getVelocities=True)
+                    all_bead_velocities_buffer[b] = state_b.getVelocities(asNumpy=True).value_in_unit(unit.nanometer/unit.picosecond)
+                
+                current_ke, current_temp = centroid_kinetic_energy_and_temperature(
+                    all_bead_velocities_buffer,
+                    masses,
+                    ndof_centroid_ke=ndof_centroid_ke,
+                )
+                current_total = current_pe + current_ke
+                
+                # Calculate density if NPT (barostat active)
+                if _use_barostat:
+                    box = state0.getPeriodicBoxVectors()
+                    volume_nm3 = (box[0][0] * box[1][1] * box[2][2]).value_in_unit(unit.nanometer**3)
+                    volume_cm3 = volume_nm3 * 1e-21
+                    current_density = total_mass_g / volume_cm3
+                    densities.append(current_density)
+                else:
+                    current_density = density
+
+                # NVT: compute centroid RMSD from minimized structure (proxy for melting)
+                if not _use_barostat and minimized_positions_nm is not None:
+                    bead_pos_list = []
+                    for b in range(num_beads):
+                        state_b = integrator.getState(b, getPositions=True)
+                        bead_pos_list.append(state_b.getPositions(asNumpy=True).value_in_unit(unit.nanometer))
+                    centroid_positions = _mic_centroid(bead_pos_list, box_matrix)
+                    diff = centroid_positions - minimized_positions_nm
+                    rmsd = np.sqrt(np.mean(np.sum(diff**2, axis=1)))
+                    rmsds.append(rmsd)
+
+                energies.append(current_total)
+                temperatures.append(current_temp)
+                
+                print(f"[{progress_pct:5.1f}%] {phase:13s} | "
+                      f"Step {step:7d}/{total_steps} ({sim_time_ps:6.1f} ps) | "
+                      f"{ns_per_day:6.2f} ns/day")
+                print(f"         PE={current_pe:10.1f} KE={current_ke:8.1f} Total={current_total:10.1f} kJ/mol | "
+                      f"T={current_temp:6.1f} K | ρ={current_density:.3f} g/cm³")
+                if _ts == "none":
+                    e_sum_beads = _rpmd_sum_bead_pe_plus_ke_kjmol(integrator, num_beads)
+                    print(
+                        f"         NVE_diag: sum_bead(PE+KE)={e_sum_beads:.6f} kJ/mol "
+                        f"(approximate conserved quantity for short NVE checks)"
+                    )
+            print("")
+        
+        # Save PDB frame (production only, at specified interval)
+        if step > equilibration_steps and (step - equilibration_steps) % pdb_interval_steps == 0:
+            bead_pos_list = []
+            for bead in range(num_beads):
+                state = integrator.getState(bead, getPositions=True)
+                bead_pos_list.append(state.getPositions(asNumpy=True).value_in_unit(unit.nanometer))
+            centroid_positions = _mic_centroid(bead_pos_list, box_matrix)
+            # Wrap into primary cell so PDB viewers show compact structure
+            frac = centroid_positions @ np.linalg.inv(_bm)
+            frac_wrapped = frac - np.floor(frac)
+            centroid_positions = frac_wrapped @ _bm
+            
+            # Write PDB frame manually
+            model_num = (step - equilibration_steps) // pdb_interval_steps
+            pdb_file_handle.write("MODEL     %4d\n" % model_num)
+            
+            atom_idx = 1
+            for residue in topology.residues():
+                for atom in residue.atoms():
+                    pos_angstrom = centroid_positions[atom.index] * 10.0  # nm to Angstrom
+                    # PDB chain ID must be 1 char; use %s (not %c) to avoid TypeError with non-char chain.id
+                    chain_str = (str(residue.chain.id) or ' ')[:1]
+                    pdb_file_handle.write("ATOM  %5d %-4s %3s %s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f          %2s\n" % (
+                        atom_idx,
+                        atom.name,
+                        residue.name,
+                        chain_str,
+                        residue.index + 1,
+                        pos_angstrom[0],
+                        pos_angstrom[1],
+                        pos_angstrom[2],
+                        1.0,  # occupancy
+                        0.0,  # temperature factor
+                        atom.element.symbol
+                    ))
+                    atom_idx += 1
+            
+            pdb_file_handle.write("ENDMDL\n")
+
+        # Write order CSV (production only): path-integral estimator for Q6 / q_tet
+        if (
+            order_csv_f
+            and format_ice_order_pi_csv_row
+            and ice_order_metrics_path_integral
+            and step > equilibration_steps
+            and (step - equilibration_steps) % order_every_steps == 0
+        ):
+            bead_ang = []
+            for bead in range(num_beads):
+                state = integrator.getState(bead, getPositions=True)
+                bead_ang.append(
+                    np.array(state.getPositions(asNumpy=True).value_in_unit(unit.nanometer)) * 10.0
+                )
+            bead_ang_wrapped = [
+                wrap_cartesian_orthorhombic(p, box_orth_ang) for p in bead_ang
+            ]
+            om = ice_order_metrics_path_integral(bead_ang_wrapped, box_orth_ang, z=z_arr)
+            sim_time_ps = step * dt_ps
+            t_k = ""  # Fill if not minimal
+            pe_kj = ""
+            if not minimal_report:
+                state0 = integrator.getState(0, getEnergy=True)
+                pe_kj = f"{state0.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole):.6f}"
+                for b in range(num_beads):
+                    state_b = integrator.getState(b, getVelocities=True)
+                    all_bead_velocities_buffer[b] = state_b.getVelocities(asNumpy=True).value_in_unit(unit.nanometer/unit.picosecond)
+                _centroid_ke, centroid_temp = centroid_kinetic_energy_and_temperature(
+                    all_bead_velocities_buffer,
+                    masses,
+                    ndof_centroid_ke=ndof_centroid_ke,
+                )
+                t_k = f"{centroid_temp:.4f}"
+            order_csv_f.write(format_ice_order_pi_csv_row(step, sim_time_ps, t_k, pe_kj, om))
+            order_csv_f.flush()
+    
+    # Close PDB file
+    pdb_file_handle.write("END\n")
+    pdb_file_handle.close()
+    if order_csv_f is not None:
+        order_csv_f.close()
+    
+    total_elapsed = time.time() - start_time
+    
+    print("=" * 80)
+    print("SIMULATION COMPLETE")
+    print("=" * 80)
+    print(f"Total time: {total_elapsed/60:.1f} minutes ({total_elapsed/3600:.2f} hours)")
+    print(f"Average speed: {(total_steps * dt_ps * 86400.0) / (total_elapsed * 1000.0):.2f} ns/day")
+    
+    # Analysis
+    print(f"\n--- Simulation Analysis ---")
+    if minimal_report:
+        print("  Minimal mode: no energy/temp analysis.")
+        is_frozen = True
+    else:
+        energies = np.array(energies)
+        temperatures = np.array(temperatures)
+        prod_start_idx = len(energies) // 2 if energies.size > 0 else 0
+        
+        # Production phase only (based on report checkpoints, not integrator steps)
+        if energies.size == 0:
+            print(
+                "\n  No progress-report energy samples "
+                "(simulation may be shorter than --report-interval); skipping drift stats."
+            )
+            is_frozen = True
+        else:
+            prod_energies = energies[prod_start_idx:]
+            prod_temps = temperatures[prod_start_idx:]
+            
+            print(f"\nProduction phase statistics:")
+            print(f"  Energy:")
+            if prod_energies.size == 0:
+                print("    (empty production window — use longer run or smaller --report-interval)")
+            else:
+                print(f"    Mean: {np.mean(prod_energies):.2f} kJ/mol")
+                print(f"    Std:  {np.std(prod_energies):.2f} kJ/mol")
+                print(
+                    f"    Drift: {(prod_energies[-1] - prod_energies[0]) / prod_energies[0] * 100:+.2f}%"
+                )
+            print(f"  Temperature:")
+            if prod_temps.size == 0:
+                print("    (empty production window)")
+            else:
+                print(f"    Mean: {np.mean(prod_temps):.2f} K (target: {temperature_K} K)")
+                print(f"    Std:  {np.std(prod_temps):.2f} K")
+        
+        if energies.size > 0 and _use_barostat and len(densities) > 0:
+            densities = np.array(densities)
+            prod_densities = densities[prod_start_idx:]
+            print(f"  Density:")
+            print(f"    Mean: {np.mean(prod_densities):.3f} g/cm³")
+            print(f"    Std:  {np.std(prod_densities):.3f} g/cm³")
+            print(f"    Ice Ih reference: ~0.92 g/cm³")
+            
+            is_frozen = np.mean(prod_densities) > 0.85
+            print(f"\n  Ice status: {'FROZEN' if is_frozen else 'MELTED'} (NPT: density > 0.85 g/cm³)")
+        elif len(rmsds) > 0:
+            rmsds_arr = np.array(rmsds)
+            prod_rmsds = rmsds_arr[prod_start_idx:]
+            mean_rmsd = np.mean(prod_rmsds)
+            print(f"  RMSD from minimized (NVT):")
+            print(f"    Mean: {mean_rmsd:.4f} nm")
+            print(f"    Std:  {np.std(prod_rmsds):.4f} nm")
+            print(f"    Threshold for frozen: < 0.15 nm")
+            
+            is_frozen = mean_rmsd < 0.15
+            print(f"\n  Ice status: {'FROZEN' if is_frozen else 'MELTED'} (NVT: RMSD < 0.15 nm)")
+        else:
+            is_frozen = True
+            print(f"\n  Ice status: Cannot determine (no density or RMSD data)")
+    
+    # NPZ and analysis PNG (skip in minimal mode)
+    npz_path = None
+    png_path = None
+    if not minimal_report and len(energies) > 0:
+        base_name = f"uma_ice_rpmd_T{temperature_K:.0f}K_b{num_beads}"
+        npz_path = output_path / f"{base_name}.npz"
+        
+        times_ps = np.arange(len(energies)) * report_interval_steps * dt_ps
+        rmsds_arr = np.array(rmsds) if rmsds else np.array([], dtype=np.float64)
+        densities_arr = np.array(densities) if densities else np.array([], dtype=np.float64)
+        
+        # Final centroid positions
+        final_centroid = np.zeros((n_atoms, 3))
+        for bead in range(num_beads):
+            state = integrator.getState(bead, getPositions=True)
+            final_centroid += state.getPositions(asNumpy=True).value_in_unit(unit.nanometer)
+        final_centroid /= num_beads
+        
+        np.savez(
+            npz_path,
+            times=times_ps,
+            rmsds=rmsds_arr,
+            densities=densities_arr,
+            energies=np.array(energies),
+            temperatures=np.array(temperatures),
+            initial_positions=minimized_positions_nm if minimized_positions_nm is not None else np.zeros((n_atoms, 3)),
+            final_positions=final_centroid,
+            is_frozen=np.array(is_frozen),
+        )
+        
+        # Analysis PNG (2x2 subplots: RMSD, density, energy, temperature)
+        if _HAS_MATPLOTLIB:
+            png_path = output_path / f"{base_name}_analysis.png"
+            fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+            # axes[0]: RMSD, [1]: Density, [2]: Energy, [3]: Temperature
+            if len(rmsds_arr) > 0:
+                axes[0, 0].plot(times_ps[:len(rmsds_arr)], rmsds_arr * 10, 'b-')  # nm -> Å
+                axes[0, 0].set_xlabel("Time (ps)")
+                axes[0, 0].set_ylabel("RMSD (Å)")
+                axes[0, 0].set_title("RMSD vs time")
+                axes[0, 0].grid(True, alpha=0.3)
+            else:
+                axes[0, 0].set_visible(False)
+            if len(densities_arr) > 0:
+                axes[0, 1].plot(times_ps[:len(densities_arr)], densities_arr, 'g-')
+                axes[0, 1].set_xlabel("Time (ps)")
+                axes[0, 1].set_ylabel("Density (g/cm³)")
+                axes[0, 1].set_title("Density vs time")
+                axes[0, 1].axhline(0.92, color='gray', linestyle='--', alpha=0.7, label="Ice Ih ref")
+                axes[0, 1].grid(True, alpha=0.3)
+            else:
+                axes[0, 1].set_visible(False)
+            axes[1, 0].plot(times_ps, energies, 'r-')
+            axes[1, 0].set_xlabel("Time (ps)")
+            axes[1, 0].set_ylabel("Total energy (kJ/mol)")
+            axes[1, 0].set_title("Total energy vs time")
+            axes[1, 0].grid(True, alpha=0.3)
+            axes[1, 1].plot(times_ps, temperatures, 'm-')
+            axes[1, 1].axhline(temperature_K, color='gray', linestyle='--', alpha=0.7)
+            axes[1, 1].set_xlabel("Time (ps)")
+            axes[1, 1].set_ylabel("Temperature (K)")
+            axes[1, 1].set_title("Temperature vs time")
+            axes[1, 1].grid(True, alpha=0.3)
+            plt.tight_layout()
+            plt.savefig(png_path, dpi=150, bbox_inches='tight')
+            plt.close()
+    
+    print(f"\n  Output files:")
+    print(f"    Trajectory: {pdb_file}")
+    if npz_path is not None:
+        print(f"    NPZ data: {npz_path}")
+    if png_path is not None:
+        print(f"    Analysis PNG: {png_path}")
+    
+    print("\n" + "=" * 80)
+    
+    return is_frozen
+
+
+if __name__ == '__main__':
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='UMA/eSEN Ice RPMD Simulation')
+    parser.add_argument('--input', '-i', type=str, default=None,
+                       help='Input structure file (CIF, PDB, or XYZ). e.g. ice.cif from GenIce. Overrides --molecules/--box.')
+    parser.add_argument('--molecules', type=int, default=None,
+                       help='With --input: trim to N molecules (for CUDA OOM). Else: target count. Default: from --box or 32')
+    parser.add_argument('--box', type=float, default=None,
+                       help='Cubic box side length in nm (e.g. 0.5, 1.0). Overrides --molecules.')
+    parser.add_argument('--ice-type', type=str, default='1h', choices=['1h', '1c'],
+                       help='Ice type: 1h (hexagonal Ih) or 1c (cubic Ic, natural cubic box). Default: 1h')
+    parser.add_argument('--nx', type=int, default=None, metavar='NX',
+                       help='Ice Ih supercell replication along a (Å cell); use with --ny, --nz. 8 molecules/cell. '
+                            'Mutually exclusive with --input.')
+    parser.add_argument('--ny', type=int, default=None, metavar='NY', help='Supercell replication along b')
+    parser.add_argument('--nz', type=int, default=None, metavar='NZ', help='Supercell replication along c')
+    parser.add_argument('--beads', type=int, default=8,
+                       help='RPMD beads (default: 8). Use 1 for classical MD / LAMMPS-like UMA cost per step.')
+    parser.add_argument('--temperature', type=float, default=243.0,
+                       help='Temperature in K (default: 243.0)')
+    parser.add_argument('--pressure', type=float, default=0.0,
+                       help='Pressure in bar (default: 1.0, use 0 for NVT)')
+    parser.add_argument('--dt', type=float, default=1.0,
+                       help='Timestep in fs (default: 1.0, use 0.5-1.0 for stability)')
+    parser.add_argument('--equil', type=float, default=5.0,
+                       help='Equilibration time in ps (default: 5.0)')
+    parser.add_argument('--prod', type=float, default=100.0,
+                       help='Production time in ps (default: 100.0)')
+    parser.add_argument('--model', type=str, default='uma-s-1p1-pythonforce-batch',
+                       help='Model name (default: uma-s-1p1; HF no longer has uma-s-1.pt)')
+    parser.add_argument('--output', type=str, default='.',
+                       help='Output directory (default: current directory)')
+    parser.add_argument('--report-interval', type=float, default=1.0,
+                       help='Console report interval in ps (default: 1.0). Unused if --report-every-steps > 0.')
+    parser.add_argument(
+        '--report-every-steps',
+        type=int,
+        default=0,
+        metavar='N',
+        help='Print progress every N integrator steps (0 = use --report-interval in ps instead). '
+        'Many beads: each report queries all bead velocities — keep N large for long runs unless debugging.',
+    )
+    parser.add_argument('--pdb-interval', type=float, default=0.2,
+                       help='PDB frame save interval in ps (default: 0.2, 5 frames/ps)')
+    parser.add_argument('--platform', type=str, default='cuda', choices=['cuda', 'cpu', 'reference'],
+                       help='OpenMM platform: cuda (GPU), cpu, or reference (full double-precision CPU, default: cuda)')
+    parser.add_argument('--ml-device', type=str, default=None,
+                       help='ML model device: cuda (default with CUDA platform), cpu, or auto. '
+                            'Lazy-load enables single-GPU use.')
+    parser.add_argument(
+        '--precision',
+        type=str,
+        default=None,
+        choices=['single', 'mixed', 'double'],
+        help='CUDA platform only: Context Precision (single / mixed / double). Default: mixed. '
+        'Note: batched PythonForce on CUDA RPMD still uploads forces via fixed-point int64 in the '
+        'RPMD plugin; double precision improves state integration but does not remove that encoding.',
+    )
+    parser.add_argument('--minimal', action='store_true',
+                       help='Minimal reporting: only progress and ns/day. Avoids getState(Energy) for faster runs. '
+                            'With CUDA, set OPENMM_CUDA_FAST_EXTERNAL_CALL=1 for extra speed. Use --report-interval 1.0 or higher.')
+    parser.add_argument('--debug-logs', action='store_true',
+                       help='Enable OPENMMML_DEBUG_LOGS for UMA batch timing breakdown (prep/atomicdata/inference). Use for profiling.')
+    parser.add_argument('--optimize-inference', action='store_true',
+                       help='Fast inference: no activation checkpointing, TF32. Increases GPU memory; use --optimize-inference-tf32-only if OOM.')
+    parser.add_argument('--optimize-inference-tf32-only', action='store_true',
+                       help='Enable only TF32 (keeps checkpointing). Lower memory, some speedup. Use if --optimize-inference causes OOM.')
+    parser.add_argument('--inference-turbo-rpmd', action='store_true',
+                       help='Turbo-like Fairchem preset for batched RPMD: TF32, no checkpoint, merge_mole (compile off). '
+                            'Overrides --optimize-inference when set.')
+    parser.add_argument('--order-csv', type=str, default=None,
+                       help='Write Q6/q_tet order CSV to path (for plot_rpmd_comparison)')
+    parser.add_argument('--order-every', type=int, default=0,
+                       help='Order CSV write interval in steps (default: 0 = disabled)')
+    parser.add_argument('--seed', type=int, default=284759,
+                       help='Random seed for thermostat and velocity initialization')
+    parser.add_argument(
+        '--rpmd-thermostat',
+        type=str,
+        default='pile-g',
+        choices=['pile-g', 'pile', 'none'],
+        help='RPMD bath: pile-g = PILE_G (Bussi centroid + PILE internal; default), '
+        'pile = PILE on all modes, none = no thermostat',
+    )
+    parser.add_argument(
+        '--rpmd-friction',
+        type=float,
+        default=1.0,
+        help='PILE internal-mode friction coefficient in 1/ps (default: 1.0)',
+    )
+    parser.add_argument(
+        '--rpmd-centroid-friction',
+        type=float,
+        default=0.5,
+        help='PILE_G only: Bussi centroid coupling in 1/ps (default: 0.5)',
+    )
+    parser.add_argument(
+        '--nve-check',
+        type=float,
+        default=0.0,
+        metavar='PS',
+        help=(
+            'If >0, run this many ps with thermostat off before equilibration/production '
+            'and print approximate PE+KE drift (diagnostic; default: 0 = disabled)'
+        ),
+    )
+    parser.add_argument(
+        '--nve-drift-warn',
+        type=float,
+        default=100.0,
+        metavar='KJ_MOL_PS',
+        help=(
+            'Warn if |dE/dt|/N_molecules exceeds this during --nve-check '
+            '(kJ/(mol·ps); default: 100)'
+        ),
+    )
+    parser.add_argument(
+        '--use-molecular-wrap-for-uma',
+        action='store_true',
+        help=(
+            'Use molecular water PBC wrap inside UMA instead of per-atom wrap. '
+            'Default is per-atom wrap for LAMMPS/Fairchem force parity.'
+        ),
+    )
+    parser.add_argument(
+        '--conservative-forces',
+        action='store_true',
+        help=(
+            'Use autograd forces (grad(E, pos)) instead of UMA direct force head. '
+            'Slower but energy-conserving; diagnostic for non-conservative force drift.'
+        ),
+    )
+    parser.add_argument(
+        '--uma-rpmd-chunk',
+        type=int,
+        default=None,
+        metavar='N',
+        help=(
+            'Beads per UMA GPU sub-batch (sets OPENMMML_UMA_RPMD_CHUNK). '
+            'If omitted and env unset, defaults to 4 for consumer GPUs. '
+            'Use 2 if 32 beads × 64 mol still OOM on ~12 GB.'
+        ),
+    )
+    args = parser.parse_args()
+
+    _apply_uma_rpmd_cuda_memory_env(uma_rpmd_chunk_cli=args.uma_rpmd_chunk)
+
+    if args.debug_logs:
+        import openmmml.models.umapotential_pythonforce_batch as _umab
+        _umab.DEBUG_LOGS = True
+
+    if args.input is not None and args.box is not None:
+        print("Warning: --input given; ignoring --box")
+
+    has_scell = args.nx is not None or args.ny is not None or args.nz is not None
+    if has_scell:
+        if args.nx is None or args.ny is None or args.nz is None:
+            parser.error("--nx, --ny, and --nz must be given together for built-in ice Ih (generate_ice_ih)")
+        if args.input is not None:
+            parser.error("Use either --input or (--nx, --ny, --nz), not both")
+        if args.box is not None:
+            parser.error("Use either --box or (--nx, --ny, --nz), not both")
+        ice_supercell = (args.nx, args.ny, args.nz)
+        num_mol = None
+        max_mol = None
+    else:
+        ice_supercell = None
+        num_mol = args.molecules
+        max_mol = args.molecules if args.input is not None else None
+
+    try:
+        success = run_simulation(
+            num_molecules=num_mol if args.input is None and ice_supercell is None else None,
+            box_nm=args.box if args.input is None and ice_supercell is None else None,
+            input_file=args.input,
+            max_molecules=max_mol,
+            ice_type=args.ice_type,
+            ice_supercell=ice_supercell,
+            num_beads=args.beads,
+            temperature_K=args.temperature,
+            pressure_bar=args.pressure,
+            dt_fs=args.dt,
+            equilibration_ps=args.equil,
+            production_ps=args.prod,
+            model_name=args.model,
+            output_dir=args.output,
+            report_interval_ps=args.report_interval,
+            report_every_steps=args.report_every_steps if args.report_every_steps > 0 else None,
+            pdb_interval_ps=args.pdb_interval,
+            minimal_report=args.minimal,
+            platform_name=args.platform,
+            ml_device=args.ml_device,
+            precision_override=args.precision,
+            optimize_inference=args.optimize_inference,
+            optimize_inference_tf32_only=args.optimize_inference_tf32_only,
+            inference_turbo_rpmd=args.inference_turbo_rpmd,
+            order_csv_path=args.order_csv,
+            order_every_steps=args.order_every if args.order_every > 0 else None,
+            seed=args.seed,
+            rpmd_thermostat=args.rpmd_thermostat.replace('-', '_'),
+            rpmd_friction_ps_inv=args.rpmd_friction,
+            rpmd_centroid_friction_ps_inv=args.rpmd_centroid_friction,
+            nve_check_ps=args.nve_check,
+            nve_drift_warn_kj_per_mol_per_ps=args.nve_drift_warn,
+            use_atom_wrap_for_lammps_parity=not args.use_molecular_wrap_for_uma,
+            conservative_forces=args.conservative_forces,
+        )
+        sys.exit(0 if success else 1)
+    except Exception as e:
+        print(f"\nSIMULATION FAILED")
+        print(f"Error: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)

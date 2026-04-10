@@ -2,7 +2,7 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
@@ -72,6 +72,9 @@ void RPMDMonteCarloBarostatImpl::updateRPMDState(ContextImpl& context) {
         return;
     step = 0;
 
+    // Ensure all prior GPU work (including PythonForce) completes before barostat operations
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().synchronize(context);
+
     // Compute the current potential energy.
 
     RPMDIntegrator& integrator = dynamic_cast<RPMDIntegrator&>(context.getIntegrator());
@@ -105,9 +108,11 @@ void RPMDMonteCarloBarostatImpl::updateRPMDState(ContextImpl& context) {
     double newVolume = volume+deltaVolume;
     double lengthScale = std::pow(newVolume/volume, 1.0/3.0);
     context.setPositions(centroid);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().synchronize(context);
     kernel.getAs<ApplyMonteCarloBarostatKernel>().saveCoordinates(context);
     context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale, box[1]*lengthScale, box[2]*lengthScale);
     kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale, lengthScale, lengthScale);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().synchronize(context);
     State scaledState = context.getOwner().getState(State::Positions);
 
     // Now apply the same offset to all the copies.

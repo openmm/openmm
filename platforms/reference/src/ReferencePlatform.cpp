@@ -2,9 +2,9 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,7 @@ ReferencePlatform::ReferencePlatform() {
     registerKernelFactory(UpdateStateDataKernel::Name(), factory);
     registerKernelFactory(ApplyConstraintsKernel::Name(), factory);
     registerKernelFactory(VirtualSitesKernel::Name(), factory);
+    registerKernelFactory(MinimizeKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomBondForceKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
@@ -110,7 +111,7 @@ void ReferencePlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 ReferencePlatform::PlatformData::PlatformData(const System& system, int numThreads) : time(0.0), stepCount(0),
-        numParticles(system.getNumParticles()), threads(numThreads) {
+        numParticles(system.getNumParticles()), threads(numThreads), verletPart1KickDuration(0.0) {
     positions = new vector<Vec3>(numParticles);
     velocities = new vector<Vec3>(numParticles);
     forces = new vector<Vec3>(numParticles);

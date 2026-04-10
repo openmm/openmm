@@ -1,0 +1,15 @@
+# ML potential runtime dependencies for OpenMM-ML
+#
+# These are NOT required for core OpenMM -- only needed when using ML potentials.
+# The openmmml package uses lazy imports so missing backends simply won't be available.
+#
+# Install with:  pip install -r requirements-ml.txt
+
+# UMA models (standard fairchem-core from PyPI)
+fairchem-core>=2.14
+
+# PyTorch (required by all ML potentials)
+torch>=2.4
+
+# Optional: for ice Ih structure generation (tests/uma_ice_rpmd)
+# genice2  # pip install genice2 - enables proton-disordered ice; embedded CIF used as fallback

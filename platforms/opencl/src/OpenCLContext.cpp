@@ -2,9 +2,9 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -433,6 +433,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     compilationDefines["ERF"] = "erf";
     compilationDefines["ERFC"] = "erfc";
     compilationDefines["FMA"] = "fma";
+    compilationDefines["FABS"] = "fabs";
 
     // Set defines for applying periodic boundary conditions.
 

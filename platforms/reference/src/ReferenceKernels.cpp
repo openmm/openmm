@@ -2,9 +2,9 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -56,6 +56,7 @@
 #include "ReferenceLCPOIxn.h"
 #include "ReferenceLJCoulomb14.h"
 #include "ReferenceLJCoulombIxn.h"
+#include "ReferenceMinimize.h"
 #include "ReferenceMonteCarloBarostat.h"
 #include "ReferenceNoseHooverChain.h"
 #include "ReferenceNoseHooverDynamics.h"
@@ -71,11 +72,13 @@
 #include "ReferenceVariableVerletDynamics.h"
 #include "ReferenceVerletDynamics.h"
 #include "ReferenceVirtualSites.h"
+#include "ReferencePlatform.h"
 #include "openmm/CMMotionRemover.h"
 #include "openmm/Context.h"
 #include "openmm/System.h"
 #include "openmm/internal/AndersenThermostatImpl.h"
 #include "openmm/internal/BussiThermostatImpl.h"
+#include "openmm/internal/BussiRescale.h"
 #include "openmm/internal/CavityForceImpl.h"
 #include "openmm/internal/CavityParticleDisplacerImpl.h"
 #include "openmm/internal/ContextImpl.h"
@@ -348,6 +351,13 @@ void ReferenceVirtualSitesKernel::initialize(const System& system) {
 void ReferenceVirtualSitesKernel::computePositions(ContextImpl& context) {
     vector<Vec3>& positions = extractPositions(context);
     extractVirtualSites(context).computePositions(context.getSystem(), positions, extractBoxVectors(context));
+}
+
+void ReferenceMinimizeKernel::initialize(const System& system) {
+}
+
+void ReferenceMinimizeKernel::execute(ContextImpl& context, double tolerance, int maxIterations, MinimizationReporter* reporter) {
+    ReferenceMinimize::minimize(context, tolerance, maxIterations, reporter);
 }
 
 void ReferenceCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
@@ -2673,6 +2683,7 @@ void ReferenceIntegrateVerletStepKernel::executePart1(ContextImpl& context, cons
         prevStepSize = stepSize;
     }
     dynamics->updatePart1(context.getSystem(), posData, velData, forceData, masses, data.verletPosDelta);
+    data.verletPart1KickDuration = 0.5 * integrator.getStepSize();
 }
 
 void ReferenceIntegrateVerletStepKernel::executePart2(ContextImpl& context, const VerletIntegrator& integrator) {
@@ -3142,6 +3153,7 @@ double ReferenceIntegrateVariableVerletStepKernel::executePart1(ContextImpl& con
         maxStepSize = min(integrator.getMaximumStepSize(), maxStepSize);
     lastMaxStepSize = maxStepSize;
     dynamics->updatePart1(context.getSystem(), posData, velData, forceData, masses, maxStepSize, data.verletPosDelta);
+    data.verletPart1KickDuration = dynamics->getLastPart1KickDuration();
     return dynamics->getDeltaT();
 }
 
@@ -3378,6 +3390,12 @@ void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
     vector<Vec3>* forceData = nullptr;
     if (afterVerletPart1)
         forceData = &extractForces(context);
+    ReferencePlatform::PlatformData& platformData = *reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    double kickPs = 0.5 * dt;
+    if (afterVerletPart1) {
+        if (platformData.verletPart1KickDuration > 0.0)
+            kickPs = platformData.verletPart1KickDuration;
+    }
     
     double kineticEnergy = 0.0;
     for (size_t i = 0; i < particleIndices.size(); ++i) {
@@ -3386,10 +3404,10 @@ void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
         if (m > 0) {
             double vx, vy, vz;
             if (afterVerletPart1) {
-                double halfDtOverM = 0.5 * dt / m;
-                vx = velData[idx][0] - (*forceData)[idx][0] * halfDtOverM;
-                vy = velData[idx][1] - (*forceData)[idx][1] * halfDtOverM;
-                vz = velData[idx][2] - (*forceData)[idx][2] * halfDtOverM;
+                double kickOverM = kickPs / m;
+                vx = velData[idx][0] - (*forceData)[idx][0] * kickOverM;
+                vy = velData[idx][1] - (*forceData)[idx][1] * kickOverM;
+                vz = velData[idx][2] - (*forceData)[idx][2] * kickOverM;
             } else {
                 vx = velData[idx][0];
                 vy = velData[idx][1];
@@ -3412,9 +3430,6 @@ void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
     
     // Compute rescaling factor using Bussi's algorithm (Bussi et al. 2007, J. Chem. Phys. 126, 014101)
     // Matches cav-hoomd's BussiThermostat::compute_rescale_factor in Thermostat.h
-    double c = exp(-dt / tau);
-    double targetKE = 0.5 * dof * BOLTZ * temperature;
-    
     double R1 = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
     
     // Sample chi^2(dof-1) via Gamma distribution: chi^2(k) = 2*Gamma(k/2, 1)
@@ -3439,24 +3454,10 @@ void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
         }
         rGamma *= 2.0;  // chi^2(dof-1) = 2 * Gamma((dof-1)/2, 1)
     }
-    
-    // Correct formula includes R1^2 in the chi-squared component (non-central chi-squared decomposition)
-    double ratio = targetKE / (dof * kineticEnergy);
-    double alphaSquared = c + (1 - c) * ratio * (rGamma + R1 * R1)
-                         + 2.0 * R1 * sqrt(c * (1 - c) * ratio);
-    
-    // Ensure alpha^2 is positive
-    if (alphaSquared < 0)
-        alphaSquared = 0;
-    
-    double alphaMagnitude = sqrt(alphaSquared);
-    // Signed alpha per Bussi et al. 2009 Eq. (A8): sign[alpha] = sign[R1 + sqrt(c*dof*K/((1-c)*K_bar))]
-    double signTerm = R1 + sqrt(c * dof * kineticEnergy / ((1.0 - c) * targetKE));
-    double alpha = (signTerm >= 0.0) ? alphaMagnitude : -alphaMagnitude;
-    
-    // Track reservoir energy: delta_E = K * (1 - alpha^2)
-    double deltaE = kineticEnergy * (1.0 - alphaSquared);
-    reservoirEnergyTranslational += deltaE;
+
+    BussiRescale::Result bussi = BussiRescale::computeRescale(dof, kineticEnergy, temperature, tau, dt, R1, rGamma);
+    double alpha = bussi.alpha;
+    reservoirEnergyTranslational += bussi.deltaE;
     
     // Rescale velocities for particles in the subset
     for (size_t i = 0; i < particleIndices.size(); ++i) {
@@ -4158,9 +4159,9 @@ void ReferenceCalcATMForceKernel::copyParametersToContext(ContextImpl& context, 
     loadParams(numParticles, force);
 }
 
-void ReferenceCalcCustomCPPForceKernel::initialize(const System& system, CustomCPPForceImpl& force) {
+void ReferenceCalcCustomCPPForceKernel::initialize(const ContextImpl& context, CustomCPPForceImpl& force) {
     this->force = &force;
-    forces.resize(system.getNumParticles());
+    forces.resize(context.getSystem().getNumParticles());
 }
 
 double ReferenceCalcCustomCPPForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -4173,9 +4174,15 @@ double ReferenceCalcCustomCPPForceKernel::execute(ContextImpl& context, bool inc
     return energy;
 }
 
-void ReferenceCalcPythonForceKernel::initialize(const System& system, const PythonForce& force) {
+void ReferenceCalcPythonForceKernel::initialize(const ContextImpl& context, const PythonForce& force) {
     computation = &force.getComputation();
-    forces.resize(system.getNumParticles());
+    particles = force.getParticles();
+    numParticles = particles.size();
+    if (numParticles == 0)
+        numParticles = context.getSystem().getNumParticles();
+    else
+        positions.resize(numParticles);
+    forces.resize(numParticles);
     usePeriodic = force.usesPeriodicBoundaryConditions();
 }
 
@@ -4183,7 +4190,13 @@ double ReferenceCalcPythonForceKernel::execute(ContextImpl& context, bool includ
     vector<Vec3>& posData = extractPositions(context);
     vector<Vec3>& forceData = extractForces(context);
     State::StateBuilder builder(context.getTime(), context.getStepCount());
-    builder.setPositions(posData);
+    if (particles.size() == 0)
+        builder.setPositions(posData);
+    else {
+        for (int i = 0; i < particles.size(); i++)
+            positions[i] = posData[particles[i]];
+        builder.setPositions(positions);
+    }
     builder.setParameters(context.getParameters());
     if (usePeriodic) {
         Vec3 a, b, c;
@@ -4193,8 +4206,15 @@ double ReferenceCalcPythonForceKernel::execute(ContextImpl& context, bool includ
     double energy;
     State state = builder.getState();
     computation->compute(state, energy, forces.data(), true);
-    if (includeForces)
-        for (int i = 0; i < forces.size(); i++)
-            forceData[i] += forces[i];
+    if (includeForces) {
+        if (particles.size() == 0) {
+            for (int i = 0; i < forces.size(); i++)
+                forceData[i] += forces[i];
+        }
+        else {
+            for (int i = 0; i < forces.size(); i++)
+                forceData[particles[i]] += forces[i];
+        }
+    }
     return energy;
 }

@@ -2,7 +2,7 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
  * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
@@ -89,7 +89,7 @@ struct IntegrationUtilities::ConstraintOrderer {
 };
 
 IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System& system) : context(context),
-        randomPos(0), hasOverlappingVsites(false) {
+        randomPos(0), hasOverlappingVsites(false), verletPart1KickDuration(0.0) {
     // Create workspace arrays.
 
     lastStepSize = mm_double2(0.0, 0.0);
@@ -816,6 +816,18 @@ double IntegrationUtilities::getLastStepSize() {
         lastStepSize = mm_double2(lastStepSizeFloat.x, lastStepSizeFloat.y);
     }
     return lastStepSize.y;
+}
+
+double IntegrationUtilities::getMixedStepBufferDtVelKick() const {
+    return 0.5 * (lastStepSize.x + lastStepSize.y);
+}
+
+void IntegrationUtilities::setVerletPart1KickDuration(double ps) {
+    verletPart1KickDuration = ps;
+}
+
+double IntegrationUtilities::getVerletPart1KickDuration() const {
+    return verletPart1KickDuration;
 }
 
 void IntegrationUtilities::applyConstraints(double tol) {

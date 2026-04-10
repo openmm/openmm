@@ -205,6 +205,132 @@ class TestForceField(unittest.TestCase):
         # Make sure flexibleConstraints yields just as many angles as no constraints
         self.assertEqual(af2.getNumAngles(), af3.getNumAngles())
 
+    def testTemplateConstraints(self):
+        """Test constraints defined by a residue template."""
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="C" class="C" element="C" mass="12.01078"/>
+  <Type name="O" class="O" element="O" mass="15.99943"/>
+  <Type name="H" class="H" element="H" mass="1.007947"/>
+  <Type name="Na+" class="Na+" element="Na" mass="22.99"/>
+  <Type name="Cl-" class="Cl-" element="Cl" mass="35.45"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="MEOH">
+   <Atom name="CB" type="C"/>
+   <Atom name="OG" type="O"/>
+   <Atom name="HG" type="H"/>
+   <Atom name="HB1" type="H"/>
+   <Atom name="HB2" type="H"/>
+   <Atom name="HB3" type="H"/>
+   <Bond atomName1="CB" atomName2="OG"/>
+   <Bond atomName1="CB" atomName2="HB1"/>
+   <Bond atomName1="CB" atomName2="HB2"/>
+   <Bond atomName1="CB" atomName2="HB3"/>
+   <Bond atomName1="OG" atomName2="HG"/>
+   <Constraint atomName1="CB" atomName2="OG" distance="1.987"/>
+   <Constraint atomName1="OG" atomName2="HG" distance="1.123"/>
+  </Residue>
+  <Residue name="NA">
+    <Atom name="NA" type="Na+"/>
+  </Residue>
+  <Residue name="CL">
+    <Atom name="CL" type="Cl-"/>
+  </Residue>
+ </Residues>
+ <HarmonicBondForce>
+  <Bond class1="C" class2="O" k="100.0" length="2.0"/>
+  <Bond class1="C" class2="H" k="100.0" length="1.0"/>
+  <Bond class1="O" class2="H" k="100.0" length="1.1"/>
+ </HarmonicBondForce>
+</ForceField>"""
+        ff = ForceField(StringIO(xml))
+        pdb = PDBFile('systems/methanol_ions.pdb')
+        expected = {None:2, HBonds:5, AllBonds:5}
+        for constraints in [None, HBonds, AllBonds]:
+            system = ff.createSystem(pdb.topology, constraints=constraints)
+            self.assertEqual(expected[constraints], system.getNumConstraints())
+            lengths = {}
+            for i in range(system.getNumConstraints()):
+                p1, p2, length = system.getConstraintParameters(i)
+                lengths[(min(p1, p2), max(p1, p2))] = length.value_in_unit(nanometer)
+            self.assertEqual(1.987, lengths[(0, 1)])
+            self.assertEqual(1.123, lengths[(1, 2)])
+            if constraints is not None:
+                self.assertEqual(1.0, lengths[(0, 3)])
+                self.assertEqual(1.0, lengths[(0, 4)])
+                self.assertEqual(1.0, lengths[(0, 5)])
+
+    def testTemplateConstraintsMultipleMols(self):
+        """Test that constraints defined by a residue template don't leak into
+        other residues.
+        See https://github.com/openmm/openmm/issues/5234
+        """
+        MOL_A = """<ForceField>
+ <AtomTypes>
+  <Type name="A0" mass="12" class="A0" element="C"/>
+  <Type name="A1" mass="12" class="A1" element="C"/>
+ </AtomTypes>
+ <HarmonicBondForce>
+  <Bond class1="A0" class2="A1" length="0.15" k="200000"/>
+ </HarmonicBondForce>
+ <NonbondedForce coulomb14scale="1" lj14scale="1">
+  <Atom class="A0" sigma="0.3" epsilon="0.1" charge="0"/>
+  <Atom class="A1" sigma="0.3" epsilon="0.1" charge="0"/>
+ </NonbondedForce>
+ <Residues>
+  <Residue name="MOLA">
+   <Atom name="a0" type="A0"/><Atom name="a1" type="A1"/>
+   <Bond atomName1="a0" atomName2="a1"/>
+  </Residue>
+ </Residues>
+</ForceField>"""
+
+        MOL_B = """<ForceField>
+ <AtomTypes>
+  <Type name="B0" mass="12" class="B0" element="C"/>
+  <Type name="B1" mass="1" class="B1" element="H"/>
+ </AtomTypes>
+ <HarmonicBondForce>
+  <Bond class1="B0" class2="B1" length="0.11" k="300000"/>
+ </HarmonicBondForce>
+ <NonbondedForce coulomb14scale="1" lj14scale="1">
+  <Atom class="B0" sigma="0.3" epsilon="0.1" charge="0"/>
+  <Atom class="B1" sigma="0.1" epsilon="0.01" charge="0"/>
+ </NonbondedForce>
+ <Residues>
+  <Residue name="MOLB">
+   <Atom name="b0" type="B0"/><Atom name="b1" type="B1"/>
+   <Bond atomName1="b0" atomName2="b1"/>
+   <Constraint atomName1="b0" atomName2="b1" distance="0.11"/>
+  </Residue>
+ </Residues>
+</ForceField>"""
+
+        top = Topology()
+        c = top.addChain()
+        C, H = Element.getBySymbol('C'), Element.getBySymbol('H')
+        r1 = top.addResidue('MOLA', c)
+        a0, a1 = top.addAtom('a0', C, r1), top.addAtom('a1', C, r1)
+        top.addBond(a0, a1)
+        r2 = top.addResidue('MOLB', c)
+        b0, b1 = top.addAtom('b0', C, r2), top.addAtom('b1', H, r2)
+        top.addBond(b0, b1)
+
+        ff = ForceField()
+        ff.loadFile(StringIO(MOL_A))
+        ff.loadFile(StringIO(MOL_B))
+        sys = ff.createSystem(top,
+                              nonbondedMethod=NoCutoff,
+                              constraints=None)
+
+        self.assertEqual(sys.getNumConstraints(), 1)
+        constraintParameters = sys.getConstraintParameters(0)
+        self.assertEqual(constraintParameters[0], 2)
+        self.assertEqual(constraintParameters[1], 3)
+        self.assertEqual(constraintParameters[2], 0.11 * nanometer)
+
     def test_ImplicitSolvent(self):
         """Test the four types of implicit solvents using the implicitSolvent
         parameter.
@@ -1870,6 +1996,111 @@ self.scriptExecuted = True
         self.assertTrue(abs(energy1 - energy_amber) < energy_tolerance)
         self.assertTrue(abs(energy1 - energy2) < energy_tolerance)
 
+    def testWholeMolecule(self):
+        """Test matching a template to a whole molecule."""
+        xml = """
+<ForceField>
+  <AtomTypes>
+    <Type class="C" element="C" mass="12.01" name="C" />
+    <Type class="CT" element="C" mass="12.01" name="CT" />
+    <Type class="CX" element="C" mass="12.01" name="CX"/>
+    <Type class="H" element="H" mass="1.008" name="H"/>
+    <Type class="HC" element="H" mass="1.008" name="HC" />
+    <Type class="H1" element="H" mass="1.008" name="H1" />
+    <Type class="N" element="N" mass="14.01" name="N" />
+    <Type class="O" element="O" mass="16.0" name="O" />
+  </AtomTypes>
+  <Residues>
+    <Residue name="Alanine-Dipeptide">
+      <Atom charge="0.1123" name="ACE-H1" type="HC" />
+      <Atom charge="-0.3662" name="ACE-CH3" type="CT" />
+      <Atom charge="0.1123" name="ACE-H2" type="HC" />
+      <Atom charge="0.1123" name="ACE-H3" type="HC" />
+      <Atom charge="0.5972" name="ACE-C" type="C" />
+      <Atom charge="-0.5679" name="ACE-O" type="O" />
+      <Bond atomName1="ACE-H1" atomName2="ACE-CH3" />
+      <Bond atomName1="ACE-CH3" atomName2="ACE-H2" />
+      <Bond atomName1="ACE-CH3" atomName2="ACE-H3" />
+      <Bond atomName1="ACE-CH3" atomName2="ACE-C" />
+      <Bond atomName1="ACE-C" atomName2="ACE-O" />
+      <Atom charge="-0.4157" name="ALA-N" type="N" />
+      <Atom charge="0.2719" name="ALA-H" type="H" />
+      <Atom charge="0.0337" name="ALA-CA" type="CX" />
+      <Atom charge="0.0823" name="ALA-HA" type="H1" />
+      <Atom charge="-0.1825" name="ALA-CB" type="CT" />
+      <Atom charge="0.0603" name="ALA-HB1" type="HC" />
+      <Atom charge="0.0603" name="ALA-HB2" type="HC" />
+      <Atom charge="0.0603" name="ALA-HB3" type="HC" />
+      <Atom charge="0.5973" name="ALA-C" type="C" />
+      <Atom charge="-0.5679" name="ALA-O" type="O" />
+      <Bond atomName1="ALA-N" atomName2="ALA-H" />
+      <Bond atomName1="ALA-N" atomName2="ALA-CA" />
+      <Bond atomName1="ALA-CA" atomName2="ALA-HA" />
+      <Bond atomName1="ALA-CA" atomName2="ALA-CB" />
+      <Bond atomName1="ALA-CA" atomName2="ALA-C" />
+      <Bond atomName1="ALA-CB" atomName2="ALA-HB1" />
+      <Bond atomName1="ALA-CB" atomName2="ALA-HB2" />
+      <Bond atomName1="ALA-CB" atomName2="ALA-HB3" />
+      <Bond atomName1="ALA-C" atomName2="ALA-O" />
+      <Atom charge="-0.4157" name="NME-N" type="N" />
+      <Atom charge="0.2719" name="NME-H" type="H" />
+      <Atom charge="-0.149" name="NME-C" type="CT" />
+      <Atom charge="0.0976" name="NME-H1" type="H1" />
+      <Atom charge="0.0976" name="NME-H2" type="H1" />
+      <Atom charge="0.0976" name="NME-H3" type="H1" />
+      <Bond atomName1="NME-N" atomName2="NME-H" />
+      <Bond atomName1="NME-N" atomName2="NME-C" />
+      <Bond atomName1="NME-C" atomName2="NME-H1" />
+      <Bond atomName1="NME-C" atomName2="NME-H2" />
+      <Bond atomName1="NME-C" atomName2="NME-H3" />
+      <Bond atomName1="ACE-C" atomName2="ALA-N" />
+      <Bond atomName1="ALA-C" atomName2="NME-N" />
+    </Residue>
+    <!-- A template that matches just the ACE with different parameters -->
+    <Residue name="ACE">
+      <Atom charge="0.1123" name="ACE-H1" type="HC" />
+      <Atom charge="-0.3662" name="ACE-CH3" type="CT" />
+      <Atom charge="-10.0" name="ACE-H2" type="HC" />
+      <Atom charge="0.1123" name="ACE-H3" type="HC" />
+      <Atom charge="10.0" name="ACE-C" type="C" />
+      <Atom charge="-0.5679" name="ACE-O" type="O" />
+      <Bond atomName1="ACE-H1" atomName2="ACE-CH3" />
+      <Bond atomName1="ACE-CH3" atomName2="ACE-H2" />
+      <Bond atomName1="ACE-CH3" atomName2="ACE-H3" />
+      <Bond atomName1="ACE-CH3" atomName2="ACE-C" />
+      <Bond atomName1="ACE-C" atomName2="ACE-O" />
+      <ExternalBond atomName="ACE-C" />
+    </Residue>
+  </Residues>
+  <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+    <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="0.359824" sigma="0.3399669508423535" type="C"/>
+    <Atom epsilon="0.4577296" sigma="0.3399669508423535" type="CT"/>
+    <Atom epsilon="0.4577296" sigma="0.3399669508423535" type="CX"/>
+    <Atom epsilon="0.06568879999999999" sigma="0.2649532787749369" type="HC"/>
+    <Atom epsilon="0.06568879999999999" sigma="0.10690784617684071" type="H"/>
+    <Atom epsilon="0.06568879999999999" sigma="0.2471353044121301" type="H1"/>
+    <Atom epsilon="0.7112800000000001" sigma="0.3249998523775958" type="N"/>
+    <Atom epsilon="0.87864" sigma="0.2959921901149463" type="O"/>
+  </NonbondedForce>
+</ForceField>"""
+        pdb = PDBFile('systems/alanine-dipeptide-implicit.pdb')
+        ff = ForceField(StringIO(xml))
+        system = ff.createSystem(pdb.topology)
+        nonbonded = next(f for f in system.getForces() if isinstance(f, NonbondedForce))
+
+        def checkAtom(resName, atomName, expected):
+            for atom in pdb.topology.atoms():
+                if atom.name == atomName and atom.residue.name == resName:
+                    params = nonbonded.getParticleParameters(atom.index)
+                    self.assertEqual(expected, params)
+                    return
+            raise ValueError(f'{resName} {atomName} not found')
+
+        checkAtom('ACE', 'C', [0.5972*elementary_charge, 0.3399669508423535*nanometers, 0.359824*kilojoules_per_mole])
+        checkAtom('ACE', 'H2', [0.1123*elementary_charge, 0.2649532787749369*nanometers, 0.06568879999999999*kilojoules_per_mole])
+        checkAtom('ALA', 'CA', [0.0337*elementary_charge, 0.3399669508423535*nanometers, 0.4577296*kilojoules_per_mole])
+        checkAtom('NME', 'N', [-0.4157*elementary_charge, 0.3249998523775958*nanometers, 0.7112800000000001*kilojoules_per_mole])
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""

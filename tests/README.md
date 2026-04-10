@@ -8,7 +8,6 @@ Test suite for verifying OpenMM functionality and correctness.
 tests/
 ├── dimer_system/      # Two-component toy model for cavity coupling
 ├── water_system/      # Flexible TIP4P-Ew water
-├── cace-lr_water/    # CACE-LR ML water
 ├── rpmd/              # UMA/RPMD tests (see rpmd/README.md)
 ├── protein_system/   # Protein cavity tests
 ├── uma_ice_rpmd/     # Ice RPMD

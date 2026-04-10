@@ -2,9 +2,9 @@
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
- * See https://openmm.org/development.                                        *
+ * See https://openmm.org.                                        *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -88,10 +88,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), useBlockingSync(useBlockingSync) {
     int cudaDriverVersion;
     cuDriverGetVersion(&cudaDriverVersion);
-    if (!hasInitializedCuda) {
-        CHECK_RESULT2(cuInit(0), "Error initializing CUDA");
-        hasInitializedCuda = true;
-    }
+    ensureCudaInitialized();
     if (precision == "single") {
         useDoublePrecision = false;
         useMixedPrecision = false;
@@ -295,6 +292,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     compilationDefines["ERF"] = useDoublePrecision ? "erf" : "erff";
     compilationDefines["ERFC"] = useDoublePrecision ? "erfc" : "erfcf";
     compilationDefines["FMA"] = useDoublePrecision ? "fma" : "fmaf";
+    compilationDefines["FABS"] = useDoublePrecision ? "fabs" : "fabsf";
 
     // Set defines for applying periodic boundary conditions.
 
@@ -472,13 +470,22 @@ void CudaContext::popAsCurrent() {
 
 void CudaContext::pushPrimaryContextForExternalCall() {
     if (contextIsValid) {
-        CHECK_RESULT2(cuCtxSynchronize(), "Error synchronizing OpenMM work before external call");
+        // Sync OpenMM work before external (e.g. PyTorch) call.
+        // OPENMM_CUDA_FAST_EXTERNAL_CALL=1: use stream sync only (faster, may be unsafe with multi-stream).
+        const char* fastEnv = std::getenv("OPENMM_CUDA_FAST_EXTERNAL_CALL");
+        if (fastEnv && fastEnv[0] == '1' && fastEnv[1] == '\0') {
+            CHECK_RESULT2(cuStreamSynchronize(getCurrentStream()), "Error synchronizing OpenMM stream before external call");
+        } else {
+            CHECK_RESULT2(cuCtxSynchronize(), "Error synchronizing OpenMM work before external call");
+        }
         CHECK_RESULT2(cuCtxPushCurrent(primaryContext), "Error pushing primary context for external call");
     }
 }
 
 void CudaContext::popPrimaryContextAfterExternalCall() {
     if (contextIsValid) {
+        // Sync external work (e.g. PyTorch) before restoring OpenMM context.
+        // Full context sync required: external libs may use different streams.
         CHECK_RESULT2(cuCtxSynchronize(), "Error synchronizing external work after callback");
         CUcontext popped;
         CHECK_RESULT2(cuCtxPopCurrent(&popped), "Error popping primary context after external call");
@@ -899,4 +906,11 @@ unsigned int CudaContext::getEventFlags() {
     if (useBlockingSync)
         flags += CU_EVENT_BLOCKING_SYNC;
     return flags;
+}
+
+void CudaContext::ensureCudaInitialized() {
+    if (!hasInitializedCuda) {
+        CHECK_RESULT2(cuInit(0), "Error initializing CUDA");
+        hasInitializedCuda = true;
+    }
 }

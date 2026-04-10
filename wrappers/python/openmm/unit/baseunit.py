@@ -7,7 +7,7 @@ Module openmm.unit.baseunit
 Contains BaseUnit class, which is a component of the Unit class.
 
 This is part of the OpenMM molecular simulation toolkit.
-See https://openmm.org/development.
+See https://openmm.org.
 
 Portions copyright (c) 2012 Stanford University and the Authors.
 Authors: Christopher M. Bruns

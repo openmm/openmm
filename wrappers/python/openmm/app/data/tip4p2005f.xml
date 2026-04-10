@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<ForceField>
+  <!--
+  TIP4P/2005f flexible water model.
+  González, M. A. & Abascal, J. L. F. J. Chem. Phys. 135, 224516 (2011).
+
+  Intramolecular: Morse potential for O-H stretch; harmonic for H-O-H bend (Table I).
+  Intermolecular: LJ on oxygen; charges on H and M-site (same as TIP4P/2005); sigma = 3.1644 Å (Table I).
+  M-site: paper Eq. (4) d_OM = d_OM^rel * (z_OH1 + z_OH2) with z_OH_i = r_OH_i*cos(θ/2).
+  Table I gives d_OM^rel = 0.13194 (chosen so rigid TIP4P/2005 geometry gives d_OM = 0.1546 Å).
+  average3: M = w1*O + w2*H1 + w3*H2 => |M| = w2*|H1+H2|, so w2 = w3 = d_OM^rel = 0.13194, w1 = 0.73612.
+  -->
+  <AtomTypes>
+    <Type name="tip4p2005f-O" class="OW" element="O" mass="15.99943"/>
+    <Type name="tip4p2005f-H" class="HW" element="H" mass="1.007947"/>
+    <Type name="tip4p2005f-M" class="MW" mass="0"/>
+  </AtomTypes>
+  <Residues>
+    <Residue name="HOH">
+      <Atom name="O" type="tip4p2005f-O"/>
+      <Atom name="H1" type="tip4p2005f-H"/>
+      <Atom name="H2" type="tip4p2005f-H"/>
+      <Atom name="M" type="tip4p2005f-M"/>
+      <VirtualSite type="average3" siteName="M" atomName1="O" atomName2="H1" atomName3="H2"
+                   weight1="0.73612" weight2="0.13194" weight3="0.13194"/>
+      <Bond atomName1="O" atomName2="H1"/>
+      <Bond atomName1="O" atomName2="H2"/>
+    </Residue>
+  </Residues>
+  <!-- Morse potential for O-H: V = D_r * (1 - exp(-beta*(r - r_eq)))^2 -->
+  <CustomBondForce energy="Dr*(1-exp(-beta*(r-req)))^2">
+    <PerBondParameter name="Dr"/>
+    <PerBondParameter name="beta"/>
+    <PerBondParameter name="req"/>
+    <Bond class1="OW" class2="HW" Dr="432.581" beta="22.87" req="0.09419"/>
+  </CustomBondForce>
+  <!-- Harmonic H-O-H angle: theta_eq = 107.4 deg = 1.87448 rad, K_theta = 367.810 kJ/(mol*rad^2) -->
+  <HarmonicAngleForce>
+    <Angle class1="HW" class2="OW" class3="HW" angle="1.87448" k="367.810"/>
+  </HarmonicAngleForce>
+  <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+    <Atom type="tip4p2005f-O" charge="0" sigma="0.31644" epsilon="0.7749"/>
+    <Atom type="tip4p2005f-H" charge="0.5564" sigma="1" epsilon="0"/>
+    <Atom type="tip4p2005f-M" charge="-1.1128" sigma="1" epsilon="0"/>
+  </NonbondedForce>
+</ForceField>

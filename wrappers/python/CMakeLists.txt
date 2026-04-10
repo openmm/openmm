@@ -46,7 +46,7 @@ file(WRITE "${OPENMM_PYTHON_STAGING_DIR}/openmm/version.py" "git_revision = '${r
 #     set(temp2 "${temp2}\n${f}")
 # endforeach()
 
-set(SUBDIRS src openmm simtk tests)
+set(SUBDIRS src openmm simtk openmmml tests)
 foreach(SUBDIR ${SUBDIRS})
     file(GLOB_RECURSE STAGING_INPUT_FILES1 RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*README.txt"
@@ -121,6 +121,9 @@ endif(SWIG_EXECUTABLE)
 if(SWIG_VERSION VERSION_LESS "3.0.5")
     message(SEND_ERROR "Swig version must be 3.0.5 or greater! (You have ${SWIG_VERSION})")
 endif(SWIG_VERSION VERSION_LESS "3.0.5")
+if(PYTHON_VERSION_STRING AND PYTHON_VERSION_STRING VERSION_GREATER_EQUAL "3.13" AND SWIG_VERSION VERSION_LESS "4.3")
+    message(SEND_ERROR "Python ${PYTHON_VERSION_STRING} requires SWIG 4.3 or later (found ${SWIG_VERSION}).")
+endif()
 
 find_package(Doxygen REQUIRED)
 mark_as_advanced(CLEAR DOXYGEN_EXECUTABLE)
@@ -195,11 +198,35 @@ INSTALL_FILES(/include/swig FILES "${SWIG_OPENMM_DIR}/OpenMMSwigHeaders.i" "${SW
 #~      -o OpenMMSwig.cxx \
 #~      OpenMM.i
 
+# Conda installs and some Windows CI setups require SWIG_LIB so swig can find swig.swg.
+# OPENMM_SWIG_LIB (cache) is preferred so the path is embedded at configure time; Windows
+# cmd/vcvars sometimes makes $ENV{SWIG_LIB} invisible to CMake even when later steps see it.
+set(OPENMM_SWIG_LIB "" CACHE STRING "Directory with SWIG data files (swig.swg); optional, overrides SWIG_LIB env for the Python SWIG step")
+mark_as_advanced(OPENMM_SWIG_LIB)
+set(_openmm_swig_lib_dir "")
+if(OPENMM_SWIG_LIB)
+    set(_openmm_swig_lib_dir "${OPENMM_SWIG_LIB}")
+elseif(DEFINED ENV{SWIG_LIB} AND NOT "$ENV{SWIG_LIB}" STREQUAL "")
+    set(_openmm_swig_lib_dir "$ENV{SWIG_LIB}")
+endif()
+# Windows: backslashes in SWIG_LIB can break `cmake -E env "SWIG_LIB=..." swig` (cmd/CRT parsing).
+# SWIG accepts forward slashes for its library directory.
+if(WIN32 AND _openmm_swig_lib_dir)
+    string(REPLACE "\\" "/" _openmm_swig_lib_dir "${_openmm_swig_lib_dir}")
+endif()
+if(_openmm_swig_lib_dir)
+    set(_OPENMM_SWIG_CMD "${CMAKE_COMMAND}" -E env "SWIG_LIB=${_openmm_swig_lib_dir}" "${SWIG_EXECUTABLE}")
+else()
+    set(_OPENMM_SWIG_CMD "${SWIG_EXECUTABLE}")
+endif()
+
 # Run swig
 add_custom_command(
     OUTPUT "${SWIG_OPENMM_DIR}/OpenMMSwig.cxx" "${OPENMM_PYTHON_STAGING_DIR}/openmm/openmm.py"
-    COMMAND ${SWIG_EXECUTABLE}
+    COMMAND ${_OPENMM_SWIG_CMD}
         -python -c++
+        # Suppress known-noisy warnings from large auto-generated OpenMM.i (typemaps, shadowed overloads, PythonForce bases).
+        -w314 -w401 -w453 -w509
         -outdir "${OPENMM_PYTHON_STAGING_DIR}/openmm"
         -o OpenMMSwig.cxx
         OpenMM.i
