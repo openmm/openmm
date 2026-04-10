@@ -34,9 +34,67 @@ from openmm.app.internal import safesave
 import os
 
 class ReplicaExchangeReporter(object):
+    """
+    This is a reporter for use with ReplicaExchangeSampler.  It outputs the most important information required for
+    nearly all replica exchange simulations.  It must be added to the sampler's list of reporters:
+
+    >>> sampler.reporters.append(ReplicaExchangeReporter(directory, interval, sampler))
+
+    As the simulation runs, it creates the following files in a user specified directory.
+
+    - A CSV file containing a log of what state each replica was in at each iteration.
+    - A set of XML files containing serialized State objects for each replica. These serve as checkpoints, allowing a
+      simulation to be resumed later.
+    - (optional) A trajectory file for each thermodynamic state.  The coordinates in these files jump discontinuously
+      whenever an exchange happens.
+    - (optional) A trajectory file for each replica.  The coordinates in these files are continuous, but the
+      thermodynamic states they explore change with time.
+    - (optional) A CSV file containing the reduced energy (potential energy divided by kT) of every replica in every
+      state at each iteration.  This information is useful for calculating free energies.
+
+    The reduced energies are written as a matrix in flattened order for each iteration.  You can load the file with
+    NumPy using the command
+
+    >>> energy = np.loadtxt('energy.csv', delimiter=',').reshape(-1, n_states, n_states)
+
+    `energy[i][j][k]` is the reduced energy of state k for replica j in iteration i.
+
+    To resume a simulation from the saved files, pass `resume=True` to the constructor.  It will load all necessary
+    information and configure the ReplicaExchangeSampler correctly.
+    """
     def __init__(self, directory: str, reportInterval: int, sampler: "app.ReplicaExchangeSampler",
                  trajectoryPerState: bool = True, trajectoryPerReplica: bool = False, trajectoryFormat: str = 'xtc',
                  enforcePeriodicBox: bool | None = None, energy: bool = False, resume: bool = False):
+        """
+        Create a ReplicaExchangeReporter.
+
+        Parameters
+        ----------
+        directory: str
+            The path to the directory where the files will be written.  The directory will be created if it does not
+            already exist.  The directory must be empty unless resume is True, in which case it must contain the files
+            from an earlier simulation.
+        reportInterval: int
+            The frequency at which to write output, measured in iterations
+        sampler: openmm.app.ReplicaExchangeSampler
+            The sampler this reporter will be added to
+        trajectoryPerState: bool
+            If True, a trajectory file will be saved for each thermodynamic state.
+        trajectoryPerReplica: bool
+            If True, a trajectory file will be saved for each replica.
+        trajectoryFormat: str
+            The format in which to save trajectories.  Supported options are 'xtc' and 'dcd'.
+        enforcePeriodicBox: bool
+            Specifies whether particle positions should be translated so the center of every molecule
+            lies in the same periodic box.  If None (the default), it will automatically decide whether
+            to translate molecules based on whether the system being simulated uses periodic boundary
+            conditions.
+        energy: bool
+            If True, a CSV file will be saved containing reduced energies.
+        resume: bool
+            Specifies whether to resume an earlier simulation.  If True, the checkpoint and log data will be loaded into
+            the ReplicaExchangeSampler, and future output will be appended to the existing files.
+        """
         trajectoryFormat = trajectoryFormat.lower()
         self.directory = directory
         self.reportInterval = reportInterval
@@ -71,7 +129,7 @@ class ReplicaExchangeReporter(object):
         else:
             if os.path.isdir(directory):
                 if len(os.listdir(directory)) > 0:
-                    raise ValueError(f'The directory {directory} already exists.')
+                    raise ValueError(f'The directory {directory} is not empty.')
             else:
                 os.makedirs(directory)
 
@@ -122,6 +180,7 @@ class ReplicaExchangeReporter(object):
             self._energy.close()
 
     def __call__(self, sampler: "app.ReplicaExchangeSampler"):
+        """This is invoked by the ReplicaExchangeSampler at the end of every iteration to generate output."""
         if sampler.currentIteration % self.reportInterval != 0:
             return
         logData = [sampler.currentIteration, sampler.simulation.currentStep]+sampler.replicaStateIndex
