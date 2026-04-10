@@ -38,6 +38,7 @@ from .charmmpsffile import CharmmPsfFile, CharmmPSFWarning
 from .simulatedtempering import SimulatedTempering
 from .metadynamics import Metadynamics, BiasVariable
 from .replicaexchangesampler import ReplicaExchangeSampler
+from .replicaexchangereporter import ReplicaExchangeReporter
 
 # Enumerated values
 
