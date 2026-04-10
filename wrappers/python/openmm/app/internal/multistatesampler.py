@@ -33,7 +33,7 @@ from openmm.unit import kilojoules_per_mole
 """This is a utility for internal use by algorithms that perform multistate sampling.  Given the definitions of a set of
 states, it can put a context into any state and efficiently evaluate the potential energies of states.
 
-Each (not to be confused with a State object) is represented by a dict containing property values.  All states must
+Each state (not to be confused with a State object) is represented by a dict containing property values.  All states must
 specify values for the same properties.  The following properties are supported.
 
 - 'temperature': the simulation temperature.  It knows how to set the temperature for all standard integrators and forces.
@@ -44,12 +44,12 @@ specify values for the same properties.  The following properties are supported.
 - Global variables defined by a CustomIntegrator
 """
 class MultistateSampler(object):
-    def __init__(self, states, context):
+    def __init__(self, states: list[dict], context: openmm.Context):
         """Create a MultistateSampler.
 
         Parameters
         ----------
-        states: list
+        states: list[dict]
             the states to sample.  Each entry should be a dict containing the property values for one state.
         context: Context
             the Context to apply the states to
@@ -155,7 +155,7 @@ class MultistateSampler(object):
                     self.groups_of_groups[i].append(group_of_groups)
                     all_groups.remove(first)
 
-    def applyState(self, index):
+    def applyState(self, index: int):
         """Modify the Context to match one of the states.
 
         Parameters
@@ -170,7 +170,7 @@ class MultistateSampler(object):
         for name, value in self.variables[index].items():
             self.context.getIntegrator().setGlobalVariableByName(name, value)
 
-    def computeEnergy(self, index):
+    def computeEnergy(self, index: int):
         """Compute the potential energy of one of the states.  This method calls applyState(), so when it returns, the
         Context will be in the specified state.
 

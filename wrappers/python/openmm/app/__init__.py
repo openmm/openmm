@@ -37,6 +37,7 @@ from .charmmparameterset import CharmmParameterSet
 from .charmmpsffile import CharmmPsfFile, CharmmPSFWarning
 from .simulatedtempering import SimulatedTempering
 from .metadynamics import Metadynamics, BiasVariable
+from .replicaexchangesampler import ReplicaExchangeSampler
 
 # Enumerated values
 
