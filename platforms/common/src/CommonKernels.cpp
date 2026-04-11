@@ -5581,17 +5581,27 @@ void CommonCalcCustomCPPForceKernel::executeOnWorkerThread(bool includeForces) {
     energy = force->computeForce(contextImpl, positionsVec, forcesVec);
     if (includeForces) {
         ContextSelector selector(cc);
-        int numParticles = cc.getNumAtoms();
-        if (cc.getUseDoublePrecision())
-            forcesArray.upload((double*) forcesVec.data());
+        int n = (int) forcesVec.size();
+        if (cc.getUseDoublePrecision()) {
+            // Upload as vector<double> so element count matches forcesArray (3*num scalars), and to
+            // avoid relying on Vec3 memory layout for reinterpret_cast to double* (OpenCL drivers).
+            vector<double> upload(3 * n);
+            for (int i = 0; i < n; i++) {
+                upload[3 * i] = forcesVec[i][0];
+                upload[3 * i + 1] = forcesVec[i][1];
+                upload[3 * i + 2] = forcesVec[i][2];
+            }
+            forcesArray.upload(upload);
+        }
         else {
-            for (int i = 0; i < numParticles; i++) {
+            for (int i = 0; i < n; i++) {
                 floatForces[3*i] = (float) forcesVec[i][0];
                 floatForces[3*i+1] = (float) forcesVec[i][1];
                 floatForces[3*i+2] = (float) forcesVec[i][2];
             }
             forcesArray.upload(floatForces);
         }
+        cc.flushQueue();
     }
 }
 
