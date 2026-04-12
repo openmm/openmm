@@ -797,7 +797,7 @@ void testSimulation() {
     LangevinMiddleIntegrator integrator(300, 1.0, 0.004);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(300);
+    context.setVelocitiesToTemperature(300, 0x41544D00);
     for (int i = 0; i < 100; i++) {
         integrator.step(10);
         vector<Vec3> pos = context.getState(State::Positions).getPositions();

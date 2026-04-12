@@ -50,6 +50,10 @@
 using namespace OpenMM;
 using namespace std;
 
+namespace {
+constexpr int kRpmdTestIntegratorSeed = 0x52504D44; // fixed seed for RPMD thermostat noise in CI
+}
+
 void testFreeParticles() {
     const int numParticles = 100;
     const int numCopies = 30;
@@ -59,6 +63,7 @@ void testFreeParticles() {
     for (int i = 0; i < numParticles; i++)
         system.addParticle(mass);
     RPMDIntegrator integ(numCopies, temperature, 10.0, 0.001);
+    integ.setRandomNumberSeed(kRpmdTestIntegratorSeed);
     Context context(system, integ, platform);
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
@@ -150,6 +155,7 @@ void testParaHydrogen() {
         nb->addParticle(params);
     system.addForce(nb);
     RPMDIntegrator integ(numCopies, temperature, 10.0, 0.0005);
+    integ.setRandomNumberSeed(kRpmdTestIntegratorSeed);
     Context context(system, integ, platform);
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
@@ -240,6 +246,7 @@ void testCMMotionRemoval() {
         system.addParticle(mass);
     system.addForce(new CMMotionRemover());
     RPMDIntegrator integ(numCopies, temperature, 10.0, 0.001);
+    integ.setRandomNumberSeed(kRpmdTestIntegratorSeed);
     Context context(system, integ, platform);
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
@@ -305,6 +312,7 @@ void testVirtualSites() {
         system.setVirtualSite(3*i+2, new TwoParticleAverageSite(3*i, 3*i+1, 0.5, 0.5));
     }
     RPMDIntegrator integ(numCopies, temperature, 10.0, 0.001);
+    integ.setRandomNumberSeed(kRpmdTestIntegratorSeed);
     Context context(system, integ, platform);
     for (int copy = 0; copy < numCopies; copy++) {
         for (int i = 0; i < gridSize; i++)
@@ -385,6 +393,7 @@ void testContractions() {
     contractions[1] = 3;
     contractions[2] = 1;
     RPMDIntegrator integ(numCopies, temperature, 50.0, 0.001, contractions);
+    integ.setRandomNumberSeed(kRpmdTestIntegratorSeed);
     Context context(system, integ, platform);
     for (int copy = 0; copy < numCopies; copy++) {
         for (int i = 0; i < gridSize; i++)
@@ -440,6 +449,7 @@ void testWithoutThermostat() {
             bonds->addBond(i-1, i, 1.0, 1000.0);
     }
     RPMDIntegrator integ(numCopies, temperature, 1.0, 0.001);
+    integ.setRandomNumberSeed(kRpmdTestIntegratorSeed);
     integ.setApplyThermostat(false);
     Context context(system, integ, platform);
     OpenMM_SFMT::SFMT sfmt;
@@ -482,6 +492,7 @@ void testPileGThermostat() {
     RPMDIntegrator integ(numCopies, temperature, 10.0, 0.001);
     integ.setThermostatType(RPMDIntegrator::PileG);
     integ.setCentroidFriction(10.0);
+    integ.setRandomNumberSeed(kRpmdTestIntegratorSeed);
     ASSERT(integ.getThermostatType() == RPMDIntegrator::PileG);
     ASSERT(integ.getApplyThermostat() == true);
     
@@ -598,7 +609,9 @@ void testWithBarostat() {
     nonbonded->setForceGroup(1);
     nonbonded->setReciprocalSpaceForceGroup(2);
     system.addForce(nonbonded);
-    system.addForce(new RPMDMonteCarloBarostat(0.5, 10));
+    auto* rpmdBarostat = new RPMDMonteCarloBarostat(0.5, 10);
+    rpmdBarostat->setRandomNumberSeed(0x524D5042);
+    system.addForce(rpmdBarostat);
 
     // Create a cloud of molecules.
 
@@ -614,6 +627,7 @@ void testWithBarostat() {
         bonds->addBond(2*i, 2*i+1, 1.0, 10000.0);
     }
     RPMDIntegrator integ(numCopies, temperature, 50.0, 0.001);
+    integ.setRandomNumberSeed(kRpmdTestIntegratorSeed);
     Context context(system, integ, platform);
     for (int copy = 0; copy < numCopies; copy++) {
         for (int i = 0; i < gridSize; i++)

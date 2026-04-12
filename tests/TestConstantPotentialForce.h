@@ -1086,7 +1086,7 @@ void testChargeUpdate(ConstantPotentialForce::ConstantPotentialMethod method, bo
     Context testContext(testSystem, integrator, platform);
 
     testContext.setPositions(positions);
-    testContext.setVelocitiesToTemperature(300);
+    testContext.setVelocitiesToTemperature(300, 0x43504600);
 
     // Charges of non-electrode atoms should exactly match charges set.
     vector<double> charges0;
@@ -1171,7 +1171,7 @@ void testEnergyConservation(ConstantPotentialForce::ConstantPotentialMethod meth
     VerletIntegrator integrator(0.002);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(1 / BOLTZ);
+    context.setVelocitiesToTemperature(1 / BOLTZ, 0x43504600);
 
     State state1 = context.getState(State::Energy);
     double energy1 = state1.getPotentialEnergy() + state1.getKineticEnergy();

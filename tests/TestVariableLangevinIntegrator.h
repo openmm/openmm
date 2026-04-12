@@ -103,7 +103,7 @@ void testTemperature() {
     for (int i = 0; i < numParticles; ++i)
         positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(temp);
+    context.setVelocitiesToTemperature(temp, 0x564C4749);
 
     // Let it equilibrate.
 
@@ -189,7 +189,7 @@ void testConstrainedMasslessParticles() {
     system.setParticleMass(1, 0.0);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(300.0);
+    context.setVelocitiesToTemperature(300.0, 0x564C4749);
     integrator.step(1);
     State state = context.getState(State::Velocities);
     ASSERT_EQUAL(0.0, state.getVelocities()[0][0]);
@@ -291,7 +291,7 @@ void testArgonBox() {
     VariableLangevinIntegrator integrator(temp, 6.0, 1e-4);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(temp);
+    context.setVelocitiesToTemperature(temp, 0x564C4749);
 
     // Equilibrate.
 
@@ -349,7 +349,7 @@ void testInitialTemperature() {
     VariableLangevinIntegrator integrator(300, 25, 1e-5);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(targetTemperature);
+    context.setVelocitiesToTemperature(targetTemperature, 0x564C4749);
     auto velocities = context.getState(State::Velocities).getVelocities();
     double kineticEnergy = 0;
     for(const auto &v : velocities) kineticEnergy += 0.5 * v.dot(v);

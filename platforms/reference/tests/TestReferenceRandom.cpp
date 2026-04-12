@@ -88,7 +88,7 @@ void testRandomVelocities() {
     
     // Ask the context to generate random velocities.
     
-    context.setVelocitiesToTemperature(temperture);
+    context.setVelocitiesToTemperature(temperture, 0x52465231);
     State state = context.getState(State::Velocities);
     
     // See if they respect constraints.

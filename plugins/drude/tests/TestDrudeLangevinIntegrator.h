@@ -37,6 +37,7 @@
 #include "openmm/DrudeForce.h"
 #include "openmm/DrudeLangevinIntegrator.h"
 #include "SimTKOpenMMUtilities.h"
+#include <algorithm>
 #include <iostream>
 #include <vector>
 
@@ -241,7 +242,8 @@ void testForceEnergyConsistency() {
 }
 
 void testInitialTemperature() {
-    // Check temperature initialization for a collection of randomly placed particles
+    // Check temperature initialization for a collection of randomly placed particles.
+    // nDoF = 3 per pair for both COM and relative kinetic diagnostics (3N each).
     const int numRealParticles = 50000;
     const int numParticles = 2 * numRealParticles;
     const int nDoF = 3 * numRealParticles;
@@ -271,7 +273,8 @@ void testInitialTemperature() {
     DrudeLangevinIntegrator integrator(targetTemperature, 25, drudeTemperature, 25, 0.001);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(targetTemperature);
+    const int velocityRandomSeed = 0x44524C56; // fixed: avoid osrngseed() nondeterminism in CI ("DRLV")
+    context.setVelocitiesToTemperature(targetTemperature, velocityRandomSeed);
     auto velocities = context.getState(State::Velocities).getVelocities();
     double comKineticEnergy = 0;
     double relKineticEnergy = 0;
@@ -292,8 +295,10 @@ void testInitialTemperature() {
     }
     double comTemperature = (2*comKineticEnergy / (nDoF*BOLTZ));
     double relTemperature = (2*relKineticEnergy / (nDoF*BOLTZ));
-    ASSERT_USUALLY_EQUAL_TOL(targetTemperature, comTemperature, 0.02);
-    ASSERT_USUALLY_EQUAL_TOL(drudeTemperature, relTemperature, 0.02);
+    const double tempTol =
+        std::max(0.015, stochasticInitialTemperatureRelativeTol(nDoF));
+    ASSERT_USUALLY_EQUAL_TOL(targetTemperature, comTemperature, tempTol);
+    ASSERT_USUALLY_EQUAL_TOL(drudeTemperature, relTemperature, tempTol);
 }
 
 void setupKernels(int argc, char* argv[]);

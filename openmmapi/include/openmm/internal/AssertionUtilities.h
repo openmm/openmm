@@ -69,8 +69,10 @@ inline double stochasticInitialTemperatureRelativeTol(int nDoF) {
 
 #define ASSERT_EQUAL_VEC(expected, found, tol) {double _norm_ = std::sqrt((expected).dot(expected)); double _scale_ = _norm_ > 1.0 ? _norm_ : 1.0; if ((std::abs(((expected)[0])-((found)[0]))/_scale_ > (tol)) || (std::abs(((expected)[1])-((found)[1]))/_scale_ > (tol)) || (std::abs(((expected)[2])-((found)[2]))/_scale_ > (tol))) {std::stringstream details; details << " Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};
 
+/** Like ASSERT_TRUE, but the message notes the check may fail due to stochastic dynamics. Does not retry. */
 #define ASSERT_USUALLY_TRUE(cond) {if (!(cond)) throwException(__FILE__, __LINE__, "(This test is stochastic and may occasionally fail)");};
 
+/** Like ASSERT_EQUAL_TOL; the message notes stochastic tests. Does not retry or resample—use fixed RNG seeds and scaled tolerances in the test itself. */
 #define ASSERT_USUALLY_EQUAL_TOL(expected, found, tol) {double _scale_ = std::abs(expected) > 1.0 ? std::abs(expected) : 1.0; if (!(std::abs((expected)-(found))/_scale_ <= (tol))) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found)<<" (This test is stochastic and may occasionally fail)"; throwException(__FILE__, __LINE__, details.str());}};
 
 #define ASSERT_VALID_INDEX(index, vector) {if (index < 0 || index >= (int) vector.size()) throwException(__FILE__, __LINE__, "Index out of range");};

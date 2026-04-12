@@ -100,7 +100,7 @@ void testBussiParticleSubset() {
     context.setPositions(positions);
     // Non-zero initial KE so classic Verlet (Bussi before kick) does not throw;
     // split Verlet tolerates v=0 but we support both orderings.
-    context.setVelocitiesToTemperature(1.0);
+    context.setVelocitiesToTemperature(1.0, 0x42555353);
     
     integrator.step(1000);
     
@@ -143,7 +143,7 @@ void testBussiReservoirEnergy() {
     for (int i = 0; i < numParticles; ++i)
         positions[i] = Vec3(i * 0.5, 0, 0);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(temp * 0.5); // Start below target temp
+    context.setVelocitiesToTemperature(temp * 0.5, 0x42555353); // Start below target temp
     
     integrator.step(1000);
     
@@ -263,7 +263,7 @@ void testBussiWithVariableVerletIntegrator() {
     for (int i = 0; i < numParticles; ++i)
         positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(temp);
+    context.setVelocitiesToTemperature(temp, 0x42555353);
 
     // Long equilibration and many samples so time-averaged KE is near kT/2 per dof (variable dt
     // increases correlation vs fixed dt, so use a sqrt(numSteps)-scaled band).
@@ -310,7 +310,7 @@ void testBussiStepOrderTemperature() {
     for (int i = 0; i < numParticles; ++i)
         positions[i] = Vec3((i % 2) * 1.0, (i % 4 < 2 ? 1 : -1) * 1.0, (i < 4 ? 1 : -1) * 1.0);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(temp);
+    context.setVelocitiesToTemperature(temp, 0x42555353);
     integrator.step(equilibrationSteps);
     double ke = 0.0;
     for (int i = 0; i < numSteps; ++i) {

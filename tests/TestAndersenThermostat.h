@@ -64,7 +64,7 @@ void testTemperature() {
     for (int i = 0; i < numParticles; ++i)
         positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(temp);
+    context.setVelocitiesToTemperature(temp, 0x414E4453);
     
     // Let it equilibrate.
     
@@ -119,7 +119,7 @@ void testConstraints() {
     positions[6] = Vec3(0, 1, 1);
     positions[7] = Vec3(0, 0, 1);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(temp);
+    context.setVelocitiesToTemperature(temp, 0x414E4453);
 
     // Let it equilibrate.
 

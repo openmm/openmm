@@ -224,7 +224,7 @@ void testMolecularGas(bool rigid) {
     LangevinIntegrator integrator(temp, 0.1, 0.005);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(temp);
+    context.setVelocitiesToTemperature(temp, 0x4D434642);
     integrator.step(equilibrationSteps);
     vector<double> avgPressure(6, 0.0);
     for (int step = 0; step < steps; ++step) {

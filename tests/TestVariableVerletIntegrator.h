@@ -230,7 +230,7 @@ void testConstrainedMasslessParticles() {
     system.setParticleMass(1, 0.0);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(300.0);
+    context.setVelocitiesToTemperature(300.0, 0x56564556);
     integrator.step(1);
     State state = context.getState(State::Velocities);
     ASSERT_EQUAL(0.0, state.getVelocities()[0][0]);
@@ -273,7 +273,7 @@ void testArgonBox() {
     VariableVerletIntegrator integrator(1e-5);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(temp);
+    context.setVelocitiesToTemperature(temp, 0x56564556);
 
     // Equilibrate.
     
@@ -330,7 +330,7 @@ void testInitialTemperature() {
     VariableVerletIntegrator integrator(0.001);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(targetTemperature);
+    context.setVelocitiesToTemperature(targetTemperature, 0x56564556);
     auto velocities = context.getState(State::Velocities).getVelocities();
     double kineticEnergy = 0;
     for(const auto &v : velocities) kineticEnergy += 0.5 * v.dot(v);

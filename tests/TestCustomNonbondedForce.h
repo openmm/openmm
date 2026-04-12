@@ -1180,7 +1180,7 @@ void testInteractionGroupWithCutoff() {
     VerletIntegrator integrator(0.001);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(100);
+    context.setVelocitiesToTemperature(100, 0x434E4246);
     ASSERT(context.getState(State::Energy, false, 1<<1).getPotentialEnergy() != 0.0);
     State initialState = context.getState(State::Energy);
     double initialEnergy = initialState.getPotentialEnergy()+initialState.getKineticEnergy();

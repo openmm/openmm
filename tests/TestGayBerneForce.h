@@ -183,7 +183,7 @@ void testEnergyConservation() {
     VerletIntegrator integ(0.0005);
     Context context(system, integ, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(300.0);
+    context.setVelocitiesToTemperature(300.0, 0x47424600);
     double initialEnergy;
     for (int i = 0; i < 100; i++) {
         integ.step(5);

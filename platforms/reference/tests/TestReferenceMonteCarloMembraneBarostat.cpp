@@ -230,7 +230,7 @@ void testCrystal() {
     LangevinIntegrator integrator(temp, 10.0, 0.002);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(temp);
+    context.setVelocitiesToTemperature(temp, 0x4D434D42);
     integrator.step(1000);
     Vec3 size;
     Vec3 avgPressure;

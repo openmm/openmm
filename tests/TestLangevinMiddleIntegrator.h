@@ -197,7 +197,7 @@ void testConstrainedMasslessParticles() {
     system.setParticleMass(1, 0.0);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(300.0);
+    context.setVelocitiesToTemperature(300.0, 0x4C4D4944);
     integrator.step(1);
     State state = context.getState(State::Velocities);
     ASSERT_EQUAL(0.0, state.getVelocities()[0][0]);
@@ -280,7 +280,7 @@ void testInitialTemperature() {
     LangevinMiddleIntegrator integrator(300, 25, 0.001);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(targetTemperature);
+    context.setVelocitiesToTemperature(targetTemperature, 0x4C4D4944);
     auto velocities = context.getState(State::Velocities).getVelocities();
     double kineticEnergy = 0;
     for(const auto &v : velocities) kineticEnergy += 0.5 * v.dot(v);
