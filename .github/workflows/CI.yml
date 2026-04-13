@@ -606,7 +606,8 @@ jobs:
         run: ccache -s
 
       - name: "Deploy docs (only on master)"
-        if: ${{ github.ref == 'refs/heads/master' && github.event_name != 'schedule' }}
+        # S3 credentials live on the upstream repo only; forks must skip this step.
+        if: ${{ github.ref == 'refs/heads/master' && github.event_name != 'schedule' && github.repository == 'openmm/openmm' }}
         uses: jakejarvis/s3-sync-action@master
         with:
           args: --acl public-read --follow-symlinks --delete
