@@ -29,6 +29,7 @@
 
 #include "OpenCLTests.h"
 #include "TestRpmd.h"
+#include "TestCavityForceTests.h"
 
 extern "C" void registerRPMDOpenCLKernelFactories();
 
@@ -36,6 +37,10 @@ using namespace OpenMM;
 
 void runPlatformTests() {
     testParaHydrogen();
+    testCavityEnergy();
+    testCavityForces();
+    testCouplingSchedule();
+    testCavityDisplacer();
 }
 
 void setupKernels (int argc, char* argv[]) {

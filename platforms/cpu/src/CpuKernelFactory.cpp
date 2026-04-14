@@ -30,6 +30,7 @@
 #include "CpuKernelFactory.h"
 #include "CpuKernels.h"
 #include "CpuPlatform.h"
+#include "ReferenceKernels.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
@@ -66,5 +67,11 @@ KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform&
         return new CpuCalcLCPOForceKernel(name, platform, data);
     if (name == IntegrateLangevinMiddleStepKernel::Name())
         return new CpuIntegrateLangevinMiddleStepKernel(name, platform, data);
+    if (name == CalcCavityForceKernel::Name())
+        return new ReferenceCalcCavityForceKernel(name, platform);
+    if (name == CalcMultiModeCavityForceKernel::Name())
+        return new ReferenceCalcMultiModeCavityForceKernel(name, platform);
+    if (name == ApplyCavityDisplacementKernel::Name())
+        return new ReferenceApplyCavityDisplacementKernel(name, platform);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str());
 }

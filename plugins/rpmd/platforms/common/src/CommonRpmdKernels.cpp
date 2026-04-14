@@ -253,6 +253,15 @@ void CommonIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
         contractedPositions.initialize(cc, maxContractedCopies*paddedParticles, elementSize, "rpmdContractedPositions");
     }
 
+    useFFLKernels = (integrator.getThermostatType() == RPMDIntegrator::FastForwardLangevin);
+    useSuzukiChinBuffers = integrator.getSuzukiChinEnabled();
+    if (useFFLKernels)
+        savedVelocitiesFFL.initialize(cc, numCopies * paddedParticles, elementSize, "savedVelocitiesFFL");
+    if (useSuzukiChinBuffers) {
+        scForcePlus.initialize<long long>(cc, numCopies * paddedParticles * 3, "scForcePlus");
+        scForceMinus.initialize<long long>(cc, numCopies * paddedParticles * 3, "scForceMinus");
+    }
+
     // Create kernels.
     
     map<string, string> defines;
@@ -272,6 +281,12 @@ void CommonIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     pileKernel = program->createKernel("applyPileThermostat");
     stepKernel = program->createKernel("integrateStep");
     velocitiesKernel = program->createKernel("advanceVelocities");
+    if (useFFLKernels) {
+        saveVelocitiesFFLKernel = program->createKernel("saveVelocitiesForFFL");
+        applyMomentumFlipFFLKernel = program->createKernel("applyMomentumFlipFFL");
+    }
+    if (useSuzukiChinBuffers)
+        applySuzukiChinAccumulateKernel = program->createKernel("applySuzukiChinAccumulate");
     computeCentroidKEKernel = program->createKernel("computeCentroidKE");
     applyBussiScalingKernel = program->createKernel("applyBussiScaling");
     copyToContextKernel = program->createKernel("copyDataToContext");
@@ -361,10 +376,27 @@ void CommonIntegrateRPMDStepKernel::initializeKernels(ContextImpl& context) {
     addForcesFromContextKernel->addArg(cc.getAtomIndexArray());
     addForcesFromContextKernel->addArg();
     
-    // Initialize Bussi thermostat kernels
+    if (useFFLKernels) {
+        saveVelocitiesFFLKernel->addArg(velocities);
+        saveVelocitiesFFLKernel->addArg(savedVelocitiesFFL);
+        applyMomentumFlipFFLKernel->addArg(velocities);
+        applyMomentumFlipFFLKernel->addArg(savedVelocitiesFFL);
+    }
+    if (useSuzukiChinBuffers) {
+        applySuzukiChinAccumulateKernel->addArg(forces);
+        applySuzukiChinAccumulateKernel->addArg(scForcePlus);
+        applySuzukiChinAccumulateKernel->addArg(scForceMinus);
+        applySuzukiChinAccumulateKernel->addArg(velocities);
+        applySuzukiChinAccumulateKernel->addArg();
+        applySuzukiChinAccumulateKernel->addArg();
+    }
+    
+    // Initialize Bussi thermostat kernels (isQuantum: skip classical in hybrid PILE_G)
     computeCentroidKEKernel->addArg(velocities);
+    computeCentroidKEKernel->addArg(isQuantum);
     computeCentroidKEKernel->addArg(centroidKE);
     applyBussiScalingKernel->addArg(velocities);
+    applyBussiScalingKernel->addArg(isQuantum);
     applyBussiScalingKernel->addArg(); // alpha (will be set at runtime)
     
     // Initialize hybrid mode kernels (uniform layout with isQuantum check)
@@ -436,156 +468,235 @@ void CommonIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
     RPMDIntegrator::ThermostatType thermostatType = integrator.getThermostatType();
     bool applyThermostat = integrator.getApplyThermostat() && (thermostatType != RPMDIntegrator::NoneThermo);
     bool hybridMode = (numClassicalParticles > 0);
-    
-    // Compute forces on all particles (all beads)
-    if (!forcesAreValid)
-        computeForces(context);
-    
+    int nInner = integrator.getNumInnerSteps();
+    if (nInner < 1)
+        throw OpenMMException("RPMDIntegrator: numInnerSteps must be at least 1.");
+    int innerMask = integrator.getInnerForceGroups() & integrator.getIntegrationForceGroups();
+    int outerMask = integrator.getIntegrationForceGroups() & ~innerMask;
+    bool useMTS = (nInner > 1);
+    if (useMTS && (innerMask == 0 || outerMask == 0))
+        throw OpenMMException("RPMDIntegrator: MTS requires non-empty inner and outer force groups (within integrationForceGroups).");
+
+    if (!forcesAreValid) {
+        if (!useMTS)
+            computeForces(context, integrator, integrator.getIntegrationForceGroups(), true);
+        else
+            computeForces(context, integrator, outerMask, false);
+    }
+
     bool useDoublePrecision = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision());
     double dt = integrator.getStepSize();
-    int applyToCentroid = (thermostatType == RPMDIntegrator::Pile) ? 1 : 0;
-    
-    if (hybridMode) {
-        // ====================================================================
-        // HYBRID MODE: Uniform storage with quantum/classical distinction
-        // Quantum particles: full RPMD with FFT (PILE thermostat)
-        // Classical particles: simple dynamics (Langevin/Bussi thermostat)
-        // All particles stored with all beads; classical beads synced to stay identical
-        // ====================================================================
-        
-        // Set kernel arguments for hybrid kernels
+    double dtInner = dt / nInner;
+    int applyToCentroid = (thermostatType == RPMDIntegrator::Pile || thermostatType == RPMDIntegrator::FastForwardLangevin) ? 1 : 0;
+
+    auto setHybridKernelArgs = [&](double stepDt, double pileDt) {
         pileKernelHybrid->setArg(3, integration.prepareRandomNumbers(numParticles*numCopies));
         if (useDoublePrecision) {
-            pileKernelHybrid->setArg(4, dt);
+            pileKernelHybrid->setArg(4, pileDt);
             pileKernelHybrid->setArg(5, integrator.getTemperature()*BOLTZ);
             pileKernelHybrid->setArg(6, integrator.getFriction());
             pileKernelHybrid->setArg(7, applyToCentroid);
-            stepKernelHybrid->setArg(4, dt);
+            stepKernelHybrid->setArg(4, stepDt);
             stepKernelHybrid->setArg(5, integrator.getTemperature()*BOLTZ);
-            velocitiesKernelHybrid->setArg(3, dt);
+            velocitiesKernelHybrid->setArg(3, pileDt);
         } else {
-            pileKernelHybrid->setArg(4, (float) dt);
+            pileKernelHybrid->setArg(4, (float) pileDt);
             pileKernelHybrid->setArg(5, (float) (integrator.getTemperature()*BOLTZ));
             pileKernelHybrid->setArg(6, (float) integrator.getFriction());
             pileKernelHybrid->setArg(7, applyToCentroid);
-            stepKernelHybrid->setArg(4, (float) dt);
+            stepKernelHybrid->setArg(4, (float) stepDt);
             stepKernelHybrid->setArg(5, (float) (integrator.getTemperature()*BOLTZ));
-            velocitiesKernelHybrid->setArg(3, (float) dt);
+            velocitiesKernelHybrid->setArg(3, (float) pileDt);
         }
-        
-        // THERMOSTAT (FIRST HALF)
-        if (applyThermostat) {
-            if (thermostatType == RPMDIntegrator::PileG) {
-                applyBussiCentroidThermostat(context.getSystem(), integrator, dt*0.5);
-            }
-            // Apply PILE to quantum particles only (hybrid kernel checks isQuantum)
-            pileKernelHybrid->execute(numParticles*numCopies, workgroupSize);
-            
-            // Apply classical thermostat
-            RPMDIntegrator::ClassicalThermostatType classicalThermostat = integrator.getClassicalThermostat();
-            if (classicalThermostat == RPMDIntegrator::BussiClassical) {
-                applyBussiClassicalThermostat(context.getSystem(), integrator, dt*0.5);
-            } else if (classicalThermostat == RPMDIntegrator::LangevinClassical) {
-                applyClassicalThermostatKernel->setArg(3, integration.prepareRandomNumbers(numParticles));
-                if (useDoublePrecision) {
-                    applyClassicalThermostatKernel->setArg(4, dt);
-                    applyClassicalThermostatKernel->setArg(5, integrator.getTemperature()*BOLTZ);
-                    applyClassicalThermostatKernel->setArg(6, integrator.getFriction());
-                } else {
-                    applyClassicalThermostatKernel->setArg(4, (float) dt);
-                    applyClassicalThermostatKernel->setArg(5, (float) (integrator.getTemperature()*BOLTZ));
-                    applyClassicalThermostatKernel->setArg(6, (float) integrator.getFriction());
-                }
-                applyClassicalThermostatKernel->setArg(7, 1);  // Langevin mode
-                applyClassicalThermostatKernel->execute(numParticles);
-            }
-        }
-        
-        // INTEGRATION (hybrid kernel handles both quantum and classical)
-        stepKernelHybrid->execute(numParticles*numCopies, workgroupSize);
-        
-        // SYNC CLASSICAL BEADS: copy bead 0 positions/velocities to beads 1..N-1
-        // This ensures force computation sees consistent positions for classical particles
-        syncClassicalBeadsKernel->execute(numParticles);
-        
-        // FORCE COMPUTATION
-        computeForces(context);
-        
-        // VELOCITY UPDATE (SECOND HALF-STEP)
-        velocitiesKernelHybrid->execute(numParticles*numCopies, workgroupSize);
-        
-        // SYNC CLASSICAL VELOCITIES: copy bead 0 velocities to beads 1..N-1
-        // This keeps classical beads consistent after the velocity update
-        syncClassicalBeadsKernel->execute(numParticles);
-        
-        // THERMOSTAT (SECOND HALF)
-        if (applyThermostat) {
-            if (thermostatType == RPMDIntegrator::PileG) {
-                applyBussiCentroidThermostat(context.getSystem(), integrator, dt*0.5);
-            }
-            pileKernelHybrid->setArg(3, integration.prepareRandomNumbers(numParticles*numCopies));
-            pileKernelHybrid->execute(numParticles*numCopies, workgroupSize);
-            
-            // Apply classical thermostat again
-            RPMDIntegrator::ClassicalThermostatType classicalThermostat = integrator.getClassicalThermostat();
-            if (classicalThermostat == RPMDIntegrator::BussiClassical) {
-                applyBussiClassicalThermostat(context.getSystem(), integrator, dt*0.5);
-            } else if (classicalThermostat == RPMDIntegrator::LangevinClassical) {
-                applyClassicalThermostatKernel->setArg(3, integration.prepareRandomNumbers(numParticles));
-                applyClassicalThermostatKernel->setArg(7, 1);
-                applyClassicalThermostatKernel->execute(numParticles);
-            }
-        }
-    } else {
-        // ====================================================================
-        // STANDARD RPMD MODE (all quantum, no sparse storage)
-        // ====================================================================
-        
-        // Set kernel arguments for standard RPMD kernels
+    };
+
+    auto setStdKernelArgs = [&](double stepDt, double pileDt) {
         pileKernel->setArg(2, integration.prepareRandomNumbers(numParticles*numCopies));
         if (useDoublePrecision) {
-            pileKernel->setArg(3, dt);
+            pileKernel->setArg(3, pileDt);
             pileKernel->setArg(4, integrator.getTemperature()*BOLTZ);
             pileKernel->setArg(5, integrator.getFriction());
             pileKernel->setArg(6, applyToCentroid);
-            stepKernel->setArg(3, dt);
+            stepKernel->setArg(3, stepDt);
             stepKernel->setArg(4, integrator.getTemperature()*BOLTZ);
-            velocitiesKernel->setArg(2, dt);
+            velocitiesKernel->setArg(2, pileDt);
         } else {
-            pileKernel->setArg(3, (float) dt);
+            pileKernel->setArg(3, (float) pileDt);
             pileKernel->setArg(4, (float) (integrator.getTemperature()*BOLTZ));
             pileKernel->setArg(5, (float) integrator.getFriction());
             pileKernel->setArg(6, applyToCentroid);
-            stepKernel->setArg(3, (float) dt);
+            stepKernel->setArg(3, (float) stepDt);
             stepKernel->setArg(4, (float) (integrator.getTemperature()*BOLTZ));
-            velocitiesKernel->setArg(2, (float) dt);
+            velocitiesKernel->setArg(2, (float) pileDt);
         }
-        
-        // THERMOSTAT (FIRST HALF)
-        if (applyThermostat) {
-            if (thermostatType == RPMDIntegrator::PileG) {
-                applyBussiCentroidThermostat(context.getSystem(), integrator, dt*0.5);
+    };
+
+    auto thermostatFirstHalfHybrid = [&]() {
+        if (!applyThermostat) return;
+        if (thermostatType == RPMDIntegrator::PileG)
+            applyBussiCentroidThermostat(context.getSystem(), integrator, dt*0.5);
+        if (useFFLKernels)
+            saveVelocitiesFFLKernel->execute(numParticles*numCopies, workgroupSize);
+        pileKernelHybrid->setArg(3, integration.prepareRandomNumbers(numParticles*numCopies));
+        pileKernelHybrid->execute(numParticles*numCopies, workgroupSize);
+        if (useFFLKernels)
+            applyMomentumFlipFFLKernel->execute(numParticles*numCopies, workgroupSize);
+        RPMDIntegrator::ClassicalThermostatType classicalThermostat = integrator.getClassicalThermostat();
+        if (classicalThermostat == RPMDIntegrator::BussiClassical) {
+            applyBussiClassicalThermostat(context.getSystem(), integrator, dt*0.5);
+        } else if (classicalThermostat == RPMDIntegrator::LangevinClassical) {
+            applyClassicalThermostatKernel->setArg(3, integration.prepareRandomNumbers(numParticles));
+            if (useDoublePrecision) {
+                applyClassicalThermostatKernel->setArg(4, dt);
+                applyClassicalThermostatKernel->setArg(5, integrator.getTemperature()*BOLTZ);
+                applyClassicalThermostatKernel->setArg(6, integrator.getFriction());
+            } else {
+                applyClassicalThermostatKernel->setArg(4, (float) dt);
+                applyClassicalThermostatKernel->setArg(5, (float) (integrator.getTemperature()*BOLTZ));
+                applyClassicalThermostatKernel->setArg(6, (float) integrator.getFriction());
             }
-            pileKernel->execute(numParticles*numCopies, workgroupSize);
+            applyClassicalThermostatKernel->setArg(7, 1);
+            applyClassicalThermostatKernel->execute(numParticles);
         }
-        
-        // INTEGRATION
-        stepKernel->execute(numParticles*numCopies, workgroupSize);
-        
-        // FORCE COMPUTATION
-        computeForces(context);
-        
-        // VELOCITY UPDATE (SECOND HALF-STEP)
+    };
+
+    auto thermostatSecondHalfHybrid = [&]() {
+        if (!applyThermostat) return;
+        if (thermostatType == RPMDIntegrator::PileG)
+            applyBussiCentroidThermostat(context.getSystem(), integrator, dt*0.5);
+        if (useFFLKernels)
+            saveVelocitiesFFLKernel->execute(numParticles*numCopies, workgroupSize);
+        pileKernelHybrid->setArg(3, integration.prepareRandomNumbers(numParticles*numCopies));
+        pileKernelHybrid->execute(numParticles*numCopies, workgroupSize);
+        if (useFFLKernels)
+            applyMomentumFlipFFLKernel->execute(numParticles*numCopies, workgroupSize);
+        RPMDIntegrator::ClassicalThermostatType classicalThermostat = integrator.getClassicalThermostat();
+        if (classicalThermostat == RPMDIntegrator::BussiClassical) {
+            applyBussiClassicalThermostat(context.getSystem(), integrator, dt*0.5);
+        } else if (classicalThermostat == RPMDIntegrator::LangevinClassical) {
+            applyClassicalThermostatKernel->setArg(3, integration.prepareRandomNumbers(numParticles));
+            applyClassicalThermostatKernel->setArg(7, 1);
+            applyClassicalThermostatKernel->execute(numParticles);
+        }
+    };
+
+    auto thermostatFirstHalfStd = [&]() {
+        if (!applyThermostat) return;
+        if (thermostatType == RPMDIntegrator::PileG)
+            applyBussiCentroidThermostat(context.getSystem(), integrator, dt*0.5);
+        if (useFFLKernels)
+            saveVelocitiesFFLKernel->execute(numParticles*numCopies, workgroupSize);
+        pileKernel->setArg(2, integration.prepareRandomNumbers(numParticles*numCopies));
+        pileKernel->execute(numParticles*numCopies, workgroupSize);
+        if (useFFLKernels)
+            applyMomentumFlipFFLKernel->execute(numParticles*numCopies, workgroupSize);
+    };
+
+    auto thermostatSecondHalfStd = [&]() {
+        if (!applyThermostat) return;
+        if (thermostatType == RPMDIntegrator::PileG)
+            applyBussiCentroidThermostat(context.getSystem(), integrator, dt*0.5);
+        if (useFFLKernels)
+            saveVelocitiesFFLKernel->execute(numParticles*numCopies, workgroupSize);
+        pileKernel->setArg(2, integration.prepareRandomNumbers(numParticles*numCopies));
+        pileKernel->execute(numParticles*numCopies, workgroupSize);
+        if (useFFLKernels)
+            applyMomentumFlipFFLKernel->execute(numParticles*numCopies, workgroupSize);
+    };
+
+    if (useMTS && hybridMode) {
+        setHybridKernelArgs(dt, dt);
+        thermostatFirstHalfHybrid();
+        if (useDoublePrecision)
+            velocitiesKernelHybrid->setArg(3, 0.5*dt);
+        else
+            velocitiesKernelHybrid->setArg(3, (float) (0.5*dt));
+        velocitiesKernelHybrid->execute(numParticles*numCopies, workgroupSize);
+        for (int inner = 0; inner < nInner; inner++) {
+            computeForces(context, integrator, innerMask, false);
+            if (useDoublePrecision)
+                velocitiesKernelHybrid->setArg(3, 0.5*dtInner);
+            else
+                velocitiesKernelHybrid->setArg(3, (float) (0.5*dtInner));
+            velocitiesKernelHybrid->execute(numParticles*numCopies, workgroupSize);
+            if (useDoublePrecision) {
+                stepKernelHybrid->setArg(4, dtInner);
+                stepKernelHybrid->setArg(5, integrator.getTemperature()*BOLTZ);
+            } else {
+                stepKernelHybrid->setArg(4, (float) dtInner);
+                stepKernelHybrid->setArg(5, (float) (integrator.getTemperature()*BOLTZ));
+            }
+            stepKernelHybrid->execute(numParticles*numCopies, workgroupSize);
+            syncClassicalBeadsKernel->execute(numParticles);
+            computeForces(context, integrator, innerMask, false);
+            if (useDoublePrecision)
+                velocitiesKernelHybrid->setArg(3, 0.5*dtInner);
+            else
+                velocitiesKernelHybrid->setArg(3, (float) (0.5*dtInner));
+            velocitiesKernelHybrid->execute(numParticles*numCopies, workgroupSize);
+        }
+        computeForces(context, integrator, outerMask, true);
+        if (useDoublePrecision)
+            velocitiesKernelHybrid->setArg(3, 0.5*dt);
+        else
+            velocitiesKernelHybrid->setArg(3, (float) (0.5*dt));
+        velocitiesKernelHybrid->execute(numParticles*numCopies, workgroupSize);
+        setHybridKernelArgs(dt, dt);
+        thermostatSecondHalfHybrid();
+    } else if (useMTS && !hybridMode) {
+        setStdKernelArgs(dt, dt);
+        thermostatFirstHalfStd();
+        if (useDoublePrecision)
+            velocitiesKernel->setArg(2, 0.5*dt);
+        else
+            velocitiesKernel->setArg(2, (float) (0.5*dt));
         velocitiesKernel->execute(numParticles*numCopies, workgroupSize);
-        
-        // THERMOSTAT (SECOND HALF)
-        if (applyThermostat) {
-            if (thermostatType == RPMDIntegrator::PileG) {
-                applyBussiCentroidThermostat(context.getSystem(), integrator, dt*0.5);
+        for (int inner = 0; inner < nInner; inner++) {
+            computeForces(context, integrator, innerMask, false);
+            if (useDoublePrecision)
+                velocitiesKernel->setArg(2, 0.5*dtInner);
+            else
+                velocitiesKernel->setArg(2, (float) (0.5*dtInner));
+            velocitiesKernel->execute(numParticles*numCopies, workgroupSize);
+            if (useDoublePrecision) {
+                stepKernel->setArg(3, dtInner);
+                stepKernel->setArg(4, integrator.getTemperature()*BOLTZ);
+            } else {
+                stepKernel->setArg(3, (float) dtInner);
+                stepKernel->setArg(4, (float) (integrator.getTemperature()*BOLTZ));
             }
-            pileKernel->setArg(2, integration.prepareRandomNumbers(numParticles*numCopies));
-            pileKernel->execute(numParticles*numCopies, workgroupSize);
+            stepKernel->execute(numParticles*numCopies, workgroupSize);
+            computeForces(context, integrator, innerMask, false);
+            if (useDoublePrecision)
+                velocitiesKernel->setArg(2, 0.5*dtInner);
+            else
+                velocitiesKernel->setArg(2, (float) (0.5*dtInner));
+            velocitiesKernel->execute(numParticles*numCopies, workgroupSize);
         }
+        computeForces(context, integrator, outerMask, true);
+        if (useDoublePrecision)
+            velocitiesKernel->setArg(2, 0.5*dt);
+        else
+            velocitiesKernel->setArg(2, (float) (0.5*dt));
+        velocitiesKernel->execute(numParticles*numCopies, workgroupSize);
+        setStdKernelArgs(dt, dt);
+        thermostatSecondHalfStd();
+    } else if (hybridMode) {
+        setHybridKernelArgs(dt, dt);
+        thermostatFirstHalfHybrid();
+        stepKernelHybrid->execute(numParticles*numCopies, workgroupSize);
+        syncClassicalBeadsKernel->execute(numParticles);
+        computeForces(context, integrator, integrator.getIntegrationForceGroups(), true);
+        velocitiesKernelHybrid->execute(numParticles*numCopies, workgroupSize);
+        syncClassicalBeadsKernel->execute(numParticles);
+        thermostatSecondHalfHybrid();
+    } else {
+        setStdKernelArgs(dt, dt);
+        thermostatFirstHalfStd();
+        stepKernel->execute(numParticles*numCopies, workgroupSize);
+        computeForces(context, integrator, integrator.getIntegrationForceGroups(), true);
+        velocitiesKernel->execute(numParticles*numCopies, workgroupSize);
+        thermostatSecondHalfStd();
     }
 
     // Update the time and step count
@@ -600,16 +711,20 @@ void CommonIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
     }
 }
 
-void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
+void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context, const RPMDIntegrator& integrator, int forceGroupMask, bool allowSuzukiChin) {
+    cc.clearBuffer(forces);
+    int integrationMask = integrator.getIntegrationForceGroups();
+    int effectiveNonContracted = groupsNotContracted & forceGroupMask & integrationMask;
+
     // Check if we can use batched force evaluation
     bool useBatchedEvaluation = false;
     const PythonForce* batchedPythonForce = nullptr;
     int batchedForceIndex = -1;
     const System& system = context.getSystem();
     
-    // Check all forces in groupsNotContracted to see if any support batching
+    // Check all forces in effectiveNonContracted to see if any support batching
     for (int i = 0; i < system.getNumForces(); i++) {
-        if ((groupsNotContracted & (1<<system.getForce(i).getForceGroup())) != 0) {
+        if ((effectiveNonContracted & (1<<system.getForce(i).getForceGroup())) != 0) {
             if (const PythonForce* pythonForce = dynamic_cast<const PythonForce*>(&system.getForce(i))) {
                 if (pythonForce->supportsBatchedEvaluation()) {
                     useBatchedEvaluation = true;
@@ -621,7 +736,7 @@ void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         }
     }
     
-    if (useBatchedEvaluation && batchedPythonForce != nullptr) {
+    if (effectiveNonContracted != 0 && useBatchedEvaluation && batchedPythonForce != nullptr) {
         // NEW BATCHED PATH: Evaluate all copies at once
         // printf("DEBUG: Using batched RPMD evaluation for %d beads\n", numCopies);
         
@@ -650,6 +765,13 @@ void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
                 }
             }
         }
+        // Hybrid classical: i-PI-style frozen ring — classical coords must match bead 0 for each force evaluation.
+        if (numClassicalParticles > 0) {
+            for (int j : classicalParticleIndices) {
+                for (int b = 1; b < numCopies; b++)
+                    allBeadPositions[b][j] = allBeadPositions[0][j];
+            }
+        }
         
         // 2. Get the PythonForce implementation and call batched evaluation
         const std::vector<ForceImpl*>& forceImpls = context.getForceImpls();
@@ -673,7 +795,7 @@ void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         
         // 4. Handle any non-PythonForce forces sequentially (if any exist)
         for (int i = 0; i < system.getNumForces(); i++) {
-            if ((groupsNotContracted & (1<<system.getForce(i).getForceGroup())) != 0) {
+            if ((effectiveNonContracted & (1<<system.getForce(i).getForceGroup())) != 0) {
                 if (i != batchedForceIndex) {
                     // Skip CMMotionRemover - it doesn't compute forces
                     if (dynamic_cast<const CMMotionRemover*>(&system.getForce(i)) != nullptr) {
@@ -698,7 +820,7 @@ void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
                 }
             }
         }
-    } else {
+    } else if (effectiveNonContracted != 0) {
         // ORIGINAL PATH: Compute forces from all groups that didn't have a specified contraction.
         // Uses standard copy kernels - uniform layout works for both hybrid and standard modes.
         // printf("DEBUG: Using sequential RPMD evaluation (%d beads)\n", numCopies);
@@ -716,8 +838,8 @@ void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
             Vec3 finalBox[3];
             context.getPeriodicBoxVectors(finalBox[0], finalBox[1], finalBox[2]);
             if (initialBox[0] != finalBox[0] || initialBox[1] != finalBox[1] || initialBox[2] != finalBox[2])
-                throw OpenMMException("Standard barostats cannot be used with RPMDIntegrator.  Use RPMDMonteCarloBarostat instead.");
-            context.calcForcesAndEnergy(true, false, groupsNotContracted);
+                throw OpenMMException("Standard barostats cannot be used with RPMDIntegrator.  Use RPMDMonteCarloBarostat or RPMDStochasticCellRescalingBarostat instead.");
+            context.calcForcesAndEnergy(true, false, effectiveNonContracted);
             copyFromContextKernel->setArg(7, i);
             copyFromContextKernel->execute(cc.getNumAtoms());
         }
@@ -731,7 +853,9 @@ void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         copyFromContextKernel->setArg(5, contractedPositions);
         for (auto& g : groupsByCopies) {
             int copies = g.first;
-            int groupFlags = g.second;
+            int groupFlags = g.second & forceGroupMask & integrationMask;
+            if (groupFlags == 0)
+                continue;
 
             // Find the contracted positions.
 
@@ -760,6 +884,120 @@ void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         copyToContextKernel->setArg(5, numCopies-1);
         copyToContextKernel->execute(cc.getNumAtoms());
     }
+
+    if (allowSuzukiChin && integrator.getSuzukiChinEnabled() && useSuzukiChinBuffers && forceGroupMask == integrationMask)
+        applySuzukiChinCorrection(context, integrator);
+}
+
+void CommonIntegrateRPMDStepKernel::applySuzukiChinCorrection(ContextImpl& context, const RPMDIntegrator& integrator) {
+    const System& system = context.getSystem();
+    int paddedParticles = cc.getPaddedNumAtoms();
+    bool useDoublePrecision = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision());
+    double epsilon = integrator.getSuzukiChinEpsilon();
+    double beta = 1.0 / (BOLTZ * integrator.getTemperature());
+    double betaP = beta / numCopies;
+    double hbar = 1.054571628e-34 * AVOGADRO / (1000 * 1e-12);
+    double prefactor = (1.0/3.0) * betaP * betaP * hbar * hbar / 12.0;
+    double invTwoEps = 1.0 / (2.0 * epsilon);
+    int integrationMask = integrator.getIntegrationForceGroups();
+
+    vector<mm_double4> posSavedDouble;
+    vector<mm_float4> posSavedFloat;
+    if (useDoublePrecision) {
+        posSavedDouble.resize(paddedParticles * numCopies);
+        positions.download(posSavedDouble);
+    } else {
+        posSavedFloat.resize(paddedParticles * numCopies);
+        positions.download(posSavedFloat);
+    }
+
+    copyToContextKernel->setArg(2, positions);
+    copyFromContextKernel->setArg(5, positions);
+
+    const double forceToDouble = 1.0 / (double) 0x100000000;
+    size_t forceElems = forces.getSize();
+
+    for (int copy = 0; copy < numCopies; copy++) {
+        vector<long long> allF(forceElems);
+        forces.download(allF);
+        int b0 = copy * paddedParticles * 3;
+        vector<Vec3> origF(numParticles);
+        for (int j = 0; j < numParticles; j++) {
+            origF[j] = Vec3(allF[b0 + j] * forceToDouble,
+                          allF[b0 + paddedParticles + j] * forceToDouble,
+                          allF[b0 + 2 * paddedParticles + j] * forceToDouble);
+        }
+
+        auto displace = [&](double sign) {
+            if (useDoublePrecision) {
+                vector<mm_double4> work = posSavedDouble;
+                int off = copy * paddedParticles;
+                for (int j = 0; j < numParticles; j++) {
+                    double mass = system.getParticleMass(j);
+                    if (mass == 0.0) continue;
+                    Vec3 F = origF[j];
+                    double fn = sqrt(F.dot(F));
+                    if (fn < 1e-20) continue;
+                    Vec3 d = F * (1.0 / fn);
+                    work[off + j].x += sign * epsilon * d[0];
+                    work[off + j].y += sign * epsilon * d[1];
+                    work[off + j].z += sign * epsilon * d[2];
+                }
+                positions.upload(work);
+            } else {
+                vector<mm_float4> work = posSavedFloat;
+                int off = copy * paddedParticles;
+                for (int j = 0; j < numParticles; j++) {
+                    double mass = system.getParticleMass(j);
+                    if (mass == 0.0) continue;
+                    Vec3 F = origF[j];
+                    double fn = sqrt(F.dot(F));
+                    if (fn < 1e-20) continue;
+                    Vec3 d = F * (1.0 / fn);
+                    work[off + j].x += (float)(sign * epsilon * d[0]);
+                    work[off + j].y += (float)(sign * epsilon * d[1]);
+                    work[off + j].z += (float)(sign * epsilon * d[2]);
+                }
+                positions.upload(work);
+            }
+        };
+
+        displace(1.0);
+        copyToContextKernel->setArg(5, copy);
+        copyToContextKernel->execute(cc.getNumAtoms());
+        context.computeVirtualSites();
+        context.updateContextState();
+        context.calcForcesAndEnergy(true, false, integrationMask);
+        copyFromContextKernel->setArg(1, scForcePlus);
+        copyFromContextKernel->setArg(7, copy);
+        copyFromContextKernel->execute(cc.getNumAtoms());
+
+        displace(-1.0);
+        copyToContextKernel->setArg(5, copy);
+        copyToContextKernel->execute(cc.getNumAtoms());
+        context.computeVirtualSites();
+        context.updateContextState();
+        context.calcForcesAndEnergy(true, false, integrationMask);
+        copyFromContextKernel->setArg(1, scForceMinus);
+        copyFromContextKernel->setArg(7, copy);
+        copyFromContextKernel->execute(cc.getNumAtoms());
+
+        if (useDoublePrecision)
+            positions.upload(posSavedDouble);
+        else
+            positions.upload(posSavedFloat);
+    }
+
+    copyFromContextKernel->setArg(1, forces);
+    bool useDouble = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision());
+    if (useDouble) {
+        applySuzukiChinAccumulateKernel->setArg(4, prefactor);
+        applySuzukiChinAccumulateKernel->setArg(5, invTwoEps);
+    } else {
+        applySuzukiChinAccumulateKernel->setArg(4, (float) prefactor);
+        applySuzukiChinAccumulateKernel->setArg(5, (float) invTwoEps);
+    }
+    applySuzukiChinAccumulateKernel->execute(numParticles*numCopies, workgroupSize);
 }
 
 double CommonIntegrateRPMDStepKernel::computeKineticEnergy(ContextImpl& context, const RPMDIntegrator& integrator) {
@@ -797,11 +1035,16 @@ void CommonIntegrateRPMDStepKernel::applyBussiCentroidThermostat(const System& s
             totalKE += (double) keData[i];
     }
     
-    // Count degrees of freedom
+    // Count degrees of freedom (quantum particles only when hybrid; matches GPU centroid KE)
+    vector<int> qflags(cc.getPaddedNumAtoms());
+    isQuantum.download(qflags);
     int ndof = 0;
     for (int i = 0; i < numParticles; i++) {
-        if (system.getParticleMass(i) > 0.0)
-            ndof += 3;
+        if (system.getParticleMass(i) <= 0.0)
+            continue;
+        if (hybridMode && qflags[i] == 0)
+            continue;
+        ndof += 3;
     }
 
     if (ndof == 0)
@@ -825,9 +1068,9 @@ void CommonIntegrateRPMDStepKernel::applyBussiCentroidThermostat(const System& s
         alpha = -alpha;
 
     if (useDoublePrecision)
-        applyBussiScalingKernel->setArg(1, alpha);
+        applyBussiScalingKernel->setArg(2, alpha);
     else
-        applyBussiScalingKernel->setArg(1, (float) alpha);
+        applyBussiScalingKernel->setArg(2, (float) alpha);
     applyBussiScalingKernel->execute(numParticles);
 }
 

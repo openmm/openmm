@@ -176,6 +176,12 @@ This ensures:
 - Classical particles act as mean-field bath
 - Energy is properly conserved (total system energy)
 
+**Implementation detail:** The Reference integrator and the batched Python-force path **overwrite** classical particle coordinates with bead 0 when building each replica’s geometry for `calcForcesAndEnergy`, so coupling is correct even if replica positions were temporarily inconsistent (e.g. user only set bead 0). The GPU sequential path relies on `syncClassicalBeads` keeping classical beads aligned; keeping bead 0 authoritative matches the same physics.
+
+### Alignment with i-PI
+
+[i-PI](https://github.com/i-pi/i-pi) stores a single global `nbeads` for all atoms (`Beads.q` has shape `(nbeads, 3*natoms)`). Ring springs couple every atom between neighboring replicas. For degrees of freedom treated as **classical**, the usual convention is **identical coordinates on every replica** so spring forces vanish (“frozen ring”); only the centroid mode carries classical dynamics. OpenMM’s hybrid mode enforces the same physics more explicitly: classical particles skip ring-polymer normal-mode evolution, use centroid MD, and **force evaluation always uses classical coordinates from bead 0** when constructing each quantum replica’s configuration, matching i-PI’s implicit frozen-ring limit and the mean-field coupling described above.
+
 ## Kernel Modifications
 
 ### Phase 3: Kernel Modifications (rpmd.cc)

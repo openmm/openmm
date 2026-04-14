@@ -31,31 +31,17 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "SimTKOpenMMUtilities.h"
+#include <set>
 #ifdef _MSC_VER
   #define POCKETFFT_NO_VECTORS
 #endif
 #include "pocketfft_hdronly.h"
 #include <complex>
 #include <fstream>
-#include <chrono>
 #include <sstream>
 
 using namespace OpenMM;
 using namespace std;
-
-static void appendDebugLog(const char* location, const char* message, const std::string& data, const char* hypothesisId, const char* runId) {
-    std::ofstream out("/media/extradrive/Trajectories/openmm/.cursor/debug.log", std::ios::app);
-    if (!out)
-        return;
-    const long long timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch()).count();
-    out << "{\"sessionId\":\"debug-session\",\"runId\":\"" << runId
-        << "\",\"hypothesisId\":\"" << hypothesisId
-        << "\",\"location\":\"" << location
-        << "\",\"message\":\"" << message
-        << "\",\"data\":" << data
-        << ",\"timestamp\":" << timestamp << "}\n";
-}
 
 static vector<Vec3>& extractPositions(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
@@ -109,6 +95,23 @@ void ReferenceIntegrateRPMDStepKernel::initialize(const System& system, const RP
         }
     }
     groupsNotContracted &= integrator.getIntegrationForceGroups();
+
+    const map<int, int>& particleTypes = integrator.getParticleTypes();
+    const set<int>& quantumTypes = integrator.getQuantumParticleTypes();
+    bool defaultQuantum = integrator.getDefaultQuantum();
+    isQuantumParticle.assign(numParticles, true);
+    hybridMode = false;
+    if (!particleTypes.empty() || !quantumTypes.empty() || !defaultQuantum) {
+        for (int i = 0; i < numParticles; i++) {
+            int type = 0;
+            auto it = particleTypes.find(i);
+            if (it != particleTypes.end())
+                type = it->second;
+            isQuantumParticle[i] = (type == 0) ? defaultQuantum : (quantumTypes.count(type) > 0);
+            if (!isQuantumParticle[i])
+                hybridMode = true;
+        }
+    }
     
     // Create workspace for doing contractions.
     
@@ -130,11 +133,23 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
     vector<Vec3>& vel = extractVelocities(context);
     vector<Vec3>& f = extractForces(context);
     const RPMDIntegrator::ThermostatType thermostatType = integrator.getThermostatType();
-    
+    int nInner = integrator.getNumInnerSteps();
+    if (nInner < 1)
+        throw OpenMMException("RPMDIntegrator: numInnerSteps must be at least 1.");
+    int innerMask = integrator.getInnerForceGroups() & integrator.getIntegrationForceGroups();
+    int outerMask = integrator.getIntegrationForceGroups() & ~innerMask;
+    bool useMTS = (nInner > 1);
+    if (useMTS && (innerMask == 0 || outerMask == 0))
+        throw OpenMMException("RPMDIntegrator: MTS requires non-empty inner and outer force groups (within integrationForceGroups).");
+
     // Loop over copies and compute the force on each one.
     
-    if (!forcesAreValid)
-        computeForces(context, integrator);
+    if (!forcesAreValid) {
+        if (!useMTS)
+            computeForces(context, integrator);
+        else
+            computeForcesWithMask(context, integrator, outerMask);
+    }
 
     // Apply the thermostat (first half).
     
@@ -149,6 +164,8 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
     
     // Bussi thermostat parameters for centroid (PILE_G mode)
     const double c1_bussi = exp(-halfdt*integrator.getCentroidFriction());
+    const bool useFFL = (thermostatType == RPMDIntegrator::FastForwardLangevin);
+    vector<vector<Vec3> > velSavedFFL;
     
     if (integrator.getApplyThermostat() && thermostatType != RPMDIntegrator::NoneThermo) {
         
@@ -156,9 +173,13 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
         if (thermostatType == RPMDIntegrator::PileG) {
             applyBussiCentroidThermostat(system, integrator, numCopies, numParticles, scale, nkT, c1_bussi);
         }
+        if (useFFL)
+            velSavedFFL = velocities;
         
         for (int particle = 0; particle < numParticles; particle++) {
             if (system.getParticleMass(particle) == 0.0)
+                continue;
+            if (hybridMode && !isQuantumParticle[particle])
                 continue;
             const double c3_0 = c2_0*sqrt(nkT/system.getParticleMass(particle));
             for (int component = 0; component < 3; component++) {
@@ -166,14 +187,11 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
                     v[k] = complex<double>(scale*velocities[k][particle][component], 0.0);
                 pocketfft::c2c({(size_t) numCopies}, {sizeof(complex<double>)}, {sizeof(complex<double>)}, {0}, true, v.data(), v.data(), 1.0, 0);
 
-                // Apply thermostat to the centroid mode (PILE mode only - PILE_G uses Bussi above)
-                if (thermostatType == RPMDIntegrator::Pile) {
+                if (thermostatType == RPMDIntegrator::Pile || thermostatType == RPMDIntegrator::FastForwardLangevin) {
                     v[0].real(v[0].real()*c1_0 + c3_0*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
                 }
-                // For PILE_G, centroid is already handled by Bussi - skip v[0]
 
                 // Use critical damping white noise for the remaining (internal) modes.
-                // This is the same for both PILE and PILE_G modes.
 
                 for (int k = 1; k <= numCopies/2; k++) {
                     const bool isCenter = (numCopies%2 == 0 && k == numCopies/2);
@@ -192,8 +210,111 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
                     velocities[k][particle][component] = scale*v[k].real();
             }
         }
+        if (useFFL) {
+            for (int ii = 0; ii < numCopies; ii++)
+                for (int jj = 0; jj < numParticles; jj++) {
+                    if (hybridMode && !isQuantumParticle[jj])
+                        continue;
+                    for (int c = 0; c < 3; c++)
+                        if (velocities[ii][jj][c] * velSavedFFL[ii][jj][c] < 0.0)
+                            velocities[ii][jj][c] = -velocities[ii][jj][c];
+                }
+        }
     }
 
+    auto applyThermostatSecondHalf = [&]() {
+        if (integrator.getApplyThermostat() && thermostatType != RPMDIntegrator::NoneThermo) {
+            if (thermostatType == RPMDIntegrator::PileG) {
+                applyBussiCentroidThermostat(system, integrator, numCopies, numParticles, scale, nkT, c1_bussi);
+            }
+            if (useFFL)
+                velSavedFFL = velocities;
+            for (int particle = 0; particle < numParticles; particle++) {
+                if (system.getParticleMass(particle) == 0.0)
+                    continue;
+                if (hybridMode && !isQuantumParticle[particle])
+                    continue;
+                const double c3_0 = c2_0*sqrt(nkT/system.getParticleMass(particle));
+                for (int component = 0; component < 3; component++) {
+                    for (int k = 0; k < numCopies; k++)
+                        v[k] = complex<double>(scale*velocities[k][particle][component], 0.0);
+                    pocketfft::c2c({(size_t) numCopies}, {sizeof(complex<double>)}, {sizeof(complex<double>)}, {0}, true, v.data(), v.data(), 1.0, 0);
+                    if (thermostatType == RPMDIntegrator::Pile || thermostatType == RPMDIntegrator::FastForwardLangevin) {
+                        v[0].real(v[0].real()*c1_0 + c3_0*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+                    }
+                    for (int k = 1; k <= numCopies/2; k++) {
+                        const bool isCenter = (numCopies%2 == 0 && k == numCopies/2);
+                        const double wk = twown*sin(k*M_PI/numCopies);
+                        const double c1 = exp(-2.0*wk*halfdt);
+                        const double c2 = sqrt((1.0-c1*c1)/2) * (isCenter ? sqrt(2.0) : 1.0);
+                        const double c3 = c2*sqrt(nkT/system.getParticleMass(particle));
+                        double rand1 = c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                        double rand2 = (isCenter ? 0.0 : c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+                        v[k] = v[k]*c1 + complex<double>(rand1, rand2);
+                        if (k < numCopies-k)
+                            v[numCopies-k] = v[numCopies-k]*c1 + complex<double>(rand1, -rand2);
+                    }
+                    pocketfft::c2c({(size_t) numCopies}, {sizeof(complex<double>)}, {sizeof(complex<double>)}, {0}, false, v.data(), v.data(), 1.0, 0);
+                    for (int k = 0; k < numCopies; k++)
+                        velocities[k][particle][component] = scale*v[k].real();
+                }
+            }
+            if (useFFL) {
+                for (int ii = 0; ii < numCopies; ii++)
+                    for (int jj = 0; jj < numParticles; jj++) {
+                        if (hybridMode && !isQuantumParticle[jj])
+                            continue;
+                        for (int c = 0; c < 3; c++)
+                            if (velocities[ii][jj][c] * velSavedFFL[ii][jj][c] < 0.0)
+                                velocities[ii][jj][c] = -velocities[ii][jj][c];
+                    }
+            }
+        }
+    };
+
+    auto evolveRingPolymer = [&](double stepDt) {
+        for (int particle = 0; particle < numParticles; particle++) {
+            if (system.getParticleMass(particle) == 0.0)
+                continue;
+            if (hybridMode && !isQuantumParticle[particle]) {
+                Vec3 vcm(0, 0, 0);
+                for (int k = 0; k < numCopies; k++)
+                    vcm += velocities[k][particle];
+                vcm *= 1.0/numCopies;
+                for (int k = 0; k < numCopies; k++) {
+                    positions[k][particle] += vcm * stepDt;
+                    velocities[k][particle] = vcm;
+                }
+                continue;
+            }
+            for (int component = 0; component < 3; component++) {
+                for (int k = 0; k < numCopies; k++) {
+                    q[k] = complex<double>(scale*positions[k][particle][component], 0.0);
+                    v[k] = complex<double>(scale*velocities[k][particle][component], 0.0);
+                }
+                pocketfft::c2c({(size_t) numCopies}, {sizeof(complex<double>)}, {sizeof(complex<double>)}, {0}, true, q.data(), q.data(), 1.0, 0);
+                pocketfft::c2c({(size_t) numCopies}, {sizeof(complex<double>)}, {sizeof(complex<double>)}, {0}, true, v.data(), v.data(), 1.0, 0);
+                q[0] += v[0]*stepDt;
+                for (int k = 1; k < numCopies; k++) {
+                    const double wk = twown*sin(k*M_PI/numCopies);
+                    const double wt = wk*stepDt;
+                    const double coswt = cos(wt);
+                    const double sinwt = sin(wt);
+                    const complex<double> vprime = v[k]*coswt - q[k]*(wk*sinwt);
+                    q[k] = v[k]*(sinwt/wk) + q[k]*coswt;
+                    v[k] = vprime;
+                }
+                pocketfft::c2c({(size_t) numCopies}, {sizeof(complex<double>)}, {sizeof(complex<double>)}, {0}, false, q.data(), q.data(), 1.0, 0);
+                pocketfft::c2c({(size_t) numCopies}, {sizeof(complex<double>)}, {sizeof(complex<double>)}, {0}, false, v.data(), v.data(), 1.0, 0);
+                for (int k = 0; k < numCopies; k++) {
+                    positions[k][particle][component] = scale*q[k].real();
+                    velocities[k][particle][component] = scale*v[k].real();
+                }
+            }
+        }
+    };
+
+    if (!useMTS) {
     // Update velocities.
     
     for (int i = 0; i < numCopies; i++)
@@ -203,35 +324,7 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
     
     // Evolve the free ring polymer by transforming to the frequency domain.
 
-    for (int particle = 0; particle < numParticles; particle++) {
-        if (system.getParticleMass(particle) == 0.0)
-            continue;
-        for (int component = 0; component < 3; component++) {
-            for (int k = 0; k < numCopies; k++) {
-                q[k] = complex<double>(scale*positions[k][particle][component], 0.0);
-                v[k] = complex<double>(scale*velocities[k][particle][component], 0.0);
-            }
-            pocketfft::c2c({(size_t) numCopies}, {sizeof(complex<double>)}, {sizeof(complex<double>)}, {0}, true, q.data(), q.data(), 1.0, 0);
-            pocketfft::c2c({(size_t) numCopies}, {sizeof(complex<double>)}, {sizeof(complex<double>)}, {0}, true, v.data(), v.data(), 1.0, 0);
-            q[0] += v[0]*dt;
-            for (int k = 1; k < numCopies; k++) {
-                const double wk = twown*sin(k*M_PI/numCopies);
-                const double wt = wk*dt;
-                const double coswt = cos(wt);
-                const double sinwt = sin(wt);
-                const double wm = wk*system.getParticleMass(particle);
-                const complex<double> vprime = v[k]*coswt - q[k]*(wk*sinwt); // Advance velocity from t to t+dt
-                q[k] = v[k]*(sinwt/wk) + q[k]*coswt; // Advance position from t to t+dt
-                v[k] = vprime;
-            }
-            pocketfft::c2c({(size_t) numCopies}, {sizeof(complex<double>)}, {sizeof(complex<double>)}, {0}, false, q.data(), q.data(), 1.0, 0);
-            pocketfft::c2c({(size_t) numCopies}, {sizeof(complex<double>)}, {sizeof(complex<double>)}, {0}, false, v.data(), v.data(), 1.0, 0);
-            for (int k = 0; k < numCopies; k++) {
-                positions[k][particle][component] = scale*q[k].real();
-                velocities[k][particle][component] = scale*v[k].real();
-            }
-        }
-    }
+    evolveRingPolymer(dt);
     
     // Calculate forces based on the updated positions.
     
@@ -244,48 +337,60 @@ void ReferenceIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDI
             if (system.getParticleMass(j) != 0.0)
                 velocities[i][j] += forces[i][j]*(halfdt/system.getParticleMass(j));
 
-    // Apply the thermostat again (second half).
-    
-    if (integrator.getApplyThermostat() && thermostatType != RPMDIntegrator::NoneThermo) {
-        
-        // For PILE_G mode, apply Bussi thermostat to centroid first
-        if (thermostatType == RPMDIntegrator::PileG) {
-            applyBussiCentroidThermostat(system, integrator, numCopies, numParticles, scale, nkT, c1_bussi);
+    applyThermostatSecondHalf();
+    } else {
+        const double dtInner = dt / nInner;
+        const double halfdtInner = 0.5 * dtInner;
+        for (int i = 0; i < numCopies; i++)
+            for (int j = 0; j < numParticles; j++)
+                if (system.getParticleMass(j) != 0.0)
+                    velocities[i][j] += forces[i][j]*(halfdt/system.getParticleMass(j));
+        for (int inner = 0; inner < nInner; inner++) {
+            computeForcesWithMask(context, integrator, innerMask);
+            for (int i = 0; i < numCopies; i++)
+                for (int j = 0; j < numParticles; j++)
+                    if (system.getParticleMass(j) != 0.0)
+                        velocities[i][j] += forces[i][j]*(halfdtInner/system.getParticleMass(j));
+            evolveRingPolymer(dtInner);
+            if (hybridMode) {
+                for (int particle = 0; particle < numParticles; particle++) {
+                    if (isQuantumParticle[particle] || system.getParticleMass(particle) == 0.0)
+                        continue;
+                    Vec3 velAvg(0, 0, 0);
+                    for (int k = 0; k < numCopies; k++)
+                        velAvg += velocities[k][particle];
+                    velAvg *= 1.0/numCopies;
+                    for (int k = 0; k < numCopies; k++) {
+                        positions[k][particle] = positions[0][particle];
+                        velocities[k][particle] = velAvg;
+                    }
+                }
+            }
+            computeForcesWithMask(context, integrator, innerMask);
+            for (int i = 0; i < numCopies; i++)
+                for (int j = 0; j < numParticles; j++)
+                    if (system.getParticleMass(j) != 0.0)
+                        velocities[i][j] += forces[i][j]*(halfdtInner/system.getParticleMass(j));
         }
-        
+        computeForcesWithMask(context, integrator, outerMask);
+        for (int i = 0; i < numCopies; i++)
+            for (int j = 0; j < numParticles; j++)
+                if (system.getParticleMass(j) != 0.0)
+                    velocities[i][j] += forces[i][j]*(halfdt/system.getParticleMass(j));
+        applyThermostatSecondHalf();
+    }
+
+    if (hybridMode) {
         for (int particle = 0; particle < numParticles; particle++) {
-            if (system.getParticleMass(particle) == 0.0)
+            if (isQuantumParticle[particle] || system.getParticleMass(particle) == 0.0)
                 continue;
-            const double c3_0 = c2_0*sqrt(nkT/system.getParticleMass(particle));
-            for (int component = 0; component < 3; component++) {
-                for (int k = 0; k < numCopies; k++)
-                    v[k] = complex<double>(scale*velocities[k][particle][component], 0.0);
-                pocketfft::c2c({(size_t) numCopies}, {sizeof(complex<double>)}, {sizeof(complex<double>)}, {0}, true, v.data(), v.data(), 1.0, 0);
-
-                // Apply thermostat to the centroid mode (PILE mode only - PILE_G uses Bussi above)
-                if (thermostatType == RPMDIntegrator::Pile) {
-                    v[0].real(v[0].real()*c1_0 + c3_0*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
-                }
-                // For PILE_G, centroid is already handled by Bussi - skip v[0]
-
-                // Use critical damping white noise for the remaining (internal) modes.
-                // This is the same for both PILE and PILE_G modes.
-
-                for (int k = 1; k <= numCopies/2; k++) {
-                    const bool isCenter = (numCopies%2 == 0 && k == numCopies/2);
-                    const double wk = twown*sin(k*M_PI/numCopies);
-                    const double c1 = exp(-2.0*wk*halfdt);
-                    const double c2 = sqrt((1.0-c1*c1)/2) * (isCenter ? sqrt(2.0) : 1.0);
-                    const double c3 = c2*sqrt(nkT/system.getParticleMass(particle));
-                    double rand1 = c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-                    double rand2 = (isCenter ? 0.0 : c3*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
-                    v[k] = v[k]*c1 + complex<double>(rand1, rand2);
-                    if (k < numCopies-k)
-                        v[numCopies-k] = v[numCopies-k]*c1 + complex<double>(rand1, -rand2);
-                }
-                pocketfft::c2c({(size_t) numCopies}, {sizeof(complex<double>)}, {sizeof(complex<double>)}, {0}, false, v.data(), v.data(), 1.0, 0);
-                for (int k = 0; k < numCopies; k++)
-                    velocities[k][particle][component] = scale*v[k].real();
+            Vec3 velAvg(0, 0, 0);
+            for (int k = 0; k < numCopies; k++)
+                velAvg += velocities[k][particle];
+            velAvg *= 1.0/numCopies;
+            for (int k = 0; k < numCopies; k++) {
+                positions[k][particle] = positions[0][particle];
+                velocities[k][particle] = velAvg;
             }
         }
     }
@@ -313,6 +418,8 @@ void ReferenceIntegrateRPMDStepKernel::applyBussiCentroidThermostat(const System
     for (int particle = 0; particle < numParticles; particle++) {
         double mass = system.getParticleMass(particle);
         if (mass == 0.0)
+            continue;
+        if (hybridMode && !isQuantumParticle[particle])
             continue;
         
         // Compute centroid velocity for this particle
@@ -349,6 +456,8 @@ void ReferenceIntegrateRPMDStepKernel::applyBussiCentroidThermostat(const System
     for (int particle = 0; particle < numParticles; particle++) {
         if (system.getParticleMass(particle) == 0.0)
             continue;
+        if (hybridMode && !isQuantumParticle[particle])
+            continue;
         Vec3 deltaCentroid = centroidVel[particle] * deltaAlpha;
         for (int copy = 0; copy < numCopies; copy++)
             velocities[copy][particle] += deltaCentroid;
@@ -356,16 +465,31 @@ void ReferenceIntegrateRPMDStepKernel::applyBussiCentroidThermostat(const System
 }
 
 void ReferenceIntegrateRPMDStepKernel::computeForces(ContextImpl& context, const RPMDIntegrator& integrator) {
+    computeForcesWithMask(context, integrator, integrator.getIntegrationForceGroups());
+}
+
+void ReferenceIntegrateRPMDStepKernel::computeForcesWithMask(ContextImpl& context, const RPMDIntegrator& integrator, int groupMask) {
     const int totalCopies = positions.size();
     const int numParticles = positions[0].size();
+    const System& system = context.getSystem();
     vector<Vec3>& pos = extractPositions(context);
     vector<Vec3>& vel = extractVelocities(context);
     vector<Vec3>& f = extractForces(context);
+    int integrationMask = integrator.getIntegrationForceGroups();
+    int nonContracted = groupsNotContracted & groupMask & integrationMask;
     
     // Compute forces from all groups that didn't have a specified contraction.
     
     for (int i = 0; i < totalCopies; i++) {
         pos = positions[i];
+        // Hybrid classical particles: use bead-0 coordinates for force evaluation (i-PI frozen-ring / mean-field convention).
+        if (hybridMode) {
+            for (int j = 0; j < numParticles; j++) {
+                if (isQuantumParticle[j] || system.getParticleMass(j) == 0.0)
+                    continue;
+                pos[j] = positions[0][j];
+            }
+        }
         vel = velocities[i];
         context.computeVirtualSites();
         Vec3 initialBox[3];
@@ -374,10 +498,10 @@ void ReferenceIntegrateRPMDStepKernel::computeForces(ContextImpl& context, const
         Vec3 finalBox[3];
         context.getPeriodicBoxVectors(finalBox[0], finalBox[1], finalBox[2]);
         if (initialBox[0] != finalBox[0] || initialBox[1] != finalBox[1] || initialBox[2] != finalBox[2])
-            throw OpenMMException("Standard barostats cannot be used with RPMDIntegrator.  Use RPMDMonteCarloBarostat instead.");
+            throw OpenMMException("Standard barostats cannot be used with RPMDIntegrator.  Use RPMDMonteCarloBarostat or RPMDStochasticCellRescalingBarostat instead.");
         positions[i] = pos;
         velocities[i] = vel;
-        context.calcForcesAndEnergy(true, false, groupsNotContracted);
+        context.calcForcesAndEnergy(true, false, nonContracted);
         forces[i] = f;
     }
     
@@ -385,7 +509,9 @@ void ReferenceIntegrateRPMDStepKernel::computeForces(ContextImpl& context, const
     
     for (auto& g : groupsByCopies) {
         int copies = g.first;
-        int groupFlags = g.second;
+        int groupFlags = g.second & groupMask & integrationMask;
+        if (groupFlags == 0)
+            continue;
         
         // Find the contracted positions.
         
@@ -414,6 +540,13 @@ void ReferenceIntegrateRPMDStepKernel::computeForces(ContextImpl& context, const
 
         for (int i = 0; i < copies; i++) {
             pos = contractedPositions[i];
+            if (hybridMode) {
+                for (int j = 0; j < numParticles; j++) {
+                    if (isQuantumParticle[j] || system.getParticleMass(j) == 0.0)
+                        continue;
+                    pos[j] = contractedPositions[0][j];
+                }
+            }
             context.computeVirtualSites();
             context.calcForcesAndEnergy(true, false, groupFlags);
             contractedForces[i] = f;
@@ -439,6 +572,56 @@ void ReferenceIntegrateRPMDStepKernel::computeForces(ContextImpl& context, const
                 pocketfft::c2c({(size_t) totalCopies}, {sizeof(complex<double>)}, {sizeof(complex<double>)}, {0}, false, q.data(), q.data(), 1.0, 0);
                 for (int k = 0; k < totalCopies; k++)
                     forces[k][particle][component] += scale2*q[k].real();
+            }
+        }
+    }
+
+    if (integrator.getSuzukiChinEnabled() && groupMask == integrator.getIntegrationForceGroups()) {
+        const System& system = context.getSystem();
+        double beta = 1.0 / (BOLTZ * integrator.getTemperature());
+        double betaP = beta / totalCopies;
+        double hbar = 1.054571628e-34 * AVOGADRO / (1000 * 1e-12);
+        double prefactor = (1.0/3.0) * betaP * betaP * hbar * hbar / 12.0;
+        double epsilon = integrator.getSuzukiChinEpsilon();
+        for (int copy = 0; copy < totalCopies; copy++) {
+            vector<Vec3> origPos = positions[copy];
+            vector<Vec3> origForces = forces[copy];
+            for (int j = 0; j < numParticles; j++) {
+                double mass = system.getParticleMass(j);
+                if (mass == 0.0)
+                    continue;
+                Vec3 F = origForces[j];
+                double fn = sqrt(F.dot(F));
+                if (fn < 1e-20)
+                    continue;
+                Vec3 d = F * (1.0 / fn);
+                positions[copy][j] = origPos[j] + d * epsilon;
+            }
+            pos = positions[copy];
+            vel = velocities[copy];
+            context.calcForcesAndEnergy(true, false, integrator.getIntegrationForceGroups());
+            vector<Vec3> fPlus = f;
+            for (int j = 0; j < numParticles; j++) {
+                double mass = system.getParticleMass(j);
+                if (mass == 0.0)
+                    continue;
+                Vec3 F = origForces[j];
+                double fn = sqrt(F.dot(F));
+                if (fn < 1e-20)
+                    continue;
+                Vec3 d = F * (1.0 / fn);
+                positions[copy][j] = origPos[j] - d * epsilon;
+            }
+            pos = positions[copy];
+            context.calcForcesAndEnergy(true, false, integrator.getIntegrationForceGroups());
+            vector<Vec3> fMinus = f;
+            positions[copy] = origPos;
+            for (int j = 0; j < numParticles; j++) {
+                double mass = system.getParticleMass(j);
+                if (mass == 0.0)
+                    continue;
+                double coeff = -prefactor / mass / (2.0 * epsilon);
+                forces[copy][j] = origForces[j] + (fPlus[j] - fMinus[j]) * coeff;
             }
         }
     }

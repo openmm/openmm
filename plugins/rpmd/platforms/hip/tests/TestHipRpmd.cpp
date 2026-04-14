@@ -30,6 +30,7 @@
 
 #include "HipTests.h"
 #include "TestRpmd.h"
+#include "TestCavityForceTests.h"
 
 extern "C" void registerRPMDHipKernelFactories();
 
@@ -37,6 +38,10 @@ using namespace OpenMM;
 
 void runPlatformTests() {
     testParaHydrogen();
+    testCavityEnergy();
+    testCavityForces();
+    testCouplingSchedule();
+    testCavityDisplacer();
 }
 
 void setupKernels (int argc, char* argv[]) {

@@ -7,6 +7,8 @@ ENABLE_TESTING()
 INCLUDE_DIRECTORIES(${OPENCL_INCLUDE_DIR})
 INCLUDE_DIRECTORIES(${OPENMM_DIR}/plugins/rpmd/tests)
 INCLUDE_DIRECTORIES(${OPENMM_DIR}/platforms/opencl/tests)
+# Shared headers used by multiple platform tests (e.g. TestCavityForceTests.h)
+INCLUDE_DIRECTORIES(${OPENMM_DIR}/tests)
 
 # Automatically create tests using files named "Test*.cpp"
 FILE(GLOB TEST_PROGS "*Test*.cpp")

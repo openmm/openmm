@@ -111,6 +111,9 @@ HipPlatform::HipPlatform() {
     registerKernelFactory(IntegrateDPDStepKernel::Name(), factory);
     registerKernelFactory(IntegrateQTBStepKernel::Name(), factory);
     registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
+    registerKernelFactory(CalcCavityForceKernel::Name(), factory);
+    registerKernelFactory(CalcMultiModeCavityForceKernel::Name(), factory);
+    registerKernelFactory(ApplyCavityDisplacementKernel::Name(), factory);
     registerKernelFactory(ApplyMonteCarloBarostatKernel::Name(), factory);
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
     registerKernelFactory(CalcATMForceKernel::Name(), factory);

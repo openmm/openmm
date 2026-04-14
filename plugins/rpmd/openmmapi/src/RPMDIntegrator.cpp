@@ -42,7 +42,8 @@ using namespace std;
 
 RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize, const map<int, int>& contractions) :
         numCopies(numCopies), applyThermostat(true), thermostatType(Pile), classicalThermostat(BussiClassical), contractions(contractions), 
-        defaultQuantum(true), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true) {
+        defaultQuantum(true), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true),
+        numInnerSteps(1), innerForceGroups(0x1), suzukiChinEnabled(false), suzukiChinEpsilon(0.001) {
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setCentroidFriction(frictionCoeff);  // Default centroid friction equals main friction
@@ -53,7 +54,8 @@ RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictio
 
 RPMDIntegrator::RPMDIntegrator(int numCopies, double temperature, double frictionCoeff, double stepSize) :
         numCopies(numCopies), applyThermostat(true), thermostatType(Pile), classicalThermostat(BussiClassical), 
-        defaultQuantum(true), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true) {
+        defaultQuantum(true), forcesAreValid(false), hasSetPosition(false), hasSetVelocity(false), isFirstStep(true),
+        numInnerSteps(1), innerForceGroups(0x1), suzukiChinEnabled(false), suzukiChinEpsilon(0.001) {
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setCentroidFriction(frictionCoeff);  // Default centroid friction equals main friction
@@ -230,6 +232,42 @@ RPMDIntegrator::ClassicalThermostatType RPMDIntegrator::getClassicalThermostat()
 
 void RPMDIntegrator::setClassicalThermostat(ClassicalThermostatType type) {
     classicalThermostat = type;
+}
+
+void RPMDIntegrator::setNumInnerSteps(int n) {
+    if (n < 1)
+        throw OpenMMException("RPMDIntegrator: numInnerSteps must be >= 1");
+    numInnerSteps = n;
+}
+
+int RPMDIntegrator::getNumInnerSteps() const {
+    return numInnerSteps;
+}
+
+void RPMDIntegrator::setInnerForceGroups(int groups) {
+    innerForceGroups = groups;
+}
+
+int RPMDIntegrator::getInnerForceGroups() const {
+    return innerForceGroups;
+}
+
+void RPMDIntegrator::setSuzukiChinEnabled(bool enable) {
+    suzukiChinEnabled = enable;
+}
+
+bool RPMDIntegrator::getSuzukiChinEnabled() const {
+    return suzukiChinEnabled;
+}
+
+void RPMDIntegrator::setSuzukiChinEpsilon(double epsilon) {
+    if (epsilon <= 0.0)
+        throw OpenMMException("RPMDIntegrator: Suzuki-Chin epsilon must be positive");
+    suzukiChinEpsilon = epsilon;
+}
+
+double RPMDIntegrator::getSuzukiChinEpsilon() const {
+    return suzukiChinEpsilon;
 }
 
 double RPMDIntegrator::getTotalEnergy() {

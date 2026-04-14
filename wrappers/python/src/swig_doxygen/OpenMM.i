@@ -37,6 +37,7 @@ namespace std {
 #include "OpenMMAmoeba.h"
 #include "openmm/RPMDIntegrator.h"
 #include "openmm/RPMDMonteCarloBarostat.h"
+#include "openmm/RPMDStochasticCellRescalingBarostat.h"
 #include "OpenMMDrude.h"
 #include "openmm/serialization/SerializationNode.h"
 #include "openmm/serialization/SerializationProxy.h"

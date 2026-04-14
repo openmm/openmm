@@ -33,6 +33,8 @@
 #include "ReferencePlatform.h"
 #include "openmm/RpmdKernels.h"
 #include "openmm/Vec3.h"
+#include <map>
+#include <vector>
 
 namespace OpenMM {
 
@@ -82,6 +84,7 @@ public:
     void copyToContext(int copy, ContextImpl& context);
 private:
     void computeForces(ContextImpl& context, const RPMDIntegrator& integrator);
+    void computeForcesWithMask(ContextImpl& context, const RPMDIntegrator& integrator, int groupMask);
     /**
      * Apply the Bussi stochastic velocity rescaling thermostat to the centroid mode.
      * This is used for PILE_G mode where Bussi thermostat is applied to centroid only.
@@ -96,6 +99,8 @@ private:
     std::vector<std::vector<Vec3> > contractedForces;
     std::map<int, int> groupsByCopies;
     int groupsNotContracted;
+    std::vector<bool> isQuantumParticle;
+    bool hybridMode;
 };
 
 } // namespace OpenMM

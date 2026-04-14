@@ -29,12 +29,18 @@
 
 #include "ReferenceTests.h"
 #include "TestRpmd.h"
+#include "TestCavityForceTests.h"
 
 extern "C" void registerRpmdReferenceKernelFactories();
 
 using namespace OpenMM;
 
-void runPlatformTests() {}
+void runPlatformTests() {
+    testCavityEnergy();
+    testCavityForces();
+    testCouplingSchedule();
+    testCavityDisplacer();
+}
 
 void setupKernels (int argc, char* argv[]) {
     registerRpmdReferenceKernelFactories();

@@ -94,7 +94,17 @@ public:
          * No thermostat is applied. Useful for NVE dynamics or when an external
          * thermostat is used.
          */
-        NoneThermo = 2
+        NoneThermo = 2,
+        /**
+         * TRPMD: PILE friction on internal normal modes only; centroid evolves NVE.
+         * Reference: Rossi, Ceriotti, Manolopoulos, JCP 140, 234116 (2014).
+         */
+        Trpmd = 3,
+        /**
+         * Fast-Forward Langevin: PILE plus momentum-flip correction after the thermostat.
+         * Reference: Hijazi, Wilkins, JCP 148, 184109 (2018).
+         */
+        FastForwardLangevin = 4
     };
     /**
      * This is an enumeration of the different thermostat types that can be used
@@ -267,6 +277,31 @@ public:
         return contractions;
     }
     /**
+     * Set the number of inner multiple-time-step (MTS) substeps per outer step.
+     * When greater than 1, only force groups in getInnerForceGroups() are evaluated
+     * every inner substep; other groups are evaluated once per outer step (r-RESPA).
+     * Default is 1 (no MTS).
+     */
+    void setNumInnerSteps(int n);
+    int getNumInnerSteps() const;
+    /**
+     * Bitmask of force groups treated as inner (fast) for MTS. Group i is inner if
+     * (mask & (1<<i)) != 0. Default is group 0 only (0x1).
+     */
+    void setInnerForceGroups(int groups);
+    int getInnerForceGroups() const;
+    /**
+     * Enable Suzuki-Chin finite-difference correction to forces (extra cost: two
+     * force evaluations per bead per step when enabled).
+     */
+    void setSuzukiChinEnabled(bool enable);
+    bool getSuzukiChinEnabled() const;
+    /**
+     * Finite-difference displacement (nm) for Suzuki-Chin correction. Default 0.001 nm.
+     */
+    void setSuzukiChinEpsilon(double epsilon);
+    double getSuzukiChinEpsilon() const;
+    /**
      * Get a map whose keys are particle indices and whose values are particle types.
      * This contains only the particles that have been explicitly set with setParticleType().
      * Particles without explicit type assignment are treated as type 0.
@@ -291,6 +326,9 @@ public:
      * Set which particle types receive quantum (RPMD) treatment.
      * Particles with types in this set will be propagated with multiple beads,
      * while other particles will be treated classically (single copy).
+     * Classical particles follow the same replicated-bead layout as i-PI’s frozen-ring
+     * convention: coordinates for force evaluation use bead 0 on every replica; see
+     * plugins/rpmd/HYBRID_RPMD.md (“Alignment with i-PI”).
      * 
      * @param types  the set of particle types to treat as quantum
      */
@@ -398,6 +436,10 @@ private:
     std::set<int> quantumParticleTypes;
     bool defaultQuantum;
     bool forcesAreValid, hasSetPosition, hasSetVelocity, isFirstStep;
+    int numInnerSteps;
+    int innerForceGroups;
+    bool suzukiChinEnabled;
+    double suzukiChinEpsilon;
     Kernel kernel;
 };
 

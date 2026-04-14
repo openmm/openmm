@@ -75,6 +75,9 @@ CpuPlatform::CpuPlatform() {
     registerKernelFactory(CalcGayBerneForceKernel::Name(), factory);
     registerKernelFactory(CalcLCPOForceKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinMiddleStepKernel::Name(), factory);
+    registerKernelFactory(CalcCavityForceKernel::Name(), factory);
+    registerKernelFactory(CalcMultiModeCavityForceKernel::Name(), factory);
+    registerKernelFactory(ApplyCavityDisplacementKernel::Name(), factory);
     platformProperties.push_back(CpuThreads());
     platformProperties.push_back(CpuDeterministicForces());
     int threads = getNumProcessors();

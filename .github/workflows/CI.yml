@@ -5,10 +5,12 @@ on:
     branches:
       - "master"
       - "mlip"
+      - "cavity-md"
   pull_request:
     branches:
       - "master"
       - "mlip"
+      - "cavity-md"
   schedule:
     # Nightly tests run on master by default:
     #   Scheduled workflows run on the latest commit on the default or base branch.
@@ -320,6 +322,7 @@ jobs:
           python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build/python/tests
           python -m pytest -v -n 2
+          python -m pytest -v -n 2 ../../../tests/rpmd
 
   windows:
     runs-on: windows-latest
@@ -509,6 +512,7 @@ jobs:
           python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build\python\tests
           python -m pytest -v -n 2
+          python -m pytest -v -n 2 ..\..\..\tests\rpmd
 
   docs:
     name: Docs

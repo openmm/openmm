@@ -4,6 +4,8 @@
 ENABLE_TESTING()
 INCLUDE_DIRECTORIES(${OPENMM_DIR}/platforms/reference/tests)
 INCLUDE_DIRECTORIES(${OPENMM_DIR}/plugins/rpmd/tests)
+# Shared headers used by multiple platform tests (e.g. TestCavityForceTests.h)
+INCLUDE_DIRECTORIES(${OPENMM_DIR}/tests)
 
 SET(SHARED_OPENMM_RPMD_TARGET OpenMMRPMD)
 

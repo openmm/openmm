@@ -198,13 +198,15 @@ KERNEL void advanceVelocities(GLOBAL mixed4* velm, GLOBAL mm_long* force, mixed 
  * Each work item computes the contribution from one particle across all beads.
  * Results are stored in the buffer for final reduction.
  */
-KERNEL void computeCentroidKE(GLOBAL mixed4* velm, GLOBAL mixed* kineticEnergy) {
+KERNEL void computeCentroidKE(GLOBAL mixed4* velm, GLOBAL const int* isQuantum, GLOBAL mixed* kineticEnergy) {
     LOCAL mixed localKE[THREAD_BLOCK_SIZE];
     mixed myKE = 0.0f;
     const mixed invNumCopies = 1.0f / NUM_COPIES;
     
     // Each thread processes one particle across all beads
     for (int particle = GLOBAL_ID; particle < NUM_ATOMS; particle += GLOBAL_SIZE) {
+        if (isQuantum[particle] == 0)
+            continue;
         // Compute centroid velocity
         mixed3 centroidVel = make_mixed3(0.0f, 0.0f, 0.0f);
         mixed mass = 0.0f;
@@ -250,12 +252,14 @@ KERNEL void computeCentroidKE(GLOBAL mixed4* velm, GLOBAL mixed* kineticEnergy) 
  *
  * Formula: new_vel[bead] = old_vel[bead] + (alpha - 1) * centroid_vel
  */
-KERNEL void applyBussiScaling(GLOBAL mixed4* velm, mixed alpha) {
+KERNEL void applyBussiScaling(GLOBAL mixed4* velm, GLOBAL const int* isQuantum, mixed alpha) {
     const mixed invNumCopies = 1.0f / NUM_COPIES;
     const mixed deltaAlpha = alpha - 1.0f;
     
     // Each thread processes one particle
     for (int particle = GLOBAL_ID; particle < NUM_ATOMS; particle += GLOBAL_SIZE) {
+        if (isQuantum[particle] == 0)
+            continue;
         // Compute centroid velocity
         mixed3 centroidVel = make_mixed3(0.0f, 0.0f, 0.0f);
         mixed mass = 0.0f;
@@ -736,6 +740,67 @@ KERNEL void applyBussiClassicalHybrid(
             velocity.y *= scalingFactor;
             velocity.z *= scalingFactor;
             velm[particle] = velocity;
+        }
+    }
+}
+
+/**
+ * Save velocities before FFL thermostat for momentum-flip correction.
+ */
+KERNEL void saveVelocitiesForFFL(GLOBAL const mixed4* velm, GLOBAL mixed4* saved) {
+    const int numBlocks = (GLOBAL_SIZE)/NUM_COPIES;
+    const int blockStart = NUM_COPIES*(LOCAL_ID/NUM_COPIES);
+    const int indexInBlock = LOCAL_ID-blockStart;
+    for (int particle = (GLOBAL_ID)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
+        int index = particle+indexInBlock*PADDED_NUM_ATOMS;
+        saved[index] = velm[index];
+    }
+}
+
+/**
+ * Fast-forward Langevin: flip velocity components if thermostat reversed their sign.
+ */
+KERNEL void applyMomentumFlipFFL(GLOBAL mixed4* velm, GLOBAL const mixed4* saved) {
+    const int numBlocks = (GLOBAL_SIZE)/NUM_COPIES;
+    const int blockStart = NUM_COPIES*(LOCAL_ID/NUM_COPIES);
+    const int indexInBlock = LOCAL_ID-blockStart;
+    for (int particle = (GLOBAL_ID)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
+        int index = particle+indexInBlock*PADDED_NUM_ATOMS;
+        mixed4 vnew = velm[index];
+        mixed4 vold = saved[index];
+        if (vnew.x * vold.x < 0) vnew.x = -vnew.x;
+        if (vnew.y * vold.y < 0) vnew.y = -vnew.y;
+        if (vnew.z * vold.z < 0) vnew.z = -vnew.z;
+        velm[index] = vnew;
+    }
+}
+
+/**
+ * Accumulate finite-difference Suzuki–Chin correction into primitive forces.
+ * F := F + coeff * (F+ - F-) with coeff = -(alpha*beta_P^2*hbar^2/(12*m)) / (2*eps).
+ */
+KERNEL void applySuzukiChinAccumulate(
+        GLOBAL mm_long* forces,
+        GLOBAL const mm_long* forcePlus,
+        GLOBAL const mm_long* forceMinus,
+        GLOBAL const mixed4* velm,
+        mixed prefactor,
+        mixed invTwoEps) {
+    const int numBlocks = (GLOBAL_SIZE)/NUM_COPIES;
+    const int blockStart = NUM_COPIES*(LOCAL_ID/NUM_COPIES);
+    const int indexInBlock = LOCAL_ID-blockStart;
+    const mixed forceScale = 1/(mixed) 0x100000000;
+    for (int particle = (GLOBAL_ID)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
+        int pi = particle+indexInBlock*PADDED_NUM_ATOMS;
+        mixed invMass = velm[pi].w;
+        if (invMass == 0) continue;
+        mixed coeff = -prefactor * invMass * invTwoEps;
+        int forceIndex = particle+indexInBlock*PADDED_NUM_ATOMS*3;
+        for (int c = 0; c < 3; c++) {
+            mixed fp = forceScale * (mixed) forcePlus[forceIndex + c*PADDED_NUM_ATOMS];
+            mixed fm = forceScale * (mixed) forceMinus[forceIndex + c*PADDED_NUM_ATOMS];
+            mixed delta = coeff * (fp - fm);
+            forces[forceIndex + c*PADDED_NUM_ATOMS] += (mm_long) (delta * (mixed) 0x100000000);
         }
     }
 }

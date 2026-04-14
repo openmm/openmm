@@ -44,7 +44,8 @@ namespace OpenMM {
 class CommonIntegrateRPMDStepKernel : public IntegrateRPMDStepKernel {
 public:
     CommonIntegrateRPMDStepKernel(const std::string& name, const Platform& platform, ComputeContext& cc) :
-            IntegrateRPMDStepKernel(name, platform), cc(cc), hasInitializedKernels(false) {
+            IntegrateRPMDStepKernel(name, platform), cc(cc), hasInitializedKernels(false),
+            useFFLKernels(false), useSuzukiChinBuffers(false) {
     }
     /**
      * Initialize the kernel.
@@ -83,7 +84,12 @@ public:
     void copyToContext(int copy, ContextImpl& context);
 private:
     void initializeKernels(ContextImpl& context);
-    void computeForces(ContextImpl& context);
+    /**
+     * @param forceGroupMask    bitmask of force groups to evaluate (intersected with contractions).
+     * @param allowSuzukiChin   if true and Suzuki–Chin is enabled, apply correction after a full evaluation.
+     */
+    void computeForces(ContextImpl& context, const RPMDIntegrator& integrator, int forceGroupMask, bool allowSuzukiChin);
+    void applySuzukiChinCorrection(ContextImpl& context, const RPMDIntegrator& integrator);
     /**
      * Download bead positions from GPU for batched force evaluation.
      * 
@@ -118,17 +124,23 @@ private:
     std::string createFFT(int size, const std::string& variable, bool forward);
     ComputeContext& cc;
     bool hasInitializedKernels;
+    bool useFFLKernels;
+    bool useSuzukiChinBuffers;
     int numCopies, numParticles, workgroupSize;
     std::map<int, int> groupsByCopies;
     int groupsNotContracted;
     ComputeArray forces;
     ComputeArray positions;
     ComputeArray velocities;
+    ComputeArray savedVelocitiesFFL;
+    ComputeArray scForcePlus;
+    ComputeArray scForceMinus;
     ComputeArray contractedForces;
     ComputeArray contractedPositions;
     ComputeArray centroidKE;
     ComputeKernel pileKernel, stepKernel, velocitiesKernel, copyToContextKernel, copyFromContextKernel, addForcesFromContextKernel, translateKernel;
     ComputeKernel computeCentroidKEKernel, applyBussiScalingKernel;
+    ComputeKernel saveVelocitiesFFLKernel, applyMomentumFlipFFLKernel, applySuzukiChinAccumulateKernel;
     std::map<int, ComputeKernel> positionContractionKernels;
     std::map<int, ComputeKernel> forceContractionKernels;
     // Hybrid mode support: quantum vs classical particles (uniform memory layout)
