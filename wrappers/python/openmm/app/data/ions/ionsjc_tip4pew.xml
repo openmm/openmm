@@ -1,0 +1,60 @@
+<ForceField>
+  <Info>
+    <!-- Monovalent ion parameters for Ewald and TIP4P/EW water from Joung & Cheatham JPCB (2008) -->
+    <DateGenerated>2022-09-11T06:28:33.654271</DateGenerated>
+    <Source Source="parm/frcmod.ionsjc_tip4pew" md5hash="7aa9de49a8df5ebc45f74e1f47d13c2a" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">parm/frcmod.ionsjc_tip4pew</Source>
+    <Source Source="lib/atomic_ions.lib" md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">lib/atomic_ions.lib</Source>
+  </Info>
+  <AtomTypes>
+    <Type class="ionsjc_tip4pew-Li+" element="Li" mass="6.94" name="ionsjc_tip4pew-Li+"/><!--          0.029               lithium   pol: J. Phys. Chem. 11,1541,(1978) -->
+    <Type class="ionsjc_tip4pew-Na+" element="Na" mass="22.99" name="ionsjc_tip4pew-Na+"/><!--          0.250               sodium    pol: J. Phys. Chem. 11,1541,(1978) -->
+    <Type class="ionsjc_tip4pew-K+" element="K" mass="39.10" name="ionsjc_tip4pew-K+"/><!--          1.060               potassium -->
+    <Type class="ionsjc_tip4pew-Rb+" element="Rb" mass="85.47" name="ionsjc_tip4pew-Rb+"/><!--                              rubidium -->
+    <Type class="ionsjc_tip4pew-Cs+" element="Cs" mass="132.91" name="ionsjc_tip4pew-Cs+"/><!--                              cesium -->
+    <Type class="ionsjc_tip4pew-F-" element="F" mass="19.00" name="ionsjc_tip4pew-F-"/><!--          0.320               fluorine -->
+    <Type class="ionsjc_tip4pew-Cl-" element="Cl" mass="35.45" name="ionsjc_tip4pew-Cl-"/><!--          1.910               chlorine  (Applequist) -->
+    <Type class="ionsjc_tip4pew-Br-" element="Br" mass="79.90" name="ionsjc_tip4pew-Br-"/><!--          2.880               bromine   (Applequist) -->
+    <Type class="ionsjc_tip4pew-I-" element="I" mass="126.9" name="ionsjc_tip4pew-I-"/><!--          4.690               iodine    (Applequist) -->
+  </AtomTypes>
+  <Residues>
+    <Residue name="BR">
+      <Atom charge="-1.0" name="BR" type="ionsjc_tip4pew-Br-"/>
+    </Residue>
+    <Residue name="CL">
+      <Atom charge="-1.0" name="CL" type="ionsjc_tip4pew-Cl-"/>
+    </Residue>
+    <Residue name="CS">
+      <Atom charge="1.0" name="CS" type="ionsjc_tip4pew-Cs+"/>
+    </Residue>
+    <Residue name="F">
+      <Atom charge="-1.0" name="F" type="ionsjc_tip4pew-F-"/>
+    </Residue>
+    <Residue name="I">
+      <Atom charge="-1.0" name="I" type="ionsjc_tip4pew-I-"/>
+    </Residue>
+    <Residue name="K">
+      <Atom charge="1.0" name="K" type="ionsjc_tip4pew-K+"/>
+    </Residue>
+    <Residue name="LI">
+      <Atom charge="1.0" name="LI" type="ionsjc_tip4pew-Li+"/>
+    </Residue>
+    <Residue name="NA">
+      <Atom charge="1.0" name="NA" type="ionsjc_tip4pew-Na+"/>
+    </Residue>
+    <Residue name="RB">
+      <Atom charge="1.0" name="RB" type="ionsjc_tip4pew-Rb+"/>
+    </Residue>
+  </Residues>
+  <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+    <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="0.4350874656" sigma="0.14396923285147886" type="ionsjc_tip4pew-Li+"/>
+    <Atom epsilon="0.7047424999999999" sigma="0.21844836568801118" type="ionsjc_tip4pew-Na+"/>
+    <Atom epsilon="1.1692819784000001" sigma="0.2833057923686279" type="ionsjc_tip4pew-K+"/>
+    <Atom epsilon="1.8122970896000001" sigma="0.304509181860368" type="ionsjc_tip4pew-Rb+"/>
+    <Atom epsilon="1.6503026512" sigma="0.3364033559697921" type="ionsjc_tip4pew-Cs+"/>
+    <Atom epsilon="0.0065906368" sigma="0.4522201893280362" type="ionsjc_tip4pew-F-"/>
+    <Atom epsilon="0.048791716" sigma="0.49177609241346726" type="ionsjc_tip4pew-Cl-"/>
+    <Atom epsilon="0.1270986232" sigma="0.4932015303624918" type="ionsjc_tip4pew-Br-"/>
+    <Atom epsilon="0.1745071088" sigma="0.5259866031900563" type="ionsjc_tip4pew-I-"/>
+  </NonbondedForce>
+</ForceField>
