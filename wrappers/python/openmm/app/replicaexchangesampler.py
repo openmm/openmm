@@ -35,7 +35,7 @@ import random
 
 class ReplicaExchangeSampler(object):
     """
-    ReplicaExchangeSampler uses replica exchange to simulate a system in a collection of different states.  It supports
+    ReplicaExchangeSampler uses replica exchange to simulate a system in a collection of thermodynamic states.  It supports
     both temperature replica exchange, in which the states correspond to different temperatures, and Hamiltonian replica
     exchange, in which they correspond to different potential functions.  It also can combine them to vary temperature
     and potential function at the same time.
@@ -54,9 +54,9 @@ class ReplicaExchangeSampler(object):
     - Hamiltonian replica exchange may be used to sample an alchemical transition between two endpoints.  It produces
       efficient sampling at every point along the transition pathway from which a free energy difference can be computed.
 
-    Each state (not to be confused with a State object) is represented by a dict containing property values.  All states
-    must specify values for the same properties.  They describe the ways in which the states differ from each other.  The
-    following properties are supported.
+    Each thermodynamic state (not to be confused with a State object) is represented by a dict containing property
+    values.  All states must specify values for the same properties.  They describe the ways in which the states differ
+    from each other.  The following properties are supported.
 
     - 'temperature': the simulation temperature
     - 'groups': a set containing the force groups to include when computing the energy, for example {0, 2}.  It also may
@@ -90,7 +90,16 @@ class ReplicaExchangeSampler(object):
 
     Because replica exchange involves simulating many distinct replicas, the standard reporters used to generate output
     from a simulation are often not appropriate.  ReplicaExchangeSampler instead provides its own reporting mechanism.
-    Define a function that takes a ReplicaExchangeSampler as its only argument:
+    For most purposes, you can use the ReplicaExchangeReporter class.  Create a reporter and add it to the sampler:
+
+    >>> sampler.reporters.append(ReplicaExchangeReporter(directory, interval, sampler))
+
+    It can write out a variety of types of information including a log of state assignments, trajectories for each
+    replica and/or state, reduced energies, and checkpoint files for resuming a simulation.  See the documentation on
+    ReplicaExchangeReporter for details.
+
+    If you want to output other information, you can create your own reporters.  Define a function that takes a
+    ReplicaExchangeSampler as its only argument:
 
     >>> def report(sampler):
     >>>     # Generate whatever output you want here
