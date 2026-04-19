@@ -107,10 +107,14 @@ class TestExpandedEnsembleSampler(unittest.TestCase):
 
             # Check the log file.
 
-            lines = open(logFile).readlines()[1:]
+            with open(logFile) as input:
+                lines = input.readlines()[1:]
             for i, line in enumerate(lines):
                 fields = line.split(',')
                 self.assertEqual(int(fields[0]), step[i])
                 self.assertEqual(int(fields[1]), iteration[i])
                 self.assertEqual(int(fields[2]), state[i])
                 self.assertTrue(np.allclose([float(x) for x in fields[3:]], weights[i]))
+            del sampler
+            del simulation
+            del integrator
