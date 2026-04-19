@@ -88,8 +88,7 @@ class TestExpandedEnsembleSampler(unittest.TestCase):
         simulation = Simulation(pdb.topology, system, integrator, Platform.getPlatform('Reference'))
         simulation.context.setPositions(pdb.positions)
         states = [{'temperature':t*kelvin} for t in [300.0, 320.0, 340.0]]
-        with tempfile.TemporaryDirectory() as directory:
-            logFile = os.path.join(directory, 'log.csv')
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as logFile:
             sampler = ExpandedEnsembleSampler(states, simulation, 5, reportInterval=5, logFile=logFile)
 
             # Run a simulation.
@@ -107,14 +106,13 @@ class TestExpandedEnsembleSampler(unittest.TestCase):
 
             # Check the log file.
 
-            with open(logFile) as input:
+            logFile.close()
+            with open(logFile.name) as input:
                 lines = input.readlines()[1:]
+            os.remove(logFile.name)
             for i, line in enumerate(lines):
                 fields = line.split(',')
                 self.assertEqual(int(fields[0]), step[i])
                 self.assertEqual(int(fields[1]), iteration[i])
                 self.assertEqual(int(fields[2]), state[i])
                 self.assertTrue(np.allclose([float(x) for x in fields[3:]], weights[i]))
-            del sampler
-            del simulation
-            del integrator
