@@ -2,12 +2,13 @@
 [![Conda](https://img.shields.io/conda/v/conda-forge/openmm.svg)](https://anaconda.org/conda-forge/openmm)
 [![Anaconda Cloud Badge](https://anaconda.org/conda-forge/openmm/badges/downloads.svg)](https://anaconda.org/conda-forge/openmm)
 
-## OpenMM: A High Performance Molecular Dynamics Library
+## OpenMM-LM: A High Performance Molecular Dynamics Library with Light-Matter Interactions
 
 ### Introduction
 
 [OpenMM](https://openmm.org) is a toolkit for molecular simulation. It can be used either as a stand-alone application for running simulations, or as a library you call from your own code. It
 provides a combination of extreme flexibility (through custom forces and integrators), openness, and high performance (especially on recent GPUs) that make it truly unique among simulation codes.
+This version adds light-matter interactions, particularly those used in optical cavities, additional modules for nuclear quantum effects (ported from i-PI), and interfaces to SOTA machine learning interatomic potentials, e.g., FAIR Chemistry's UMA and AIMNet2. 
 
 ### Getting Help
 
