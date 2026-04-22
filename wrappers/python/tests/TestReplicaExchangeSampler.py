@@ -52,7 +52,7 @@ class TestReplicaExchangeSampler(unittest.TestCase):
         force.addGlobalParameter('k', 1.0)
         force.addParticle(0)
         system.addForce(force)
-        states = [{'k':k*kilojoules_per_mole/(nanometer**2)} for k in np.geomspace(5.0, 100.0, 5)]
+        states = [{'k':k*kilojoules_per_mole/(nanometer**2)} for k in np.geomspace(10.0, 100.0, 5)]
         for reinitialize in [False, True]:
             integrator = LangevinIntegrator(300*kelvin, 10/picosecond, 0.01*picosecond)
             simulation = Simulation(Topology(), system, integrator, Platform.getPlatform('Reference'))

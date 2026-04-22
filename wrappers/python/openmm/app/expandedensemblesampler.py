@@ -31,9 +31,12 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
+import openmm
 import openmm.unit as unit
+from openmm.app.internal import safesave
 from openmm.app.internal.multistatesampler import MultistateSampler
 import math
+import pickle
 import random
 
 class ExpandedEnsembleSampler(object):
@@ -102,10 +105,20 @@ class ExpandedEnsembleSampler(object):
     the weights and discard the initial part of the simulation where they are changing rapidly.  Until the weights have
     converged, the simulation will not sample the correct distribution.
 
-    To analyze the results of a simulation, it is essential to know what state it was in at every point in time.  An
-    ExpandedEnsembleSampler can act as a reporter, generating output to a file that reports the current state and
-    weights at regular intervals.  The reporting interval should generally be the same as the one used for writing a
-    trajectory so the two will be synchronized with each other.
+    An ExpandedEnsembleSampler can act as a reporter, generating output to files at regular intervals.  The reporting
+    interval should generally be the same as the one used for writing a trajectory so they will be synchronized with
+    each other.  The following files can optionally be written.
+
+    - A log file that records the current thermodynamic state and weights.  To analyze the results of a simulation, it
+    is essential to know what state it was in at every point in time.
+    - A file recording the current reduced energy (potential energy divided by kT) of every thermodynamic state.  This
+    information is useful for calculating free energies.
+    - A checkpoint file containing all information necessary to resume the simulation.  This includes internal fields
+    of the ExpandedEnsembleSampler itself, as well as a State object recording the current positions, velocities,
+    parameters, etc.
+
+    To resume a simulation from the saved checkpoint, pass `resume=True` to the constructor.  It will load all necessary
+    information and configure the ExpandedEnsembleSampler correctly.
 
     Attributes
     ----------
@@ -125,9 +138,10 @@ class ExpandedEnsembleSampler(object):
         The current state of the simulation, specified as an index into states.
     """
 
-    def __init__(self, states: list[dict], simulation: "mm.app.Simulation", stepsPerIteration: int,
+    def __init__(self, states: list[dict], simulation: "openmm.app.Simulation", stepsPerIteration: int,
                  reinitializeVelocities: bool = False, weights: list[float] | None = None, reportInterval: int = 1000,
-                 logFile: str | object | None = None):
+                 logFile: str | object | None = None, energyFile: str | object | None = None,
+                 checkpointFile: str | None = None, resume: bool = False):
         """Create a new ExpandedEnsembleSampler.
 
         Parameters
@@ -144,10 +158,19 @@ class ExpandedEnsembleSampler(object):
         weights: list[float] | None
             The weights to use for each state.  If None, weights are chosen automatically as the simulation runs.
         reportInterval: int
-            The frequency at which to write output, measured in time steps
+            The frequency at which to write output, measured in time steps.  This must be a multiple of
+            stepsPerIteration.
         logFile: str | object | None
             An optional file to write a log to.  This may be either a file-like object or a string containing the path
             to the file.
+        energyFile: str | object | None
+            An optional file to write reduced energies to.  This may be either a file-like object or a string containing
+            the path to the file.
+        checkpointFile: str | None
+            The path to an optional file for saving checkpointing information
+        resume: bool
+            Specifies whether to resume an earlier simulation.  If True, the checkpoint will be loaded and future output
+            will be appended to the existing files.
         """
         self.states = states
         self.simulation = simulation
@@ -182,9 +205,35 @@ class ExpandedEnsembleSampler(object):
             self._weights = weights
             self._updateWeights = False
 
+        # Restore from the checkpoint file.
+
+        if resume:
+            if checkpointFile is None:
+                raise ValueError('resume=True, but no checkpoint file was specified to restore from.')
+            with open(checkpointFile, 'rb') as input:
+                checkpoint = pickle.load(input)
+                self._applyCheckpoint(checkpoint)
+
         # Apply the current state to the simulation.
 
         self._sampler.applyState(self.currentStateIndex)
+
+        # Open output files.
+
+        if (logFile is not None or energyFile is not None) and reportInterval%stepsPerIteration != 0:
+            raise ValueError('The reporting interval must be a multiple iteration length.')
+        mode = 'a' if resume else 'w'
+        self._openedLogFile = isinstance(logFile, str)
+        if self._openedLogFile:
+            self._log = open(logFile, mode, 1)
+        else:
+            self._log = logFile
+        self._openedEnergyFile = isinstance(energyFile, str)
+        if self._openedEnergyFile:
+            self._energy = open(energyFile, mode, 1)
+        else:
+            self._energy = energyFile
+        self._checkpointFile = checkpointFile
 
         # Add a reporter to the simulation which will handle the updates and reports.
 
@@ -206,36 +255,37 @@ class ExpandedEnsembleSampler(object):
             def report(self, simulation, state):
                 sampler = self.sampler
                 if simulation.currentStep%sampler.stepsPerIteration == 0:
-                    sampler.attemptStateChange(state)
-                if simulation.currentStep%sampler.reportInterval == 0:
-                    sampler._writeReport()
+                    reducedEnergy = sampler.attemptStateChange(state)
+                    if simulation.currentStep%sampler.reportInterval == 0:
+                        sampler._writeReport(reducedEnergy)
 
-        self._openedFile = isinstance(logFile, str)
-        if self._openedFile:
-            self._out = open(logFile, 'w', 1)
-        else:
-            self._out = logFile
         simulation.reporters.append(EEReporter(self))
 
-        # Write out the header line.
+        # Write header lines to the output files.
 
-        if self._out is not None:
-            headers = ['Steps', 'Iteration', 'State'] + [f'Weight {i}' for i in range(len(self.states))]
-            print('"%s"' % (',').join(headers), file=self._out)
+        if not resume:
+            if self._log is not None:
+                headers = ['Steps', 'Iteration', 'State'] + [f'Weight {i}' for i in range(len(self.states))]
+                print('"%s"' % (',').join(headers), file=self._log)
+            if self._energy is not None:
+                headers = ['Steps'] + [f'u{i}' for i in range(len(self.states))]
+                print('"%s"' % (',').join(headers), file=self._energy)
 
     def __del__(self):
-        if self._openedFile:
-            self._out.close()
+        if self._openedLogFile:
+            self._log.close()
+        if self._openedEnergyFile:
+            self._energy.close()
 
     @property
     def weights(self):
         return [x-self._weights[0] for x in self._weights]
 
-    def step(self, steps):
+    def step(self, steps: int):
         """Advance the simulation by integrating a specified number of time steps."""
         self.simulation.step(steps)
 
-    def attemptStateChange(self, state):
+    def attemptStateChange(self, state: openmm.State) -> list[float]:
         """Attempt to move to a different state.  This is called automatically during the simulation, and there is not
         normally a reason to call it directly.
 
@@ -249,7 +299,8 @@ class ExpandedEnsembleSampler(object):
             kT = [unit.MOLAR_GAS_CONSTANT_R*self.simulation.integrator.getTemperature()]*len(self.states)
         else:
             kT = self._kT
-        logProbability = [(self._weights[i]-energies[i]/kT[i]) for i in range(len(self._weights))]
+        reducedEnergy = [energies[i]/kT[i] for i in range(len(self._weights))]
+        logProbability = [(self._weights[i]-reducedEnergy[i]) for i in range(len(self._weights))]
         maxLogProb = max(logProbability)
         offset = maxLogProb + math.log(sum(math.exp(x-maxLogProb) for x in logProbability))
         probability = [math.exp(x-offset) for x in logProbability]
@@ -314,9 +365,38 @@ class ExpandedEnsembleSampler(object):
         elif kT[prevState] != kT[self.currentStateIndex]:
             scale = math.sqrt(kT[self.currentStateIndex]/kT[prevState])
             self.simulation.context.setVelocities(scale*state.getVelocities(asNumpy=True))
+        return reducedEnergy
 
-    def _writeReport(self):
-        """Write out a line to the report."""
-        if self._out is not None:
-            values = [self.currentStateIndex]+self.weights
-            print(f'{self.simulation.currentStep},{self.currentIteration},' + ','.join('%g' % v for v in values), file=self._out)
+    def _writeReport(self, reducedEnergy: list[float]):
+        """Write output to the files."""
+        if self._log is not None:
+            print(f'{self.simulation.currentStep},{self.currentIteration},{self.currentStateIndex},' + ','.join('%g' % v for v in self.weights), file=self._log)
+        if self._energy is not None:
+            print(f'{self.simulation.currentStep},' + ','.join('%g' % v for v in reducedEnergy), file=self._energy)
+        if self._checkpointFile is not None:
+            checkpoint = self._createCheckpoint()
+            safesave.save(pickle.dumps(checkpoint), self._checkpointFile)
+
+    def _createCheckpoint(self) -> dict:
+        """Create a dict containing the information to save to a checkpoint file."""
+        checkpoint = {}
+        checkpoint['currentIteration'] = self.currentIteration
+        checkpoint['stage'] = self._stage
+        checkpoint['currentStateIndex'] = self.currentStateIndex
+        checkpoint['weights'] = self._weights
+        checkpoint['weightUpdateFactor'] = self._weightUpdateFactor
+        checkpoint['histogram'] = self._histogram
+        checkpoint['hasMadeTransition'] = self._hasMadeTransition
+        checkpoint['state'] = self.simulation.context.getState(positions=True, velocities=True, parameters=True, integratorParameters=True)
+        return checkpoint
+
+    def _applyCheckpoint(self, checkpoint: dict):
+        """Record the information that was loaded from a checkpoint file."""
+        self.currentIteration = checkpoint['currentIteration']
+        self._stage = checkpoint['stage']
+        self.currentStateIndex = checkpoint['currentStateIndex']
+        self._weights = checkpoint['weights']
+        self._weightUpdateFactor = checkpoint['weightUpdateFactor']
+        self._histogram = checkpoint['histogram']
+        self._hasMadeTransition = checkpoint['hasMadeTransition']
+        self.simulation.context.setState(checkpoint['state'])
