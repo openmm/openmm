@@ -194,7 +194,9 @@ public:
     }
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<forceGroup)) != 0) {
-            event->wait();
+            // Keep the dependency on reciprocal-space work, but avoid stalling the host
+            // when the default queue can wait for the PME queue asynchronously.
+            event->queueWait(cc.getCurrentQueue());
             if (includeEnergy)
                 addEnergyKernel->execute(pmeEnergyBuffer.getSize());
         }
