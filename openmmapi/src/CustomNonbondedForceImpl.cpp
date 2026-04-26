@@ -293,9 +293,13 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
             int i = atomicCounter++;
             if (i >= numClasses)
                 break;
-            for (int j = i; j < numClasses; j++)
-                threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteraction(expression, data.classes[i], data.classes[j],
+            for (int j = i; j < numClasses; j++) {
+                long long int count = data.interactionCount.at(make_pair(i, j));
+                if (count == 0)
+                    continue;
+                threadSum[threadIndex] += count*integrateInteraction(expression, data.classes[i], data.classes[j],
                         computedValues[i], computedValues[j], force, context, data.paramNames, data.computedValueNames);
+            }
         }
     });
     threads.waitForThreads();
@@ -318,9 +322,13 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
                 int i = atomicCounter++;
                 if (i >= numClasses)
                     break;
-                for (int j = i; j < numClasses; j++)
-                    threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteraction(expression, data.classes[i], data.classes[j],
+                for (int j = i; j < numClasses; j++) {
+                    long long int count = data.interactionCount.at(make_pair(i, j));
+                    if (count == 0)
+                        continue;
+                    threadSum[threadIndex] += count*integrateInteraction(expression, data.classes[i], data.classes[j],
                             computedValues[i], computedValues[j], force, context, data.paramNames, data.computedValueNames);
+                }
             }
         });
         threads.waitForThreads();
