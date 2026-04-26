@@ -341,8 +341,8 @@ double NonbondedForceImpl::calcDispersionCorrection(const System& system, const 
     return 8*numParticles*numParticles*M_PI*(sum1/(9*pow(cutoff, 9))-sum2/(3*pow(cutoff, 3))+sum3);
 }
 
-void NonbondedForceImpl::updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle, int firstException, int lastException) {
-    kernel.getAs<CalcNonbondedForceKernel>().copyParametersToContext(context, owner, firstParticle, lastParticle, firstException, lastException);
+void NonbondedForceImpl::updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle, int firstException, int lastException, bool preserveLongRangeCorrection) {
+    kernel.getAs<CalcNonbondedForceKernel>().copyParametersToContext(context, owner, firstParticle, lastParticle, firstException, lastException, preserveLongRangeCorrection);
     context.systemChanged();
 }
 

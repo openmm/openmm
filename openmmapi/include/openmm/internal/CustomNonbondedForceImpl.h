@@ -61,7 +61,7 @@ public:
     double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
-    void updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle);
+    void updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle, bool preserveLongRangeCorrection = false);
     /**
      * Prepare for computing the long range correction.  This function pre-computes anything
      * that depends only on the Force (such as particle parameters) but not on information in

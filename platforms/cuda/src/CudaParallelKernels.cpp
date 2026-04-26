@@ -304,9 +304,9 @@ double CudaParallelCalcNonbondedForceKernel::execute(ContextImpl& context, bool 
     return 0.0;
 }
 
-void CudaParallelCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
+void CudaParallelCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException, bool preserveLongRangeCorrection) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force, firstParticle, lastParticle, firstException, lastException);
+        getKernel(i).copyParametersToContext(context, force, firstParticle, lastParticle, firstException, lastException, preserveLongRangeCorrection);
 }
 
 void CudaParallelCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {

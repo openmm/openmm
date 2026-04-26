@@ -224,9 +224,9 @@ double OpenCLParallelCalcNonbondedForceKernel::execute(ContextImpl& context, boo
     return 0.0;
 }
 
-void OpenCLParallelCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
+void OpenCLParallelCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException, bool preserveLongRangeCorrection) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force, firstParticle, lastParticle, firstException, lastException);
+        getKernel(i).copyParametersToContext(context, force, firstParticle, lastParticle, firstException, lastException, preserveLongRangeCorrection);
 }
 
 void OpenCLParallelCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {

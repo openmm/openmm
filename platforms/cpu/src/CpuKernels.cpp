@@ -735,7 +735,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     return energy;
 }
 
-void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
+void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException, bool preserveLongRangeCorrection) {
     if (force.getNumParticles() != numParticles)
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
@@ -805,7 +805,7 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
     // Recompute the coefficient for the dispersion correction.
 
     NonbondedForce::NonbondedMethod method = force.getNonbondedMethod();
-    if (force.getUseDispersionCorrection() && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME))
+    if (!preserveLongRangeCorrection && force.getUseDispersionCorrection() && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
 }
 
@@ -1365,7 +1365,7 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
     return energy;
 }
 
-void CpuCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle) {
+void CpuCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle, bool preserveLongRangeCorrection) {
     if (numParticles != force.getNumParticles())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
@@ -1380,11 +1380,13 @@ void CpuCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& con
     }
     
     // If necessary, recompute the long range correction.
-    
+
     if (forceCopy != NULL) {
-        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, data.threads.getNumThreads());
-        CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
-        hasInitializedLongRangeCorrection = true;
+        if (!preserveLongRangeCorrection) {
+            longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, data.threads.getNumThreads());
+            CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
+            hasInitializedLongRangeCorrection = true;
+        }
         *forceCopy = force;
     }
 

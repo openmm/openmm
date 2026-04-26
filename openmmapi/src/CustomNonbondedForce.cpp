@@ -332,8 +332,8 @@ ForceImpl* CustomNonbondedForce::createImpl() const {
     return new CustomNonbondedForceImpl(*this);
 }
 
-void CustomNonbondedForce::updateParametersInContext(Context& context) {
-    dynamic_cast<CustomNonbondedForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context), firstChangedParticle, lastChangedParticle);
+void CustomNonbondedForce::updateParametersInContext(Context& context, bool preserveLongRangeCorrection) {
+    dynamic_cast<CustomNonbondedForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context), firstChangedParticle, lastChangedParticle, preserveLongRangeCorrection);
     if (numContexts == 1) {
         // We just updated the only existing context for this force, so we can reset
         // the tracking of changed particles.

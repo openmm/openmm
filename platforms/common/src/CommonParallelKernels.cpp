@@ -382,9 +382,9 @@ double CommonParallelCalcCustomNonbondedForceKernel::execute(ContextImpl& contex
     return 0.0;
 }
 
-void CommonParallelCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle) {
+void CommonParallelCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle, bool preserveLongRangeCorrection) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force, firstParticle, lastParticle);
+        getKernel(i).copyParametersToContext(context, force, firstParticle, lastParticle, preserveLongRangeCorrection);
 }
 
 class CommonParallelCalcCustomExternalForceKernel::Task : public ComputeContext::WorkTask {

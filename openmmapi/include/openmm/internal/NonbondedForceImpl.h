@@ -59,7 +59,7 @@ public:
     double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
-    void updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle, int firstException, int lastException);
+    void updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle, int firstException, int lastException, bool preserveLongRangeCorrection = false);
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     /**

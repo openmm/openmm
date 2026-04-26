@@ -548,8 +548,12 @@ public:
      * only be changed by reinitializing the Context.  Also, this method cannot be used to add new particles, only to change
      * the parameters of existing ones.  While the tabulated values of a function can change, everything else about it (its dimensions,
      * the data range) must not be changed.
+     *
+     * @param context                      the Context in which to update the parameters
+     * @param preserveLongRangeCorrection  if true, the long range correction is not recomputed.  Set this to true only if
+     *                                     you know that none of the parameters that affect the long range correction have changed.
      */
-    void updateParametersInContext(Context& context);
+    void updateParametersInContext(Context& context, bool preserveLongRangeCorrection = false);
     /**
      * Returns whether or not this force makes use of periodic boundary
      * conditions.

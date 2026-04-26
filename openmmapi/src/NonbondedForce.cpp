@@ -359,9 +359,9 @@ void NonbondedForce::setIncludeDirectSpace(bool include) {
     includeDirectSpace = include;
 }
 
-void NonbondedForce::updateParametersInContext(Context& context) {
+void NonbondedForce::updateParametersInContext(Context& context, bool preserveLongRangeCorrection) {
     dynamic_cast<NonbondedForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context),
-            firstChangedParticle, lastChangedParticle, firstChangedException, lastChangedException);
+            firstChangedParticle, lastChangedParticle, firstChangedException, lastChangedException, preserveLongRangeCorrection);
     if (numContexts == 1) {
         // We just updated the only existing context for this force, so we can reset
         // the tracking of changed particles and exceptions.

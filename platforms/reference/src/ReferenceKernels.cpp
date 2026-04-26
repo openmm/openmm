@@ -1026,7 +1026,7 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
     return energy;
 }
 
-void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
+void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException, bool preserveLongRangeCorrection) {
     if (force.getNumParticles() != numParticles)
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
     if (force.getNumParticleParameterOffsets() != particleParamOffsets.size())
@@ -1099,7 +1099,7 @@ void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& con
     // Recompute the coefficient for the dispersion correction.
 
     NonbondedForce::NonbondedMethod method = force.getNonbondedMethod();
-    if (force.getUseDispersionCorrection() && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME))
+    if (!preserveLongRangeCorrection && force.getUseDispersionCorrection() && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
 }
 
@@ -1579,7 +1579,7 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
     return energy;
 }
 
-void ReferenceCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle) {
+void ReferenceCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle, bool preserveLongRangeCorrection) {
     if (numParticles != force.getNumParticles())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
@@ -1594,12 +1594,14 @@ void ReferenceCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImp
     }
     
     // If necessary, recompute the long range correction.
-    
+
     if (forceCopy != NULL) {
-        ThreadPool& threads = extractThreadPool(context);
-        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, threads.getNumThreads());
-        CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, threads);
-        hasInitializedLongRangeCorrection = true;
+        if (!preserveLongRangeCorrection) {
+            ThreadPool& threads = extractThreadPool(context);
+            longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, threads.getNumThreads());
+            CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, threads);
+            hasInitializedLongRangeCorrection = true;
+        }
         *forceCopy = force;
     }
 

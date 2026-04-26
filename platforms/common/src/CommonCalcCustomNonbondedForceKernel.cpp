@@ -716,7 +716,7 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
     return 0;
 }
 
-void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle) {
+void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle, bool preserveLongRangeCorrection) {
     ContextSelector selector(cc);
     int numParticles = force.getNumParticles();
     if (numParticles != cc.getNumAtoms())
@@ -753,11 +753,13 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
     // If necessary, recompute the long range correction.
 
     if (forceCopy != NULL) {
-        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
-        hasInitializedLongRangeCorrection = false;
+        if (!preserveLongRangeCorrection) {
+            longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
+            hasInitializedLongRangeCorrection = false;
+            longRangeCoefficientCache.clear();
+            longRangeCoefficientDerivsCache.clear();
+        }
         *forceCopy = force;
-        longRangeCoefficientCache.clear();
-        longRangeCoefficientDerivsCache.clear();
     }
 
     // Mark that the current reordering may be invalid.

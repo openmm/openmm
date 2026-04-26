@@ -1116,7 +1116,7 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
     return energy;
 }
 
-void CommonCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
+void CommonCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException, bool preserveLongRangeCorrection) {
     // Make sure the new parameters are acceptable.
 
     ContextSelector selector(cc);
@@ -1246,7 +1246,7 @@ void CommonCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
 
     // Compute other values.
 
-    if (force.getUseDispersionCorrection() && cc.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
+    if (!preserveLongRangeCorrection && force.getUseDispersionCorrection() && cc.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
     cc.invalidateMolecules(info, firstParticle <= lastParticle || force.getNumParticleParameterOffsets() > 0,
                            firstException <= lastException || force.getNumExceptionParameterOffsets() > 0);

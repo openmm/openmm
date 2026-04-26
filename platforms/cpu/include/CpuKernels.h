@@ -278,7 +278,7 @@ public:
      * @param firstException the index of the first exception whose parameters might have changed
      * @param lastException  the index of the last exception whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException);
+    void copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException, bool preserveLongRangeCorrection = false);
     /**
      * Get the parameters being used for PME.
      *
@@ -430,7 +430,7 @@ public:
      * @param firstParticle  the index of the first particle whose parameters might have changed
      * @param lastParticle   the index of the last particle whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle);
+    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle, bool preserveLongRangeCorrection = false);
 private:
     void createInteraction(const CustomNonbondedForce& force);
     CpuPlatform::PlatformData& data;
