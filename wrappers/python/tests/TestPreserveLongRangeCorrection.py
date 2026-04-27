@@ -169,68 +169,96 @@ class TestPreserveLongRangeCorrectionCustomNonbonded(unittest.TestCase):
     def test_global_param_lrc_caching(self):
         """
         With preserveLongRangeCorrection=True and a global parameter keying the
-        LRC cache, revisiting the same stateIndex reproduces the same energy,
-        confirming the per-state cache entries are stored and retrieved correctly.
+        LRC cache:
+        - Energies must agree with preserveLongRangeCorrection=False at each
+          discrete state (catches stale longRangeCorrectionData).
+        - Revisiting a state produces the same energy as the first visit
+          (confirms cache entries are stored and retrieved correctly).
         """
         grid_size = 4
         num_particles = grid_size**3
         box_size = grid_size * 0.7
         cutoff = box_size / 3
 
-        system = mm.System()
-        force = mm.CustomNonbondedForce(
-            "4*eps*((sigma/r)^12-(sigma/r)^6);"
-            "sigma=0.5*(sigma1+sigma2);"
-            "eps=sqrt(eps1*eps2)"
-        )
-        force.addPerParticleParameter("sigma")
-        force.addPerParticleParameter("eps")
-        # stateIndex does not appear in the energy expression but is still tracked
-        # by the kernel as a global parameter.  It acts as a pure cache key: the
-        # LRC coefficient is recomputed only when stateIndex takes a new value and
-        # reused on revisits
-        force.addGlobalParameter("stateIndex", 0)
+        states = [
+            [1.1, 0.5],   # sigma, eps — state 0
+            [1.0, 1.0],   # state 1
+            [0.9, 0.8],   # state 2
+        ]
+        positions = _build_grid_positions(grid_size, box_size)
 
-        params_state0 = [1.1, 0.5]
-        params_state1 = [1.0, 1.0]
+        def make_context(with_global_param):
+            system = mm.System()
+            force = mm.CustomNonbondedForce(
+                "4*eps*((sigma/r)^12-(sigma/r)^6);"
+                "sigma=0.5*(sigma1+sigma2);"
+                "eps=sqrt(eps1*eps2)"
+            )
+            force.addPerParticleParameter("sigma")
+            force.addPerParticleParameter("eps")
+            if with_global_param:
+                # stateIndex does not appear in the energy expression but acts as
+                # a pure cache key: LRC is recomputed only when stateIndex changes.
+                force.addGlobalParameter("stateIndex", 0)
+            for _ in range(num_particles):
+                system.addParticle(1.0)
+                force.addParticle(states[0])
+            force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffPeriodic)
+            force.setCutoffDistance(cutoff)
+            force.setUseLongRangeCorrection(True)
+            system.setDefaultPeriodicBoxVectors(
+                mm.Vec3(box_size, 0, 0),
+                mm.Vec3(0, box_size, 0),
+                mm.Vec3(0, 0, box_size),
+            )
+            system.addForce(force)
+            integrator = mm.VerletIntegrator(0.01)
+            platform = mm.Platform.getPlatformByName("Reference")
+            context = mm.Context(system, integrator, platform)
+            context.setPositions(positions)
+            return context, force
 
-        for _ in range(num_particles):
-            system.addParticle(1.0)
-            force.addParticle(params_state0)
-        force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffPeriodic)
-        force.setCutoffDistance(cutoff)
-        force.setUseLongRangeCorrection(True)
-        system.setDefaultPeriodicBoxVectors(
-            mm.Vec3(box_size, 0, 0),
-            mm.Vec3(0, box_size, 0),
-            mm.Vec3(0, 0, box_size),
-        )
-        system.addForce(force)
-        integrator = mm.VerletIntegrator(0.01)
-        platform = mm.Platform.getPlatformByName("Reference")
-        context = mm.Context(system, integrator, platform)
-        context.setPositions(_build_grid_positions(grid_size, box_size))
+        # Reference context: always recomputes LRC from scratch.
+        ctx_ref, force_ref = make_context(with_global_param=False)
+        # Cached context: preserves LRC data, keyed by stateIndex.
+        ctx_cache, force_cache = make_context(with_global_param=True)
 
-        def set_state(state_idx, params):
+        def energy_ref(state_idx):
             for i in range(num_particles):
-                force.setParticleParameters(i, params)
-            context.setParameter("stateIndex", float(state_idx))
-            force.updateParametersInContext(context, preserveLongRangeCorrection=True)
-            return context.getState(getEnergy=True).getPotentialEnergy()._value
+                force_ref.setParticleParameters(i, states[state_idx])
+            force_ref.updateParametersInContext(ctx_ref)
+            return ctx_ref.getState(getEnergy=True).getPotentialEnergy()._value
 
-        # First pass: cold cache, one entry per stateIndex.
-        e0_first = set_state(0, params_state0)
-        e1_first = set_state(1, params_state1)
+        def energy_cache(state_idx):
+            for i in range(num_particles):
+                force_cache.setParticleParameters(i, states[state_idx])
+            ctx_cache.setParameter("stateIndex", float(state_idx))
+            force_cache.updateParametersInContext(
+                ctx_cache, preserveLongRangeCorrection=True
+            )
+            return ctx_cache.getState(getEnergy=True).getPotentialEnergy()._value
 
-        # The two states must have different energies so the test is non-trivial.
-        self.assertNotAlmostEqual(e0_first, e1_first, places=2)
+        # First pass: cold cache.  Energies must agree with the reference, which
+        # would fail if longRangeCorrectionData were stale.
+        ref_energies = [energy_ref(i) for i in range(len(states))]
+        cold_energies = [energy_cache(i) for i in range(len(states))]
 
-        # Second pass: warm cache, revisit both states in reverse order.
-        e1_second = set_state(1, params_state1)
-        e0_second = set_state(0, params_state0)
+        for i, (e_ref, e_cold) in enumerate(zip(ref_energies, cold_energies)):
+            self.assertAlmostEqual(
+                e_ref, e_cold, places=5,
+                msg=f"Cold-cache energy mismatch at state {i}"
+            )
 
-        self.assertAlmostEqual(e0_first, e0_second, places=5)
-        self.assertAlmostEqual(e1_first, e1_second, places=5)
+        # States must have distinct energies so the test is non-trivial.
+        self.assertNotAlmostEqual(ref_energies[0], ref_energies[1], places=2)
+
+        # Second pass: warm cache, reversed.  Energies must still match reference.
+        for i in reversed(range(len(states))):
+            e_warm = energy_cache(i)
+            self.assertAlmostEqual(
+                ref_energies[i], e_warm, places=5,
+                msg=f"Warm-cache energy mismatch at state {i}"
+            )
 
     def test_uniform_type_changes_energy(self):
         """
