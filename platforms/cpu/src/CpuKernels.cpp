@@ -1353,10 +1353,8 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
     // Add in the long range correction.
     
     if (!hasInitializedLongRangeCorrection) {
-        if (longRangeCorrectionDataStale) {
-            longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(*forceCopy, data.threads.getNumThreads());
-            longRangeCorrectionDataStale = false;
-        }
+        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(*forceCopy, data.threads.getNumThreads());
+        longRangeCorrectionDataStale = false;
         CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
         hasInitializedLongRangeCorrection = true;
     }

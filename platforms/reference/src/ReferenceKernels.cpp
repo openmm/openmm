@@ -1565,10 +1565,8 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
     
     if (!hasInitializedLongRangeCorrection) {
         ThreadPool& threads = extractThreadPool(context);
-        if (longRangeCorrectionDataStale) {
-            longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(*forceCopy, threads.getNumThreads());
-            longRangeCorrectionDataStale = false;
-        }
+        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(*forceCopy, threads.getNumThreads());
+        longRangeCorrectionDataStale = false;
         CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, threads);
         hasInitializedLongRangeCorrection = true;
     }
