@@ -549,9 +549,19 @@ public:
      * the parameters of existing ones.  While the tabulated values of a function can change, everything else about it (its dimensions,
      * the data range) must not be changed.
      *
+     * When preserveLongRangeCorrection is true, the long range correction (LRC) cache is preserved across this call.
+     * The existing per-global-parameter caching then provides state-based LRC caching: add a global parameter to the
+     * force (it need not appear in the energy expression) and update it via Context::setParameter() before calling
+     * this method.  The LRC will be recomputed only when that parameter takes a value not yet seen, and the cached
+     * coefficient will be reused on revisits.  This allows efficient multi-state simulations (e.g. alchemical free
+     * energy calculations) where per-particle parameters change at every step but the LRC can be cached per discrete
+     * state.
+     *
      * @param context                      the Context in which to update the parameters
-     * @param preserveLongRangeCorrection  if true, the long range correction is not recomputed.  Set this to true only if
-     *                                     you know that none of the parameters that affect the long range correction have changed.
+     * @param preserveLongRangeCorrection  if true, the long range correction cache is not cleared.  Set this to
+     *                                     true when using a global parameter as an explicit cache key, or whenever
+     *                                     you know that none of the parameters that affect the long range correction
+     *                                     have changed.
      */
     void updateParametersInContext(Context& context, bool preserveLongRangeCorrection = false);
     /**
