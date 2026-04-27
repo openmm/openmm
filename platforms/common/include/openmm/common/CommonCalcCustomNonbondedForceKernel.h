@@ -93,7 +93,7 @@ private:
     std::map<std::vector<float>, double> longRangeCoefficientCache;
     std::map<std::vector<float>, std::vector<double> > longRangeCoefficientDerivsCache;
     std::vector<double> longRangeCoefficientDerivs;
-    bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList, needGlobalParams;
+    bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList, needGlobalParams, longRangeCorrectionDataStale;
     int numGroupThreadBlocks;
     CustomNonbondedForce* forceCopy;
     CustomNonbondedForceImpl::LongRangeCorrectionData longRangeCorrectionData;

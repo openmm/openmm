@@ -364,6 +364,7 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
         cc.addPostComputation(new LongRangePostComputation(cc, longRangeCoefficient, longRangeCoefficientDerivs, forceCopy));
         hasInitializedLongRangeCorrection = false;
+        longRangeCorrectionDataStale = false;
     }
     else {
         longRangeCoefficient = 0.0;
@@ -655,6 +656,10 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
     }
     if (recomputeLongRangeCorrection) {
         if (includeEnergy || forceCopy->getNumEnergyParameterDerivatives() > 0) {
+            if (longRangeCorrectionDataStale) {
+                longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(*forceCopy, cc.getThreadPool().getNumThreads());
+                longRangeCorrectionDataStale = false;
+            }
             cc.getWorkThread().addTask(new LongRangeTask(cc, context.getOwner(), longRangeCorrectionData, globalParamValues, longRangeCoefficient,
                                        longRangeCoefficientDerivs, forceCopy, longRangeCoefficientCache, longRangeCoefficientDerivsCache));
             hasInitializedLongRangeCorrection = true;
@@ -758,6 +763,10 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
             hasInitializedLongRangeCorrection = false;
             longRangeCoefficientCache.clear();
             longRangeCoefficientDerivsCache.clear();
+            longRangeCorrectionDataStale = false;
+        }
+        else {
+            longRangeCorrectionDataStale = true;
         }
         *forceCopy = force;
     }

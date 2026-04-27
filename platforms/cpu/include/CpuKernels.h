@@ -437,7 +437,7 @@ private:
     int numParticles;
     std::vector<std::vector<double> > particleParamArray;
     double nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
-    bool useSwitchingFunction, hasInitializedLongRangeCorrection;
+    bool useSwitchingFunction, hasInitializedLongRangeCorrection, longRangeCorrectionDataStale;
     CustomNonbondedForce* forceCopy;
     CustomNonbondedForceImpl::LongRangeCorrectionData longRangeCorrectionData;
     std::map<std::string, double> globalParamValues;
