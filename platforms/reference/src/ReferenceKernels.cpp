@@ -1026,7 +1026,7 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
     return energy;
 }
 
-void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException, bool preserveLongRangeCorrection) {
+void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
     if (force.getNumParticles() != numParticles)
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
     if (force.getNumParticleParameterOffsets() != particleParamOffsets.size())
@@ -1069,10 +1069,18 @@ void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& con
     if (nb14s.size() != num14)
         throw OpenMMException("updateParametersInContext: The number of non-excluded exceptions has changed");
 
-    // Record the values.
+    // Record the values, checking whether any LJ parameters changed.
 
-    for (int i = firstParticle; i <= lastParticle; ++i)
-        force.getParticleParameters(i, baseParticleParams[i][0], baseParticleParams[i][1], baseParticleParams[i][2]);
+    bool ljChanged = false;
+    NonbondedForce::NonbondedMethod method = force.getNonbondedMethod();
+    bool checkLRC = force.getUseDispersionCorrection() && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME);
+    for (int i = firstParticle; i <= lastParticle; ++i) {
+        double charge, sigma, epsilon;
+        force.getParticleParameters(i, charge, sigma, epsilon);
+        if (checkLRC && !ljChanged && (sigma != baseParticleParams[i][1] || epsilon != baseParticleParams[i][2]))
+            ljChanged = true;
+        baseParticleParams[i] = {charge, sigma, epsilon};
+    }
     for (int i = 0; i < num14; ++i) {
         int particle1, particle2;
         force.getExceptionParameters(nb14s[i], particle1, particle2, baseExceptionParams[i][0], baseExceptionParams[i][1], baseExceptionParams[i][2]);
@@ -1095,11 +1103,10 @@ void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& con
         force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
         exceptionParamOffsets[make_pair(param, nb14Index[exception])] = {charge, sigma, epsilon};
     }
-    
-    // Recompute the coefficient for the dispersion correction.
 
-    NonbondedForce::NonbondedMethod method = force.getNonbondedMethod();
-    if (!preserveLongRangeCorrection && force.getUseDispersionCorrection() && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME))
+    // Recompute the coefficient for the dispersion correction if LJ parameters changed.
+
+    if (ljChanged)
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
 }
 

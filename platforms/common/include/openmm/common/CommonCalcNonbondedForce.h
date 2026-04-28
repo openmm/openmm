@@ -80,7 +80,7 @@ public:
      * @param firstException the index of the first exception whose parameters might have changed
      * @param lastException  the index of the last exception whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException, bool preserveLongRangeCorrection = false);
+    void copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException);
     /**
      * Get the parameters being used for PME.
      *
@@ -164,6 +164,7 @@ private:
     std::map<std::string, double> paramValues;
     std::map<int, int> exceptionIndex;
     double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha, totalCharge;
+    std::vector<double> lrcSigmaSnapshot, lrcEpsilonSnapshot;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
     int stepsToSort;

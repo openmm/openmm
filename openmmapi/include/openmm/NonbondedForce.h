@@ -568,11 +568,9 @@ public:
      * identify of the particle or exception the offset is applied to, or which global parameter it is based on.  Finally,
      * this method cannot be used to add new particles or exceptions, only to change the parameters of existing ones.
      *
-     * @param context                      the Context in which to update the parameters
-     * @param preserveLongRangeCorrection  if true, the long range dispersion correction is not recomputed.  Set this to
-     *                                     true only if you know that none of the Lennard-Jones parameters have changed.
+     * @param context  the Context in which to update the parameters
      */
-    void updateParametersInContext(Context& context, bool preserveLongRangeCorrection = false);
+    void updateParametersInContext(Context& context);
     /**
      * Returns whether or not this force makes use of periodic boundary
      * conditions.
