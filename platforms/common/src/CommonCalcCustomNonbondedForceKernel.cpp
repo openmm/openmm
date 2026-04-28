@@ -364,7 +364,6 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
         cc.addPostComputation(new LongRangePostComputation(cc, longRangeCoefficient, longRangeCoefficientDerivs, forceCopy));
         hasInitializedLongRangeCorrection = false;
-        longRangeCorrectionDataStale = false;
     }
     else {
         longRangeCoefficient = 0.0;
@@ -656,10 +655,6 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
     }
     if (recomputeLongRangeCorrection) {
         if (includeEnergy || forceCopy->getNumEnergyParameterDerivatives() > 0) {
-            if (longRangeCorrectionDataStale) {
-                longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(*forceCopy, cc.getThreadPool().getNumThreads());
-                longRangeCorrectionDataStale = false;
-            }
             cc.getWorkThread().addTask(new LongRangeTask(cc, context.getOwner(), longRangeCorrectionData, globalParamValues, longRangeCoefficient,
                                        longRangeCoefficientDerivs, forceCopy, longRangeCoefficientCache, longRangeCoefficientDerivsCache));
             hasInitializedLongRangeCorrection = true;
@@ -721,7 +716,7 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
     return 0;
 }
 
-void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle, bool preserveLongRangeCorrection) {
+void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle) {
     ContextSelector selector(cc);
     int numParticles = force.getNumParticles();
     if (numParticles != cc.getNumAtoms())
@@ -758,17 +753,11 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
     // If necessary, recompute the long range correction.
 
     if (forceCopy != NULL) {
-        if (!preserveLongRangeCorrection) {
-            longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
-            hasInitializedLongRangeCorrection = false;
-            longRangeCoefficientCache.clear();
-            longRangeCoefficientDerivsCache.clear();
-            longRangeCorrectionDataStale = false;
-        }
-        else {
-            longRangeCorrectionDataStale = true;
-        }
+        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
+        hasInitializedLongRangeCorrection = false;
         *forceCopy = force;
+        longRangeCoefficientCache.clear();
+        longRangeCoefficientDerivsCache.clear();
     }
 
     // Mark that the current reordering may be invalid.

@@ -70,7 +70,7 @@ public:
      * @param firstParticle  the index of the first particle whose parameters might have changed
      * @param lastParticle   the index of the last particle whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle, bool preserveLongRangeCorrection = false);
+    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle);
 private:
     class ForceInfo;
     class LongRangePostComputation;
@@ -93,7 +93,7 @@ private:
     std::map<std::vector<float>, double> longRangeCoefficientCache;
     std::map<std::vector<float>, std::vector<double> > longRangeCoefficientDerivsCache;
     std::vector<double> longRangeCoefficientDerivs;
-    bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList, needGlobalParams, longRangeCorrectionDataStale;
+    bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList, needGlobalParams;
     int numGroupThreadBlocks;
     CustomNonbondedForce* forceCopy;
     CustomNonbondedForceImpl::LongRangeCorrectionData longRangeCorrectionData;

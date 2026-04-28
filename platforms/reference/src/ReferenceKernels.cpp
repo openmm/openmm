@@ -1458,13 +1458,12 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
     if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection()) {
         forceCopy = new CustomNonbondedForce(force);
         hasInitializedLongRangeCorrection = false;
-        longRangeCorrectionDataStale = false;
     }
     else {
         longRangeCoefficient = 0.0;
         hasInitializedLongRangeCorrection = true;
     }
-    
+
     // Record the interaction groups.
     
     for (int i = 0; i < force.getNumInteractionGroups(); i++) {
@@ -1573,16 +1572,11 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
     if (!hasInitializedLongRangeCorrection) {
         ThreadPool& threads = extractThreadPool(context);
         longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(*forceCopy, threads.getNumThreads());
-        longRangeCorrectionDataStale = false;
         CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, threads);
         hasInitializedLongRangeCorrection = true;
     }
     else if (globalParamsChanged && forceCopy != NULL) {
         ThreadPool& threads = extractThreadPool(context);
-        if (longRangeCorrectionDataStale) {
-            longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(*forceCopy, threads.getNumThreads());
-            longRangeCorrectionDataStale = false;
-        }
         CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, threads);
     }
     double volume = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
@@ -1592,7 +1586,7 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
     return energy;
 }
 
-void ReferenceCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle, bool preserveLongRangeCorrection) {
+void ReferenceCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle) {
     if (numParticles != force.getNumParticles())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
@@ -1609,17 +1603,10 @@ void ReferenceCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImp
     // If necessary, recompute the long range correction.
 
     if (forceCopy != NULL) {
-        if (!preserveLongRangeCorrection) {
-            ThreadPool& threads = extractThreadPool(context);
-            longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, threads.getNumThreads());
-            CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, threads);
-            hasInitializedLongRangeCorrection = true;
-            longRangeCorrectionDataStale = false;
-        }
-        else {
-            hasInitializedLongRangeCorrection = false;
-            longRangeCorrectionDataStale = true;
-        }
+        ThreadPool& threads = extractThreadPool(context);
+        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, threads.getNumThreads());
+        CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, threads);
+        hasInitializedLongRangeCorrection = true;
         *forceCopy = force;
     }
 

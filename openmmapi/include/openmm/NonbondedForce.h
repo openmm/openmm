@@ -567,8 +567,6 @@ public:
      * exception cannot change.  Likewise, it can update charge, sigma and epsilon for a parameter offset, but not the
      * identify of the particle or exception the offset is applied to, or which global parameter it is based on.  Finally,
      * this method cannot be used to add new particles or exceptions, only to change the parameters of existing ones.
-     *
-     * @param context  the Context in which to update the parameters
      */
     void updateParametersInContext(Context& context);
     /**
