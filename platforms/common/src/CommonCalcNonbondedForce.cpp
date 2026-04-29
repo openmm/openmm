@@ -194,7 +194,7 @@ public:
     }
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<forceGroup)) != 0) {
-            event->wait();
+            event->queueWait(cc.getCurrentQueue());
             if (includeEnergy)
                 addEnergyKernel->execute(pmeEnergyBuffer.getSize());
         }
