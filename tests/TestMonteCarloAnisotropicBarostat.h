@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Lee-Ping Wang                                      *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,6 +29,7 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/CustomExternalForce.h"
+#include "openmm/CustomIntegrator.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/MonteCarloAnisotropicBarostat.h"
@@ -184,8 +185,75 @@ void testIdealGasAxis(int axis) {
     }
 }
 
-void testMolecularGas() {
-    const int numMolecules = 64;
+void testMoleculeScaling(bool rigid) {
+    int numMolecules = 10;
+    double initialWidth = 3.0;
+
+    // Create a system of diatomic molecules.
+
+    System system;
+    Vec3 initialBox[] = {Vec3(initialWidth, 0, 0), Vec3(0, initialWidth, 0), Vec3(0, 0, initialWidth)};
+    system.setDefaultPeriodicBoxVectors(initialBox[0], initialBox[1], initialBox[2]);
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    system.addForce(bonds);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    system.addForce(nonbonded);
+    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(1.0, 1.0, 1.0), 300.0, true, true, true, 1, rigid);
+    system.addForce(barostat);
+    vector<Vec3> positions;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numMolecules; i++) {
+        system.addParticle(1.0);
+        system.addParticle(1.0);
+        bonds->addBond(2*i, 2*i+1, 0.2, 1000.0);
+        nonbonded->addParticle(0.0, 0.1, 1.0);
+        nonbonded->addParticle(0.0, 0.1, 1.0);
+        Vec3 pos1(initialWidth*genrand_real2(sfmt), initialWidth*genrand_real2(sfmt), initialWidth*genrand_real2(sfmt));
+        Vec3 delta(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
+        delta /= sqrt(delta.dot(delta));
+        positions.push_back(pos1);
+        positions.push_back(pos1+delta);
+    }
+
+    // Use an integrator that applies the barostat but nothing else.
+
+    CustomIntegrator integrator(1.0);
+    integrator.addUpdateContextState();
+
+    // Let the barostat make some moves.
+
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    integrator.step(100);
+    State state = context.getState(State::Positions);
+
+    // The box size should have changed.
+
+    Vec3 finalBox[3];
+    state.getPeriodicBoxVectors(finalBox[0], finalBox[1], finalBox[2]);
+    for (int i = 0; i < 3; i++)
+        ASSERT(finalBox[i][i] != initialBox[i][i]);
+
+    // See if the molecules were scaled correctly.
+
+    Vec3 boxScale(finalBox[0][0]/initialBox[0][0], finalBox[1][1]/initialBox[1][1], finalBox[2][2]/initialBox[2][2]);
+    for (int i = 0; i < numMolecules; i++) {
+        Vec3 delta1 = positions[2*i+1]-positions[2*i];
+        Vec3 delta2 = state.getPositions()[2*i+1]-state.getPositions()[2*i];
+        if (rigid) {
+            ASSERT_EQUAL_VEC(delta1, delta2, 1e-5);
+        }
+        else {
+            Vec3 expected(delta1[0]*boxScale[0], delta1[1]*boxScale[1], delta1[2]*boxScale[2]);
+            ASSERT_EQUAL_VEC(expected, delta2, 1e-5);
+        }
+    }
+}
+
+void testMolecularGas(bool rigid) {
+    const int numMolecules = 256;
     const int frequency = 5;
     const int steps = 5000;
     const double pressure = 3.0;
@@ -198,7 +266,7 @@ void testMolecularGas() {
 
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.5*initialLength, 0), Vec3(0, 0, 2*initialLength));
-    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp, true, true, true, frequency);
+    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp, true, true, true, frequency, rigid);
     system.addForce(barostat);
     HarmonicBondForce* bonds = new HarmonicBondForce();
     bonds->setUsesPeriodicBoundaryConditions(true);
@@ -211,8 +279,8 @@ void testMolecularGas() {
         system.addParticle(1.0);
         system.addParticle(1.0);
         Vec3 pos(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
-        system.addConstraint(positions.size(), positions.size()+1, 0.1);
-        system.addConstraint(positions.size(), positions.size()+2, 0.1);
+        bonds->addBond(positions.size(), positions.size()+1, 0.1, 1.0);
+        bonds->addBond(positions.size(), positions.size()+2, 0.1, 1.0);
         positions.push_back(pos);
         positions.push_back(pos+Vec3(0.1, 0.0, 0.0));
         positions.push_back(pos+Vec3(0.0, 0.1, 0.0));
@@ -565,7 +633,10 @@ int main(int argc, char* argv[]) {
         testIdealGasAxis(0);
         testIdealGasAxis(1);
         testIdealGasAxis(2);
-        testMolecularGas();
+        testMoleculeScaling(true);
+        testMoleculeScaling(false);
+        testMolecularGas(true);
+        testMolecularGas(false);
         testRandomSeed();
         testTriclinic();
         //testEinsteinCrystal();
