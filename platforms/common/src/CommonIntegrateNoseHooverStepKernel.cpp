@@ -96,16 +96,16 @@ void CommonIntegrateNoseHooverStepKernel::initialize(const System& system, const
 }
 
 void CommonIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator) {
+    // If the atom reordering has occured, the forces from the previous step are permuted and thus invalid.
+    // They need to be either sorted or recomputed; here we choose the latter.
+    if (cc.getAtomsWereReordered())
+        context.calcForcesAndEnergy(true, false, integrator.getIntegrationForceGroups());
+
     ContextSelector selector(cc);
     IntegrationUtilities& integration = cc.getIntegrationUtilities();
     int paddedNumAtoms = cc.getPaddedNumAtoms();
     double dt = integrator.getStepSize();
     cc.getIntegrationUtilities().setNextStepSize(dt);
-
-    // If the atom reordering has occured, the forces from the previous step are permuted and thus invalid.
-    // They need to be either sorted or recomputed; here we choose the latter.
-    if (cc.getAtomsWereReordered())
-        context.calcForcesAndEnergy(true, false, integrator.getIntegrationForceGroups());
 
     const auto& atomList = integrator.getAllThermostatedIndividualParticles();
     const auto& pairList = integrator.getAllThermostatedPairs();
