@@ -265,11 +265,11 @@ class ExpandedEnsembleSampler(object):
 
         if not resume:
             if self._log is not None:
-                headers = ['Steps', 'Iteration', 'State'] + [f'Weight {i}' for i in range(len(self.states))]
-                print('"%s"' % (',').join(headers), file=self._log)
+                headers = ['"Steps"', '"Iteration"', '"State"'] + [f'"Weight {i}"' for i in range(len(self.states))]
+                print('%s' % (',').join(headers), file=self._log)
             if self._energy is not None:
-                headers = ['Steps'] + [f'u{i}' for i in range(len(self.states))]
-                print('"%s"' % (',').join(headers), file=self._energy)
+                headers = ['"Steps"'] + [f'"u{i}"' for i in range(len(self.states))]
+                print('%s' % (',').join(headers), file=self._energy)
 
     def __del__(self):
         if self._openedLogFile:
@@ -345,8 +345,6 @@ class ExpandedEnsembleSampler(object):
 
                             self._weightUpdateFactor *= 2.0
                             self._histogram = [0]*len(self.states)
-                        if self._weightUpdateFactor < 1/self.currentIteration:
-                            self.stage = 1
                 break
             r -= probability[j]
 
