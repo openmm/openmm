@@ -4709,7 +4709,7 @@ void CommonCalcCustomCPPForceKernel::initialize(const ContextImpl& context, Cust
     forceGroupFlag = (1<<force.getOwner().getForceGroup());
     useWorkerThread = (cc.getNumContexts() == 1);
     for (const ForceImpl* impl : context.getForceImpls())
-        if (dynamic_cast<const CustomCPPForceImpl*>(impl) != NULL || dynamic_cast<const PythonForceImpl*>(impl) != NULL)
+        if (impl != &force && (dynamic_cast<const CustomCPPForceImpl*>(impl) != NULL || dynamic_cast<const PythonForceImpl*>(impl) != NULL))
             useWorkerThread = false;
     if (useWorkerThread) {
         cc.addPreComputation(new StartCalculationPreComputation(*this));
@@ -4836,7 +4836,7 @@ void CommonCalcPythonForceKernel::initialize(const ContextImpl& context, const P
     forceGroupFlag = (1<<force.getForceGroup());
     useWorkerThread = (cc.getNumContexts() == 1);
     for (const ForceImpl* impl : context.getForceImpls())
-        if (dynamic_cast<const CustomCPPForceImpl*>(impl) != NULL || dynamic_cast<const PythonForceImpl*>(impl) != NULL)
+        if (&impl->getOwner() != &force && (dynamic_cast<const CustomCPPForceImpl*>(impl) != NULL || dynamic_cast<const PythonForceImpl*>(impl) != NULL))
             useWorkerThread = false;
     if (useWorkerThread) {
         cc.addPreComputation(new StartCalculationPreComputation(*this));

@@ -683,7 +683,10 @@ void CommonIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             }
             else {
                 recordChangedParameters(context);
-                energy = context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroups);
+                {
+                    ContextDeselector deselector(cc);
+                    energy = context.calcForcesAndEnergy(computeForce, computeEnergy, forceGroups);
+                }
                 savedEnergy[forceGroups] = energy;
                 if (needsEnergyParamDerivs) {
                     context.getEnergyParameterDerivatives(energyParamDerivs);

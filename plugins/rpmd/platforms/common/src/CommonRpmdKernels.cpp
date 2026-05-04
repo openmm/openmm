@@ -297,7 +297,10 @@ void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
         context.getPeriodicBoxVectors(finalBox[0], finalBox[1], finalBox[2]);
         if (initialBox[0] != finalBox[0] || initialBox[1] != finalBox[1] || initialBox[2] != finalBox[2])
             throw OpenMMException("Standard barostats cannot be used with RPMDIntegrator.  Use RPMDMonteCarloBarostat instead.");
-        context.calcForcesAndEnergy(true, false, groupsNotContracted);
+        {
+            ContextDeselector deselector(cc);
+            context.calcForcesAndEnergy(true, false, groupsNotContracted);
+        }
         copyFromContextKernel->setArg(7, i);
         copyFromContextKernel->execute(cc.getNumAtoms());
     }
@@ -322,7 +325,10 @@ void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
                 copyToContextKernel->setArg(5, i);
                 copyToContextKernel->execute(cc.getNumAtoms());
                 context.computeVirtualSites();
-                context.calcForcesAndEnergy(true, false, groupFlags);
+                {
+                    ContextDeselector deselector(cc);
+                    context.calcForcesAndEnergy(true, false, groupFlags);
+                }
                 copyFromContextKernel->setArg(7, i);
                 copyFromContextKernel->execute(cc.getNumAtoms());
             }
