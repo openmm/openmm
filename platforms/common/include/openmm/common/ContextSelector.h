@@ -49,6 +49,25 @@ private:
     ComputeContext& context;
 };
 
+/**
+ * This class deselects a ComputeContext by calling popAsCurrent() on the
+ * context when it is created and pushAsCurrent() when it goes out of scope.
+ * This can be useful to temporarily undo the effect of a ContextSelector and
+ * must only be used when the context is already selected.
+ */
+
+class OPENMM_EXPORT_COMMON ContextDeselector {
+public:
+    ContextDeselector(ComputeContext& context) : context(context) {
+        context.popAsCurrent();
+    }
+    ~ContextDeselector() {
+        context.pushAsCurrent();
+    }
+private:
+    ComputeContext& context;
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_CONTEXTSELECTOR_H_*/

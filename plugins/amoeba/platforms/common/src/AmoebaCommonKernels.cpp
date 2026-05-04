@@ -1399,8 +1399,10 @@ void CommonCalcAmoebaMultipoleForceKernel::ensureMultipolesValid(ContextImpl& co
                 }
         }
     }
-    if (!multipolesAreValid)
+    if (!multipolesAreValid) {
+        ContextDeselector deselector(cc);
         context.calcForcesAndEnergy(false, false, context.getIntegrator().getIntegrationForceGroups());
+    }
 }
 
 void CommonCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
@@ -3487,8 +3489,10 @@ void CommonCalcHippoNonbondedForceKernel::ensureMultipolesValid(ContextImpl& con
                 }
         }
     }
-    if (!multipolesAreValid)
+    if (!multipolesAreValid) {
+        ContextDeselector deselector(cc);
         context.calcForcesAndEnergy(false, false, context.getIntegrator().getIntegrationForceGroups());
+    }
 }
 
 void CommonCalcHippoNonbondedForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& dipoles) {

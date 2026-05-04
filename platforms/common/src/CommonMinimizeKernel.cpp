@@ -547,7 +547,11 @@ void CommonMinimizeKernel::evaluateGpu(ContextImpl& context) {
     // Evaluate the forces and energy for the desired interactions as well as
     // harmonic restraints to emulate the constraints.
 
-    energy = context.calcForcesAndEnergy(true, true, forceGroups);
+    {
+        ContextDeselector deselector(cc);
+        energy = context.calcForcesAndEnergy(true, true, forceGroups);
+    }
+
     if (numConstraints) {
         if (mixedIsDouble) {
             getConstraintEnergyForcesKernel->setArg(8, kRestraint);
@@ -592,7 +596,11 @@ double CommonMinimizeKernel::evaluateCpu(ContextImpl& context) {
     cpuContext->setState(context.getOwner().getState(State::Parameters));
     cpuContext->setPositions(hostPositions);
     cpuContext->computeVirtualSites();
-    State state = cpuContext->getState(State::Energy | State::Forces, false, forceGroups);
+    State state;
+    {
+        ContextDeselector deselector(cc);
+        state = cpuContext->getState(State::Energy | State::Forces, false, forceGroups);
+    }
     double hostEnergy = state.getPotentialEnergy();
     const vector<Vec3>& hostForces = state.getForces();
 
@@ -676,7 +684,10 @@ bool CommonMinimizeKernel::report(ContextImpl& context, int iteration) {
     args["system energy"] = energy - restraintEnergy;
     args["restraint strength"] = kRestraint;
     args["max constraint error"] = maxError;
-    return reporter->report(iteration - 1, hostX, hostGrad, args);
+    {
+        ContextDeselector deselector(cc);
+        return reporter->report(iteration - 1, hostX, hostGrad, args);
+    }
 }
 
 void CommonMinimizeKernel::downloadReturnFlagStart() {
