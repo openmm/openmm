@@ -461,8 +461,11 @@ void CudaContext::pushAsCurrent() {
 
 void CudaContext::popAsCurrent() {
     CUcontext popped;
-    if (contextIsValid)
+    if (contextIsValid) {
         cuCtxPopCurrent(&popped);
+        if (popped != context)
+            throw OpenMMException("Called popAsCurrent() on a context that is not current");
+    }
 }
 
 CUmodule CudaContext::createModule(const string source, const char* optimizationFlags) {
