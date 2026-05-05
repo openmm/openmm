@@ -89,9 +89,9 @@ class TestExpandedEnsembleSampler(unittest.TestCase):
             system.addParticle(1.0)
             force.addParticle(0)
         states = [{'k':k} for k in (200.0, 300.0, 400.0)]
-        with tempfile.NamedTemporaryFile(mode='w', delete_on_close=False) as logFile:
-            with tempfile.NamedTemporaryFile(mode='w', delete_on_close=False) as energyFile:
-                with tempfile.NamedTemporaryFile(mode='w', delete_on_close=False) as checkpointFile:
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as logFile:
+            with tempfile.NamedTemporaryFile(mode='w', delete=False) as energyFile:
+                with tempfile.NamedTemporaryFile(mode='w', delete=False) as checkpointFile:
                     integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.001*picosecond)
                     simulation = Simulation(Topology(), system, integrator, Platform.getPlatform('Reference'))
                     simulation.context.setPositions([Vec3(0, 0, 0)]*3)
