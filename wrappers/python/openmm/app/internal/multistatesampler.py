@@ -209,7 +209,7 @@ class MultistateSampler(object):
         -------
         an array containing the potential energies of all states in the order they appear in self.states
         """
-        energies = [0*kilojoules_per_mole for _ in self.states]
+        energies = [0 for _ in self.states]*kilojoules_per_mole
         for i, subset in enumerate(self.subsets):
             if self.groups is None:
                 # States don't depend on force groups, so we can just evaluate the energy of one state.
@@ -241,6 +241,6 @@ class MultistateSampler(object):
         an array containing the shifted potential energies of all states in the order they appear in self.states
         """
         if len(self.subsets) == 1 and self.groups is None:
-            return [0*kilojoules_per_mole]*len(self.states)
+            return [0]*len(self.states)*kilojoules_per_mole
         energies = self.computeAllEnergies()
         return [e-energies[0] for e in energies]

@@ -4,9 +4,9 @@ safesave.py: Helper module to ensure atomic overwrite/backup of existing files.
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2025 Stanford University and the Authors.
+Portions copyright (c) 2025-2026 Stanford University and the Authors.
 Authors: Evan Pretti
-Contributors:
+Contributors: Peter Eastman
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -51,11 +51,8 @@ def _getTempFilename(prefix):
 
     for index in itertools.count():
         name = f'{prefix}.{index}.tmp'
-        try:
-            with open(name, 'x'):
-                return name
-        except FileExistsError:
-            pass
+        if not os.path.exists(name):
+            return name
 
 def save(data, filename):
     """

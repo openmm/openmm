@@ -19,6 +19,7 @@ class TestReplicaExchangeSampler(unittest.TestCase):
         for reinitialize in [False, True]:
             integrator = LangevinIntegrator(300*kelvin, 10/picosecond, 0.01*picosecond)
             simulation = Simulation(Topology(), system, integrator, Platform.getPlatform('Reference'))
+            simulation.context.setPositions([Vec3(0, 0, 0)])
             repex = ReplicaExchangeSampler(states, simulation, 20, reinitialize)
             energies = [0.0*kilojoules_per_mole]*len(states)
             exchanged = False
@@ -51,10 +52,11 @@ class TestReplicaExchangeSampler(unittest.TestCase):
         force.addGlobalParameter('k', 1.0)
         force.addParticle(0)
         system.addForce(force)
-        states = [{'k':k*kilojoules_per_mole/(nanometer**2)} for k in np.geomspace(5.0, 100.0, 5)]
+        states = [{'k':k*kilojoules_per_mole/(nanometer**2)} for k in np.geomspace(10.0, 100.0, 5)]
         for reinitialize in [False, True]:
             integrator = LangevinIntegrator(300*kelvin, 10/picosecond, 0.01*picosecond)
             simulation = Simulation(Topology(), system, integrator, Platform.getPlatform('Reference'))
+            simulation.context.setPositions([Vec3(0, 0, 0)])
             repex = ReplicaExchangeSampler(states, simulation, 20, reinitialize)
             r2 = [0.0*nanometer**2]*len(states)
             exchanged = False
@@ -135,7 +137,8 @@ class TestReplicaExchangeSampler(unittest.TestCase):
 
             # Check the log file.
 
-            lines = open(os.path.join(directory, 'log.csv')).readlines()[1:]
+            with open(os.path.join(directory, 'log.csv')) as input:
+                lines = input.readlines()[1:]
             for i, line in enumerate(lines):
                 fields = [int(x) for x in line.split(',')]
                 self.assertEqual(fields[0], 3*(i+1))
@@ -177,3 +180,6 @@ class TestReplicaExchangeSampler(unittest.TestCase):
 
             with self.assertRaises(ValueError):
                 ReplicaExchangeReporter(directory, 3, sampler)
+            del sampler
+            del simulation
+            del integrator
