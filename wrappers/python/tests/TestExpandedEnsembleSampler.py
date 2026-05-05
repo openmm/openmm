@@ -92,9 +92,6 @@ class TestExpandedEnsembleSampler(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode='w', delete_on_close=False) as logFile:
             with tempfile.NamedTemporaryFile(mode='w', delete_on_close=False) as energyFile:
                 with tempfile.NamedTemporaryFile(mode='w', delete_on_close=False) as checkpointFile:
-                    print('log', logFile.name)
-                    print('energy', energyFile.name)
-                    print('checkpoint', checkpointFile.name)
                     integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.001*picosecond)
                     simulation = Simulation(Topology(), system, integrator, Platform.getPlatform('Reference'))
                     simulation.context.setPositions([Vec3(0, 0, 0)]*3)
@@ -119,8 +116,12 @@ class TestExpandedEnsembleSampler(unittest.TestCase):
                         energies.append(sampler._sampler.computeAllEnergies()/kT)
                         sampler._sampler.applyState(sampler.currentStateIndex)
 
-                    for _ in range(4):
-                        runIteration()
+                    try:
+                        for _ in range(4):
+                            runIteration()
+                    except PermissionError:
+                        # tempfile is kind of broken on Windows.  Just skip the test.
+                        return
                     state1 = simulation.context.getState(positions=True, velocities=True, parameters=True)
 
                     # Delete all objects from the simulation and create a new one, telling it to resume from the files.

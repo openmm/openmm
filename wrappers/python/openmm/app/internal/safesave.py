@@ -87,9 +87,6 @@ def save(data, filename):
     except FileExistsError:
         # Make a backup copy since replace() on Windows may not be atomic.
         tempFilename2 = _getTempFilename(filename)
-        print('filename', filename)
-        print('tempFilename1', tempFilename1)
-        print('tempFilename2', tempFilename2)
         os.replace(filename, tempFilename2)
         os.replace(tempFilename1, filename)
         os.remove(tempFilename2)
