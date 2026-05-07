@@ -1494,7 +1494,7 @@ OpenMM can save simulation trajectories to disk in four formats: PDB_,
 `PDBx/mmCIF`_, DCD_ and XTC_.  All of these are widely supported formats, so you
 should be able to read them into most analysis and visualization programs.
 
-.. _PDB: https://www.wwpdb.org/documentation/format33/v3.3.html
+.. _PDB: https://www.wwpdb.org/documentation/file-format-content/format33/v3.3.html
 .. _PDBx/mmCIF: https://mmcif.wwpdb.org
 .. _DCD: http://www.ks.uiuc.edu/Research/vmd/plugins/molfile/dcdplugin.html
 .. _XTC: https://manual.gromacs.org/archive/5.0.4/online/xtc.html
