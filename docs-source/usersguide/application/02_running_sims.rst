@@ -615,7 +615,7 @@ CHARMM36
 --------
 
 The CHARMM36\ :cite:`Best2012` force field provides parameters for proteins, DNA,
-RNA, lipids, carbohydrates, water, ions, and various small molecules (see `here <http://mackerell.umaryland.edu/charmm_ff.shtml#refs>`_
+RNA, lipids, carbohydrates, water, ions, and various small molecules (see `here <https://mackerell.umaryland.edu/charmm_ff.shtml#refs>`_
 for full references).
 
 .. tabularcolumns:: |l|L|
@@ -687,7 +687,7 @@ such as :file:`charmm36_2024/water.xml`, which specifies the default CHARMM wate
              additional force field XML files that can be loaded as needed.
 
 The converted parameter sets come from the
-`CHARMM36 July 2024 update <http://mackerell.umaryland.edu/charmm_ff.shtml>`_,
+`CHARMM36 July 2024 update <https://mackerell.umaryland.edu/charmm_ff.shtml>`_,
 which includes the CHARMM36m protein parameters.  They were converted using the
 openmmforcefields_ package and `ParmEd <https://github.com/parmed/parmed>`_.
 
