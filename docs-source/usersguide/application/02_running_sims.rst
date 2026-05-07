@@ -1617,16 +1617,35 @@ These are known as enhanced sampling methods.  OpenMM offers several that you
 can choose from.  They are briefly described here.  Consult the API documentation
 for more detailed descriptions and example code.
 
-Simulated Tempering
--------------------
+Replica Exchange
+----------------
 
-Simulated tempering\ :cite:`Marinari1992` involves making frequent changes to the
-temperature of a simulation.  At high temperatures, it can quickly cross energy barriers
-and explore a wide range of configurations.  At lower temperatures, it more thoroughly
-explores each local region of configuration space.  This is a powerful method to
-speed up sampling when you do not know in advance what motions you want to sample.
-Simply specify the range of temperatures to simulate and the algorithm handles
-everything for you mostly automatically.
+Replica exchange involves simulating several copies of the system at once, each in a
+different thermodynamic state.  It periodically exchanges states between the replicas, allowing
+each trajectory to explore multiple states.
+
+In one common version, the thermodynamic states correspond to different temperatures.  A
+single replica might spend time at a high temperature where barriers are easily crossed, then
+transition to the lower temperature you are most interested in to sample the distribution of
+conformations at that temperature.  This is a powerful method to speed up sampling when you
+do not know in advance what motions you want to sample.
+
+In another common version, the thermodynamic states correspond to different potential
+functions, for example different values of a global parameter that controls the strength of
+a force.  A single trajectory might sample the distribution of conformations when the force
+has full strength, then reduce the strength of the force so it can cross barriers, and then
+turn it back on again.
+
+Expanded Ensemble
+-----------------
+
+The expanded ensemble method is closely related to replica exchange, but instead of
+simulating many replicas and exchanging thermodynamic states between them, it simulates a
+single trajectory that jumps between states.  When the states correspond to temperatures,
+this method is also known as simulated tempering.
+
+Expanded ensemble sampling can be more efficient than replica exchange, but also requires a
+bit more care to ensure it samples all thermodynamic states evenly.
 
 Metadynamics
 ------------
