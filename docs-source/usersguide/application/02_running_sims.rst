@@ -615,7 +615,7 @@ CHARMM36
 --------
 
 The CHARMM36\ :cite:`Best2012` force field provides parameters for proteins, DNA,
-RNA, lipids, carbohydrates, water, ions, and various small molecules (see `here <http://mackerell.umaryland.edu/charmm_ff.shtml#refs>`_
+RNA, lipids, carbohydrates, water, ions, and various small molecules (see `here <https://mackerell.umaryland.edu/charmm_ff.shtml#refs>`_
 for full references).
 
 .. tabularcolumns:: |l|L|
@@ -657,12 +657,12 @@ such as :file:`charmm36_2024/water.xml`, which specifies the default CHARMM wate
          how to add hydrogens to these nonstandard residues, and your input topologies
          must already contain appropriate hydrogens. This can often cause problems when
          trying to read in PDB files from sources such as `CHARMM-GUI <http://charmm-gui.org/>`_
-         that do not generate PDB files that comply with the `PDB standard <http://www.wwpdb.org/documentation/file-format>`_.
+         that do not generate PDB files that comply with the `PDB standard <https://www.wwpdb.org/documentation/file-format>`_.
          If you're using files from `CHARMM-GUI <http://charmm-gui.org/>`_, it's easiest to load
          the PSF file directly, as discussed in Section :numref:`using-charmm-files`.
 
 .. tip:: Trying to read in PDB files from sources such as `CHARMM-GUI <http://charmm-gui.org/>`_
-         that do not generate PDB files that comply with the `PDB standard <http://www.wwpdb.org/documentation/file-format>`_
+         that do not generate PDB files that comply with the `PDB standard <https://www.wwpdb.org/documentation/file-format>`_
          and omit ``CONECT`` records specifying bonds between residues (such as cysteines)
          or include ``CONECT`` records specifying non-chemical ``H-H`` bonds in waters
          can cause issues with the detection and parameter assignment for disulfide bonds.
@@ -687,7 +687,7 @@ such as :file:`charmm36_2024/water.xml`, which specifies the default CHARMM wate
              additional force field XML files that can be loaded as needed.
 
 The converted parameter sets come from the
-`CHARMM36 July 2024 update <http://mackerell.umaryland.edu/charmm_ff.shtml>`_,
+`CHARMM36 July 2024 update <https://mackerell.umaryland.edu/charmm_ff.shtml>`_,
 which includes the CHARMM36m protein parameters.  They were converted using the
 openmmforcefields_ package and `ParmEd <https://github.com/parmed/parmed>`_.
 
@@ -1494,8 +1494,8 @@ OpenMM can save simulation trajectories to disk in four formats: PDB_,
 `PDBx/mmCIF`_, DCD_ and XTC_.  All of these are widely supported formats, so you
 should be able to read them into most analysis and visualization programs.
 
-.. _PDB: http://www.wwpdb.org/documentation/format33/v3.3.html
-.. _PDBx/mmCIF: http://mmcif.wwpdb.org
+.. _PDB: https://www.wwpdb.org/documentation/file-format-content/format33/v3.3.html
+.. _PDBx/mmCIF: https://mmcif.wwpdb.org
 .. _DCD: http://www.ks.uiuc.edu/Research/vmd/plugins/molfile/dcdplugin.html
 .. _XTC: https://manual.gromacs.org/archive/5.0.4/online/xtc.html
 
