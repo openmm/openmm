@@ -113,6 +113,12 @@ torch::Tensor allocate_xyz_tensor(CudaContext& cuda, int atoms) {
     return torch::empty({atoms, 3}, torch::TensorOptions().dtype(torch::kFloat64).device(device));
 }
 
+torch::Tensor allocate_xyz_int64_tensor(CudaContext& cuda, int atoms) {
+    const int device_index = cuda.getDeviceIndex();
+    torch::Device device(torch::kCUDA, device_index);
+    return torch::empty({atoms, 3}, torch::TensorOptions().dtype(torch::kInt64).device(device));
+}
+
 void ensure_cuda_tensor(const torch::Tensor& tensor, int atoms, int device_index) {
     if (!tensor.defined())
         throw std::runtime_error("tensor is undefined");
@@ -191,10 +197,87 @@ void tensor_to_velocities(const py::object& context_object, torch::Tensor veloci
     tensor_to_array(cuda, cuda.getVelm(), nullptr, velocities);
 }
 
+namespace {
+
+constexpr double kInvFixedPointScale = 1.0 / static_cast<double>(0x100000000LL);
+// OpenMM forces: kJ/mol/nm  → eV/Å (matches AmberGBCudaTeacher numpy conversion)
+constexpr double kKjPerNmToEvPerAng = 1.0 / (96.4853321233100184 * 10.0);
+
+torch::Tensor forces_fixed_to_torch(CudaContext& cuda, int atoms) {
+    CudaArray& force = cuda.getForce();
+    const int n_elem = static_cast<int>(force.getSize());
+    TORCH_CHECK(n_elem == atoms * 3, "CudaContext.force size mismatch");
+    torch::Tensor packed = allocate_xyz_int64_tensor(cuda, atoms);
+    CUcontext previous = nullptr;
+    cuCtxGetCurrent(&previous);
+    cuCtxSetCurrent(cuda.getContext());
+    auto stream = reinterpret_cast<cudaStream_t>(cuda.getCurrentStream());
+    cudaError_t st = cudaMemcpyAsync(
+            packed.data_ptr<int64_t>(),
+            reinterpret_cast<const void*>(device_pointer(force)),
+            static_cast<size_t>(n_elem) * sizeof(int64_t),
+            cudaMemcpyDeviceToDevice,
+            stream);
+    if (st != cudaSuccess)
+        throw std::runtime_error(std::string("cudaMemcpyAsync(force): ") + cudaGetErrorString(st));
+    cudaStreamSynchronize(stream);
+    if (previous != nullptr)
+        cuCtxSetCurrent(previous);
+    torch::Tensor real_fp64 = packed.to(torch::kFloat64);
+    real_fp64.mul_(kInvFixedPointScale * kKjPerNmToEvPerAng);
+    return real_fp64;
+}
+
+struct CudaBridge {
+    py::object context_object;
+    int groups;
+
+    CudaBridge(py::object ctx, int groups_in)
+            : context_object(std::move(ctx)), groups(groups_in) {}
+
+    torch::Tensor evaluate(torch::Tensor positions) {
+        if (!positions.is_cuda())
+            throw std::runtime_error("positions must be a CUDA tensor");
+        torch::Tensor pos_fp64 =
+                positions.scalar_type() == torch::kFloat64 ? positions : positions.to(torch::kFloat64);
+        if (!pos_fp64.is_contiguous())
+            pos_fp64 = pos_fp64.contiguous();
+        Context& ctx = unwrap_context(context_object);
+        ContextImpl& impl = ctx.getImpl();
+        CudaContext& cuda = cuda_context_from_openmm_context(context_object);
+        const int padded_atoms = static_cast<int>(cuda.getPosq().getSize());
+        const int n_in = static_cast<int>(pos_fp64.size(0));
+        TORCH_CHECK(pos_fp64.size(1) == 3, "positions must have shape (N, 3)");
+        TORCH_CHECK(n_in <= padded_atoms, "positions has more atoms than the OpenMM CUDA context");
+
+        torch::Tensor pos_upload = pos_fp64;
+        if (n_in < padded_atoms) {
+            torch::Tensor tail = torch::zeros(
+                    {padded_atoms - n_in, 3},
+                    torch::TensorOptions().dtype(torch::kFloat64).device(pos_fp64.device()));
+            pos_upload = torch::cat({pos_fp64, tail}, /*dim=*/0);
+        }
+
+        tensor_to_positions(context_object, pos_upload);
+        impl.calcForcesAndEnergy(true, false, groups);
+        torch::Tensor forces_fp64 = forces_fixed_to_torch(cuda, padded_atoms).slice(/*dim=*/0, /*start=*/0, /*end=*/n_in);
+        if (positions.scalar_type() != torch::kFloat64)
+            return forces_fp64.to(positions.scalar_type());
+        return forces_fp64;
+    }
+};
+
+} // namespace
+
 PYBIND11_MODULE(openmm_cuda_bridge, module) {
     module.doc() = "GPU-resident OpenMM CUDA Context <-> PyTorch tensor bridge";
     module.def("positions_to_tensor", &positions_to_tensor, py::arg("context"));
     module.def("tensor_to_positions", &tensor_to_positions, py::arg("context"), py::arg("positions"));
     module.def("velocities_to_tensor", &velocities_to_tensor, py::arg("context"));
     module.def("tensor_to_velocities", &tensor_to_velocities, py::arg("context"), py::arg("velocities"));
+
+    py::class_<CudaBridge>(module, "CudaBridge")
+            .def(py::init<py::object, int>(), py::arg("context"), py::arg("groups"))
+            .def("evaluate", &CudaBridge::evaluate, py::arg("positions"),
+                 "CUDA Context forces as a tensor after GPU-side evaluation.");
 }
