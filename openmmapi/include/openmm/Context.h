@@ -112,6 +112,19 @@ public:
      */
     Platform& getPlatform();
     /**
+     * Get the internal implementation object for this Context.
+     *
+     * This is intended for low-level extension modules that need direct access
+     * to platform internals (for example CUDA device buffers).  Ordinary users
+     * should use the public Context API instead.
+     */
+    ContextImpl& getImplementation() {
+        return *impl;
+    }
+    const ContextImpl& getImplementation() const {
+        return *impl;
+    }
+    /**
      * Get a State object recording the current state information stored in this context.
      * 
      * @param types the set of data types which should be stored in the State object.  This

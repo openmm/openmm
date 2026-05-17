@@ -139,12 +139,26 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
             else
                 flags += CU_CTX_SCHED_SPIN;
 
+            const char* usePrimaryEnv = std::getenv("OPENMM_CUDA_USE_PRIMARY_CONTEXT");
+            const bool usePrimaryContext = (usePrimaryEnv && usePrimaryEnv[0] == '1' && usePrimaryEnv[1] == '\0');
+            CUresult result;
+            if (usePrimaryContext) {
+                result = cuDevicePrimaryCtxSetFlags(device, flags);
+                if (result == CUDA_ERROR_PRIMARY_CONTEXT_ACTIVE)
+                    result = CUDA_SUCCESS;
+                if (result == CUDA_SUCCESS)
+                    result = cuDevicePrimaryCtxRetain(&context, device);
+                if (result == CUDA_SUCCESS)
+                    result = cuCtxPushCurrent(context);
+            }
+            else {
 #if CUDA_VERSION < 13000
-            CUresult result = cuCtxCreate(&context, flags, device);
+                result = cuCtxCreate(&context, flags, device);
 #else
-            CUctxCreateParams params = {};
-            CUresult result = cuCtxCreate(&context, &params, flags, device);
+                CUctxCreateParams params = {};
+                result = cuCtxCreate(&context, &params, flags, device);
 #endif
+            }
             if (result == CUDA_SUCCESS) {
                 this->deviceIndex = trialDeviceIndex;
                 CUcontext popped;
