@@ -1,3 +1,6 @@
+// OpenMM CUDA posq stores xyz in nanometers. This PyTorch bridge uses Angstrom for
+// positions read/written by positions_to_tensor / tensor_to_positions / CudaBridge.evaluate.
+// Velocities use getVelm(): nm/ps internally; tensor_to_velocities uses scale 1.0 (no Å conversion).
 #include <cuda_runtime.h>
 
 #include <cstdint>
@@ -17,7 +20,8 @@ __global__ void extract_xyz_f4_kernel(
         const float4* src,
         const float4* correction,
         double* dst,
-        int n) {
+        int n,
+        double extract_scale) {
     const int atom = blockIdx.x * blockDim.x + threadIdx.x;
     if (atom >= n)
         return;
@@ -31,54 +35,58 @@ __global__ void extract_xyz_f4_kernel(
         y += static_cast<double>(c.y);
         z += static_cast<double>(c.z);
     }
-    dst[3 * atom] = x;
-    dst[3 * atom + 1] = y;
-    dst[3 * atom + 2] = z;
+    dst[3 * atom] = x * extract_scale;
+    dst[3 * atom + 1] = y * extract_scale;
+    dst[3 * atom + 2] = z * extract_scale;
 }
 
 __global__ void scatter_xyz_f4_kernel(
         float4* dst,
         float4* correction,
         const double* src,
-        int n) {
+        int n,
+        double scatter_scale) {
     const int atom = blockIdx.x * blockDim.x + threadIdx.x;
     if (atom >= n)
         return;
     float4 p = dst[atom];
-    const float x = static_cast<float>(src[3 * atom]);
-    const float y = static_cast<float>(src[3 * atom + 1]);
-    const float z = static_cast<float>(src[3 * atom + 2]);
+    const double sx = src[3 * atom] * scatter_scale;
+    const double sy = src[3 * atom + 1] * scatter_scale;
+    const double sz = src[3 * atom + 2] * scatter_scale;
+    const float x = static_cast<float>(sx);
+    const float y = static_cast<float>(sy);
+    const float z = static_cast<float>(sz);
     p.x = x;
     p.y = y;
     p.z = z;
     dst[atom] = p;
     if (correction != nullptr) {
         float4 c = correction[atom];
-        c.x = static_cast<float>(src[3 * atom] - static_cast<double>(x));
-        c.y = static_cast<float>(src[3 * atom + 1] - static_cast<double>(y));
-        c.z = static_cast<float>(src[3 * atom + 2] - static_cast<double>(z));
+        c.x = static_cast<float>(sx - static_cast<double>(x));
+        c.y = static_cast<float>(sy - static_cast<double>(y));
+        c.z = static_cast<float>(sz - static_cast<double>(z));
         correction[atom] = c;
     }
 }
 
-__global__ void extract_xyz_d4_kernel(const double4* src, double* dst, int n) {
+__global__ void extract_xyz_d4_kernel(const double4* src, double* dst, int n, double extract_scale) {
     const int atom = blockIdx.x * blockDim.x + threadIdx.x;
     if (atom >= n)
         return;
     const double4 p = src[atom];
-    dst[3 * atom] = p.x;
-    dst[3 * atom + 1] = p.y;
-    dst[3 * atom + 2] = p.z;
+    dst[3 * atom] = p.x * extract_scale;
+    dst[3 * atom + 1] = p.y * extract_scale;
+    dst[3 * atom + 2] = p.z * extract_scale;
 }
 
-__global__ void scatter_xyz_d4_kernel(double4* dst, const double* src, int n) {
+__global__ void scatter_xyz_d4_kernel(double4* dst, const double* src, int n, double scatter_scale) {
     const int atom = blockIdx.x * blockDim.x + threadIdx.x;
     if (atom >= n)
         return;
     double4 p = dst[atom];
-    p.x = src[3 * atom];
-    p.y = src[3 * atom + 1];
-    p.z = src[3 * atom + 2];
+    p.x = src[3 * atom] * scatter_scale;
+    p.y = src[3 * atom + 1] * scatter_scale;
+    p.z = src[3 * atom + 2] * scatter_scale;
     dst[atom] = p;
 }
 
@@ -90,6 +98,7 @@ extern "C" void openmm_bridge_extract_xyz(
         int element_size,
         double* dst,
         int n,
+        double extract_scale,
         cudaStream_t stream) {
     const int blocks = (n + kBlockSize - 1) / kBlockSize;
     if (element_size == static_cast<int>(sizeof(float4))) {
@@ -97,13 +106,15 @@ extern "C" void openmm_bridge_extract_xyz(
                 reinterpret_cast<const float4*>(src_ptr),
                 correction_ptr == 0 ? nullptr : reinterpret_cast<const float4*>(correction_ptr),
                 dst,
-                n);
+                n,
+                extract_scale);
     }
     else if (element_size == static_cast<int>(sizeof(double4))) {
         extract_xyz_d4_kernel<<<blocks, kBlockSize, 0, stream>>>(
                 reinterpret_cast<const double4*>(src_ptr),
                 dst,
-                n);
+                n,
+                extract_scale);
     }
     else {
         throw std::runtime_error("unsupported OpenMM CudaArray element size for xyz extraction");
@@ -117,6 +128,7 @@ extern "C" void openmm_bridge_scatter_xyz(
         int element_size,
         const double* src,
         int n,
+        double scatter_scale,
         cudaStream_t stream) {
     const int blocks = (n + kBlockSize - 1) / kBlockSize;
     if (element_size == static_cast<int>(sizeof(float4))) {
@@ -124,13 +136,15 @@ extern "C" void openmm_bridge_scatter_xyz(
                 reinterpret_cast<float4*>(dst_ptr),
                 correction_ptr == 0 ? nullptr : reinterpret_cast<float4*>(correction_ptr),
                 src,
-                n);
+                n,
+                scatter_scale);
     }
     else if (element_size == static_cast<int>(sizeof(double4))) {
         scatter_xyz_d4_kernel<<<blocks, kBlockSize, 0, stream>>>(
                 reinterpret_cast<double4*>(dst_ptr),
                 src,
-                n);
+                n,
+                scatter_scale);
     }
     else {
         throw std::runtime_error("unsupported OpenMM CudaArray element size for xyz scatter");
