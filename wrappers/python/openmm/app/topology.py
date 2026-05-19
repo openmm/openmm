@@ -74,6 +74,10 @@ class Topology(object):
     pairs are bonded to each other, and the dimensions of the crystallographic unit cell.
 
     Atom and residue names should follow the PDB 3.0 nomenclature for all molecules for which one exists.
+
+    When a System is constructed from a Topology (for example with ForceField.createSystem()),
+    each atom is converted to a corresponding particle in the System.  The particles are in the
+    same order as the atoms, so an atom's index in the Topology is also the index of its particle.
     """
 
     _standardBonds = {}

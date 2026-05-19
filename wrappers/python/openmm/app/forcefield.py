@@ -1286,6 +1286,12 @@ class ForceField(object):
         -------
         system
             the newly created System
+
+        Notes
+        -----
+        The constructed System contains one particle for each atom in the Topology,
+        and the particles are in the same order as the atoms.  An atom's index in the
+        Topology is therefore also the index of its corresponding particle in the System.
         """
         args['switchDistance'] = switchDistance
         args['flexibleConstraints'] = flexibleConstraints
