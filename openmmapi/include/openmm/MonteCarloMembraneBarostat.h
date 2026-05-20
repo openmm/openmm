@@ -121,14 +121,16 @@ public:
     /**
      * Create a MonteCarloMembraneBarostat.
      *
-     * @param defaultPressure        the default pressure acting on the system (in bar)
-     * @param defaultSurfaceTension  the default surface tension acting on the system (in bar*nm)
-     * @param defaultTemperature     the default temperature at which the system is being maintained (in Kelvin)
-     * @param xymode                 the mode specifying the behavior of the X and Y axes
-     * @param zmode                  the mode specifying the behavior of the Z axis
-     * @param frequency              the frequency at which Monte Carlo volume changes should be attempted (in time steps)
+     * @param defaultPressure         the default pressure acting on the system (in bar)
+     * @param defaultSurfaceTension   the default surface tension acting on the system (in bar*nm)
+     * @param defaultTemperature      the default temperature at which the system is being maintained (in Kelvin)
+     * @param xymode                  the mode specifying the behavior of the X and Y axes
+     * @param zmode                   the mode specifying the behavior of the Z axis
+     * @param frequency               the frequency at which Monte Carlo volume changes should be attempted (in time steps)
+     * @param scaleMoleculesAsRigid   if true, coordinate scaling keeps molecules rigid, scaling only the center of mass
+     *                                of each one. If false, every constrained atom group is scaled independently.
      */
-    MonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, double defaultTemperature, XYMode xymode, ZMode zmode, int frequency = 25);
+    MonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, double defaultTemperature, XYMode xymode, ZMode zmode, int frequency = 25, bool scaleMoleculesAsRigid = true);
     /**
      * Get the default pressure acting on the system (in bar).
      *
@@ -238,16 +240,32 @@ public:
         return false;
     }
     /**
+     * Get whether scaling is applied to the centroid of each molecule while keeping
+     * the molecules rigid, or to each atom independently.
+     *
+     * @returns true if scaling is applied to molecule centroids, false if it is applied to each atom independently.
+     */
+    bool getScaleMoleculesAsRigid() const {
+        return scaleMoleculesAsRigid;
+    }
+    /**
+     * Set whether scaling is applied to the centroid of each molecule while keeping
+     * the molecules rigid, or to each atom independently.
+     */
+    void setScaleMoleculesAsRigid(bool rigid) {
+        scaleMoleculesAsRigid = rigid;
+    }
+    /**
      * Compute the instantaneous pressure along each axis of a system to which this barostat
      * is applied.
-     * 
+     *
      * The pressure is computed from the molecular virial, using a finite difference to
      * calculate the derivative of potential energy with respect to volume.  For most systems
      * in equilibrium, the time average of the instantaneous pressure should equal the
      * pressure applied by the barostat.  Fluctuations around the average value can be
      * extremely large, however, and it may take a very long simulation to accurately
      * compute the average.
-     * 
+     *
      * @param context    the Context for which to compute the current pressure
      * @returns a vector containing the pressure along each axis
      */
@@ -255,6 +273,7 @@ public:
 protected:
     ForceImpl* createImpl() const;
 private:
+    bool scaleMoleculesAsRigid;
     double defaultPressure, defaultSurfaceTension, defaultTemperature;
     XYMode xymode;
     ZMode zmode;
