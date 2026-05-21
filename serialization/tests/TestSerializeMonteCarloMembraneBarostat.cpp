@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -39,7 +39,7 @@ using namespace std;
 void testSerialization() {
     // Create a Force.
 
-    MonteCarloMembraneBarostat force(25.5, 11.2, 250.0, MonteCarloMembraneBarostat::XYAnisotropic, MonteCarloMembraneBarostat::ZFixed, 14);
+    MonteCarloMembraneBarostat force(25.5, 11.2, 250.0, MonteCarloMembraneBarostat::XYAnisotropic, MonteCarloMembraneBarostat::ZFixed, 14, false);
     force.setForceGroup(3);
     force.setName("custom name");
     force.setRandomNumberSeed(3);
@@ -62,6 +62,7 @@ void testSerialization() {
     ASSERT_EQUAL(force.getZMode(), force2.getZMode());
     ASSERT_EQUAL(force.getFrequency(), force2.getFrequency());
     ASSERT_EQUAL(force.getRandomNumberSeed(), force2.getRandomNumberSeed());
+    ASSERT_EQUAL(force.getScaleMoleculesAsRigid(), force2.getScaleMoleculesAsRigid());
 }
 
 int main() {
