@@ -16,6 +16,9 @@ DOC_STRINGS = {("Context", "setPositions") :
 SKIP_METHODS = [('State', 'getPositions'),
                 ('State', 'getVelocities'),
                 ('State', 'getForces'),
+                # Context::getImplementation() returns ContextImpl& which the SWIG unit
+                # mapper cannot handle; it is an internal method not needed in Python.
+                ('Context', 'getImplementation'),
                 ('StateBuilder',),
                 ('Vec3',),
                 ('OpenMMException',),
