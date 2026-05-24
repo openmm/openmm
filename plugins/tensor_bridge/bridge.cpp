@@ -1,5 +1,11 @@
 #include <pybind11/pybind11.h>
+
+#ifdef GENAI_TPS_STABLE_TORCH_ABI
+#include "bridge_interop.hpp"
+#include "bridge_stable_ops.hpp"
+#else
 #include <torch/extension.h>
+#endif
 
 #include <cuda.h>
 #include <cuda_runtime_api.h>
@@ -112,8 +118,13 @@ std::uintptr_t correction_pointer(CudaArray& correction, int expected_size) {
 
 torch::Tensor allocate_xyz_tensor(CudaContext& cuda, int atoms) {
     const int device_index = cuda.getDeviceIndex();
+#ifdef GENAI_TPS_STABLE_TORCH_ABI
+    return openmm_bridge_interop::aten_from_stable(
+            openmm_bridge_stable::allocate_xyz_tensor(device_index, atoms));
+#else
     torch::Device device(torch::kCUDA, device_index);
     return torch::empty({atoms, 3}, torch::TensorOptions().dtype(torch::kFloat64).device(device));
+#endif
 }
 
 void ensure_cuda_tensor(const torch::Tensor& tensor, int atoms, int device_index) {
@@ -214,6 +225,24 @@ constexpr double kKjPerNmToEvPerAng = 1.0 / (96.4853321233100184 * 10.0);
 torch::Tensor forces_fixed_to_torch(CudaContext& cuda, int padded_atoms) {
     CudaArray& force = cuda.getForce();
     const int n_elem = static_cast<int>(force.getSize());
+#ifdef GENAI_TPS_STABLE_TORCH_ABI
+    if (n_elem != padded_atoms * 3) {
+        throw std::runtime_error("CudaContext.force size mismatch");
+    }
+    CUcontext previous = nullptr;
+    cuCtxGetCurrent(&previous);
+    cuCtxSetCurrent(cuda.getContext());
+    auto stream = reinterpret_cast<cudaStream_t>(cuda.getCurrentStream());
+    torch::stable::Tensor out = openmm_bridge_stable::forces_fixed_to_torch(
+            cuda.getDeviceIndex(),
+            device_pointer(force),
+            padded_atoms,
+            stream);
+    if (previous != nullptr) {
+        cuCtxSetCurrent(previous);
+    }
+    return openmm_bridge_interop::aten_from_stable(out);
+#else
     TORCH_CHECK(n_elem == padded_atoms * 3, "CudaContext.force size mismatch");
     const int device_index = cuda.getDeviceIndex();
     torch::Device device(torch::kCUDA, device_index);
@@ -229,12 +258,13 @@ torch::Tensor forces_fixed_to_torch(CudaContext& cuda, int padded_atoms) {
             static_cast<size_t>(n_elem) * sizeof(int64_t),
             cudaMemcpyDeviceToDevice,
             stream);
-    if (st != cudaSuccess)
+    if (st != cudaSuccess) {
         throw std::runtime_error(std::string("cudaMemcpyAsync(force): ") + cudaGetErrorString(st));
+    }
     cudaStreamSynchronize(stream);
-    if (previous != nullptr)
+    if (previous != nullptr) {
         cuCtxSetCurrent(previous);
-    // OpenMM CUDA layout: x components for all atoms, then y, then z (see nonbonded.cu).
+    }
     torch::Tensor flat_fp64 = flat.to(torch::kFloat64);
     torch::Tensor fx = flat_fp64.narrow(0, 0, padded_atoms);
     torch::Tensor fy = flat_fp64.narrow(0, padded_atoms, padded_atoms);
@@ -242,6 +272,7 @@ torch::Tensor forces_fixed_to_torch(CudaContext& cuda, int padded_atoms) {
     torch::Tensor out = torch::stack({fx, fy, fz}, /*dim=*/1);
     out.mul_(kInvFixedPointScale * kKjPerNmToEvPerAng);
     return out;
+#endif
 }
 
 struct CudaBridge {
@@ -254,14 +285,31 @@ struct CudaBridge {
     torch::Tensor evaluate(torch::Tensor positions) {
         if (!positions.is_cuda())
             throw std::runtime_error("positions must be a CUDA tensor");
-        torch::Tensor pos_fp64 =
-                positions.scalar_type() == torch::kFloat64 ? positions : positions.to(torch::kFloat64);
-        if (!pos_fp64.is_contiguous())
-            pos_fp64 = pos_fp64.contiguous();
         Context& ctx = unwrap_context(context_object);
         ContextImpl& impl = ctx.getImpl();
         CudaContext& cuda = cuda_context_from_openmm_context(context_object);
         const int padded_atoms = static_cast<int>(cuda.getPosq().getSize());
+#ifdef GENAI_TPS_STABLE_TORCH_ABI
+        torch::stable::Tensor pos_stable = openmm_bridge_interop::stable_from_aten(positions);
+        torch::stable::Tensor pos_fp64 = openmm_bridge_stable::ensure_fp64_contiguous(pos_stable);
+        const int n_in = static_cast<int>(pos_fp64.size(0));
+        if (pos_fp64.size(1) != 3)
+            throw std::runtime_error("positions must have shape (N, 3)");
+        if (n_in > padded_atoms)
+            throw std::runtime_error("positions has more atoms than the OpenMM CUDA context");
+
+        torch::stable::Tensor pos_upload = openmm_bridge_stable::pad_positions(pos_fp64, padded_atoms);
+        tensor_to_positions(context_object, openmm_bridge_interop::aten_from_stable(pos_upload));
+        impl.calcForcesAndEnergy(true, false, groups);
+        torch::Tensor forces_fp64 = forces_fixed_to_torch(cuda, padded_atoms).slice(/*dim=*/0, /*start=*/0, /*end=*/n_in);
+        if (positions.scalar_type() != torch::kFloat64)
+            return forces_fp64.to(positions.scalar_type());
+        return forces_fp64;
+#else
+        torch::Tensor pos_fp64 =
+                positions.scalar_type() == torch::kFloat64 ? positions : positions.to(torch::kFloat64);
+        if (!pos_fp64.is_contiguous())
+            pos_fp64 = pos_fp64.contiguous();
         const int n_in = static_cast<int>(pos_fp64.size(0));
         TORCH_CHECK(pos_fp64.size(1) == 3, "positions must have shape (N, 3)");
         TORCH_CHECK(n_in <= padded_atoms, "positions has more atoms than the OpenMM CUDA context");
@@ -281,6 +329,7 @@ struct CudaBridge {
         if (positions.scalar_type() != torch::kFloat64)
             return forces_fp64.to(positions.scalar_type());
         return forces_fp64;
+#endif
     }
 };
 
