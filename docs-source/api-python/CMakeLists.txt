@@ -27,7 +27,7 @@ endforeach(INIT_FILE ${STAGING_INPUT_FILES})
 add_custom_command(
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/app.rst"
            "${CMAKE_CURRENT_BINARY_DIR}/library.rst"
-    COMMAND "${PYTHON_EXECUTABLE}" "${CMAKE_CURRENT_BINARY_DIR}/render.py"
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_BINARY_DIR}/render.py"
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/app.rst.jinja2"
             "${CMAKE_CURRENT_BINARY_DIR}/library.rst.jinja2"
             "${CMAKE_CURRENT_BINARY_DIR}/render.py"
@@ -35,7 +35,7 @@ add_custom_command(
 
 add_custom_command(
     OUTPUT "${CMAKE_BINARY_DIR}/api-python/index.html"
-    COMMAND "${PYTHON_EXECUTABLE}" -m sphinx . "${CMAKE_BINARY_DIR}/api-python"
+    COMMAND "${Python3_EXECUTABLE}" -m sphinx . "${CMAKE_BINARY_DIR}/api-python"
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/conf.py"
             "${CMAKE_CURRENT_BINARY_DIR}/process-docstring.py"

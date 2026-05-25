@@ -108,7 +108,7 @@ There are several variables that can be adjusted in the CMake interface:
 * Set the variable CMAKE_INSTALL_PREFIX to the location where you want to
   install OpenMM. If you are using conda environments this variable should point to
   the full path of the root directory of your environment.
-* Set the variable PYTHON_EXECUTABLE to the Python interpreter you plan to use
+* Set the variable Python3_EXECUTABLE to the Python interpreter you plan to use
   OpenMM with.  Usually this will be detected automatically.
 * There are lots of options starting with OPENMM_BUILD that control
   whether to build particular features of OpenMM, such as plugins, API wrappers,
@@ -303,7 +303,7 @@ There are several variables that can be adjusted in the CMake interface:
 
 * Set the variable CMAKE_INSTALL_PREFIX to the location where you want to
   install OpenMM.
-* Set the variable PYTHON_EXECUTABLE to the Python interpreter you plan to use
+* Set the variable Python3_EXECUTABLE to the Python interpreter you plan to use
   OpenMM with.  Usually this will be detected automatically.
 * There are lots of options starting with OPENMM_BUILD that control
   whether to build particular features of OpenMM, such as plugins, API wrappers,
