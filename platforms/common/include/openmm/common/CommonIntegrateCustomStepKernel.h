@@ -44,9 +44,7 @@ namespace OpenMM {
 class CommonIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
 public:
     enum GlobalTargetType {DT, VARIABLE, PARAMETER};
-    CommonIntegrateCustomStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateCustomStepKernel(name, platform), cc(cc),
-            hasInitializedKernels(false), deviceGlobalsAreCurrent(false), needsEnergyParamDerivs(false) {
-    }
+    CommonIntegrateCustomStepKernel(std::string name, const Platform& platform, ComputeContext& cc);
     /**
      * Initialize the kernel.
      * 

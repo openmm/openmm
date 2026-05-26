@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -59,9 +59,7 @@ public:
     /**
      * Get the number of particles in the system.
      */
-    int getNumParticles() const {
-        return particles.size();
-    }
+    int getNumParticles() const;
 
     /**
      * Add the  parameters for a particle.  This should be called once for each particle

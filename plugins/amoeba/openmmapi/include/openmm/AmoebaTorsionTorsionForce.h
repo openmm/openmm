@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -59,16 +59,12 @@ public:
     /**
      * Get the number of torsion-torsion terms in the potential function
      */
-    int getNumTorsionTorsions(void) const {
-        return torsionTorsions.size();
-    }
+    int getNumTorsionTorsions(void) const;
 
     /**
      * Get the number of torsion-torsion grids
      */
-    int getNumTorsionTorsionGrids(void) const {
-        return torsionTorsionGrids.size();
-    }
+    int getNumTorsionTorsionGrids(void) const;
 
     /**
      * Add a torsion-torsion term to the force field.

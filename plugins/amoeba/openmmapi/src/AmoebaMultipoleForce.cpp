@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,10 @@ AmoebaMultipoleForce::AmoebaMultipoleForce() : nonbondedMethod(NoCutoff), polari
     extrapolationCoefficients.push_back(0.017);
     extrapolationCoefficients.push_back(0.658);
     extrapolationCoefficients.push_back(0.474);
+}
+
+int AmoebaMultipoleForce::getNumMultipoles() const {
+    return multipoles.size();
 }
 
 AmoebaMultipoleForce::NonbondedMethod AmoebaMultipoleForce::getNonbondedMethod() const {
