@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -48,6 +48,7 @@ void MonteCarloBarostatProxy::serialize(const void* object, SerializationNode& n
     node.setDoubleProperty("temperature", force.getDefaultTemperature());
     node.setIntProperty("frequency", force.getFrequency());
     node.setIntProperty("randomSeed", force.getRandomNumberSeed());
+    node.setBoolProperty("rigidScaling", force.getScaleMoleculesAsRigid());
 }
 
 void* MonteCarloBarostatProxy::deserialize(const SerializationNode& node) const {
@@ -55,7 +56,8 @@ void* MonteCarloBarostatProxy::deserialize(const SerializationNode& node) const 
         throw OpenMMException("Unsupported version number");
     MonteCarloBarostat* force = NULL;
     try {
-        force = new MonteCarloBarostat(node.getDoubleProperty("pressure"), node.getDoubleProperty("temperature"), node.getIntProperty("frequency"));
+        force = new MonteCarloBarostat(node.getDoubleProperty("pressure"), node.getDoubleProperty("temperature"), node.getIntProperty("frequency"),
+                                       node.getBoolProperty("rigidScaling", true));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setName(node.getStringProperty("name", force->getName()));
         force->setRandomNumberSeed(node.getIntProperty("randomSeed"));

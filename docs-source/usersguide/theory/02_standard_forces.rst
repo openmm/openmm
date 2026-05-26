@@ -772,7 +772,11 @@ accordingly.
 Each Monte Carlo step modifies particle positions by scaling the centroid of
 each molecule, then applying the resulting displacement to each particle in the
 molecule.  This ensures that each molecule is translated as a unit, so bond
-lengths and constrained distances are unaffected.
+lengths and constrained distances are unaffected.  Alternatively, there is an
+option to scale the position of each particle independently.  This option is
+intended for unusual situations, such as when the entire system is a single
+molecule.  In most other cases it is less efficient than scaling molecules,
+and it should never be used with a system that contains constraints.
 
 MonteCarloBarostat assumes the simulation is being run at constant temperature
 as well as pressure, and the simulation temperature affects the step acceptance

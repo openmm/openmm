@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,8 +32,8 @@
 
 using namespace OpenMM;
 
-MonteCarloMembraneBarostat::MonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, double defaultTemperature, XYMode xymode, ZMode zmode, int frequency) :
-        xymode(xymode), zmode(zmode) {
+MonteCarloMembraneBarostat::MonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, double defaultTemperature, XYMode xymode, ZMode zmode,
+        int frequency, bool scaleMoleculesAsRigid) : xymode(xymode), zmode(zmode), scaleMoleculesAsRigid(scaleMoleculesAsRigid) {
     setDefaultPressure(defaultPressure);
     setDefaultSurfaceTension(defaultSurfaceTension);
     setDefaultTemperature(defaultTemperature);
