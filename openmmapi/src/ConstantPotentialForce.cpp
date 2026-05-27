@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Evan Pretti                                        *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,6 +45,18 @@ ConstantPotentialForce::ConstantPotentialForce() : constantPotentialMethod(CG),
         chargeTarget(0.0), exceptionsUsePeriodic(false),
         useChargeConstraint(false), usePreconditioner(true),
         nx(0), ny(0), nz(0), numContexts(0) {
+}
+
+int ConstantPotentialForce::getNumParticles() const {
+    return particles.size();
+}
+
+int ConstantPotentialForce::getNumExceptions() const {
+    return exceptions.size();
+}
+
+int ConstantPotentialForce::getNumElectrodes() const {
+    return electrodes.size();
 }
 
 double ConstantPotentialForce::getCutoffDistance() const {

@@ -39,6 +39,13 @@ using namespace std;
 AmoebaTorsionTorsionForce::AmoebaTorsionTorsionForce() : usePeriodic(false) {
 }
 
+int AmoebaTorsionTorsionForce::getNumTorsionTorsions(void) const {
+    return torsionTorsions.size();
+}
+
+int AmoebaTorsionTorsionForce::getNumTorsionTorsionGrids(void) const {
+    return torsionTorsionGrids.size();
+}
 int AmoebaTorsionTorsionForce::addTorsionTorsion(int particle1, int particle2, int particle3,
                                                  int particle4, int particle5, int chiralCheckAtomIndex,
                                                  int gridIndex) {

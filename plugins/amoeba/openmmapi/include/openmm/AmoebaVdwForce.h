@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -143,23 +143,17 @@ public:
     /**
      * Get the number of particles
      */
-    int getNumParticles() const {
-        return parameters.size();
-    }
+    int getNumParticles() const;
 
     /**
      * Get the number of particle types.
      */
-    int getNumParticleTypes() const {
-        return types.size();
-    }
+    int getNumParticleTypes() const;
 
     /**
      * Get the number of type pairs.
      */
-    int getNumTypePairs() const {
-        return pairs.size();
-    }
+    int getNumTypePairs() const;
 
     /**
      * Set the force field parameters for a vdw particle.
