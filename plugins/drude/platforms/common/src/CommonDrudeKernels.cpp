@@ -502,7 +502,10 @@ void CommonIntegrateDrudeSCFStepKernel::minimize(ContextImpl& context, double to
     int numDrude = drudeParams.getSize();
     int paddedNumAtoms = cc.getPaddedNumAtoms();
     for (int iteration = 0; iteration < 50; iteration++) {
-        context.calcForcesAndEnergy(true, false, context.getIntegrator().getIntegrationForceGroups());
+        {
+            ContextDeselector deselector(cc);
+            context.calcForcesAndEnergy(true, false, context.getIntegrator().getIntegrationForceGroups());
+        }
         minimizeKernel->execute(drudeParams.getSize());
         cc.getLongForceBuffer().download(forces);
         double totalForce = 0;
