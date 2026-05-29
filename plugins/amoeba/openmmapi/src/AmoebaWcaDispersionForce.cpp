@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -52,6 +52,10 @@ AmoebaWcaDispersionForce::AmoebaWcaDispersionForce() {
     // No units.
     slevy = 1.0;
     shctd = 0.82;
+}
+
+int AmoebaWcaDispersionForce::getNumParticles() const {
+    return parameters.size();
 }
 
 int AmoebaWcaDispersionForce::addParticle(double radius, double epsilon) {

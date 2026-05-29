@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Evan Pretti                                        *
  * Contributors:                                                              *
  *                                                                            *
@@ -116,15 +116,11 @@ public:
     /**
      * Get the number of particles for which force field parameters have been defined.
      */
-    int getNumParticles() const {
-        return particles.size();
-    }
+    int getNumParticles() const;
     /**
      * Get the number of special interactions that should be calculated differently from other interactions.
      */
-    int getNumExceptions() const {
-        return exceptions.size();
-    }
+    int getNumExceptions() const;
     /**
      * Get the cutoff distance (in nm) being used for nonbonded interactions.
      *
@@ -362,9 +358,7 @@ public:
     /**
      * Get the number of electrodes that have been added.
      */
-    int getNumElectrodes() const {
-        return electrodes.size();
-    }
+    int getNumElectrodes() const;
     /**
      * Add a new electrode from a set of particles.  The specified particles
      * will have their charges solved for such that they are held at the

@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -51,6 +51,7 @@ void MonteCarloMembraneBarostatProxy::serialize(const void* object, Serializatio
     node.setIntProperty("zmode", force.getZMode());
     node.setIntProperty("frequency", force.getFrequency());
     node.setIntProperty("randomSeed", force.getRandomNumberSeed());
+    node.setBoolProperty("rigidScaling", force.getScaleMoleculesAsRigid());
 }
 
 void* MonteCarloMembraneBarostatProxy::deserialize(const SerializationNode& node) const {
@@ -61,7 +62,7 @@ void* MonteCarloMembraneBarostatProxy::deserialize(const SerializationNode& node
         MonteCarloMembraneBarostat::XYMode xymode = (MonteCarloMembraneBarostat::XYMode) node.getIntProperty("xymode");
         MonteCarloMembraneBarostat::ZMode zmode = (MonteCarloMembraneBarostat::ZMode) node.getIntProperty("zmode");
         force = new MonteCarloMembraneBarostat(node.getDoubleProperty("pressure"), node.getDoubleProperty("surfaceTension"),
-                node.getDoubleProperty("temperature"), xymode, zmode, node.getIntProperty("frequency"));
+                node.getDoubleProperty("temperature"), xymode, zmode, node.getIntProperty("frequency"), node.getBoolProperty("rigidScaling", true));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setName(node.getStringProperty("name", force->getName()));
         force->setRandomNumberSeed(node.getIntProperty("randomSeed"));

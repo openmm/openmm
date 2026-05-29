@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -105,9 +105,7 @@ public:
     /**
      * Get the number of particles in the potential function
      */
-    int getNumMultipoles() const {
-        return multipoles.size();
-    }
+    int getNumMultipoles() const;
 
     /**
      * Get the method used for handling long-range nonbonded interactions.

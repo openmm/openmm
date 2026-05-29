@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -48,7 +48,7 @@ void MonteCarloBarostatImpl::initialize(ContextImpl& context) {
     if (!context.getSystem().usesPeriodicBoundaryConditions())
         throw OpenMMException("A barostat cannot be used with a non-periodic system");
     kernel = context.getPlatform().createKernel(ApplyMonteCarloBarostatKernel::Name(), context);
-    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner, 1);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner, 1, owner.getScaleMoleculesAsRigid());
     Vec3 box[3];
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
@@ -81,11 +81,16 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context, bool& forc
     kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale, lengthScale, lengthScale);
 
     // Compute the energy of the modified system.
-    
+
+    double numberOfScaledParticles;
+    if (owner.getScaleMoleculesAsRigid())
+        numberOfScaledParticles = context.getMolecules().size();
+    else
+        numberOfScaledParticles = context.getSystem().getNumParticles();
     double finalEnergy = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
     double pressure = context.getParameter(MonteCarloBarostat::Pressure())*(AVOGADRO*1e-25);
     double kT = BOLTZ*context.getParameter(MonteCarloBarostat::Temperature());
-    double w = finalEnergy-initialEnergy + pressure*deltaVolume - context.getMolecules().size()*kT*log(newVolume/volume);
+    double w = finalEnergy-initialEnergy + pressure*deltaVolume - numberOfScaledParticles*kT*log(newVolume/volume);
     if (w > 0 && SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() > exp(-w/kT)) {
         // Reject the step.
 

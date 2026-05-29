@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,6 +40,18 @@ using std::vector;
 AmoebaVdwForce::AmoebaVdwForce() : nonbondedMethod(NoCutoff), potentialFunction(Buffered147),
         sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), cutoff(1.0e+10), useDispersionCorrection(true),
         useTypes(false), alchemicalMethod(None), n(5), alpha(0.7) {
+}
+
+int AmoebaVdwForce::getNumParticles() const {
+    return parameters.size();
+}
+
+int AmoebaVdwForce::getNumParticleTypes() const {
+    return types.size();
+}
+
+int AmoebaVdwForce::getNumTypePairs() const {
+    return pairs.size();
 }
 
 int AmoebaVdwForce::addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor, bool isAlchemical, double scaleFactor) {

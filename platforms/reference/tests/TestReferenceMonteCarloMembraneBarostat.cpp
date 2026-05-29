@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,13 +34,14 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/MonteCarloMembraneBarostat.h"
 #include "openmm/Context.h"
-#include "ReferencePlatform.h"
+#include "openmm/CustomIntegrator.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/VerletIntegrator.h"
+#include "ReferencePlatform.h"
 #include "sfmt/SFMT.h"
 #include "SimTKOpenMMRealType.h"
 #include <iostream>
@@ -114,6 +115,73 @@ void testIdealGas(MonteCarloMembraneBarostat::XYMode xymode, MonteCarloMembraneB
             double effectivePressure = pressureInMD-tensionInMD/zsize;
             double expected = (numParticles+1)*BOLTZ*temp[i]/effectivePressure;
             ASSERT_USUALLY_EQUAL_TOL(expected, volume, 0.05);
+        }
+    }
+}
+
+void testMoleculeScaling(bool rigid) {
+    int numMolecules = 10;
+    double initialWidth = 3.0;
+
+    // Create a system of diatomic molecules.
+
+    System system;
+    Vec3 initialBox[] = {Vec3(initialWidth, 0, 0), Vec3(0, initialWidth, 0), Vec3(0, 0, initialWidth)};
+    system.setDefaultPeriodicBoxVectors(initialBox[0], initialBox[1], initialBox[2]);
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    system.addForce(bonds);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    system.addForce(nonbonded);
+    MonteCarloMembraneBarostat* barostat = new MonteCarloMembraneBarostat(1.0, 0.0, 300.0, MonteCarloMembraneBarostat::XYAnisotropic, MonteCarloMembraneBarostat::ZFree, 1, rigid);
+    system.addForce(barostat);
+    vector<Vec3> positions;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numMolecules; i++) {
+        system.addParticle(1.0);
+        system.addParticle(1.0);
+        bonds->addBond(2*i, 2*i+1, 0.2, 1000.0);
+        nonbonded->addParticle(0.0, 0.1, 1.0);
+        nonbonded->addParticle(0.0, 0.1, 1.0);
+        Vec3 pos1(initialWidth*genrand_real2(sfmt), initialWidth*genrand_real2(sfmt), initialWidth*genrand_real2(sfmt));
+        Vec3 delta(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
+        delta /= sqrt(delta.dot(delta));
+        positions.push_back(pos1);
+        positions.push_back(pos1+delta);
+    }
+
+    // Use an integrator that applies the barostat but nothing else.
+
+    CustomIntegrator integrator(1.0);
+    integrator.addUpdateContextState();
+
+    // Let the barostat make some moves.
+
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    integrator.step(100);
+    State state = context.getState(State::Positions);
+
+    // The box size should have changed.
+
+    Vec3 finalBox[3];
+    state.getPeriodicBoxVectors(finalBox[0], finalBox[1], finalBox[2]);
+    for (int i = 0; i < 3; i++)
+        ASSERT(finalBox[i][i] != initialBox[i][i]);
+
+    // See if the molecules were scaled correctly.
+
+    Vec3 boxScale(finalBox[0][0]/initialBox[0][0], finalBox[1][1]/initialBox[1][1], finalBox[2][2]/initialBox[2][2]);
+    for (int i = 0; i < numMolecules; i++) {
+        Vec3 delta1 = positions[2*i+1]-positions[2*i];
+        Vec3 delta2 = state.getPositions()[2*i+1]-state.getPositions()[2*i];
+        if (rigid) {
+            ASSERT_EQUAL_VEC(delta1, delta2, 1e-5);
+        }
+        else {
+            Vec3 expected(delta1[0]*boxScale[0], delta1[1]*boxScale[1], delta1[2]*boxScale[2]);
+            ASSERT_EQUAL_VEC(expected, delta2, 1e-5);
         }
     }
 }
@@ -256,6 +324,8 @@ int main() {
         testIdealGas(MonteCarloMembraneBarostat::XYAnisotropic, MonteCarloMembraneBarostat::ZFree);
         testIdealGas(MonteCarloMembraneBarostat::XYAnisotropic, MonteCarloMembraneBarostat::ZFixed);
         testIdealGas(MonteCarloMembraneBarostat::XYAnisotropic, MonteCarloMembraneBarostat::ConstantVolume);
+        testMoleculeScaling(true);
+        testMoleculeScaling(false);
         testRandomSeed();
         testCrystal();
     }

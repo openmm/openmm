@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2013-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -59,15 +59,11 @@ public:
     /**
      * Get the number of particles for which force field parameters have been defined.
      */
-    int getNumParticles() const {
-        return particles.size();
-    }
+    int getNumParticles() const;
     /**
      * Get the number of special interactions that should be calculated differently from other interactions.
      */
-    int getNumScreenedPairs() const {
-        return screenedPairs.size();
-    }
+    int getNumScreenedPairs() const;
     /**
      * Add a Drude particle to which forces should be applied.
      *
