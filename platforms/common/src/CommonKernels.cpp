@@ -4811,7 +4811,7 @@ public:
     AddForcesPostComputation(CommonCalcPythonForceKernel& owner) : owner(owner) {
     }
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
-        return owner.addForces(includeForces, includeEnergy, groups);
+        return owner.addForces(includeForces, includeEnergy);
     }
     CommonCalcPythonForceKernel& owner;
 };
@@ -4868,7 +4868,6 @@ void CommonCalcPythonForceKernel::initialize(const ContextImpl& context, const P
         addForcesKernel->addArg(cc.getLongForceBuffer());
         addForcesKernel->addArg(cc.getAtomIndexArray());
     }
-    forceGroupFlag = (1<<force.getForceGroup());
     useWorkerThread = (cc.getNumContexts() == 1);
     for (const ForceImpl* impl : context.getForceImpls())
         if (&impl->getOwner() != &force && (dynamic_cast<const CustomCPPForceImpl*>(impl) != NULL || dynamic_cast<const PythonForceImpl*>(impl) != NULL))
@@ -4893,9 +4892,8 @@ double CommonCalcPythonForceKernel::execute(ContextImpl& context, bool includeFo
 
     if (cc.getContextIndex() != 0)
         return 0.0;
-    getPositions();
     executeOnWorkerThread(includeForces);
-    return addForces(includeForces, includeEnergy, -1);
+    return addForces(includeForces, includeEnergy);
 }
 
 void CommonCalcPythonForceKernel::getPositions() {
@@ -4903,11 +4901,11 @@ void CommonCalcPythonForceKernel::getPositions() {
     // wrapped to the periodic box.  If this force also applies periodic boundary conditions, that's
     // alright.  Otherwise, we need to move them back.
 
-    bool fixPeriodic = usePeriodic || !cc.getNonbondedUtilities().getUsePeriodic();
+    bool allowPeriodic = usePeriodic || !cc.getNonbondedUtilities().getUsePeriodic();
     if (particles.size() == 0) {
         // The force applies to the whole system, so we can just use the standard getPositions().
 
-        contextImpl.getPositions(positionsVec, fixPeriodic);
+        contextImpl.getPositions(positionsVec, allowPeriodic);
     }
     else {
         // Retrieve positions for the subset of particles the force is applied to.
@@ -4926,7 +4924,7 @@ void CommonCalcPythonForceKernel::getPositions() {
             for (int i = 0; i < numParticles; i++)
                 positionsVec[i] = Vec3((double) pos[3*i], (double) pos[3*i+1], (double) pos[3*i+2]);
         }
-        if (fixPeriodic) {
+        if (!allowPeriodic) {
             Vec3 boxVectors[3];
             cc.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
             for (int i = 0; i < numParticles; ++i) {
@@ -4951,9 +4949,6 @@ void CommonCalcPythonForceKernel::sortParticles() {
 }
 
 void CommonCalcPythonForceKernel::beginComputation(bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&forceGroupFlag) == 0)
-        return;
-
     // The actual force computation will be done on a different thread.
 
     cc.getWorkThread().addTask(new ExecuteTask(*this, includeForces));
@@ -4977,10 +4972,7 @@ void CommonCalcPythonForceKernel::executeOnWorkerThread(bool includeForces) {
     }
 }
 
-double CommonCalcPythonForceKernel::addForces(bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&forceGroupFlag) == 0)
-        return 0;
-
+double CommonCalcPythonForceKernel::addForces(bool includeForces, bool includeEnergy) {
     // Wait until executeOnWorkerThread() is finished.
 
     if (useWorkerThread)

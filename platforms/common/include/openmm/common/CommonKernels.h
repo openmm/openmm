@@ -1545,7 +1545,7 @@ public:
     /**
      * This is called by the post-computation to add the forces to the main array.
      */
-    double addForces(bool includeForces, bool includeEnergy, int groups);
+    double addForces(bool includeForces, bool includeEnergy);
 private:
     class ExecuteTask;
     class StartCalculationPreComputation;
@@ -1561,7 +1561,7 @@ private:
     std::vector<Vec3> positionsVec;
     std::vector<double> forcesVec;
     std::vector<int> particles;
-    int numParticles, forceGroupFlag;
+    int numParticles;
     double energy;
     bool usePeriodic, useWorkerThread;
 };
