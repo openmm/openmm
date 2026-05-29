@@ -184,7 +184,7 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
 
     hostMallocFlags = hipHostMallocDefault;
 #if !defined(WIN32)
-    // hipHostMallocNumaUser may not be allowed in some conditions, for example, if docker container 
+    // hipHostMallocNumaUser may not be allowed in some conditions, for example, if docker container
     // is created without --security-opt seccomp=unconfined or --cap-add=SYS_NICE
     int* tmpHostBuffer;
     if(hipHostMalloc(&tmpHostBuffer, sizeof(*tmpHostBuffer), hipHostMallocNumaUser) == hipSuccess) {
@@ -588,6 +588,16 @@ hipModule_t HipContext::createModule(const string source, const map<string, stri
     if (hipModuleLoad(&module, cacheFile.c_str()) == hipSuccess) {
         loadedModules.push_back(module);
         return module;
+    }
+    else {
+        // Need to call hipGetLastError to clear the error code
+        hipError_t last_error = hipGetLastError();
+        if (last_error != hipErrorFileNotFound) {
+            std::ostringstream msg;
+            msg << "Detected HIP error: " << hipGetErrorString(last_error)
+                << "(" << last_error << ") at " << __FILE__ << ":" << __LINE__;
+            throw OpenMMException(msg.str());
+        }
     }
 
     // Select names for the various temporary files.
