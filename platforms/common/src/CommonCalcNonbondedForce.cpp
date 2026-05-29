@@ -962,7 +962,7 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         // Execute the reciprocal space kernels.
 
         if (hasCoulomb) {
-            if (stepsToSort <= 0 || doLJPME || cc.getNumAtoms() > 15000) {
+            if (stepsToSort <= 0 || doLJPME) {
                 setPeriodicBoxArgs(cc, pmeGridIndexKernel, 2);
                 if (cc.getUseDoublePrecision()) {
                     pmeGridIndexKernel->setArg(7, recipBoxVectors[0]);
@@ -976,7 +976,7 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 }
                 pmeGridIndexKernel->execute(cc.getNumAtoms());
                 sort->sort(pmeAtomGridIndex);
-                stepsToSort = 3;
+                stepsToSort = (cc.getNumAtoms() > 15000) ? 1 : 3;
             }
             else
                 stepsToSort--;
