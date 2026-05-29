@@ -4811,7 +4811,7 @@ public:
     AddForcesPostComputation(CommonCalcPythonForceKernel& owner) : owner(owner) {
     }
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
-        return owner.addForces(includeForces, includeEnergy);
+        return owner.addForces(includeForces, includeEnergy, groups);
     }
     CommonCalcPythonForceKernel& owner;
 };
@@ -4868,6 +4868,7 @@ void CommonCalcPythonForceKernel::initialize(const ContextImpl& context, const P
         addForcesKernel->addArg(cc.getLongForceBuffer());
         addForcesKernel->addArg(cc.getAtomIndexArray());
     }
+    forceGroupFlag = (1<<force.getForceGroup());
     useWorkerThread = (cc.getNumContexts() == 1);
     for (const ForceImpl* impl : context.getForceImpls())
         if (&impl->getOwner() != &force && (dynamic_cast<const CustomCPPForceImpl*>(impl) != NULL || dynamic_cast<const PythonForceImpl*>(impl) != NULL))
@@ -4893,7 +4894,7 @@ double CommonCalcPythonForceKernel::execute(ContextImpl& context, bool includeFo
     if (cc.getContextIndex() != 0)
         return 0.0;
     executeOnWorkerThread(includeForces);
-    return addForces(includeForces, includeEnergy);
+    return addForces(includeForces, includeEnergy, -1);
 }
 
 void CommonCalcPythonForceKernel::getPositions() {
@@ -4949,6 +4950,9 @@ void CommonCalcPythonForceKernel::sortParticles() {
 }
 
 void CommonCalcPythonForceKernel::beginComputation(bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&forceGroupFlag) == 0)
+        return;
+
     // The actual force computation will be done on a different thread.
 
     cc.getWorkThread().addTask(new ExecuteTask(*this, includeForces));
@@ -4972,7 +4976,10 @@ void CommonCalcPythonForceKernel::executeOnWorkerThread(bool includeForces) {
     }
 }
 
-double CommonCalcPythonForceKernel::addForces(bool includeForces, bool includeEnergy) {
+double CommonCalcPythonForceKernel::addForces(bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&forceGroupFlag) == 0)
+        return 0;
+
     // Wait until executeOnWorkerThread() is finished.
 
     if (useWorkerThread)
