@@ -4893,7 +4893,6 @@ double CommonCalcPythonForceKernel::execute(ContextImpl& context, bool includeFo
 
     if (cc.getContextIndex() != 0)
         return 0.0;
-    getPositions();
     executeOnWorkerThread(includeForces);
     return addForces(includeForces, includeEnergy, -1);
 }
@@ -4903,11 +4902,11 @@ void CommonCalcPythonForceKernel::getPositions() {
     // wrapped to the periodic box.  If this force also applies periodic boundary conditions, that's
     // alright.  Otherwise, we need to move them back.
 
-    bool fixPeriodic = usePeriodic || !cc.getNonbondedUtilities().getUsePeriodic();
+    bool allowPeriodic = usePeriodic || !cc.getNonbondedUtilities().getUsePeriodic();
     if (particles.size() == 0) {
         // The force applies to the whole system, so we can just use the standard getPositions().
 
-        contextImpl.getPositions(positionsVec, fixPeriodic);
+        contextImpl.getPositions(positionsVec, allowPeriodic);
     }
     else {
         // Retrieve positions for the subset of particles the force is applied to.
@@ -4926,7 +4925,7 @@ void CommonCalcPythonForceKernel::getPositions() {
             for (int i = 0; i < numParticles; i++)
                 positionsVec[i] = Vec3((double) pos[3*i], (double) pos[3*i+1], (double) pos[3*i+2]);
         }
-        if (fixPeriodic) {
+        if (!allowPeriodic) {
             Vec3 boxVectors[3];
             cc.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
             for (int i = 0; i < numParticles; ++i) {
