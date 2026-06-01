@@ -198,7 +198,7 @@ public:
         int particle = index / AmoebaMultipoleForce::CovalentEnd;
         int type = index - AmoebaMultipoleForce::CovalentEnd * particle;
         force.getCovalentMap(particle, AmoebaMultipoleForce::CovalentType(type), particles);
-        particles.insert(particles.begin(), particle);
+        particles.push_back(particle);
     }
     bool areGroupsIdentical(int group1, int group2) {
         return ((group1%AmoebaMultipoleForce::CovalentEnd) == (group2%AmoebaMultipoleForce::CovalentEnd));
