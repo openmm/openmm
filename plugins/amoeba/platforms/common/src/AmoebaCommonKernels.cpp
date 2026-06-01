@@ -192,15 +192,16 @@ public:
         return true;
     }
     int getNumParticleGroups() {
-        return 7*force.getNumMultipoles();
+        return AmoebaMultipoleForce::CovalentEnd * force.getNumMultipoles();
     }
     void getParticlesInGroup(int index, vector<int>& particles) {
-        int particle = index/7;
-        int type = index-7*particle;
+        int particle = index / AmoebaMultipoleForce::CovalentEnd;
+        int type = index - AmoebaMultipoleForce::CovalentEnd * particle;
         force.getCovalentMap(particle, AmoebaMultipoleForce::CovalentType(type), particles);
+        particles.push_back(particle);
     }
     bool areGroupsIdentical(int group1, int group2) {
-        return ((group1%7) == (group2%7));
+        return ((group1%AmoebaMultipoleForce::CovalentEnd) == (group2%AmoebaMultipoleForce::CovalentEnd));
     }
 private:
     const AmoebaMultipoleForce& force;
