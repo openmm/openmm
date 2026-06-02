@@ -285,8 +285,8 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
     bool usePeriodic = (nonbondedMethod != NoCutoff && nonbondedMethod != CutoffNonPeriodic);
     doLJPME = (nonbondedMethod == LJPME && hasLJ);
     usePosqCharges = hasCoulomb ? cc.requestPosqCharges() : false;
-    // Split LJPME dispersion reciprocal work onto a second PME stream.
-    useSplitLJPMEStream = (getPlatform().getName() == "HIP" && usePmeQueue && doLJPME && hasCoulomb);
+    bool isHip = (getPlatform().getName() == "HIP");
+    useSplitLJPMEStream = (isHip && cc.getSIMDWidth() == 64 && usePmeQueue && doLJPME && hasCoulomb);
     map<string, string> defines;
     defines["HAS_COULOMB"] = (hasCoulomb ? "1" : "0");
     defines["HAS_LENNARD_JONES"] = (hasLJ ? "1" : "0");
