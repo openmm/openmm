@@ -509,7 +509,7 @@ class Bond(namedtuple('Bond', ['atom1', 'atom2'])):
         return self.__dict__
 
     def __deepcopy__(self, memo):
-        return Bond(self[0], self[1], self.type, self.order)
+        return Bond(deepcopy(self[0], memo), deepcopy(self[1], memo), self.type, self.order)
 
     def __repr__(self):
         s = "Bond(%s, %s" % (self[0], self[1])
