@@ -270,6 +270,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         compilationDefines["make_mixed4"] = "make_float4";
     }
     force.initialize<long long>(*this, paddedNumAtoms*3, "force");
+    atomEnergyBuffer.initialize<long long>(*this, paddedNumAtoms, "atomEnergyBuffer");
     posCellOffsets.resize(paddedNumAtoms, mm_int4(0, 0, 0, 0));
     atomIndexDevice.initialize<int>(*this, paddedNumAtoms, "atomIndex");
     atomIndex.resize(paddedNumAtoms);
@@ -445,6 +446,7 @@ void CudaContext::initialize() {
     velm.upload(pinnedBuffer);
     bonded->initialize(system);
     addAutoclearBuffer(force.getDevicePointer(), force.getSize()*force.getElementSize());
+    addAutoclearBuffer(atomEnergyBuffer.getDevicePointer(), atomEnergyBuffer.getSize()*atomEnergyBuffer.getElementSize());
     addAutoclearBuffer(energyBuffer.getDevicePointer(), energyBuffer.getSize()*energyBuffer.getElementSize());
     int numEnergyParamDerivs = energyParamDerivNames.size();
     if (numEnergyParamDerivs > 0) {

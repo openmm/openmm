@@ -242,6 +242,15 @@ public:
         return force;
     }
     /**
+     * Get the array which contains the per-atom potential energy (one long long per atom in
+     * 64 bit fixed point), accumulated alongside the per-atom force by forces that opt in.
+     * This is a genai-tps fork addition used to obtain per-atom nonbonded/GB energy without
+     * a separate energy-decomposition pass.  Autocleared on every force evaluation, like force.
+     */
+    CudaArray& getAtomEnergyBuffer() {
+        return atomEnergyBuffer;
+    }
+    /**
      * The CUDA platform does not use floating point force buffers, so this throws an exception.
      */
     ArrayInterface& getFloatForceBuffer() {
@@ -632,6 +641,7 @@ private:
     CudaArray posqCorrection;
     CudaArray velm;
     CudaArray force;
+    CudaArray atomEnergyBuffer;
     CudaArray energyBuffer;
     CudaArray energySum;
     CudaArray energyParamDerivBuffer;

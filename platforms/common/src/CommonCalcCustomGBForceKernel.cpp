@@ -929,6 +929,8 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         }
         else
             pairEnergyKernel->addArg(numAtomBlocks*(numAtomBlocks+1)/2);
+        if (!cc.getIsCPU())
+            pairEnergyKernel->addArg(cc.getAtomEnergyBuffer());
         if (needGlobalParams)
             pairEnergyKernel->addArg(cc.getGlobalParamValues());
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
@@ -951,6 +953,7 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         perParticleEnergyKernel->addArg(cc.getEnergyBuffer());
         perParticleEnergyKernel->addArg(cc.getPosq());
         perParticleEnergyKernel->addArg(cc.getLongForceBuffer());
+        perParticleEnergyKernel->addArg(cc.getAtomEnergyBuffer());
         if (needGlobalParams)
             perParticleEnergyKernel->addArg(cc.getGlobalParamValues());
         for (auto& buffer : params->getParameterInfos())

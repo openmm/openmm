@@ -66,6 +66,10 @@ void ComputeContext::addForce(ComputeForceInfo* force) {
     forces.push_back(force);
 }
 
+ArrayInterface& ComputeContext::getAtomEnergyBuffer() {
+    throw OpenMMException("This platform does not support per-atom energy decomposition (getAtomEnergyBuffer)");
+}
+
 void ComputeContext::setAtomIndex(std::vector<int>& index){
     atomIndex = index;
     getAtomIndexArray().upload(atomIndex);

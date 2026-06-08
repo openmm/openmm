@@ -39,6 +39,17 @@ __device__ void saveSingleForce(int atom, real3 force, unsigned long long* force
         atomicAdd(&forceBuffers[atom+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(force.z)));
 }
 
+#ifdef INCLUDE_ENERGY
+/**
+ * Accumulate a per-atom potential-energy contribution (genai-tps fork) into the
+ * fixed-point atom-energy buffer, using the same representation as the force buffer.
+ */
+__device__ void saveSingleAtomEnergy(int atom, real e, unsigned long long* atomEnergyBuffer) {
+    if (e != 0)
+        atomicAdd(&atomEnergyBuffer[atom], static_cast<unsigned long long>(realToFixedPoint(e)));
+}
+#endif
+
 /**
  * Compute nonbonded interactions. The kernel is separated into two parts,
  * tiles with exclusions and tiles without exclusions. It relies heavily on 
@@ -110,6 +121,7 @@ extern "C" __global__ void computeNonbonded(
         const real4* __restrict__ blockSize, const unsigned int* __restrict__ interactingAtoms, unsigned int maxSinglePairs,
         const int2* __restrict__ singlePairs
 #endif
+        , unsigned long long* __restrict__ atomEnergyBuffer
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
     const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE; // global warpIndex
@@ -127,6 +139,9 @@ extern "C" __global__ void computeNonbonded(
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
         real3 force = make_real3(0);
+#ifdef INCLUDE_ENERGY
+        real atomEnergy1 = 0;  // genai-tps: per-atom energy share for atom1 in this tile
+#endif
         unsigned int atom1 = x*TILE_SIZE + tgx;
         real4 posq1 = posq[atom1];
         LOAD_ATOM1_PARAMETERS
@@ -166,6 +181,11 @@ extern "C" __global__ void computeNonbonded(
                 const real interactionScale = 0.5f;
                 COMPUTE_INTERACTION
                 energy += 0.5f*tempEnergy;
+#ifdef INCLUDE_ENERGY
+                // Diagonal tile: this thread owns pair (atom1, atom2) with a 0.5 weight;
+                // the reverse pair is computed by atom2's own thread, giving an equal split.
+                atomEnergy1 += 0.5f*tempEnergy;
+#endif
 #ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
                 force.x -= delta.x*dEdR;
@@ -221,6 +241,11 @@ extern "C" __global__ void computeNonbonded(
                 const real interactionScale = 1.0f;
                 COMPUTE_INTERACTION
                 energy += tempEnergy;
+#ifdef INCLUDE_ENERGY
+                // Off-diagonal exclusion tile: pair computed once; split equally.
+                atomEnergy1 += 0.5f*tempEnergy;
+                saveSingleAtomEnergy(atom2, 0.5f*tempEnergy, atomEnergyBuffer);
+#endif
 #ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
                 delta *= dEdR;
@@ -262,6 +287,9 @@ extern "C" __global__ void computeNonbonded(
         atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(force.y)));
         atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(force.z)));
 #endif
+#ifdef INCLUDE_ENERGY
+        saveSingleAtomEnergy(atom1, atomEnergy1, atomEnergyBuffer);
+#endif
     }
 
     // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
@@ -288,6 +316,9 @@ extern "C" __global__ void computeNonbonded(
     while (pos < end) {
         const bool hasExclusions = false;
         real3 force = make_real3(0);
+#ifdef INCLUDE_ENERGY
+        real atomEnergy1 = 0;  // genai-tps: per-atom energy share for atom1 in this tile
+#endif
         bool includeTile = true;
 
         // Extract the coordinates of this tile.
@@ -379,6 +410,11 @@ extern "C" __global__ void computeNonbonded(
                     const real interactionScale = 1.0f;
                     COMPUTE_INTERACTION
                     energy += tempEnergy;
+#ifdef INCLUDE_ENERGY
+                    // Non-exclusion tile (pair computed once): split equally.
+                    atomEnergy1 += 0.5f*tempEnergy;
+                    saveSingleAtomEnergy(atom2, 0.5f*tempEnergy, atomEnergyBuffer);
+#endif
 #ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
                     delta *= dEdR;
@@ -431,6 +467,11 @@ extern "C" __global__ void computeNonbonded(
                     const real interactionScale = 1.0f;
                     COMPUTE_INTERACTION
                     energy += tempEnergy;
+#ifdef INCLUDE_ENERGY
+                    // Non-exclusion tile (pair computed once): split equally.
+                    atomEnergy1 += 0.5f*tempEnergy;
+                    saveSingleAtomEnergy(atom2, 0.5f*tempEnergy, atomEnergyBuffer);
+#endif
 #ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
                     delta *= dEdR;
@@ -455,6 +496,9 @@ extern "C" __global__ void computeNonbonded(
             }
 
             // Write results.
+#ifdef INCLUDE_ENERGY
+            saveSingleAtomEnergy(atom1, atomEnergy1, atomEnergyBuffer);
+#endif
 #ifdef INCLUDE_FORCES
             atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>(realToFixedPoint(force.x)));
             atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(force.y)));
@@ -507,6 +551,11 @@ extern "C" __global__ void computeNonbonded(
         const real interactionScale = 1.0f;
         COMPUTE_INTERACTION
         energy += tempEnergy;
+#ifdef INCLUDE_ENERGY
+        // Single pair computed once: split equally.
+        saveSingleAtomEnergy(atom1, 0.5f*tempEnergy, atomEnergyBuffer);
+        saveSingleAtomEnergy(atom2, 0.5f*tempEnergy, atomEnergyBuffer);
+#endif
 #ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
         real3 dEdR1 = delta*dEdR;

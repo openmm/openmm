@@ -189,6 +189,8 @@ void tensor_to_array(
             atoms,
             scatter_scale,
             stream);
+    // Sync required before OpenMM reads posq on the same stream; deferring this
+    // requires profile evidence (see scripts/profile/run_openmm_bridge_baseline.sh).
     cudaStreamSynchronize(stream);
     if (previous != nullptr)
         cuCtxSetCurrent(previous);
@@ -221,6 +223,8 @@ namespace {
 constexpr double kInvFixedPointScale = 1.0 / static_cast<double>(0x100000000LL);
 // OpenMM forces: kJ/mol/nm  → eV/Å (matches AmberGBCudaTeacher numpy conversion)
 constexpr double kKjPerNmToEvPerAng = 1.0 / (96.4853321233100184 * 10.0);
+// OpenMM energies: kJ/mol → eV (matches the eV/Å force scaling above).
+constexpr double kKjPerMolToEv = 1.0 / 96.4853321233100184;
 
 torch::Tensor forces_fixed_to_torch(CudaContext& cuda, int padded_atoms) {
     CudaArray& force = cuda.getForce();
@@ -275,6 +279,58 @@ torch::Tensor forces_fixed_to_torch(CudaContext& cuda, int padded_atoms) {
 #endif
 }
 
+// Read the genai-tps per-atom energy buffer (long long fixed point, paddedNumAtoms)
+// as a 1-D tensor of length padded_atoms in eV. Same fixed-point scale as forces,
+// energy unit conversion kJ/mol → eV.
+torch::Tensor atom_energy_fixed_to_torch(CudaContext& cuda, int padded_atoms) {
+    CudaArray& atomEnergy = cuda.getAtomEnergyBuffer();
+    const int n_elem = static_cast<int>(atomEnergy.getSize());
+#ifdef GENAI_TPS_STABLE_TORCH_ABI
+    if (n_elem != padded_atoms) {
+        throw std::runtime_error("CudaContext.atomEnergyBuffer size mismatch");
+    }
+    CUcontext previous = nullptr;
+    cuCtxGetCurrent(&previous);
+    cuCtxSetCurrent(cuda.getContext());
+    auto stream = reinterpret_cast<cudaStream_t>(cuda.getCurrentStream());
+    torch::stable::Tensor out = openmm_bridge_stable::atom_energies_fixed_to_torch(
+            cuda.getDeviceIndex(),
+            device_pointer(atomEnergy),
+            padded_atoms,
+            stream);
+    if (previous != nullptr) {
+        cuCtxSetCurrent(previous);
+    }
+    return openmm_bridge_interop::aten_from_stable(out);
+#else
+    TORCH_CHECK(n_elem == padded_atoms, "CudaContext.atomEnergyBuffer size mismatch");
+    const int device_index = cuda.getDeviceIndex();
+    torch::Device device(torch::kCUDA, device_index);
+    torch::Tensor flat =
+            torch::empty({n_elem}, torch::TensorOptions().dtype(torch::kInt64).device(device));
+    CUcontext previous = nullptr;
+    cuCtxGetCurrent(&previous);
+    cuCtxSetCurrent(cuda.getContext());
+    auto stream = reinterpret_cast<cudaStream_t>(cuda.getCurrentStream());
+    cudaError_t st = cudaMemcpyAsync(
+            flat.data_ptr<int64_t>(),
+            reinterpret_cast<const void*>(device_pointer(atomEnergy)),
+            static_cast<size_t>(n_elem) * sizeof(int64_t),
+            cudaMemcpyDeviceToDevice,
+            stream);
+    if (st != cudaSuccess) {
+        throw std::runtime_error(std::string("cudaMemcpyAsync(atomEnergy): ") + cudaGetErrorString(st));
+    }
+    cudaStreamSynchronize(stream);
+    if (previous != nullptr) {
+        cuCtxSetCurrent(previous);
+    }
+    torch::Tensor out = flat.to(torch::kFloat64);
+    out.mul_(kInvFixedPointScale * kKjPerMolToEv);
+    return out;
+#endif
+}
+
 struct CudaBridge {
     py::object context_object;
     int groups;
@@ -282,7 +338,16 @@ struct CudaBridge {
     CudaBridge(py::object ctx, int groups_in)
             : context_object(std::move(ctx)), groups(groups_in) {}
 
-    torch::Tensor evaluate(torch::Tensor positions) {
+    // Upload positions, run calcForcesAndEnergy, and return forces (n_in, 3) in
+    // eV/Å. When ``include_energy`` is true, the group's total potential energy
+    // (eV) from the *same* evaluation is written to ``energy_ev_out``. When
+    // ``atom_energy_out`` is non-null (requires include_energy), the genai-tps
+    // per-atom energy buffer (eV, sliced to n_in) is written there.
+    torch::Tensor run_forces(
+            torch::Tensor positions,
+            bool include_energy,
+            double& energy_ev_out,
+            torch::Tensor* atom_energy_out = nullptr) {
         if (!positions.is_cuda())
             throw std::runtime_error("positions must be a CUDA tensor");
         Context& ctx = unwrap_context(context_object);
@@ -300,8 +365,14 @@ struct CudaBridge {
 
         torch::stable::Tensor pos_upload = openmm_bridge_stable::pad_positions(pos_fp64, padded_atoms);
         tensor_to_positions(context_object, openmm_bridge_interop::aten_from_stable(pos_upload));
-        impl.calcForcesAndEnergy(true, false, groups);
+        const double energy_kj = impl.calcForcesAndEnergy(true, include_energy, groups);
+        if (include_energy)
+            energy_ev_out = energy_kj * kKjPerMolToEv;
         torch::Tensor forces_fp64 = forces_fixed_to_torch(cuda, padded_atoms).slice(/*dim=*/0, /*start=*/0, /*end=*/n_in);
+        if (atom_energy_out != nullptr) {
+            torch::Tensor ae = atom_energy_fixed_to_torch(cuda, padded_atoms).slice(/*dim=*/0, /*start=*/0, /*end=*/n_in);
+            *atom_energy_out = (positions.scalar_type() != torch::kFloat64) ? ae.to(positions.scalar_type()) : ae;
+        }
         if (positions.scalar_type() != torch::kFloat64)
             return forces_fp64.to(positions.scalar_type());
         return forces_fp64;
@@ -324,12 +395,77 @@ struct CudaBridge {
 
         // Positions tensor is Angstrom per genai/OpenMM-host convention; CUDA posq holds nm (scale in tensor_to_positions).
         tensor_to_positions(context_object, pos_upload);
-        impl.calcForcesAndEnergy(true, false, groups);
+        const double energy_kj = impl.calcForcesAndEnergy(true, include_energy, groups);
+        if (include_energy)
+            energy_ev_out = energy_kj * kKjPerMolToEv;
         torch::Tensor forces_fp64 = forces_fixed_to_torch(cuda, padded_atoms).slice(/*dim=*/0, /*start=*/0, /*end=*/n_in);
+        if (atom_energy_out != nullptr) {
+            torch::Tensor ae = atom_energy_fixed_to_torch(cuda, padded_atoms).slice(/*dim=*/0, /*start=*/0, /*end=*/n_in);
+            *atom_energy_out = (positions.scalar_type() != torch::kFloat64) ? ae.to(positions.scalar_type()) : ae;
+        }
         if (positions.scalar_type() != torch::kFloat64)
             return forces_fp64.to(positions.scalar_type());
         return forces_fp64;
 #endif
+    }
+
+    torch::Tensor evaluate(torch::Tensor positions) {
+        double energy_ev = 0.0;  // discarded
+        return run_forces(std::move(positions), /*include_energy=*/false, energy_ev);
+    }
+
+    // Force-and-energy variant: returns (forces (n_in, 3) eV/Å, scalar energy eV)
+    // for the bound force group(s) from a single calcForcesAndEnergy evaluation.
+    // This is the Tier-1 per-group *scalar* energy used to validate the Tier-2
+    // torch bonded per-atom decomposition (and the Tier-3 per-atom kernels).
+    std::pair<torch::Tensor, double> evaluate_with_energy(torch::Tensor positions) {
+        double energy_ev = 0.0;
+        torch::Tensor forces = run_forces(std::move(positions), /*include_energy=*/true, energy_ev);
+        return std::make_pair(std::move(forces), energy_ev);
+    }
+
+    // Tier-3 variant: returns (forces (n_in, 3) eV/Å, per-atom energy (n_in,) eV)
+    // for the bound force group(s). The per-atom energy comes from the genai-tps
+    // atomEnergyBuffer populated by the forked nonbonded/GB kernels; summing it
+    // over atoms recovers the scalar group energy from evaluate_with_energy.
+    std::pair<torch::Tensor, torch::Tensor> evaluate_with_atom_energy(torch::Tensor positions) {
+        double energy_ev = 0.0;
+        torch::Tensor atom_energy;
+        torch::Tensor forces = run_forces(
+                std::move(positions), /*include_energy=*/true, energy_ev, &atom_energy);
+        return std::make_pair(std::move(forces), std::move(atom_energy));
+    }
+
+    torch::Tensor evaluate_batch(torch::Tensor positions) {
+        TORCH_CHECK(positions.dim() == 3, "positions must have shape (B, N, 3)");
+        TORCH_CHECK(positions.size(2) == 3, "positions must have shape (B, N, 3)");
+        const int64_t batch_size = positions.size(0);
+        std::vector<torch::Tensor> force_rows;
+        force_rows.reserve(static_cast<size_t>(batch_size));
+        for (int64_t i = 0; i < batch_size; ++i) {
+            force_rows.push_back(evaluate(positions.select(0, i).contiguous()));
+        }
+        return torch::stack(force_rows, /*dim=*/0);
+    }
+
+    // Batch Tier-3: returns (forces (B, n_in, 3), per-atom energy (B, n_in)).
+    // Serial loop over the batch, matching evaluate_batch semantics.
+    std::pair<torch::Tensor, torch::Tensor> evaluate_batch_with_atom_energy(torch::Tensor positions) {
+        TORCH_CHECK(positions.dim() == 3, "positions must have shape (B, N, 3)");
+        TORCH_CHECK(positions.size(2) == 3, "positions must have shape (B, N, 3)");
+        const int64_t batch_size = positions.size(0);
+        std::vector<torch::Tensor> force_rows;
+        std::vector<torch::Tensor> energy_rows;
+        force_rows.reserve(static_cast<size_t>(batch_size));
+        energy_rows.reserve(static_cast<size_t>(batch_size));
+        for (int64_t i = 0; i < batch_size; ++i) {
+            auto fe = evaluate_with_atom_energy(positions.select(0, i).contiguous());
+            force_rows.push_back(std::move(fe.first));
+            energy_rows.push_back(std::move(fe.second));
+        }
+        return std::make_pair(
+                torch::stack(force_rows, /*dim=*/0),
+                torch::stack(energy_rows, /*dim=*/0));
     }
 };
 
@@ -353,5 +489,17 @@ PYBIND11_MODULE(openmm_cuda_bridge, module) {
                     py::arg("context"),
                     py::arg("groups") = static_cast<int>(0xFFFFFFFF))
             .def("evaluate", &CudaBridge::evaluate, py::arg("positions"),
-                 "CUDA Context forces as a tensor after GPU-side evaluation.");
+                 "CUDA Context forces as a tensor after GPU-side evaluation.")
+            .def("evaluate_with_energy", &CudaBridge::evaluate_with_energy, py::arg("positions"),
+                 "(forces (N,3) eV/Å, scalar potential energy eV) for the bound force "
+                 "group(s) from a single calcForcesAndEnergy evaluation.")
+            .def("evaluate_batch", &CudaBridge::evaluate_batch, py::arg("positions"),
+                 "Batch forces for shape (B, N, 3). Current implementation preserves "
+                 "single-Context semantics by evaluating each row in sequence.")
+            .def("evaluate_with_atom_energy", &CudaBridge::evaluate_with_atom_energy, py::arg("positions"),
+                 "(forces (N,3) eV/Å, per-atom energy (N,) eV) for the bound force group(s); "
+                 "per-atom energy sums to the scalar group energy.")
+            .def("evaluate_batch_with_atom_energy", &CudaBridge::evaluate_batch_with_atom_energy,
+                 py::arg("positions"),
+                 "Batch (forces (B,N,3), per-atom energy (B,N)) via serial per-row evaluation.");
 }

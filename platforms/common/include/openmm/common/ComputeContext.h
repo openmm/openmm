@@ -419,6 +419,12 @@ public:
      */
     virtual ArrayInterface& getLongForceBuffer() = 0;
     /**
+     * Get the array which accumulates a per-atom decomposed energy represented as 64 bit fixed point.
+     * This is used by the tensor bridge to read back per-atom energies for the physics representation.
+     * The default implementation throws an exception; platforms that support it (CUDA) override this method.
+     */
+    virtual ArrayInterface& getAtomEnergyBuffer();
+    /**
      * Get the array which contains the buffer in which energy is computed.
      */
     virtual ArrayInterface& getEnergyBuffer() = 0;

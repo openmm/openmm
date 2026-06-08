@@ -35,7 +35,8 @@ KERNEL void reduceBornSum(float alpha, float beta, float gamma,
 
 KERNEL void reduceBornForce(
             GLOBAL mm_long* RESTRICT bornForce,
-            GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const float2* RESTRICT params, GLOBAL const real* RESTRICT bornRadii, GLOBAL const real* RESTRICT obcChain) {
+            GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const float2* RESTRICT params, GLOBAL const real* RESTRICT bornRadii, GLOBAL const real* RESTRICT obcChain,
+            GLOBAL mm_ulong* RESTRICT atomEnergyBuffer) {
     mixed energy = 0;
     for (unsigned int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
         // Get summed Born force
@@ -51,6 +52,7 @@ KERNEL void reduceBornForce(
         real saTerm = SURFACE_AREA_FACTOR*r*r*ratio6;
         force += saTerm/bornRadius;
         energy += saTerm;
+        ATOMIC_ADD(&atomEnergyBuffer[index], (mm_ulong) realToFixedPoint(saTerm/(real) -6.0));
         force *= bornRadius*bornRadius*obcChain[index];
         bornForce[index] = realToFixedPoint(force);
     }

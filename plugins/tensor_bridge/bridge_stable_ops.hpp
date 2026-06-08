@@ -29,4 +29,10 @@ torch::stable::Tensor forces_fixed_to_torch(
         int padded_atoms,
         cudaStream_t stream);
 
+torch::stable::Tensor atom_energies_fixed_to_torch(
+        int device_index,
+        std::uintptr_t atom_energy_ptr,
+        int padded_atoms,
+        cudaStream_t stream);
+
 } // namespace openmm_bridge_stable

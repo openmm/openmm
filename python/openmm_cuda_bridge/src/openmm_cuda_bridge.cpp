@@ -13,6 +13,7 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <utility>
 
 using namespace OpenMM;
 
@@ -123,7 +124,17 @@ public:
         }
     }
 
+    // kJ/mol -> eV (matches the eV/Å force scaling in readForces).
+    static constexpr double KJ_PER_MOL_TO_EV = 1.0 / 96.4853321233100184;
+
     torch::Tensor compute_forces() {
+        double energy;  // discarded
+        return compute_forces_impl(false, energy);
+    }
+
+    // Returns forces (N, 3) in eV/Å and sets ``energy_ev`` to the group's total
+    // potential energy in eV from the *same* calcForcesAndEnergy evaluation.
+    torch::Tensor compute_forces_impl(bool include_energy, double& energy_ev) {
         const auto dtype = cu_.getUseDoublePrecision() ? torch::kFloat64 : torch::kFloat32;
         torch::Tensor forces = torch::empty(
             {cu_.getNumAtoms(), 3},
@@ -132,11 +143,12 @@ public:
         void* force_data = tensor_data_pointer(cu_, forces);
         int num_atoms = cu_.getNumAtoms();
         int padded_num_atoms = cu_.getPaddedNumAtoms();
+        double energy_kj = 0.0;
 
         {
             ContextSelector selector(cu_);
             impl_->computeVirtualSites();
-            impl_->calcForcesAndEnergy(true, false, groups_);
+            energy_kj = impl_->calcForcesAndEnergy(true, include_energy, groups_);
             void* args[] = {
                 &cu_.getForce().getDevicePointer(),
                 &force_data,
@@ -150,6 +162,7 @@ public:
         CHECK_CUDA_RESULT(cuCtxPushCurrent(primary_context_), cu_, "Failed to restore CUDA primary context");
         CUcontext popped;
         CHECK_CUDA_RESULT(cuCtxPopCurrent(&popped), cu_, "Failed to pop restored CUDA primary context");
+        energy_ev = energy_kj * KJ_PER_MOL_TO_EV;
         return forces;
     }
 
@@ -157,6 +170,38 @@ public:
         set_positions(positions_angstrom);
         return compute_forces();
     }
+
+    // Force-and-energy variant: returns (forces (N, 3) eV/Å, scalar energy eV).
+    // This is the Tier-1 per-group *scalar* energy (one number per force group),
+    // used to validate the Tier-2 torch bonded per-atom decomposition.
+    std::pair<torch::Tensor, double> evaluate_with_energy(torch::Tensor positions_angstrom) {
+        set_positions(positions_angstrom);
+        double energy_ev = 0.0;
+        torch::Tensor forces = compute_forces_impl(true, energy_ev);
+        return std::make_pair(forces, energy_ev);
+    }
+
+    // --- Tier 3 interface (per-atom nonbond/GB energy) -------------------------
+    // The bonded terms (bond/angle/torsion) get a per-atom energy split in torch
+    // (BondedInteractionCache), but the all-pairs nonbonded and GB energies are
+    // only available as the scalar group energy above. Producing a *per-atom*
+    // nonbond/GB energy requires forking the OpenMM CUDA kernels to accumulate
+    // each interaction's energy into a per-atom buffer, analogous to the existing
+    // per-atom force buffer:
+    //
+    //   1. Allocate an ``atomEnergyBuffer`` (long long, paddedNumAtoms) in the
+    //      CudaContext alongside getForce().
+    //   2. In nonbonded.cu / gbsaObc2.cu (and CustomGBForce for GBn2), add the
+    //      half-interaction energy to atomEnergyBuffer[atom1]/[atom2] in the same
+    //      fixed-point representation used for forces.
+    //   3. Add a ``readAtomEnergies`` kernel mirroring readForces (scale by the
+    //      same eV conversion) and expose ``evaluate_with_atom_energy`` returning
+    //      (forces (N,3), atomEnergy (N,)).
+    //
+    // Until that fork is built, callers must run with energy_per_atom_mode:
+    // bonded_only; the physics_repr scalar hierarchy masks the nonbond/GB energy
+    // channels (left at zero) accordingly.
+    // ---------------------------------------------------------------------------
 
 private:
     void validate_positions(const torch::Tensor& positions_angstrom) const {
@@ -203,5 +248,6 @@ PYBIND11_MODULE(_openmm_cuda_bridge, m) {
         .def("device_index", &CudaBridge::device_index)
         .def("set_positions", &CudaBridge::set_positions)
         .def("compute_forces", &CudaBridge::compute_forces)
-        .def("evaluate", &CudaBridge::evaluate);
+        .def("evaluate", &CudaBridge::evaluate)
+        .def("evaluate_with_energy", &CudaBridge::evaluate_with_energy);
 }

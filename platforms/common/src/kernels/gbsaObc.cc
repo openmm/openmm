@@ -375,7 +375,7 @@ KERNEL void computeGBSAForce1(
 #else
         unsigned int numTiles,
 #endif
-        GLOBAL const int2* RESTRICT exclusionTiles) {
+        GLOBAL const int2* RESTRICT exclusionTiles, GLOBAL mm_ulong* RESTRICT atomEnergyBuffer) {
     const unsigned int totalWarps = GLOBAL_SIZE/TILE_SIZE;
     const unsigned int warp = GLOBAL_ID/TILE_SIZE;
     const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);
@@ -392,6 +392,7 @@ KERNEL void computeGBSAForce1(
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
         real4 force = make_real4(0);
+        real atomEnergy1 = 0;
         unsigned int atom1 = x*TILE_SIZE + tgx;
         real4 posq1 = posq[atom1];
         real charge1 = charge[atom1];
@@ -435,8 +436,10 @@ KERNEL void computeGBSAForce1(
                         if (atom1 != y*TILE_SIZE+j)
                             tempEnergy -= scaledChargeProduct/CUTOFF;
 #endif
-                        if (needEnergy)
+                        if (needEnergy) {
                             energy += 0.5f*tempEnergy;
+                            atomEnergy1 += 0.5f*tempEnergy;
+                        }
                         delta *= dEdR;
                         force.x -= delta.x;
                         force.y -= delta.y;
@@ -493,8 +496,11 @@ KERNEL void computeGBSAForce1(
 #ifdef USE_CUTOFF
                         tempEnergy -= scaledChargeProduct/CUTOFF;
 #endif
-                        if (needEnergy)
+                        if (needEnergy) {
                             energy += tempEnergy;
+                            atomEnergy1 += 0.5f*tempEnergy;
+                            ATOMIC_ADD(&atomEnergyBuffer[y*TILE_SIZE+tj], (mm_ulong) realToFixedPoint(0.5f*tempEnergy));
+                        }
                         delta *= dEdR;
                         force.x -= delta.x;
                         force.y -= delta.y;
@@ -519,6 +525,8 @@ KERNEL void computeGBSAForce1(
         ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.y));
         ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.z));
         ATOMIC_ADD(&global_bornForce[offset], (mm_ulong) realToFixedPoint(force.w));
+        if (needEnergy)
+            ATOMIC_ADD(&atomEnergyBuffer[offset], (mm_ulong) realToFixedPoint(atomEnergy1));
         if (x != y) {
             offset = y*TILE_SIZE + tgx;
             ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fx));
@@ -549,6 +557,7 @@ KERNEL void computeGBSAForce1(
 
     while (pos < end) {
         real4 force = make_real4(0);
+        real atomEnergy1 = 0;
         bool includeTile = true;
 
         // Extract the coordinates of this tile.
@@ -650,8 +659,11 @@ KERNEL void computeGBSAForce1(
 #ifdef USE_CUTOFF
                             tempEnergy -= scaledChargeProduct/CUTOFF;
 #endif
-                            if (needEnergy)
+                            if (needEnergy) {
                                 energy += tempEnergy;
+                                atomEnergy1 += 0.5f*tempEnergy;
+                                ATOMIC_ADD(&atomEnergyBuffer[atom2], (mm_ulong) realToFixedPoint(0.5f*tempEnergy));
+                            }
                             delta *= dEdR;
                             force.x -= delta.x;
                             force.y -= delta.y;
@@ -702,8 +714,11 @@ KERNEL void computeGBSAForce1(
 #ifdef USE_CUTOFF
                             tempEnergy -= scaledChargeProduct/CUTOFF;
 #endif
-                            if (needEnergy)
+                            if (needEnergy) {
                                 energy += tempEnergy;
+                                atomEnergy1 += 0.5f*tempEnergy;
+                                ATOMIC_ADD(&atomEnergyBuffer[atom2], (mm_ulong) realToFixedPoint(0.5f*tempEnergy));
+                            }
                             delta *= dEdR;
                             force.x -= delta.x;
                             force.y -= delta.y;
@@ -732,6 +747,8 @@ KERNEL void computeGBSAForce1(
             ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.y));
             ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.z));
             ATOMIC_ADD(&global_bornForce[atom1], (mm_ulong) realToFixedPoint(force.w));
+            if (needEnergy)
+                ATOMIC_ADD(&atomEnergyBuffer[atom1], (mm_ulong) realToFixedPoint(atomEnergy1));
             if (atom2 < PADDED_NUM_ATOMS) {
                 ATOMIC_ADD(&forceBuffers[atom2], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fx));
                 ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fy));

@@ -301,6 +301,12 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         forceArgs.push_back(&maxSinglePairs);
         forceArgs.push_back(&singlePairs.getDevicePointer());
     }
+    // genai-tps: per-atom energy buffer. Appended *after* the (optional) cutoff
+    // arguments and *before* the force-specific PARAMETER_ARGUMENTS so the
+    // hardcoded neighbor-list arg indices (7/17/19, used during list rebuilds)
+    // remain valid, and so it matches the kernel signature where atomEnergyBuffer
+    // follows the USE_CUTOFF block.
+    forceArgs.push_back(&context.getAtomEnergyBuffer().getDevicePointer());
     hasInitializedParams = false;
     paramStartIndex = forceArgs.size();
     for (int i = 0; i < parameters.size()+arguments.size(); i++)

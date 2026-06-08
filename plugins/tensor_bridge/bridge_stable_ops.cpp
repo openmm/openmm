@@ -101,6 +101,43 @@ torch::stable::Tensor forces_fixed_to_torch(
     return mul_scalar(out, kInvFixedPointScale * kKjPerNmToEvPerAng);
 }
 
+torch::stable::Tensor atom_energies_fixed_to_torch(
+        int device_index,
+        std::uintptr_t atom_energy_ptr,
+        int padded_atoms,
+        cudaStream_t stream) {
+    std::array<int64_t, 1> size{static_cast<int64_t>(padded_atoms)};
+
+    torch::stable::Tensor flat = torch::stable::empty(
+            torch::headeronly::IntHeaderOnlyArrayRef(size.data(), size.size()),
+            torch::headeronly::ScalarType::Long,
+            std::nullopt,
+            cuda_device(device_index));
+
+    cudaError_t st = cudaMemcpyAsync(
+            flat.mutable_data_ptr<int64_t>(),
+            reinterpret_cast<const void*>(atom_energy_ptr),
+            static_cast<size_t>(padded_atoms) * sizeof(int64_t),
+            cudaMemcpyDeviceToDevice,
+            stream);
+    if (st != cudaSuccess) {
+        throw std::runtime_error(std::string("cudaMemcpyAsync(atomEnergy): ") + cudaGetErrorString(st));
+    }
+    cudaStreamSynchronize(stream);
+
+    torch::stable::Tensor flat_fp64 = torch::stable::to(
+            flat,
+            torch::headeronly::ScalarType::Double,
+            std::nullopt,
+            std::nullopt,
+            std::nullopt,
+            false,
+            false,
+            std::nullopt);
+    // kJ/mol → eV, same fixed-point scale as forces.
+    return mul_scalar(flat_fp64, kInvFixedPointScale * (1.0 / 96.4853321233100184));
+}
+
 torch::stable::Tensor ensure_fp64_contiguous(const torch::stable::Tensor& tensor) {
     torch::stable::Tensor out = torch::stable::to(
             tensor,

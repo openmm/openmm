@@ -11,7 +11,7 @@
 
 KERNEL void computePerParticleEnergy(GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq,
         GLOBAL mm_long* RESTRICT forceBuffers
-        PARAMETER_ARGUMENTS) {
+        , GLOBAL mm_ulong* RESTRICT atomEnergyBuffer PARAMETER_ARGUMENTS) {
     mixed energy = 0;
     INIT_PARAM_DERIVS
     for (int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
@@ -23,7 +23,9 @@ KERNEL void computePerParticleEnergy(GLOBAL mixed* RESTRICT energyBuffer, GLOBAL
 
         real4 pos = posq[index];
         real3 force = make_real3(0, 0, 0);
+        mixed energyBefore = energy;
         COMPUTE_ENERGY
+        ATOMIC_ADD(&atomEnergyBuffer[index], (mm_ulong) realToFixedPoint((real) (energy - energyBefore)));
     }
     energyBuffer[GLOBAL_ID] += energy;
     SAVE_PARAM_DERIVS

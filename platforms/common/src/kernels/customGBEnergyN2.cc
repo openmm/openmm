@@ -16,7 +16,7 @@ KERNEL void computeN2Energy(
 #else
         unsigned int numTiles
 #endif
-        PARAMETER_ARGUMENTS) {
+        , GLOBAL mm_ulong* RESTRICT atomEnergyBuffer PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = GLOBAL_SIZE/TILE_SIZE;
     const unsigned int warp = GLOBAL_ID/TILE_SIZE;
     const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);
@@ -36,6 +36,7 @@ KERNEL void computeN2Energy(
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
         real3 force = make_real3(0);
+        real atomEnergy1 = 0;
         DECLARE_ATOM1_DERIVATIVES
         unsigned int atom1 = x*TILE_SIZE + tgx;
         real3 pos1 = trimTo3(posq[atom1]);
@@ -75,8 +76,10 @@ KERNEL void computeN2Energy(
                         COMPUTE_INTERACTION
                         dEdR /= -r;
                     }
-                    if (needEnergy)
+                    if (needEnergy) {
                         energy += 0.5f*tempEnergy;
+                        atomEnergy1 += 0.5f*tempEnergy;
+                    }
                     delta *= dEdR;
                     force.x -= delta.x;
                     force.y -= delta.y;
@@ -129,8 +132,11 @@ KERNEL void computeN2Energy(
                         COMPUTE_INTERACTION
                         dEdR /= -r;
                     }
-                    if (needEnergy)
+                    if (needEnergy) {
                         energy += tempEnergy;
+                        atomEnergy1 += 0.5f*tempEnergy;
+                        ATOMIC_ADD(&atomEnergyBuffer[atom2], (mm_ulong) realToFixedPoint(0.5f*tempEnergy));
+                    }
                     delta *= dEdR;
                     force.x -= delta.x;
                     force.y -= delta.y;
@@ -156,6 +162,8 @@ KERNEL void computeN2Energy(
         ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.y));
         ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.z));
         STORE_DERIVATIVES_1
+        if (needEnergy)
+            ATOMIC_ADD(&atomEnergyBuffer[offset], (mm_ulong) realToFixedPoint(atomEnergy1));
         if (x != y) {
             offset = y*TILE_SIZE + tgx;
             ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(local_force[LOCAL_ID].x));
@@ -187,6 +195,7 @@ KERNEL void computeN2Energy(
     while (pos < end) {
         const bool isExcluded = false;
         real3 force = make_real3(0);
+        real atomEnergy1 = 0;
         DECLARE_ATOM1_DERIVATIVES
         bool includeTile = true;
 
@@ -275,8 +284,11 @@ KERNEL void computeN2Energy(
                             COMPUTE_INTERACTION
                             dEdR /= -r;
                         }
-                        if (needEnergy)
+                        if (needEnergy) {
                             energy += tempEnergy;
+                            atomEnergy1 += 0.5f*tempEnergy;
+                            ATOMIC_ADD(&atomEnergyBuffer[atom2], (mm_ulong) realToFixedPoint(0.5f*tempEnergy));
+                        }
                         delta *= dEdR;
                         force.x -= delta.x;
                         force.y -= delta.y;
@@ -317,8 +329,11 @@ KERNEL void computeN2Energy(
                             COMPUTE_INTERACTION
                             dEdR /= -r;
                         }
-                        if (needEnergy)
+                        if (needEnergy) {
                             energy += tempEnergy;
+                            atomEnergy1 += 0.5f*tempEnergy;
+                            ATOMIC_ADD(&atomEnergyBuffer[atom2], (mm_ulong) realToFixedPoint(0.5f*tempEnergy));
+                        }
                         delta *= dEdR;
                         force.x -= delta.x;
                         force.y -= delta.y;
@@ -346,6 +361,8 @@ KERNEL void computeN2Energy(
             ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.z));
             unsigned int offset = atom1;
             STORE_DERIVATIVES_1
+            if (needEnergy)
+                ATOMIC_ADD(&atomEnergyBuffer[atom1], (mm_ulong) realToFixedPoint(atomEnergy1));
             if (atom2 < PADDED_NUM_ATOMS) {
                 ATOMIC_ADD(&forceBuffers[atom2], (mm_ulong) realToFixedPoint(local_force[LOCAL_ID].x));
                 ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(local_force[LOCAL_ID].y));
