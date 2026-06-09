@@ -467,6 +467,37 @@ struct CudaBridge {
                 torch::stack(force_rows, /*dim=*/0),
                 torch::stack(energy_rows, /*dim=*/0));
     }
+
+    // Batch super-system Tier-3: pack (B, N, 3) with per-replica X offsets, one
+    // calcForcesAndEnergy on the replicated Context, return (B, N, 3) / (B, N).
+    std::pair<torch::Tensor, torch::Tensor> evaluate_super_batch_with_atom_energy(
+            torch::Tensor positions,
+            int64_t n_per_replica,
+            double offset_angstrom) {
+        TORCH_CHECK(positions.dim() == 3, "positions must have shape (B, N, 3)");
+        TORCH_CHECK(positions.size(2) == 3, "positions must have shape (B, N, 3)");
+        const int64_t batch_size = positions.size(0);
+        const int64_t n = positions.size(1);
+        TORCH_CHECK(n == n_per_replica, "n_per_replica must match positions.size(1)");
+
+        torch::Tensor pos64 =
+                positions.scalar_type() == torch::kFloat64 ? positions : positions.to(torch::kFloat64);
+        if (!pos64.is_contiguous())
+            pos64 = pos64.contiguous();
+
+        torch::Tensor offsets =
+                torch::arange(batch_size, pos64.options().dtype(torch::kFloat64)).view({-1, 1, 1}) *
+                offset_angstrom;
+        torch::Tensor x = pos64.select(/*dim=*/2, /*index=*/0).unsqueeze(/*dim=*/2) + offsets;
+        torch::Tensor super_pos =
+                torch::cat({x, pos64.slice(/*dim=*/2, /*start=*/1, /*end=*/3)}, /*dim=*/2)
+                        .reshape({batch_size * n, 3});
+
+        auto fe = evaluate_with_atom_energy(super_pos.contiguous());
+        torch::Tensor forces = fe.first.view({batch_size, n, 3});
+        torch::Tensor energies = fe.second.view({batch_size, n});
+        return std::make_pair(std::move(forces), std::move(energies));
+    }
 };
 
 } // namespace
@@ -501,5 +532,11 @@ PYBIND11_MODULE(openmm_cuda_bridge, module) {
                  "per-atom energy sums to the scalar group energy.")
             .def("evaluate_batch_with_atom_energy", &CudaBridge::evaluate_batch_with_atom_energy,
                  py::arg("positions"),
-                 "Batch (forces (B,N,3), per-atom energy (B,N)) via serial per-row evaluation.");
+                 "Batch (forces (B,N,3), per-atom energy (B,N)) via serial per-row evaluation.")
+            .def("evaluate_super_batch_with_atom_energy",
+                 &CudaBridge::evaluate_super_batch_with_atom_energy,
+                 py::arg("positions"),
+                 py::arg("n_per_replica"),
+                 py::arg("offset_angstrom"),
+                 "Replicated super-system batch: one calcForcesAndEnergy over B replicas.");
 }
