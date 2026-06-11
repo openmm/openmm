@@ -144,6 +144,7 @@ namespace OpenMM {
                 throw OpenMMException("PythonForceProxy: Could not serialize PythonForce because its function could not be pickled.");
             node.setStringProperty("function", hexEncode(force.getPickledFunction()));
             node.setIntProperty("forceGroup", force.getForceGroup());
+            node.setStringProperty("name", force.getName());
             node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
             SerializationNode& globalParams = node.createChildNode("GlobalParameters");
             for (auto param : force.getGlobalParameters())
@@ -174,6 +175,7 @@ namespace OpenMM {
             PythonForce* force = _createPythonForce(function, params, particles);
             if (node.hasProperty("forceGroup"))
                 force->setForceGroup(node.getIntProperty("forceGroup", 0));
+            force->setName(node.getStringProperty("name", force->getName()));
             if (node.hasProperty("usesPeriodic"))
                 force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
             return force;

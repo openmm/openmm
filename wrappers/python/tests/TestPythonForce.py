@@ -95,6 +95,7 @@ class TestPythonForce(unittest.TestCase):
         force1 = PythonForce(compute, {'k':2.5})
         force1.setUsesPeriodicBoundaryConditions(True)
         force1.setParticles([1,3,5])
+        force1.setName("custom name")
 
         # Make a copy by serializing and the deserializing it.
 
@@ -106,6 +107,7 @@ class TestPythonForce(unittest.TestCase):
         self.assertEqual(dict(force2.getGlobalParameters()), {'k':2.5})
         self.assertEqual(force1.getParticles(), force2.getParticles())
         self.assertTrue(force2.usesPeriodicBoundaryConditions())
+        self.assertEqual(force1.getName(), force2.getName())
 
         # A locally defined function cannot be pickled.  We should not be able to serialize a force
         # that uses it.
