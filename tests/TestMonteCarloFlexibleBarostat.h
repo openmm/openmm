@@ -300,6 +300,65 @@ void testRandomSeed() {
     }
 }
 
+void testTriclinicNormalPressure() {
+    // On a tilted (triclinic) box, the normal pressure components (xx, yy, zz)
+    // must match a consistent uniaxial strain finite difference, in which the
+    // atoms and every box vector are deformed by the same gradient.  The
+    // velocities are zero, so only the potential contribution is compared.
+
+    const int numParticles = 64;
+    System system;
+    Vec3 a(4.0, 0, 0), b(0, 4.0, 0), c(1.0, 0, 4.0); // c has an x-tilt
+    system.setDefaultPeriodicBoxVectors(a, b, c);
+    NonbondedForce* nb = new NonbondedForce();
+    nb->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nb->setCutoffDistance(1.4);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        nb->addParticle(0.0, 0.3, 1.0);
+        Vec3 f(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
+        positions[i] = a*f[0] + b*f[1] + c*f[2]; // fractional -> Cartesian
+    }
+    system.addForce(nb);
+    MonteCarloFlexibleBarostat* barostat = new MonteCarloFlexibleBarostat(1.0, 300.0, 0, false);
+    system.addForce(barostat);
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocities(vector<Vec3>(numParticles, Vec3(0, 0, 0)));
+
+    vector<double> pressure;
+    barostat->computeCurrentPressure(context, pressure);
+
+    // Reference: consistent uniaxial strain finite difference.
+
+    double delta = 1e-3;
+    Vec3 box0[3] = {a, b, c};
+    double volume = a[0]*b[1]*c[2];
+    for (int axis = 0; axis < 3; axis++) {
+        double energy[2];
+        for (int s = 0; s < 2; s++) {
+            double f = (s == 0 ? 1.0+delta : 1.0-delta);
+            Vec3 nbox[3] = {box0[0], box0[1], box0[2]};
+            for (int j = 0; j < 3; j++)
+                nbox[j][axis] *= f;
+            context.setPeriodicBoxVectors(nbox[0], nbox[1], nbox[2]);
+            vector<Vec3> p(numParticles);
+            for (int i = 0; i < numParticles; i++) {
+                p[i] = positions[i];
+                p[i][axis] *= f;
+            }
+            context.setPositions(p);
+            energy[s] = context.getState(State::Energy).getPotentialEnergy();
+        }
+        double ref = -((energy[0]-energy[1])/(2*delta))/volume/(AVOGADRO*1e-25);
+        ASSERT_EQUAL_TOL(ref, pressure[axis], 1e-2);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -311,6 +370,7 @@ int main(int argc, char* argv[]) {
         testMolecularGas(true);
         testMolecularGas(false);
         testRandomSeed();
+        testTriclinicNormalPressure();
         runPlatformTests();
     }
     catch(const exception& e) {

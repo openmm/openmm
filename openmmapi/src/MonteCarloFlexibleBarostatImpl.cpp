@@ -197,8 +197,16 @@ double MonteCarloFlexibleBarostatImpl::computePressureComponent(ContextImpl& con
     if (component < 3) {
         scale[component] = 1.0+delta;
         kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, scale[0], scale[1], scale[2]);
+
+        // A uniaxial strain along a Cartesian axis must scale that Cartesian
+        // component of every box vector, not just the diagonal element.
+        // Otherwise the box deformation is inconsistent with the coordinate
+        // scaling for non-orthorhombic boxes.
+        for (int j = component; j < 3; j++)
+            newBox[j][component] *= 1.0+delta;
     }
-    newBox[scaleVec][scaleComponent] *= 1.0+delta;
+    else
+        newBox[scaleVec][scaleComponent] *= 1.0+delta;
     setBoxVectors(context, newBox[0], newBox[1], newBox[2]);
     double energy1 = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
 
@@ -207,8 +215,11 @@ double MonteCarloFlexibleBarostatImpl::computePressureComponent(ContextImpl& con
     if (component < 3) {
         scale[component] = (1.0-delta)/(1.0+delta);
         kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, scale[0], scale[1], scale[2]);
+        for (int j = component; j < 3; j++)
+            newBox[j][component] = box[j][component]*(1.0-delta);
     }
-    newBox[scaleVec][scaleComponent] = box[scaleVec][scaleComponent]*(1.0-delta);
+    else
+        newBox[scaleVec][scaleComponent] = box[scaleVec][scaleComponent]*(1.0-delta);
     setBoxVectors(context, newBox[0], newBox[1], newBox[2]);
     double energy2 = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
 
