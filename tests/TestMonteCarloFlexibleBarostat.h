@@ -313,6 +313,14 @@ void testTriclinicNormalPressure() {
     NonbondedForce* nb = new NonbondedForce();
     nb->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     nb->setCutoffDistance(1.4);
+
+    // Use a switching function so the potential is smooth.  A hard cutoff makes
+    // the energy discontinuous, and on a tilted box the finite-difference
+    // strain in computeCurrentPressure() (which deforms via the GPU
+    // scaleCoordinates kernel) can land a borderline pair on the opposite side
+    // of the cutoff from the reference, producing a spurious step.
+    nb->setUseSwitchingFunction(true);
+    nb->setSwitchingDistance(1.1);
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     vector<Vec3> positions(numParticles);
