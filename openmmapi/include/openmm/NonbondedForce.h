@@ -145,6 +145,22 @@ public:
         LJPME = 5
     };
     /**
+     * This is an enumeration of the reciprocal space kernels that may be used
+     * with PME for charge-charge Coulomb interactions.
+     */
+    enum ReciprocalSpaceKernelType {
+        /**
+         * Use the standard Gaussian Ewald split with B-spline PME spreading.
+         * This is the default.
+         */
+        PMEKernel = 0,
+        /**
+         * Use the ESP reciprocal space kernel with prolate splitting and
+         * spreading.
+         */
+        ESPKernel = 1
+    };
+    /**
      * Create a NonbondedForce.
      */
     NonbondedForce();
@@ -176,6 +192,16 @@ public:
      * Set the method used for handling long range nonbonded interactions.
      */
     void setNonbondedMethod(NonbondedMethod method);
+    /**
+     * Get the reciprocal space kernel to use for PME charge-charge Coulomb
+     * interactions.
+     */
+    ReciprocalSpaceKernelType getReciprocalSpaceKernelType() const;
+    /**
+     * Set the reciprocal space kernel to use for PME charge-charge Coulomb
+     * interactions.
+     */
+    void setReciprocalSpaceKernelType(ReciprocalSpaceKernelType kernel);
     /**
      * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
      * is NoCutoff, this value will have no effect.
@@ -616,6 +642,7 @@ private:
     class ParticleOffsetInfo;
     class ExceptionOffsetInfo;
     NonbondedMethod nonbondedMethod;
+    ReciprocalSpaceKernelType reciprocalSpaceKernel;
     double cutoffDistance, switchingDistance, rfDielectric, ewaldErrorTol, alpha, dalpha;
     bool useSwitchingFunction, useDispersionCorrection, exceptionsUsePeriodic, includeDirectSpace;
     int recipForceGroup, nx, ny, nz, dnx, dny, dnz;

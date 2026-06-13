@@ -38,6 +38,9 @@ KERNEL void computeParameters(GLOBAL mixed* RESTRICT energyBuffer, int includeSe
     #ifdef INCLUDE_EWALD
         energy -= EWALD_SELF_ENERGY_SCALE*params.x*params.x;
     #endif
+    #ifdef INCLUDE_ESP
+        energy -= ESP_SELF_ENERGY_SCALE*params.x*params.x;
+    #endif
     #ifdef INCLUDE_LJPME
         real sig3 = params.y*params.y*params.y;
         energy += LJPME_SELF_ENERGY_SCALE*sig3*sig3*params.z;
@@ -68,7 +71,7 @@ KERNEL void computeParameters(GLOBAL mixed* RESTRICT energyBuffer, int includeSe
 
     // Record the total charge from particles processed by this block.
 
-#if defined(HAS_OFFSETS) && defined(INCLUDE_EWALD)
+#if defined(HAS_OFFSETS) && (defined(INCLUDE_EWALD) || defined(INCLUDE_ESP))
     LOCAL real temp[WORK_GROUP_SIZE];
     temp[LOCAL_ID] = totalCharge;
     for (int i = 1; i < WORK_GROUP_SIZE; i *= 2) {
@@ -107,7 +110,7 @@ KERNEL void computeExclusionParameters(GLOBAL real4* RESTRICT posq, GLOBAL real*
 }
 
 /**
- * When using Ewald or PME with parameter offsets, the total charge can change each step.
+ * When using Ewald, PME, or ESP with parameter offsets, the total charge can change each step.
  * We therefore need to compute the correction for the neutralizing plasma on the GPU.
  * This kernel is executed by a single thread block.
  */
@@ -125,6 +128,10 @@ KERNEL void computePlasmaCorrection(GLOBAL real* RESTRICT chargeBuffer, GLOBAL m
     }
     if (LOCAL_ID == 0) {
         real totalCharge = temp[0];
+#ifdef INCLUDE_ESP
+        energyBuffer[0] -= ESP_BACKGROUND_ENERGY_SCALE*totalCharge*totalCharge/volume;
+#else
         energyBuffer[0] -= totalCharge*totalCharge/(8*EPSILON0*volume*alpha*alpha);
+#endif
     }
 }

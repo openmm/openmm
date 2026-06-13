@@ -40,9 +40,11 @@ void testSerialization() {
     // Create a Force.
 
     NonbondedForce force;
+    ASSERT_EQUAL(NonbondedForce::PMEKernel, force.getReciprocalSpaceKernelType());
     force.setForceGroup(3);
     force.setName("custom name");
     force.setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    force.setReciprocalSpaceKernelType(NonbondedForce::ESPKernel);
     force.setSwitchingDistance(1.5);
     force.setUseSwitchingFunction(true);
     force.setCutoffDistance(2.0);
@@ -79,6 +81,7 @@ void testSerialization() {
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
     ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.getNonbondedMethod(), force2.getNonbondedMethod());
+    ASSERT_EQUAL(force.getReciprocalSpaceKernelType(), force2.getReciprocalSpaceKernelType());
     ASSERT_EQUAL(force.getSwitchingDistance(), force2.getSwitchingDistance());
     ASSERT_EQUAL(force.getUseSwitchingFunction(), force2.getUseSwitchingFunction());
     ASSERT_EQUAL(force.getCutoffDistance(), force2.getCutoffDistance());
@@ -158,11 +161,31 @@ void testSerialization() {
         ASSERT_EQUAL(sigma1, sigma2);
         ASSERT_EQUAL(epsilon1, epsilon2);
     }
+    delete copy;
+}
+
+void testLegacySerializationDefaultKernelType() {
+    NonbondedForce force;
+    force.setNonbondedMethod(NonbondedForce::PME);
+
+    stringstream buffer;
+    XmlSerializer::serialize<NonbondedForce>(&force, "Force", buffer);
+    string xml = buffer.str();
+    string property = " reciprocalSpaceKernel=\"0\"";
+    size_t pos = xml.find(property);
+    ASSERT(pos != string::npos);
+    xml.erase(pos, property.size());
+
+    stringstream legacyBuffer(xml);
+    NonbondedForce* copy = XmlSerializer::deserialize<NonbondedForce>(legacyBuffer);
+    ASSERT_EQUAL(NonbondedForce::PMEKernel, copy->getReciprocalSpaceKernelType());
+    delete copy;
 }
 
 int main() {
     try {
         testSerialization();
+        testLegacySerializationDefaultKernelType();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

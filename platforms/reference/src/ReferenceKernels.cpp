@@ -938,6 +938,8 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
         exceptionParamOffsets[make_pair(param, nb14Index[exception])] = {charge, sigma, epsilon};
     }
     nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
+    if (force.getReciprocalSpaceKernelType() == NonbondedForce::ESPKernel)
+        throw OpenMMException("NonbondedForce: ESP reciprocal space kernel is only supported on GPU platforms.");
     nonbondedCutoff = force.getCutoffDistance();
     if (nonbondedMethod == NoCutoff) {
         neighborList = NULL;

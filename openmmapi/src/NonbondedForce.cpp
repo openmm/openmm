@@ -40,7 +40,7 @@
 using namespace OpenMM;
 using namespace std;
 
-NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), switchingDistance(-1.0), rfDielectric(78.3),
+NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), reciprocalSpaceKernel(PMEKernel), cutoffDistance(1.0), switchingDistance(-1.0), rfDielectric(78.3),
         ewaldErrorTol(5e-4), alpha(0.0), dalpha(0.0), useSwitchingFunction(false), useDispersionCorrection(true), exceptionsUsePeriodic(false), recipForceGroup(-1),
         includeDirectSpace(true), nx(0), ny(0), nz(0), dnx(0), dny(0), dnz(0), numContexts(0) {
 }
@@ -53,6 +53,16 @@ void NonbondedForce::setNonbondedMethod(NonbondedMethod method) {
     if (method < 0 || method > 5)
         throw OpenMMException("NonbondedForce: Illegal value for nonbonded method");
     nonbondedMethod = method;
+}
+
+NonbondedForce::ReciprocalSpaceKernelType NonbondedForce::getReciprocalSpaceKernelType() const {
+    return reciprocalSpaceKernel;
+}
+
+void NonbondedForce::setReciprocalSpaceKernelType(ReciprocalSpaceKernelType kernel) {
+    if (kernel < 0 || kernel > 1)
+        throw OpenMMException("NonbondedForce: Illegal value for reciprocal space kernel");
+    reciprocalSpaceKernel = kernel;
 }
 
 double NonbondedForce::getCutoffDistance() const {

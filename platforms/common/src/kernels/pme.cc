@@ -20,6 +20,39 @@ KERNEL void findAtomGridIndex(GLOBAL const real4* RESTRICT posq, GLOBAL int2* RE
     }
 }
 
+#ifdef USE_ESP
+DEVICE inline real espHorner(GLOBAL const real* RESTRICT coeffs, int offset, int order, real x) {
+    real value = coeffs[offset];
+    for (int i = 1; i < order; i++)
+        value = value*x + coeffs[offset+i];
+    return value;
+}
+
+DEVICE inline real3 espHorner3(GLOBAL const real* RESTRICT coeffs, int offset, int order, real3 x) {
+    real c0 = coeffs[offset];
+    real3 value = make_real3(c0, c0, c0);
+    for (int i = 1; i < order; i++) {
+        real c = coeffs[offset+i];
+        value.x = value.x*x.x + c;
+        value.y = value.y*x.y + c;
+        value.z = value.z*x.z + c;
+    }
+    return value;
+}
+
+DEVICE inline real espEvaluateChebyshev(GLOBAL const real* RESTRICT coeffs, real x) {
+    const real t = 2*x - 1;
+    real b1 = 0;
+    real b2 = 0;
+    for (int i = ESP_CHEB_ORDER-1; i >= 1; --i) {
+        real tmp = 2*t*b1 - b2 + coeffs[i];
+        b2 = b1;
+        b1 = tmp;
+    }
+    return coeffs[0] + t*b1 - b2;
+}
+#endif
+
 KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq,
 #ifdef USE_FIXED_POINT_CHARGE_SPREADING
         GLOBAL mm_ulong* RESTRICT pmeGrid,
@@ -33,14 +66,31 @@ KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq,
 #else
         GLOBAL const real* RESTRICT charges
 #endif
+#ifdef USE_ESP
+        , GLOBAL const real* RESTRICT espSpreadCoeffs
+#endif
         ) {
     // Process the atoms in spatially sorted order.  This improves efficiency when writing
     // the grid values.  PME_ORDER threads process one atom.
 
+#ifndef USE_ESP
     real3 data[PME_ORDER];
     const real scale = RECIP((real) (PME_ORDER-1));
-    for (int i = GLOBAL_ID; i < NUM_ATOMS*PME_ORDER; i += GLOBAL_SIZE) {
-        int atom = pmeAtomGridIndex[i/PME_ORDER].x;
+#endif
+    for (int i = GLOBAL_ID; i < NUM_ATOMS*
+#ifdef USE_ESP
+            ESP_ORDER
+#else
+            PME_ORDER
+#endif
+            ; i += GLOBAL_SIZE) {
+        int atom = pmeAtomGridIndex[i/
+#ifdef USE_ESP
+                ESP_ORDER
+#else
+                PME_ORDER
+#endif
+                ].x;
         real4 pos = posq[atom];
 #ifdef CHARGE_FROM_SIGEPS
         const float2 sigEps = sigmaEpsilon[atom];
@@ -65,6 +115,11 @@ KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq,
         // from global memory.
 
         real3 dr = make_real3(t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z);
+#ifdef USE_ESP
+        real3 espData[ESP_ORDER];
+        for (int j = 0; j < ESP_ORDER; j++)
+            espData[j] = espHorner3(espSpreadCoeffs, j*ESP_POLY_ORDER, ESP_POLY_ORDER, dr);
+#else
         data[PME_ORDER-1] = make_real3(0);
         data[1] = dr;
         data[0] = make_real3(1)-dr;
@@ -79,29 +134,66 @@ KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq,
         for (int j = 1; j < (PME_ORDER-1); j++)
             data[PME_ORDER-j-1] = scale*((dr+make_real3(j))*data[PME_ORDER-j-2] + (make_real3(PME_ORDER-j)-dr)*data[PME_ORDER-j-1]);
         data[0] = scale*(make_real3(1)-dr)*data[0];
+#endif
 
         // Spread the charge from this atom onto each grid point.  PME_ORDER threads access
         // consecutive addresses.
 
-        int iz = i%PME_ORDER;
+        int iz = i%
+#ifdef USE_ESP
+                ESP_ORDER
+#else
+                PME_ORDER
+#endif
+                ;
         int zindex = gridIndex.z+iz;
         zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
         real dz = 0;
-        for (int i = 0; i < PME_ORDER; i++) {
+        for (int i = 0; i <
+#ifdef USE_ESP
+                ESP_ORDER
+#else
+                PME_ORDER
+#endif
+                ; i++) {
+#ifdef USE_ESP
+            dz = i == iz ? espData[i].z : dz;
+#else
             dz = i == iz ? data[i].z : dz;
+#endif
         }
         dz *= charge;
-        for (int ix = 0; ix < PME_ORDER; ix++) {
+        for (int ix = 0; ix <
+#ifdef USE_ESP
+                ESP_ORDER
+#else
+                PME_ORDER
+#endif
+                ; ix++) {
             int xbase = gridIndex.x+ix;
             xbase -= (xbase >= GRID_SIZE_X ? GRID_SIZE_X : 0);
             xbase = xbase*GRID_SIZE_Y*GRID_SIZE_Z;
+#ifdef USE_ESP
+            real dzdx = dz*espData[ix].x;
+#else
             real dzdx = dz*data[ix].x;
-            for (int iy = 0; iy < PME_ORDER; iy++) {
+#endif
+            for (int iy = 0; iy <
+#ifdef USE_ESP
+                    ESP_ORDER
+#else
+                    PME_ORDER
+#endif
+                    ; iy++) {
                 int ybase = gridIndex.y+iy;
                 ybase -= (ybase >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
                 ybase = ybase*GRID_SIZE_Z;
                 int index = xbase + ybase + zindex;
+#ifdef USE_ESP
+                real add = dzdx*espData[iy].y;
+#else
                 real add = dzdx*data[iy].y;
+#endif
                 if (fabs(add) > 2.3e-10f) { // Smallest value representable in 64 bit fixed point
 #ifdef USE_FIXED_POINT_CHARGE_SPREADING
                     ATOMIC_ADD(&pmeGrid[index], (mm_ulong) realToFixedPoint(add));
@@ -136,7 +228,12 @@ KERNEL void finishSpreadCharge(
 
 KERNEL void reciprocalConvolution(GLOBAL real2* RESTRICT pmeGrid, GLOBAL const real* RESTRICT pmeBsplineModuliX,
         GLOBAL const real* RESTRICT pmeBsplineModuliY, GLOBAL const real* RESTRICT pmeBsplineModuliZ,
-        real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
+        real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ
+#ifdef USE_ESP
+        , GLOBAL const real* RESTRICT espInvModuliX, GLOBAL const real* RESTRICT espInvModuliY,
+        GLOBAL const real* RESTRICT espInvModuliZ, GLOBAL const real* RESTRICT espSplitChebCoeffs
+#endif
+        ) {
     // R2C stores into a half complex matrix where the last dimension is cut by half
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*(GRID_SIZE_Z/2+1);
 #ifdef USE_LJPME
@@ -145,6 +242,8 @@ KERNEL void reciprocalConvolution(GLOBAL real2* RESTRICT pmeGrid, GLOBAL const r
     real fac1 = 2*M_PI*M_PI*M_PI*SQRT(M_PI);
     real fac2 = EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA;
     real fac3 = -2*EWALD_ALPHA*M_PI*M_PI;
+#elif defined(USE_ESP)
+    const real recipScaleFactor = ((real) 0.5/(real) M_PI)*recipBoxVecX.x*recipBoxVecY.y*recipBoxVecZ.z;
 #else
     const real recipScaleFactor = RECIP(M_PI)*recipBoxVecX.x*recipBoxVecY.y*recipBoxVecZ.z;
 #endif
@@ -166,7 +265,17 @@ KERNEL void reciprocalConvolution(GLOBAL real2* RESTRICT pmeGrid, GLOBAL const r
         real bz = pmeBsplineModuliZ[kz];
         real2 grid = pmeGrid[index];
         real m2 = mhx*mhx+mhy*mhy+mhz*mhz;
-#ifdef USE_LJPME
+#ifdef USE_ESP
+        if (kx != 0 || ky != 0 || kz != 0) {
+            real arg = SQRT(m2)*(real) ESP_ARG_SCALE;
+            real splitVal = (arg > (real) 1 ? (real) 0 : espEvaluateChebyshev(espSplitChebCoeffs, arg));
+            real eterm = recipScaleFactor*splitVal*
+                    espInvModuliX[kx]*espInvModuliY[ky]*espInvModuliZ[kz]*RECIP(m2);
+            pmeGrid[index] = make_real2(grid.x*eterm, grid.y*eterm);
+        }
+        else
+            pmeGrid[index] = make_real2(0);
+#elif defined(USE_LJPME)
         real denom = recipScaleFactor/(bx*by*bz);
         real m = SQRT(m2);
         real m3 = m*m2;
@@ -190,7 +299,12 @@ KERNEL void reciprocalConvolution(GLOBAL real2* RESTRICT pmeGrid, GLOBAL const r
 
 KERNEL void gridEvaluateEnergy(GLOBAL real2* RESTRICT pmeGrid, GLOBAL mixed* RESTRICT energyBuffer,
                       GLOBAL const real* RESTRICT pmeBsplineModuliX, GLOBAL const real* RESTRICT pmeBsplineModuliY, GLOBAL const real* RESTRICT pmeBsplineModuliZ,
-                      real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
+                      real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ
+#ifdef USE_ESP
+                      , GLOBAL const real* RESTRICT espInvModuliX, GLOBAL const real* RESTRICT espInvModuliY,
+                      GLOBAL const real* RESTRICT espInvModuliZ, GLOBAL const real* RESTRICT espSplitChebCoeffs
+#endif
+                      ) {
     // R2C stores into a half complex matrix where the last dimension is cut by half
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
  #ifdef USE_LJPME
@@ -199,6 +313,8 @@ KERNEL void gridEvaluateEnergy(GLOBAL real2* RESTRICT pmeGrid, GLOBAL mixed* RES
     real fac1 = 2*M_PI*M_PI*M_PI*SQRT(M_PI);
     real fac2 = EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA;
     real fac3 = -2*EWALD_ALPHA*M_PI*M_PI;
+#elif defined(USE_ESP)
+    const real recipScaleFactor = ((real) 0.5/(real) M_PI)*recipBoxVecX.x*recipBoxVecY.y*recipBoxVecZ.z;
 #else
     const real recipScaleFactor = RECIP(M_PI)*recipBoxVecX.x*recipBoxVecY.y*recipBoxVecZ.z;
 #endif
@@ -217,10 +333,18 @@ KERNEL void gridEvaluateEnergy(GLOBAL real2* RESTRICT pmeGrid, GLOBAL mixed* RES
         real mhy = mx*recipBoxVecY.x+my*recipBoxVecY.y;
         real mhz = mx*recipBoxVecZ.x+my*recipBoxVecZ.y+mz*recipBoxVecZ.z;
         real m2 = mhx*mhx+mhy*mhy+mhz*mhz;
+        real eterm = 0;
+#ifdef USE_ESP
+        if (kx != 0 || ky != 0 || kz != 0) {
+            real arg = SQRT(m2)*(real) ESP_ARG_SCALE;
+            real splitVal = (arg > (real) 1 ? (real) 0 : espEvaluateChebyshev(espSplitChebCoeffs, arg));
+            eterm = recipScaleFactor*splitVal*
+                    espInvModuliX[kx]*espInvModuliY[ky]*espInvModuliZ[kz]*RECIP(m2);
+        }
+#elif defined(USE_LJPME)
         real bx = pmeBsplineModuliX[kx];
         real by = pmeBsplineModuliY[ky];
         real bz = pmeBsplineModuliZ[kz];
-#ifdef USE_LJPME
         real denom = recipScaleFactor/(bx*by*bz);
         real m = SQRT(m2);
         real m3 = m*m2;
@@ -228,10 +352,13 @@ KERNEL void gridEvaluateEnergy(GLOBAL real2* RESTRICT pmeGrid, GLOBAL mixed* RES
         real expfac = -b*b;
         real expterm = EXP(expfac);
         real erfcterm = ERFC(b);
-        real eterm = (fac1*erfcterm*m3 + expterm*(fac2 + fac3*m2)) * denom;
+        eterm = (fac1*erfcterm*m3 + expterm*(fac2 + fac3*m2)) * denom;
 #else
+        real bx = pmeBsplineModuliX[kx];
+        real by = pmeBsplineModuliY[ky];
+        real bz = pmeBsplineModuliZ[kz];
         real denom = m2*bx*by*bz;
-        real eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)/denom;
+        eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)/denom;
 #endif
         if (kz >= (GRID_SIZE_Z/2+1)) {
             kx = ((kx == 0) ? kx : GRID_SIZE_X-kx);
@@ -240,7 +367,7 @@ KERNEL void gridEvaluateEnergy(GLOBAL real2* RESTRICT pmeGrid, GLOBAL mixed* RES
         }
         int indexInHalfComplexGrid = kz + ky*(GRID_SIZE_Z/2+1)+kx*(GRID_SIZE_Y*(GRID_SIZE_Z/2+1));
         real2 grid = pmeGrid[indexInHalfComplexGrid];
-#ifndef USE_LJPME
+#if !defined(USE_LJPME) && !defined(USE_ESP)
         if (kx != 0 || ky != 0 || kz != 0)
 #endif
             energy += eterm*(grid.x*grid.x + grid.y*grid.y);
@@ -260,10 +387,15 @@ KERNEL void gridInterpolateForce(GLOBAL const real4* RESTRICT posq, GLOBAL mm_ul
 #else
         GLOBAL const real* RESTRICT charges
 #endif
+#ifdef USE_ESP
+        , GLOBAL const real* RESTRICT espSpreadCoeffs, GLOBAL const real* RESTRICT espSpreadDerCoeffs
+#endif
         ) {
+#ifndef USE_ESP
     real3 data[PME_ORDER];
     real3 ddata[PME_ORDER];
     const real scale = RECIP((real) (PME_ORDER-1));
+#endif
 
     // Process the atoms in spatially sorted order.  This improves cache performance when loading
     // the grid values.
@@ -295,6 +427,14 @@ KERNEL void gridInterpolateForce(GLOBAL const real4* RESTRICT posq, GLOBAL mm_ul
         // from global memory.
 
         real3 dr = make_real3(t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z);
+#ifdef USE_ESP
+        real3 espData[ESP_ORDER];
+        real3 espDdata[ESP_ORDER];
+        for (int j = 0; j < ESP_ORDER; j++) {
+            espData[j] = espHorner3(espSpreadCoeffs, j*ESP_POLY_ORDER, ESP_POLY_ORDER, dr);
+            espDdata[j] = espHorner3(espSpreadDerCoeffs, j*ESP_DER_POLY_ORDER, ESP_DER_POLY_ORDER, dr);
+        }
+#else
         data[PME_ORDER-1] = make_real3(0);
         data[1] = dr;
         data[0] = make_real3(1)-dr;
@@ -312,31 +452,66 @@ KERNEL void gridInterpolateForce(GLOBAL const real4* RESTRICT posq, GLOBAL mm_ul
         for (int j = 1; j < (PME_ORDER-1); j++)
             data[PME_ORDER-j-1] = scale*((dr+make_real3(j))*data[PME_ORDER-j-2] + (make_real3(PME_ORDER-j)-dr)*data[PME_ORDER-j-1]);
         data[0] = scale*(make_real3(1)-dr)*data[0];
+#endif
 
         // Compute the force on this atom.
 
-        for (int ix = 0; ix < PME_ORDER; ix++) {
+        for (int ix = 0; ix <
+#ifdef USE_ESP
+                ESP_ORDER
+#else
+                PME_ORDER
+#endif
+                ; ix++) {
             int xbase = gridIndex.x+ix;
             xbase -= (xbase >= GRID_SIZE_X ? GRID_SIZE_X : 0);
             xbase = xbase*GRID_SIZE_Y*GRID_SIZE_Z;
+#ifdef USE_ESP
+            real dx = espData[ix].x;
+            real ddx = espDdata[ix].x;
+#else
             real dx = data[ix].x;
             real ddx = ddata[ix].x;
+#endif
 
-            for (int iy = 0; iy < PME_ORDER; iy++) {
+            for (int iy = 0; iy <
+#ifdef USE_ESP
+                    ESP_ORDER
+#else
+                    PME_ORDER
+#endif
+                    ; iy++) {
                 int ybase = gridIndex.y+iy;
                 ybase -= (ybase >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
                 ybase = xbase + ybase*GRID_SIZE_Z;
+#ifdef USE_ESP
+                real dy = espData[iy].y;
+                real ddy = espDdata[iy].y;
+#else
                 real dy = data[iy].y;
                 real ddy = ddata[iy].y;
+#endif
 
-                for (int iz = 0; iz < PME_ORDER; iz++) {
+                for (int iz = 0; iz <
+#ifdef USE_ESP
+                        ESP_ORDER
+#else
+                        PME_ORDER
+#endif
+                        ; iz++) {
                     int zindex = gridIndex.z+iz;
                     zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
                     int index = ybase + zindex;
                     real gridvalue = pmeGrid[index];
+#ifdef USE_ESP
+                    force.x += ddx*dy*espData[iz].z*gridvalue;
+                    force.y += dx*ddy*espData[iz].z*gridvalue;
+                    force.z += dx*dy*espDdata[iz].z*gridvalue;
+#else
                     force.x += ddx*dy*data[iz].z*gridvalue;
                     force.y += dx*ddy*data[iz].z*gridvalue;
                     force.z += dx*dy*ddata[iz].z*gridvalue;
+#endif
                 }
             }
         }

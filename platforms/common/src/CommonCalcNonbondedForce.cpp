@@ -30,6 +30,7 @@
 #include "openmm/common/ContextSelector.h"
 #include "openmm/common/NonbondedUtilities.h"
 #include "CommonKernelSources.h"
+#include "EspPswf.h"
 #include "SimTKOpenMMRealType.h"
 #include <algorithm>
 #include <assert.h>
@@ -39,6 +40,47 @@
 
 using namespace OpenMM;
 using namespace std;
+
+namespace {
+
+void buildEspRealSpaceTables(const pswf::EspCoefficients& espCoeffs, double cutoff, int numTablePoints,
+        vector<double>& energyTable, vector<double>& scaleTable) {
+    pswf::Prolate0Fun pfun(espCoeffs.c_s);
+    const double c0 = espCoeffs.c0;
+    const double dx = cutoff/numTablePoints;
+    energyTable.resize(numTablePoints+4);
+    scaleTable.resize(numTablePoints+4);
+    for (int i = 0; i < numTablePoints+4; i++) {
+        const double r = i*dx;
+        const double x = r/cutoff;
+        if (x >= 1.0 || r >= cutoff) {
+            energyTable[i] = 0.0;
+            scaleTable[i] = 0.0;
+        }
+        else {
+            const double intPsi = pfun.int_eval(x)/c0;
+            const double psiVal = pfun.eval_val(x);
+            energyTable[i] = 1.0-intPsi;
+            scaleTable[i] = 1.0-intPsi + x*psiVal/c0;
+        }
+    }
+}
+
+double computeEspBackgroundFactor(const pswf::EspCoefficients& espCoeffs) {
+    pswf::Prolate0Fun pfun(espCoeffs.c_s);
+    const int numQuadPoints = 128;
+    vector<double> points(numQuadPoints), weights(numQuadPoints);
+    pswf::legerts(numQuadPoints, points.data(), weights.data());
+    double integral = 0.0;
+    for (int i = 0; i < numQuadPoints; i++) {
+        const double x = 0.5*(points[i]+1.0);
+        const double weight = 0.5*weights[i];
+        integral += weight*x*pfun.int_eval(x)/espCoeffs.c0;
+    }
+    return 2.0*M_PI*(0.5-integral);
+}
+
+}
 
 class CommonCalcNonbondedForceKernel::ForceInfo : public ComputeForceInfo {
 public:
@@ -284,6 +326,9 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
     bool useCutoff = (nonbondedMethod != NoCutoff);
     bool usePeriodic = (nonbondedMethod != NoCutoff && nonbondedMethod != CutoffNonPeriodic);
     doLJPME = (nonbondedMethod == LJPME && hasLJ);
+    useEsp = false;
+    if (force.getReciprocalSpaceKernelType() == NonbondedForce::ESPKernel && nonbondedMethod != PME)
+        throw OpenMMException("NonbondedForce: ESP reciprocal space kernel is only supported for PME.");
     usePosqCharges = hasCoulomb ? cc.requestPosqCharges() : false;
     map<string, string> defines;
     defines["HAS_COULOMB"] = (hasCoulomb ? "1" : "0");
@@ -321,6 +366,13 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
     hasOffsets = (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0);
     if (hasOffsets)
         paramsDefines["HAS_OFFSETS"] = "1";
+    espCutoff = force.getCutoffDistance();
+    espBgFactor = 0.0;
+    espSelfEnergyScale = 0.0;
+    espOrder = 0;
+    espSpreadPolyOrder = 0;
+    espSpreadDerPolyOrder = 0;
+    espSplitChebOrder = 0;
     if (force.getNumParticleParameterOffsets() > 0)
         paramsDefines["HAS_PARTICLE_OFFSETS"] = "1";
     if (force.getNumExceptionParameterOffsets() > 0)
@@ -366,10 +418,25 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
     else if (((nonbondedMethod == PME || nonbondedMethod == LJPME) && hasCoulomb) || doLJPME) {
         // Compute the PME parameters.
 
-        NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSizeX, gridSizeY, gridSizeZ, false);
-        gridSizeX = cc.findLegalFFTDimension(gridSizeX);
-        gridSizeY = cc.findLegalFFTDimension(gridSizeY);
-        gridSizeZ = cc.findLegalFFTDimension(gridSizeZ);
+        useEsp = (nonbondedMethod == PME && hasCoulomb && force.getReciprocalSpaceKernelType() == NonbondedForce::ESPKernel);
+        if (useEsp) {
+            const double prolateC = pswf::get_prolate_c(force.getEwaldErrorTolerance());
+            const double spacing = M_PI*force.getCutoffDistance()/prolateC;
+            const int minGridSize = 16;
+            Vec3 boxVectors[3];
+            system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+            gridSizeX = cc.findLegalFFTDimension(max((int) ceil(boxVectors[0][0]/spacing), minGridSize));
+            gridSizeY = cc.findLegalFFTDimension(max((int) ceil(boxVectors[1][1]/spacing), minGridSize));
+            gridSizeZ = cc.findLegalFFTDimension(max((int) ceil(boxVectors[2][2]/spacing), minGridSize));
+            int pmeGridSizeX, pmeGridSizeY, pmeGridSizeZ;
+            NonbondedForceImpl::calcPMEParameters(system, force, alpha, pmeGridSizeX, pmeGridSizeY, pmeGridSizeZ, false);
+        }
+        else {
+            NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSizeX, gridSizeY, gridSizeZ, false);
+            gridSizeX = cc.findLegalFFTDimension(gridSizeX);
+            gridSizeY = cc.findLegalFFTDimension(gridSizeY);
+            gridSizeZ = cc.findLegalFFTDimension(gridSizeZ);
+        }
         if (doLJPME) {
             NonbondedForceImpl::calcPMEParameters(system, force, dispersionAlpha, dispersionGridSizeX,
                                                   dispersionGridSizeY, dispersionGridSizeZ, true);
@@ -392,10 +459,28 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
             defines["MULTSHIFT6"] = cc.doubleToString(multShift6);
         }
         if (cc.getContextIndex() == 0) {
-            paramsDefines["INCLUDE_EWALD"] = "1";
-            paramsDefines["EWALD_SELF_ENERGY_SCALE"] = cc.doubleToString(ONE_4PI_EPS0*alpha/sqrt(M_PI));
+            pswf::EspCoefficients espCoeffs;
+            if (useEsp) {
+                espCoeffs = pswf::build_esp_coefficients_with_P(force.getEwaldErrorTolerance(), 8, 16);
+                espOrder = espCoeffs.P;
+                espSpreadPolyOrder = espCoeffs.spread_poly_order;
+                espSpreadDerPolyOrder = espCoeffs.spread_der_poly_order;
+                espSplitChebOrder = espCoeffs.split_fourier_cheb_order;
+                espBgFactor = computeEspBackgroundFactor(espCoeffs);
+                espSelfEnergyScale = ONE_4PI_EPS0*espCoeffs.psi0/(2.0*espCoeffs.c0*force.getCutoffDistance());
+                paramsDefines["INCLUDE_ESP"] = "1";
+                paramsDefines["ESP_SELF_ENERGY_SCALE"] = cc.doubleToString(espSelfEnergyScale);
+                paramsDefines["ESP_BACKGROUND_ENERGY_SCALE"] = cc.doubleToString(ONE_4PI_EPS0*espBgFactor*force.getCutoffDistance()*force.getCutoffDistance());
+            }
+            else {
+                paramsDefines["INCLUDE_EWALD"] = "1";
+                paramsDefines["EWALD_SELF_ENERGY_SCALE"] = cc.doubleToString(ONE_4PI_EPS0*alpha/sqrt(M_PI));
+            }
             for (int i = 0; i < numParticles; i++) {
-                ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+                if (useEsp)
+                    ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*espSelfEnergyScale;
+                else
+                    ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
                 totalCharge += baseParticleParamVec[i].x;
             }
             if (doLJPME) {
@@ -414,11 +499,19 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
             pmeDefines["GRID_SIZE_Z"] = cc.intToString(gridSizeZ);
             pmeDefines["EPSILON_FACTOR"] = cc.doubleToString(sqrt(ONE_4PI_EPS0));
             pmeDefines["M_PI"] = cc.doubleToString(M_PI);
+            if (useEsp) {
+                pmeDefines["USE_ESP"] = "1";
+                pmeDefines["ESP_ORDER"] = cc.intToString(espOrder);
+                pmeDefines["ESP_POLY_ORDER"] = cc.intToString(espSpreadPolyOrder);
+                pmeDefines["ESP_DER_POLY_ORDER"] = cc.intToString(espSpreadDerPolyOrder);
+                pmeDefines["ESP_CHEB_ORDER"] = cc.intToString(espSplitChebOrder);
+                pmeDefines["ESP_ARG_SCALE"] = cc.doubleToString(2.0*M_PI*force.getCutoffDistance()/espCoeffs.c_s);
+            }
             if (useFixedPointChargeSpreading)
                 pmeDefines["USE_FIXED_POINT_CHARGE_SPREADING"] = "1";
             if (deviceIsCpu)
                 pmeDefines["DEVICE_IS_CPU"] = "1";
-            if (useCpuPme && !doLJPME && usePosqCharges) {
+            if (useCpuPme && !doLJPME && usePosqCharges && !useEsp) {
                 // Create the CPU PME kernel.
 
                 try {
@@ -451,6 +544,56 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
                 pmeBsplineModuliX.initialize(cc, gridSizeX, elementSize, "pmeBsplineModuliX");
                 pmeBsplineModuliY.initialize(cc, gridSizeY, elementSize, "pmeBsplineModuliY");
                 pmeBsplineModuliZ.initialize(cc, gridSizeZ, elementSize, "pmeBsplineModuliZ");
+                if (useEsp) {
+                    espSpreadCoeffs.initialize(cc, espOrder*espSpreadPolyOrder, elementSize, "espSpreadCoeffs");
+                    espSpreadDerCoeffs.initialize(cc, espOrder*espSpreadDerPolyOrder, elementSize, "espSpreadDerCoeffs");
+                    espSplitChebCoeffs.initialize(cc, espSplitChebOrder, elementSize, "espSplitChebCoeffs");
+                    espInvModuliX.initialize(cc, gridSizeX, elementSize, "espInvModuliX");
+                    espInvModuliY.initialize(cc, gridSizeY, elementSize, "espInvModuliY");
+                    espInvModuliZ.initialize(cc, gridSizeZ, elementSize, "espInvModuliZ");
+                    pswf::Prolate0Data windowData = pswf::prolate0_prepare(espCoeffs.c_w);
+                    vector<float> invModuliX = pswf::compute_pswf_inv_moduli(gridSizeX, espOrder, windowData, espCoeffs.c_w, espCoeffs.lambda_w);
+                    vector<float> invModuliY = pswf::compute_pswf_inv_moduli(gridSizeY, espOrder, windowData, espCoeffs.c_w, espCoeffs.lambda_w);
+                    vector<float> invModuliZ = pswf::compute_pswf_inv_moduli(gridSizeZ, espOrder, windowData, espCoeffs.c_w, espCoeffs.lambda_w);
+                    if (cc.getUseDoublePrecision()) {
+                        vector<double> spreadCoeffs(espCoeffs.spread_coeffs.begin(), espCoeffs.spread_coeffs.end());
+                        vector<double> spreadDerCoeffs(espCoeffs.spread_der_coeffs.begin(), espCoeffs.spread_der_coeffs.end());
+                        vector<double> invModuliXDouble(invModuliX.begin(), invModuliX.end());
+                        vector<double> invModuliYDouble(invModuliY.begin(), invModuliY.end());
+                        vector<double> invModuliZDouble(invModuliZ.begin(), invModuliZ.end());
+                        espSpreadCoeffs.upload(spreadCoeffs);
+                        espSpreadDerCoeffs.upload(spreadDerCoeffs);
+                        espSplitChebCoeffs.upload(espCoeffs.split_fourier_cheb_coeffs);
+                        espInvModuliX.upload(invModuliXDouble);
+                        espInvModuliY.upload(invModuliYDouble);
+                        espInvModuliZ.upload(invModuliZDouble);
+                    }
+                    else {
+                        vector<float> splitChebCoeffs(espCoeffs.split_fourier_cheb_coeffs.begin(), espCoeffs.split_fourier_cheb_coeffs.end());
+                        espSpreadCoeffs.upload(espCoeffs.spread_coeffs);
+                        espSpreadDerCoeffs.upload(espCoeffs.spread_der_coeffs);
+                        espSplitChebCoeffs.upload(splitChebCoeffs);
+                        espInvModuliX.upload(invModuliX);
+                        espInvModuliY.upload(invModuliY);
+                        espInvModuliZ.upload(invModuliZ);
+                    }
+                    if (force.getIncludeDirectSpace()) {
+                        vector<double> energyTable, scaleTable;
+                        buildEspRealSpaceTables(espCoeffs, force.getCutoffDistance(), EspNumTablePoints, energyTable, scaleTable);
+                        espRealSpaceEnergyTable.initialize(cc, EspNumTablePoints+4, elementSize, "espRealSpaceEnergyTable");
+                        espRealSpaceScaleTable.initialize(cc, EspNumTablePoints+4, elementSize, "espRealSpaceScaleTable");
+                        if (cc.getUseDoublePrecision()) {
+                            espRealSpaceEnergyTable.upload(energyTable);
+                            espRealSpaceScaleTable.upload(scaleTable);
+                        }
+                        else {
+                            vector<float> energyTableFloat(energyTable.begin(), energyTable.end());
+                            vector<float> scaleTableFloat(scaleTable.begin(), scaleTable.end());
+                            espRealSpaceEnergyTable.upload(energyTableFloat);
+                            espRealSpaceScaleTable.upload(scaleTableFloat);
+                        }
+                    }
+                }
                 if (doLJPME) {
                     pmeDispersionBsplineModuliX.initialize(cc, dispersionGridSizeX, elementSize, "pmeDispersionBsplineModuliX");
                     pmeDispersionBsplineModuliY.initialize(cc, dispersionGridSizeY, elementSize, "pmeDispersionBsplineModuliY");
@@ -586,6 +729,14 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
             replacements["TWO_OVER_SQRT_PI"] = cc.doubleToString(2.0/sqrt(M_PI));
             replacements["DO_LJPME"] = doLJPME ? "1" : "0";
             replacements["USE_PERIODIC"] = force.getExceptionsUsePeriodicBoundaryConditions() ? "1" : "0";
+            if (useEsp && force.getIncludeDirectSpace()) {
+                replacements["USE_ESP"] = "1";
+                replacements["ESP_NUM_TABLE_POINTS"] = cc.intToString(EspNumTablePoints);
+                replacements["ESP_INV_DX"] = cc.doubleToString((double) EspNumTablePoints/force.getCutoffDistance());
+                string tableType = cc.getUseDoublePrecision() ? "double" : "float";
+                replacements["ESP_ENERGY_TABLE"] = cc.getBondedUtilities().addArgument(espRealSpaceEnergyTable, tableType);
+                replacements["ESP_SCALE_TABLE"] = cc.getBondedUtilities().addArgument(espRealSpaceScaleTable, tableType);
+            }
             if (doLJPME)
                 replacements["EWALD_DISPERSION_ALPHA"] = cc.doubleToString(dispersionAlpha);
             if (force.getIncludeDirectSpace())
@@ -616,6 +767,17 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
         replacements["SIGMA_EPSILON1"] = prefix+"sigmaEpsilon1";
         replacements["SIGMA_EPSILON2"] = prefix+"sigmaEpsilon2";
         cc.getNonbondedUtilities().addParameter(ComputeParameterInfo(sigmaEpsilon, prefix+"sigmaEpsilon", "float", 2));
+    }
+    if (useEsp && force.getIncludeDirectSpace()) {
+        const string espEnergyArgName = prefix+"espEnergyTable";
+        const string espScaleArgName = prefix+"espScaleTable";
+        cc.getNonbondedUtilities().addArgument(ComputeParameterInfo(espRealSpaceEnergyTable, espEnergyArgName, "real", 1));
+        cc.getNonbondedUtilities().addArgument(ComputeParameterInfo(espRealSpaceScaleTable, espScaleArgName, "real", 1));
+        replacements["USE_ESP"] = "1";
+        replacements["ESP_NUM_TABLE_POINTS"] = cc.intToString(EspNumTablePoints);
+        replacements["ESP_INV_DX"] = cc.doubleToString((double) EspNumTablePoints/force.getCutoffDistance());
+        replacements["ESP_ENERGY_TABLE"] = espEnergyArgName;
+        replacements["ESP_SCALE_TABLE"] = espScaleArgName;
     }
     source = cc.replaceStrings(source, replacements);
     if (force.getIncludeDirectSpace())
@@ -787,12 +949,20 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 pmeSpreadChargeKernel->addArg();
             pmeSpreadChargeKernel->addArg(pmeAtomGridIndex);
             pmeSpreadChargeKernel->addArg(charges);
+            if (useEsp)
+                pmeSpreadChargeKernel->addArg(espSpreadCoeffs);
             pmeConvolutionKernel->addArg(pmeGrid2);
             pmeConvolutionKernel->addArg(pmeBsplineModuliX);
             pmeConvolutionKernel->addArg(pmeBsplineModuliY);
             pmeConvolutionKernel->addArg(pmeBsplineModuliZ);
             for (int i = 0; i < 3; i++)
                 pmeConvolutionKernel->addArg();
+            if (useEsp) {
+                pmeConvolutionKernel->addArg(espInvModuliX);
+                pmeConvolutionKernel->addArg(espInvModuliY);
+                pmeConvolutionKernel->addArg(espInvModuliZ);
+                pmeConvolutionKernel->addArg(espSplitChebCoeffs);
+            }
             pmeEvalEnergyKernel->addArg(pmeGrid2);
             if (usePmeQueue)
                 pmeEvalEnergyKernel->addArg(pmeEnergyBuffer);
@@ -803,6 +973,12 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeEvalEnergyKernel->addArg(pmeBsplineModuliZ);
             for (int i = 0; i < 3; i++)
                 pmeEvalEnergyKernel->addArg();
+            if (useEsp) {
+                pmeEvalEnergyKernel->addArg(espInvModuliX);
+                pmeEvalEnergyKernel->addArg(espInvModuliY);
+                pmeEvalEnergyKernel->addArg(espInvModuliZ);
+                pmeEvalEnergyKernel->addArg(espSplitChebCoeffs);
+            }
             pmeInterpolateForceKernel->addArg(cc.getPosq());
             pmeInterpolateForceKernel->addArg(cc.getLongForceBuffer());
             pmeInterpolateForceKernel->addArg(pmeGrid1);
@@ -810,6 +986,10 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 pmeInterpolateForceKernel->addArg();
             pmeInterpolateForceKernel->addArg(pmeAtomGridIndex);
             pmeInterpolateForceKernel->addArg(charges);
+            if (useEsp) {
+                pmeInterpolateForceKernel->addArg(espSpreadCoeffs);
+                pmeInterpolateForceKernel->addArg(espSpreadDerCoeffs);
+            }
             if (useFixedPointChargeSpreading) {
                 pmeFinishSpreadChargeKernel = program->createKernel("finishSpreadCharge");
                 pmeFinishSpreadChargeKernel->addArg(pmeGrid2);
@@ -894,7 +1074,10 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         Vec3 a, b, c;
         cc.getPeriodicBoxVectors(a, b, c);
         double volume = a[0]*b[1]*c[2];
-        energy = ewaldSelfEnergy - totalCharge*totalCharge/(8*EPSILON0*volume*alpha*alpha);
+        if (useEsp)
+            energy = ewaldSelfEnergy - ONE_4PI_EPS0*espBgFactor*espCutoff*espCutoff*totalCharge*totalCharge/volume;
+        else
+            energy = ewaldSelfEnergy - totalCharge*totalCharge/(8*EPSILON0*volume*alpha*alpha);
     }
     if (recomputeParams || hasOffsets) {
         computeParamsKernel->setArg(1, (int) (includeEnergy && includeReciprocal));

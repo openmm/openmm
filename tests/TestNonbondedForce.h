@@ -1109,6 +1109,27 @@ void testReordering() {
     }
 }
 
+void testEspKernelUnsupportedOnPlatform() {
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(2, 0, 0), Vec3(0, 2, 0), Vec3(0, 0, 2));
+    system.addParticle(1.0);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    nonbonded->setReciprocalSpaceKernelType(NonbondedForce::ESPKernel);
+    nonbonded->addParticle(1.0, 1.0, 0.0);
+    system.addForce(nonbonded);
+    VerletIntegrator integrator(0.001);
+    bool threw = false;
+    try {
+        Context context(system, integrator, platform);
+    }
+    catch (const OpenMMException& e) {
+        ASSERT(string(e.what()).find("only supported on GPU platforms") != string::npos);
+        threw = true;
+    }
+    ASSERT(threw);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {

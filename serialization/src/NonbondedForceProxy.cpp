@@ -40,11 +40,12 @@ NonbondedForceProxy::NonbondedForceProxy() : SerializationProxy("NonbondedForce"
 }
 
 void NonbondedForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 4);
+    node.setIntProperty("version", 5);
     const NonbondedForce& force = *reinterpret_cast<const NonbondedForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
     node.setStringProperty("name", force.getName());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
+    node.setIntProperty("reciprocalSpaceKernel", (int) force.getReciprocalSpaceKernelType());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
     node.setBoolProperty("useSwitchingFunction", force.getUseSwitchingFunction());
     node.setDoubleProperty("switchingDistance", force.getSwitchingDistance());
@@ -102,13 +103,14 @@ void NonbondedForceProxy::serialize(const void* object, SerializationNode& node)
 
 void* NonbondedForceProxy::deserialize(const SerializationNode& node) const {
     int version = node.getIntProperty("version");
-    if (version < 1 || version > 4)
+    if (version < 1 || version > 5)
         throw OpenMMException("Unsupported version number");
     NonbondedForce* force = new NonbondedForce();
     try {
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setName(node.getStringProperty("name", force->getName()));
         force->setNonbondedMethod((NonbondedForce::NonbondedMethod) node.getIntProperty("method"));
+        force->setReciprocalSpaceKernelType((NonbondedForce::ReciprocalSpaceKernelType) node.getIntProperty("reciprocalSpaceKernel", (int) NonbondedForce::PMEKernel));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction", false));
         force->setSwitchingDistance(node.getDoubleProperty("switchingDistance", -1.0));

@@ -31,4 +31,5 @@
 #include "TestNonbondedForce.h"
 
 void runPlatformTests() {
+    testEspKernelUnsupportedOnPlatform();
 }

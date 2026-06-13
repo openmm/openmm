@@ -136,6 +136,14 @@ private:
     ComputeArray pmeBsplineModuliX;
     ComputeArray pmeBsplineModuliY;
     ComputeArray pmeBsplineModuliZ;
+    ComputeArray espRealSpaceEnergyTable;
+    ComputeArray espRealSpaceScaleTable;
+    ComputeArray espInvModuliX;
+    ComputeArray espInvModuliY;
+    ComputeArray espInvModuliZ;
+    ComputeArray espSpreadCoeffs;
+    ComputeArray espSpreadDerCoeffs;
+    ComputeArray espSplitChebCoeffs;
     ComputeArray pmeDispersionBsplineModuliX;
     ComputeArray pmeDispersionBsplineModuliY;
     ComputeArray pmeDispersionBsplineModuliZ;
@@ -163,14 +171,15 @@ private:
     std::map<std::string, int> paramIndices;
     std::map<std::string, double> paramValues;
     std::map<int, int> exceptionIndex;
-    double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha, totalCharge;
+    double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha, totalCharge, espCutoff, espBgFactor, espSelfEnergyScale;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
-    int stepsToSort;
+    int stepsToSort, espOrder, espSpreadPolyOrder, espSpreadDerPolyOrder, espSplitChebOrder;
     bool usePmeQueue, deviceIsCpu, useFixedPointChargeSpreading, useCpuPme;
-    bool hasCoulomb, hasLJ, doLJPME, usePosqCharges, recomputeParams, hasOffsets;
+    bool hasCoulomb, hasLJ, doLJPME, useEsp, usePosqCharges, recomputeParams, hasOffsets;
     NonbondedMethod nonbondedMethod;
     static const int PmeOrder = 5;
+    static const int EspNumTablePoints = 2048;
 };
 
 } // namespace OpenMM

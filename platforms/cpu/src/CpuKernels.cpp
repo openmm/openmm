@@ -594,6 +594,8 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     // Record other parameters.
     
     nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
+    if (force.getReciprocalSpaceKernelType() == NonbondedForce::ESPKernel)
+        throw OpenMMException("NonbondedForce: ESP reciprocal space kernel is only supported on GPU platforms.");
     nonbondedCutoff = force.getCutoffDistance();
     if (nonbondedMethod == NoCutoff) {
         data.requestNeighborList(0.0, 0.0, true, exclusions);
