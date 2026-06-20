@@ -909,6 +909,23 @@ The six non-zero elements are as follows.
 * The elements below the diagonal reflect the pressure acting to change the box
   angles.  In equilibrium they should average to zero.
 
+computeStressTensor()
+^^^^^^^^^^^^^^^^^^^^^
+
+MonteCarloFlexibleBarostat also provides computeStressTensor(), which estimates
+the stress tensor from a consistent strain finite difference.  For each of the
+six independent tensor components, a small deformation gradient is applied to
+both the atomic coordinates and all three box vectors.  The potential energy
+is evaluated at positive and negative strain, and the corresponding stress
+component is obtained from the central difference.
+
+The method returns the six independent elements in the order
+(XX, YY, ZZ, XY, XZ, YZ), in bar.  Tension is positive.  By default only the
+configurational (potential energy) contribution is included.  If includeKinetic
+is set to true, the kinetic contribution is added as well.  When
+getScaleMoleculesAsRigid() is true, coordinates are deformed by moving each
+molecule as a rigid unit.
+
 CMMotionRemover
 ***************
 

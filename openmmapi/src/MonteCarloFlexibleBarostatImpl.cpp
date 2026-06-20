@@ -166,6 +166,28 @@ void MonteCarloFlexibleBarostatImpl::computeCurrentPressure(ContextImpl& context
     kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
 }
 
+void MonteCarloFlexibleBarostatImpl::computeStressTensor(ContextImpl& context, vector<double>& stress, bool includeKinetic) {
+    stress.resize(6);
+    Vec3 box[3];
+    context.getPeriodicBoxVectors(box[0], box[1], box[2]);
+    double volume = box[0][0]*box[1][1]*box[2][2];
+    double delta = 1e-3;
+    vector<double> ke;
+    if (includeKinetic) {
+        kernel.getAs<ApplyMonteCarloBarostatKernel>().saveCoordinates(context);
+        kernel.getAs<ApplyMonteCarloBarostatKernel>().computeKineticEnergy(context, ke);
+    }
+
+    for (int component = 0; component < 6; component++) {
+        stress[component] = computeStressComponent(context, delta, component)/(AVOGADRO*1e-25);
+        if (includeKinetic)
+            stress[component] += -2.0*ke[component]/volume/(AVOGADRO*1e-25);
+    }
+
+    if (includeKinetic)
+        kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
+}
+
 double MonteCarloFlexibleBarostatImpl::computePressureComponent(ContextImpl& context, double delta, int component) {
     Vec3 box[3], newBox[3];
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
@@ -224,6 +246,64 @@ double MonteCarloFlexibleBarostatImpl::computePressureComponent(ContextImpl& con
 
     double volume = box[0][0]*box[1][1]*box[2][2];
     return (energy1-energy2)/(volume*2*delta);
+}
+
+double MonteCarloFlexibleBarostatImpl::computeStressComponent(ContextImpl& context, double delta, int component) {
+    static const int icomp[6] = {0, 1, 2, 0, 0, 1};
+    static const int jcomp[6] = {0, 1, 2, 1, 2, 2};
+    if (component < 0 || component > 5)
+        throw OpenMMException("Illegal component index");
+    int i = icomp[component], j = jcomp[component];
+    int groups = context.getIntegrator().getIntegrationForceGroups();
+
+    Vec3 box[3];
+    context.getPeriodicBoxVectors(box[0], box[1], box[2]);
+    vector<Vec3> pos0 = context.getOwner().getState(State::Positions).getPositions();
+    int numParticles = pos0.size();
+
+    vector<vector<int> > singleAtoms;
+    const vector<vector<int> >* scaledUnits;
+    if (owner.getScaleMoleculesAsRigid())
+        scaledUnits = &context.getMolecules();
+    else {
+        singleAtoms.resize(numParticles);
+        for (int a = 0; a < numParticles; a++)
+            singleAtoms[a].push_back(a);
+        scaledUnits = &singleAtoms;
+    }
+
+    double energy[2];
+    double sign[2] = {1.0, -1.0};
+    for (int s = 0; s < 2; s++) {
+        double d = sign[s]*delta;
+
+        Vec3 newBox[3];
+        for (int k = 0; k < 3; k++) {
+            newBox[k] = box[k];
+            newBox[k][i] += d*box[k][j];
+        }
+        setBoxVectors(context, newBox[0], newBox[1], newBox[2]);
+
+        vector<Vec3> pos = pos0;
+        for (const vector<int>& unit : *scaledUnits) {
+            Vec3 center(0, 0, 0);
+            for (int atom : unit)
+                center += pos0[atom];
+            center /= unit.size();
+            double offset = d*center[j];
+            for (int atom : unit)
+                pos[atom][i] += offset;
+        }
+        context.getOwner().setPositions(pos);
+
+        energy[s] = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
+    }
+
+    context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
+    context.getOwner().setPositions(pos0);
+
+    double volume = box[0][0]*box[1][1]*box[2][2];
+    return (energy[0]-energy[1])/(volume*2*delta);
 }
 
 void MonteCarloFlexibleBarostatImpl::setBoxVectors(ContextImpl& context, Vec3 a, Vec3 b, Vec3 c) {

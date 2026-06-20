@@ -60,6 +60,10 @@ void MonteCarloFlexibleBarostat::computeCurrentPressure(Context& context, std::v
     dynamic_cast<MonteCarloFlexibleBarostatImpl&>(getImplInContext(context)).computeCurrentPressure(getContextImpl(context), pressure);
 }
 
+void MonteCarloFlexibleBarostat::computeStressTensor(Context& context, std::vector<double>& stress, bool includeKinetic) const {
+    dynamic_cast<MonteCarloFlexibleBarostatImpl&>(getImplInContext(context)).computeStressTensor(getContextImpl(context), stress, includeKinetic);
+}
+
 ForceImpl* MonteCarloFlexibleBarostat::createImpl() const {
     return new MonteCarloFlexibleBarostatImpl(*this);
 }

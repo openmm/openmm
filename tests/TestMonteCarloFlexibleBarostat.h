@@ -300,6 +300,68 @@ void testRandomSeed() {
     }
 }
 
+void testTriclinicStressTensor() {
+    // On a fully tilted (triclinic) box, all six stress components must match a
+    // consistent strain finite difference in which the atoms and every box vector
+    // are deformed by the same deformation gradient.  Velocities are zero and
+    // includeKinetic is false, so only the potential contribution is compared.
+
+    const int numParticles = 64;
+    System system;
+    Vec3 a(4.0, 0, 0), b(0.5, 4.0, 0), c(1.0, 0.7, 4.0);
+    system.setDefaultPeriodicBoxVectors(a, b, c);
+    NonbondedForce* nb = new NonbondedForce();
+    nb->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nb->setCutoffDistance(1.4);
+    nb->setUseSwitchingFunction(true);
+    nb->setSwitchingDistance(1.1);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        nb->addParticle(0.0, 0.3, 1.0);
+        Vec3 f(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
+        positions[i] = a*f[0] + b*f[1] + c*f[2];
+    }
+    system.addForce(nb);
+    MonteCarloFlexibleBarostat* barostat = new MonteCarloFlexibleBarostat(1.0, 300.0, 0, false);
+    system.addForce(barostat);
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocities(vector<Vec3>(numParticles, Vec3(0, 0, 0)));
+
+    vector<double> stress;
+    barostat->computeStressTensor(context, stress, false);
+
+    static const int icomp[6] = {0, 1, 2, 0, 0, 1};
+    static const int jcomp[6] = {0, 1, 2, 1, 2, 2};
+    double delta = 1e-3;
+    Vec3 box0[3] = {a, b, c};
+    double volume = a[0]*b[1]*c[2];
+    for (int component = 0; component < 6; component++) {
+        int i = icomp[component], j = jcomp[component];
+        double energy[2];
+        for (int s = 0; s < 2; s++) {
+            double d = (s == 0 ? delta : -delta);
+            Vec3 nbox[3] = {box0[0], box0[1], box0[2]};
+            for (int k = 0; k < 3; k++)
+                nbox[k][i] += d*box0[k][j];
+            context.setPeriodicBoxVectors(nbox[0], nbox[1], nbox[2]);
+            vector<Vec3> p = positions;
+            for (int atom = 0; atom < numParticles; atom++)
+                p[atom][i] += d*positions[atom][j];
+            context.setPositions(p);
+            energy[s] = context.getState(State::Energy).getPotentialEnergy();
+        }
+        context.setPeriodicBoxVectors(box0[0], box0[1], box0[2]);
+        context.setPositions(positions);
+        double ref = (energy[0]-energy[1])/(2*delta*volume)/(AVOGADRO*1e-25);
+        ASSERT_EQUAL_TOL(ref, stress[component], 1e-2);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -311,6 +373,7 @@ int main(int argc, char* argv[]) {
         testMolecularGas(true);
         testMolecularGas(false);
         testRandomSeed();
+        testTriclinicStressTensor();
         runPlatformTests();
     }
     catch(const exception& e) {
