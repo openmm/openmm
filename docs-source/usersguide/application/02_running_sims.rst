@@ -570,7 +570,7 @@ to them.
          :file:`tip3p.xml` will be missing parameters for ions in your system.
 
 The converted parameter sets come from the `AmberTools 24 release <http://ambermd.org/AmberTools.php>`_
-and were converted using the openmmforcefields_ package and `ParmEd <https://github.com/parmed/parmed>`_.
+and were converted using the OpenMMForceFields_ package and `ParmEd <https://github.com/parmed/parmed>`_.
 
 Amber14
 -------
@@ -609,7 +609,7 @@ File                                 Parameters
    in both directories for compatibility and convenience.
 
 The converted parameter sets come from the `AmberTools 17 release <http://ambermd.org/AmberTools.php>`_
-and were converted using the openmmforcefields_ package and `ParmEd <https://github.com/parmed/parmed>`_.
+and were converted using the OpenMMForceFields_ package and `ParmEd <https://github.com/parmed/parmed>`_.
 
 CHARMM36
 --------
@@ -682,14 +682,14 @@ such as :file:`charmm36_2024/water.xml`, which specifies the default CHARMM wate
              CHARMM36, either due to a lack of support for certain CHARMM
              features in `ParmEd <https://github.com/parmed/parmed>`_, or
              because they generate a large number of residue-patch combinations,
-             slowing down parameterization.  The openmmforcefields_ package
+             slowing down parameterization.  The OpenMMForceFields_ package
              includes residues and patches not present in this port within
              additional force field XML files that can be loaded as needed.
 
 The converted parameter sets come from the
 `CHARMM36 July 2024 update <https://mackerell.umaryland.edu/charmm_ff.shtml>`_,
 which includes the CHARMM36m protein parameters.  They were converted using the
-openmmforcefields_ package and `ParmEd <https://github.com/parmed/parmed>`_.
+OpenMMForceFields_ package and `ParmEd <https://github.com/parmed/parmed>`_.
 
 Implicit Solvent
 ----------------
@@ -877,7 +877,7 @@ Small molecule residue template generators
 ------------------------------------------
 
 One approach is to use residue template generators for small molecules from the
-openmmforcefields_  conda package.
+OpenMMForceFields_  conda package.
 You can install this via conda with:
 
 .. code-block:: bash
@@ -923,12 +923,12 @@ Alternatively, you can use the older `AMBER GAFF small molecule force field <htt
     pdbfile = PDBFile('t4-lysozyme-L99A-with-benzene.pdb')
     system = forcefield.createSystem(pdbfile.topology)
 
-More documentation can be found on the openmmforcefields_ page.
+More documentation can be found on the OpenMMForceFields_ page.
 
 Managing force fields with ``SystemGenerator``
 ----------------------------------------------
 
-As an alternative to explicitly registering template generators, the openmmforcefields_
+As an alternative to explicitly registering template generators, the OpenMMForceFields_
 package provides a ``SystemGenerator`` facility to simplify biopolymer and
 small molecule force field management. To use this, you can simply specify the
 small molecule force field you want to use:
@@ -949,9 +949,9 @@ small molecule force field you want to use:
 
 The ``SystemGenerator`` will match any instances of the molecules found in ``molecules.sdf`` to those that appear in ``topology``.
 Note that the protonation and tautomeric states must match exactly between the ``molecules`` read and those appearing in the Topology.
-See the openmmforcefields_ documentation for more details.
+See the OpenMMForceFields_ documentation for more details.
 
-.. _openmmforcefields: http://github.com/openmm/openmmforcefields
+.. _OpenMMForceFields: http://github.com/openmm/openmmforcefields
 
 AMBER Implicit Solvent
 ======================
