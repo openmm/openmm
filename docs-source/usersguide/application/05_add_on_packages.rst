@@ -104,16 +104,16 @@ For more information,  see the OpenMMTools_ website.
 
 .. _OpenMMTools: https://github.com/choderalab/openmmtools
 
-openmmforcefields
+OpenMMForceFields
 *****************
 
-The openmmforcefields package is described in section :numref:`small-molecule-parameters`,
+The OpenMMForceFields package is described in section :numref:`small-molecule-parameters`,
 where we show how to use it to parametrize small molecules.  In addition to
 its support for generic small molecule force fields like OpenFF and GAFF, it
 also provides a larger selection of Amber and CHARMM force fields than what is
-bundled with OpenMM.  See the openmmforcefields_ website for more information.
+bundled with OpenMM.  See the OpenMMForceFields_ website for more information.
 
-.. _openmmforcefields: http://github.com/openmm/openmmforcefields
+.. _OpenMMForceFields: http://github.com/openmm/openmmforcefields
 
 OpenMM-PLUMED
 *************
