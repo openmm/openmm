@@ -260,46 +260,55 @@ double MonteCarloFlexibleBarostatImpl::computeStressComponent(ContextImpl& conte
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
 
-    double energy[2];
-    double sign[2] = {1.0, -1.0};
-    for (int s = 0; s < 2; s++) {
-        double d = sign[s]*delta;
+    int shearIndex = -1;
+    if (i != j)
+        shearIndex = (i == 0 && j == 1) ? 0 : (i == 0 && j == 2) ? 1 : 2;
 
-        // Build the deformed box.  The same deformation gradient (F = I + d*e_i (x) e_j) is
-        // applied to the box vectors and, through scaleCoordinates(), to the particle positions.
+    // The same deformation gradient (F = I + d*e_i (x) e_j) is applied to the box vectors and,
+    // through scaleCoordinates(), to the particle positions.  Saving and restoring the
+    // coordinates around each energy evaluation resulted in an inaccurate finite difference
+    // energy, so we instead deform the coordinates continuously (forward, then to the opposite
+    // strain, then back), mimicking computePressureComponent().
 
-        Vec3 newBox[3];
-        for (int k = 0; k < 3; k++) {
-            newBox[k] = box[k];
-            newBox[k][i] += d*box[k][j];
-        }
-
-        // Express the deformation gradient as the scale and shear factors used by
-        // scaleCoordinates().  Diagonal components are an axial scaling; off-diagonal
-        // components are a shear.
-
-        double scale[3] = {1.0, 1.0, 1.0};
-        double shear[3] = {0.0, 0.0, 0.0}; // (xy, xz, yz)
-        if (i == j)
-            scale[i] = 1.0+d;
-        else {
-            int shearIndex = (i == 0 && j == 1) ? 0 : (i == 0 && j == 2) ? 1 : 2;
-            shear[shearIndex] = d;
-        }
-
-        // Apply the deformation on the GPU.  saveCoordinates()/restoreCoordinates() bracket the
-        // energy evaluation so the context is left unchanged, and so that scaleCoordinates() never
-        // compounds across the two finite difference steps.
-
-        kernel.getAs<ApplyMonteCarloBarostatKernel>().saveCoordinates(context);
-        setBoxVectors(context, newBox[0], newBox[1], newBox[2]);
-        kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, scale[0], scale[1], scale[2], shear[0], shear[1], shear[2]);
-        energy[s] = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
-        kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
-        context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
+    Vec3 plusBox[3], minusBox[3];
+    for (int k = 0; k < 3; k++) {
+        plusBox[k] = box[k];
+        plusBox[k][i] += delta*box[k][j];
+        minusBox[k] = box[k];
+        minusBox[k][i] -= delta*box[k][j];
     }
 
-    return (energy[0]-energy[1])/(volume*2*delta);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().saveCoordinates(context);
+
+    // Apply the +delta strain (relative to the original coordinates) and evaluate the energy.
+
+    double scale[3] = {1.0, 1.0, 1.0}, shear[3] = {0.0, 0.0, 0.0};
+    if (i == j)
+        scale[i] = 1.0+delta;
+    else
+        shear[shearIndex] = delta;
+    setBoxVectors(context, plusBox[0], plusBox[1], plusBox[2]);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, scale[0], scale[1], scale[2], shear[0], shear[1], shear[2]);
+    double energyPlus = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
+
+    // Apply the strain that carries the +delta state to the -delta state, and evaluate again.
+
+    scale[0] = scale[1] = scale[2] = 1.0;
+    shear[0] = shear[1] = shear[2] = 0.0;
+    if (i == j)
+        scale[i] = (1.0-delta)/(1.0+delta);
+    else
+        shear[shearIndex] = -2.0*delta;
+    setBoxVectors(context, minusBox[0], minusBox[1], minusBox[2]);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, scale[0], scale[1], scale[2], shear[0], shear[1], shear[2]);
+    double energyMinus = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
+
+    // Restore the original coordinates and box.
+
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
+    context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
+
+    return (energyPlus-energyMinus)/(volume*2*delta);
 }
 
 void MonteCarloFlexibleBarostatImpl::setBoxVectors(ContextImpl& context, Vec3 a, Vec3 b, Vec3 c) {
