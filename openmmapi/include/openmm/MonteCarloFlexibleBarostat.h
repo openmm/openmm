@@ -198,7 +198,7 @@ public:
      * the strain.
      *
      * The returned values are in bar, with tension positive.  When includeKinetic is
-     * true, the kinetic contribution is included as well.  When getScaleMoleculesAsRigid()
+     * true, the kinetic energy contribution is included as well.  When getScaleMoleculesAsRigid()
      * is true, coordinates are deformed by moving each molecule as a rigid unit.
      *
      * @param context         the Context for which to compute the stress tensor

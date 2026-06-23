@@ -300,6 +300,113 @@ void testRandomSeed() {
     }
 }
 
+void testTwoParticleStressTensor() {
+    // Two particles connected by a harmonic bond have a stress tensor that is known
+    // analytically.  For a bond with force constant k, equilibrium length r0, and
+    // separation vector r (length L), the configurational stress is
+    //
+    //     sigma_ij = k (L - r0) r_i r_j / (L V)
+    //
+    // This is an independent check of computeStressTensor(): it does not reuse the
+    // finite difference logic of the implementation.  The bond is tilted in all three
+    // directions so that every one of the six components is nonzero.
+
+    const double k = 500.0;   // kJ/mol/nm^2
+    const double r0 = 0.15;   // nm
+    System system;
+    Vec3 a(4.0, 0, 0), b(0, 4.0, 0), c(0, 0, 5.0);
+    system.setDefaultPeriodicBoxVectors(a, b, c);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    bonds->setUsesPeriodicBoundaryConditions(true);
+    bonds->addBond(0, 1, r0, k);
+    system.addForce(bonds);
+    MonteCarloFlexibleBarostat* barostat = new MonteCarloFlexibleBarostat(1.0, 300.0, 0, false);
+    system.addForce(barostat);
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions = {Vec3(0, 0, 0), Vec3(0.05, 0.03, 0.20)};
+    context.setPositions(positions);
+    context.setVelocities(vector<Vec3>(2, Vec3(0, 0, 0)));
+
+    vector<double> stress;
+    barostat->computeStressTensor(context, stress, false);
+
+    static const int icomp[6] = {0, 1, 2, 0, 0, 1};
+    static const int jcomp[6] = {0, 1, 2, 1, 2, 2};
+    Vec3 d = positions[1]-positions[0];
+    double L = sqrt(d.dot(d));
+    double volume = a[0]*b[1]*c[2];
+    for (int component = 0; component < 6; component++) {
+        int i = icomp[component], j = jcomp[component];
+        double ref = (k*(L-r0)*d[i]*d[j])/(L*volume)/(AVOGADRO*1e-25);
+        ASSERT_EQUAL_TOL(ref, stress[component], 1e-3);
+    }
+}
+
+void testStressTensorAgainstLammps() {
+    // Cross-code validation against LAMMPS.  An asymmetric six atom Lennard-Jones
+    // cluster is placed in a large cubic box so that every real pair is well inside
+    // the cutoff and every periodic image is far beyond it.  The configurational
+    // (virial) stress computed here is compared against values computed independently
+    // by LAMMPS for the identical system.
+    //
+    // The LAMMPS reference values were produced with LAMMPS (19 Nov 2024) using metal
+    // units (Angstrom, eV, bar) and the input script
+    //   cuda_mace_env_recreation_2/validation_scripts/lammps_stress_crosscheck/in.lj_stress
+    // with pair_style lj/cut and "compute pressure NULL virial" (virial term only, no
+    // kinetic contribution).  The OpenMM parameters below map to that system as
+    //   sigma   = 0.3 nm   = 3.0 Angstrom
+    //   epsilon = 1.0 kJ/mol = 0.0103642697 eV
+    //   box     = 4.0 nm   = 40 Angstrom
+    //   positions_nm = positions_Angstrom / 10
+    // LAMMPS reports the pressure tensor (compression positive); OpenMM's stress
+    // tensor is tension positive, so the expected OpenMM values are the negatives of
+    // the LAMMPS pressure components.
+
+    const double sigma = 0.3;     // nm
+    const double epsilon = 1.0;   // kJ/mol
+    const double boxLength = 4.0; // nm
+    const double cutoff = 1.5;    // nm
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxLength, 0, 0), Vec3(0, boxLength, 0), Vec3(0, 0, boxLength));
+    NonbondedForce* nb = new NonbondedForce();
+    nb->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nb->setCutoffDistance(cutoff);
+    nb->setUseSwitchingFunction(false);
+    nb->setUseDispersionCorrection(false);
+    vector<Vec3> positions = {
+        Vec3(0.00, 0.00, 0.00),
+        Vec3(0.32, 0.04, 0.01),
+        Vec3(0.05, 0.30, 0.06),
+        Vec3(0.02, 0.07, 0.33),
+        Vec3(0.30, 0.31, 0.09),
+        Vec3(0.11, 0.20, 0.25)
+    };
+    for (int i = 0; i < (int) positions.size(); i++) {
+        system.addParticle(1.0);
+        nb->addParticle(0.0, sigma, epsilon);
+    }
+    system.addForce(nb);
+    MonteCarloFlexibleBarostat* barostat = new MonteCarloFlexibleBarostat(1.0, 300.0, 0, false);
+    system.addForce(barostat);
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocities(vector<Vec3>(positions.size(), Vec3(0, 0, 0)));
+
+    vector<double> stress;
+    barostat->computeStressTensor(context, stress, false);
+
+    // LAMMPS pressure tensor (bar) in the order (XX, YY, ZZ, XY, XZ, YZ).
+    double lammpsPressure[6] = {1869.08676851, 3740.91201516, 1681.44462233,
+                                2481.14075422, -1459.42106406, -2393.77198342};
+    for (int component = 0; component < 6; component++)
+        ASSERT_EQUAL_TOL(-lammpsPressure[component], stress[component], 1e-3);
+}
+
 void testTriclinicStressTensor() {
     // On a fully tilted (triclinic) box, all six stress components must match a
     // consistent strain finite difference in which the atoms and every box vector
@@ -373,6 +480,8 @@ int main(int argc, char* argv[]) {
         testMolecularGas(true);
         testMolecularGas(false);
         testRandomSeed();
+        testTwoParticleStressTensor();
+        testStressTensorAgainstLammps();
         testTriclinicStressTensor();
         runPlatformTests();
     }

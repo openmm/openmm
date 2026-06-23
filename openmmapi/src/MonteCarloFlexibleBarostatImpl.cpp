@@ -258,51 +258,47 @@ double MonteCarloFlexibleBarostatImpl::computeStressComponent(ContextImpl& conte
 
     Vec3 box[3];
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
-    vector<Vec3> pos0 = context.getOwner().getState(State::Positions).getPositions();
-    int numParticles = pos0.size();
-
-    vector<vector<int> > singleAtoms;
-    const vector<vector<int> >* scaledUnits;
-    if (owner.getScaleMoleculesAsRigid())
-        scaledUnits = &context.getMolecules();
-    else {
-        singleAtoms.resize(numParticles);
-        for (int a = 0; a < numParticles; a++)
-            singleAtoms[a].push_back(a);
-        scaledUnits = &singleAtoms;
-    }
+    double volume = box[0][0]*box[1][1]*box[2][2];
 
     double energy[2];
     double sign[2] = {1.0, -1.0};
     for (int s = 0; s < 2; s++) {
         double d = sign[s]*delta;
 
+        // Build the deformed box.  The same deformation gradient (F = I + d*e_i (x) e_j) is
+        // applied to the box vectors and, through scaleCoordinates(), to the particle positions.
+
         Vec3 newBox[3];
         for (int k = 0; k < 3; k++) {
             newBox[k] = box[k];
             newBox[k][i] += d*box[k][j];
         }
-        setBoxVectors(context, newBox[0], newBox[1], newBox[2]);
 
-        vector<Vec3> pos = pos0;
-        for (const vector<int>& unit : *scaledUnits) {
-            Vec3 center(0, 0, 0);
-            for (int atom : unit)
-                center += pos0[atom];
-            center /= unit.size();
-            double offset = d*center[j];
-            for (int atom : unit)
-                pos[atom][i] += offset;
+        // Express the deformation gradient as the scale and shear factors used by
+        // scaleCoordinates().  Diagonal components are an axial scaling; off-diagonal
+        // components are a shear.
+
+        double scale[3] = {1.0, 1.0, 1.0};
+        double shear[3] = {0.0, 0.0, 0.0}; // (xy, xz, yz)
+        if (i == j)
+            scale[i] = 1.0+d;
+        else {
+            int shearIndex = (i == 0 && j == 1) ? 0 : (i == 0 && j == 2) ? 1 : 2;
+            shear[shearIndex] = d;
         }
-        context.getOwner().setPositions(pos);
 
+        // Apply the deformation on the GPU.  saveCoordinates()/restoreCoordinates() bracket the
+        // energy evaluation so the context is left unchanged, and so that scaleCoordinates() never
+        // compounds across the two finite difference steps.
+
+        kernel.getAs<ApplyMonteCarloBarostatKernel>().saveCoordinates(context);
+        setBoxVectors(context, newBox[0], newBox[1], newBox[2]);
+        kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, scale[0], scale[1], scale[2], shear[0], shear[1], shear[2]);
         energy[s] = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
+        kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
+        context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
     }
 
-    context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
-    context.getOwner().setPositions(pos0);
-
-    double volume = box[0][0]*box[1][1]*box[2][2];
     return (energy[0]-energy[1])/(volume*2*delta);
 }
 

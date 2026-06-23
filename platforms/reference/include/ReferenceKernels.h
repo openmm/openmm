@@ -1881,7 +1881,8 @@ public:
      * @param scaleY     the scale factor by which to multiply particle y-coordinate
      * @param scaleZ     the scale factor by which to multiply particle z-coordinate
      */
-    void scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ);
+    void scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ,
+                          double scaleXY=0, double scaleXZ=0, double scaleYZ=0);
     /**
      * Reject the most recent Monte Carlo step, restoring the particle positions to where they were when
      * saveCoordinates() was last called.

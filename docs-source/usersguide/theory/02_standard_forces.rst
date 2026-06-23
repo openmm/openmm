@@ -909,22 +909,26 @@ The six non-zero elements are as follows.
 * The elements below the diagonal reflect the pressure acting to change the box
   angles.  In equilibrium they should average to zero.
 
-computeStressTensor()
-^^^^^^^^^^^^^^^^^^^^^
+MonteCarloFlexibleBarostat can also compute the stress tensor, which measures the
+mechanical stress in a material.\ :cite:`Thompson2009`  It is defined as the
+derivative of the energy with respect to a uniform strain of the system: if a
+small strain :math:`\epsilon_{jk}` is applied to both the atomic coordinates and
+the periodic box, the stress is
 
-MonteCarloFlexibleBarostat also provides computeStressTensor(), which estimates
-the stress tensor from a consistent strain finite difference.  For each of the
-six independent tensor components, a small deformation gradient is applied to
-both the atomic coordinates and all three box vectors.  The potential energy
-is evaluated at positive and negative strain, and the corresponding stress
-component is obtained from the central difference.
+.. math::
 
-The method returns the six independent elements in the order
-(XX, YY, ZZ, XY, XZ, YZ), in bar.  Tension is positive.  By default only the
-configurational (potential energy) contribution is included.  If includeKinetic
-is set to true, the kinetic contribution is added as well.  When
-getScaleMoleculesAsRigid() is true, coordinates are deformed by moving each
-molecule as a rigid unit.
+   \sigma_{jk} = -\frac{1}{V} \frac{\partial E}{\partial \epsilon_{jk}}
+
+where :math:`V` is the volume.  The stress tensor is symmetric, so it has six
+independent elements: three normal components that describe stretching or
+compression along each axis, and three shear components that describe the
+response to a shape change.  A positive value corresponds to tension.
+
+The stress tensor is the quantity needed to study the mechanical response of a
+material.  For example, applying a known deformation to a crystal and measuring
+the resulting stress gives the elastic constants, and monitoring the stress
+during a simulation indicates whether a structure is under residual tension or
+compression.
 
 CMMotionRemover
 ***************
