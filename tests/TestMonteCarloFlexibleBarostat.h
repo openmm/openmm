@@ -36,8 +36,10 @@
 #include "openmm/CustomIntegrator.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/VerletIntegrator.h"
+#include "openmm/CustomVolumeForce.h"
 #include "sfmt/SFMT.h"
 #include "SimTKOpenMMRealType.h"
+#include "TestMonteCarloBarostatContinuity.h"
 #include <iostream>
 #include <vector>
 
@@ -107,6 +109,81 @@ void testIdealGas() {
         for (int i = 3; i < 6; i++) {
             avgPressure[i] /= steps;
             ASSERT_USUALLY_EQUAL_TOL(0.0, avgPressure[i], 0.4);
+        }
+    }
+}
+
+void testContinuity() {
+    // Tests that particles do not get swapped or jump across periodic box
+    // boundaries due to improper handling of atom reordering in the barostat.
+
+    const int numParticles = 64;
+    const double pressure = 1.5;
+    const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
+    const double temp = 300.0;
+    const double initialVolume = numParticles*BOLTZ*temp/pressureInMD;
+    const double initialLength = std::pow(initialVolume, 1.0/3.0);
+
+    // Create a gas of particles.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.8*initialLength, 0), Vec3(0, 0, 1.25*initialLength));
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(1.0);
+        positions[i] = Vec3(initialLength*genrand_real2(sfmt), 0.8*initialLength*genrand_real2(sfmt), 1.25*initialLength*genrand_real2(sfmt));
+    }
+    MonteCarloFlexibleBarostat* barostat = new MonteCarloFlexibleBarostat(pressure, temp);
+    system.addForce(barostat);
+
+    // Prevent the box from getting too elongated or skewed.
+
+    CustomVolumeForce* volForce = new CustomVolumeForce("(ax-l)^2+(by-l)^2+(cz-l)^2+bx^2+cx^2+cy^2; l=(ax+by+cz)/3");
+    system.addForce(volForce);
+
+    // Add a nonbonded force (to ensure that atom reordering takes place).
+
+    NonbondedForce* pair = new NonbondedForce();
+    pair->setCutoffDistance(2.5);
+    pair->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    for (int i = 0; i < numParticles; i++) {
+        pair->addParticle(0.0, 1.0, 0.1);
+    }
+    system.addForce(pair);
+
+    barostat->setDefaultTemperature(temp);
+    LangevinIntegrator integrator(temp, 0.1, 0.005);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+
+    vector<Vec3> last, current;
+    vector<double> pressureTensor;
+
+    barostat->setFrequency(1);
+    integrator.step(2500);
+
+    // Check with rescaling both off and on.
+
+    for(int barostatFreq = 0; barostatFreq <= 1; barostatFreq++) {
+        barostat->setFrequency(barostatFreq);
+
+        // Check without pressure computation.
+
+        for (int i = 0; i < 2500; i++) {
+            integrator.step(1);
+            State state = context.getState(State::Positions);
+            checkContinuity(state, last, current, 0.01);
+        }
+
+        // Check with pressure computation.
+
+        for (int i = 0; i < 2500; i++) {
+            integrator.step(1);
+            barostat->computeCurrentPressure(context, pressureTensor);
+            State state = context.getState(State::Positions);
+            checkContinuity(state, last, current, 0.01);
         }
     }
 }
@@ -306,6 +383,7 @@ int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
         testIdealGas();
+        testContinuity();
         testMoleculeScaling(true);
         testMoleculeScaling(false);
         testMolecularGas(true);
