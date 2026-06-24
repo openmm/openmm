@@ -161,30 +161,36 @@ void testContinuity() {
     vector<Vec3> last, current;
     vector<double> pressureTensor;
 
+    // Warm up.
+
     barostat->setFrequency(1);
     integrator.step(2500);
 
-    // Check with rescaling both off and on.
+    // Check with rescaling on.
 
-    for(int barostatFreq = 0; barostatFreq <= 1; barostatFreq++) {
-        barostat->setFrequency(barostatFreq);
+    for (int i = 0; i < 2500; i++) {
+        integrator.step(1);
+        State state = context.getState(State::Positions);
+        checkContinuity(state, last, current, 0.01);
+    }
 
-        // Check without pressure computation.
+    // Check with rescaling on and pressure computation.
 
-        for (int i = 0; i < 2500; i++) {
-            integrator.step(1);
-            State state = context.getState(State::Positions);
-            checkContinuity(state, last, current, 0.01);
-        }
+    for (int i = 0; i < 2500; i++) {
+        integrator.step(1);
+        barostat->computeCurrentPressure(context, pressureTensor);
+        State state = context.getState(State::Positions);
+        checkContinuity(state, last, current, 0.01);
+    }
 
-        // Check with pressure computation.
+    // Check with rescaling off and pressure computation.
 
-        for (int i = 0; i < 2500; i++) {
-            integrator.step(1);
-            barostat->computeCurrentPressure(context, pressureTensor);
-            State state = context.getState(State::Positions);
-            checkContinuity(state, last, current, 0.01);
-        }
+    barostat->setFrequency(0);
+    for (int i = 0; i < 2500; i++) {
+        integrator.step(1);
+        barostat->computeCurrentPressure(context, pressureTensor);
+        State state = context.getState(State::Positions);
+        checkContinuity(state, last, current, 0.01);
     }
 }
 
