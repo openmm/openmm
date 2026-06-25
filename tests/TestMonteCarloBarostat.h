@@ -38,7 +38,6 @@
 #include "openmm/VerletIntegrator.h"
 #include "sfmt/SFMT.h"
 #include "SimTKOpenMMRealType.h"
-#include "TestMonteCarloBarostatContinuity.h"
 #include <iostream>
 #include <vector>
 
@@ -140,6 +139,38 @@ void testIdealGas() {
         double expected = (numParticles+1)*BOLTZ*temp[i]/pressureInMD;
         ASSERT_USUALLY_EQUAL_TOL(expected, volume, 3/std::sqrt((double) steps));
         ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure, 0.1);
+    }
+}
+
+void checkContinuity(State& state, vector<Vec3>& last, vector<Vec3>& current, double threshold) {
+    // Copy the previously current positions before we overwrite them.
+
+    last.assign(current.begin(), current.end());
+
+    // Get the current box vectors.
+
+    Vec3 a, b, c;
+    state.getPeriodicBoxVectors(a, b, c);
+
+    // Get the current positions in reduced coordinates accounting for only the
+    // box matrix diagonal, corresponding with how MonteCarloFlexibleBarostat
+    // works: when the box vectors change, coordinates are rescaled with the
+    // diagonal elements but not sheared with the off-diagonal elements.
+
+    const vector<Vec3>& positions = state.getPositions();
+    current.resize(positions.size());
+    for(int i = 0; i < positions.size(); i++) {
+        Vec3 pos = positions[i];
+        current[i] = Vec3(pos[0] / a[0], pos[1] / b[1], pos[2] / c[2]);
+    }
+
+    // Make sure particles have not moved too far since the last step.  Use
+    // last.size() since on the first step last will be empty and current will
+    // contain the initial coordinates.
+
+    for (int j = 0; j < last.size(); j++) {
+        Vec3 delta = current[j] - last[j];
+        ASSERT_USUALLY_TRUE(sqrt(delta.dot(delta)) < threshold);
     }
 }
 
