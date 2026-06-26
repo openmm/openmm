@@ -4335,13 +4335,14 @@ void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) 
         cc.getFloatForceBuffer().copyTo(savedFloatForces);
     lastPosCellOffsets = cc.getPosCellOffsets();
     lastAtomOrder = cc.getAtomIndex();
+    atomsWereReordered = false;
 }
 
 void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
     ContextSelector selector(cc);
 
     // check if atoms were reordered from energy evaluation before scaling
-    atomsWereReordered = cc.getAtomsWereReordered();
+    atomsWereReordered |= cc.getAtomsWereReordered();
     kernel->setArg(0, (float) scaleX);
     kernel->setArg(1, (float) scaleY);
     kernel->setArg(2, (float) scaleZ);

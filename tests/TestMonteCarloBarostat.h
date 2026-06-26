@@ -142,6 +142,113 @@ void testIdealGas() {
     }
 }
 
+void checkContinuity(State& state, vector<Vec3>& last, vector<Vec3>& current, double threshold) {
+    // Copy the previously current positions before we overwrite them.
+
+    last.assign(current.begin(), current.end());
+
+    // Get the current box vectors.
+
+    Vec3 a, b, c;
+    state.getPeriodicBoxVectors(a, b, c);
+
+    // Get the current positions in reduced coordinates accounting for only the
+    // box matrix diagonal, corresponding with how MonteCarloFlexibleBarostat
+    // works: when the box vectors change, coordinates are rescaled with the
+    // diagonal elements but not sheared with the off-diagonal elements.
+
+    const vector<Vec3>& positions = state.getPositions();
+    current.resize(positions.size());
+    for(int i = 0; i < positions.size(); i++) {
+        Vec3 pos = positions[i];
+        current[i] = Vec3(pos[0] / a[0], pos[1] / b[1], pos[2] / c[2]);
+    }
+
+    // Make sure particles have not moved too far since the last step.  Use
+    // last.size() since on the first step last will be empty and current will
+    // contain the initial coordinates.
+
+    for (int j = 0; j < last.size(); j++) {
+        Vec3 delta = current[j] - last[j];
+        ASSERT_USUALLY_TRUE(sqrt(delta.dot(delta)) < threshold);
+    }
+}
+
+void testContinuity() {
+    // Tests that particles do not get swapped or jump across periodic box
+    // boundaries due to improper handling of atom reordering in the barostat.
+
+    const int numParticles = 64;
+    const double pressure = 1.5;
+    const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
+    const double temp = 300.0;
+    const double initialVolume = numParticles*BOLTZ*temp/pressureInMD;
+    const double initialLength = std::pow(initialVolume, 1.0/3.0);
+
+    // Create a gas of particles.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.8*initialLength, 0), Vec3(0, 0, 1.25*initialLength));
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(1.0);
+        positions[i] = Vec3(initialLength*genrand_real2(sfmt), 0.8*initialLength*genrand_real2(sfmt), 1.25*initialLength*genrand_real2(sfmt));
+    }
+    MonteCarloBarostat* barostat = new MonteCarloBarostat(pressure, temp);
+    system.addForce(barostat);
+
+    // Add a nonbonded force (to ensure that atom reordering takes place).
+
+    NonbondedForce* pair = new NonbondedForce();
+    pair->setCutoffDistance(2.5);
+    pair->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    for (int i = 0; i < numParticles; i++) {
+        pair->addParticle(0.0, 1.0, 0.1);
+    }
+    system.addForce(pair);
+
+    barostat->setDefaultTemperature(temp);
+    LangevinIntegrator integrator(temp, 0.1, 0.005);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+
+    vector<Vec3> last, current;
+
+    // Warm up.
+
+    barostat->setFrequency(1);
+    integrator.step(2500);
+
+    // Check with rescaling on.
+
+    for (int i = 0; i < 2500; i++) {
+        integrator.step(1);
+        State state = context.getState(State::Positions);
+        checkContinuity(state, last, current, 0.01);
+    }
+
+    // Check with rescaling on and pressure computation.
+
+    for (int i = 0; i < 2500; i++) {
+        integrator.step(1);
+        barostat->computeCurrentPressure(context);
+        State state = context.getState(State::Positions);
+        checkContinuity(state, last, current, 0.01);
+    }
+
+    // Check with rescaling off and pressure computation.
+
+    barostat->setFrequency(0);
+    for (int i = 0; i < 2500; i++) {
+        integrator.step(1);
+        barostat->computeCurrentPressure(context);
+        State state = context.getState(State::Positions);
+        checkContinuity(state, last, current, 0.01);
+    }
+}
+
 void testMoleculeScaling(bool rigid) {
     int numMolecules = 10;
     double initialWidth = 3.0;
@@ -448,6 +555,7 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         testChangingBoxSize();
         testIdealGas();
+        testContinuity();
         testMoleculeScaling(true);
         testMoleculeScaling(false);
         testMolecularGas(true);
