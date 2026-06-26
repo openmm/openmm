@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2025 Stanford University and the Authors.           *
+ * Portions copyright (c) 2025-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -26,7 +26,11 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/common/ComputeQueue.h"
-#include "opencl.hpp"
+#ifdef __APPLE__
+  #include "opencl.hpp"
+#else
+  #include <CL/opencl.hpp>
+#endif
 
 namespace OpenMM {
 

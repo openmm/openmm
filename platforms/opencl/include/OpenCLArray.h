@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -31,7 +31,11 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/common/windowsExportCommon.h"
 #include "openmm/common/ArrayInterface.h"
-#include "opencl.hpp"
+#ifdef __APPLE__
+  #include "opencl.hpp"
+#else
+  #include <CL/opencl.hpp>
+#endif
 #include <iostream>
 #include <sstream>
 #include <vector>

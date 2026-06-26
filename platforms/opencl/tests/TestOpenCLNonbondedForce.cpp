@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,7 +32,11 @@
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
 #include "OpenCLTests.h"
 #include "TestNonbondedForce.h"
-#include "opencl.hpp"
+#ifdef __APPLE__
+  #include "opencl.hpp"
+#else
+  #include <CL/opencl.hpp>
+#endif
 
 bool canRunHugeTest() {
     // Create a minimal context just to see which platform and device are being used.

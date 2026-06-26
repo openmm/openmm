@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -46,7 +46,11 @@
     // Prevent Windows from defining macros that interfere with other code.
     #define NOMINMAX
 #endif
-#include "opencl.hpp"
+#ifdef __APPLE__
+  #include "opencl.hpp"
+#else
+  #include <CL/opencl.hpp>
+#endif
 #include "openmm/common/windowsExportCommon.h"
 #include "OpenCLArray.h"
 #include "OpenCLBondedUtilities.h"
