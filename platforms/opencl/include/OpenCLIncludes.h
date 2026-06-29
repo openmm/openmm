@@ -1,13 +1,10 @@
-#ifndef OPENMM_OPENCLQUEUE_H_
-#define OPENMM_OPENCLQUEUE_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2025-2026 Stanford University and the Authors.      *
+ * Portions copyright (c) 2026 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -25,32 +22,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/common/ComputeQueue.h"
-#include "OpenCLIncludes.h"
+// Include the OpenCL C and C++ APIs.
 
-namespace OpenMM {
-
-/**
- * This is the OpenCL implementation of the ComputeQueue interface.  It wraps a cl::CommandQueue.
- */
-
-class OpenCLQueue : public ComputeQueueImpl {
-public:
-    /**
-     * Create an OpenCLQueue that wraps a cl::CommandQueue.
-     */
-    OpenCLQueue(cl::CommandQueue queue) : queue(queue) {
-    }
-    /**
-     * Get the cl::CommandQueue.
-     */
-    cl::CommandQueue getQueue() {
-        return queue;
-    }
-private:
-    cl::CommandQueue queue;
-};
-
-} // namespace OpenMM
-
-#endif /*OPENMM_OPENCLQUEUE_H_*/
+#ifdef __APPLE__
+    #include <OpenCL/opencl.h>
+#else
+    #include <CL/opencl.h>
+#endif
+#define CL_HPP_ENABLE_EXCEPTIONS
+#define CL_HPP_TARGET_OPENCL_VERSION 120
+#define CL_HPP_MINIMUM_OPENCL_VERSION 120
+#ifdef CL_API_SUFFIX__VERSION_3_0
+  #include <CL/opencl.hpp>
+#else
+  #include "opencl.hpp"
+#endif

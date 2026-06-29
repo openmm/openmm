@@ -46,11 +46,6 @@
     // Prevent Windows from defining macros that interfere with other code.
     #define NOMINMAX
 #endif
-#ifdef __APPLE__
-  #include "opencl.hpp"
-#else
-  #include <CL/opencl.hpp>
-#endif
 #include "openmm/common/windowsExportCommon.h"
 #include "OpenCLArray.h"
 #include "OpenCLBondedUtilities.h"
