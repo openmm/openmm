@@ -17,6 +17,12 @@ if(BUILD_TESTING AND OPENMM_BUILD_OPENCL_TESTS)
     SUBDIRS (tests)
 endif(BUILD_TESTING AND OPENMM_BUILD_OPENCL_TESTS)
 
+find_file(OPENCL_HPP_PATH opencl.hpp "${OPENCL_INCLUDE_DIR}/CL")
+mark_as_advanced(OPENCL_HPP_PATH)
+if(OPENCL_HPP_PATH)
+    ADD_DEFINITIONS(-DHAS_OPENCL_HPP)
+endif()
+
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
 SET(OPENMM_SOURCE_SUBDIRS . ../common)
