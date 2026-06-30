@@ -190,6 +190,23 @@ public:
      *                   pressure tensor in the order (XX, YY, ZZ, XY, XZ, YZ)
      */
     void computeCurrentPressure(Context& context, std::vector<double>& pressure) const;
+    /**
+     * Compute the instantaneous stress tensor of a system to which this barostat is applied.
+     * The stress is estimated by a consistent strain finite difference: for each tensor
+     * component, a small deformation gradient is applied to both the atomic coordinates
+     * and all box vectors, and the potential energy is differentiated with respect to
+     * the strain.
+     *
+     * The returned values are in bar, with tension positive.  When includeKinetic is
+     * true, the kinetic energy contribution is included as well.  When getScaleMoleculesAsRigid()
+     * is true, coordinates are deformed by moving each molecule as a rigid unit.
+     *
+     * @param context         the Context for which to compute the stress tensor
+     * @param stress          on exit, the six independent elements in the order
+     *                        (XX, YY, ZZ, XY, XZ, YZ), in bar
+     * @param includeKinetic  if true, include the kinetic contribution to the stress tensor
+     */
+    void computeStressTensor(Context& context, std::vector<double>& stress, bool includeKinetic=false) const;
 protected:
     ForceImpl* createImpl() const;
 private:

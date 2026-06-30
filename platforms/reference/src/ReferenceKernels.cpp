@@ -3326,10 +3326,11 @@ void ReferenceApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& contex
     barostat->savePositions(posData);
 }
 
-void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
+void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ,
+        double scaleXY, double scaleXZ, double scaleYZ) {
     vector<Vec3>& posData = extractPositions(context);
     Vec3* boxVectors = extractBoxVectors(context);
-    barostat->applyBarostat(posData, boxVectors, scaleX, scaleY, scaleZ);
+    barostat->applyBarostat(posData, boxVectors, scaleX, scaleY, scaleZ, scaleXY, scaleXZ, scaleYZ);
 }
 
 void ReferenceApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {

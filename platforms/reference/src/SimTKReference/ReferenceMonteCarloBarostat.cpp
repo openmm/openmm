@@ -77,10 +77,14 @@ void ReferenceMonteCarloBarostat::savePositions(vector<Vec3>& atomPositions) {
   @param scaleX             the factor by which to scale atom x-coordinates
   @param scaleY             the factor by which to scale atom y-coordinates
   @param scaleZ             the factor by which to scale atom z-coordinates
+  @param scaleXY            the factor by which the y-coordinate contributes to the new x-coordinate
+  @param scaleXZ            the factor by which the z-coordinate contributes to the new x-coordinate
+  @param scaleYZ            the factor by which the z-coordinate contributes to the new y-coordinate
 
   --------------------------------------------------------------------------------------- */
 
-void ReferenceMonteCarloBarostat::applyBarostat(vector<Vec3>& atomPositions, const Vec3* boxVectors, double scaleX, double scaleY, double scaleZ) {
+void ReferenceMonteCarloBarostat::applyBarostat(vector<Vec3>& atomPositions, const Vec3* boxVectors, double scaleX, double scaleY, double scaleZ,
+        double scaleXY, double scaleXZ, double scaleYZ) {
     // Loop over molecules.
 
     for (auto& molecule : molecules) {
@@ -93,12 +97,13 @@ void ReferenceMonteCarloBarostat::applyBarostat(vector<Vec3>& atomPositions, con
         }
         pos /= molecule.size();
 
-        // Now scale the position of the molecule center.
+        // Now apply the deformation to the position of the molecule center.  When the shear
+        // factors are zero this is just an independent scaling of the x, y, and z coordinates.
 
         Vec3 newPos = pos;
-        newPos[0] *= scaleX;
-        newPos[1] *= scaleY;
-        newPos[2] *= scaleZ;
+        newPos[0] = scaleX*pos[0] + scaleXY*pos[1] + scaleXZ*pos[2];
+        newPos[1] = scaleY*pos[1] + scaleYZ*pos[2];
+        newPos[2] = scaleZ*pos[2];
         Vec3 offset = newPos-pos;
         for (int atom : molecule) {
             Vec3& atomPos = atomPositions[atom];

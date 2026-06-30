@@ -56,8 +56,10 @@ public:
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
     void computeCurrentPressure(ContextImpl& context, std::vector<double>& pressure);
+    void computeStressTensor(ContextImpl& context, std::vector<double>& stress, bool includeKinetic);
 private:
     double computePressureComponent(ContextImpl& context, double delta, int component);
+    double computeStressComponent(ContextImpl& context, double delta, int component);
     void setBoxVectors(ContextImpl& context, Vec3 a, Vec3 b, Vec3 c);
     const MonteCarloFlexibleBarostat& owner;
     int step, numAttempted, numAccepted;

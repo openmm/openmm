@@ -4315,6 +4315,9 @@ void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) 
         kernel->addArg();
         kernel->addArg();
         kernel->addArg();
+        kernel->addArg();
+        kernel->addArg();
+        kernel->addArg();
         kernel->addArg(numMolecules);
         for (int i = 0; i < 5; i++)
             kernel->addArg();
@@ -4338,7 +4341,8 @@ void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) 
     atomsWereReordered = false;
 }
 
-void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
+void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ,
+        double scaleXY, double scaleXZ, double scaleYZ) {
     ContextSelector selector(cc);
 
     // check if atoms were reordered from energy evaluation before scaling
@@ -4346,7 +4350,10 @@ void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
     kernel->setArg(0, (float) scaleX);
     kernel->setArg(1, (float) scaleY);
     kernel->setArg(2, (float) scaleZ);
-    setPeriodicBoxArgs(cc, kernel, 4);
+    kernel->setArg(3, (float) scaleXY);
+    kernel->setArg(4, (float) scaleXZ);
+    kernel->setArg(5, (float) scaleYZ);
+    setPeriodicBoxArgs(cc, kernel, 7);
     kernel->execute(numMolecules);
 }
 

@@ -69,17 +69,23 @@ class ReferenceMonteCarloBarostat {
 
       /**---------------------------------------------------------------------------------------
 
-         Apply the barostat at the start of a time step, scaling x, y, and z coordinates independently.
+         Apply the barostat at the start of a time step, applying an upper triangular deformation
+         to the x, y, and z coordinates.  When the shear factors are zero this reduces to scaling
+         the x, y, and z coordinates independently.
 
          @param atomPositions      atom positions
          @param boxVectors         the periodic box vectors
          @param scaleX             the factor by which to scale atomic x coordinates
          @param scaleY             the factor by which to scale atomic y coordinates
          @param scaleZ             the factor by which to scale atomic z coordinates
+         @param scaleXY            the factor by which the y coordinate contributes to the new x coordinate
+         @param scaleXZ            the factor by which the z coordinate contributes to the new x coordinate
+         @param scaleYZ            the factor by which the z coordinate contributes to the new y coordinate
 
          --------------------------------------------------------------------------------------- */
 
-      void applyBarostat(std::vector<OpenMM::Vec3>& atomPositions, const OpenMM::Vec3* boxVectors, double scaleX, double scaleY, double scaleZ);
+      void applyBarostat(std::vector<OpenMM::Vec3>& atomPositions, const OpenMM::Vec3* boxVectors, double scaleX, double scaleY, double scaleZ,
+                         double scaleXY=0, double scaleXZ=0, double scaleYZ=0);
 
       /**---------------------------------------------------------------------------------------
 
