@@ -104,7 +104,8 @@ std::vector<Vec3> Integrator::getVelocitiesForTemperature(const System &system, 
         double mass = system.getParticleMass(i);
         if (mass != 0) {
             double velocityScale = sqrt(BOLTZ*temperature/mass);
-            velocities[i] = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*velocityScale;
+            velocities[i] = Vec3(randoms[nextRandom], randoms[nextRandom+1], randoms[nextRandom+2])*velocityScale;
+            nextRandom += 3;
         }
     }
     return velocities;
