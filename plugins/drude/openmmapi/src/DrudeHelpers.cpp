@@ -125,7 +125,8 @@ vector<Vec3> assignDrudeVelocities(const ContextImpl& context, double temperatur
         double mass = system.getParticleMass(atom);
         if (mass != 0) {
             double velocityScale = sqrt(BOLTZ*temperature/mass);
-            velocities[atom] = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*velocityScale;
+            velocities[atom] = Vec3(randoms[nextRandom], randoms[nextRandom+1], randoms[nextRandom+2])*velocityScale;
+            nextRandom += 3;
         }
     }
     // Now the particle-Drude pairs
@@ -139,14 +140,16 @@ vector<Vec3> assignDrudeVelocities(const ContextImpl& context, double temperatur
             double redMass = mass1 * mass2 * invMass;
             double fracM1 = mass1 * invMass;
             double fracM2 = mass2 * invMass;
-            Vec3 comVelocity = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*sqrt(BOLTZ*temperature*invMass);
-            Vec3 relVelocity = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*sqrt(BOLTZ*drudeTemperature/redMass);
+            Vec3 comVelocity = Vec3(randoms[nextRandom], randoms[nextRandom+1], randoms[nextRandom+2])*sqrt(BOLTZ*temperature*invMass);
+            Vec3 relVelocity = Vec3(randoms[nextRandom+3], randoms[nextRandom+4], randoms[nextRandom+5])*sqrt(BOLTZ*drudeTemperature/redMass);
+            nextRandom += 6;
             velocities[atom1] = comVelocity - fracM2 * relVelocity;
             velocities[atom2] = comVelocity + fracM1 * relVelocity;
         }
         else if (mass2 != 0) {
             double velocityScale = sqrt(BOLTZ*temperature/mass2);
-            velocities[atom2] = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*velocityScale;
+            velocities[atom2] = Vec3(randoms[nextRandom], randoms[nextRandom+1], randoms[nextRandom+2])*velocityScale;
+            nextRandom += 3;
         }
     }
     return velocities;
