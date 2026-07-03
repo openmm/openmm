@@ -306,10 +306,8 @@ void testTwoParticleStressTensor() {
     // separation vector r (length L), the configurational stress is
     //
     //     sigma_ij = k (L - r0) r_i r_j / (L V)
-    //
-    // This is an independent check of computeStressTensor(): it does not reuse the
-    // finite difference logic of the implementation.  The bond is tilted in all three
-    // directions so that every one of the six components is nonzero.
+    // The bond is tilted in all three directions so that every one of the six
+    // components is nonzero.
 
     const double k = 500.0;   // kJ/mol/nm^2
     const double r0 = 0.15;   // nm
@@ -353,8 +351,7 @@ void testStressTensorAgainstLammps() {
     // by LAMMPS for the identical system.
     //
     // The LAMMPS reference values were produced with LAMMPS (19 Nov 2024) using metal
-    // units (Angstrom, eV, bar) and the input script
-    //   cuda_mace_env_recreation_2/validation_scripts/lammps_stress_crosscheck/in.lj_stress
+    // units (Angstrom, eV, bar)
     // with pair_style lj/cut and "compute pressure NULL virial" (virial term only, no
     // kinetic contribution).  The OpenMM parameters below map to that system as
     //   sigma   = 0.3 nm   = 3.0 Angstrom
@@ -403,6 +400,70 @@ void testStressTensorAgainstLammps() {
     // LAMMPS pressure tensor (bar) in the order (XX, YY, ZZ, XY, XZ, YZ).
     double lammpsPressure[6] = {1869.08676851, 3740.91201516, 1681.44462233,
                                 2481.14075422, -1459.42106406, -2393.77198342};
+    for (int component = 0; component < 6; component++)
+        ASSERT_EQUAL_TOL(-lammpsPressure[component], stress[component], 1e-3);
+}
+
+void testKineticStressTensorAgainstLammps() {
+    // Cross-code validation of the includeKinetic=true option.  Same six atom
+    // Lennard-Jones cluster as testStressTensorAgainstLammps(), but every atom is
+    // given a nonzero velocity so the full (virial + kinetic) stress tensor is
+    // exercised.  The velocities are chosen large enough that the kinetic term is
+    // comparable to the virial term (otherwise it would be a ~0.01% perturbation
+    // that a relative tolerance could not detect).
+    //
+    // The LAMMPS reference values were produced with LAMMPS (19 Nov 2024), metal
+    // units, pair_style lj/cut, and "compute pressure" with a temperature compute
+    // (kinetic + virial).  OpenMM velocities are in nm/ps; the LAMMPS velocities are
+    // ten times larger (Angstrom/ps).  As before, OpenMM's stress tensor is tension
+    // positive, so the expected values are the negatives of the LAMMPS pressure.
+
+    const double sigma = 0.3;     // nm
+    const double epsilon = 1.0;   // kJ/mol
+    const double boxLength = 4.0; // nm
+    const double cutoff = 1.5;    // nm
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxLength, 0, 0), Vec3(0, boxLength, 0), Vec3(0, 0, boxLength));
+    NonbondedForce* nb = new NonbondedForce();
+    nb->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nb->setCutoffDistance(cutoff);
+    nb->setUseSwitchingFunction(false);
+    nb->setUseDispersionCorrection(false);
+    vector<Vec3> positions = {
+        Vec3(0.00, 0.00, 0.00),
+        Vec3(0.32, 0.04, 0.01),
+        Vec3(0.05, 0.30, 0.06),
+        Vec3(0.02, 0.07, 0.33),
+        Vec3(0.30, 0.31, 0.09),
+        Vec3(0.11, 0.20, 0.25)
+    };
+    vector<Vec3> velocities = {   // nm/ps  (LAMMPS Angstrom/ps values / 10)
+        Vec3( 50, -30,  20),
+        Vec3(-40,  60, -10),
+        Vec3( 20,  10,  70),
+        Vec3(-30, -50,  40),
+        Vec3( 60,  20, -30),
+        Vec3(-10,  40,  50)
+    };
+    for (int i = 0; i < (int) positions.size(); i++) {
+        system.addParticle(1.0);
+        nb->addParticle(0.0, sigma, epsilon);
+    }
+    system.addForce(nb);
+    MonteCarloFlexibleBarostat* barostat = new MonteCarloFlexibleBarostat(1.0, 300.0, 0, false);
+    system.addForce(barostat);
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+
+    vector<double> stress;
+    barostat->computeStressTensor(context, stress, true);
+
+    // Full LAMMPS pressure tensor (bar), order (XX, YY, ZZ, XY, XZ, YZ).
+    double lammpsPressure[6] = {4230.16540767, 6101.99065433, 4379.82020995,
+                                2117.89788666, -1641.04249785, -2679.17709365};
     for (int component = 0; component < 6; component++)
         ASSERT_EQUAL_TOL(-lammpsPressure[component], stress[component], 1e-3);
 }
@@ -482,6 +543,7 @@ int main(int argc, char* argv[]) {
         testRandomSeed();
         testTwoParticleStressTensor();
         testStressTensorAgainstLammps();
+        testKineticStressTensorAgainstLammps();
         testTriclinicStressTensor();
         runPlatformTests();
     }
