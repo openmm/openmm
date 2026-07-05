@@ -177,6 +177,7 @@ UNITS = {
 ("*", "getDefaultSurfaceTension") : ("unit.bar*unit.nanometer", ()),
 ("*", "setDefaultSurfaceTension") : (None, ("unit.bar*unit.nanometer",)),
 ("*", "computeCurrentPressure") : ("unit.bar", ()),
+("*", "computeStressTensor") : ("unit.bar", ()),
 ("*", "getDefaultTemperature") : ("unit.kelvin", ()),
 ("*", "setDefaultTemperature") : (None, ("unit.kelvin",)),
 ("*", "getRelativeTemperature") : ("unit.kelvin", ()),

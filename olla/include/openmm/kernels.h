@@ -1746,7 +1746,14 @@ public:
     virtual void saveCoordinates(ContextImpl& context) = 0;
     /**
      * Attempt a Monte Carlo step, scaling particle positions (or cluster centers) by a specified value.
-     * This version scales the x, y, and z positions independently.
+     * The transformation applied to each position (or cluster center) r is the upper triangular deformation
+     *
+     *     x' = scaleX*x + scaleXY*y + scaleXZ*z
+     *     y' =            scaleY*y  + scaleYZ*z
+     *     z' =                        scaleZ*z
+     *
+     * When the three shear factors are left at their default value of zero, this reduces to scaling the x, y,
+     * and z positions independently.  The shear factors are used when computing the full stress tensor.
      * This is called BEFORE the periodic box size is modified.  It should begin by translating each particle
      * or cluster into the first periodic box, so that coordinates will still be correct after the box size
      * is changed.
@@ -1755,8 +1762,12 @@ public:
      * @param scaleX     the scale factor by which to multiply particle x-coordinate
      * @param scaleY     the scale factor by which to multiply particle y-coordinate
      * @param scaleZ     the scale factor by which to multiply particle z-coordinate
+     * @param scaleXY    the factor by which the y-coordinate contributes to the new x-coordinate
+     * @param scaleXZ    the factor by which the z-coordinate contributes to the new x-coordinate
+     * @param scaleYZ    the factor by which the z-coordinate contributes to the new y-coordinate
      */
-    virtual void scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) = 0;
+    virtual void scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ,
+                                  double scaleXY=0, double scaleXZ=0, double scaleYZ=0) = 0;
     /**
      * Reject the most recent Monte Carlo step, restoring the particle positions to where they were when
      * saveCoordinates() was last called.
