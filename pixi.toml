@@ -1,0 +1,207 @@
+# OpenMM Pixi workspace + package manifest
+# Build with:  pixi install && pixi run smoke
+# Full tests:  pixi run -e test test-py
+# Package:     pixi build
+
+[workspace]
+name = "openmm"
+channels = ["https://prefix.dev/conda-forge"]
+platforms = ["linux-64", "win-64", "osx-64", "osx-arm64"]
+preview = ["pixi-build"]
+
+[activation]
+env = { OPENMM_PLUGIN_DIR = "$CONDA_PREFIX/lib/plugins" }
+
+[dependencies]
+openmm = { path = "." }
+
+[tasks]
+info = { cmd = "python -c \"import openmm as mm; print('OpenMM', mm.__version__); print('Platforms:', [mm.Platform.getPlatform(i).getName() for i in range(mm.Platform.getNumPlatforms())])\"" }
+smoke = "python -m openmm.testInstallation"
+
+# ---------------------------------------------------------------------------
+# Package definition (built from this repo via pixi-build-cmake)
+# ---------------------------------------------------------------------------
+[package]
+name = "openmm"
+version = "8.5.0"
+
+[package.build]
+backend = { name = "pixi-build-cmake", version = "0.*", channels = ["https://prefix.dev/conda-forge"] }
+
+# Base build config (overwritten per-platform — see target tables below)
+[package.build.config]
+compilers = ["c", "cxx"]
+extra-args = [
+    "-DCMAKE_BUILD_TYPE=Release",
+    "-DBUILD_TESTING=OFF",
+    "-DOPENMM_BUILD_PYTHON_WRAPPERS=ON",
+    "-DOPENMM_PYTHON_INSTALL_TO_SITEPACKAGES=ON",
+    "-DOPENMM_BUILD_SHARED_LIB=ON",
+    "-DOPENMM_BUILD_CPU_LIB=ON",
+    "-DOPENMM_BUILD_CUDA_LIB=OFF",
+    "-DOPENMM_BUILD_OPENCL_LIB=OFF",
+    "-DOPENMM_BUILD_AMOEBA_PLUGIN=ON",
+    "-DOPENMM_BUILD_RPMD_PLUGIN=ON",
+    "-DOPENMM_BUILD_DRUDE_PLUGIN=ON",
+    "-DOPENMM_BUILD_PME_PLUGIN=ON",
+    "-DOPENMM_BUILD_EXAMPLES=OFF",
+    "-DOPENMM_BUILD_REFERENCE_TESTS=OFF",
+    "-DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF",
+]
+
+[package.host-dependencies]
+python = ">=3.11,<3.14"
+numpy = "*"
+cython = "*"
+swig = ">=4.3"
+doxygen = "*"
+cmake = ">=3.17,<4.0"
+setuptools = "*"
+wheel = "*"
+pip = "*"
+
+[package.run-dependencies]
+python = ">=3.11,<3.14"
+numpy = "*"
+
+# Linux CUDA + OpenCL dev libraries (required for CMake configure)
+[package.target.linux-64.host-dependencies]
+cuda-cudart-dev = "*"
+cuda-nvrtc-dev = "*"
+cuda-nvcc = "*"
+libcufft-dev = "*"
+cuda-cupti-dev = "*"
+cuda-profiler-api = "*"
+opencl-headers = "*"
+ocl-icd = "*"
+
+# ---------------------------------------------------------------------------
+# Per-platform build overrides (extra-args/compilers REPLACE base config)
+# ---------------------------------------------------------------------------
+[package.build.target.linux-64.config]
+compilers = ["c", "cxx", "cuda"]
+env = { CUDA_HOME = "$PREFIX", CUDA_PATH = "$PREFIX" }
+extra-args = [
+    "-DCMAKE_BUILD_TYPE=Release",
+    "-DBUILD_TESTING=OFF",
+    "-DCUDAToolkit_ROOT=$PREFIX",
+    "-DOPENMM_BUILD_PYTHON_WRAPPERS=ON",
+    "-DOPENMM_PYTHON_INSTALL_TO_SITEPACKAGES=ON",
+    "-DOPENMM_BUILD_SHARED_LIB=ON",
+    "-DOPENMM_BUILD_CPU_LIB=ON",
+    "-DOPENMM_BUILD_CUDA_LIB=ON",
+    "-DOPENMM_BUILD_OPENCL_LIB=ON",
+    "-DOPENMM_BUILD_AMOEBA_PLUGIN=ON",
+    "-DOPENMM_BUILD_RPMD_PLUGIN=ON",
+    "-DOPENMM_BUILD_DRUDE_PLUGIN=ON",
+    "-DOPENMM_BUILD_PME_PLUGIN=ON",
+    "-DOPENMM_BUILD_EXAMPLES=OFF",
+    "-DOPENMM_BUILD_REFERENCE_TESTS=OFF",
+    "-DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF",
+]
+
+[package.build.target.win-64.config]
+compilers = ["c", "cxx", "cuda"]
+extra-args = [
+    "-DCMAKE_BUILD_TYPE=Release",
+    "-DBUILD_TESTING=OFF",
+    "-DOPENMM_BUILD_PYTHON_WRAPPERS=ON",
+    "-DOPENMM_PYTHON_INSTALL_TO_SITEPACKAGES=ON",
+    "-DOPENMM_BUILD_SHARED_LIB=ON",
+    "-DOPENMM_BUILD_CPU_LIB=ON",
+    "-DOPENMM_BUILD_CUDA_LIB=ON",
+    "-DOPENMM_BUILD_OPENCL_LIB=ON",
+    "-DOPENMM_BUILD_AMOEBA_PLUGIN=ON",
+    "-DOPENMM_BUILD_RPMD_PLUGIN=ON",
+    "-DOPENMM_BUILD_DRUDE_PLUGIN=ON",
+    "-DOPENMM_BUILD_PME_PLUGIN=ON",
+    "-DOPENMM_BUILD_EXAMPLES=OFF",
+    "-DOPENMM_BUILD_REFERENCE_TESTS=OFF",
+    "-DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF",
+]
+
+[package.build.target.osx-64.config]
+compilers = ["c", "cxx"]
+extra-args = [
+    "-DCMAKE_BUILD_TYPE=Release",
+    "-DBUILD_TESTING=OFF",
+    "-DOPENMM_BUILD_PYTHON_WRAPPERS=ON",
+    "-DOPENMM_PYTHON_INSTALL_TO_SITEPACKAGES=ON",
+    "-DOPENMM_BUILD_SHARED_LIB=ON",
+    "-DOPENMM_BUILD_CPU_LIB=ON",
+    "-DOPENMM_BUILD_CUDA_LIB=OFF",
+    "-DOPENMM_BUILD_OPENCL_LIB=OFF",
+    "-DOPENMM_BUILD_AMOEBA_PLUGIN=ON",
+    "-DOPENMM_BUILD_RPMD_PLUGIN=ON",
+    "-DOPENMM_BUILD_DRUDE_PLUGIN=ON",
+    "-DOPENMM_BUILD_PME_PLUGIN=ON",
+    "-DOPENMM_BUILD_EXAMPLES=OFF",
+    "-DOPENMM_BUILD_REFERENCE_TESTS=OFF",
+    "-DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF",
+]
+
+[package.build.target.osx-arm64.config]
+compilers = ["c", "cxx"]
+extra-args = [
+    "-DCMAKE_BUILD_TYPE=Release",
+    "-DBUILD_TESTING=OFF",
+    "-DOPENMM_BUILD_PYTHON_WRAPPERS=ON",
+    "-DOPENMM_PYTHON_INSTALL_TO_SITEPACKAGES=ON",
+    "-DOPENMM_BUILD_SHARED_LIB=ON",
+    "-DOPENMM_BUILD_CPU_LIB=ON",
+    "-DOPENMM_BUILD_CUDA_LIB=OFF",
+    "-DOPENMM_BUILD_OPENCL_LIB=OFF",
+    "-DOPENMM_BUILD_AMOEBA_PLUGIN=ON",
+    "-DOPENMM_BUILD_RPMD_PLUGIN=ON",
+    "-DOPENMM_BUILD_DRUDE_PLUGIN=ON",
+    "-DOPENMM_BUILD_PME_PLUGIN=ON",
+    "-DOPENMM_BUILD_EXAMPLES=OFF",
+    "-DOPENMM_BUILD_REFERENCE_TESTS=OFF",
+    "-DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF",
+]
+
+# CUDA / OpenCL libraries are pulled in automatically by the `cuda` compiler
+# (pixi-build-cmake) and conda-forge run-exports when building on linux-64/win-64.
+# OpenCL on Linux: add ocl-icd-system at workspace level if needed for runtime tests.
+
+# ---------------------------------------------------------------------------
+# Optional feature environments
+# ---------------------------------------------------------------------------
+[feature.test.dependencies]
+pytest = "*"
+pytest-xdist = "*"
+pytest-timeout = "*"
+scipy = "*"
+matplotlib = "*"
+pandas = "*"
+
+[feature.test.tasks]
+smoke = "python -m openmm.testInstallation"
+fix-cuda = "bash scripts/rebuild_cuda_plugin.sh"
+test-py = "python -m pytest -v wrappers/python/tests/TestCavityMDControllers.py tests/rpmd/ --ignore=tests/rpmd/test_uma_hybrid_rpmd_cavity.py -x"
+test-cpp = "bash scripts/build_and_test_cpp.sh"
+figure5 = "bash examples/cavity/c2f_protocol/run_figure5.sh"
+calibrate-fictive = "python examples/cavity/c2f_protocol/run_fictive_calibration.py"
+calibrate-fictive-quick = "python examples/cavity/c2f_protocol/run_fictive_calibration.py --quick"
+
+[feature.ml.dependencies]
+python = ">=3.11,<3.14"
+pip = "*"
+
+[feature.ml.tasks]
+install-ml = "pip install -r requirements-ml.txt"
+smoke-ml = "python -c \"import openmmml; print('openmmml OK')\""
+
+[feature.docs.dependencies]
+sphinx = "*"
+doxygen = "*"
+
+[feature.docs.tasks]
+docs = "echo 'Run sphinx from build/docs-source after configuring with -DOPENMM_GENERATE_API_DOCS=ON'"
+
+[environments]
+default = { features = [] }
+test = { features = ["test"] }
+ml = { features = ["ml", "test"] }
+docs = { features = ["docs"] }
