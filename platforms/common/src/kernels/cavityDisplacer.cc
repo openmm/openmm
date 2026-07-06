@@ -57,7 +57,7 @@ KERNEL void computeCavityDipole(GLOBAL const real4* RESTRICT posq, GLOBAL const 
 /**
  * Displace the cavity particle to its equilibrium position.
  * 
- * The equilibrium position is: q_eq = -(lambda/omega) * d_xy
+ * The equilibrium position is: q_eq = -(lambda / (photonMass_au * omega_c)) * d_xy
  * 
  * Only x,y components are modified; z is preserved.
  */
@@ -70,7 +70,7 @@ KERNEL void displaceCavityParticle(GLOBAL real4* RESTRICT posq, GLOBAL const flo
         float dipoleX = dipole[0];
         float dipoleY = dipole[1];
         
-        // Compute new position: q = factor * d_xy (factor = -lambda/omega)
+        // Compute new position: q = factor * d_xy (factor = -lambda/(photonMass_au*omega_c))
         pos.x = factor * dipoleX;
         pos.y = factor * dipoleY;
         // Keep z unchanged

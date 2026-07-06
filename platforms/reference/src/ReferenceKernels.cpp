@@ -3752,15 +3752,10 @@ void ReferenceApplyCavityDisplacementKernel::execute(ContextImpl& context, doubl
         }
     }
     
-    // Compute equilibrium position: q_eq = -(lambda/omega_c) * d_xy
-    // Per Hamiltonian H_EM = sum [ p^2/2 + (omega_c^2/2)(q + lambda*mu/omega_c)^2 ], the
-    // equilibrium has NO photon mass (cavity mode has unit mass in a.u.).
-    // Multiply by photonMass_au to cancel the erroneous division by mass:
-    // factor = -lambda * photonMass_au * 937679 / (photonMass * 1.7109e9 * omega) = -lambda/omega
+    // Compute equilibrium position: q_eq = -(epsilon/K)*d = -lambda/(photonMass_au*omegac)*d
     static const double AMU_TO_AU_CAVITY = 1822.888486209;
     double photonMass_au = photonMass * AMU_TO_AU_CAVITY;
-    double epsilonOverK = lambdaCoupling * photonMass_au * 937679.0 / (photonMass * 1.7109e9 * omegac);
-    double factor = -epsilonOverK;
+    double factor = -lambdaCoupling / (photonMass_au * omegac);
     
     // Update cavity particle position (only x,y, preserve z)
     double originalZ = posData[cavityParticleIndex][2];
