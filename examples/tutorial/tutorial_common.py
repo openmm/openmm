@@ -88,39 +88,46 @@ def create_context(
     return context
 
 
-def molecular_kinetic_energy(state: openmm.State, indices: list[int]) -> float:
+def molecular_kinetic_energy(
+    state: openmm.State,
+    molecular_indices: list[int],
+    system: openmm.System,
+) -> float:
     """Kinetic energy of selected particles in kJ/mol."""
     vel = state.getVelocities(asNumpy=True).value_in_unit(
         unit.nanometer / unit.picosecond
     )
     ke = 0.0
-    for idx in indices:
-        mass = state.getParticleMass(idx).value_in_unit(unit.dalton)
+    for idx in molecular_indices:
+        mass = system.getParticleMass(idx).value_in_unit(unit.dalton)
         ke += 0.5 * mass * float(np.sum(vel[idx] ** 2))
     return ke
 
 
 def molecular_kinetic_temperature(
     state: openmm.State,
+    system: openmm.System,
     molecular_indices: list[int] | None = None,
     subtract_com: bool = True,
 ) -> float:
     """Molecular kinetic temperature using Bussi-compatible DOF."""
     if molecular_indices is None:
         molecular_indices = [0, 1]
-    ke = molecular_kinetic_energy(state, molecular_indices)
+    ke = molecular_kinetic_energy(state, molecular_indices, system)
     dof = 3 * len(molecular_indices)
     if subtract_com:
         dof -= 3
     return 2.0 * ke / (dof * Units.KB_KJMOL_PER_K)
 
 
-def photon_kinetic_temperature(state: openmm.State, photon_index: int = 2) -> float:
+def photon_kinetic_temperature(
+    state: openmm.State, system: openmm.System, photon_index: int = 2
+) -> float:
     """Photon kinetic temperature from its 3 translational DOF."""
     vel = state.getVelocities(asNumpy=True).value_in_unit(
         unit.nanometer / unit.picosecond
     )
-    mass = state.getParticleMass(photon_index).value_in_unit(unit.dalton)
+    mass = system.getParticleMass(photon_index).value_in_unit(unit.dalton)
     ke = 0.5 * mass * float(np.sum(vel[photon_index] ** 2))
     return 2.0 * ke / (3.0 * Units.KB_KJMOL_PER_K)
 
@@ -206,11 +213,11 @@ def run_nvt_single_dimer(
         integrator.step(1)
         if step % sample_stride != 0:
             continue
-        state = context.getState(getPositions=True, getEnergy=True)
+        state = context.getState(getPositions=True, getVelocities=True)
         pos = state.getPositions(asNumpy=True)
         dipoles.append(charges[0] * pos[0] + charges[1] * pos[1])
-        temperatures.append(molecular_kinetic_temperature(state))
-        photon_temperatures.append(photon_kinetic_temperature(state))
+        temperatures.append(molecular_kinetic_temperature(state, system))
+        photon_temperatures.append(photon_kinetic_temperature(state, system))
 
     dipoles_arr = np.asarray(dipoles)
     freqs, spectrum, peak_cm1 = dipole_spectrum_cm1(dipoles_arr, dt_fs)
