@@ -37,6 +37,7 @@ The `cavity/` directory contains examples of cavity-coupled molecular dynamics s
 - `cavity/dimer_system/` - Simple two-component dimer system with cavity coupling
 - `cavity/water_system/` - Flexible TIP4P-Ew water with cavity coupling
 - `cavity/protein_system/` - Protein system data and examples
+- `tutorial/` - Step-by-step mKA cavity MD notebook with validation scripts
 
 These examples demonstrate:
 - Cavity-molecule coupling effects

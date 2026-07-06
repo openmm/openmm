@@ -169,11 +169,15 @@ def setup_multimode_adaptive_square_wave(
 def configure_dipole_self_energy(force, include: bool = True) -> None:
     """Enable or disable the dipole self-energy (self-polarization) term.
 
-    Works with ``CavityForce`` and ``MultiModeCavityForce``. When disabled,
-    the DSE energy and its force contribution via the displaced coordinate
-    are omitted; molecular forces reduce to pure bilinear coupling.
+    Dipole self-energy is always included in the current CavityForce kernel.
+    This helper is retained for API compatibility and is a no-op.
     """
-    force.setIncludeDipoleSelfEnergy(include)
+    if not include:
+        import warnings
+        warnings.warn(
+            "CavityForce always includes dipole self-energy; disabling is not supported.",
+            stacklevel=2,
+        )
 
 
 def assign_force_groups(system, include_dipole_self_energy: bool = True) -> Dict[str, int]:
@@ -194,11 +198,9 @@ def assign_force_groups(system, include_dipole_self_energy: bool = True) -> Dict
             force.setForceGroup(0)
             group_map["nonbonded"] = 0
         elif isinstance(force, openmm.CavityForce):
-            force.setIncludeDipoleSelfEnergy(include_dipole_self_energy)
             force.setForceGroup(2)
             group_map["cavity"] = 2
         elif isinstance(force, openmm.MultiModeCavityForce):
-            force.setIncludeDipoleSelfEnergy(include_dipole_self_energy)
             force.setForceGroup(2)
             group_map["cavity"] = 2
         elif isinstance(force, openmm.BussiThermostat):
