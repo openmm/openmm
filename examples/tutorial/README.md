@@ -37,10 +37,9 @@ python examples/tutorial/run_tutorial_validation.py --platform CPU
 
 By default the validation script uses **CUDA** (mixed precision) when available, otherwise **CPU**.
 
-This runs tutorial Section 2 (single A–A dimer + photon, NVT Bussi) and checks:
+This runs tutorial Section 2 (single A–A dimer + photon, NVT Langevin) and checks:
 
-- Mean molecular kinetic temperature near the bath (100 K by default)
-- Photon in-plane temperature stays bounded (no runaway heating from bad equilibrium displacement)
+- Mean total kinetic temperature near the bath (100 K by default)
 - Dipole spectrum peak near the cavity frequency (1560 cm⁻¹)
 
 ## Automated tests
@@ -54,11 +53,11 @@ The tutorial regression lives in [`tests/tutorial/test_mka_tutorial_physics.py`]
 ## Physics notes
 
 - **Finite-q displacement**: `displaceToEquilibrium()` sets `q_eq = -(λ/(m_ph·ω_c))·d_xy`, matching `CavityForce` with `K = m_ph·ω_c²`.
-- **Bussi thermostat**: Applied to molecular atoms only; photon equilibrates via cavity coupling.
-- **Photon temperature**: The photon is **not** Bussi-thermostatted. At weak coupling (λ ≈ 0.01) its in-plane kinetic temperature is **below** the molecular bath (often ~50 K when T_bath = 100 K). This is expected, not a DOF miscount. Report T using 2 DOF in the cavity plane (y, z when the dimer lies along x); 3-DOF Cartesian T is similar.
+- **NVT thermostat**: `LangevinMiddleIntegrator` (friction γ = 0.01 ps⁻¹) thermostats molecules and photon at T_bath. Section 1 remains NVE (Verlet).
+- **Temperature reporting**: Langevin thermostats each particle independently (3N molecular DOF, not 3N−3). The total system kinetic temperature is the primary bath metric; molecular and photon subsets can differ when cavity coupling exchanges energy.
 - **Dipole self-energy**: Always included in `CavityForce`; no toggle is required in Python setup code.
 - **Spectrum**: Direct FFT of the dipole trace; peak should be near ω_c = 1560 cm⁻¹ for λ = 0.01.
-- **Platform**: The notebook prefers CUDA; CPU/Reference is supported after the split-Verlet + Bussi integrator fix in `ReferenceVerletDynamics`.
+- **Platform**: The notebook prefers CUDA; CPU/Reference is also supported.
 
 ## Troubleshooting
 
@@ -66,5 +65,5 @@ The tutorial regression lives in [`tests/tutorial/test_mka_tutorial_physics.py`]
 |---------|----------------|
 | `AttributeError: setIncludeDipoleSelfEnergy` | Remove that call; DSE is always on |
 | Photon T >> bath T | Old `displaceToEquilibrium` bug; rebuild OpenMM from current branch |
-| Peak ~1000 cm⁻¹ instead of ~1560 cm⁻¹ (CPU) | Old Reference split-Verlet bug; rebuild OpenMM from current branch |
-| Photon T ≈ 50 K with T_bath = 100 K | Expected at weak λ; photon is not thermostatted (not a DOF bug) |
+| Peak ~1000 cm⁻¹ instead of ~1560 cm⁻¹ (CPU, old builds) | Legacy Reference split-Verlet + Bussi bug; rebuild OpenMM |
+| Photon T far from T_bath with Langevin NVT | Increase production length or check friction γ |

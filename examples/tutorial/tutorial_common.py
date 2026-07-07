@@ -15,7 +15,10 @@ from openmm.cavitymd.forcefields.mka import (
     PHOTON_MASS_AMU,
     R0_AA_AU,
 )
-from openmm.cavitymd.thermostats import DualThermostat
+from openmm.cavitymd.thermostats import (
+    DEFAULT_LANGEVIN_FRICTION_PS,
+    create_langevin_integrator,
+)
 
 B2NM = Units.BOHR_TO_NM
 H2K = Units.HARTREE_TO_KJMOL
@@ -38,11 +41,8 @@ def select_platform(prefer_cuda: bool = True) -> openmm.Platform:
 def build_single_aa_dimer_system(
     lambda_coupling: float,
     omegac_au: float | None = None,
-    temperature_K: float | None = None,
-    tau_ps: float = 1.0,
-    seed: int = 42,
 ) -> tuple[openmm.System, openmm.CavityParticleDisplacer, list]:
-    """Build a single A-A dimer + photon system with optional Bussi thermostat."""
+    """Build a single A-A dimer + photon system (no integrator/thermostat)."""
     if omegac_au is None:
         omegac_au = Units.cm1_to_au(OMEGA_C_CM1)
 
@@ -67,15 +67,6 @@ def build_single_aa_dimer_system(
     displacer.setSwitchOnStep(2**31 - 1)
     system.addForce(displacer)
 
-    if temperature_K is not None:
-        DualThermostat.setup_bussi_for_system(
-            system,
-            molecular_indices=[0, 1],
-            temperature_K=temperature_K,
-            tau_ps=tau_ps,
-            random_number_seed=seed,
-        )
-
     half_r0 = R0_AA_OMM / 2.0
     positions = [
         openmm.Vec3(-half_r0, 0, 0) * unit.nanometer,
@@ -91,9 +82,18 @@ def create_context(
     temperature_K: float,
     seed: int,
     platform_name: str | None = None,
+    *,
+    use_langevin: bool = False,
+    friction_ps_inv: float = DEFAULT_LANGEVIN_FRICTION_PS,
 ) -> openmm.Context:
     """Create a Context with thermal velocities on the selected platform."""
-    integrator = openmm.VerletIntegrator(dt_fs * 1e-3)
+    dt_ps = dt_fs * 1e-3
+    if use_langevin:
+        integrator = create_langevin_integrator(
+            temperature_K, dt_ps, friction_ps_inv=friction_ps_inv
+        )
+    else:
+        integrator = openmm.VerletIntegrator(dt_ps)
     if platform_name is None:
         platform = select_platform()
     else:
@@ -123,15 +123,30 @@ def molecular_kinetic_temperature(
     state: openmm.State,
     system: openmm.System,
     molecular_indices: list[int] | None = None,
-    subtract_com: bool = True,
+    subtract_com: bool = False,
 ) -> float:
-    """Molecular kinetic temperature using Bussi-compatible DOF."""
+    """Molecular kinetic temperature from translational DOFs.
+
+    Use subtract_com=False (3N DOF) with LangevinMiddleIntegrator, which
+    thermostats each particle independently.  Use subtract_com=True (3N-3)
+    when a BussiThermostat with setSubtractCMMotion(True) enforces the bath.
+    """
     if molecular_indices is None:
         molecular_indices = [0, 1]
     ke = molecular_kinetic_energy(state, molecular_indices, system)
     dof = 3 * len(molecular_indices)
     if subtract_com:
         dof -= 3
+    return 2.0 * ke / (dof * Units.KB_KJMOL_PER_K)
+
+
+def system_kinetic_temperature(
+    state: openmm.State,
+    system: openmm.System,
+) -> float:
+    """Total kinetic temperature (3 DOF per particle) from an OpenMM State."""
+    ke = state.getKineticEnergy().value_in_unit(unit.kilojoule_per_mole)
+    dof = 3 * system.getNumParticles()
     return 2.0 * ke / (dof * Units.KB_KJMOL_PER_K)
 
 
@@ -144,10 +159,10 @@ def photon_kinetic_temperature(
 ) -> float:
     """Photon kinetic temperature from selected translational DOFs.
 
-    The cavity photon is not Bussi-thermostatted; at weak coupling (lambda ~ 0.01)
-    it equilibrates below the molecular bath (~50 K when T_bath = 100 K).  Use
-    dof=2 (default) for the cavity plane (y, z when the dimer lies along x); dof=3
-    counts all Cartesian components.
+    With LangevinMiddleIntegrator all particles (including the photon) are
+    thermostatted at T_bath; use dof=3 for the canonical kinetic temperature.
+    Use dof=2 for the cavity plane (y, z when the dimer lies along x) as a
+    supplementary in-plane diagnostic.
     """
     vel = state.getVelocities(asNumpy=True).value_in_unit(
         unit.nanometer / unit.picosecond
@@ -213,17 +228,19 @@ def run_nvt_single_dimer(
     seed: int = 42,
     sample_stride: int = 1,
     platform_name: str | None = None,
+    friction_ps_inv: float = DEFAULT_LANGEVIN_FRICTION_PS,
 ) -> dict:
-    """Run tutorial Section 2 and return diagnostics."""
+    """Run tutorial Section 2 (Langevin NVT) and return diagnostics."""
     omegac_au = Units.cm1_to_au(OMEGA_C_CM1)
     system, displacer, positions = build_single_aa_dimer_system(
         lambda_coupling=lambda_coupling,
         omegac_au=omegac_au,
-        temperature_K=temperature_K,
-        seed=seed,
     )
 
-    integrator = openmm.VerletIntegrator(dt_fs * 1e-3)
+    dt_ps = dt_fs * 1e-3
+    integrator = create_langevin_integrator(
+        temperature_K, dt_ps, friction_ps_inv=friction_ps_inv
+    )
     platform = (
         select_platform()
         if platform_name is None
@@ -234,7 +251,8 @@ def run_nvt_single_dimer(
     context.setVelocitiesToTemperature(temperature_K, seed)
     displacer.displaceToEquilibrium(context, lambda_coupling)
 
-    temperatures = []
+    system_temperatures = []
+    molecular_temperatures = []
     photon_temperatures = []
     dipoles = []
     charges = np.array([-CHARGE_MAG, +CHARGE_MAG])
@@ -243,24 +261,31 @@ def run_nvt_single_dimer(
         integrator.step(1)
         if step % sample_stride != 0:
             continue
-        state = context.getState(getPositions=True, getVelocities=True)
+        state = context.getState(
+            getPositions=True, getVelocities=True, getEnergy=True
+        )
         pos = state.getPositions(asNumpy=True)
         dipoles.append(charges[0] * pos[0] + charges[1] * pos[1])
-        temperatures.append(molecular_kinetic_temperature(state, system))
+        system_temperatures.append(system_kinetic_temperature(state, system))
+        molecular_temperatures.append(
+            molecular_kinetic_temperature(state, system, subtract_com=False)
+        )
         photon_temperatures.append(
-            photon_kinetic_temperature(state, system, dof=2)
+            photon_kinetic_temperature(state, system, dof=3)
         )
 
     dipoles_arr = np.asarray(dipoles)
     freqs, spectrum, peak_cm1 = dipole_spectrum_cm1(dipoles_arr, dt_fs)
 
     return {
-        "mean_temperature_K": float(np.mean(temperatures)),
+        "mean_system_temperature_K": float(np.mean(system_temperatures)),
+        "mean_temperature_K": float(np.mean(molecular_temperatures)),
         "mean_photon_temperature_K": float(np.mean(photon_temperatures)),
         "peak_frequency_cm1": peak_cm1,
         "omega_c_cm1": OMEGA_C_CM1,
         "dipoles": dipoles_arr,
-        "temperatures": np.asarray(temperatures),
+        "system_temperatures": np.asarray(system_temperatures),
+        "temperatures": np.asarray(molecular_temperatures),
         "photon_temperatures": np.asarray(photon_temperatures),
         "freqs_cm1": freqs,
         "spectrum": spectrum,

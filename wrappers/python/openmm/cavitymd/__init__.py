@@ -30,7 +30,11 @@ from .trackers import ElapsedTimeTracker, EnergyTracker, TemperatureTracker, com
 from .feedback import EmpiricalTemperatureFeedback, GradientDescentFeedback
 from .controllers import DiffEqController, SimpleSetpointController, PIDControl
 from .analysis import RelaxationTimeModel, ToolNarayanaswamy
-from .thermostats import DualThermostat
+from .thermostats import (
+    DEFAULT_LANGEVIN_FRICTION_PS,
+    DualThermostat,
+    create_langevin_integrator,
+)
 from .adaptive import (
     EPS_STAR_NM,
     F0,
@@ -84,7 +88,9 @@ __all__ = [
     "PIDControl",
     "RelaxationTimeModel",
     "ToolNarayanaswamy",
+    "DEFAULT_LANGEVIN_FRICTION_PS",
     "DualThermostat",
+    "create_langevin_integrator",
     "EPS_STAR_NM",
     "F0",
     "TAU_RAMP_PS",

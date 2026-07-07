@@ -4,6 +4,25 @@ import math
 
 from .constants import Units
 
+# Low friction preserves vibrational lineshapes (matches dimer_system examples).
+DEFAULT_LANGEVIN_FRICTION_PS = 0.01
+
+
+def create_langevin_integrator(
+    temperature_K: float,
+    dt_ps: float,
+    friction_ps_inv: float = DEFAULT_LANGEVIN_FRICTION_PS,
+):
+    """Return a LangevinMiddleIntegrator for NVT cavity-MD runs."""
+    import openmm
+    from openmm import unit
+
+    return openmm.LangevinMiddleIntegrator(
+        temperature_K * unit.kelvin,
+        friction_ps_inv / unit.picosecond,
+        dt_ps * unit.picosecond,
+    )
+
 
 class DualThermostat:
     """Separate thermostat control for molecular and cavity particles.

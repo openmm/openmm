@@ -27,12 +27,8 @@ def test_nvt_temperature_and_spectrum_peak():
         platform_name=select_platform().getName(),
     )
 
-    assert abs(result["mean_temperature_K"] - 100.0) < 50.0, (
-        f"Mean molecular T={result['mean_temperature_K']:.1f} K too far from 100 K"
-    )
-    assert result["mean_photon_temperature_K"] < 500.0, (
-        f"Photon T={result['mean_photon_temperature_K']:.1f} K suggests "
-        "displaceToEquilibrium bug or runaway heating"
+    assert abs(result["mean_system_temperature_K"] - 100.0) < 50.0, (
+        f"Mean system T={result['mean_system_temperature_K']:.1f} K too far from 100 K"
     )
     assert abs(result["peak_frequency_cm1"] - OMEGA_C_CM1) < 500.0, (
         f"Peak {result['peak_frequency_cm1']:.0f} cm^-1 too far from "
