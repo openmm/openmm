@@ -12,7 +12,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from tutorial_common import OMEGA_C_CM1, run_nvt_single_dimer
+from tutorial_common import OMEGA_C_CM1, run_nvt_single_dimer, select_platform
 
 
 def main() -> int:
@@ -21,7 +21,11 @@ def main() -> int:
     parser.add_argument("--temperature-K", type=float, default=100.0)
     parser.add_argument("--steps", type=int, default=5000)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--platform", default="CPU")
+    parser.add_argument(
+        "--platform",
+        default=None,
+        help="OpenMM platform (default: CUDA if available, else CPU)",
+    )
     parser.add_argument(
         "--peak-tolerance-cm1",
         type=float,
@@ -36,10 +40,14 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    platform_name = args.platform
+    if platform_name is None:
+        platform_name = select_platform().getName()
+
     print("Running tutorial Section 2 validation...")
     print(
         f"  lambda={args.lambda_coupling}, T={args.temperature_K} K, "
-        f"steps={args.steps}, platform={args.platform}"
+        f"steps={args.steps}, platform={platform_name}"
     )
 
     result = run_nvt_single_dimer(
@@ -47,7 +55,7 @@ def main() -> int:
         temperature_K=args.temperature_K,
         n_steps=args.steps,
         seed=args.seed,
-        platform_name=args.platform,
+        platform_name=platform_name,
     )
 
     mean_t = result["mean_temperature_K"]
@@ -57,7 +65,7 @@ def main() -> int:
 
     print(f"\nResults:")
     print(f"  Mean molecular T_kin  = {mean_t:.1f} K  (target {args.temperature_K} K)")
-    print(f"  Mean photon T_kin     = {mean_t_ph:.1f} K")
+    print(f"  Mean photon T_kin (2 DOF, cavity plane) = {mean_t_ph:.1f} K")
     print(f"  Spectral peak         = {peak:.0f} cm^-1  (cavity omega_c = {omega_c:.0f} cm^-1)")
 
     failures = []
@@ -69,6 +77,11 @@ def main() -> int:
     if mean_t_ph > 5.0 * args.temperature_K:
         failures.append(
             f"photon temperature {mean_t_ph:.1f} K is much higher than bath "
+            f"({args.temperature_K} K) — check displaceToEquilibrium"
+        )
+    elif mean_t_ph > 2.0 * args.temperature_K:
+        failures.append(
+            f"photon in-plane T_kin {mean_t_ph:.1f} K is much higher than bath "
             f"({args.temperature_K} K) — check displaceToEquilibrium"
         )
     if abs(peak - omega_c) > args.peak_tolerance_cm1:

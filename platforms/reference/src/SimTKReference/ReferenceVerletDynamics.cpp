@@ -131,12 +131,15 @@ void ReferenceVerletDynamics::updatePart1(const OpenMM::System& system, vector<V
       }
    }
    posDelta.resize(numberOfAtoms);
-   const double halfDt = 0.5 * getDeltaT();
+   const double dt = getDeltaT();
    for (int i = 0; i < numberOfAtoms; ++i) {
        if (masses[i] != 0.0)
            for (int j = 0; j < 3; ++j) {
-               velocities[i][j] += inverseMasses[i]*forces[i][j]*halfDt;
-               posDelta[i][j] = velocities[i][j]*getDeltaT();
+               // Full-step kick + position delta (matches legacy Reference update()).
+               // Required for correct oscillation frequencies when Bussi forces
+               // split Verlet (part1 / thermostat / part2).
+               velocities[i][j] += inverseMasses[i]*forces[i][j]*dt;
+               posDelta[i][j] = velocities[i][j]*dt;
            }
        else
            posDelta[i] = Vec3(0, 0, 0);

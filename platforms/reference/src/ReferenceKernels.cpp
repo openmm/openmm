@@ -2652,21 +2652,8 @@ void ReferenceIntegrateVerletStepKernel::initialize(const System& system, const 
 }
 
 void ReferenceIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIntegrator& integrator) {
-    double stepSize = integrator.getStepSize();
-    vector<Vec3>& posData = extractPositions(context);
-    vector<Vec3>& velData = extractVelocities(context);
-    vector<Vec3>& forceData = extractForces(context);
-    if (dynamics == 0 || stepSize != prevStepSize) {
-        if (dynamics)
-            delete dynamics;
-        dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), stepSize);
-        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
-        dynamics->setVirtualSites(extractVirtualSites(context));
-        prevStepSize = stepSize;
-    }
-    dynamics->update(context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), extractBoxVectors(context));
-    data.time += stepSize;
-    data.stepCount++;
+    executePart1(context, integrator);
+    executePart2(context, integrator);
 }
 
 void ReferenceIntegrateVerletStepKernel::executePart1(ContextImpl& context, const VerletIntegrator& integrator) {
@@ -2683,7 +2670,7 @@ void ReferenceIntegrateVerletStepKernel::executePart1(ContextImpl& context, cons
         prevStepSize = stepSize;
     }
     dynamics->updatePart1(context.getSystem(), posData, velData, forceData, masses, data.verletPosDelta);
-    data.verletPart1KickDuration = 0.5 * integrator.getStepSize();
+    data.verletPart1KickDuration = integrator.getStepSize();
 }
 
 void ReferenceIntegrateVerletStepKernel::executePart2(ContextImpl& context, const VerletIntegrator& integrator) {
@@ -3391,7 +3378,7 @@ void ReferenceApplyBussiThermostatKernel::execute(ContextImpl& context) {
     if (afterVerletPart1)
         forceData = &extractForces(context);
     ReferencePlatform::PlatformData& platformData = *reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    double kickPs = 0.5 * dt;
+    double kickPs = dt;
     if (afterVerletPart1) {
         if (platformData.verletPart1KickDuration > 0.0)
             kickPs = platformData.verletPart1KickDuration;

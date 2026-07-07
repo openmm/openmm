@@ -13,7 +13,7 @@ sys.path.insert(0, str(TUTORIAL_DIR))
 
 openmm = pytest.importorskip("openmm")
 
-from tutorial_common import OMEGA_C_CM1, run_nvt_single_dimer  # noqa: E402
+from tutorial_common import OMEGA_C_CM1, run_nvt_single_dimer, select_platform  # noqa: E402
 
 
 @pytest.mark.timeout(300)
@@ -24,7 +24,7 @@ def test_nvt_temperature_and_spectrum_peak():
         temperature_K=100.0,
         n_steps=3000,
         seed=42,
-        platform_name="CPU",
+        platform_name=select_platform().getName(),
     )
 
     assert abs(result["mean_temperature_K"] - 100.0) < 50.0, (

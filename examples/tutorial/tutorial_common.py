@@ -23,6 +23,18 @@ K_AA_OMM = K_AA_AU * H2K / B2NM**2
 R0_AA_OMM = R0_AA_AU * B2NM
 
 
+def select_platform(prefer_cuda: bool = True) -> openmm.Platform:
+    """Return CUDA (mixed precision) when available, otherwise CPU/Reference."""
+    if prefer_cuda:
+        try:
+            platform = openmm.Platform.getPlatformByName("CUDA")
+            platform.setPropertyDefaultValue("Precision", "mixed")
+            return platform
+        except Exception:
+            pass
+    return openmm.Platform.getPlatformByName("CPU")
+
+
 def build_single_aa_dimer_system(
     lambda_coupling: float,
     omegac_au: float | None = None,
@@ -78,11 +90,14 @@ def create_context(
     dt_fs: float,
     temperature_K: float,
     seed: int,
-    platform_name: str = "CPU",
+    platform_name: str | None = None,
 ) -> openmm.Context:
-    """Create a Context with thermal velocities on CPU (or requested platform)."""
+    """Create a Context with thermal velocities on the selected platform."""
     integrator = openmm.VerletIntegrator(dt_fs * 1e-3)
-    platform = openmm.Platform.getPlatformByName(platform_name)
+    if platform_name is None:
+        platform = select_platform()
+    else:
+        platform = openmm.Platform.getPlatformByName(platform_name)
     context = openmm.Context(system, integrator, platform)
     context.setVelocitiesToTemperature(temperature_K, seed)
     return context
@@ -121,15 +136,31 @@ def molecular_kinetic_temperature(
 
 
 def photon_kinetic_temperature(
-    state: openmm.State, system: openmm.System, photon_index: int = 2
+    state: openmm.State,
+    system: openmm.System,
+    photon_index: int = 2,
+    dof: int = 2,
+    in_plane_components: tuple[int, int] = (1, 2),
 ) -> float:
-    """Photon kinetic temperature from its 3 translational DOF."""
+    """Photon kinetic temperature from selected translational DOFs.
+
+    The cavity photon is not Bussi-thermostatted; at weak coupling (lambda ~ 0.01)
+    it equilibrates below the molecular bath (~50 K when T_bath = 100 K).  Use
+    dof=2 (default) for the cavity plane (y, z when the dimer lies along x); dof=3
+    counts all Cartesian components.
+    """
     vel = state.getVelocities(asNumpy=True).value_in_unit(
         unit.nanometer / unit.picosecond
     )
     mass = system.getParticleMass(photon_index).value_in_unit(unit.dalton)
-    ke = 0.5 * mass * float(np.sum(vel[photon_index] ** 2))
-    return 2.0 * ke / (3.0 * Units.KB_KJMOL_PER_K)
+    if dof == 2:
+        ke = 0.5 * mass * float(
+            vel[photon_index, in_plane_components[0]] ** 2
+            + vel[photon_index, in_plane_components[1]] ** 2
+        )
+    else:
+        ke = 0.5 * mass * float(np.sum(vel[photon_index] ** 2))
+    return 2.0 * ke / (dof * Units.KB_KJMOL_PER_K)
 
 
 def collect_dipole_trajectory(
@@ -158,20 +189,15 @@ def dipole_spectrum_cm1(
     min_freq_cm1: float = 500.0,
     max_freq_cm1: float = 3000.0,
 ) -> tuple[np.ndarray, np.ndarray, float]:
-    """Compute dipole power spectrum and return peak frequency in cm^-1."""
+    """Compute dipole power spectrum (direct FFT) and return peak frequency in cm^-1."""
     d_x = dipoles[:, component].copy()
     n_sig = len(d_x)
     d_x -= d_x.mean()
 
-    fft_d = np.fft.rfft(d_x, n=2 * n_sig)
-    acf = np.fft.irfft(np.abs(fft_d) ** 2)[:n_sig]
-    acf /= acf[0] if acf[0] != 0 else 1.0
-
-    spectrum_raw = np.abs(np.fft.rfft(acf)) ** 2
     dt_s = dt_fs * 1e-15
     freqs_hz = np.fft.rfftfreq(n_sig, d=dt_s)
     freqs_cm1 = freqs_hz / 3e10
-    spectrum = freqs_cm1 * spectrum_raw
+    spectrum = np.abs(np.fft.rfft(d_x)) ** 2
 
     mask = (freqs_cm1 > min_freq_cm1) & (freqs_cm1 < max_freq_cm1)
     peak_idx = int(np.argmax(spectrum[mask]))
@@ -186,7 +212,7 @@ def run_nvt_single_dimer(
     n_steps: int = 5000,
     seed: int = 42,
     sample_stride: int = 1,
-    platform_name: str = "CPU",
+    platform_name: str | None = None,
 ) -> dict:
     """Run tutorial Section 2 and return diagnostics."""
     omegac_au = Units.cm1_to_au(OMEGA_C_CM1)
@@ -198,7 +224,11 @@ def run_nvt_single_dimer(
     )
 
     integrator = openmm.VerletIntegrator(dt_fs * 1e-3)
-    platform = openmm.Platform.getPlatformByName(platform_name)
+    platform = (
+        select_platform()
+        if platform_name is None
+        else openmm.Platform.getPlatformByName(platform_name)
+    )
     context = openmm.Context(system, integrator, platform)
     context.setPositions(positions)
     context.setVelocitiesToTemperature(temperature_K, seed)
@@ -217,7 +247,9 @@ def run_nvt_single_dimer(
         pos = state.getPositions(asNumpy=True)
         dipoles.append(charges[0] * pos[0] + charges[1] * pos[1])
         temperatures.append(molecular_kinetic_temperature(state, system))
-        photon_temperatures.append(photon_kinetic_temperature(state, system))
+        photon_temperatures.append(
+            photon_kinetic_temperature(state, system, dof=2)
+        )
 
     dipoles_arr = np.asarray(dipoles)
     freqs, spectrum, peak_cm1 = dipole_spectrum_cm1(dipoles_arr, dt_fs)
