@@ -61,7 +61,7 @@ echo "::endgroup::"
 
 # Build
 echo "::group::Build with make..."
-make -j2 install PythonInstall
+make -j4 install PythonInstall
 echo "::endgroup::"
 
 echo "::group::Check ccache performance..."
@@ -71,7 +71,7 @@ echo "::endgroup::"
 # Core tests
 
 echo "::group::Run core tests..."
-python ${WORKSPACE}/devtools/run-ctest.py --parallel 2 --timeout 1500 --job-duration 360 --attempts 3
+python ${WORKSPACE}/devtools/run-ctest.py --parallel 4 --timeout 1500 --job-duration 360 --attempts 3
 test -f ${CONDA_PREFIX}/lib/libOpenMM.so
 test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCPU.so
 test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMPME.so

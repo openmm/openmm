@@ -252,14 +252,14 @@ jobs:
         shell: bash -l {0}
         run: |
           cd build
-          make -j2 install
+          make -j4 install
 
       - name: "Build Python wrappers"
         shell: bash -l {0}
         if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }}
         run: |
           cd build
-          make -j2 PythonInstall
+          make -j4 PythonInstall
 
       - name: "Check ccache performance"
         shell: bash -l {0}
@@ -274,7 +274,7 @@ jobs:
           if [[ ${{ matrix.OPENCL }} == true ]]; then
             source /opt/intel/oneapi/setvars.sh
           fi
-          python ../devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 900 --attempts 3
+          python ../devtools/run-ctest.py --parallel 4 --timeout 600 --job-duration 900 --attempts 3
 
           if [[ ${{ matrix.os }} == ubuntu-* ]]; then SHLIB=so; else SHLIB=dylib; fi
           # This is always built
@@ -405,9 +405,9 @@ jobs:
         run: |
           call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           cd build
-          jom -j 2
+          jom -j 4
           if errorlevel 1 exit 1
-          jom -j 2 install
+          jom -j 4 install
           if errorlevel 1 exit 1
 
       - name: "Build Python wrappers"
@@ -416,7 +416,7 @@ jobs:
         run: |
           call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           cd build
-          jom -j 2 PythonInstall
+          jom -j 4 PythonInstall
 
       - name: "Check ccache performance"
         shell: cmd /C call {0}
@@ -428,7 +428,7 @@ jobs:
         run: |
           @echo on
           cd build
-          python ..\devtools\run-ctest.py --parallel 2 --timeout 600 --job-duration 900 --attempts 3
+          python ..\devtools\run-ctest.py --parallel 4 --timeout 600 --job-duration 900 --attempts 3
           if errorlevel 1 exit 1
 
           if not exist %CONDA_PREFIX%/Library/lib/OpenMM.lib exit 1
@@ -616,11 +616,11 @@ jobs:
         run: |
           set -x
           cd build
-          make -j2 install PythonInstall
-          make -j2 sphinxhtml
-          make -j2 sphinxpdf
-          make -j2 C++ApiDocs
-          make -j2 PythonApiDocs
+          make -j4 install PythonInstall
+          make -j4 sphinxhtml
+          make -j4 sphinxpdf
+          make -j4 C++ApiDocs
+          make -j4 PythonApiDocs
           mkdir -p api-docs
           mv sphinx-docs/userguide/html api-docs/userguide
           mv sphinx-docs/userguide/latex/*.pdf api-docs/userguide/
