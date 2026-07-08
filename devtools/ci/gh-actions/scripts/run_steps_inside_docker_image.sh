@@ -88,7 +88,7 @@ python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, 
 cd python/tests
 # Gromacs is not available on condaforge for PPC/ARM
 # Membrane an MTS Langevin Integrator tests timeout (>6h!), possibly due to the emulation slowdown
-python -m pytest -v -k "not gromacs and not membrane and not MTSLangevinIntegrator" -n 4
+python -m pytest -v -k "not gromacs and not membrane and not MTSLangevinIntegrator" -n 2
 echo "::endgroup::"
 
 echo "We are done!"

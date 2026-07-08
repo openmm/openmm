@@ -303,7 +303,7 @@ jobs:
           python -m openmm.testInstallation
           python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build/python/tests
-          python -m pytest -v -n 4
+          python -m pytest -v -n 2
 
   windows:
     runs-on: windows-latest
@@ -448,7 +448,7 @@ jobs:
           python -m openmm.testInstallation
           python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build\python\tests
-          python -m pytest -v -n 4
+          python -m pytest -v -n 2
 
   docker:
     name: ${{ matrix.name }}
