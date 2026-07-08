@@ -1,7 +1,3 @@
-DEVICE real2 multofReal2(real2 a, real2 b) {
-    return make_real2(a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x);
-}
-
 /**
  * Precompute the cosine and sine sums which appear in each force term.
  */
@@ -34,13 +30,8 @@ KERNEL void calculateEwaldCosSinSums(GLOBAL mixed* RESTRICT energyBuffer, GLOBAL
         real2 sum = make_real2(0);
         for (int atom = 0; atom < NUM_ATOMS; atom++) {
             real4 apos = posq[atom];
-            real phase = apos.x*kx;
-            real2 structureFactor = make_real2(COS(phase), SIN(phase));
-            phase = apos.y*ky;
-            structureFactor = multofReal2(structureFactor, make_real2(COS(phase), SIN(phase)));
-            phase = apos.z*kz;
-            structureFactor = multofReal2(structureFactor, make_real2(COS(phase), SIN(phase)));
-            sum += apos.w*structureFactor;
+            real phase = apos.x*kx + apos.y*ky + apos.z*kz;
+            sum += apos.w*make_real2(COS(phase), SIN(phase));
         }
         cosSinSum[index] = sum;
 
@@ -75,10 +66,6 @@ KERNEL void calculateEwaldForces(GLOBAL mm_long* RESTRICT forceBuffers, GLOBAL c
             real kx = rx*reciprocalBoxSize.x;
             for (int ry = lowry; ry < KMAX_Y; ry++) {
                 real ky = ry*reciprocalBoxSize.y;
-                real phase = apos.x*kx;
-                real2 tab_xy = make_real2(COS(phase), SIN(phase));
-                phase = apos.y*ky;
-                tab_xy = multofReal2(tab_xy, make_real2(COS(phase), SIN(phase)));
                 for (int rz = lowrz; rz < KMAX_Z; rz++) {
                     real kz = rz*reciprocalBoxSize.z;
 
@@ -87,8 +74,8 @@ KERNEL void calculateEwaldForces(GLOBAL mm_long* RESTRICT forceBuffers, GLOBAL c
                     int index = rx*(KMAX_Y*2-1)*(KMAX_Z*2-1) + (ry+KMAX_Y-1)*(KMAX_Z*2-1) + (rz+KMAX_Z-1);
                     real k2 = kx*kx + ky*ky + kz*kz;
                     real ak = EXP(k2*EXP_COEFFICIENT)/k2;
-                    phase = apos.z*kz;
-                    real2 structureFactor = multofReal2(tab_xy, make_real2(COS(phase), SIN(phase)));
+                    real phase = apos.x*kx + apos.y*ky + apos.z*kz;
+                    real2 structureFactor = make_real2(COS(phase), SIN(phase));
                     real2 sum = cosSinSum[index];
                     real dEdR = 2*reciprocalCoefficient*ak*apos.w*(sum.x*structureFactor.y - sum.y*structureFactor.x);
                     force.x += dEdR*kx;
