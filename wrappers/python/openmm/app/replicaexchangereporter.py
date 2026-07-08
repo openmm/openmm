@@ -51,6 +51,8 @@ class ReplicaExchangeReporter(object):
       thermodynamic states they explore change with time.
     - (optional) A CSV file containing the reduced energy (potential energy divided by kT) of every replica in every
       state at each iteration.  This information is useful for calculating free energies.
+    - (optional) A CSV file containing the periodic box volume of every replica at each iteration.  This information is
+      useful for calculating free energies in constant pressure simulations.
 
     The reduced energies are written as a matrix in flattened order for each iteration.  You can load the file with
     NumPy using the command
@@ -64,7 +66,8 @@ class ReplicaExchangeReporter(object):
     """
     def __init__(self, directory: str, reportInterval: int, sampler: "app.ReplicaExchangeSampler",
                  trajectoryPerState: bool = True, trajectoryPerReplica: bool = False, trajectoryFormat: str = 'xtc',
-                 enforcePeriodicBox: bool | None = None, energy: bool = False, resume: bool = False):
+                 enforcePeriodicBox: bool | None = None, energy: bool = False, volume: bool = False,
+                 resume: bool = False):
         """
         Create a ReplicaExchangeReporter.
 
@@ -91,6 +94,8 @@ class ReplicaExchangeReporter(object):
             conditions.
         energy: bool
             If True, a CSV file will be saved containing reduced energies.
+        volume: bool
+            If True, a CSV file will be saved containing periodic box volumes.
         resume: bool
             Specifies whether to resume an earlier simulation.  If True, the checkpoint and log data will be loaded into
             the ReplicaExchangeSampler, and future output will be appended to the existing files.
@@ -100,9 +105,10 @@ class ReplicaExchangeReporter(object):
         self.reportInterval = reportInterval
         self.trajectoryPerState = trajectoryPerState
         self.trajectoryPerReplica = trajectoryPerReplica
-        self.format = trajectoryFormat
+        self.trajectoryFormat = trajectoryFormat
         self._log = None
         self._energy = None
+        self._volume = None
         numStates = len(sampler.states)
 
         # Validate the inputs and create the output directory if necessary.
@@ -120,6 +126,8 @@ class ReplicaExchangeReporter(object):
             checkExists('log.csv')
             if energy:
                 checkExists('energy.csv')
+            if volume:
+                checkExists('volume.csv')
             for i in range(numStates):
                 checkExists(f'checkpoint_{i}.xml')
                 if trajectoryPerState:
@@ -172,12 +180,16 @@ class ReplicaExchangeReporter(object):
             self._log.flush()
         if energy:
             self._energy = open(os.path.join(directory, 'energy.csv'), 'a' if resume else 'w')
+        if volume:
+            self._volume = open(os.path.join(directory, 'volume.csv'), 'a' if resume else 'w')
 
     def __del__(self):
         if self._log is not None:
             self._log.close()
         if self._energy is not None:
             self._energy.close()
+        if self._volume is not None:
+            self._volume.close()
 
     def __call__(self, sampler: "app.ReplicaExchangeSampler"):
         """This is invoked by the ReplicaExchangeSampler at the end of every iteration to generate output."""
@@ -195,6 +207,10 @@ class ReplicaExchangeReporter(object):
                 energy /= sampler._kT
             print(','.join([str(x) for x in energy.flatten()]), file=self._energy)
             self._energy.flush()
+        if self._volume is not None:
+            volumes = [str(state.getPeriodicBoxVolume().value_in_unit(unit.nanometer**3)) for state in sampler.replicaConformation]
+            print(','.join(volumes), file=self._volume)
+            self._volume.flush()
         for i, conf in enumerate(sampler.replicaConformation):
             if len(self._stateReporters) > 0:
                 self._stateReporters[sampler.replicaStateIndex[i]].report(sampler.simulation, conf)
