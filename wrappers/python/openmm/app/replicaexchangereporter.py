@@ -100,7 +100,7 @@ class ReplicaExchangeReporter(object):
         self.reportInterval = reportInterval
         self.trajectoryPerState = trajectoryPerState
         self.trajectoryPerReplica = trajectoryPerReplica
-        self.format = format
+        self.format = trajectoryFormat
         self._log = None
         self._energy = None
         numStates = len(sampler.states)
