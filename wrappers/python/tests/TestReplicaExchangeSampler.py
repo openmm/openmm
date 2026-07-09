@@ -97,16 +97,18 @@ class TestReplicaExchangeSampler(unittest.TestCase):
 
         stateIndices = []
         energies = []
+        volumes = []
         conformations = []
 
         def report(sampler):
             if sampler.currentIteration % 3 == 0:
                 stateIndices.append(sampler.replicaStateIndex[:])
                 energies.append(sampler.replicaStateEnergy[:])
+                volumes.append([sampler.replicaConformation[i].getPeriodicBoxVolume().value_in_unit(nanometer**3) for i in range(len(states))])
                 conformations.append(sampler.replicaConformation[:])
 
         with tempfile.TemporaryDirectory() as directory:
-            sampler.reporters.append(ReplicaExchangeReporter(directory, 3, sampler, trajectoryPerState=True, trajectoryPerReplica=True, energy=True))
+            sampler.reporters.append(ReplicaExchangeReporter(directory, 3, sampler, trajectoryPerState=True, trajectoryPerReplica=True, energy=True, volume=True))
             sampler.reporters.append(report)
 
             # Generate some output.
@@ -121,7 +123,7 @@ class TestReplicaExchangeSampler(unittest.TestCase):
             integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.001*picosecond)
             simulation = Simulation(pdb.topology, system, integrator, Platform.getPlatform('Reference'))
             sampler = ReplicaExchangeSampler(states, simulation, 5)
-            sampler.reporters.append(ReplicaExchangeReporter(directory, 3, sampler, trajectoryPerState=True, trajectoryPerReplica=True, energy=True, resume=True))
+            sampler.reporters.append(ReplicaExchangeReporter(directory, 3, sampler, trajectoryPerState=True, trajectoryPerReplica=True, energy=True, volume=True, resume=True))
             sampler.reporters.append(report)
 
             # Check that it loaded the checkpoints correctly.
@@ -153,6 +155,13 @@ class TestReplicaExchangeSampler(unittest.TestCase):
                 for j in range(len(states)):
                     for k in range(len(states)):
                         self.assertAlmostEqual(energy[i][j][k], energies[i][j][k]/sampler._kT[k])
+
+            # Check the volume file.
+
+            volume = np.loadtxt(os.path.join(directory, 'volume.csv'), delimiter=',').reshape(-1, len(states))
+            for i in range(10):
+                for j in range(len(states)):
+                    self.assertAlmostEqual(volume[i][j], volumes[i][j])
 
             # Check the trajectory files.
 
