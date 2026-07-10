@@ -14,6 +14,7 @@ DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) {
             temp[thread] = temp[thread] + temp[thread+step];
         SYNC_WARPS;
     }
+    SYNC_THREADS;
     for (int step = 32; step < LOCAL_SIZE; step *= 2) {
         if (thread+step < LOCAL_SIZE && thread%(2*step) == 0)
             temp[thread] = temp[thread] + temp[thread+step];
