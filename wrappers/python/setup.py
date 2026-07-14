@@ -194,6 +194,17 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     openmm_lib_path = os.getenv('OPENMM_LIB_PATH')
     if not openmm_lib_path:
         reportError("Set OPENMM_LIB_PATH to point to the lib directory for OpenMM")
+    # Packaging workflows that stage a build into DESTDIR before the final
+    # system install (e.g. "make install DESTDIR=...", used by most Linux
+    # distro packagers) build this extension after the C++ libraries have
+    # only been installed to DESTDIR + OPENMM_LIB_PATH, not the real
+    # OPENMM_LIB_PATH yet, so the linker needs to search there instead.
+    # The extension's runtime rpath must still be the real OPENMM_LIB_PATH,
+    # since DESTDIR never exists on the system the extension actually runs
+    # on -- see the runtime_library_dirs assignment below, and the Darwin
+    # -rpath in extra_link_args below, which already uses openmm_lib_path
+    # (not this DESTDIR-aware variant) for the same reason.
+    openmm_lib_search_path = os.environ.get('DESTDIR', '') + openmm_lib_path
 
     extra_compile_args=['-std=c++11']
     extra_link_args=[]
@@ -218,7 +229,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                 os.environ['CC'] = 'clang'
                 os.environ['CXX'] = 'clang++'
 
-    library_dirs=[openmm_lib_path]
+    library_dirs=[openmm_lib_search_path]
     include_dirs=openmm_include_path.split(';')
     include_dirs.append(numpy.get_include())
 
@@ -231,7 +242,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                     "extra_compile_args": extra_compile_args,
                     "extra_link_args": extra_link_args}
     if platform.system() != "Windows":
-        extensionArgs["runtime_library_dirs"] = library_dirs
+        extensionArgs["runtime_library_dirs"] = [openmm_lib_path]
     setupKeywords["ext_modules"] = [Extension(**extensionArgs)]
     setupKeywords["ext_modules"] += cythonize('openmm/app/internal/*.pyx')
 
