@@ -1,4 +1,3 @@
-#!/bin/env python
 """
 Module openmm.unit.standard_dimensions
 
