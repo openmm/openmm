@@ -246,7 +246,7 @@ CpuConstantPotentialCGSolver::CpuConstantPotentialCGSolver(int numParticles,int 
 
 void CpuConstantPotentialCGSolver::solveImpl(CpuConstantPotentialForce& conp, ThreadPool& threads, Kernel& pmeKernel) {
     ensureValid(conp, threads, pmeKernel);
-    
+
     double offset;
     float error, paramScale, alpha, beta;
     const float errorTarget = conp.cgErrorTol * conp.cgErrorTol * numElectrodeParticles;
@@ -275,7 +275,8 @@ void CpuConstantPotentialCGSolver::solveImpl(CpuConstantPotentialForce& conp, Th
 
     // Evaluate the initial gradient Aq - b.
     conp.getDerivatives(threads, pmeKernel);
-    grad.assign(&conp.chargeDerivatives[0], &conp.chargeDerivatives[numElectrodeParticles]);
+    assert(conp.chargeDerivatives.size() == (size_t) numElectrodeParticles);
+    grad.assign(conp.chargeDerivatives.begin(), conp.chargeDerivatives.end());
 
     // Project the initial gradient without preconditioning.
     offset = 0.0;
@@ -306,7 +307,7 @@ void CpuConstantPotentialCGSolver::solveImpl(CpuConstantPotentialForce& conp, Th
         conp.posq[4 * i + 3] = 0.0f;
     }
     conp.getDerivatives(threads, pmeKernel);
-    grad0.assign(&conp.chargeDerivatives[0], &conp.chargeDerivatives[numElectrodeParticles]);
+    grad0.assign(conp.chargeDerivatives.begin(), conp.chargeDerivatives.end());
 
     // Project the initial gradient with preconditioning.
     if (precondActivated) {
@@ -337,7 +338,7 @@ void CpuConstantPotentialCGSolver::solveImpl(CpuConstantPotentialForce& conp, Th
             conp.posq[4 * conp.elecToSys[ii] + 3] = qStep[ii];
         }
         conp.getDerivatives(threads, pmeKernel);
-        gradStep.assign(&conp.chargeDerivatives[0], &conp.chargeDerivatives[numElectrodeParticles]);
+        gradStep.assign(conp.chargeDerivatives.begin(), conp.chargeDerivatives.end());
         for (int ii = 0; ii < numElectrodeParticles; ii++) {
             gradStep[ii] -= grad0[ii];
         }
@@ -393,7 +394,7 @@ void CpuConstantPotentialCGSolver::solveImpl(CpuConstantPotentialForce& conp, Th
                 conp.posq[4 * conp.elecToSys[ii] + 3] = q[ii];
             }
             conp.getDerivatives(threads, pmeKernel);
-            grad.assign(&conp.chargeDerivatives[0], &conp.chargeDerivatives[numElectrodeParticles]);
+            grad.assign(conp.chargeDerivatives.begin(), conp.chargeDerivatives.end());
         }
         else {
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
@@ -531,7 +532,7 @@ void CpuConstantPotentialCGSolver::ensureValid(CpuConstantPotentialForce& conp, 
         // position but only due to finite accuracy of the PME splines, so it is
         // fine to assume it will be constant for the preconditioner.
         vector<float> derivatives(numElectrodeParticles);
-        CpuConstantPotentialPmeIO io(conp.posq, NULL, &derivatives[0], numParticles, numElectrodeParticles);
+        CpuConstantPotentialPmeIO io(conp.posq, NULL, derivatives.data(), numParticles, numElectrodeParticles);
         pmeKernel.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, boxVectors, false, false, true);
         pmeKernel.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
         float pmeTerm = derivatives[0];
@@ -615,12 +616,12 @@ void CpuConstantPotentialForce::initialize(
     // elecElec, which should not change, and to electrodeParams, whose values
     // might be updated.  If this happens, update() will be called with the
     // electrode indices that have new parameters.
-    this->exclusions = &exclusions[0];
-    this->sysToElec = &sysToElec[0];
-    this->elecToSys = &elecToSys[0];
-    this->sysElec = &sysElec[0];
-    this->elecElec = &elecElec[0];
-    this->electrodeParams = &electrodeParams[0];
+    this->exclusions = exclusions.data();
+    this->sysToElec = sysToElec.data();
+    this->elecToSys = elecToSys.data();
+    this->sysElec = sysElec.data();
+    this->elecElec = elecElec.data();
+    this->electrodeParams = electrodeParams.data();
 
     numElectrodes = electrodeParams.size();
     electrodePotentials.resize(numElectrodes + 1);
@@ -732,7 +733,7 @@ void CpuConstantPotentialForce::setThreadData(const Vec3* boxVectors, const vect
 
     plasmaScale = (float) (1.0 / (8.0 * EPSILON0 * boxVectors[0][0] * boxVectors[1][1] * boxVectors[2][2] * ewaldAlpha * ewaldAlpha));
 
-    this->posData = &posData[0];
+    this->posData = posData.data();
     this->posq = posq;
     this->threadForce = &threadForce;
 }
@@ -883,7 +884,7 @@ void CpuConstantPotentialForce::getDerivatives(ThreadPool& threads, Kernel& pmeK
     }
 
     // Reciprocal space.
-    CpuConstantPotentialPmeIO io(posq, NULL, &chargeDerivatives[0], numParticles, numElectrodeParticles);
+    CpuConstantPotentialPmeIO io(posq, NULL, chargeDerivatives.data(), numParticles, numElectrodeParticles);
     pmeKernel.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, boxVectors, false, false, true);
     pmeKernel.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
 }

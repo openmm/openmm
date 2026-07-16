@@ -62,8 +62,8 @@ void CpuLCPOForce::Neighbors::insert(const NeighborInfo& info) {
 
 void CpuLCPOForce::Neighbors::getNeighbors(int i, int& iNumNeighbors, const int*& iIndices, const NeighborData*& iData) const {
     iNumNeighbors = numNeighbors[i];
-    iIndices = &indices[i * maxNumNeighbors];
-    iData = &data[i * maxNumNeighbors];
+    iIndices = indices.data() + (size_t) i * maxNumNeighbors;
+    iData = data.data() + (size_t) i * maxNumNeighbors;
 }
 
 bool CpuLCPOForce::Neighbors::isNeighbor(int i, int j, NeighborData& data) {
