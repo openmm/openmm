@@ -200,7 +200,7 @@ class ReplicaExchangeReporter(object):
         self._log.flush()
         if self._energy is not None:
             import numpy as np
-            energy = np.array(sampler.replicaStateEnergy)
+            energy = unit.Quantity(np.array(sampler.replicaStateEnergy))
             if sampler._kT is None:
                 energy /= unit.MOLAR_GAS_CONSTANT_R*sampler.simulation.integrator.getTemperature()
             else:
