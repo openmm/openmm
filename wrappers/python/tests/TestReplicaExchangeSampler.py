@@ -70,15 +70,19 @@ class TestReplicaExchangeSampler(unittest.TestCase):
                     r2[repex.replicaStateIndex[i]] += x*x
 
             repex.reporters.append(recordDisplacements)
-            for i in range(len(states)):
-                repex.simulateReplica(i, 100)
-            steps = 2000
-            repex.simulate(steps)
-            self.assertTrue(exchanged)
-            expected = 0.5*integrator.getTemperature()*MOLAR_GAS_CONSTANT_R
-            for i in range(len(r2)):
-                average = 0.5*states[i]['k']*r2[i]/steps
-                self.assertTrue(0.7 < average/expected < 1.3)
+            with tempfile.TemporaryDirectory() as directory:
+                repex.reporters.append(ReplicaExchangeReporter(directory, 1, repex, trajectoryPerState=False, energy=True))
+                for i in range(len(states)):
+                    repex.simulateReplica(i, 100)
+                steps = 2000
+                repex.simulate(steps)
+                self.assertTrue(exchanged)
+                expected = 0.5*integrator.getTemperature()*MOLAR_GAS_CONSTANT_R
+                for i in range(len(r2)):
+                    average = 0.5*states[i]['k']*r2[i]/steps
+                    self.assertTrue(0.7 < average/expected < 1.3)
+                # Check that the energy file can be parsed correctly.
+                np.loadtxt(os.path.join(directory, 'energy.csv'), delimiter=',').reshape(-1, len(states), len(states))
 
     def testReporter(self):
         """Test reporting output from a replica exchange simulation."""
