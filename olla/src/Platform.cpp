@@ -340,7 +340,7 @@ const string& Platform::getDefaultPluginsDirectory() {
     }
 #else
     if (dir == NULL)
-        directory = "/usr/local/openmm/lib/plugins";
+        directory = OPENMM_INSTALL_PREFIX "/lib/plugins";
     else
         directory = string(dir);
 #endif
