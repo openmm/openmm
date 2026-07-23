@@ -192,3 +192,59 @@ class TestReplicaExchangeSampler(unittest.TestCase):
             del sampler
             del simulation
             del integrator
+
+
+    def testKTFallback(self):
+        """Ensure sampler._kT is constructed from the integrator when states omit temperature."""
+        system = System()
+        system.addParticle(6.0)
+        force = CustomExternalForce('0.5*k*x*x')
+        force.addGlobalParameter('k', 1.0)
+        # apply the force to the single particle
+        force.addParticle(0)
+        system.addForce(force)
+
+        top = Topology()
+        chain = top.addChain()
+        res = top.addResidue('RES', chain)
+        top.addAtom('C1', Element.getByAtomicNumber(6), res)
+
+        # States differ in a force parameter but do not specify 'temperature'.
+        states = [{'k':k*kilojoule_per_mole/(nanometer**2)} for k in [1.0, 2.0, 3.0]]
+        integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 1 * femtosecond)
+        simulation = Simulation(top, system, integrator, Platform.getPlatform('Reference'))
+        simulation.context.setPositions([Vec3(0, 0, 0)])
+
+        repex = ReplicaExchangeSampler(states, simulation, 5)
+
+        # _kT should be a per-state list constructed from integrator.getTemperature()
+        expected_kT = MOLAR_GAS_CONSTANT_R * integrator.getTemperature()
+        self.assertEqual(len(repex._kT), len(states))
+        for kT in repex._kT:
+            self.assertEqual(kT, expected_kT)
+
+        # Add reporters to it.
+        energies = []
+
+        def report(sampler):
+            if sampler.currentIteration % 1 == 0:
+                energies.append(sampler.replicaStateEnergy[:])
+
+
+        with tempfile.TemporaryDirectory() as directory:
+            # add reporters that write into the temporary directory and collect runtime data
+            repex.reporters.append(ReplicaExchangeReporter(directory, 1, repex, trajectoryPerState=False, energy=True))
+            repex.reporters.append(report)
+
+            # Exercise a short simulation to ensure no runtime errors with the fallback pathway.
+            repex.simulate(15)
+
+        del simulation
+        del integrator
+
+        # Check the energy file make sure we can load it without stripping the units
+        energy = np.loadtxt(os.path.join(directory, 'energy.csv'), delimiter=',').reshape(-1, len(states), len(states))
+        for i in range(10):
+            for j in range(len(states)):
+                for k in range(len(states)):
+                    self.assertAlmostEqual(energy[i][j][k], energies[i][j][k] / repex._kT[k])

@@ -200,11 +200,8 @@ class ReplicaExchangeReporter(object):
         self._log.flush()
         if self._energy is not None:
             import numpy as np
-            energy = unit.Quantity(np.array(sampler.replicaStateEnergy))
-            if sampler._kT is None:
-                energy /= unit.MOLAR_GAS_CONSTANT_R*sampler.simulation.integrator.getTemperature()
-            else:
-                energy /= sampler._kT
+            energy = np.array(sampler.replicaStateEnergy)
+            energy /= np.array(sampler._kT)
             print(','.join([str(x) for x in energy.flatten()]), file=self._energy)
             self._energy.flush()
         if self._volume is not None:

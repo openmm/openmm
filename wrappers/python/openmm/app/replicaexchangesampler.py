@@ -173,10 +173,11 @@ class ReplicaExchangeSampler(object):
                     temperature[i] = t*unit.kelvin
             self._kT = [unit.MOLAR_GAS_CONSTANT_R*t for t in temperature]
         else:
-            self._kT = None
             if not hasattr(simulation.integrator, 'getTemperature'):
                 raise ValueError('Cannot determine temperature because the integrator does not have a getTemperature() method. '
                                  'Specify the temperature in each state dict.')
+            kT_val = unit.MOLAR_GAS_CONSTANT_R * simulation.integrator.getTemperature()
+            self._kT = [kT_val for _ in states]
 
     def simulate(self, iterations: int):
         """
