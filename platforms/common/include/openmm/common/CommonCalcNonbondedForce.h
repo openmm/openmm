@@ -164,6 +164,7 @@ private:
     std::map<std::string, double> paramValues;
     std::map<int, int> exceptionIndex;
     double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha, totalCharge;
+    std::vector<double> lrcSigmaSnapshot, lrcEpsilonSnapshot;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
     int stepsToSort;
