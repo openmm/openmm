@@ -171,7 +171,9 @@ class ReplicaExchangeSampler(object):
             for i, t in enumerate(temperature):
                 if not unit.is_quantity(t):
                     temperature[i] = t*unit.kelvin
-            self._kT = [unit.MOLAR_GAS_CONSTANT_R*t for t in temperature]
+            self._kT = []*unit.kilojoules_per_mole
+            for t in temperature:
+                self._kT.append(unit.MOLAR_GAS_CONSTANT_R*t)
         else:
             self._kT = None
             if not hasattr(simulation.integrator, 'getTemperature'):
@@ -190,7 +192,7 @@ class ReplicaExchangeSampler(object):
         """
         for _ in range(iterations):
             self.replicaStateEnergy = None
-            energies = []
+            energies = []*unit.kilojoules_per_mole
             for i in range(len(self.states)):
                 self.simulateReplica(i)
                 energies.append(self._sampler.computeAllEnergies())
