@@ -195,10 +195,10 @@ class ReplicaExchangeSampler(object):
                 self.simulateReplica(i)
                 energies.append(self._sampler.computeAllEnergies())
             self.replicaStateEnergy = energies
-            self.exchangeReplicas()
             self.currentIteration += 1
             for reporter in self.reporters:
                 reporter(self)
+            self.exchangeReplicas()
 
     def simulateReplica(self, index: int, steps: int | None = None):
         """
