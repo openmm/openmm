@@ -50,6 +50,49 @@ using namespace OpenMM;
 using namespace std;
 const static char CHECKPOINT_MAGIC_BYTES[] = "OpenMM Binary Checkpoint\n";
 
+namespace {
+
+bool violatesStrictTriangleInequality(double distance1, double distance2, double distance3) {
+    double distances[] = {distance1, distance2, distance3};
+    sort(distances, distances+3);
+    // Subtraction avoids overflow.  Equality is unsafe: constraint solvers
+    // require a nondegenerate triangle.
+    return distances[0] <= distances[2]-distances[1];
+}
+
+bool isUnsafeAtSettlePrecision(double distance1, double distance2, double distance3) {
+    float distance12 = (float) distance1;
+    float distance13 = (float) distance2;
+    float distance23 = (float) distance3;
+    float arm, base;
+    if (distance12 == distance13) {
+        arm = distance12;
+        base = distance23;
+    }
+    else if (distance12 == distance23) {
+        arm = distance12;
+        base = distance13;
+    }
+    else if (distance13 == distance23) {
+        arm = distance13;
+        base = distance12;
+    }
+    else
+        return false;
+    float stored[] = {distance12, distance13, distance23};
+    for (int i = 0; i < 3; i++)
+        if (!std::isfinite(stored[i]) || stored[i] <= 0)
+            return true;
+    float halfBase = 0.5f*base;
+    float radicand = arm*arm-halfBase*halfBase;
+    if (!(radicand > 0 && std::isnormal(radicand)))
+        return true;
+    sort(stored, stored+3);
+    // SETTLE selects and stores its geometry in float on every backend.
+    return (double) stored[0] <= (double) stored[2]-(double) stored[1];
+}
+
+}
 
 ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties, ContextImpl* originalContext) :
         owner(owner), system(system), integrator(integrator), hasInitializedForces(false), hasSetPositions(false), integratorIsDeleted(false), hasMinimizeKernel(false),
@@ -64,6 +107,7 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
         if (system.isVirtualSite(i) && system.getParticleMass(i) != 0.0)
             throw OpenMMException("Virtual site has nonzero mass");
     set<pair<int, int> > constraintAtoms;
+    vector<map<int, double> > constraintDistances(numParticles);
     for (int i = 0; i < system.getNumConstraints(); i++) {
         int particle1, particle2;
         double distance;
@@ -72,6 +116,8 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
             throw OpenMMException("A constraint cannot connect a particle to itself");
         if (particle1 < 0 || particle2 < 0 || particle1 >= numParticles || particle2 >= numParticles)
             throw OpenMMException("Illegal particle index in constraint");
+        if (!std::isfinite(distance) || distance <= 0)
+            throw OpenMMException("Constraint distance must be finite and positive");
         double mass1 = system.getParticleMass(particle1);
         double mass2 = system.getParticleMass(particle2);
         if ((mass1 == 0.0 && mass2 != 0.0) || (mass2 == 0.0 && mass1 != 0.0))
@@ -80,6 +126,33 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
         if (constraintAtoms.find(atoms) != constraintAtoms.end())
             throw OpenMMException("The System has two constraints between the same atoms.  This will produce a singular constraint matrix.");
         constraintAtoms.insert(atoms);
+        constraintDistances[particle1][particle2] = distance;
+        constraintDistances[particle2][particle1] = distance;
+    }
+    // Check each complete triangle once.  Search the smaller adjacency list so
+    // high-degree partial graphs remain inexpensive.
+    for (auto atoms : constraintAtoms) {
+        int particle1 = atoms.first;
+        int particle2 = atoms.second;
+        bool searchFromParticle1 = constraintDistances[particle1].size() < constraintDistances[particle2].size();
+        const map<int, double>& candidates = searchFromParticle1 ? constraintDistances[particle1] : constraintDistances[particle2];
+        const map<int, double>& otherNeighbors = searchFromParticle1 ? constraintDistances[particle2] : constraintDistances[particle1];
+        double distance12 = constraintDistances[particle1].find(particle2)->second;
+        for (auto candidate : candidates) {
+            int particle3 = candidate.first;
+            if (particle3 <= particle2)
+                continue;
+            auto otherDistance = otherNeighbors.find(particle3);
+            bool isSettleCandidate = constraintDistances[particle1].size() == 2 &&
+                    constraintDistances[particle2].size() == 2 && constraintDistances[particle3].size() == 2 &&
+                    system.getParticleMass(particle1) != 0 && system.getParticleMass(particle2) != 0 &&
+                    system.getParticleMass(particle3) != 0;
+            if (otherDistance != otherNeighbors.end() &&
+                    (violatesStrictTriangleInequality(distance12, candidate.second, otherDistance->second) ||
+                    (isSettleCandidate && isUnsafeAtSettlePrecision(distance12, candidate.second, otherDistance->second))))
+                throw OpenMMException("Constraints among particles "+to_string(particle1)+", "+to_string(particle2)+", and "+
+                        to_string(particle3)+" form a degenerate, inconsistent, or numerically unsafe triangle");
+        }
     }
     
     // Validate the list of properties.
