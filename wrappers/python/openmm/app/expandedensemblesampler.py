@@ -255,9 +255,10 @@ class ExpandedEnsembleSampler(object):
             def report(self, simulation, state):
                 sampler = self.sampler
                 if simulation.currentStep%sampler.stepsPerIteration == 0:
+                    stateIndex = sampler.currentStateIndex
                     reducedEnergy = sampler.attemptStateChange(state)
                     if simulation.currentStep%sampler.reportInterval == 0:
-                        sampler._writeReport(reducedEnergy)
+                        sampler._writeReport(reducedEnergy, stateIndex)
 
         simulation.reporters.append(EEReporter(self))
 
@@ -365,10 +366,10 @@ class ExpandedEnsembleSampler(object):
             self.simulation.context.setVelocities(scale*state.getVelocities(asNumpy=True))
         return reducedEnergy
 
-    def _writeReport(self, reducedEnergy: list[float]):
+    def _writeReport(self, reducedEnergy: list[float], stateIndex: int):
         """Write output to the files."""
         if self._log is not None:
-            print(f'{self.simulation.currentStep},{self.currentIteration},{self.currentStateIndex},' + ','.join('%g' % v for v in self.weights), file=self._log)
+            print(f'{self.simulation.currentStep},{self.currentIteration},{stateIndex},' + ','.join('%g' % v for v in self.weights), file=self._log)
         if self._energy is not None:
             print(f'{self.simulation.currentStep},' + ','.join('%g' % v for v in reducedEnergy), file=self._energy)
         if self._checkpointFile is not None:
