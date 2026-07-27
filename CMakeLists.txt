@@ -372,6 +372,16 @@ IF(OPENMM_BUILD_CPU_LIB)
    ADD_SUBDIRECTORY(platforms/cpu)
 ENDIF(OPENMM_BUILD_CPU_LIB)
 
+# Serialization support
+#
+# This must come before the plugins below: it declares
+# OPENMM_BUILD_SERIALIZATION_TESTS, which plugins can check to decide
+# whether to add their own serialization/tests subdirectories.
+
+ADD_SUBDIRECTORY(serialization)
+FILE(GLOB serialization_files  ${CMAKE_SOURCE_DIR}/serialization/src/*.cpp)
+SET_SOURCE_FILES_PROPERTIES(${serialization_files} PROPERTIES COMPILE_FLAGS "-DOPENMM_BUILDING_SHARED_LIBRARY -DIEEE_8087")
+
 # Amoeba plugin
 
 SET(OPENMM_BUILD_AMOEBA_PLUGIN ON CACHE BOOL "Build Amoeba plugin")
@@ -426,12 +436,6 @@ INSTALL_FILES(/include/openmm/internal FILES ${INTERNAL_HEADERS})
 INSTALL_FILES(/include/openmm/reference FILES ${REFERENCE_HEADERS})
 INSTALL_FILES(/include/lepton          FILES ${LEPTON_HEADERS})
 INSTALL_FILES(/include/sfmt            FILES ${SFMT_HEADERS})
-
-# Serialization support
-
-ADD_SUBDIRECTORY(serialization)
-FILE(GLOB serialization_files  ${CMAKE_SOURCE_DIR}/serialization/src/*.cpp)
-SET_SOURCE_FILES_PROPERTIES(${serialization_files} PROPERTIES COMPILE_FLAGS "-DOPENMM_BUILDING_SHARED_LIBRARY -DIEEE_8087")
 
 # Python wrappers
 
