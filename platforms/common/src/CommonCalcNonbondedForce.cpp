@@ -310,6 +310,14 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
     else
         dispersionCoefficient = 0.0;
+    lrcSigmaSnapshot.resize(force.getNumParticles());
+    lrcEpsilonSnapshot.resize(force.getNumParticles());
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double charge, sigma, epsilon;
+        force.getParticleParameters(i, charge, sigma, epsilon);
+        lrcSigmaSnapshot[i] = sigma;
+        lrcEpsilonSnapshot[i] = epsilon;
+    }
     alpha = 0;
     ewaldSelfEnergy = 0.0;
     totalCharge = 0.0;
@@ -1161,6 +1169,7 @@ void CommonCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
 
     // Record the per-particle parameters.
 
+    bool ljChanged = false;
     if (firstParticle <= lastParticle) {
         vector<mm_float4> baseParticleParamVec(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
         for (int i = 0; i < force.getNumParticles(); i++) {
@@ -1183,6 +1192,21 @@ void CommonCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
                         ewaldSelfEnergy += baseParticleParamVec[i].z*pow(baseParticleParamVec[i].y*dispersionAlpha, 6)/3.0;
                 }
             }
+        }
+
+        // Check whether any LJ parameters changed in the updated range.
+
+        if (force.getUseDispersionCorrection() && cc.getContextIndex() == 0 &&
+                (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME)) {
+            for (int i = firstParticle; i <= lastParticle && !ljChanged; i++)
+                if (lrcSigmaSnapshot[i] != (double)baseParticleParamVec[i].y ||
+                        lrcEpsilonSnapshot[i] != (double)baseParticleParamVec[i].z)
+                    ljChanged = true;
+            if (ljChanged)
+                for (int i = 0; i < force.getNumParticles(); i++) {
+                    lrcSigmaSnapshot[i] = baseParticleParamVec[i].y;
+                    lrcEpsilonSnapshot[i] = baseParticleParamVec[i].z;
+                }
         }
     }
 
@@ -1246,7 +1270,7 @@ void CommonCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
 
     // Compute other values.
 
-    if (force.getUseDispersionCorrection() && cc.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
+    if (ljChanged)
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
     cc.invalidateMolecules(info, firstParticle <= lastParticle || force.getNumParticleParameterOffsets() > 0,
                            firstException <= lastException || force.getNumExceptionParameterOffsets() > 0);

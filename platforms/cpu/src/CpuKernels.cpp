@@ -764,10 +764,18 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
     if (nb14s.size() != num14)
         throw OpenMMException("updateParametersInContext: The number of non-excluded exceptions has changed");
 
-    // Record the values.
+    // Record the values, checking whether any LJ parameters changed.
 
-    for (int i = firstParticle; i <= lastParticle; ++i)
-       force.getParticleParameters(i, baseParticleParams[i][0], baseParticleParams[i][1], baseParticleParams[i][2]);
+    bool ljChanged = false;
+    NonbondedForce::NonbondedMethod method = force.getNonbondedMethod();
+    bool checkLRC = force.getUseDispersionCorrection() && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME);
+    for (int i = firstParticle; i <= lastParticle; ++i) {
+        double charge, sigma, epsilon;
+        force.getParticleParameters(i, charge, sigma, epsilon);
+        if (checkLRC && !ljChanged && (sigma != baseParticleParams[i][1] || epsilon != baseParticleParams[i][2]))
+            ljChanged = true;
+        baseParticleParams[i] = {charge, sigma, epsilon};
+    }
     for (int i = 0; i < num14; ++i) {
         int particle1, particle2;
         force.getExceptionParameters(nb14s[i], particle1, particle2, baseExceptionParams[i][0], baseExceptionParams[i][1], baseExceptionParams[i][2]);
@@ -801,11 +809,10 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
         exceptionParamOffsets[nb14Index[exception]].push_back(make_tuple(charge, sigma, epsilon, paramIndex));
     }
     computeParameters(context, false);
-    
-    // Recompute the coefficient for the dispersion correction.
 
-    NonbondedForce::NonbondedMethod method = force.getNonbondedMethod();
-    if (force.getUseDispersionCorrection() && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME))
+    // Recompute the coefficient for the dispersion correction if LJ parameters changed.
+
+    if (ljChanged)
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
 }
 
@@ -1356,8 +1363,9 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
         CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
         hasInitializedLongRangeCorrection = true;
     }
-    else if (globalParamsChanged && forceCopy != NULL)
+    else if (globalParamsChanged && forceCopy != NULL) {
         CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
+    }
     double volume = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
     energy += longRangeCoefficient/volume;
     for (int i = 0; i < longRangeCoefficientDerivs.size(); i++)
@@ -1380,7 +1388,7 @@ void CpuCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& con
     }
     
     // If necessary, recompute the long range correction.
-    
+
     if (forceCopy != NULL) {
         longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, data.threads.getNumThreads());
         CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
