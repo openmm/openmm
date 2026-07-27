@@ -605,6 +605,71 @@ void testLargeSystem() {
     }
 }
 
+void testNonbondedChargesAfterReordering() {
+    // Verify that charges remain attached to the correct particles when the
+    // outer and inner contexts use different atom orderings.
+
+    const int numParticles = 512;
+    const double boxSize = 4.0;
+    vector<Vec3> positions, displacedPositions, displacements;
+    vector<double> charges;
+    for (int i = 0; i < numParticles; i++) {
+        int x = i%8;
+        int y = (i/8)%8;
+        int z = i/64;
+        positions.push_back(Vec3(0.25+0.45*x, 0.25+0.45*y, 0.25+0.45*z));
+        Vec3 displacement(0.01*((i%3)-1), 0.01*(((i/3)%3)-1), 0.01*(((i/9)%3)-1));
+        displacements.push_back(displacement);
+        displacedPositions.push_back(positions.back()+displacement);
+        charges.push_back(0.05*((i%7)-3));
+    }
+
+    // Compute reference energies without ATMForce.
+
+    System referenceSystem;
+    referenceSystem.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    NonbondedForce* referenceForce = new NonbondedForce();
+    referenceForce->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    referenceForce->setCutoffDistance(0.9);
+    referenceSystem.addForce(referenceForce);
+    for (int i = 0; i < numParticles; i++) {
+        referenceSystem.addParticle(1.0);
+        referenceForce->addParticle(charges[i], 0.25, 0.1);
+    }
+    VerletIntegrator referenceIntegrator(0.001);
+    Context referenceContext(referenceSystem, referenceIntegrator, platform);
+    referenceContext.setPositions(positions);
+    double expectedU0 = referenceContext.getState(State::Energy).getPotentialEnergy();
+    referenceContext.setPositions(displacedPositions);
+    double expectedU1 = referenceContext.getState(State::Energy).getPotentialEnergy();
+
+    // Put the same force inside ATMForce.  The zero-valued outer force causes
+    // GPU atom reordering independent of the inner contexts.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    ATMForce* atm = new ATMForce("u0");
+    atm->addForce(XmlSerializer::clone<Force>(*referenceForce));
+    system.addForce(atm);
+    CustomNonbondedForce* outerForce = new CustomNonbondedForce("0");
+    outerForce->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    outerForce->setCutoffDistance(0.9);
+    system.addForce(outerForce);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        atm->addParticle(new ATMForce::FixedDisplacement(displacements[i]));
+        outerForce->addParticle();
+    }
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.getState(State::Energy);
+    double u0, u1, energy;
+    atm->getPerturbationEnergy(context, u1, u0, energy);
+    ASSERT_EQUAL_TOL(expectedU0, u0, 1e-3);
+    ASSERT_EQUAL_TOL(expectedU1, u1, 1e-3);
+}
+
 void testLargeSystemSwap() {
     // Create a system with lots of particles in an external field
     // that depends on atom indexes. Swap their positions, check
@@ -828,6 +893,7 @@ int main(int argc, char* argv[]) {
         testParticlesCustomExpressionLinear();
         testParticlesCustomExpressionSoftplus();
         testLargeSystem();
+        testNonbondedChargesAfterReordering();
         testLargeSystemSwap();
         testChangingBoxVectors();
         testMolecules();
@@ -841,4 +907,3 @@ int main(int argc, char* argv[]) {
     cout << "Done" << endl;
     return 0;
 }
-

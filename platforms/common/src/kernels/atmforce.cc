@@ -142,8 +142,8 @@ KERNEL void copyState(int numParticles,
         int index1 = inner1InvAtomOrder[atom];
         real4 p0 = posq[i] + make_real4((real) displ0.x, (real) displ0.y, (real) displ0.z, 0);
         real4 p1 = posq[i] + make_real4((real) displ1.x, (real) displ1.y, (real) displ1.z, 0);
-        p0.w = posq0[i].w;
-        p1.w = posq1[i].w;
+        p0.w = posq0[index0].w;
+        p1.w = posq1[index1].w;
         posq0[index0] = p0;
         posq1[index1] = p1;
 #ifdef USE_MIXED_PRECISION
