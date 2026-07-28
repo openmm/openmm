@@ -398,7 +398,12 @@ class TestModeller(unittest.TestCase):
         topology_start.setUnitCellDimensions(Vec3(3.5, 3.5, 3.5)*nanometers)
         modeller = Modeller(topology_start, self.positions)
         modeller.deleteWater()
-        modeller.addSolvent(self.forcefield, ionicStrength = 2.0*molar)
+        random_state = random.getstate()
+        random.seed(0)
+        try:
+            modeller.addSolvent(self.forcefield, ionicStrength = 2.0*molar)
+        finally:
+            random.setstate(random_state)
         topology_after = modeller.getTopology()
 
         water_count=0
@@ -418,6 +423,11 @@ class TestModeller(unittest.TestCase):
         expected_ions = math.floor(total_added*expected_ion_fraction+0.5)
         self.assertEqual(sodium_count, expected_ions)
         self.assertEqual(chlorine_count, expected_ions)
+
+        ion_positions = [modeller.positions[atom.index] for atom in topology_after.atoms() if atom.residue.name in ('NA', 'CL')]
+        for i, position in enumerate(ion_positions):
+            for other_position in ion_positions[:i]:
+                self.assertGreater(norm(position-other_position), 0.5*nanometer)
 
     def test_addSolventNegativeSolvent(self):
         """ Test the addSolvent() method; test adding ions to a negatively charged solvent. """
