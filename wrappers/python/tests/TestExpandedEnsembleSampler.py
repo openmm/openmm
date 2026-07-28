@@ -105,6 +105,7 @@ class TestExpandedEnsembleSampler(unittest.TestCase):
                     stateIndex = []
                     weights = []
                     energies = []
+                    stateIndex.append(sampler.currentStateIndex)
 
                     def runIteration():
                         simulation.step(5)
