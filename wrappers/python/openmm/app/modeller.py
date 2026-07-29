@@ -584,14 +584,14 @@ class Modeller(object):
             center = Vec3(center[0], center[1], center[2])
         numBoxes = [int(ceil(box[i]/pdbBoxSize[i])) for i in range(3)]
         addedWaters = []
-        for boxx in range(numBoxes[0]):
-            for boxy in range(numBoxes[1]):
-                for boxz in range(numBoxes[2]):
-                    offset = Vec3(boxx*pdbBoxSize[0], boxy*pdbBoxSize[1], boxz*pdbBoxSize[2])
-                    for residue in pdbResidues:
-                        oxygen = [atom for atom in residue.atoms() if atom.element == elem.oxygen][0]
+        for residue in pdbResidues:
+            oxygen = [atom for atom in residue.atoms() if atom.element == elem.oxygen][0]
+            for boxx in range(numBoxes[0]):
+                for boxy in range(numBoxes[1]):
+                    for boxz in range(numBoxes[2]):
+                        offset = Vec3(boxx*pdbBoxSize[0], boxy*pdbBoxSize[1], boxz*pdbBoxSize[2])
                         atomPos = pdbPositions[oxygen.index]+offset
-                        if not any((atomPos[i] > box[i] for i in range(3))):
+                        if not any([atomPos[i] > box[i] for i in range(3)]):
                             # This molecule is inside the box, so see how close to it is to the solute.
 
                             atomPos += center-box/2
