@@ -1727,8 +1727,8 @@ class _CellList(object):
                 vectors = (Vec3(width[0], 0, 0), Vec3(0, width[1], 0), Vec3(0, 0, width[2]))
         self.positions = deepcopy(positions)
         self.cells = {}
-        self.numCells = tuple((max(1, int(floor(vectors[i][i]/maxCutoff))) for i in range(3)))
-        self.cellSize = tuple((vectors[i][i]/self.numCells[i] for i in range(3)))
+        self.numCells = tuple([max(1, int(floor(vectors[i][i]/maxCutoff))) for i in range(3)])
+        self.cellSize = tuple([vectors[i][i]/self.numCells[i] for i in range(3)])
         self.vectors = vectors
         self.periodic = periodic
         invBox = Vec3(1.0/vectors[0][0], 1.0/vectors[1][1], 1.0/vectors[2][2])
@@ -1751,7 +1751,7 @@ class _CellList(object):
             pos = pos-floor(pos[2]*invBox[2])*self.vectors[2]
             pos -= floor(pos[1]*invBox[1])*self.vectors[1]
             pos -= floor(pos[0]*invBox[0])*self.vectors[0]
-        return tuple((int(floor(pos[j]/self.cellSize[j]))%self.numCells[j] for j in range(3)))
+        return tuple([int(floor(pos[j]/self.cellSize[j]))%self.numCells[j] for j in range(3)])
 
     def neighbors(self, pos):
         processedCells = set()
