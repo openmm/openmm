@@ -266,7 +266,7 @@ class PDBFile(object):
                 map[atom.attrib[id]] = name
 
     @staticmethod
-    def writeFile(topology, positions, file=sys.stdout, keepIds=False, extraParticleIdentifier='EP'):
+    def writeFile(topology, positions, file=sys.stdout, keepIds=False, extraParticleIdentifier='EP', keepSegids=False):
         """Write a PDB file containing a single model.
 
         Parameters
@@ -284,13 +284,17 @@ class PDBFile(object):
             PDB format.  Otherwise, the output file will be invalid.
         extraParticleIdentifier : string='EP'
             String to write in the element column of the ATOM records for atoms whose element is None (extra particles)
+        keepSegids : bool=False
+            If True, save segment (chain) ids for creation of psf files based on pdb, 
+            and work with Charmm force fields, and also for improved compatibility with VMD.
+
         """
         if isinstance(file, str):
             with open(file, 'w') as output:
-                PDBFile.writeFile(topology, positions, output, keepIds, extraParticleIdentifier)
+                PDBFile.writeFile(topology, positions, output, keepIds, extraParticleIdentifier, keepSegids=keepSegids)
         else:
             PDBFile.writeHeader(topology, file)
-            PDBFile.writeModel(topology, positions, file, keepIds=keepIds, extraParticleIdentifier=extraParticleIdentifier)
+            PDBFile.writeModel(topology, positions, file, keepIds=keepIds, extraParticleIdentifier=extraParticleIdentifier, keepSegids=keepSegids)
             PDBFile.writeFooter(topology, file)
 
     @staticmethod
@@ -313,7 +317,7 @@ class PDBFile(object):
                     a*10, b*10, c*10, alpha*RAD_TO_DEG, beta*RAD_TO_DEG, gamma*RAD_TO_DEG), file=file)
 
     @staticmethod
-    def writeModel(topology, positions, file=sys.stdout, modelIndex=None, keepIds=False, extraParticleIdentifier='EP'):
+    def writeModel(topology, positions, file=sys.stdout, modelIndex=None, keepIds=False, extraParticleIdentifier='EP', keepSegids=False):
         """Write out a model to a PDB file.
 
         Parameters
@@ -335,6 +339,9 @@ class PDBFile(object):
             are not, and the output file could be invalid.
         extraParticleIdentifier : string='EP'
             String to write in the element column of the ATOM records for atoms whose element is None (extra particles)
+        keepSegids : bool=False
+            If True, save segment (chain) ids for creation of psf files based on pdb, 
+            and work with Charmm force fields, and also for improved compatibility with VMD.
         """
 
         if len(list(topology.atoms())) != len(positions):
@@ -392,9 +399,17 @@ class PDBFile(object):
                         formalCharge = ("%+2d" % atom.formalCharge)[::-1]
                     else:
                         formalCharge = '  '
-                    line = "%s%5s %-4s %3s %s%4s%1s   %s%s%s  1.00  0.00          %2s%2s" % (
+                    chain_id_atom = atom.residue.chain.id
+
+                    if keepSegids:
+                        line = "%s%5s %-4s %3s %s%4s%1s   %s%s%s  1.00  0.00      %4s%2s%2s" % (
+                        recordName, _formatIndex(atomIndex, 5), atomName, resName, chainName, resId, resIC, _format_83(coords[0]),
+                        _format_83(coords[1]), _format_83(coords[2]), chain_id_atom, symbol, formalCharge)
+                    else:
+                        line = "%s%5s %-4s %3s %s%4s%1s   %s%s%s  1.00  0.00          %2s%2s" % (
                         recordName, _formatIndex(atomIndex, 5), atomName, resName, chainName, resId, resIC, _format_83(coords[0]),
                         _format_83(coords[1]), _format_83(coords[2]), symbol, formalCharge)
+                    
                     if len(line) != 80:
                         raise ValueError('Fixed width overflow detected')
                     print(line, file=file)
