@@ -255,7 +255,7 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
-    def _addIons(self, forcefield, numWaters, replaceableMols, ionCutoff=0.05*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True, residueTemplates=dict()):
+    def _addIons(self, forcefield, numWaters, replaceableMols, ionCutoff=0.5*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True, residueTemplates=dict()):
         """Adds ions to the system by replacing certain molecules.
 
         Parameters

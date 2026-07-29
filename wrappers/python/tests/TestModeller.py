@@ -419,6 +419,12 @@ class TestModeller(unittest.TestCase):
         self.assertEqual(sodium_count, expected_ions)
         self.assertEqual(chlorine_count, expected_ions)
 
+        positions = modeller.positions.value_in_unit(nanometer)
+        ion_positions = [positions[atom.index] for atom in topology_after.atoms() if atom.residue.name in ('NA', 'CL')]
+        for i, position in enumerate(ion_positions):
+            for other_position in ion_positions[:i]:
+                self.assertGreater(norm(position-other_position), 0.5)
+
     def test_addSolventNegativeSolvent(self):
         """ Test the addSolvent() method; test adding ions to a negatively charged solvent. """
 
