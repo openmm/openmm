@@ -287,6 +287,9 @@ class Modeller(object):
             monoatomic iron ion in the Topology).
         """
 
+        if not neutralize and ionicStrength == 0 *molar:
+            return
+
         posIonElements = {'Cs+': elem.cesium, 'K+': elem.potassium,
                           'Li+': elem.lithium, 'Na+': elem.sodium,
                           'Rb+': elem.rubidium}
@@ -581,14 +584,14 @@ class Modeller(object):
             center = Vec3(center[0], center[1], center[2])
         numBoxes = [int(ceil(box[i]/pdbBoxSize[i])) for i in range(3)]
         addedWaters = []
-        for boxx in range(numBoxes[0]):
-            for boxy in range(numBoxes[1]):
-                for boxz in range(numBoxes[2]):
-                    offset = Vec3(boxx*pdbBoxSize[0], boxy*pdbBoxSize[1], boxz*pdbBoxSize[2])
-                    for residue in pdbResidues:
-                        oxygen = [atom for atom in residue.atoms() if atom.element == elem.oxygen][0]
+        for residue in pdbResidues:
+            oxygen = [atom for atom in residue.atoms() if atom.element == elem.oxygen][0]
+            for boxx in range(numBoxes[0]):
+                for boxy in range(numBoxes[1]):
+                    for boxz in range(numBoxes[2]):
+                        offset = Vec3(boxx*pdbBoxSize[0], boxy*pdbBoxSize[1], boxz*pdbBoxSize[2])
                         atomPos = pdbPositions[oxygen.index]+offset
-                        if not any((atomPos[i] > box[i] for i in range(3))):
+                        if not any([atomPos[i] > box[i] for i in range(3)]):
                             # This molecule is inside the box, so see how close to it is to the solute.
 
                             atomPos += center-box/2
@@ -1727,8 +1730,8 @@ class _CellList(object):
                 vectors = (Vec3(width[0], 0, 0), Vec3(0, width[1], 0), Vec3(0, 0, width[2]))
         self.positions = deepcopy(positions)
         self.cells = {}
-        self.numCells = tuple((max(1, int(floor(vectors[i][i]/maxCutoff))) for i in range(3)))
-        self.cellSize = tuple((vectors[i][i]/self.numCells[i] for i in range(3)))
+        self.numCells = tuple([max(1, int(floor(vectors[i][i]/maxCutoff))) for i in range(3)])
+        self.cellSize = tuple([vectors[i][i]/self.numCells[i] for i in range(3)])
         self.vectors = vectors
         self.periodic = periodic
         invBox = Vec3(1.0/vectors[0][0], 1.0/vectors[1][1], 1.0/vectors[2][2])
@@ -1751,7 +1754,7 @@ class _CellList(object):
             pos = pos-floor(pos[2]*invBox[2])*self.vectors[2]
             pos -= floor(pos[1]*invBox[1])*self.vectors[1]
             pos -= floor(pos[0]*invBox[0])*self.vectors[0]
-        return tuple((int(floor(pos[j]/self.cellSize[j]))%self.numCells[j] for j in range(3)))
+        return tuple([int(floor(pos[j]/self.cellSize[j]))%self.numCells[j] for j in range(3)])
 
     def neighbors(self, pos):
         processedCells = set()
