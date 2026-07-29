@@ -287,6 +287,9 @@ class Modeller(object):
             monoatomic iron ion in the Topology).
         """
 
+        if not neutralize and ionicStrength == 0 *molar:
+            return
+
         posIonElements = {'Cs+': elem.cesium, 'K+': elem.potassium,
                           'Li+': elem.lithium, 'Na+': elem.sodium,
                           'Rb+': elem.rubidium}
