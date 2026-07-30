@@ -43,8 +43,8 @@ class ReplicaExchangeReporter(object):
     As the simulation runs, it creates the following files in a user specified directory.
 
     - A CSV file containing a log of what state each replica was in at each iteration.
-    - A set of XML files containing serialized State objects for each replica. These serve as checkpoints, allowing a
-      simulation to be resumed later.
+    - (optional) A set of XML files containing serialized State objects for each replica. These serve as checkpoints,
+      allowing a simulation to be resumed later.
     - (optional) A trajectory file for each thermodynamic state.  The coordinates in these files jump discontinuously
       whenever an exchange happens.
     - (optional) A trajectory file for each replica.  The coordinates in these files are continuous, but the
@@ -65,9 +65,9 @@ class ReplicaExchangeReporter(object):
     information and configure the ReplicaExchangeSampler correctly.
     """
     def __init__(self, directory: str, reportInterval: int, sampler: "app.ReplicaExchangeSampler",
-                 trajectoryPerState: bool = True, trajectoryPerReplica: bool = False, trajectoryFormat: str = 'xtc',
+                 trajectoryPerState: bool = False, trajectoryPerReplica: bool = False, trajectoryFormat: str = 'xtc',
                  enforcePeriodicBox: bool | None = None, energy: bool = False, volume: bool = False,
-                 resume: bool = False):
+                 checkpoints: bool = False, resume: bool = False):
         """
         Create a ReplicaExchangeReporter.
 
@@ -96,6 +96,8 @@ class ReplicaExchangeReporter(object):
             If True, a CSV file will be saved containing reduced energies.
         volume: bool
             If True, a CSV file will be saved containing periodic box volumes.
+        checkpoints: bool
+            If True, checkpoint files will be saved to allow resuming
         resume: bool
             Specifies whether to resume an earlier simulation.  If True, the checkpoint and log data will be loaded into
             the ReplicaExchangeSampler, and future output will be appended to the existing files.
@@ -109,6 +111,7 @@ class ReplicaExchangeReporter(object):
         self._log = None
         self._energy = None
         self._volume = None
+        self._checkpoints = checkpoints
         numStates = len(sampler.states)
 
         # Validate the inputs and create the output directory if necessary.
@@ -216,4 +219,5 @@ class ReplicaExchangeReporter(object):
                 self._stateReporters[sampler.replicaStateIndex[i]].report(sampler.simulation, conf)
             if len(self._replicaReporters) > 0:
                 self._replicaReporters[i].report(sampler.simulation, conf)
-            safesave.save(mm.XmlSerializer.serialize(conf), os.path.join(self.directory, f'checkpoint_{i}.xml'))
+            if self._checkpoints:
+                safesave.save(mm.XmlSerializer.serialize(conf), os.path.join(self.directory, f'checkpoint_{i}.xml'))

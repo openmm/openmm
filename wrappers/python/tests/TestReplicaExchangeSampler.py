@@ -71,7 +71,7 @@ class TestReplicaExchangeSampler(unittest.TestCase):
 
             repex.reporters.append(recordDisplacements)
             with tempfile.TemporaryDirectory() as directory:
-                repex.reporters.append(ReplicaExchangeReporter(directory, 1, repex, trajectoryPerState=False, energy=True))
+                repex.reporters.append(ReplicaExchangeReporter(directory, 1, repex, energy=True))
                 for i in range(len(states)):
                     repex.simulateReplica(i, 100)
                 steps = 2000
@@ -115,7 +115,7 @@ class TestReplicaExchangeSampler(unittest.TestCase):
                 conformations.append(sampler.replicaConformation[:])
 
         with tempfile.TemporaryDirectory() as directory:
-            sampler.reporters.append(ReplicaExchangeReporter(directory, 3, sampler, trajectoryPerState=True, trajectoryPerReplica=True, energy=True, volume=True))
+            sampler.reporters.append(ReplicaExchangeReporter(directory, 3, sampler, trajectoryPerState=True, trajectoryPerReplica=True, energy=True, volume=True, checkpoints=True))
             sampler.reporters.append(report)
 
             # Generate some output.
@@ -130,7 +130,7 @@ class TestReplicaExchangeSampler(unittest.TestCase):
             integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.001*picosecond)
             simulation = Simulation(pdb.topology, system, integrator, Platform.getPlatform('Reference'))
             sampler = ReplicaExchangeSampler(states, simulation, 5)
-            sampler.reporters.append(ReplicaExchangeReporter(directory, 3, sampler, trajectoryPerState=True, trajectoryPerReplica=True, energy=True, volume=True, resume=True))
+            sampler.reporters.append(ReplicaExchangeReporter(directory, 3, sampler, trajectoryPerState=True, trajectoryPerReplica=True, energy=True, volume=True, resume=True, checkpoints=True))
             sampler.reporters.append(report)
 
             # Check that it loaded the checkpoints correctly.
