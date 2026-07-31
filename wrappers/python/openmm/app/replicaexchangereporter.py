@@ -66,8 +66,8 @@ class ReplicaExchangeReporter(object):
     """
     def __init__(self, directory: str, reportInterval: int, sampler: "app.ReplicaExchangeSampler",
                  trajectoryPerState: bool = False, trajectoryPerReplica: bool = False, trajectoryFormat: str = 'xtc',
-                 enforcePeriodicBox: bool | None = None, energy: bool = False, volume: bool = False,
-                 checkpoints: bool = False, resume: bool = False):
+                 atomSubset: list | None = None, enforcePeriodicBox: bool | None = None, energy: bool = False,
+                 volume: bool = False, checkpoints: bool = False, resume: bool = False):
         """
         Create a ReplicaExchangeReporter.
 
@@ -87,6 +87,9 @@ class ReplicaExchangeReporter(object):
             If True, a trajectory file will be saved for each replica.
         trajectoryFormat: str
             The format in which to save trajectories.  Supported options are 'xtc' and 'dcd'.
+        atomSubset: list
+            Atom indices (zero indexed) of the particles to output when writing trajectories.  If None (the default),
+            all particles will be included.
         enforcePeriodicBox: bool
             Specifies whether particle positions should be translated so the center of every molecule
             lies in the same periodic box.  If None (the default), it will automatically decide whether
@@ -167,8 +170,8 @@ class ReplicaExchangeReporter(object):
             path = os.path.join(directory, filename)
             interval = reportInterval*sampler.stepsPerIteration
             if trajectoryFormat == 'xtc':
-                return app.XTCReporter(path, reportInterval*sampler.stepsPerIteration, append=resume, enforcePeriodicBox=enforcePeriodicBox)
-            return app.DCDReporter(path, interval, append=resume, enforcePeriodicBox=enforcePeriodicBox)
+                return app.XTCReporter(path, reportInterval*sampler.stepsPerIteration, append=resume, enforcePeriodicBox=enforcePeriodicBox, atomSubset=atomSubset)
+            return app.DCDReporter(path, interval, append=resume, enforcePeriodicBox=enforcePeriodicBox, atomSubset=atomSubset)
 
         self._stateReporters = []
         self._replicaReporters = []
