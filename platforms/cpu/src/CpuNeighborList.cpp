@@ -165,6 +165,46 @@ public:
     }
         
     void getNeighbors(vector<int>& neighbors, int blockIndex, const fvec4& blockCenter, const fvec4& blockWidth, const vector<int>& sortedAtoms, vector<CpuNeighborList::BlockExclusionMask>& exclusions, float maxDistance, const vector<int>& blockAtoms, const vector<float>& blockAtomX, const vector<float>& blockAtomY, const vector<float>& blockAtomZ, const vector<float>& sortedPositions, const vector<VoxelIndex>& atomVoxelIndex) const {
+        float maxDistanceSquared = maxDistance * maxDistance;
+        if (usePeriodic && triclinic && (periodicBoxSize[2]/2-blockWidth[2]-voxelSizeZ < maxDistance || periodicBoxSize[1]/2-blockWidth[1]-voxelSizeY < maxDistance)) {
+            // The calculation to find the nearest periodic copy is only guaranteed to work if the nearest copy is less than half a box width away.
+            // This block is large enough that this requirement could be violated, so do a full scan against all particles.
+
+            for (int i = 0; i < blockSize*(blockIndex+1); i++) {
+                const float* atomPos = &sortedPositions[4*i];
+                bool anyInteraction = false;
+                for (int k = 0; k < (int) blockAtoms.size(); k += 4) {
+                    fvec4 dx = fvec4(&blockAtomX[k])-atomPos[0];
+                    fvec4 dy = fvec4(&blockAtomY[k])-atomPos[1];
+                    fvec4 dz = fvec4(&blockAtomZ[k])-atomPos[2];
+                    fvec4 scale3 = floor(dz*recipBoxSize[2]+0.5f);
+                    dx -= scale3*periodicBoxVectors[2][0];
+                    dy -= scale3*periodicBoxVectors[2][1];
+                    dz -= scale3*periodicBoxVectors[2][2];
+                    fvec4 scale2 = floor(dy*recipBoxSize[1]+0.5f);
+                    dx -= scale2*periodicBoxVectors[1][0];
+                    dy -= scale2*periodicBoxVectors[1][1];
+                    fvec4 scale1 = floor(dx*recipBoxSize[0]+0.5f);
+                    dx -= scale1*periodicBoxVectors[0][0];
+                    fvec4 r2 = dx*dx + dy*dy + dz*dz;
+                    if (any(r2 < maxDistanceSquared)) {
+                        anyInteraction = true;
+                        break;
+                    }
+                }
+                if (anyInteraction) {
+                    neighbors.push_back(sortedAtoms[i]);
+                    int mask = (1<<blockSize)-1;
+                    if (i < blockSize*blockIndex)
+                        exclusions.push_back(0);
+                    else {
+                        int mask = (1<<blockSize)-1;
+                        exclusions.push_back(mask & (mask<<(i-blockSize*blockIndex)));
+                    }
+                }
+            }
+            return;
+        }
         neighbors.resize(0);
         exclusions.resize(0);
         fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
@@ -174,7 +214,6 @@ public:
         periodicBoxVec4[1] = fvec4(periodicBoxVectors[1][0], periodicBoxVectors[1][1], periodicBoxVectors[1][2], 0);
         periodicBoxVec4[2] = fvec4(periodicBoxVectors[2][0], periodicBoxVectors[2][1], periodicBoxVectors[2][2], 0);
 
-        float maxDistanceSquared = maxDistance * maxDistance;
         float refineCutoff = maxDistance-max(max(blockWidth[0], blockWidth[1]), blockWidth[2]);
         float refineCutoffSquared = refineCutoff*refineCutoff;
 
@@ -431,7 +470,7 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
     blockExclusions.resize(numBlocks);
     sortedAtoms.resize(numAtoms);
     sortedPositions.resize(4*numAtoms);
-    
+
     // Record the parameters for the threads.
     
     this->exclusions = &exclusions;
