@@ -166,11 +166,15 @@ public:
         
     void getNeighbors(vector<int>& neighbors, int blockIndex, const fvec4& blockCenter, const fvec4& blockWidth, const vector<int>& sortedAtoms, vector<CpuNeighborList::BlockExclusionMask>& exclusions, float maxDistance, const vector<int>& blockAtoms, const vector<float>& blockAtomX, const vector<float>& blockAtomY, const vector<float>& blockAtomZ, const vector<float>& sortedPositions, const vector<VoxelIndex>& atomVoxelIndex) const {
         float maxDistanceSquared = maxDistance * maxDistance;
+        neighbors.resize(0);
+        exclusions.resize(0);
+        fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
+        int lastSortedIndex = std::min(blockSize*(blockIndex+1), (int) sortedAtoms.size());
         if (usePeriodic && triclinic && (periodicBoxSize[2]/2-blockWidth[2]-voxelSizeZ < maxDistance || periodicBoxSize[1]/2-blockWidth[1]-voxelSizeY < maxDistance)) {
             // The calculation to find the nearest periodic copy is only guaranteed to work if the nearest copy is less than half a box width away.
             // This block is large enough that this requirement could be violated, so do a full scan against all particles.
 
-            for (int i = 0; i < blockSize*(blockIndex+1); i++) {
+            for (int i = 0; i < lastSortedIndex; i++) {
                 const float* atomPos = &sortedPositions[4*i];
                 bool anyInteraction = false;
                 for (int k = 0; k < (int) blockAtoms.size(); k += 4) {
@@ -205,9 +209,6 @@ public:
             }
             return;
         }
-        neighbors.resize(0);
-        exclusions.resize(0);
-        fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
         fvec4 invBoxSize(recipBoxSize[0], recipBoxSize[1], recipBoxSize[2], 0);
         fvec4 periodicBoxVec4[3];
         periodicBoxVec4[0] = fvec4(periodicBoxVectors[0][0], periodicBoxVectors[0][1], periodicBoxVectors[0][2], 0);
@@ -237,7 +238,6 @@ public:
             startz = max(startz, 0);
             endz = min(endz, nz-1);
         }
-        int lastSortedIndex = blockSize*(blockIndex+1);
         VoxelIndex voxelIndex(0, 0);
         for (int z = startz; z <= endz; ++z) {
             voxelIndex.z = z;
