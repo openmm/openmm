@@ -44,8 +44,10 @@ private:
 
     bool cutoff;
     bool periodic;
+    bool triclinic;
     const CpuNeighborList* neighborList;
     float periodicBoxSize[3];
+    AlignedArray<fvec4> periodicBoxVec4;
     float cutoffDistance, cutoffDistance2;
     int numValues, numParams;
     const std::vector<std::set<int> > exclusions;
@@ -215,10 +217,10 @@ public:
      * already been set, and the smallest side of the periodic box is at least twice the cutoff
      * distance.
      * 
-     * @param boxSize             the X, Y, and Z widths of the periodic box
+     * @param periodicBoxVectors    the vectors defining the periodic box
      */
 
-    void setPeriodic(Vec3& boxSize);
+    void setPeriodic(Vec3* periodicBoxVectors);
 
     /**
      * Calculate custom GB ixn

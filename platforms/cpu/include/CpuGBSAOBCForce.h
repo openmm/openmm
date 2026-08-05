@@ -26,6 +26,7 @@
 #define OPENMM_CPU_GBSAOBC_FORCE_H__
 
 #include "AlignedArray.h"
+#include "openmm/Vec3.h"
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/vectorize.h"
 #include <atomic>
@@ -52,9 +53,9 @@ public:
      * already been set, and the smallest side of the periodic box is at least twice the cutoff
      * distance.
      *
-     * @param boxSize             the X, Y, and Z widths of the periodic box
+     * @param periodicBoxVectors    the vectors defining the periodic box
      */
-    void setPeriodic(float* periodicBoxSize);
+    void setPeriodic(Vec3* periodicBoxVectors);
 
     /**
      * Set the solute dielectric constant.
@@ -100,7 +101,9 @@ public:
 private:
     bool cutoff;
     bool periodic;
+    bool triclinic;
     float periodicBoxSize[3];
+    Vec3 periodicBoxVectors[3];
     float cutoffDistance, soluteDielectric, solventDielectric, surfaceAreaFactor;
     std::vector<std::pair<float, float> > particleParams;        
     AlignedArray<float> bornRadii;

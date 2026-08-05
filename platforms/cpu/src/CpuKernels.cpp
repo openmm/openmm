@@ -70,11 +70,6 @@ static vector<Vec3>& extractForces(ContextImpl& context) {
     return *data->forces;
 }
 
-static Vec3& extractBoxSize(ContextImpl& context) {
-    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *data->periodicBoxSize;
-}
-
 static Vec3* extractBoxVectors(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return data->periodicBoxVectors;
@@ -1431,11 +1426,8 @@ void CpuCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCFo
 
 double CpuCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     copyChargesToPosq(context, charges, posqIndex);
-    if (data.isPeriodic) {
-        Vec3& boxSize = extractBoxSize(context);
-        float floatBoxSize[3] = {(float) boxSize[0], (float) boxSize[1], (float) boxSize[2]};
-        obc.setPeriodic(floatBoxSize);
-    }
+    if (data.isPeriodic)
+        obc.setPeriodic(extractBoxVectors(context));
     double energy = 0.0;
     obc.computeForce(data.posq, data.threadForce, includeEnergy ? &energy : NULL, data.threads);
     return energy;
@@ -1622,7 +1614,7 @@ double CpuCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeFor
     double energy = 0;
     Vec3* boxVectors = extractBoxVectors(context);
     if (data.isPeriodic)
-        ixn->setPeriodic(extractBoxSize(context));
+        ixn->setPeriodic(boxVectors);
     if (nonbondedMethod != NoCutoff) {
         vector<set<int> > noExclusions(numParticles);
         neighborList->computeNeighborList(numParticles, data.posq, noExclusions, boxVectors, data.isPeriodic, nonbondedCutoff, data.threads);
