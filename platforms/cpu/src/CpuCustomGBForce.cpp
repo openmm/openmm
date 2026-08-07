@@ -165,16 +165,23 @@ void CpuCustomGBForce::setUseCutoff(float distance, const CpuNeighborList& neigh
     neighborList = &neighbors;
   }
 
-void CpuCustomGBForce::setPeriodic(Vec3& boxSize) {
+void CpuCustomGBForce::setPeriodic(Vec3* periodicBoxVectors) {
     if (cutoff) {
-        assert(boxSize[0] >= 2.0*cutoffDistance);
-        assert(boxSize[1] >= 2.0*cutoffDistance);
-        assert(boxSize[2] >= 2.0*cutoffDistance);
+        assert(periodicBoxVectors[0][0] >= 2.0*cutoffDistance);
+        assert(periodicBoxVectors[1][1] >= 2.0*cutoffDistance);
+        assert(periodicBoxVectors[2][2] >= 2.0*cutoffDistance);
     }
     periodic = true;
-    periodicBoxSize[0] = boxSize[0];
-    periodicBoxSize[1] = boxSize[1];
-    periodicBoxSize[2] = boxSize[2];
+    periodicBoxSize[0] = (float) periodicBoxVectors[0][0];
+    periodicBoxSize[1] = (float) periodicBoxVectors[1][1];
+    periodicBoxSize[2] = (float) periodicBoxVectors[2][2];
+    periodicBoxVec4.resize(3);
+    periodicBoxVec4[0] = fvec4(periodicBoxVectors[0][0], periodicBoxVectors[0][1], periodicBoxVectors[0][2], 0);
+    periodicBoxVec4[1] = fvec4(periodicBoxVectors[1][0], periodicBoxVectors[1][1], periodicBoxVectors[1][2], 0);
+    periodicBoxVec4[2] = fvec4(periodicBoxVectors[2][0], periodicBoxVectors[2][1], periodicBoxVectors[2][2], 0);
+    triclinic = (periodicBoxVectors[0][1] != 0.0 || periodicBoxVectors[0][2] != 0.0 ||
+            periodicBoxVectors[1][0] != 0.0 || periodicBoxVectors[1][2] != 0.0 ||
+            periodicBoxVectors[2][0] != 0.0 || periodicBoxVectors[2][1] != 0.0);
   }
 
 void CpuCustomGBForce::calculateIxn(int numberOfAtoms, float* posq, vector<vector<double> >& atomParameters,
@@ -668,8 +675,15 @@ void CpuCustomGBForce::calculateOnePairChainRule(int atom1, int atom2, ThreadDat
 void CpuCustomGBForce::getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const {
     deltaR = posJ-posI;
     if (periodic) {
-        fvec4 base = round(deltaR*invBoxSize)*boxSize;
-        deltaR = deltaR-base;
+        if (triclinic) {
+            deltaR -= periodicBoxVec4[2]*floorf(deltaR[2]*invBoxSize[2]+0.5f);
+            deltaR -= periodicBoxVec4[1]*floorf(deltaR[1]*invBoxSize[1]+0.5f);
+            deltaR -= periodicBoxVec4[0]*floorf(deltaR[0]*invBoxSize[0]+0.5f);
+        }
+        else {
+            fvec4 base = round(deltaR*invBoxSize)*boxSize;
+            deltaR = deltaR-base;
+        }
     }
     r2 = dot3(deltaR, deltaR);
 }

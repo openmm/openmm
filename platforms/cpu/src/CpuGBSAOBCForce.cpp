@@ -50,11 +50,17 @@ void CpuGBSAOBCForce::setUseCutoff(float distance) {
     cutoffDistance = distance;
 }
 
-void CpuGBSAOBCForce::setPeriodic(float* periodicBoxSize) {
+void CpuGBSAOBCForce::setPeriodic(Vec3* periodicBoxVectors) {
     periodic = true;
-    this->periodicBoxSize[0] = periodicBoxSize[0];
-    this->periodicBoxSize[1] = periodicBoxSize[1];
-    this->periodicBoxSize[2] = periodicBoxSize[2];
+    this->periodicBoxVectors[0] = periodicBoxVectors[0];
+    this->periodicBoxVectors[1] = periodicBoxVectors[1];
+    this->periodicBoxVectors[2] = periodicBoxVectors[2];
+    periodicBoxSize[0] = (float) periodicBoxVectors[0][0];
+    periodicBoxSize[1] = (float) periodicBoxVectors[1][1];
+    periodicBoxSize[2] = (float) periodicBoxVectors[2][2];
+    triclinic = (periodicBoxVectors[0][1] != 0.0 || periodicBoxVectors[0][2] != 0.0 ||
+            periodicBoxVectors[1][0] != 0.0 || periodicBoxVectors[1][2] != 0.0 ||
+            periodicBoxVectors[2][0] != 0.0 || periodicBoxVectors[2][1] != 0.0);
 }
 
 void CpuGBSAOBCForce::setSoluteDielectric(float dielectric) {
@@ -397,9 +403,22 @@ void CpuGBSAOBCForce::getDeltaR(const fvec4& posI, const fvec4& x, const fvec4& 
     dy = y-posI[1];
     dz = z-posI[2];
     if (periodic) {
-        dx -= round(dx*invBoxSize[0])*boxSize[0];
-        dy -= round(dy*invBoxSize[1])*boxSize[1];
-        dz -= round(dz*invBoxSize[2])*boxSize[2];
+        if (triclinic) {
+            fvec4 scale3 = floor(dz*invBoxSize[2]+0.5f);
+            dx -= scale3*periodicBoxVectors[2][0];
+            dy -= scale3*periodicBoxVectors[2][1];
+            dz -= scale3*periodicBoxVectors[2][2];
+            fvec4 scale2 = floor(dy*invBoxSize[1]+0.5f);
+            dx -= scale2*periodicBoxVectors[1][0];
+            dy -= scale2*periodicBoxVectors[1][1];
+            fvec4 scale1 = floor(dx*invBoxSize[0]+0.5f);
+            dx -= scale1*periodicBoxVectors[0][0];
+        }
+        else {
+            dx -= round(dx*invBoxSize[0])*boxSize[0];
+            dy -= round(dy*invBoxSize[1])*boxSize[1];
+            dz -= round(dz*invBoxSize[2])*boxSize[2];
+        }
     }
     r2 = dx*dx + dy*dy + dz*dz;
 }

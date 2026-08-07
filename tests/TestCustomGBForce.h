@@ -44,7 +44,7 @@ using namespace std;
 
 const double TOL = 1e-5;
 
-void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMethod customMethod) {
+void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMethod customMethod, bool triclinic=false) {
     const int numMolecules = 70;
     const int numParticles = numMolecules*2;
     const double boxSize = 10.0;
@@ -58,8 +58,14 @@ void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMe
         standardSystem.addParticle(1.0);
         customSystem.addParticle(1.0);
     }
-    standardSystem.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0.0, 0.0), Vec3(0.0, boxSize, 0.0), Vec3(0.0, 0.0, boxSize));
-    customSystem.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0.0, 0.0), Vec3(0.0, boxSize, 0.0), Vec3(0.0, 0.0, boxSize));
+    Vec3 a(boxSize, 0.0, 0.0), b(0.0, boxSize, 0.0), c(0.0, 0.0, boxSize);
+    if (triclinic) {
+        b[0] = 0.1*boxSize;
+        c[0] = -0.1*boxSize;
+        c[1] = -0.15*boxSize;
+    }
+    standardSystem.setDefaultPeriodicBoxVectors(a, b, c);
+    customSystem.setDefaultPeriodicBoxVectors(a, b, c);
     GBSAOBCForce* obc = new GBSAOBCForce();
     CustomGBForce* custom = new CustomGBForce();
     obc->setCutoffDistance(cutoff);
@@ -558,6 +564,7 @@ int main(int argc, char* argv[]) {
         testOBC(GBSAOBCForce::NoCutoff, CustomGBForce::NoCutoff);
         testOBC(GBSAOBCForce::CutoffNonPeriodic, CustomGBForce::CutoffNonPeriodic);
         testOBC(GBSAOBCForce::CutoffPeriodic, CustomGBForce::CutoffPeriodic);
+        testOBC(GBSAOBCForce::CutoffPeriodic, CustomGBForce::CutoffPeriodic, true);
         testMembrane();
         testTabulatedFunction();
         testMultipleChainRules();

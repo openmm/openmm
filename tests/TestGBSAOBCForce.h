@@ -176,7 +176,7 @@ void testCutoffAndPeriodic() {
     ASSERT_EQUAL_VEC(state3.getForces()[1], Vec3(0, 0, 0), 0.01);
 }
 
-void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBCForce::NonbondedMethod method2) {
+void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBCForce::NonbondedMethod method2, bool triclinic=false) {
     ReferencePlatform reference;
     System system;
     GBSAOBCForce* gbsa = new GBSAOBCForce();
@@ -194,7 +194,10 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBC
     int grid = (int) floor(0.5+pow(numParticles, 1.0/3.0));
     if (method == NonbondedForce::CutoffPeriodic) {
         double boxSize = (grid+1)*1.1;
-        system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+        if (triclinic)
+            system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0.1*boxSize, boxSize, 0), Vec3(-0.1*boxSize, -0.15*boxSize, boxSize));
+        else
+            system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     }
     system.addForce(gbsa);
     system.addForce(nonbonded);
@@ -270,6 +273,7 @@ int main(int argc, char* argv[]) {
             testForce(i*i*i, NonbondedForce::CutoffNonPeriodic, GBSAOBCForce::CutoffNonPeriodic);
             testForce(i*i*i, NonbondedForce::CutoffPeriodic, GBSAOBCForce::CutoffPeriodic);
         }
+        testForce(1000, NonbondedForce::CutoffPeriodic, GBSAOBCForce::CutoffPeriodic, true);
         runPlatformTests();
     }
     catch(const exception& e) {
