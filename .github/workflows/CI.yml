@@ -677,7 +677,7 @@ jobs:
           exit $exitcode
 
   gpu:
-    runs-on: self-hosted
+    runs-on: ["self-hosted", "cuda"]
     name: ${{ matrix.name }}
     strategy:
       fail-fast: false
