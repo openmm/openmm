@@ -3644,26 +3644,17 @@ void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegr
 
     // Perform the integration.
 
-    vector<int> p;
-    particleType.download(p);
     double stepSize = integrator.getStepSize();
     cc.getIntegrationUtilities().setNextStepSize(stepSize);
     kernel1->execute(numAtoms);
-    particleType.download(p);
     integration.applyVelocityConstraints(integrator.getConstraintTolerance());
-    particleType.download(p);
     kernel2->setArg(9, randomSeed+cc.getStepCount());
     kernel2->setArg(10, (float) (BOLTZ*integrator.getTemperature()));
     setPeriodicBoxArgs(cc, kernel2, 11);
-    particleType.download(p);
     kernel2->execute(2*nb.getNumForceThreadBlocks()*blockSize, blockSize);
-    particleType.download(p);
     kernel3->execute(numAtoms);
-    particleType.download(p);
     integration.applyConstraints(integrator.getConstraintTolerance());
-    particleType.download(p);
     kernel4->execute(numAtoms);
-    particleType.download(p);
     integration.computeVirtualSites();
 
     // Update the time and step count.
@@ -3675,7 +3666,6 @@ void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegr
     // Reduce UI lag.
 
     flushPeriodically(cc);
-    particleType.download(p);
 }
 
 double CommonIntegrateDPDStepKernel::computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator) {
