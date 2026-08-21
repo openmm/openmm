@@ -743,7 +743,7 @@ jobs:
         shell: bash -l {0}
         run: |
           cd build
-          python ../devtools/run-ctest.py --parallel 4 --timeout 600 --job-duration 900 --attempts 3
+          python ../devtools/run-ctest.py --parallel 3 --timeout 600 --job-duration 900 --attempts 3
           test -f ${CONDA_PREFIX}/lib/libOpenMM.so
           if [[ ${{ matrix.OPENCL }} == true ]]; then
             test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMOpenCL.so
