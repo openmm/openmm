@@ -686,8 +686,10 @@ jobs:
           - name: Linux GPU OpenCL
             python-version: "3.13"
             env: ubuntu-arm
+            OPENCL: true
+            CUDA: false
             CMAKE_FLAGS: |
-              -DOPENMM_BUILD_CUDA_TESTS=OFF \
+              -DOPENMM_BUILD_CUDA_LIB=OFF \
               -DOPENMM_BUILD_CPU_LIB=OFF \
               -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
               -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
@@ -698,8 +700,10 @@ jobs:
           - name: Linux GPU CUDA
             python-version: "3.13"
             env: ubuntu-arm
+            OPENCL: false
+            CUDA: true
             CMAKE_FLAGS: |
-              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_CPU_LIB=OFF \
               -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
               -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
@@ -739,7 +743,11 @@ jobs:
         shell: bash -l {0}
         run: |
           cd build
-          python ../devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 900 --attempts 3
+          python ../devtools/run-ctest.py --parallel 4 --timeout 600 --job-duration 900 --attempts 3
           test -f ${CONDA_PREFIX}/lib/libOpenMM.so
-          test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCUDA.so
-          test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMOpenCL.so
+          if [[ ${{ matrix.OPENCL }} == true ]]; then
+            test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMOpenCL.so
+          fi
+          if [[ ${{ matrix.CUDA }} == true ]]; then
+            test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCUDA.so
+          fi
