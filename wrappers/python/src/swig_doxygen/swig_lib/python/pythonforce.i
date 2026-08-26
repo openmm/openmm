@@ -12,6 +12,8 @@ namespace OpenMM {
     class ComputationWrapper : public PythonForceComputation {
     public:
         ComputationWrapper(PyObject* computation) : computation(computation) {
+            if (!isNumpyAvailable())
+                throw OpenMMException("PythonForce: numpy is not available");
             Py_INCREF(computation);
         }
         ~ComputationWrapper() {
