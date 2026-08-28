@@ -709,6 +709,31 @@ void testDiscrete3DFunction() {
     }
 }
 
+void testParticleTypes() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* force = new CustomNonbondedForce("fn(type1)*fn(type2)");
+    force->addPerParticleParameter("type");
+    force->addParticle({0});
+    force->addParticle({1});
+    force->addTabulatedFunction("fn", new Discrete1DFunction({1.0, 2.0}));
+    system.addForce(force);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions = {Vec3(), Vec3(1.0, 0.0, 0.0)};
+    context.setPositions(positions);
+    State state = context.getState(State::Energy);
+    ASSERT_EQUAL(2.0, state.getPotentialEnergy());
+
+    // Try modifying the table.
+
+    dynamic_cast<Discrete1DFunction&>(force->getTabulatedFunction(0)).setFunctionParameters({3.0, 4.0});
+    force->updateParametersInContext(context);
+    state = context.getState(State::Energy);
+    ASSERT_EQUAL(12.0, state.getPotentialEnergy());
+}
+
 void testCoulombLennardJones() {
     const int numMolecules = 300;
     const int numParticles = numMolecules*2;
@@ -1576,6 +1601,7 @@ int main(int argc, char* argv[]) {
         testDiscrete1DFunction();
         testDiscrete2DFunction();
         testDiscrete3DFunction();
+        testParticleTypes();
         testCoulombLennardJones();
         testSwitchingFunction();
         testLongRangeCorrection();

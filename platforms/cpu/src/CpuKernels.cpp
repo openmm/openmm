@@ -1255,6 +1255,11 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
 }
 
 void CpuCalcCustomNonbondedForceKernel::createInteraction(const CustomNonbondedForce& force) {
+    parameterNames.clear();
+    globalParameterNames.clear();
+    computedValueNames.clear();
+    energyParamDerivNames.clear();
+
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
