@@ -3,6 +3,7 @@ from openmm import *
 from openmm.unit import *
 import numpy as np
 import copy
+import pickle
 
 def compute(state):
     """This is a computation function used by the test cases."""
@@ -194,6 +195,11 @@ class TestPythonForce(unittest.TestCase):
                 forces = context.getState(forces=True).getForces().value_in_unit(kilojoules_per_mole/nanometer)
                 self.assertEqual(Vec3(1,2,3), forces[0])
                 self.assertEqual(Vec3(4,5,6), forces[1])
+
+    def testGetPickledFunction(self):
+        """Test retrieving the bytes of the pickled callable."""
+        force = PythonForce(compute)
+        self.assertEqual(force.getPickledFunction(), pickle.dumps(compute))
 
 if __name__ == '__main__':
     unittest.main()

@@ -598,6 +598,11 @@ int Py_SequenceToVecVecVecDouble(PyObject* obj, std::vector<std::vector<std::vec
 }
 
 
+%typemap(out) const std::vector<char>& OpenMM::PythonForce::getPickledFunction{
+    $result = PyBytes_FromStringAndSize($1->data(), $1->size());
+}
+
+
 %typemap(in) std::string {
     // if we have a C++ method that takes in a std::string, we're most happy
     // to accept a python bytes object. But if the user passes in a unicode

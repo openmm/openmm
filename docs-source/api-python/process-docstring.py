@@ -82,6 +82,7 @@ def process_docstring(app, what, name, obj, options, lines):
 
 substitutions = {'double':'float', 'long long':'int', 'string':'str',
                  'pairii':'tuple[int, int]',
+                 'vectorc':'bytes',
                  'vectord':'tuple[float, ...]',
                  'vectorvectorvectord':'tuple[tuple[tuple[float, ...], ...], ...]',
                  'vectori':'tuple[int, ...]',
