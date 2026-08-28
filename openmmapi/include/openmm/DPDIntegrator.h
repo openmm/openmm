@@ -148,8 +148,8 @@ public:
      * for interactions between particles of two particular types.
      * 
      * @param pairIndex      the index of the type pair
-     * @param[out] type1     the index of the first particle type
-     * @param[out] type2     the index of the second particle type
+     * @param[out] type1     the first particle type
+     * @param[out] type2     the second particle type
      * @param[out] friction  the friction for interactions between particles of these two types
      * @param[out] cutoff    the cutoff distance for interactions between particles of these two types
      */
@@ -159,8 +159,8 @@ public:
      * for interactions between particles of two particular types.
      * 
      * @param pairIndex the index of the type pair
-     * @param type1     the index of the first particle type
-     * @param type2     the index of the second particle type
+     * @param type1     the first particle type
+     * @param type2     the second particle type
      * @param friction  the friction for interactions between particles of these two types
      * @param cutoff    the cutoff distance for interactions between particles of these two types
      */

@@ -227,10 +227,10 @@ void testTypePairs() {
         positions[i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
         if (i > 3) {
             positions[i][0] += 5.0;
-            integrator.setParticleType(i, 1);
+            integrator.setParticleType(i, 10);
         }
     }
-    integrator.addTypePair(1, 1, 0.0, 2.0);
+    integrator.addTypePair(10, 10, 0.0, 2.0);
     Context context(system, integrator, platform);
     context.setPositions(positions);
 

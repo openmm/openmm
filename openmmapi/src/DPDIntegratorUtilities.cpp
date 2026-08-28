@@ -59,9 +59,6 @@ void DPDIntegratorUtilities::createTypeTables(const DPDIntegrator& integrator, i
     cutoff.clear();
     friction.resize(numTypes, vector<double>(numTypes, integrator.getDefaultFriction()));
     cutoff.resize(numTypes, vector<double>(numTypes, integrator.getDefaultCutoff()));
-    map<int, int> inverseMap;
-    for (auto mapping : typeMap)
-        inverseMap[mapping.second] = mapping.first;
     maxCutoff = integrator.getDefaultCutoff();
     for (int i = 0; i < integrator.getNumTypePairs(); i++) {
         int t1, t2;
@@ -71,8 +68,10 @@ void DPDIntegratorUtilities::createTypeTables(const DPDIntegrator& integrator, i
             throw OpenMMException("DPDIntegrator: friction cannot be negative");
         if (c <= 0.0)
             throw OpenMMException("DPDIntegrator: cutoff must be positive");
-        int type1 = inverseMap[t1];
-        int type2 = inverseMap[t2];
+        if (typeMap.find(t1) == typeMap.end() || typeMap.find(t2) == typeMap.end())
+            continue;
+        int type1 = typeMap[t1];
+        int type2 = typeMap[t2];
         friction[type1][type2] = f;
         friction[type2][type1] = f;
         cutoff[type1][type2] = c;
