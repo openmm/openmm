@@ -169,6 +169,7 @@ void CommonIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegr
         forceKernel->addArg(noise);
         forceKernel->addArg(randomForce);
         forceKernel->addArg(cc.getVelm());
+        forceKernel->addArg(cc.getAtomIndexArray());
         forceKernel->addArg(thetad);
         forceKernel->addArg(cutoffFunction);
         forceKernel->addArg(particleType);
@@ -177,6 +178,7 @@ void CommonIntegrateQTBStepKernel::execute(ContextImpl& context, const QTBIntegr
         adapt1Kernel->addArg(numAtoms);
         adapt1Kernel->addArg(segmentLength);
         adapt1Kernel->addArg(cc.getVelm());
+        adapt1Kernel->addArg(cc.getAtomIndexArray());
         adapt1Kernel->addArg(particleType);
         adapt1Kernel->addArg(randomForce);
         adapt1Kernel->addArg(segmentVelocity);

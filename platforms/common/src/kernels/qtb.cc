@@ -127,7 +127,7 @@ DEVICE mixed2 multiplyComplexConj(mixed2 c1, mixed2 c2) {
  * Generate the random force for the next segment.
  */
 KERNEL void generateRandomForce(int numAtoms, int segmentLength, mixed dt, mixed friction, GLOBAL float* RESTRICT noise,
-        GLOBAL mixed* RESTRICT randomForce, GLOBAL mixed4* RESTRICT velm, GLOBAL mixed* RESTRICT thetad,
+        GLOBAL mixed* RESTRICT randomForce, GLOBAL mixed4* RESTRICT velm, GLOBAL const int* RESTRICT atomOrder, GLOBAL mixed* RESTRICT thetad,
         GLOBAL mixed* RESTRICT cutoffFunction, GLOBAL int* RESTRICT particleType, GLOBAL mixed* RESTRICT adaptedFriction,
         GLOBAL mixed2* RESTRICT workspace) {
     const int fftLength = 3*segmentLength;
@@ -140,11 +140,12 @@ KERNEL void generateRandomForce(int numAtoms, int segmentLength, mixed dt, mixed
     for (int i = GROUP_ID; i < 3*numAtoms; i += NUM_GROUPS) {
         int atom = i/3;
         int axis = i%3;
+        int atomIndex = atomOrder[atom];
         mixed invMass = velm[atom].w;
-        int type = particleType[atom];
+        int type = particleType[atomIndex];
         if (invMass != 0) {
             for (int j = LOCAL_ID; j < fftLength; j += LOCAL_SIZE)
-                data0[j] = make_mixed2(noise[i*fftLength+j], 0);
+                data0[j] = make_mixed2(noise[(3*atomIndex+axis)*fftLength+j], 0);
             SYNC_THREADS
             FFT_FORWARD
             for (int j = LOCAL_ID; j < numFreq; j += LOCAL_SIZE) {
@@ -160,7 +161,7 @@ KERNEL void generateRandomForce(int numAtoms, int segmentLength, mixed dt, mixed
             FFT_BACKWARD
             const mixed scale = SQRT(2*friction/(dt*invMass))/fftLength;
             for (int j = LOCAL_ID; j < segmentLength; j += LOCAL_SIZE)
-                randomForce[numAtoms*(3*j+axis)+atom] = scale*data0[segmentLength+j].x;
+                randomForce[numAtoms*(3*j+axis)+atomIndex] = scale*data0[segmentLength+j].x;
             SYNC_THREADS
         }
     }
@@ -170,7 +171,7 @@ KERNEL void generateRandomForce(int numAtoms, int segmentLength, mixed dt, mixed
  * Update the friction rates used for generating noise, part 1: compute the error in the
  * fluctuation dissipation theorem.
  */
-KERNEL void adaptFrictionPart1(int numAtoms, int segmentLength, GLOBAL const mixed4* RESTRICT velm, GLOBAL const int* RESTRICT particleType,
+KERNEL void adaptFrictionPart1(int numAtoms, int segmentLength, GLOBAL const mixed4* RESTRICT velm, GLOBAL const int* RESTRICT atomOrder, GLOBAL const int* RESTRICT particleType,
         GLOBAL const mixed* RESTRICT randomForce, GLOBAL const mixed* RESTRICT segmentVelocity, GLOBAL const mixed* RESTRICT adaptedFriction,
         GLOBAL mm_ulong* RESTRICT dfdt, GLOBAL mixed2* RESTRICT workspace) {
     const int fftLength = 3*segmentLength;
@@ -183,12 +184,13 @@ KERNEL void adaptFrictionPart1(int numAtoms, int segmentLength, GLOBAL const mix
     for (int i = GROUP_ID; i < 3*numAtoms; i += NUM_GROUPS) {
         int atom = i/3;
         int axis = i%3;
-        int type = particleType[atom];
+        int atomIndex = atomOrder[atom];
+        int type = particleType[atomIndex];
         mixed invMass = velm[atom].w;
         if (invMass != 0) {
             // Pack the velocities and forces together so we can transform both at once.
             for (int j = LOCAL_ID; j < segmentLength; j += LOCAL_SIZE)
-                data0[j] = make_mixed2(segmentVelocity[numAtoms*(3*j+axis)+atom], randomForce[numAtoms*(3*j+axis)+atom]);
+                data0[j] = make_mixed2(segmentVelocity[numAtoms*(3*j+axis)+atomIndex], randomForce[numAtoms*(3*j+axis)+atomIndex]);
             for (int j = segmentLength+LOCAL_ID; j < fftLength; j += LOCAL_SIZE)
                 data0[j] = make_mixed2(0);
             SYNC_THREADS
