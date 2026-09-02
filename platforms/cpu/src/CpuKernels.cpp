@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2013-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,6 +45,7 @@
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/internal/ConstantPotentialForceImpl.h"
 #include "openmm/internal/vectorize.h"
+#include "openmm/serialization/XmlSerializer.h"
 #include "lepton/CompiledExpression.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/Operation.h"
@@ -1232,7 +1233,7 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
     // Record information for the long range correction.
 
     if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection()) {
-        forceCopy = new CustomNonbondedForce(force);
+        forceCopy = XmlSerializer::clone(force);
         hasInitializedLongRangeCorrection = false;
     }
     else {
@@ -1385,7 +1386,8 @@ void CpuCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& con
         longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, data.threads.getNumThreads());
         CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
         hasInitializedLongRangeCorrection = true;
-        *forceCopy = force;
+        delete forceCopy;
+        forceCopy = XmlSerializer::clone(force);
     }
 
     // See if any tabulated functions have changed.

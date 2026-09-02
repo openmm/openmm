@@ -28,6 +28,7 @@
 #include "openmm/common/ExpressionUtilities.h"
 #include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/serialization/XmlSerializer.h"
 #include "CommonKernelSources.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/ExpressionTreeNode.h"
@@ -360,7 +361,7 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     // Record information for the long range correction.
 
     if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection() && cc.getContextIndex() == 0) {
-        forceCopy = new CustomNonbondedForce(force);
+        forceCopy = XmlSerializer::clone(force);
         longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
         cc.addPostComputation(new LongRangePostComputation(cc, longRangeCoefficient, longRangeCoefficientDerivs, forceCopy));
         hasInitializedLongRangeCorrection = false;
@@ -755,7 +756,8 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
     if (forceCopy != NULL) {
         longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
         hasInitializedLongRangeCorrection = false;
-        *forceCopy = force;
+        delete forceCopy;
+        forceCopy = XmlSerializer::clone(force);
         longRangeCoefficientCache.clear();
         longRangeCoefficientDerivsCache.clear();
     }
