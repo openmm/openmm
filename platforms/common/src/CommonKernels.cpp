@@ -4867,7 +4867,9 @@ void CommonCalcPythonForceKernel::initialize(const ContextImpl& context, const P
         addForcesKernel->addArg(cc.getAtomIndexArray());
     }
     forceGroupFlag = (1<<force.getForceGroup());
-    useWorkerThread = (cc.getNumContexts() == 1);
+    // Disable the worker thread until we figure out what is causing incompatibilities with PyTorch.
+//    useWorkerThread = (cc.getNumContexts() == 1);
+    useWorkerThread = false;
     for (const ForceImpl* impl : context.getForceImpls())
         if (&impl->getOwner() != &force && (dynamic_cast<const CustomCPPForceImpl*>(impl) != NULL || dynamic_cast<const PythonForceImpl*>(impl) != NULL))
             useWorkerThread = false;
