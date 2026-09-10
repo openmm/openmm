@@ -20,6 +20,9 @@ which lists various items that need to be included before the feature can be mer
 tests, serialization, support for all APIs, etc.).  Not every item is necessarily applicable to
 every new feature, but usually at least some of them are.
 
+Be sure to read our [AI Policy](AI_POLICY.md), which describes requirements and guidelines for
+use of artificial intelligence in OpenMM development.
+
 The core developers will review the pull request and may suggest changes.  Simply push the
 changes to the branch that is being pulled from, and they will automatically be added to the
 pull request.  In addition, the full test suite is automatically run on every pull request,

@@ -14,3 +14,5 @@ To write a useful bug report, please include as much detail as possible. Describ
 - The platform (CUDA, OpenCL, etc.) you are using.
 - Any other software (Python libraries, setup tools, etc.) you are using along with OpenMM to implement your workflow.
 - The output of the command `python -m openmm.testInstallation`.  It reports details about your installation and checks for some basic problems.
+
+Be sure to read our [AI Policy](https://github.com/openmm/openmm/blob/master/AI_POLICY.md), which describes requirements and guidelines for use of artificial intelligence in OpenMM development.
