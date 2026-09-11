@@ -763,7 +763,7 @@ double OpenCLContext::reduceEnergy() {
         workGroupSize = 512;
     reduceEnergyKernel->setArg(0, energyBuffer);
     reduceEnergyKernel->setArg(1, energySum);
-    reduceEnergyKernel->setArg(2, energyBuffer.getSize());
+    reduceEnergyKernel->setArg(2, (int) energyBuffer.getSize());
     reduceEnergyKernel->setArg(3, workGroupSize);
     reduceEnergyKernel->execute(workGroupSize*energySum.getSize(), workGroupSize);
     energySum.download(pinnedMemory);

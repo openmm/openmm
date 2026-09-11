@@ -77,7 +77,7 @@ void ComputeContext::initializeKernels() {
         clearBufferKernel->addArg();
     clearTwoBuffersKernel = program->createKernel("clearTwoBuffers");
     for (int i = 0; i < 4; i++)
-        clearBufferKernel->addArg();
+        clearTwoBuffersKernel->addArg();
     clearThreeBuffersKernel = program->createKernel("clearThreeBuffers");
     for (int i = 0; i < 6; i++)
         clearThreeBuffersKernel->addArg();
