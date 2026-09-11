@@ -232,11 +232,15 @@ public:
     /**
      * Get whether double precision is being used.
      */
-    virtual bool getUseDoublePrecision() const = 0;
+    bool getUseDoublePrecision() const {
+        return useDoublePrecision;
+    }
     /**
      * Get whether mixed precision is being used.
      */
-    virtual bool getUseMixedPrecision() const = 0;
+    bool getUseMixedPrecision() const {
+        return useMixedPrecision;
+    }
     /**
      * Get the current simulation time.
      */
@@ -373,11 +377,15 @@ public:
     /**
      * Get the number of blocks of TileSize atoms.
      */
-    virtual int getNumAtomBlocks() const = 0;
+    int getNumAtomBlocks() const {
+        return numAtomBlocks;
+    }
     /**
      * Get the standard number of thread blocks to use when executing kernels.
      */
-    virtual int getNumThreadBlocks() const = 0;
+    int getNumThreadBlocks() const {
+        return numThreadBlocks;
+    }
     /**
      * Get the maximum number of threads in a thread block supported by this device.
      */
@@ -495,7 +503,9 @@ public:
     /**
      * Get whether the periodic box is triclinic.
      */
-    virtual bool getBoxIsTriclinic() const = 0;
+    bool getBoxIsTriclinic() const {
+        return boxIsTriclinic;
+    }
     /**
      * Get the vectors defining the periodic box.
      */
@@ -558,7 +568,7 @@ public:
      * Request to use the fourth element of the posq array for storing charges.  Since only one force can
      * do that, this returns true the first time it is called, and false on all subsequent calls.
      */
-    virtual bool requestPosqCharges() = 0;
+    bool requestPosqCharges();
     /**
      * Get the thread used by this context for executing parallel computations.
      */
@@ -568,12 +578,16 @@ public:
     /**
      * Get the names of all parameters with respect to which energy derivatives are computed.
      */
-    virtual const std::vector<std::string>& getEnergyParamDerivNames() const = 0;
+    const std::vector<std::string>& getEnergyParamDerivNames() const {
+        return energyParamDerivNames;
+    }
     /**
      * Get a workspace data structure used for accumulating the values of derivatives of the energy
      * with respect to parameters.
      */
-    virtual std::map<std::string, double>& getEnergyParamDerivWorkspace() = 0;
+    std::map<std::string, double>& getEnergyParamDerivWorkspace() {
+        return energyParamDerivWorkspace;
+    }
     /**
      * Register that the derivative of potential energy with respect to a context parameter
      * will need to be calculated.  If this is called multiple times for a single parameter,
@@ -581,7 +595,7 @@ public:
      * 
      * @param param    the name of the parameter to add
      */
-    virtual void addEnergyParameterDerivative(const std::string& param) = 0;
+    void addEnergyParameterDerivative(const std::string& param);
     /**
      * Mark that the current molecule definitions (and hence the atom order) may be invalid.
      * This should be called whenever force field parameters change.  It will cause the definitions
@@ -647,7 +661,9 @@ protected:
     const System& system;
     double time;
     int numAtoms, paddedNumAtoms, computeForceCount, stepsSinceReorder;
+    int numAtomBlocks, numThreadBlocks;
     long long stepCount;
+    bool useDoublePrecision, useMixedPrecision, boxIsTriclinic, hasAssignedPosqCharges;
     bool forceNextReorder, atomsWereReordered, forcesValid, hasInitializedGlobals;
     ComputeQueue defaultQueue, currentQueue;
     ComputeKernel clearBufferKernel, clearTwoBuffersKernel, clearThreeBuffersKernel;
@@ -668,6 +684,8 @@ protected:
     std::vector<ForcePostComputation*> postComputations;
     std::vector<std::string> globalParamNames;
     std::vector<double> lastGlobalParamValues;
+    std::vector<std::string> energyParamDerivNames;
+    std::map<std::string, double> energyParamDerivWorkspace;
     WorkThread* workThread;
 };
 

@@ -44,7 +44,7 @@ const int ComputeContext::ThreadBlockSize = 64;
 const int ComputeContext::TileSize = 32;
 
 ComputeContext::ComputeContext(const System& system) : system(system), time(0.0), stepCount(0), computeForceCount(0), stepsSinceReorder(99999),
-        forceNextReorder(false), atomsWereReordered(false), forcesValid(false), hasInitializedGlobals(false) {
+        forceNextReorder(false), atomsWereReordered(false), forcesValid(false), hasInitializedGlobals(false), hasAssignedPosqCharges(false) {
     workThread = new WorkThread();
 }
 
@@ -273,6 +273,21 @@ void ComputeContext::setCharges(const vector<double>& charges) {
     chargeBuffer.upload(c, true);
     setChargesKernel->setArg(0, chargeBuffer);
     setChargesKernel->execute(numAtoms);
+}
+
+bool ComputeContext::requestPosqCharges() {
+    bool allow = !hasAssignedPosqCharges;
+    hasAssignedPosqCharges = true;
+    return allow;
+}
+
+void ComputeContext::addEnergyParameterDerivative(const string& param) {
+    // See if this parameter has already been registered.
+    
+    for (int i = 0; i < energyParamDerivNames.size(); i++)
+        if (param == energyParamDerivNames[i])
+            return;
+    energyParamDerivNames.push_back(param);
 }
 
 /**

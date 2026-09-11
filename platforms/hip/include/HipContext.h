@@ -390,18 +390,6 @@ public:
      */
     double reduceEnergy();
     /**
-     * Get the number of blocks of TileSize atoms.
-     */
-    int getNumAtomBlocks() const {
-        return numAtomBlocks;
-    }
-    /**
-     * Get the standard number of thread blocks to use when executing kernels.
-     */
-    int getNumThreadBlocks() const {
-        return numThreadBlocks;
-    }
-    /**
      * Get the maximum number of threads in a thread block supported by this device.
      */
     int getMaxThreadBlockSize() const {
@@ -444,24 +432,6 @@ public:
      */
     bool getSupportsDoublePrecision() const {
         return true;
-    }
-    /**
-     * Get whether double precision is being used.
-     */
-    bool getUseDoublePrecision() const {
-        return useDoublePrecision;
-    }
-    /**
-     * Get whether mixed precision is being used.
-     */
-    bool getUseMixedPrecision() const {
-        return useMixedPrecision;
-    }
-    /**
-     * Get whether the periodic box is triclinic.
-     */
-    bool getBoxIsTriclinic() const {
-        return boxIsTriclinic;
     }
     /**
      * Convert a HIP result code to the corresponding string description.
@@ -580,32 +550,6 @@ public:
      */
     void setCharges(const std::vector<double>& charges);
     /**
-     * Request to use the fourth element of the posq array for storing charges.  Since only one force can
-     * do that, this returns true the first time it is called, and false on all subsequent calls.
-     */
-    bool requestPosqCharges();
-    /**
-     * Get the names of all parameters with respect to which energy derivatives are computed.
-     */
-    const std::vector<std::string>& getEnergyParamDerivNames() const {
-        return energyParamDerivNames;
-    }
-    /**
-     * Get a workspace data structure used for accumulating the values of derivatives of the energy
-     * with respect to parameters.
-     */
-    std::map<std::string, double>& getEnergyParamDerivWorkspace() {
-        return energyParamDerivWorkspace;
-    }
-    /**
-     * Register that the derivative of potential energy with respect to a context parameter
-     * will need to be calculated.  If this is called multiple times for a single parameter,
-     * it is only added to the list once.
-     *
-     * @param param    the name of the parameter to add
-     */
-    void addEnergyParameterDerivative(const std::string& param);
-    /**
      * Wait until all work that has been queued (kernel executions, asynchronous data transfers, etc.)
      * has been submitted to the device.  This does not mean it has necessarily been completed.
      * Calling this periodically may improve the responsiveness of the computer's GUI, but at the
@@ -630,14 +574,12 @@ private:
     HipPlatform::PlatformData& platformData;
     int deviceIndex;
     int contextIndex;
-    int numAtomBlocks;
-    int numThreadBlocks;
     int simdWidth;
     int multiprocessors;
     int sharedMemPerBlock;
     bool supportsHardwareFloatGlobalAtomicAdd;
     unsigned int hostMallocFlags;
-    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, boxIsTriclinic, hasAssignedPosqCharges;
+    bool useBlockingSync, contextIsValid;
     bool isLinkedContext;
     std::string tempDir, cacheDir, gpuArchitecture;
     float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
@@ -663,8 +605,6 @@ private:
     HipArray energyParamDerivBuffer;
     HipArray atomIndexDevice;
     HipArray chargeBuffer;
-    std::vector<std::string> energyParamDerivNames;
-    std::map<std::string, double> energyParamDerivWorkspace;
     std::vector<hipDeviceptr_t> autoclearBuffers;
     std::vector<int> autoclearBufferSizes;
     HipIntegrationUtilities* integration;

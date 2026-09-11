@@ -86,7 +86,7 @@ bool HipContext::hasInitializedHip = false;
 
 
 HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& tempDir, HipPlatform::PlatformData& platformData,
-        HipContext* originalContext) : ComputeContext(system), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
+        HipContext* originalContext) : ComputeContext(system), platformData(platformData), contextIsValid(false),
         pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL),
         useBlockingSync(useBlockingSync), supportsHardwareFloatGlobalAtomicAdd(false) {
     if (!hasInitializedHip) {
@@ -878,21 +878,6 @@ void HipContext::setCharges(const vector<double>& charges) {
     chargeBuffer.upload(c, true);
     void* args[] = {&chargeBuffer.getDevicePointer(), &posq.getDevicePointer(), &atomIndexDevice.getDevicePointer(), &numAtoms};
     executeKernel(setChargesKernel, args, numAtoms);
-}
-
-bool HipContext::requestPosqCharges() {
-    bool allow = !hasAssignedPosqCharges;
-    hasAssignedPosqCharges = true;
-    return allow;
-}
-
-void HipContext::addEnergyParameterDerivative(const string& param) {
-    // See if this parameter has already been registered.
-
-    for (int i = 0; i < energyParamDerivNames.size(); i++)
-        if (param == energyParamDerivNames[i])
-            return;
-    energyParamDerivNames.push_back(param);
 }
 
 void HipContext::flushQueue() {

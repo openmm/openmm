@@ -84,7 +84,7 @@ const int CudaContext::TileSize = sizeof(tileflags)*8;
 bool CudaContext::hasInitializedCuda = false;
 
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& tempDir, CudaPlatform::PlatformData& platformData,
-        CudaContext* originalContext) : ComputeContext(system), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
+        CudaContext* originalContext) : ComputeContext(system), platformData(platformData), contextIsValid(false),
         pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), useBlockingSync(useBlockingSync) {
     int cudaDriverVersion;
     cuDriverGetVersion(&cudaDriverVersion);
@@ -723,21 +723,6 @@ double CudaContext::reduceEnergy() {
             result += ((float*) pinnedBuffer)[i];
     }
     return result;
-}
-
-bool CudaContext::requestPosqCharges() {
-    bool allow = !hasAssignedPosqCharges;
-    hasAssignedPosqCharges = true;
-    return allow;
-}
-
-void CudaContext::addEnergyParameterDerivative(const string& param) {
-    // See if this parameter has already been registered.
-    
-    for (int i = 0; i < energyParamDerivNames.size(); i++)
-        if (param == energyParamDerivNames[i])
-            return;
-    energyParamDerivNames.push_back(param);
 }
 
 void CudaContext::flushQueue() {

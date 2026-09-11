@@ -84,7 +84,7 @@ static bool isSupported(cl::Platform platform) {
 }
 
 OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData, OpenCLContext* originalContext) :
-        ComputeContext(system), platformData(platformData), numForceBuffers(0), hasAssignedPosqCharges(false), profileStartTime(0),
+        ComputeContext(system), platformData(platformData), numForceBuffers(0), profileStartTime(0),
         integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), pinnedBuffer(NULL) {
     if (precision == "single") {
         useDoublePrecision = false;
@@ -777,21 +777,6 @@ double OpenCLContext::reduceEnergy() {
             result += ((float*) pinnedMemory)[i];
     }
     return result;
-}
-
-bool OpenCLContext::requestPosqCharges() {
-    bool allow = !hasAssignedPosqCharges;
-    hasAssignedPosqCharges = true;
-    return allow;
-}
-
-void OpenCLContext::addEnergyParameterDerivative(const string& param) {
-    // See if this parameter has already been registered.
-    
-    for (int i = 0; i < energyParamDerivNames.size(); i++)
-        if (param == energyParamDerivNames[i])
-            return;
-    energyParamDerivNames.push_back(param);
 }
 
 void OpenCLContext::flushQueue() {
