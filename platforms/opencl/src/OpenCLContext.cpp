@@ -318,8 +318,6 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
         numThreadBlocks = numThreadBlocksPerComputeUnit*device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
         if (useDoublePrecision) {
-            posq.initialize<mm_double4>(*this, paddedNumAtoms, "posq");
-            velm.initialize<mm_double4>(*this, paddedNumAtoms, "velm");
             compilationDefines["USE_DOUBLE_PRECISION"] = "1";
             compilationDefines["convert_real4"] = "convert_double4";
             compilationDefines["make_real2"] = "make_double2";
@@ -331,9 +329,6 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             compilationDefines["make_mixed4"] = "make_double4";
         }
         else if (useMixedPrecision) {
-            posq.initialize<mm_float4>(*this, paddedNumAtoms, "posq");
-            posqCorrection.initialize<mm_float4>(*this, paddedNumAtoms, "posq");
-            velm.initialize<mm_double4>(*this, paddedNumAtoms, "velm");
             compilationDefines["USE_MIXED_PRECISION"] = "1";
             compilationDefines["convert_real4"] = "convert_float4";
             compilationDefines["make_real2"] = "make_float2";
@@ -345,8 +340,6 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             compilationDefines["make_mixed4"] = "make_double4";
         }
         else {
-            posq.initialize<mm_float4>(*this, paddedNumAtoms, "posq");
-            velm.initialize<mm_float4>(*this, paddedNumAtoms, "velm");
             compilationDefines["convert_real4"] = "convert_float4";
             compilationDefines["make_real2"] = "make_float2";
             compilationDefines["make_real3"] = "make_float3";
@@ -356,13 +349,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             compilationDefines["make_mixed3"] = "make_float3";
             compilationDefines["make_mixed4"] = "make_float4";
         }
-        longForceBuffer.initialize<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer");
         posCellOffsets.resize(paddedNumAtoms, mm_int4(0, 0, 0, 0));
-        atomIndexDevice.initialize<cl_int>(*this, paddedNumAtoms, "atomIndexDevice");
-        atomIndex.resize(paddedNumAtoms);
-        for (int i = 0; i < paddedNumAtoms; ++i)
-            atomIndex[i] = i;
-        atomIndexDevice.upload(atomIndex);
     }
     catch (cl::Error err) {
         std::stringstream str;
@@ -373,16 +360,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     // Create utility kernels that are used in multiple places.
 
     cl::Program utilities = createProgram(OpenCLKernelSources::utilities);
-    clearBufferKernel = cl::Kernel(utilities, "clearBuffer");
-    clearTwoBuffersKernel = cl::Kernel(utilities, "clearTwoBuffers");
-    clearThreeBuffersKernel = cl::Kernel(utilities, "clearThreeBuffers");
-    clearFourBuffersKernel = cl::Kernel(utilities, "clearFourBuffers");
-    clearFiveBuffersKernel = cl::Kernel(utilities, "clearFiveBuffers");
-    clearSixBuffersKernel = cl::Kernel(utilities, "clearSixBuffers");
     reduceReal4Kernel = cl::Kernel(utilities, "reduceReal4Buffer");
     reduceForcesKernel = cl::Kernel(utilities, "reduceForces");
-    reduceEnergyKernel = cl::Kernel(utilities, "reduceEnergy");
-    setChargesKernel = cl::Kernel(utilities, "setCharges");
 
     // Decide whether native_sqrt(), native_rsqrt(), and native_recip() are sufficiently accurate to use.
 
@@ -485,6 +464,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             "pos.y -= floor((pos.y-center.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y; \\\n"
             "pos.z -= floor((pos.z-center.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;}";
     }
+    initializeKernels();
 
     // Create utilities objects.
 
@@ -543,7 +523,7 @@ void OpenCLContext::initialize() {
         energyBuffer.initialize<cl_float>(*this, energyBufferSize, "energyBuffer");
         energySum.initialize<cl_float>(*this, numComputeUnits, "energySum");
     }
-    reduceForcesKernel.setArg<cl::Buffer>(0, longForceBuffer.getDeviceBuffer());
+    reduceForcesKernel.setArg<cl::Buffer>(0, unwrap(longForceBuffer).getDeviceBuffer());
     reduceForcesKernel.setArg<cl::Buffer>(1, forceBuffers.getDeviceBuffer());
     reduceForcesKernel.setArg<cl_int>(2, paddedNumAtoms);
     reduceForcesKernel.setArg<cl_int>(3, numForceBuffers);
@@ -764,90 +744,6 @@ int OpenCLContext::computeThreadBlockSize(double memory) const {
     return threads;
 }
 
-void OpenCLContext::clearBuffer(ArrayInterface& array) {
-    clearBuffer(unwrap(array).getDeviceBuffer(), array.getSize()*array.getElementSize());
-}
-
-void OpenCLContext::clearBuffer(cl::Memory& memory, int size) {
-    int words = size/4;
-    clearBufferKernel.setArg<cl::Memory>(0, memory);
-    clearBufferKernel.setArg<cl_int>(1, words);
-    executeKernel(clearBufferKernel, words, 128);
-}
-
-void OpenCLContext::addAutoclearBuffer(ArrayInterface& array) {
-    addAutoclearBuffer(unwrap(array).getDeviceBuffer(), array.getSize()*array.getElementSize());
-}
-
-void OpenCLContext::addAutoclearBuffer(cl::Memory& memory, int size) {
-    autoclearBuffers.push_back(&memory);
-    autoclearBufferSizes.push_back(size/4);
-}
-
-void OpenCLContext::clearAutoclearBuffers() {
-    int base = 0;
-    int total = autoclearBufferSizes.size();
-    while (total-base >= 6) {
-        clearSixBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
-        clearSixBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
-        clearSixBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
-        clearSixBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
-        clearSixBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
-        clearSixBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
-        clearSixBuffersKernel.setArg<cl::Memory>(6, *autoclearBuffers[base+3]);
-        clearSixBuffersKernel.setArg<cl_int>(7, autoclearBufferSizes[base+3]);
-        clearSixBuffersKernel.setArg<cl::Memory>(8, *autoclearBuffers[base+4]);
-        clearSixBuffersKernel.setArg<cl_int>(9, autoclearBufferSizes[base+4]);
-        clearSixBuffersKernel.setArg<cl::Memory>(10, *autoclearBuffers[base+5]);
-        clearSixBuffersKernel.setArg<cl_int>(11, autoclearBufferSizes[base+5]);
-        executeKernel(clearSixBuffersKernel, max(max(max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), autoclearBufferSizes[base+4]), autoclearBufferSizes[base+5]), 128);
-        base += 6;
-    }
-    if (total-base == 5) {
-        clearFiveBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
-        clearFiveBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
-        clearFiveBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
-        clearFiveBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
-        clearFiveBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
-        clearFiveBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
-        clearFiveBuffersKernel.setArg<cl::Memory>(6, *autoclearBuffers[base+3]);
-        clearFiveBuffersKernel.setArg<cl_int>(7, autoclearBufferSizes[base+3]);
-        clearFiveBuffersKernel.setArg<cl::Memory>(8, *autoclearBuffers[base+4]);
-        clearFiveBuffersKernel.setArg<cl_int>(9, autoclearBufferSizes[base+4]);
-        executeKernel(clearFiveBuffersKernel, max(max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), autoclearBufferSizes[base+4]), 128);
-    }
-    else if (total-base == 4) {
-        clearFourBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
-        clearFourBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
-        clearFourBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
-        clearFourBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
-        clearFourBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
-        clearFourBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
-        clearFourBuffersKernel.setArg<cl::Memory>(6, *autoclearBuffers[base+3]);
-        clearFourBuffersKernel.setArg<cl_int>(7, autoclearBufferSizes[base+3]);
-        executeKernel(clearFourBuffersKernel, max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), 128);
-    }
-    else if (total-base == 3) {
-        clearThreeBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
-        clearThreeBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
-        clearThreeBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
-        clearThreeBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
-        clearThreeBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
-        clearThreeBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
-        executeKernel(clearThreeBuffersKernel, max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), 128);
-    }
-    else if (total-base == 2) {
-        clearTwoBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
-        clearTwoBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
-        clearTwoBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
-        clearTwoBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
-        executeKernel(clearTwoBuffersKernel, max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), 128);
-    }
-    else if (total-base == 1) {
-        clearBuffer(*autoclearBuffers[base], autoclearBufferSizes[base]*4);
-    }
-}
-
 void OpenCLContext::reduceForces() {
     executeKernel(reduceForcesKernel, paddedNumAtoms, 128);
 }
@@ -865,12 +761,11 @@ double OpenCLContext::reduceEnergy() {
     int workGroupSize  = device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
     if (workGroupSize > 512)
         workGroupSize = 512;
-    reduceEnergyKernel.setArg<cl::Buffer>(0, energyBuffer.getDeviceBuffer());
-    reduceEnergyKernel.setArg<cl::Buffer>(1, energySum.getDeviceBuffer());
-    reduceEnergyKernel.setArg<cl_int>(2, energyBuffer.getSize());
-    reduceEnergyKernel.setArg<cl_int>(3, workGroupSize);
-    reduceEnergyKernel.setArg(4, workGroupSize*energyBuffer.getElementSize(), NULL);
-    executeKernel(reduceEnergyKernel, workGroupSize*energySum.getSize(), workGroupSize);
+    reduceEnergyKernel->setArg(0, energyBuffer);
+    reduceEnergyKernel->setArg(1, energySum);
+    reduceEnergyKernel->setArg(2, energyBuffer.getSize());
+    reduceEnergyKernel->setArg(3, workGroupSize);
+    reduceEnergyKernel->execute(workGroupSize*energySum.getSize(), workGroupSize);
     energySum.download(pinnedMemory);
     double result = 0;
     if (getUseDoublePrecision() || getUseMixedPrecision()) {
@@ -882,20 +777,6 @@ double OpenCLContext::reduceEnergy() {
             result += ((float*) pinnedMemory)[i];
     }
     return result;
-}
-
-void OpenCLContext::setCharges(const vector<double>& charges) {
-    if (!chargeBuffer.isInitialized())
-        chargeBuffer.initialize(*this, numAtoms, useDoublePrecision ? sizeof(double) : sizeof(float), "chargeBuffer");
-    vector<double> c(numAtoms);
-    for (int i = 0; i < numAtoms; i++)
-        c[i] = charges[i];
-    chargeBuffer.upload(c, true);
-    setChargesKernel.setArg<cl::Buffer>(0, chargeBuffer.getDeviceBuffer());
-    setChargesKernel.setArg<cl::Buffer>(1, posq.getDeviceBuffer());
-    setChargesKernel.setArg<cl::Buffer>(2, atomIndexDevice.getDeviceBuffer());
-    setChargesKernel.setArg<cl_int>(3, numAtoms);
-    executeKernel(setChargesKernel, numAtoms);
 }
 
 bool OpenCLContext::requestPosqCharges() {

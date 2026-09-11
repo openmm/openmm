@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2019-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2019-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -203,11 +203,15 @@ public:
     /**
      * Set all elements of an array to 0.
      */
-    virtual void clearBuffer(ArrayInterface& array) = 0;
+    void clearBuffer(ArrayInterface& array);
     /**
-     * Register an array that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
+     * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
      */
-    virtual void addAutoclearBuffer(ArrayInterface& array) = 0;
+    void addAutoclearBuffer(ArrayInterface& array);
+    /**
+     * Clear all buffers that have been registered with addAutoclearBuffer().
+     */
+    void clearAutoclearBuffers();
     /**
      * Get whether the device being used is a CPU.  In some cases, different algorithms
      * may be more efficient on CPUs and GPUs.
@@ -381,15 +385,21 @@ public:
     /**
      * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
      */
-    virtual ArrayInterface& getPosq() = 0;
+    ArrayInterface& getPosq() {
+        return posq;
+    }
     /**
      * Get the array which contains a correction to the position of each atom.  This only exists if getUseMixedPrecision() returns true.
      */
-    virtual ArrayInterface& getPosqCorrection() = 0;
+    ArrayInterface& getPosqCorrection() {
+        return posqCorrection;
+    }
     /**
      * Get the array which contains the velocity (the xyz components) and inverse mass (the w component) of each atom.
      */
-    virtual ArrayInterface& getVelm() = 0;
+    ArrayInterface& getVelm() {
+        return velm;
+    }
     /**
      * On devices that do not support 64 bit atomics, this returns an array containing buffers of type real4 in which
      * forces can be accumulated.  On platforms that do not use floating point force buffers, this will throw an exception.
@@ -403,15 +413,21 @@ public:
     /**
      * Get the array which contains a contribution to each force represented as 64 bit fixed point.
      */
-    virtual ArrayInterface& getLongForceBuffer() = 0;
+    ArrayInterface& getLongForceBuffer() {
+        return longForceBuffer;
+    }
     /**
      * Get the array which contains the buffer in which energy is computed.
      */
-    virtual ArrayInterface& getEnergyBuffer() = 0;
+    ArrayInterface& getEnergyBuffer() {
+        return energyBuffer;
+    }
     /**
      * Get the array which contains the buffer in which derivatives of the energy with respect to parameters are computed.
      */
-    virtual ArrayInterface& getEnergyParamDerivBuffer() = 0;
+    ArrayInterface& getEnergyParamDerivBuffer() {
+        return energyParamDerivBuffer;
+    }
     /**
      * Get a pointer to a block of pinned memory that can be used for asynchronous transfers between host and device.
      * This is guaranteed to be at least as large as any of the arrays returned by methods of this class.
@@ -442,7 +458,9 @@ public:
     /**
      * Get the array which contains the index of each atom.
      */
-    virtual ArrayInterface& getAtomIndexArray() = 0;
+    ArrayInterface& getAtomIndexArray() {
+        return atomIndexDevice;
+    }
     /**
      * Get the number of cells by which the positions are offset.
      */
@@ -535,7 +553,7 @@ public:
     /**
      * Set the particle charges.  These are packed into the fourth element of the posq array.
      */
-    virtual void setCharges(const std::vector<double>& charges) = 0;
+    void setCharges(const std::vector<double>& charges);
     /**
      * Request to use the fourth element of the posq array for storing charges.  Since only one force can
      * do that, this returns true the first time it is called, and false on all subsequent calls.
@@ -618,6 +636,10 @@ protected:
     void findMoleculeGroups();
     void resetAtomOrder();
     /**
+     * Subclasses should invoke this from their constructors to initialize common kernels.
+     */
+    void initializeKernels();
+    /**
      * This is the internal implementation of reorderAtoms(), templatized by the numerical precision in use.
      */
     template <class Real, class Real4, class Mixed, class Mixed4>
@@ -628,6 +650,14 @@ protected:
     long long stepCount;
     bool forceNextReorder, atomsWereReordered, forcesValid, hasInitializedGlobals;
     ComputeQueue defaultQueue, currentQueue;
+    ComputeKernel clearBufferKernel, clearTwoBuffersKernel, clearThreeBuffersKernel;
+    ComputeKernel clearFourBuffersKernel, clearFiveBuffersKernel, clearSixBuffersKernel;
+    ComputeKernel reduceEnergyKernel, setChargesKernel;
+    ComputeArray posq, posqCorrection, velm;
+    ComputeArray longForceBuffer, atomIndexDevice;
+    ComputeArray energyBuffer, energySum, energyParamDerivBuffer;
+    ComputeArray chargeBuffer, globalParamValues;
+    std::vector<ArrayInterface*> autoclearBuffers;
     std::vector<ComputeForceInfo*> forces;
     std::vector<Molecule> molecules;
     std::vector<MoleculeGroup> moleculeGroups;
@@ -638,7 +668,6 @@ protected:
     std::vector<ForcePostComputation*> postComputations;
     std::vector<std::string> globalParamNames;
     std::vector<double> lastGlobalParamValues;
-    ComputeArray globalParamValues;
     WorkThread* workThread;
 };
 

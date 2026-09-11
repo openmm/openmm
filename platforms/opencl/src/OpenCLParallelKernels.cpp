@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2011-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -38,7 +38,7 @@ public:
         // Copy coordinates over to this device and execute the kernel.
 
         if (cl.getContextIndex() > 0)
-            cl.getQueue().enqueueWriteBuffer(cl.getPosq().getDeviceBuffer(), CL_FALSE, 0, cl.getPaddedNumAtoms()*cl.getPosq().getElementSize(), pinnedMemory);
+            cl.getQueue().enqueueWriteBuffer(cl.unwrap(cl.getPosq()).getDeviceBuffer(), CL_FALSE, 0, cl.getPaddedNumAtoms()*cl.getPosq().getElementSize(), pinnedMemory);
         kernel.beginComputation(context, includeForce, includeEnergy, groups);
         if (cl.getNonbondedUtilities().getUsePeriodic())
             cl.getNonbondedUtilities().getInteractionCount().download(&numTiles, false);
@@ -132,7 +132,7 @@ void OpenCLParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& cont
 
     // Copy coordinates over to each device and execute the kernel.
     
-    cl0.getQueue().enqueueReadBuffer(cl0.getPosq().getDeviceBuffer(), CL_TRUE, 0, cl0.getPaddedNumAtoms()*elementSize, pinnedPositionMemory);
+    cl0.getQueue().enqueueReadBuffer(cl0.unwrap(cl0.getPosq()).getDeviceBuffer(), CL_TRUE, 0, cl0.getPaddedNumAtoms()*elementSize, pinnedPositionMemory);
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         data.contextEnergy[i] = 0.0;
         OpenCLContext& cl = *data.contexts[i];
@@ -159,7 +159,7 @@ double OpenCLParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& c
         int elementSize = (cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
         cl.getQueue().enqueueWriteBuffer(contextForces.getDeviceBuffer(), CL_FALSE, numAtoms*elementSize,
                 numAtoms*(data.contexts.size()-1)*elementSize, pinnedForceMemory);
-        cl.reduceBuffer(contextForces, cl.getLongForceBuffer(), data.contexts.size());
+        cl.reduceBuffer(contextForces, cl.unwrap(cl.getLongForceBuffer()), data.contexts.size());
         
         // Balance work between the contexts by transferring a little nonbonded work from the context that
         // finished last to the one that finished first.
