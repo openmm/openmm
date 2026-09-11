@@ -225,8 +225,6 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
     if (simdWidth == 32)
         compilationDefines["AMD_RDNA"] = "1";
     if (useDoublePrecision) {
-        posq.initialize<double4>(*this, paddedNumAtoms, "posq");
-        velm.initialize<double4>(*this, paddedNumAtoms, "velm");
         compilationDefines["USE_DOUBLE_PRECISION"] = "1";
         compilationDefines["make_real2"] = "make_double2";
         compilationDefines["make_real3"] = "make_double3";
@@ -236,9 +234,6 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
         compilationDefines["make_mixed4"] = "make_double4";
     }
     else if (useMixedPrecision) {
-        posq.initialize<float4>(*this, paddedNumAtoms, "posq");
-        posqCorrection.initialize<float4>(*this, paddedNumAtoms, "posqCorrection");
-        velm.initialize<double4>(*this, paddedNumAtoms, "velm");
         compilationDefines["USE_MIXED_PRECISION"] = "1";
         compilationDefines["make_real2"] = "make_float2";
         compilationDefines["make_real3"] = "make_float3";
@@ -248,8 +243,6 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
         compilationDefines["make_mixed4"] = "make_double4";
     }
     else {
-        posq.initialize<float4>(*this, paddedNumAtoms, "posq");
-        velm.initialize<float4>(*this, paddedNumAtoms, "velm");
         compilationDefines["make_real2"] = "make_float2";
         compilationDefines["make_real3"] = "make_float3";
         compilationDefines["make_real4"] = "make_float4";
@@ -257,25 +250,6 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
         compilationDefines["make_mixed3"] = "make_float3";
         compilationDefines["make_mixed4"] = "make_float4";
     }
-    force.initialize<long long>(*this, paddedNumAtoms*3, "force");
-    posCellOffsets.resize(paddedNumAtoms, mm_int4(0, 0, 0, 0));
-    atomIndexDevice.initialize<int>(*this, paddedNumAtoms, "atomIndex");
-    atomIndex.resize(paddedNumAtoms);
-    for (int i = 0; i < paddedNumAtoms; ++i)
-        atomIndex[i] = i;
-    atomIndexDevice.upload(atomIndex);
-
-    // Create utility kernels that are used in multiple places.
-
-    hipModule_t utilities = createModule(HipKernelSources::vectorOps+HipKernelSources::utilities);
-    clearBufferKernel = getKernel(utilities, "clearBuffer");
-    clearTwoBuffersKernel = getKernel(utilities, "clearTwoBuffers");
-    clearThreeBuffersKernel = getKernel(utilities, "clearThreeBuffers");
-    clearFourBuffersKernel = getKernel(utilities, "clearFourBuffers");
-    clearFiveBuffersKernel = getKernel(utilities, "clearFiveBuffers");
-    clearSixBuffersKernel = getKernel(utilities, "clearSixBuffers");
-    reduceEnergyKernel = getKernel(utilities, "reduceEnergy");
-    setChargesKernel = getKernel(utilities, "setCharges");
 
     // Set defines based on the requested precision.
 
@@ -358,6 +332,7 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
             "pos.y -= floor((pos.y-center.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y; \\\n"
             "pos.z -= floor((pos.z-center.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;}";
     }
+    initializeKernels();
 
     // Create utilities objects.
 
@@ -425,8 +400,8 @@ void HipContext::initialize() {
     }
     velm.upload(pinnedBuffer);
     bonded->initialize(system);
-    addAutoclearBuffer(force.getDevicePointer(), force.getSize()*force.getElementSize());
-    addAutoclearBuffer(energyBuffer.getDevicePointer(), energyBuffer.getSize()*energyBuffer.getElementSize());
+    addAutoclearBuffer(longForceBuffer);
+    addAutoclearBuffer(energyBuffer);
     int numEnergyParamDerivs = energyParamDerivNames.size();
     if (numEnergyParamDerivs > 0) {
         if (useDoublePrecision || useMixedPrecision)
@@ -786,76 +761,13 @@ int HipContext::computeThreadBlockSize(double memory) const {
     return threads;
 }
 
-void HipContext::clearBuffer(ArrayInterface& array) {
-    clearBuffer(unwrap(array).getDevicePointer(), array.getSize()*array.getElementSize());
-}
-
-void HipContext::clearBuffer(hipDeviceptr_t memory, int size) {
-    int words = size/4;
-    void* args[] = {&memory, &words};
-    executeKernel(clearBufferKernel, args, words, 4 * this->simdWidth);
-}
-
-void HipContext::addAutoclearBuffer(ArrayInterface& array) {
-    addAutoclearBuffer(unwrap(array).getDevicePointer(), array.getSize()*array.getElementSize());
-}
-
-void HipContext::addAutoclearBuffer(hipDeviceptr_t memory, int size) {
-    autoclearBuffers.push_back(memory);
-    autoclearBufferSizes.push_back(size/4);
-}
-
-void HipContext::clearAutoclearBuffers() {
-
-    int preferredTBSize = this->simdWidth * 4;
-    int base = 0;
-    int total = autoclearBufferSizes.size();
-    while (total-base >= 6) {
-        void* args[] = {&autoclearBuffers[base], &autoclearBufferSizes[base],
-                        &autoclearBuffers[base+1], &autoclearBufferSizes[base+1],
-                        &autoclearBuffers[base+2], &autoclearBufferSizes[base+2],
-                        &autoclearBuffers[base+3], &autoclearBufferSizes[base+3],
-                        &autoclearBuffers[base+4], &autoclearBufferSizes[base+4],
-                        &autoclearBuffers[base+5], &autoclearBufferSizes[base+5]};
-        executeKernel(clearSixBuffersKernel, args, max(max(max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), autoclearBufferSizes[base+4]), autoclearBufferSizes[base+5]), preferredTBSize);
-        base += 6;
-    }
-    if (total-base == 5) {
-        void* args[] = {&autoclearBuffers[base], &autoclearBufferSizes[base],
-                        &autoclearBuffers[base+1], &autoclearBufferSizes[base+1],
-                        &autoclearBuffers[base+2], &autoclearBufferSizes[base+2],
-                        &autoclearBuffers[base+3], &autoclearBufferSizes[base+3],
-                        &autoclearBuffers[base+4], &autoclearBufferSizes[base+4]};
-        executeKernel(clearFiveBuffersKernel, args, max(max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), autoclearBufferSizes[base+4]), preferredTBSize);
-    }
-    else if (total-base == 4) {
-        void* args[] = {&autoclearBuffers[base], &autoclearBufferSizes[base],
-                        &autoclearBuffers[base+1], &autoclearBufferSizes[base+1],
-                        &autoclearBuffers[base+2], &autoclearBufferSizes[base+2],
-                        &autoclearBuffers[base+3], &autoclearBufferSizes[base+3]};
-        executeKernel(clearFourBuffersKernel, args, max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), preferredTBSize);
-    }
-    else if (total-base == 3) {
-        void* args[] = {&autoclearBuffers[base], &autoclearBufferSizes[base],
-                        &autoclearBuffers[base+1], &autoclearBufferSizes[base+1],
-                        &autoclearBuffers[base+2], &autoclearBufferSizes[base+2]};
-        executeKernel(clearThreeBuffersKernel, args, max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), preferredTBSize);
-    }
-    else if (total-base == 2) {
-        void* args[] = {&autoclearBuffers[base], &autoclearBufferSizes[base],
-                        &autoclearBuffers[base+1], &autoclearBufferSizes[base+1]};
-        executeKernel(clearTwoBuffersKernel, args, max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), preferredTBSize);
-    }
-    else if (total-base == 1) {
-        clearBuffer(autoclearBuffers[base], autoclearBufferSizes[base]*4);
-    }
-}
-
 double HipContext::reduceEnergy() {
-    int bufferSize = energyBuffer.getSize();
     int workGroupSize = getMaxThreadBlockSize();
-    void* args[] = {&energyBuffer.getDevicePointer(), &energySum.getDevicePointer(), &bufferSize, &workGroupSize};
-    executeKernel(reduceEnergyKernel, args, workGroupSize*energySum.getSize(), workGroupSize, workGroupSize*energyBuffer.getElementSize());
+    reduceEnergyKernel->setArg(0, energyBuffer);
+    reduceEnergyKernel->setArg(1, energySum);
+    reduceEnergyKernel->setArg(2, energyBuffer.getSize());
+    reduceEnergyKernel->setArg(3, workGroupSize);
+    reduceEnergyKernel->execute(workGroupSize*energySum.getSize(), workGroupSize);
     energySum.download(pinnedBuffer);
     double result = 0;
     if (getUseDoublePrecision() || getUseMixedPrecision()) {
@@ -867,17 +779,6 @@ double HipContext::reduceEnergy() {
             result += ((float*) pinnedBuffer)[i];
     }
     return result;
-}
-
-void HipContext::setCharges(const vector<double>& charges) {
-    if (!chargeBuffer.isInitialized())
-        chargeBuffer.initialize(*this, numAtoms, useDoublePrecision ? sizeof(double) : sizeof(float), "chargeBuffer");
-    vector<double> c(numAtoms);
-    for (int i = 0; i < numAtoms; i++)
-        c[i] = charges[i];
-    chargeBuffer.upload(c, true);
-    void* args[] = {&chargeBuffer.getDevicePointer(), &posq.getDevicePointer(), &atomIndexDevice.getDevicePointer(), &numAtoms};
-    executeKernel(setChargesKernel, args, numAtoms);
 }
 
 void HipContext::flushQueue() {

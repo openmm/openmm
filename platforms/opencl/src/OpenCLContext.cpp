@@ -349,7 +349,6 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             compilationDefines["make_mixed3"] = "make_float3";
             compilationDefines["make_mixed4"] = "make_float4";
         }
-        posCellOffsets.resize(paddedNumAtoms, mm_int4(0, 0, 0, 0));
     }
     catch (cl::Error err) {
         std::stringstream str;

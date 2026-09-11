@@ -71,6 +71,7 @@ void ComputeContext::initializeKernels() {
     for (int i = 0; i < paddedNumAtoms; ++i)
         atomIndex[i] = i;
     atomIndexDevice.upload(atomIndex);
+    posCellOffsets.resize(paddedNumAtoms, mm_int4(0, 0, 0, 0));
     ComputeProgram program = compileProgram(CommonKernelSources::utilities);
     clearBufferKernel = program->createKernel("clearBuffer");
     for (int i = 0; i < 2; i++)

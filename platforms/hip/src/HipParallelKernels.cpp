@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2011-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2026 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2021 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -95,7 +95,7 @@ public:
                     int numBytes = numAtoms*3*sizeof(long long);
                     int offset = (cu.getContextIndex()-1)*numBytes;
                     CHECK_RESULT(hipMemcpyAsync(static_cast<char*>(contextForces.getDevicePointer())+offset,
-                                           cu.getForce().getDevicePointer(), numBytes, hipMemcpyDeviceToDevice, stream), "Error copying forces");
+                                           cu.unwrap(cu.getLongForceBuffer()).getDevicePointer(), numBytes, hipMemcpyDeviceToDevice, stream), "Error copying forces");
                     hipEventRecord(event, stream);
                 }
                 else
@@ -187,8 +187,8 @@ void HipParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context
         for (int i = 1; i < (int) data.contexts.size(); i++) {
             hipStreamWaitEvent(peerCopyStream[i], event, 0);
             CHECK_RESULT(hipMemcpyAsync(
-                data.contexts[i]->getPosq().getDevicePointer(),
-                cu.getPosq().getDevicePointer(), numBytes,
+                cu.unwrap(data.contexts[i]->getPosq()).getDevicePointer(),
+                cu.unwrap(cu.getPosq()).getDevicePointer(), numBytes,
                 hipMemcpyDeviceToDevice, peerCopyStream[i]), "Error copying positions");
             hipEventRecord(peerCopyEvent[i], peerCopyStream[i]);
         }
@@ -226,7 +226,7 @@ double HipParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& cont
             contextForces.upload(pinnedForceBuffer, false);
         int bufferSize = 3*cu.getPaddedNumAtoms();
         int numBuffers = data.contexts.size()-1;
-        void* args[] = {&cu.getForce().getDevicePointer(), &contextForces.getDevicePointer(), &bufferSize, &numBuffers};
+        void* args[] = {&cu.unwrap(cu.getLongForceBuffer()).getDevicePointer(), &contextForces.getDevicePointer(), &bufferSize, &numBuffers};
         cu.executeKernel(sumKernel, args, bufferSize);
 
         // Balance work between the contexts by transferring a little nonbonded work from the context that

@@ -247,7 +247,6 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         compilationDefines["make_mixed3"] = "make_float3";
         compilationDefines["make_mixed4"] = "make_float4";
     }
-    posCellOffsets.resize(paddedNumAtoms, mm_int4(0, 0, 0, 0));
 
     // Set defines based on the requested precision.
 
@@ -705,7 +704,6 @@ int CudaContext::computeThreadBlockSize(double memory) const {
 }
 
 double CudaContext::reduceEnergy() {
-    int bufferSize = energyBuffer.getSize();
     int workGroupSize  = 512;
     reduceEnergyKernel->setArg(0, energyBuffer);
     reduceEnergyKernel->setArg(1, energySum);
