@@ -267,6 +267,12 @@ public:
         return force;
     }
     /**
+     * Get the array which contains the buffer in which energy is computed.
+     */
+    OpenCLArray& getEnergyBuffer() {
+        return energyBuffer;
+    }
+    /**
      * Get a pointer to a block of pinned memory that can be used for efficient transfers between host and device.
      * This is guaranteed to be at least as large as any of the arrays returned by methods of this class.
      */
@@ -533,6 +539,7 @@ private:
     void* pinnedMemory;
     OpenCLArray force;
     OpenCLArray forceBuffers;
+    OpenCLArray energyBuffer;
     std::vector<cl::Event> profilingEvents;
     std::vector<std::string> profilingKernelNames;
     cl_ulong profileStartTime;

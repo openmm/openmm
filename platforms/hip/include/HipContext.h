@@ -241,6 +241,12 @@ public:
         throw OpenMMException("HIP platform does not use floating point force buffers");
     }
     /**
+     * Get the array which contains the buffer in which energy is computed.
+     */
+    HipArray& getEnergyBuffer() {
+        return energyBuffer;
+    }
+    /**
      * Get a pointer to a block of pinned memory that can be used for efficient transfers between host and device.
      * This is guaranteed to be at least as large as any of the arrays returned by methods of this class.
      */
@@ -515,6 +521,7 @@ private:
     std::vector<hipModule_t> loadedModules;
     hipDevice_t device;
     void* pinnedBuffer;
+    HipArray energyBuffer;
     HipIntegrationUtilities* integration;
     HipExpressionUtilities* expression;
     HipBondedUtilities* bonded;
