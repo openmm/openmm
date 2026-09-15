@@ -4928,9 +4928,13 @@ void CommonCalcPythonForceKernel::getPositions() {
         if (!allowPeriodic) {
             Vec3 boxVectors[3];
             cc.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+            const vector<int>& order = cc.getAtomIndex();
+            vector<int> inverseOrder(order.size());
+            for (int i = 0; i < cc.getNumAtoms(); i++)
+                inverseOrder[order[i]] = i;
             for (int i = 0; i < numParticles; ++i) {
-                mm_int4 offset = cc.getPosCellOffsets()[particles[i]];
-                positionsVec[i] -= boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
+                mm_int4 offset = cc.getPosCellOffsets()[inverseOrder[particles[i]]];
+                positionsVec[i] -= boxVectors[0]*offset.x+boxVectors[1]*offset.y+boxVectors[2]*offset.z;
             }
         }
     }
