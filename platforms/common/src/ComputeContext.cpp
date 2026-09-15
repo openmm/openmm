@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2019-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2019-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -28,6 +28,7 @@
 #include "openmm/VirtualSite.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/ThreadPool.h"
+#include "CommonKernelSources.h"
 #include "hilbert.h"
 #include <algorithm>
 #include <cmath>
@@ -43,11 +44,61 @@ const int ComputeContext::ThreadBlockSize = 64;
 const int ComputeContext::TileSize = 32;
 
 ComputeContext::ComputeContext(const System& system) : system(system), time(0.0), stepCount(0), computeForceCount(0), stepsSinceReorder(99999),
-        forceNextReorder(false), atomsWereReordered(false), forcesValid(false), hasInitializedGlobals(false) {
+        forceNextReorder(false), atomsWereReordered(false), forcesValid(false), hasInitializedGlobals(false), hasAssignedPosqCharges(false) {
     workThread = new WorkThread();
 }
 
 ComputeContext::~ComputeContext() {
+}
+
+void ComputeContext::initializeKernels() {
+    if (getUseDoublePrecision()) {
+        posq.initialize<mm_double4>(*this, paddedNumAtoms, "posq");
+        velm.initialize<mm_double4>(*this, paddedNumAtoms, "velm");
+    }
+    else if (getUseMixedPrecision()) {
+        posq.initialize<mm_float4>(*this, paddedNumAtoms, "posq");
+        posqCorrection.initialize<mm_float4>(*this, paddedNumAtoms, "posq");
+        velm.initialize<mm_double4>(*this, paddedNumAtoms, "velm");
+    }
+    else {
+        posq.initialize<mm_float4>(*this, paddedNumAtoms, "posq");
+        velm.initialize<mm_float4>(*this, paddedNumAtoms, "velm");
+    }
+    longForceBuffer.initialize<long long>(*this, 3*paddedNumAtoms, "longForceBuffer");
+    atomIndexDevice.initialize<int>(*this, paddedNumAtoms, "atomIndexDevice");
+    atomIndex.resize(paddedNumAtoms);
+    for (int i = 0; i < paddedNumAtoms; ++i)
+        atomIndex[i] = i;
+    atomIndexDevice.upload(atomIndex);
+    posCellOffsets.resize(paddedNumAtoms, mm_int4(0, 0, 0, 0));
+    ComputeProgram program = compileProgram(CommonKernelSources::utilities);
+    clearBufferKernel = program->createKernel("clearBuffer");
+    for (int i = 0; i < 2; i++)
+        clearBufferKernel->addArg();
+    clearTwoBuffersKernel = program->createKernel("clearTwoBuffers");
+    for (int i = 0; i < 4; i++)
+        clearTwoBuffersKernel->addArg();
+    clearThreeBuffersKernel = program->createKernel("clearThreeBuffers");
+    for (int i = 0; i < 6; i++)
+        clearThreeBuffersKernel->addArg();
+    clearFourBuffersKernel = program->createKernel("clearFourBuffers");
+    for (int i = 0; i < 8; i++)
+        clearFourBuffersKernel->addArg();
+    clearFiveBuffersKernel = program->createKernel("clearFiveBuffers");
+    for (int i = 0; i < 10; i++)
+        clearFiveBuffersKernel->addArg();
+    clearSixBuffersKernel = program->createKernel("clearSixBuffers");
+    for (int i = 0; i < 12; i++)
+        clearSixBuffersKernel->addArg();
+    reduceEnergyKernel = program->createKernel("reduceEnergy");
+    for (int i = 0; i < 4; i++)
+        reduceEnergyKernel->addArg();
+    setChargesKernel = program->createKernel("setCharges");
+    setChargesKernel->addArg();
+    setChargesKernel->addArg(getPosq());
+    setChargesKernel->addArg(getAtomIndexArray());
+    setChargesKernel->addArg(numAtoms);
 }
 
 ComputeQueue ComputeContext::getCurrentQueue() {
@@ -143,6 +194,101 @@ void ComputeContext::computeReciprocalBoxVectors(mm_double4 recipBoxVectors[3]) 
     recipBoxVectors[0] = mm_double4(boxVectors[1][1]*boxVectors[2][2]*scale, 0, 0, 0);
     recipBoxVectors[1] = mm_double4(-boxVectors[1][0]*boxVectors[2][2]*scale, boxVectors[0][0]*boxVectors[2][2]*scale, 0, 0);
     recipBoxVectors[2] = mm_double4((boxVectors[1][0]*boxVectors[2][1]-boxVectors[1][1]*boxVectors[2][0])*scale, -boxVectors[0][0]*boxVectors[2][1]*scale, boxVectors[0][0]*boxVectors[1][1]*scale, 0);
+}
+
+static void setClearBufferArg(ComputeKernel kernel, int index, ArrayInterface& array) {
+    int words = array.getSize()*array.getElementSize()/4;
+    kernel->setArg(2*index, array);
+    kernel->setArg(2*index+1, words);
+}
+
+void ComputeContext::clearBuffer(ArrayInterface& array) {
+    int words = array.getSize()*array.getElementSize()/4;
+    setClearBufferArg(clearBufferKernel, 0, array);
+    clearBufferKernel->execute(words, 128);
+}
+
+void ComputeContext::addAutoclearBuffer(ArrayInterface& array) {
+    autoclearBuffers.push_back(&array);
+}
+
+static int getClearKernelSize(ArrayInterface** arrays, int count) {
+    int size = 128;
+    for (int i = 0; i < count; i++) {
+        int words = arrays[i]->getSize()*arrays[i]->getElementSize()/4;
+        size = max(size, words);
+    }
+    return size;
+}
+
+void ComputeContext::clearAutoclearBuffers() {
+    int base = 0;
+    int total = autoclearBuffers.size();
+    while (total-base >= 6) {
+        setClearBufferArg(clearSixBuffersKernel, 0, *autoclearBuffers[base]);
+        setClearBufferArg(clearSixBuffersKernel, 1, *autoclearBuffers[base+1]);
+        setClearBufferArg(clearSixBuffersKernel, 2, *autoclearBuffers[base+2]);
+        setClearBufferArg(clearSixBuffersKernel, 3, *autoclearBuffers[base+3]);
+        setClearBufferArg(clearSixBuffersKernel, 4, *autoclearBuffers[base+4]);
+        setClearBufferArg(clearSixBuffersKernel, 5, *autoclearBuffers[base+5]);
+        clearSixBuffersKernel->execute(getClearKernelSize(&autoclearBuffers[base], 6));
+        base += 6;
+    }
+    if (total-base == 5) {
+        setClearBufferArg(clearFiveBuffersKernel, 0, *autoclearBuffers[base]);
+        setClearBufferArg(clearFiveBuffersKernel, 1, *autoclearBuffers[base+1]);
+        setClearBufferArg(clearFiveBuffersKernel, 2, *autoclearBuffers[base+2]);
+        setClearBufferArg(clearFiveBuffersKernel, 3, *autoclearBuffers[base+3]);
+        setClearBufferArg(clearFiveBuffersKernel, 4, *autoclearBuffers[base+4]);
+        clearFiveBuffersKernel->execute(getClearKernelSize(&autoclearBuffers[base], 5));
+    }
+    else if (total-base == 4) {
+        setClearBufferArg(clearFourBuffersKernel, 0, *autoclearBuffers[base]);
+        setClearBufferArg(clearFourBuffersKernel, 1, *autoclearBuffers[base+1]);
+        setClearBufferArg(clearFourBuffersKernel, 2, *autoclearBuffers[base+2]);
+        setClearBufferArg(clearFourBuffersKernel, 3, *autoclearBuffers[base+3]);
+        clearFourBuffersKernel->execute(getClearKernelSize(&autoclearBuffers[base], 4));
+    }
+    else if (total-base == 3) {
+        setClearBufferArg(clearThreeBuffersKernel, 0, *autoclearBuffers[base]);
+        setClearBufferArg(clearThreeBuffersKernel, 1, *autoclearBuffers[base+1]);
+        setClearBufferArg(clearThreeBuffersKernel, 2, *autoclearBuffers[base+2]);
+        clearThreeBuffersKernel->execute(getClearKernelSize(&autoclearBuffers[base], 3));
+    }
+    else if (total-base == 2) {
+        setClearBufferArg(clearTwoBuffersKernel, 0, *autoclearBuffers[base]);
+        setClearBufferArg(clearTwoBuffersKernel, 1, *autoclearBuffers[base+1]);
+        clearTwoBuffersKernel->execute(getClearKernelSize(&autoclearBuffers[base], 2));
+    }
+    else if (total-base == 1) {
+        clearBuffer(*autoclearBuffers[base]);
+    }
+}
+
+void ComputeContext::setCharges(const vector<double>& charges) {
+    if (!chargeBuffer.isInitialized())
+        chargeBuffer.initialize(*this, numAtoms, getUseDoublePrecision() ? sizeof(double) : sizeof(float), "chargeBuffer");
+    vector<double> c(numAtoms);
+    for (int i = 0; i < numAtoms; i++)
+        c[i] = charges[i];
+    chargeBuffer.upload(c, true);
+    setChargesKernel->setArg(0, chargeBuffer);
+    setChargesKernel->execute(numAtoms);
+}
+
+bool ComputeContext::requestPosqCharges() {
+    bool allow = !hasAssignedPosqCharges;
+    hasAssignedPosqCharges = true;
+    return allow;
+}
+
+void ComputeContext::addEnergyParameterDerivative(const string& param) {
+    // See if this parameter has already been registered.
+    
+    for (int i = 0; i < energyParamDerivNames.size(); i++)
+        if (param == energyParamDerivNames[i])
+            return;
+    energyParamDerivNames.push_back(param);
 }
 
 /**

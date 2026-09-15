@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2026 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -222,41 +222,16 @@ public:
      */
     HipArray& unwrap(ArrayInterface& array) const;
     /**
-     * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
-     */
-    HipArray& getPosq() {
-        return posq;
-    }
-    /**
-     * Get the array which contains a correction to the position of each atom.  This only exists if getUseMixedPrecision() returns true.
-     */
-    HipArray& getPosqCorrection() {
-        return posqCorrection;
-    }
-    /**
-     * Get the array which contains the velocity (the xyz components) and inverse mass (the w component) of each atom.
-     */
-    HipArray& getVelm() {
-        return velm;
-    }
-    /**
      * Get the array which contains the force on each atom (represented as three long longs in 64 bit fixed point).
      */
-    HipArray& getForce() {
-        return force;
+    ArrayInterface& getForce() {
+        return longForceBuffer;
     }
     /**
      * The HIP platform does not use floating point force buffers, so this throws an exception.
      */
     ArrayInterface& getFloatForceBuffer() {
         throw OpenMMException("HIP platform does not use floating point force buffers");
-    }
-    /**
-     * Get the array which contains a contribution to each force represented as 64 bit fixed point.
-     * This is a synonym for getForce().  It exists to satisfy the ComputeContext interface.
-     */
-    HipArray& getLongForceBuffer() {
-        return force;
     }
     /**
      * Not all HIP devices support 64 bit atomics, so this throws an exception.
@@ -270,12 +245,6 @@ public:
      */
     HipArray& getEnergyBuffer() {
         return energyBuffer;
-    }
-    /**
-     * Get the array which contains the buffer in which derivatives of the energy with respect to parameters are computed.
-     */
-    HipArray& getEnergyParamDerivBuffer() {
-        return energyParamDerivBuffer;
     }
     /**
      * Get a pointer to a block of pinned memory that can be used for efficient transfers between host and device.
@@ -293,12 +262,6 @@ public:
      */
     ThreadPool& getThreadPool() {
         return getPlatformData().threads;
-    }
-    /**
-     * Get the array which contains the index of each atom.
-     */
-    HipArray& getAtomIndexArray() {
-        return atomIndexDevice;
     }
     /**
      * Get a file name in tempDir unique for the current process and context.
@@ -360,47 +323,9 @@ public:
      */
     int computeThreadBlockSize(double memory) const;
     /**
-     * Set all elements of an array to 0.
-     */
-    void clearBuffer(ArrayInterface& array);
-    /**
-     * Set all elements of an array to 0.
-     *
-     * @param memory     the memory to clear
-     * @param size       the size of the buffer in bytes
-     */
-    void clearBuffer(hipDeviceptr_t memory, int size);
-    /**
-     * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
-     */
-    void addAutoclearBuffer(ArrayInterface& array);
-    /**
-     * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
-     *
-     * @param memory     the memory to clear
-     * @param size       the size of the buffer in bytes
-     */
-    void addAutoclearBuffer(hipDeviceptr_t memory, int size);
-    /**
-     * Clear all buffers that have been registered with addAutoclearBuffer().
-     */
-    void clearAutoclearBuffers();
-    /**
      * Sum the buffer containing energy.
      */
     double reduceEnergy();
-    /**
-     * Get the number of blocks of TileSize atoms.
-     */
-    int getNumAtomBlocks() const {
-        return numAtomBlocks;
-    }
-    /**
-     * Get the standard number of thread blocks to use when executing kernels.
-     */
-    int getNumThreadBlocks() const {
-        return numThreadBlocks;
-    }
     /**
      * Get the maximum number of threads in a thread block supported by this device.
      */
@@ -444,24 +369,6 @@ public:
      */
     bool getSupportsDoublePrecision() const {
         return true;
-    }
-    /**
-     * Get whether double precision is being used.
-     */
-    bool getUseDoublePrecision() const {
-        return useDoublePrecision;
-    }
-    /**
-     * Get whether mixed precision is being used.
-     */
-    bool getUseMixedPrecision() const {
-        return useMixedPrecision;
-    }
-    /**
-     * Get whether the periodic box is triclinic.
-     */
-    bool getBoxIsTriclinic() const {
-        return boxIsTriclinic;
     }
     /**
      * Convert a HIP result code to the corresponding string description.
@@ -576,36 +483,6 @@ public:
      */
     void initializeContexts();
     /**
-     * Set the particle charges.  These are packed into the fourth element of the posq array.
-     */
-    void setCharges(const std::vector<double>& charges);
-    /**
-     * Request to use the fourth element of the posq array for storing charges.  Since only one force can
-     * do that, this returns true the first time it is called, and false on all subsequent calls.
-     */
-    bool requestPosqCharges();
-    /**
-     * Get the names of all parameters with respect to which energy derivatives are computed.
-     */
-    const std::vector<std::string>& getEnergyParamDerivNames() const {
-        return energyParamDerivNames;
-    }
-    /**
-     * Get a workspace data structure used for accumulating the values of derivatives of the energy
-     * with respect to parameters.
-     */
-    std::map<std::string, double>& getEnergyParamDerivWorkspace() {
-        return energyParamDerivWorkspace;
-    }
-    /**
-     * Register that the derivative of potential energy with respect to a context parameter
-     * will need to be calculated.  If this is called multiple times for a single parameter,
-     * it is only added to the list once.
-     *
-     * @param param    the name of the parameter to add
-     */
-    void addEnergyParameterDerivative(const std::string& param);
-    /**
      * Wait until all work that has been queued (kernel executions, asynchronous data transfers, etc.)
      * has been submitted to the device.  This does not mean it has necessarily been completed.
      * Calling this periodically may improve the responsiveness of the computer's GUI, but at the
@@ -630,14 +507,12 @@ private:
     HipPlatform::PlatformData& platformData;
     int deviceIndex;
     int contextIndex;
-    int numAtomBlocks;
-    int numThreadBlocks;
     int simdWidth;
     int multiprocessors;
     int sharedMemPerBlock;
     bool supportsHardwareFloatGlobalAtomicAdd;
     unsigned int hostMallocFlags;
-    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, boxIsTriclinic, hasAssignedPosqCharges;
+    bool useBlockingSync, contextIsValid;
     bool isLinkedContext;
     std::string tempDir, cacheDir, gpuArchitecture;
     float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
@@ -645,28 +520,8 @@ private:
     std::map<std::string, std::string> compilationDefines;
     std::vector<hipModule_t> loadedModules;
     hipDevice_t device;
-    hipFunction_t clearBufferKernel;
-    hipFunction_t clearTwoBuffersKernel;
-    hipFunction_t clearThreeBuffersKernel;
-    hipFunction_t clearFourBuffersKernel;
-    hipFunction_t clearFiveBuffersKernel;
-    hipFunction_t clearSixBuffersKernel;
-    hipFunction_t reduceEnergyKernel;
-    hipFunction_t setChargesKernel;
     void* pinnedBuffer;
-    HipArray posq;
-    HipArray posqCorrection;
-    HipArray velm;
-    HipArray force;
     HipArray energyBuffer;
-    HipArray energySum;
-    HipArray energyParamDerivBuffer;
-    HipArray atomIndexDevice;
-    HipArray chargeBuffer;
-    std::vector<std::string> energyParamDerivNames;
-    std::map<std::string, double> energyParamDerivWorkspace;
-    std::vector<hipDeviceptr_t> autoclearBuffers;
-    std::vector<int> autoclearBufferSizes;
     HipIntegrationUtilities* integration;
     HipExpressionUtilities* expression;
     HipBondedUtilities* bonded;

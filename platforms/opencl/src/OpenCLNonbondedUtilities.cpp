@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -518,7 +518,7 @@ void OpenCLNonbondedUtilities::createKernelsForGroups(int groups) {
             cl::Program interactingBlocksProgram = context.createProgram(file, defines);
             kernels.findBlockBoundsKernel = cl::Kernel(interactingBlocksProgram, "findBlockBounds");
             kernels.findBlockBoundsKernel.setArg<cl_int>(0, context.getNumAtoms());
-            kernels.findBlockBoundsKernel.setArg<cl::Buffer>(6, context.getPosq().getDeviceBuffer());
+            kernels.findBlockBoundsKernel.setArg<cl::Buffer>(6, context.unwrap(context.getPosq()).getDeviceBuffer());
             kernels.findBlockBoundsKernel.setArg<cl::Buffer>(7, blockCenter.getDeviceBuffer());
             kernels.findBlockBoundsKernel.setArg<cl::Buffer>(8, blockBoundingBox.getDeviceBuffer());
             kernels.findBlockBoundsKernel.setArg<cl::Buffer>(9, rebuildNeighborList.getDeviceBuffer());
@@ -534,7 +534,7 @@ void OpenCLNonbondedUtilities::createKernelsForGroups(int groups) {
             kernels.sortBoxDataKernel.setArg<cl::Buffer>(2, blockBoundingBox.getDeviceBuffer());
             kernels.sortBoxDataKernel.setArg<cl::Buffer>(3, sortedBlockCenter.getDeviceBuffer());
             kernels.sortBoxDataKernel.setArg<cl::Buffer>(4, sortedBlockBoundingBox.getDeviceBuffer());
-            kernels.sortBoxDataKernel.setArg<cl::Buffer>(5, context.getPosq().getDeviceBuffer());
+            kernels.sortBoxDataKernel.setArg<cl::Buffer>(5, context.unwrap(context.getPosq()).getDeviceBuffer());
             kernels.sortBoxDataKernel.setArg<cl::Buffer>(6, oldPositions.getDeviceBuffer());
             kernels.sortBoxDataKernel.setArg<cl::Buffer>(7, interactionCount.getDeviceBuffer());
             kernels.sortBoxDataKernel.setArg<cl::Buffer>(8, rebuildNeighborList.getDeviceBuffer());
@@ -547,7 +547,7 @@ void OpenCLNonbondedUtilities::createKernelsForGroups(int groups) {
             kernels.findInteractingBlocksKernel.setArg<cl::Buffer>(5, interactionCount.getDeviceBuffer());
             kernels.findInteractingBlocksKernel.setArg<cl::Buffer>(6, interactingTiles.getDeviceBuffer());
             kernels.findInteractingBlocksKernel.setArg<cl::Buffer>(7, interactingAtoms.getDeviceBuffer());
-            kernels.findInteractingBlocksKernel.setArg<cl::Buffer>(8, context.getPosq().getDeviceBuffer());
+            kernels.findInteractingBlocksKernel.setArg<cl::Buffer>(8, context.unwrap(context.getPosq()).getDeviceBuffer());
             kernels.findInteractingBlocksKernel.setArg<cl_uint>(9, interactingTiles.getSize());
             kernels.findInteractingBlocksKernel.setArg<cl_uint>(10, startBlockIndex);
             kernels.findInteractingBlocksKernel.setArg<cl_uint>(11, numBlocks);
@@ -747,9 +747,9 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     // Set arguments to the Kernel.
 
     int index = 0;
-    kernel.setArg<cl::Memory>(index++, context.getLongForceBuffer().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(index++, context.getEnergyBuffer().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(index++, context.getPosq().getDeviceBuffer());
+    kernel.setArg<cl::Memory>(index++, context.unwrap(context.getLongForceBuffer()).getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(index++, context.unwrap(context.getEnergyBuffer()).getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(index++, context.unwrap(context.getPosq()).getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusions.getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusionTiles.getDeviceBuffer());
     kernel.setArg<cl_uint>(index++, startTileIndex);
@@ -768,7 +768,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     for (ComputeParameterInfo& arg : arguments)
         kernel.setArg<cl::Memory>(index++, context.unwrap(arg.getArray()).getDeviceBuffer());
     if (energyParameterDerivatives.size() > 0)
-        kernel.setArg<cl::Memory>(index++, context.getEnergyParamDerivBuffer().getDeviceBuffer());
+        kernel.setArg<cl::Memory>(index++, context.unwrap(context.getEnergyParamDerivBuffer()).getDeviceBuffer());
     return kernel;
 }
 

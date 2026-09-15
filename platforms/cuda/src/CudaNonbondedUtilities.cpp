@@ -279,9 +279,9 @@ void CudaNonbondedUtilities::initialize(const System& system) {
 
     // Record arguments for kernels.
 
-    forceArgs.push_back(&context.getForce().getDevicePointer());
-    forceArgs.push_back(&context.getEnergyBuffer().getDevicePointer());
-    forceArgs.push_back(&context.getPosq().getDevicePointer());
+    forceArgs.push_back(&context.unwrap(context.getLongForceBuffer()).getDevicePointer());
+    forceArgs.push_back(&context.unwrap(context.getEnergyBuffer()).getDevicePointer());
+    forceArgs.push_back(&context.unwrap(context.getPosq()).getDevicePointer());
     forceArgs.push_back(&exclusions.getDevicePointer());
     forceArgs.push_back(&exclusionTiles.getDevicePointer());
     forceArgs.push_back(&startTileIndex);
@@ -306,7 +306,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
     for (int i = 0; i < parameters.size()+arguments.size(); i++)
         forceArgs.push_back(NULL);
     if (energyParameterDerivatives.size() > 0)
-        forceArgs.push_back(&context.getEnergyParamDerivBuffer().getDevicePointer());
+        forceArgs.push_back(&context.unwrap(context.getEnergyParamDerivBuffer()).getDevicePointer());
     if (useCutoff) {
         findBlockBoundsArgs.push_back(&numAtoms);
         findBlockBoundsArgs.push_back(context.getPeriodicBoxSizePointer());
@@ -314,7 +314,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         findBlockBoundsArgs.push_back(context.getPeriodicBoxVecXPointer());
         findBlockBoundsArgs.push_back(context.getPeriodicBoxVecYPointer());
         findBlockBoundsArgs.push_back(context.getPeriodicBoxVecZPointer());
-        findBlockBoundsArgs.push_back(&context.getPosq().getDevicePointer());
+        findBlockBoundsArgs.push_back(&context.unwrap(context.getPosq()).getDevicePointer());
         findBlockBoundsArgs.push_back(&blockCenter.getDevicePointer());
         findBlockBoundsArgs.push_back(&blockBoundingBox.getDevicePointer());
         findBlockBoundsArgs.push_back(&rebuildNeighborList.getDevicePointer());
@@ -337,7 +337,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
             sortBoxDataArgs.push_back(context.getPeriodicBoxVecYPointer());
             sortBoxDataArgs.push_back(context.getPeriodicBoxVecZPointer());
         }
-        sortBoxDataArgs.push_back(&context.getPosq().getDevicePointer());
+        sortBoxDataArgs.push_back(&context.unwrap(context.getPosq()).getDevicePointer());
         sortBoxDataArgs.push_back(&oldPositions.getDevicePointer());
         sortBoxDataArgs.push_back(&interactionCount.getDevicePointer());
         sortBoxDataArgs.push_back(&rebuildNeighborList.getDevicePointer());
@@ -351,7 +351,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         findInteractingBlocksArgs.push_back(&interactingTiles.getDevicePointer());
         findInteractingBlocksArgs.push_back(&interactingAtoms.getDevicePointer());
         findInteractingBlocksArgs.push_back(&singlePairs.getDevicePointer());
-        findInteractingBlocksArgs.push_back(&context.getPosq().getDevicePointer());
+        findInteractingBlocksArgs.push_back(&context.unwrap(context.getPosq()).getDevicePointer());
         findInteractingBlocksArgs.push_back(&maxTiles);
         findInteractingBlocksArgs.push_back(&maxSinglePairs);
         findInteractingBlocksArgs.push_back(&startBlockIndex);

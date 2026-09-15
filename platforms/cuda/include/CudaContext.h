@@ -206,41 +206,16 @@ public:
      */
     CudaArray& unwrap(ArrayInterface& array) const;
     /**
-     * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
-     */
-    CudaArray& getPosq() {
-        return posq;
-    }
-    /**
-     * Get the array which contains a correction to the position of each atom.  This only exists if getUseMixedPrecision() returns true.
-     */
-    CudaArray& getPosqCorrection() {
-        return posqCorrection;
-    }
-    /**
-     * Get the array which contains the velocity (the xyz components) and inverse mass (the w component) of each atom.
-     */
-    CudaArray& getVelm() {
-        return velm;
-    }
-    /**
      * Get the array which contains the force on each atom (represented as three long longs in 64 bit fixed point).
      */
-    CudaArray& getForce() {
-        return force;
+    ArrayInterface& getForce() {
+        return longForceBuffer;
     }
     /**
      * The CUDA platform does not use floating point force buffers, so this throws an exception.
      */
     ArrayInterface& getFloatForceBuffer() {
         throw OpenMMException("CUDA platform does not use floating point force buffers");
-    }
-    /**
-     * Get the array which contains a contribution to each force represented as 64 bit fixed point.
-     * This is a synonym for getForce().  It exists to satisfy the ComputeContext interface.
-     */
-    CudaArray& getLongForceBuffer() {
-        return force;
     }
     /**
      * All CUDA devices support 64 bit atomics, so this throws an exception.
@@ -253,12 +228,6 @@ public:
      */
     CudaArray& getEnergyBuffer() {
         return energyBuffer;
-    }
-    /**
-     * Get the array which contains the buffer in which derivatives of the energy with respect to parameters are computed.
-     */
-    CudaArray& getEnergyParamDerivBuffer() {
-        return energyParamDerivBuffer;
     }
     /**
      * Get a pointer to a block of pinned memory that can be used for efficient transfers between host and device.
@@ -276,12 +245,6 @@ public:
      */
     ThreadPool& getThreadPool() {
         return getPlatformData().threads;
-    }
-    /**
-     * Get the array which contains the index of each atom.
-     */
-    CudaArray& getAtomIndexArray() {
-        return atomIndexDevice;
     }
     /**
      * Create a CUDA module from source code.
@@ -325,47 +288,9 @@ public:
      */
     int computeThreadBlockSize(double memory) const;
     /**
-     * Set all elements of an array to 0.
-     */
-    void clearBuffer(ArrayInterface& array);
-    /**
-     * Set all elements of an array to 0.
-     *
-     * @param memory     the memory to clear
-     * @param size       the size of the buffer in bytes
-     */
-    void clearBuffer(CUdeviceptr memory, int size);
-    /**
-     * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
-     */
-    void addAutoclearBuffer(ArrayInterface& array);
-    /**
-     * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
-     *
-     * @param memory     the memory to clear
-     * @param size       the size of the buffer in bytes
-     */
-    void addAutoclearBuffer(CUdeviceptr memory, int size);
-    /**
-     * Clear all buffers that have been registered with addAutoclearBuffer().
-     */
-    void clearAutoclearBuffers();
-    /**
      * Sum the buffer containing energy.
      */
     double reduceEnergy();
-    /**
-     * Get the number of blocks of TileSize atoms.
-     */
-    int getNumAtomBlocks() const {
-        return numAtomBlocks;
-    }
-    /**
-     * Get the standard number of thread blocks to use when executing kernels.
-     */
-    int getNumThreadBlocks() const {
-        return numThreadBlocks;
-    }
     /**
      * Get the maximum number of threads in a thread block supported by this device.
      */
@@ -396,24 +321,6 @@ public:
      */
     bool getSupportsDoublePrecision() const {
         return true;
-    }
-    /**
-     * Get whether double precision is being used.
-     */
-    bool getUseDoublePrecision() const {
-        return useDoublePrecision;
-    }
-    /**
-     * Get whether mixed precision is being used.
-     */
-    bool getUseMixedPrecision() const {
-        return useMixedPrecision;
-    }
-    /**
-     * Get whether the periodic box is triclinic.
-     */
-    bool getBoxIsTriclinic() const {
-        return boxIsTriclinic;
     }
     /**
      * Convert a CUDA result code to the corresponding string description.
@@ -538,36 +445,6 @@ public:
      */
     void initializeContexts();
     /**
-     * Set the particle charges.  These are packed into the fourth element of the posq array.
-     */
-    void setCharges(const std::vector<double>& charges);
-    /**
-     * Request to use the fourth element of the posq array for storing charges.  Since only one force can
-     * do that, this returns true the first time it is called, and false on all subsequent calls.
-     */
-    bool requestPosqCharges();
-    /**
-     * Get the names of all parameters with respect to which energy derivatives are computed.
-     */
-    const std::vector<std::string>& getEnergyParamDerivNames() const {
-        return energyParamDerivNames;
-    }
-    /**
-     * Get a workspace data structure used for accumulating the values of derivatives of the energy
-     * with respect to parameters.
-     */
-    std::map<std::string, double>& getEnergyParamDerivWorkspace() {
-        return energyParamDerivWorkspace;
-    }
-    /**
-     * Register that the derivative of potential energy with respect to a context parameter
-     * will need to be calculated.  If this is called multiple times for a single parameter,
-     * it is only added to the list once.
-     * 
-     * @param param    the name of the parameter to add
-     */
-    void addEnergyParameterDerivative(const std::string& param);
-    /**
      * Wait until all work that has been queued (kernel executions, asynchronous data transfers, etc.)
      * has been submitted to the device.  This does not mean it has necessarily been completed.
      * Calling this periodically may improve the responsiveness of the computer's GUI, but at the
@@ -594,10 +471,8 @@ private:
     CudaPlatform::PlatformData& platformData;
     int deviceIndex;
     int contextIndex;
-    int numAtomBlocks;
-    int numThreadBlocks;
     int gpuArchitecture;
-    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, boxIsTriclinic, hasAssignedPosqCharges;
+    bool useBlockingSync, contextIsValid;
     bool isLinkedContext;
     std::string tempDir, cacheDir;
     float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
@@ -606,28 +481,8 @@ private:
     std::map<std::string, std::string> compilationDefines;
     CUcontext context;
     CUdevice device;
-    CUfunction clearBufferKernel;
-    CUfunction clearTwoBuffersKernel;
-    CUfunction clearThreeBuffersKernel;
-    CUfunction clearFourBuffersKernel;
-    CUfunction clearFiveBuffersKernel;
-    CUfunction clearSixBuffersKernel;
-    CUfunction reduceEnergyKernel;
-    CUfunction setChargesKernel;
     void* pinnedBuffer;
-    CudaArray posq;
-    CudaArray posqCorrection;
-    CudaArray velm;
-    CudaArray force;
     CudaArray energyBuffer;
-    CudaArray energySum;
-    CudaArray energyParamDerivBuffer;
-    CudaArray atomIndexDevice;
-    CudaArray chargeBuffer;
-    std::vector<std::string> energyParamDerivNames;
-    std::map<std::string, double> energyParamDerivWorkspace;
-    std::vector<CUdeviceptr> autoclearBuffers;
-    std::vector<int> autoclearBufferSizes;
     CudaIntegrationUtilities* integration;
     CudaExpressionUtilities* expression;
     CudaBondedUtilities* bonded;
