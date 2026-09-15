@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -163,6 +163,9 @@ void CustomNonbondedForceImpl::updateParametersInContext(ContextImpl& context, i
 CustomNonbondedForceImpl::LongRangeCorrectionData CustomNonbondedForceImpl::prepareLongRangeCorrection(const CustomNonbondedForce& force, int numThreads) {
     LongRangeCorrectionData data;
     data.method = force.getNonbondedMethod();
+    data.cutoffDistance = force.getCutoffDistance();
+    data.switchingDistance = force.getSwitchingDistance();
+    data.useSwitchingFunction = force.getUseSwitchingFunction();
     if (data.method == CustomNonbondedForce::NoCutoff || data.method == CustomNonbondedForce::CutoffNonPeriodic)
         return data;
     
@@ -238,8 +241,12 @@ CustomNonbondedForceImpl::LongRangeCorrectionData CustomNonbondedForceImpl::prep
         for (int i = 0; i < numThreads; i++)
             data.derivExpressions[i].push_back(derivExpression);
     }
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        data.globalParameterNames.push_back(force.getGlobalParameterName(i));
+    }
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         string name = force.getPerParticleParameterName(i);
+        data.perParticleParameterNames.push_back(name);
         data.paramNames.push_back(name+"1");
         data.paramNames.push_back(name+"2");
     }
@@ -253,7 +260,7 @@ CustomNonbondedForceImpl::LongRangeCorrectionData CustomNonbondedForceImpl::prep
     return data;
 }
 
-void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForce& force, LongRangeCorrectionData& data, const Context& context, double& coefficient, vector<double>& derivatives, ThreadPool& threads) {
+void CustomNonbondedForceImpl::calcLongRangeCorrection(LongRangeCorrectionData& data, const Context& context, double& coefficient, vector<double>& derivatives, ThreadPool& threads) {
     if (data.method == CustomNonbondedForce::NoCutoff || data.method == CustomNonbondedForce::CutoffNonPeriodic) {
         coefficient = 0.0;
         return;
@@ -262,18 +269,18 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
     // Calculate the computed values for all atom classes.
     
     int numClasses = data.classes.size();
-    vector<vector<double> > computedValues(numClasses, vector<double>(force.getNumComputedValues()));
-    for (int i = 0; i < force.getNumComputedValues(); i++) {
+    vector<vector<double> > computedValues(numClasses, vector<double>(data.computedValueExpressions.size()));
+    for (int i = 0; i < data.computedValueExpressions.size(); i++) {
         Lepton::CompiledExpression& expression = data.computedValueExpressions[i];
         const set<string>& variables = expression.getVariables();
-        for (int j = 0; j < force.getNumGlobalParameters(); j++) {
-            const string& name = force.getGlobalParameterName(j);
+        for (int j = 0; j < data.globalParameterNames.size(); j++) {
+            const string& name = data.globalParameterNames[j];
             if (variables.find(name) != variables.end())
                 expression.getVariableReference(name) = context.getParameter(name);
         }
         for (int j = 0; j < numClasses; j++) {
-            for (int k = 0; k < force.getNumPerParticleParameters(); k++) {
-                const string& name = force.getPerParticleParameterName(k);
+            for (int k = 0; k < data.perParticleParameterNames.size(); k++) {
+                const string& name = data.perParticleParameterNames[k];
                 if (variables.find(name) != variables.end())
                     expression.getVariableReference(name) = data.classes[j][k];
             }
@@ -295,7 +302,7 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
                 break;
             for (int j = i; j < numClasses; j++)
                 threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteraction(expression, data.classes[i], data.classes[j],
-                        computedValues[i], computedValues[j], force, context, data.paramNames, data.computedValueNames);
+                        computedValues[i], computedValues[j], data, context);
         }
     });
     threads.waitForThreads();
@@ -320,7 +327,7 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
                     break;
                 for (int j = i; j < numClasses; j++)
                     threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteraction(expression, data.classes[i], data.classes[j],
-                            computedValues[i], computedValues[j], force, context, data.paramNames, data.computedValueNames);
+                            computedValues[i], computedValues[j], data, context);
             }
         });
         threads.waitForThreads();
@@ -333,11 +340,11 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
 }
 
 double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledVectorExpression& expression, const vector<double>& params1, const vector<double>& params2,
-        const vector<double>& computedValues1, const vector<double>& computedValues2, const CustomNonbondedForce& force, const Context& context,
-        const vector<string>& paramNames, const vector<string>& computedValueNames) {
+        const vector<double>& computedValues1, const vector<double>& computedValues2, const LongRangeCorrectionData& data, const Context& context) {
     int width = expression.getWidth();
     const set<string>& variables = expression.getVariables();
-    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
+    const vector<string>& paramNames = data.paramNames;
+    for (int i = 0; i < data.perParticleParameterNames.size(); i++) {
         if (variables.find(paramNames[2*i]) != variables.end()) {
             float* pointer = expression.getVariablePointer(paramNames[2*i]);
             for (int j = 0; j < width; j++)
@@ -349,7 +356,8 @@ double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledVectorExpr
                 pointer[j] = params2[i];
         }
     }
-    for (int i = 0; i < force.getNumComputedValues(); i++) {
+    const vector<string>& computedValueNames = data.computedValueNames;
+    for (int i = 0; i < data.computedValueExpressions.size(); i++) {
         if (variables.find(computedValueNames[2*i]) != variables.end()) {
             float* pointer = expression.getVariablePointer(computedValueNames[2*i]);
             for (int j = 0; j < width; j++)
@@ -361,8 +369,8 @@ double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledVectorExpr
                 pointer[j] = computedValues2[i];
         }
     }
-    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-        const string& name = force.getGlobalParameterName(i);
+    for (int i = 0; i < data.globalParameterNames.size(); i++) {
+        const string& name = data.globalParameterNames[i];
         if (variables.find(name) != variables.end()) {
             float* pointer = expression.getVariablePointer(name);
             for (int j = 0; j < width; j++)
@@ -381,7 +389,7 @@ double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledVectorExpr
     catch (exception& ex) {
         throw OpenMMException("CustomNonbondedForce: Cannot use long range correction with a force that does not depend on r.");
     }
-    double cutoff = force.getCutoffDistance();
+    double cutoff = data.cutoffDistance;
     double sum = 0;
     int numPoints = 1;
     for (int iteration = 0; ; iteration++) {
@@ -414,8 +422,8 @@ double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledVectorExpr
     // If a switching function is used, integrate over the switching interval.
 
     double sum2 = 0;
-    if (force.getUseSwitchingFunction()) {
-        double rswitch = force.getSwitchingDistance();
+    if (data.useSwitchingFunction) {
+        double rswitch = data.switchingDistance;
         sum2 = 0;
         numPoints = 1;
         vector<double> switchValue(width);

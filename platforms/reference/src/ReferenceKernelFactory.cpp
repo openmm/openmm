@@ -51,7 +51,7 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
     if (name == CalcConstantPotentialForceKernel::Name())
         return new ReferenceCalcConstantPotentialForceKernel(name, platform);
     if (name == CalcCustomNonbondedForceKernel::Name())
-        return new ReferenceCalcCustomNonbondedForceKernel(name, platform);
+        return new ReferenceCalcCustomNonbondedForceKernel(name, platform, data);
     if (name == CalcHarmonicBondForceKernel::Name())
         return new ReferenceCalcHarmonicBondForceKernel(name, platform);
     if (name == CalcCustomBondForceKernel::Name())

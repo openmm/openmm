@@ -86,11 +86,13 @@ private:
 
 class CommonCalcCustomNonbondedForceKernel::LongRangePostComputation : public ComputeContext::ForcePostComputation {
 public:
-    LongRangePostComputation(ComputeContext& cc, double& longRangeCoefficient, vector<double>& longRangeCoefficientDerivs, CustomNonbondedForce* force) :
-            cc(cc), longRangeCoefficient(longRangeCoefficient), longRangeCoefficientDerivs(longRangeCoefficientDerivs), force(force) {
+    LongRangePostComputation(ComputeContext& cc, double& longRangeCoefficient, vector<double>& longRangeCoefficientDerivs, const CustomNonbondedForce& force) :
+            cc(cc), longRangeCoefficient(longRangeCoefficient), longRangeCoefficientDerivs(longRangeCoefficientDerivs), forceGroup(force.getForceGroup()) {
+        for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++)
+            energyParameterDerivativeNames.push_back(force.getEnergyParameterDerivativeName(i));
     }
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
-        if ((groups&(1<<force->getForceGroup())) == 0)
+        if ((groups&(1<<forceGroup)) == 0)
             return 0;
         if (!cc.getWorkThread().isCurrentThread())
             cc.getWorkThread().flush();
@@ -99,27 +101,28 @@ public:
         double volume = a[0]*b[1]*c[2];
         map<string, double>& derivs = cc.getEnergyParamDerivWorkspace();
         for (int i = 0; i < longRangeCoefficientDerivs.size(); i++)
-            derivs[force->getEnergyParameterDerivativeName(i)] += longRangeCoefficientDerivs[i]/volume;
+            derivs[energyParameterDerivativeNames[i]] += longRangeCoefficientDerivs[i]/volume;
         return longRangeCoefficient/volume;
     }
 private:
     ComputeContext& cc;
+    int forceGroup;
     double& longRangeCoefficient;
+    vector<string> energyParameterDerivativeNames;
     vector<double>& longRangeCoefficientDerivs;
-    CustomNonbondedForce* force;
 };
 
 class CommonCalcCustomNonbondedForceKernel::LongRangeTask : public ComputeContext::WorkTask {
 public:
     LongRangeTask(ComputeContext& cc, Context& context, CustomNonbondedForceImpl::LongRangeCorrectionData& data, vector<float>& globalParamValues,
-                  double& longRangeCoefficient, vector<double>& longRangeCoefficientDerivs, CustomNonbondedForce* force,
-                  map<vector<float>, double>& longRangeCoefficientCache, map<vector<float>, vector<double> >& longRangeCoefficientDerivsCache) :
+                  double& longRangeCoefficient, vector<double>& longRangeCoefficientDerivs, map<vector<float>, double>& longRangeCoefficientCache,
+                  map<vector<float>, vector<double> >& longRangeCoefficientDerivsCache) :
                         cc(cc), context(context), data(data), globalParamValues(globalParamValues), longRangeCoefficient(longRangeCoefficient),
-                        longRangeCoefficientDerivs(longRangeCoefficientDerivs), force(force), longRangeCoefficientCache(longRangeCoefficientCache),
+                        longRangeCoefficientDerivs(longRangeCoefficientDerivs), longRangeCoefficientCache(longRangeCoefficientCache),
                         longRangeCoefficientDerivsCache(longRangeCoefficientDerivsCache) {
     }
     void execute() {
-        CustomNonbondedForceImpl::calcLongRangeCorrection(*force, data, context, longRangeCoefficient, longRangeCoefficientDerivs, cc.getThreadPool());
+        CustomNonbondedForceImpl::calcLongRangeCorrection(data, context, longRangeCoefficient, longRangeCoefficientDerivs, cc.getThreadPool());
         if (longRangeCoefficientCache.size() < 1000) {
             longRangeCoefficientCache[globalParamValues] = longRangeCoefficient;
             longRangeCoefficientDerivsCache[globalParamValues] = longRangeCoefficientDerivs;
@@ -134,7 +137,6 @@ private:
     vector<double>& longRangeCoefficientDerivs;
     map<vector<float>, double>& longRangeCoefficientCache;
     map<vector<float>, vector<double> >& longRangeCoefficientDerivsCache;
-    CustomNonbondedForce* force;
 };
 
 CommonCalcCustomNonbondedForceKernel::~CommonCalcCustomNonbondedForceKernel() {
@@ -143,8 +145,6 @@ CommonCalcCustomNonbondedForceKernel::~CommonCalcCustomNonbondedForceKernel() {
         delete params;
     if (computedValues != NULL)
         delete computedValues;
-    if (forceCopy != NULL)
-        delete forceCopy;
 }
 
 void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
@@ -159,6 +159,7 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     int numParticles = force.getNumParticles();
     int paddedNumParticles = cc.getPaddedNumAtoms();
     int numParams = force.getNumPerParticleParameters();
+    hasParamDerivs = (force.getNumEnergyParameterDerivatives() > 0);
     params = new ComputeParameterSet(cc, numParams, paddedNumParticles, "customNonbondedParameters", true);
     vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
     vector<vector<int> > exclusionList(numParticles);
@@ -360,10 +361,10 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
 
     // Record information for the long range correction.
 
-    if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection() && cc.getContextIndex() == 0) {
-        forceCopy = XmlSerializer::clone(force);
+    useLongRangeCorrection = (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection() && cc.getContextIndex() == 0);
+    if (useLongRangeCorrection) {
         longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
-        cc.addPostComputation(new LongRangePostComputation(cc, longRangeCoefficient, longRangeCoefficientDerivs, forceCopy));
+        cc.addPostComputation(new LongRangePostComputation(cc, longRangeCoefficient, longRangeCoefficientDerivs, force));
         hasInitializedLongRangeCorrection = false;
     }
     else {
@@ -546,7 +547,6 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
 
     // Create the kernel.
 
-    hasParamDerivs = (force.getNumEnergyParameterDerivatives() > 0);
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = interactionSource;
     const string suffixes[] = {"x", "y", "z", "w"};
@@ -641,7 +641,7 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
     }
     ContextSelector selector(cc);
     bool recomputeLongRangeCorrection = !hasInitializedLongRangeCorrection;
-    if (needGlobalParams && forceCopy != NULL) {
+    if (needGlobalParams && useLongRangeCorrection) {
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
             float value = (float) context.getParameter(globalParamNames[i]);
             if (value != globalParamValues[i])
@@ -655,9 +655,9 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
         recomputeLongRangeCorrection = false;
     }
     if (recomputeLongRangeCorrection) {
-        if (includeEnergy || forceCopy->getNumEnergyParameterDerivatives() > 0) {
+        if (includeEnergy || hasParamDerivs) {
             cc.getWorkThread().addTask(new LongRangeTask(cc, context.getOwner(), longRangeCorrectionData, globalParamValues, longRangeCoefficient,
-                                       longRangeCoefficientDerivs, forceCopy, longRangeCoefficientCache, longRangeCoefficientDerivsCache));
+                                       longRangeCoefficientDerivs, longRangeCoefficientCache, longRangeCoefficientDerivsCache));
             hasInitializedLongRangeCorrection = true;
         }
         else
@@ -753,11 +753,9 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
 
     // If necessary, recompute the long range correction.
 
-    if (forceCopy != NULL) {
+    if (useLongRangeCorrection) {
         longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
         hasInitializedLongRangeCorrection = false;
-        delete forceCopy;
-        forceCopy = XmlSerializer::clone(force);
         longRangeCoefficientCache.clear();
         longRangeCoefficientDerivsCache.clear();
     }

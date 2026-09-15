@@ -74,11 +74,10 @@ public:
      * long range correction to the energy.  If the Force computes parameter derivatives,
      * also compute the corresponding derivatives of the correction.
      */
-    static void calcLongRangeCorrection(const CustomNonbondedForce& force, LongRangeCorrectionData& data, const Context& context, double& coefficient, std::vector<double>& derivatives, ThreadPool& threads);
+    static void calcLongRangeCorrection(LongRangeCorrectionData& data, const Context& context, double& coefficient, std::vector<double>& derivatives, ThreadPool& threads);
 private:
     static double integrateInteraction(Lepton::CompiledVectorExpression& expression, const std::vector<double>& params1, const std::vector<double>& params2,
-            const std::vector<double>& computedValues1, const std::vector<double>& computedValues2, const CustomNonbondedForce& force, const Context& context,
-            const std::vector<std::string>& paramNames, const std::vector<std::string>& computedValueNames);
+            const std::vector<double>& computedValues1, const std::vector<double>& computedValues2, const LongRangeCorrectionData& data, const Context& context);
     const CustomNonbondedForce& owner;
     Kernel kernel;
 };
@@ -86,8 +85,10 @@ private:
 class CustomNonbondedForceImpl::LongRangeCorrectionData {
 public:
     CustomNonbondedForce::NonbondedMethod method;
+    double cutoffDistance, switchingDistance;
+    bool useSwitchingFunction;
     std::vector<std::vector<double> > classes;
-    std::vector<std::string> paramNames, computedValueNames;
+    std::vector<std::string> globalParameterNames, perParticleParameterNames, paramNames, computedValueNames;
     std::map<std::pair<int, int>, long long int> interactionCount;
     std::vector<Lepton::CompiledVectorExpression> energyExpression;
     std::vector<std::vector<Lepton::CompiledVectorExpression> > derivExpressions;
