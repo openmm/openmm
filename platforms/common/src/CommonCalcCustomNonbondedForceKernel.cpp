@@ -754,7 +754,7 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
     // If necessary, recompute the long range correction.
 
     if (useLongRangeCorrection) {
-        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
+        CustomNonbondedForceImpl::updateLongRangeCorrection(force, longRangeCorrectionData, cc.getThreadPool().getNumThreads());
         hasInitializedLongRangeCorrection = false;
         longRangeCoefficientCache.clear();
         longRangeCoefficientDerivsCache.clear();
