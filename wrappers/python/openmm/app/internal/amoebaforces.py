@@ -686,11 +686,7 @@ class AmoebaOutOfPlaneBendForceBuilder(BaseAmoebaForceBuilder):
                             angleList.append(atomIndex)
                     inPlaneAngles.append(tuple(angleList))
                 else:
-                    angleList = list(angle[:3])
-                    for atomIndex in partners:
-                        if atomIndex not in angleList:
-                            angleList.append(atomIndex)
-                    genericAngles.append(tuple(angleList))
+                    genericAngles.append(tuple(angle[:3]))
                     
             elif middleCovalency == 3 and middleAtom in skipAtoms:
                 angleList = list(angle[:3])
