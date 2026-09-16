@@ -777,7 +777,8 @@ private:
  */
 class ReferenceCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
-    ReferenceCalcCustomNonbondedForceKernel(std::string name, const Platform& platform) : CalcCustomNonbondedForceKernel(name, platform), forceCopy(NULL) {
+    ReferenceCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) :
+        CalcCustomNonbondedForceKernel(name, platform), data(data) {
     }
     ~ReferenceCalcCustomNonbondedForceKernel();
     /**
@@ -807,11 +808,11 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle);
 private:
     void createExpressions(const CustomNonbondedForce& force);
+    ReferencePlatform::PlatformData& data;
     int numParticles;
     std::vector<std::vector<double> > particleParamArray;
     double nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
-    bool useSwitchingFunction, hasInitializedLongRangeCorrection;
-    CustomNonbondedForce* forceCopy;
+    bool useSwitchingFunction, useLongRangeCorrection, hasInitializedLongRangeCorrection;
     CustomNonbondedForceImpl::LongRangeCorrectionData longRangeCorrectionData;
     std::map<std::string, double> globalParamValues;
     std::vector<std::set<int> > exclusions;

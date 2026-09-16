@@ -43,7 +43,7 @@ namespace OpenMM {
 class CommonCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
     CommonCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            cc(cc), params(NULL), computedValues(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
+            cc(cc), params(NULL), computedValues(NULL), system(system), hasInitializedKernel(false) {
     }
     ~CommonCalcCustomNonbondedForceKernel();
     /**
@@ -93,9 +93,8 @@ private:
     std::map<std::vector<float>, double> longRangeCoefficientCache;
     std::map<std::vector<float>, std::vector<double> > longRangeCoefficientDerivsCache;
     std::vector<double> longRangeCoefficientDerivs;
-    bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList, needGlobalParams;
+    bool useLongRangeCorrection, hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList, needGlobalParams;
     int numGroupThreadBlocks;
-    CustomNonbondedForce* forceCopy;
     CustomNonbondedForceImpl::LongRangeCorrectionData longRangeCorrectionData;
     const System& system;
 };

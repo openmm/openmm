@@ -1185,14 +1185,12 @@ void CpuCalcConstantPotentialForceKernel::ensurePmeInitialized(ContextImpl& cont
 }
 
 CpuCalcCustomNonbondedForceKernel::CpuCalcCustomNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) :
-            CalcCustomNonbondedForceKernel(name, platform), data(data), forceCopy(NULL), nonbonded(NULL) {
+            CalcCustomNonbondedForceKernel(name, platform), data(data), nonbonded(NULL) {
 }
 
 CpuCalcCustomNonbondedForceKernel::~CpuCalcCustomNonbondedForceKernel() {
     if (nonbonded != NULL)
         delete nonbonded;
-    if (forceCopy != NULL)
-        delete forceCopy;
 }
 
 void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
@@ -1232,8 +1230,9 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
 
     // Record information for the long range correction.
 
-    if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection()) {
-        forceCopy = XmlSerializer::clone(force);
+    useLongRangeCorrection = (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection());
+    if (useLongRangeCorrection) {
+        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, data.threads.getNumThreads());
         hasInitializedLongRangeCorrection = false;
     }
     else {
@@ -1335,11 +1334,11 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
         nonbonded->setPeriodic(boxVectors);
     }
-    bool globalParamsChanged = false;
+    bool recomputeLongRangeCorrection = !hasInitializedLongRangeCorrection;
     for (auto& name : globalParameterNames) {
         double value = context.getParameter(name);
         if (globalParamValues[name] != value)
-            globalParamsChanged = true;
+            recomputeLongRangeCorrection = true;
         globalParamValues[name] = value;
     }
     if (useSwitchingFunction)
@@ -1352,13 +1351,10 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
     
     // Add in the long range correction.
     
-    if (!hasInitializedLongRangeCorrection) {
-        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(*forceCopy, data.threads.getNumThreads());
-        CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
+    if (recomputeLongRangeCorrection && useLongRangeCorrection) {
+        CustomNonbondedForceImpl::calcLongRangeCorrection(longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
         hasInitializedLongRangeCorrection = true;
     }
-    else if (globalParamsChanged && forceCopy != NULL)
-        CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
     double volume = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
     energy += longRangeCoefficient/volume;
     for (int i = 0; i < longRangeCoefficientDerivs.size(); i++)
@@ -1382,12 +1378,10 @@ void CpuCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& con
     
     // If necessary, recompute the long range correction.
     
-    if (forceCopy != NULL) {
+    if (useLongRangeCorrection) {
         longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, data.threads.getNumThreads());
-        CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
+        CustomNonbondedForceImpl::calcLongRangeCorrection(longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
         hasInitializedLongRangeCorrection = true;
-        delete forceCopy;
-        forceCopy = XmlSerializer::clone(force);
     }
 
     // See if any tabulated functions have changed.
