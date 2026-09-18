@@ -20,6 +20,7 @@ from .forcefield import ForceField
 from .simulation import Simulation
 from .pdbreporter import PDBReporter, PDBxReporter
 from .xtcreporter import XTCReporter
+from .imdreporter import IMDReporter
 from .amberprmtopfile import AmberPrmtopFile, HCT, OBC1, OBC2, GBn, GBn2
 from .amberinpcrdfile import AmberInpcrdFile
 from .tinkerfiles import TinkerFiles
