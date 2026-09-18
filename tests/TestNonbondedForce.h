@@ -747,7 +747,7 @@ void testManyUpdatesOfOneMolecule() {
         nonbonded->addParticle(-0.8, 0.3, 0.6);
         nonbonded->addParticle(0.4, 0.1, 0.0);
         nonbonded->addParticle(0.4, 0.1, 0.0);
-        Vec3 center(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+        Vec3 center(0.6*(i%8)+0.2*genrand_real2(sfmt), 0.6*((i/8)%8)+0.2*genrand_real2(sfmt), 0.6*(i/64)+0.2*genrand_real2(sfmt));
         positions[3*i] = center;
         positions[3*i+1] = center+Vec3(0.1, 0, 0);
         positions[3*i+2] = center+Vec3(0, 0.1, 0);
@@ -777,7 +777,7 @@ void testManyUpdatesOfOneMolecule() {
         nonbonded->setParticleParameters(3*molecule+2, 0.4*scale, 0.1, 0.0);
         nonbonded->updateParametersInContext(context);
         nonbonded->updateParametersInContext(referenceContext);
-        if (step%20 == 19) {
+        if (step%20 >= 18) {
             double energy = context.getState(State::Energy).getPotentialEnergy();
             double referenceEnergy = referenceContext.getState(State::Energy).getPotentialEnergy();
             ASSERT_EQUAL_TOL(referenceEnergy, energy, 1e-4);
