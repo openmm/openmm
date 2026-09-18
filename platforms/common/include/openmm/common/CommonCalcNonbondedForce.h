@@ -162,7 +162,8 @@ private:
     std::vector<std::string> paramNames;
     std::map<std::string, int> paramIndices;
     std::map<std::string, double> paramValues;
-    std::map<int, int> exceptionIndex;
+    std::vector<int> exceptionIndex, exceptions;
+    std::vector<mm_float4> baseParticleParamVec, baseExceptionParamsVec;
     double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha, totalCharge;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;

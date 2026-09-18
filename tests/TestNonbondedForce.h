@@ -724,6 +724,139 @@ void testChangingParameters() {
     ASSERT_EQUAL_TOL(state.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
 }
 
+void testChangingSubsetOfParameters() {
+    const int numMolecules = 600;
+    const int numParticles = numMolecules*2;
+    const double cutoff = 2.0;
+    const double boxSize = 20.0;
+    const double tol = 2e-3;
+    ReferencePlatform reference;
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numMolecules; i++) {
+        nonbonded->addParticle(-1.0, 0.2, 0.1);
+        nonbonded->addParticle(1.0, 0.1, 0.1);
+        positions[2*i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+        positions[2*i+1] = Vec3(positions[2*i][0]+1.0, positions[2*i][1], positions[2*i][2]);
+        system.addConstraint(2*i, 2*i+1, 1.0);
+        if (i%3 == 0)
+            nonbonded->addException(2*i, 2*i+1, -0.5, 0.15, 0.05);
+        else
+            nonbonded->addException(2*i, 2*i+1, 0.0, 0.15, 0.0);
+    }
+    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    nonbonded->setCutoffDistance(cutoff);
+    system.addForce(nonbonded);
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    VerletIntegrator integrator1(0.01);
+    VerletIntegrator integrator2(0.01);
+    Context context(system, integrator1, platform);
+    Context referenceContext(system, integrator2, reference);
+    context.setPositions(positions);
+    referenceContext.setPositions(positions);
+
+    // Change a few particles and exceptions in the middle of the system, then a different
+    // few, checking against the Reference platform each time.
+
+    for (int round = 0; round < 3; round++) {
+        int firstMolecule = 100+150*round;
+        for (int i = firstMolecule; i < firstMolecule+10; i++) {
+            double charge, sigma, epsilon;
+            nonbonded->getParticleParameters(2*i, charge, sigma, epsilon);
+            nonbonded->setParticleParameters(2*i, 1.2*charge, 1.1*sigma, 1.5*epsilon);
+            nonbonded->getParticleParameters(2*i+1, charge, sigma, epsilon);
+            nonbonded->setParticleParameters(2*i+1, 1.2*charge, 1.1*sigma, 1.5*epsilon);
+            int particle1, particle2;
+            double chargeProd;
+            nonbonded->getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+            if (chargeProd != 0.0)
+                nonbonded->setExceptionParameters(i, particle1, particle2, 1.3*chargeProd, 1.1*sigma, 1.4*epsilon);
+            else
+                nonbonded->setExceptionParameters(i, particle1, particle2, 0.0, 1.1*sigma, 0.0);
+        }
+        nonbonded->updateParametersInContext(context);
+        nonbonded->updateParametersInContext(referenceContext);
+        State state = context.getState(State::Forces | State::Energy);
+        State referenceState = referenceContext.getState(State::Forces | State::Energy);
+        for (int i = 0; i < numParticles; i++)
+            ASSERT_EQUAL_VEC(state.getForces()[i], referenceState.getForces()[i], tol);
+        ASSERT_EQUAL_TOL(state.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
+    }
+
+    // Making an excluded exception non-excluded is not allowed.
+
+    nonbonded->setExceptionParameters(1, 2, 3, 0.5, 0.15, 0.05);
+    bool thrown = false;
+    try {
+        nonbonded->updateParametersInContext(context);
+    }
+    catch (const OpenMMException& exception) {
+        thrown = true;
+    }
+    ASSERT(thrown);
+
+    // Neither is adding an exception.
+
+    nonbonded->setExceptionParameters(1, 2, 3, 0.0, 0.15, 0.0);
+    nonbonded->updateParametersInContext(context);
+    nonbonded->addException(0, 5, 0.1, 0.2, 0.1);
+    thrown = false;
+    try {
+        nonbonded->updateParametersInContext(context);
+    }
+    catch (const OpenMMException& exception) {
+        thrown = true;
+    }
+    ASSERT(thrown);
+}
+
+void testChangingParametersWithoutLJ() {
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
+    NonbondedForce* nonbonded = new NonbondedForce();
+    vector<Vec3> positions;
+    for (int i = 0; i < 10; i++) {
+        system.addParticle(1.0);
+        nonbonded->addParticle(i%2 == 0 ? 1.0 : -1.0, 0.2, 0.0);
+        positions.push_back(Vec3(0.5*i, 0, 0));
+    }
+    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    nonbonded->setCutoffDistance(2.0);
+    system.addForce(nonbonded);
+    ReferencePlatform reference;
+    VerletIntegrator integrator1(0.01);
+    VerletIntegrator integrator2(0.01);
+    Context context(system, integrator1, platform);
+    Context referenceContext(system, integrator2, reference);
+    context.setPositions(positions);
+    referenceContext.setPositions(positions);
+    context.getState(State::Energy);
+
+    // Changing a charge is fine.
+
+    nonbonded->setParticleParameters(4, 0.5, 0.2, 0.0);
+    nonbonded->updateParametersInContext(context);
+    nonbonded->updateParametersInContext(referenceContext);
+    ASSERT_EQUAL_TOL(referenceContext.getState(State::Energy).getPotentialEnergy(), context.getState(State::Energy).getPotentialEnergy(), 1e-4);
+
+    // A platform that built its kernel without Lennard-Jones interactions must reject a
+    // nonzero epsilon.  One that did not must apply it.
+
+    nonbonded->setParticleParameters(4, 0.5, 0.2, 0.1);
+    nonbonded->updateParametersInContext(referenceContext);
+    try {
+        nonbonded->updateParametersInContext(context);
+        ASSERT_EQUAL_TOL(referenceContext.getState(State::Energy).getPotentialEnergy(), context.getState(State::Energy).getPotentialEnergy(), 1e-4);
+    }
+    catch (const OpenMMException& exception) {
+    }
+}
+
 void testSwitchingFunction(NonbondedForce::NonbondedMethod method) {
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
@@ -1125,6 +1258,8 @@ int main(int argc, char* argv[]) {
         testLargeSystem();
         testDispersionCorrection();
         testChangingParameters();
+        testChangingSubsetOfParameters();
+        testChangingParametersWithoutLJ();
         testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
         testSwitchingFunction(NonbondedForce::PME);
         testTwoForces();

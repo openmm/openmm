@@ -237,7 +237,8 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
         exceptionsWithOffsets.insert(exception);
     }
     vector<pair<int, int> > exclusions;
-    vector<int> exceptions;
+    exceptionIndex.assign(force.getNumExceptions(), -1);
+    exceptions.clear();
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
@@ -252,7 +253,7 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
     // Initialize nonbonded interactions.
 
     int numParticles = force.getNumParticles();
-    vector<mm_float4> baseParticleParamVec(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    baseParticleParamVec.assign(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
     vector<vector<int> > exclusionList(numParticles);
     hasCoulomb = false;
     hasLJ = false;
@@ -633,7 +634,7 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
         vector<vector<int> > atoms(numExceptions, vector<int>(2));
         exceptionParams.initialize<mm_float4>(cc, numExceptions, "exceptionParams");
         baseExceptionParams.initialize<mm_float4>(cc, numExceptions, "baseExceptionParams");
-        vector<mm_float4> baseExceptionParamsVec(numExceptions);
+        baseExceptionParamsVec.resize(numExceptions);
         for (int i = 0; i < numExceptions; i++) {
             double chargeProd, sigma, epsilon;
             force.getExceptionParameters(exceptions[startIndex+i], atoms[i][0], atoms[i][1], chargeProd, sigma, epsilon);
@@ -1117,13 +1118,16 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
 }
 
 void CommonCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
-    // Make sure the new parameters are acceptable.
+    // Make sure the new parameters are acceptable.  Only parameters in the changed ranges
+    // can have become unacceptable, except that offsets may refer to any exception.
 
     ContextSelector selector(cc);
     if (force.getNumParticles() != cc.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    if (force.getNumExceptions() != (int) exceptionIndex.size())
+        throw OpenMMException("updateParametersInContext: The number of exceptions has changed");
     if (!hasCoulomb || !hasLJ) {
-        for (int i = 0; i < force.getNumParticles(); i++) {
+        for (int i = firstParticle; i <= lastParticle; i++) {
             double charge, sigma, epsilon;
             force.getParticleParameters(i, charge, sigma, epsilon);
             if (!hasCoulomb && charge != 0.0)
@@ -1132,38 +1136,49 @@ void CommonCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
                 throw OpenMMException("updateParametersInContext: The nonbonded force kernel does not include Lennard-Jones interactions, because all epsilons were originally 0");
         }
     }
-    set<int> exceptionsWithOffsets;
     for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
         string param;
         int exception;
         double charge, sigma, epsilon;
         force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
-        exceptionsWithOffsets.insert(exception);
-    }
-    vector<int> exceptions;
-    for (int i = 0; i < force.getNumExceptions(); i++) {
-        int particle1, particle2;
-        double chargeProd, sigma, epsilon;
-        force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
-        if (exceptionIndex.find(i) == exceptionIndex.end()) {
-            if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
-                throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
-        }
-        else
-            exceptions.push_back(i);
+        if (exceptionIndex[exception] < 0)
+            throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
     }
     int numContexts = cc.getNumContexts();
     int startIndex = cc.getContextIndex()*exceptions.size()/numContexts;
     int endIndex = (cc.getContextIndex()+1)*exceptions.size()/numContexts;
     int numExceptions = endIndex-startIndex;
-    if (numExceptions != exceptionAtoms.size())
-        throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
+
+    // Record the exceptions.  An exception that was excluded must stay excluded.  The
+    // changed exceptions are contiguous in the force, and exceptionIndex preserves their
+    // order, so they are contiguous in this context's array too.
+
+    int first = numExceptions, last = -1;
+    for (int i = firstException; i <= lastException; i++) {
+        int particle1, particle2;
+        double chargeProd, sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+        if (exceptionIndex[i] < 0) {
+            if (chargeProd != 0.0 || epsilon != 0.0)
+                throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
+            continue;
+        }
+        int index = exceptionIndex[i]-startIndex;
+        if (index < 0 || index >= numExceptions)
+            continue;
+        if (make_pair(particle1, particle2) != exceptionAtoms[index])
+            throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
+        baseExceptionParamsVec[index] = mm_float4(chargeProd, sigma, epsilon, 0);
+        first = min(first, index);
+        last = max(last, index);
+    }
+    if (first <= last)
+        baseExceptionParams.uploadSubArray(&baseExceptionParamsVec[first], first, last-first+1);
 
     // Record the per-particle parameters.
 
     if (firstParticle <= lastParticle) {
-        vector<mm_float4> baseParticleParamVec(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
-        for (int i = 0; i < force.getNumParticles(); i++) {
+        for (int i = firstParticle; i <= lastParticle; i++) {
             double charge, sigma, epsilon;
             force.getParticleParameters(i, charge, sigma, epsilon);
             baseParticleParamVec[i] = mm_float4(charge, sigma, epsilon, 0);
@@ -1186,63 +1201,50 @@ void CommonCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
         }
     }
 
-    // Record the exceptions.
-
-    if (firstException <= lastException && numExceptions > 0) {
-        vector<mm_float4> baseExceptionParamsVec(numExceptions);
-        for (int i = 0; i < numExceptions; i++) {
-            int particle1, particle2;
-            double chargeProd, sigma, epsilon;
-            force.getExceptionParameters(exceptions[startIndex+i], particle1, particle2, chargeProd, sigma, epsilon);
-            if (make_pair(particle1, particle2) != exceptionAtoms[i])
-                throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
-            baseExceptionParamsVec[i] = mm_float4(chargeProd, sigma, epsilon, 0);
-        }
-        baseExceptionParams.upload(baseExceptionParamsVec);
-    }
-
     // Record parameter offsets.
 
-    vector<vector<mm_float4> > particleOffsetVec(force.getNumParticles());
-    vector<vector<mm_float4> > exceptionOffsetVec(numExceptions);
-    for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
-        string param;
-        int particle;
-        double charge, sigma, epsilon;
-        force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
-        auto paramIndex = paramIndices.find(param);
-        if (paramIndex == paramIndices.end())
-            throw OpenMMException("updateParametersInContext: The parameter of a particle parameter offset has changed");
-        particleOffsetVec[particle].push_back(mm_float4(charge, sigma, epsilon, paramIndex->second));
-    }
-    for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
-        string param;
-        int exception;
-        double charge, sigma, epsilon;
-        force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
-        int index = exceptionIndex[exception];
-        if (index < startIndex || index >= endIndex)
-            continue;
-        auto paramIndex = paramIndices.find(param);
-        if (paramIndex == paramIndices.end())
-            throw OpenMMException("updateParametersInContext: The parameter of an exception parameter offset has changed");
-        exceptionOffsetVec[index-startIndex].push_back(mm_float4(charge, sigma, epsilon, paramIndex->second));
-    }
     if (max(force.getNumParticleParameterOffsets(), 1) != particleParamOffsets.getSize())
         throw OpenMMException("updateParametersInContext: The number of particle parameter offsets has changed");
-    vector<mm_float4> p, e;
-    for (int i = 0; i < particleOffsetVec.size(); i++)
-        for (int j = 0; j < particleOffsetVec[i].size(); j++)
-            p.push_back(particleOffsetVec[i][j]);
-    for (int i = 0; i < exceptionOffsetVec.size(); i++)
-        for (int j = 0; j < exceptionOffsetVec[i].size(); j++)
-            e.push_back(exceptionOffsetVec[i][j]);
-    if (force.getNumParticleParameterOffsets() > 0)
-        particleParamOffsets.upload(p);
-    if (max((int) e.size(), 1) != exceptionParamOffsets.getSize())
-        throw OpenMMException("updateParametersInContext: The number of exception parameter offsets has changed");
-    if (e.size() > 0)
-        exceptionParamOffsets.upload(e);
+    if (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0) {
+        vector<vector<mm_float4> > particleOffsetVec(force.getNumParticles());
+        vector<vector<mm_float4> > exceptionOffsetVec(numExceptions);
+        for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+            string param;
+            int particle;
+            double charge, sigma, epsilon;
+            force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
+            auto paramIndex = paramIndices.find(param);
+            if (paramIndex == paramIndices.end())
+                throw OpenMMException("updateParametersInContext: The parameter of a particle parameter offset has changed");
+            particleOffsetVec[particle].push_back(mm_float4(charge, sigma, epsilon, paramIndex->second));
+        }
+        for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+            string param;
+            int exception;
+            double charge, sigma, epsilon;
+            force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
+            int index = exceptionIndex[exception];
+            if (index < startIndex || index >= endIndex)
+                continue;
+            auto paramIndex = paramIndices.find(param);
+            if (paramIndex == paramIndices.end())
+                throw OpenMMException("updateParametersInContext: The parameter of an exception parameter offset has changed");
+            exceptionOffsetVec[index-startIndex].push_back(mm_float4(charge, sigma, epsilon, paramIndex->second));
+        }
+        vector<mm_float4> p, e;
+        for (int i = 0; i < particleOffsetVec.size(); i++)
+            for (int j = 0; j < particleOffsetVec[i].size(); j++)
+                p.push_back(particleOffsetVec[i][j]);
+        for (int i = 0; i < exceptionOffsetVec.size(); i++)
+            for (int j = 0; j < exceptionOffsetVec[i].size(); j++)
+                e.push_back(exceptionOffsetVec[i][j]);
+        if (force.getNumParticleParameterOffsets() > 0)
+            particleParamOffsets.upload(p);
+        if (max((int) e.size(), 1) != exceptionParamOffsets.getSize())
+            throw OpenMMException("updateParametersInContext: The number of exception parameter offsets has changed");
+        if (e.size() > 0)
+            exceptionParamOffsets.upload(e);
+    }
 
     // Compute other values.
 
