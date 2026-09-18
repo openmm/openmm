@@ -747,7 +747,7 @@ void testManyUpdatesOfOneMolecule() {
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     for (int i = 0; i < numMolecules; i++) {
-        Vec3 center(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+        Vec3 center(0.6*(i%8)+0.2*genrand_real2(sfmt), 0.6*((i/8)%8)+0.2*genrand_real2(sfmt), 0.6*(i/64)+0.2*genrand_real2(sfmt));
         positions[3*i] = center;
         positions[3*i+1] = center+Vec3(0.1, 0, 0);
         positions[3*i+2] = center+Vec3(0, 0.1, 0);
@@ -782,12 +782,12 @@ void testManyUpdatesOfOneMolecule() {
     context.setPositions(positions);
     int molecule = numMolecules/2;
     for (int step = 0; step < 200; step++) {
-        double scale = (step%2 == 0 ? 1.0+0.01*(1+step%7) : 1.0);
+        double scale = (step%2 == 0 ? 1.0+0.1*(1+step%7) : 1.0);
         nonbonded->setParticleParameters(3*molecule, {0.3, 0.6*scale});
         nonbonded->setParticleParameters(3*molecule+1, {0.1, 0.05*scale});
         nonbonded->setParticleParameters(3*molecule+2, {0.1, 0.05*scale});
         nonbonded->updateParametersInContext(context);
-        if (step%20 == 19) {
+        if (step%20 >= 18) {
             System freshSystem;
             build(freshSystem, scale);
             VerletIntegrator freshIntegrator(0.01);
