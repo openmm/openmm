@@ -556,6 +556,16 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force, int firstParti
 bool ComputeContext::invalidateMolecules(ComputeForceInfo* force, bool checkAtoms, bool checkGroups, const vector<bool>& groupsToCheck) {
     if (numAtoms == 0 || !getNonbondedUtilities().getUseCutoff())
         return false;
+
+    // A group with a single instance has nothing to compare against, so skip it, and if no
+    // group needs checking there is no reason to wake the thread pool at all.
+
+    bool anyToCheck = false;
+    for (int group = 0; group < (int) moleculeGroups.size() && !anyToCheck; group++)
+        if ((groupsToCheck.empty() || groupsToCheck[group]) && moleculeGroups[group].instances.size() > 1)
+            anyToCheck = true;
+    if (!anyToCheck)
+        return false;
     bool valid = true;
     int forceIndex = -1;
     for (int i = 0; i < forces.size(); i++)
