@@ -1178,27 +1178,24 @@ void CommonCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
     // Record the per-particle parameters.
 
     if (firstParticle <= lastParticle) {
+        // Update the self energy by removing the old contribution of each changed particle
+        // and adding the new one, rather than summing over every particle again.
+
+        bool computeSelfEnergy = (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) && cc.getContextIndex() == 0;
         for (int i = firstParticle; i <= lastParticle; i++) {
             double charge, sigma, epsilon;
             force.getParticleParameters(i, charge, sigma, epsilon);
+            mm_float4 oldParams = baseParticleParamVec[i];
             baseParticleParamVec[i] = mm_float4(charge, sigma, epsilon, 0);
-        }
-        baseParticleParams.uploadSubArray(&baseParticleParamVec[firstParticle], firstParticle, lastParticle-firstParticle+1);
-
-        // Compute the self energy.
-
-        ewaldSelfEnergy = 0.0;
-        totalCharge = 0.0;
-        if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
-            if (cc.getContextIndex() == 0) {
-                for (int i = 0; i < force.getNumParticles(); i++) {
-                    ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
-                    totalCharge += baseParticleParamVec[i].x;
-                    if (doLJPME)
-                        ewaldSelfEnergy += baseParticleParamVec[i].z*pow(baseParticleParamVec[i].y*dispersionAlpha, 6)/3.0;
-                }
+            if (computeSelfEnergy) {
+                mm_float4& newParams = baseParticleParamVec[i];
+                ewaldSelfEnergy += (oldParams.x*oldParams.x - newParams.x*newParams.x)*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+                totalCharge += newParams.x-oldParams.x;
+                if (doLJPME)
+                    ewaldSelfEnergy += (newParams.z*pow(newParams.y*dispersionAlpha, 6) - oldParams.z*pow(oldParams.y*dispersionAlpha, 6))/3.0;
             }
         }
+        baseParticleParams.uploadSubArray(&baseParticleParamVec[firstParticle], firstParticle, lastParticle-firstParticle+1);
     }
 
     // Record parameter offsets.
@@ -1250,8 +1247,13 @@ void CommonCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
 
     if (force.getUseDispersionCorrection() && cc.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
-    cc.invalidateMolecules(info, firstParticle <= lastParticle || force.getNumParticleParameterOffsets() > 0,
-                           firstException <= lastException || force.getNumExceptionParameterOffsets() > 0);
+    if (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0) {
+        // Offsets can be changed without marking a range, so every molecule must be checked.
+        cc.invalidateMolecules(info, firstParticle <= lastParticle || force.getNumParticleParameterOffsets() > 0,
+                               firstException <= lastException || force.getNumExceptionParameterOffsets() > 0);
+    }
+    else
+        cc.invalidateMolecules(info, firstParticle, lastParticle, firstException, lastException);
     recomputeParams = true;
 }
 
