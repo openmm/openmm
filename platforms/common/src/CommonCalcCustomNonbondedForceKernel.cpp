@@ -763,5 +763,5 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
 
     // Mark that the current reordering may be invalid.
 
-    cc.invalidateMolecules(info, firstParticle <= lastParticle, false);
+    cc.invalidateMolecules(info, firstParticle, lastParticle, 0, -1);
 }
