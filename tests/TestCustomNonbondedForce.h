@@ -734,6 +734,72 @@ void testParticleTypes() {
     ASSERT_EQUAL(12.0, state.getPotentialEnergy());
 }
 
+void testManyUpdatesOfOneMolecule() {
+    // Repeatedly change one molecule's parameters so that it stops being identical to the
+    // others and then matches them again, checking against a freshly built context each
+    // time.  This exercises the molecule reordering that an update may or may not require.
+
+    const int numMolecules = 400;
+    const int numParticles = numMolecules*3;
+    const double cutoff = 1.0;
+    const double boxSize = 5.0;
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numMolecules; i++) {
+        Vec3 center(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+        positions[3*i] = center;
+        positions[3*i+1] = center+Vec3(0.1, 0, 0);
+        positions[3*i+2] = center+Vec3(0, 0.1, 0);
+    }
+    auto build = [&] (System& system, double scale) {
+        CustomNonbondedForce* nonbonded = new CustomNonbondedForce("4*eps*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); eps=sqrt(eps1*eps2)");
+        nonbonded->addPerParticleParameter("sigma");
+        nonbonded->addPerParticleParameter("eps");
+        for (int i = 0; i < numMolecules; i++) {
+            double s = (i == numMolecules/2 ? scale : 1.0);
+            for (int j = 0; j < 3; j++)
+                system.addParticle(j == 0 ? 16.0 : 1.0);
+            nonbonded->addParticle({0.3, 0.6*s});
+            nonbonded->addParticle({0.1, 0.05*s});
+            nonbonded->addParticle({0.1, 0.05*s});
+            system.addConstraint(3*i, 3*i+1, 0.1);
+            system.addConstraint(3*i, 3*i+2, 0.1);
+            nonbonded->addExclusion(3*i, 3*i+1);
+            nonbonded->addExclusion(3*i, 3*i+2);
+            nonbonded->addExclusion(3*i+1, 3*i+2);
+        }
+        nonbonded->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+        nonbonded->setCutoffDistance(cutoff);
+        system.addForce(nonbonded);
+        system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+        return nonbonded;
+    };
+    System system;
+    CustomNonbondedForce* nonbonded = build(system, 1.0);
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    int molecule = numMolecules/2;
+    for (int step = 0; step < 200; step++) {
+        double scale = (step%2 == 0 ? 1.0+0.01*(1+step%7) : 1.0);
+        nonbonded->setParticleParameters(3*molecule, {0.3, 0.6*scale});
+        nonbonded->setParticleParameters(3*molecule+1, {0.1, 0.05*scale});
+        nonbonded->setParticleParameters(3*molecule+2, {0.1, 0.05*scale});
+        nonbonded->updateParametersInContext(context);
+        if (step%20 == 19) {
+            System freshSystem;
+            build(freshSystem, scale);
+            VerletIntegrator freshIntegrator(0.01);
+            Context freshContext(freshSystem, freshIntegrator, platform);
+            freshContext.setPositions(positions);
+            double energy = context.getState(State::Energy).getPotentialEnergy();
+            double freshEnergy = freshContext.getState(State::Energy).getPotentialEnergy();
+            ASSERT_EQUAL_TOL(freshEnergy, energy, 1e-4);
+        }
+    }
+}
+
 void testCoulombLennardJones() {
     const int numMolecules = 300;
     const int numParticles = numMolecules*2;
@@ -1603,6 +1669,7 @@ int main(int argc, char* argv[]) {
         testDiscrete3DFunction();
         testParticleTypes();
         testCoulombLennardJones();
+        testManyUpdatesOfOneMolecule();
         testSwitchingFunction();
         testLongRangeCorrection();
         testInteractionGroups();
