@@ -99,6 +99,7 @@ void OpenCLIntegrationUtilities::applyConstraintsImpl(bool constrainVelocities, 
             ccmaConvergedHostMemory[0] = 0;
             queue.enqueueUnmapMemObject(ccmaConvergedHostBuffer.getDeviceBuffer(), ccmaConvergedHostMemory);
             ccmaUpdateKernel->setArg(4, constrainVelocities ? context.getVelm() : posDelta);
+            ccmaUpdateKernel->setArg(10, (int) constrainVelocities);
             for (int i = 0; i < 150; i++) {
                 ccmaForceKernel->setArg(8, i);
                 ccmaForceKernel->execute(ccmaConstraintAtoms.getSize());
