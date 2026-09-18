@@ -544,7 +544,7 @@ void CommonCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& con
 
     // Mark that the current reordering may be invalid.
 
-    cc.invalidateMolecules(info, false, true);
+    cc.invalidateMolecules(info, 0, -1, firstBond, lastBond);
 }
 class CommonCalcCustomBondForceKernel::ForceInfo : public ComputeForceInfo {
 public:
@@ -671,7 +671,7 @@ void CommonCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& conte
 
     // Mark that the current reordering may be invalid.
 
-    cc.invalidateMolecules(info, false, true);
+    cc.invalidateMolecules(info, 0, -1, firstBond, lastBond);
 }
 
 class CommonCalcHarmonicAngleForceKernel::ForceInfo : public ComputeForceInfo {
@@ -758,7 +758,7 @@ void CommonCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& co
 
     // Mark that the current reordering may be invalid.
 
-    cc.invalidateMolecules(info, false, true);
+    cc.invalidateMolecules(info, 0, -1, firstAngle, lastAngle);
 }
 
 class CommonCalcCustomAngleForceKernel::ForceInfo : public ComputeForceInfo {
@@ -975,7 +975,7 @@ void CommonCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& 
 
     // Mark that the current reordering may be invalid.
 
-    cc.invalidateMolecules(info, false, true);
+    cc.invalidateMolecules(info, 0, -1, firstTorsion, lastTorsion);
 }
 
 class CommonCalcRBTorsionForceKernel::ForceInfo : public ComputeForceInfo {
