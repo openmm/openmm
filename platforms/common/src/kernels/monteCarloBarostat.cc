@@ -1,59 +1,17 @@
 /**
  * Apply an upper triangular deformation to the molecule centers.  When the shear factors
  * (scaleXY, scaleXZ, scaleYZ) are zero this reduces to scaling each axis independently.
- * Each thread processes one molecule, so this is only used for molecules with few atoms.
+ * Molecules with many atoms come first in the list, and each of those is processed by
+ * a whole work group so that its atoms are handled in parallel.  The remaining molecules
+ * are processed one per thread.
  */
 
 KERNEL void scalePositions(float scaleX, float scaleY, float scaleZ, float scaleXY, float scaleXZ, float scaleYZ,
-        int firstMolecule, int numMolecules, real4 periodicBoxSize,
-        real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, GLOBAL real4* RESTRICT posq,
-        GLOBAL const int* RESTRICT moleculeAtoms, GLOBAL const int* RESTRICT moleculeStartIndex) {
-    for (int index = firstMolecule+GLOBAL_ID; index < numMolecules; index += GLOBAL_SIZE) {
-        int first = moleculeStartIndex[index];
-        int last = moleculeStartIndex[index+1];
-        int numAtoms = last-first;
-
-        // Find the center of each molecule.
-
-        real3 center = make_real3(0, 0, 0);
-        for (int atom = first; atom < last; atom++) {
-            real4 pos = posq[moleculeAtoms[atom]];
-            center.x += pos.x;
-            center.y += pos.y;
-            center.z += pos.z;
-        }
-        real invNumAtoms = RECIP((real) numAtoms);
-        center.x *= invNumAtoms;
-        center.y *= invNumAtoms;
-        center.z *= invNumAtoms;
-
-        // Now apply the deformation to the position of the molecule center.
-
-        real3 delta;
-        delta.x = center.x*(scaleX-1) + center.y*scaleXY + center.z*scaleXZ;
-        delta.y = center.y*(scaleY-1) + center.z*scaleYZ;
-        delta.z = center.z*(scaleZ-1);
-        for (int atom = first; atom < last; atom++) {
-            real4 pos = posq[moleculeAtoms[atom]];
-            pos.x += delta.x;
-            pos.y += delta.y;
-            pos.z += delta.z;
-            posq[moleculeAtoms[atom]] = pos;
-        }
-    }
-}
-
-/**
- * Apply the same deformation to molecules with many atoms, using a whole work group
- * for each molecule so that the atoms are processed in parallel.
- */
-
-KERNEL void scaleLargeMolecules(float scaleX, float scaleY, float scaleZ, float scaleXY, float scaleXZ, float scaleYZ,
-        int numMolecules, real4 periodicBoxSize,
+        int numLargeMolecules, int numMolecules, real4 periodicBoxSize,
         real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, GLOBAL real4* RESTRICT posq,
         GLOBAL const int* RESTRICT moleculeAtoms, GLOBAL const int* RESTRICT moleculeStartIndex) {
     LOCAL real3 tempBuffer[WORK_GROUP_SIZE];
-    for (int index = GROUP_ID; index < numMolecules; index += NUM_GROUPS) {
+    for (int index = GROUP_ID; index < numLargeMolecules; index += NUM_GROUPS) {
         int first = moleculeStartIndex[index];
         int last = moleculeStartIndex[index+1];
         int numAtoms = last-first;
@@ -86,6 +44,39 @@ KERNEL void scaleLargeMolecules(float scaleX, float scaleY, float scaleZ, float 
             posq[moleculeAtoms[atom]] = pos;
         }
         SYNC_THREADS;
+    }
+    for (int index = numLargeMolecules+GLOBAL_ID; index < numMolecules; index += GLOBAL_SIZE) {
+        int first = moleculeStartIndex[index];
+        int last = moleculeStartIndex[index+1];
+        int numAtoms = last-first;
+
+        // Find the center of each molecule.
+
+        real3 center = make_real3(0, 0, 0);
+        for (int atom = first; atom < last; atom++) {
+            real4 pos = posq[moleculeAtoms[atom]];
+            center.x += pos.x;
+            center.y += pos.y;
+            center.z += pos.z;
+        }
+        real invNumAtoms = RECIP((real) numAtoms);
+        center.x *= invNumAtoms;
+        center.y *= invNumAtoms;
+        center.z *= invNumAtoms;
+
+        // Now apply the deformation to the position of the molecule center.
+
+        real3 delta;
+        delta.x = center.x*(scaleX-1) + center.y*scaleXY + center.z*scaleXZ;
+        delta.y = center.y*(scaleY-1) + center.z*scaleYZ;
+        delta.z = center.z*(scaleZ-1);
+        for (int atom = first; atom < last; atom++) {
+            real4 pos = posq[moleculeAtoms[atom]];
+            pos.x += delta.x;
+            pos.y += delta.y;
+            pos.z += delta.z;
+            posq[moleculeAtoms[atom]] = pos;
+        }
     }
 }
 

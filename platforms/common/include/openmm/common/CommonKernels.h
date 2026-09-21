@@ -1388,7 +1388,7 @@ private:
     ComputeArray savedPositions, savedFloatForces, savedLongForces, savedVelocities;
     ComputeArray moleculeAtoms, moleculeStartIndex;
     std::vector<ComputeArray> energyBuffers;
-    ComputeKernel kernel, largeMoleculeKernel, kineticEnergyKernel;
+    ComputeKernel kernel, kineticEnergyKernel;
     std::vector<int> lastAtomOrder;
     std::vector<mm_int4> lastPosCellOffsets;
 };
