@@ -1384,11 +1384,11 @@ public:
 private:
     ComputeContext& cc;
     bool hasInitializedKernels, rigidMolecules, atomsWereReordered;
-    int numMolecules, components;
+    int numMolecules, numLargeMolecules, components;
     ComputeArray savedPositions, savedFloatForces, savedLongForces, savedVelocities;
     ComputeArray moleculeAtoms, moleculeStartIndex;
     std::vector<ComputeArray> energyBuffers;
-    ComputeKernel kernel, kineticEnergyKernel;
+    ComputeKernel kernel, largeMoleculeKernel, kineticEnergyKernel;
     std::vector<int> lastAtomOrder;
     std::vector<mm_int4> lastPosCellOffsets;
 };

@@ -1,13 +1,14 @@
 /**
  * Apply an upper triangular deformation to the molecule centers.  When the shear factors
  * (scaleXY, scaleXZ, scaleYZ) are zero this reduces to scaling each axis independently.
+ * Each thread processes one molecule, so this is only used for molecules with few atoms.
  */
 
 KERNEL void scalePositions(float scaleX, float scaleY, float scaleZ, float scaleXY, float scaleXZ, float scaleYZ,
-        int numMolecules, real4 periodicBoxSize,
+        int firstMolecule, int numMolecules, real4 periodicBoxSize,
         real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, GLOBAL real4* RESTRICT posq,
         GLOBAL const int* RESTRICT moleculeAtoms, GLOBAL const int* RESTRICT moleculeStartIndex) {
-    for (int index = GLOBAL_ID; index < numMolecules; index += GLOBAL_SIZE) {
+    for (int index = firstMolecule+GLOBAL_ID; index < numMolecules; index += GLOBAL_SIZE) {
         int first = moleculeStartIndex[index];
         int last = moleculeStartIndex[index+1];
         int numAtoms = last-first;
@@ -39,6 +40,52 @@ KERNEL void scalePositions(float scaleX, float scaleY, float scaleZ, float scale
             pos.z += delta.z;
             posq[moleculeAtoms[atom]] = pos;
         }
+    }
+}
+
+/**
+ * Apply the same deformation to molecules with many atoms, using a whole work group
+ * for each molecule so that the atoms are processed in parallel.
+ */
+
+KERNEL void scaleLargeMolecules(float scaleX, float scaleY, float scaleZ, float scaleXY, float scaleXZ, float scaleYZ,
+        int numMolecules, real4 periodicBoxSize,
+        real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, GLOBAL real4* RESTRICT posq,
+        GLOBAL const int* RESTRICT moleculeAtoms, GLOBAL const int* RESTRICT moleculeStartIndex) {
+    LOCAL real3 tempBuffer[WORK_GROUP_SIZE];
+    for (int index = GROUP_ID; index < numMolecules; index += NUM_GROUPS) {
+        int first = moleculeStartIndex[index];
+        int last = moleculeStartIndex[index+1];
+        int numAtoms = last-first;
+
+        // Find the center of the molecule.
+
+        real3 sum = make_real3(0, 0, 0);
+        for (int atom = first+LOCAL_ID; atom < last; atom += LOCAL_SIZE)
+            sum += trimTo3(posq[moleculeAtoms[atom]]);
+        tempBuffer[LOCAL_ID] = sum;
+        for (int i = 1; i < WORK_GROUP_SIZE; i *= 2) {
+            SYNC_THREADS;
+            if (LOCAL_ID%(i*2) == 0 && LOCAL_ID+i < WORK_GROUP_SIZE)
+                tempBuffer[LOCAL_ID] += tempBuffer[LOCAL_ID+i];
+        }
+        SYNC_THREADS;
+        real3 center = tempBuffer[0]*RECIP((real) numAtoms);
+
+        // Now apply the deformation to the position of the molecule center.
+
+        real3 delta;
+        delta.x = center.x*(scaleX-1) + center.y*scaleXY + center.z*scaleXZ;
+        delta.y = center.y*(scaleY-1) + center.z*scaleYZ;
+        delta.z = center.z*(scaleZ-1);
+        for (int atom = first+LOCAL_ID; atom < last; atom += LOCAL_SIZE) {
+            real4 pos = posq[moleculeAtoms[atom]];
+            pos.x += delta.x;
+            pos.y += delta.y;
+            pos.z += delta.z;
+            posq[moleculeAtoms[atom]] = pos;
+        }
+        SYNC_THREADS;
     }
 }
 

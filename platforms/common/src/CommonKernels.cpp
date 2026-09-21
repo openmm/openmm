@@ -4267,6 +4267,7 @@ void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const
     defines["COMPONENTS"] = cc.intToString(components);
     ComputeProgram program = cc.compileProgram(CommonKernelSources::monteCarloBarostat, defines);
     kernel = program->createKernel("scalePositions");
+    largeMoleculeKernel = program->createKernel("scaleLargeMolecules");
     kineticEnergyKernel = program->createKernel("computeMolecularKineticEnergy");
 }
 
@@ -4286,6 +4287,10 @@ void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) 
                 molecules[i].push_back(i);
         }
         numMolecules = molecules.size();
+
+        // Molecules with many atoms are placed first, since they are processed by a different kernel.
+
+        numLargeMolecules = stable_partition(molecules.begin(), molecules.end(), [] (const vector<int>& m) { return m.size() > 32; })-molecules.begin();
         moleculeAtoms.initialize<int>(cc, cc.getNumAtoms(), "moleculeAtoms");
         moleculeStartIndex.initialize<int>(cc, numMolecules+1, "moleculeStartIndex");
         vector<int> atoms(moleculeAtoms.getSize());
@@ -4302,18 +4307,23 @@ void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) 
 
         // Initialize the kernel arguments.
 
-        kernel->addArg();
-        kernel->addArg();
-        kernel->addArg();
-        kernel->addArg();
-        kernel->addArg();
-        kernel->addArg();
-        kernel->addArg(numMolecules);
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < 6; i++) {
             kernel->addArg();
+            largeMoleculeKernel->addArg();
+        }
+        kernel->addArg(numLargeMolecules);
+        kernel->addArg(numMolecules);
+        largeMoleculeKernel->addArg(numLargeMolecules);
+        for (int i = 0; i < 5; i++) {
+            kernel->addArg();
+            largeMoleculeKernel->addArg();
+        }
         kernel->addArg(cc.getPosq());
         kernel->addArg(moleculeAtoms);
         kernel->addArg(moleculeStartIndex);
+        largeMoleculeKernel->addArg(cc.getPosq());
+        largeMoleculeKernel->addArg(moleculeAtoms);
+        largeMoleculeKernel->addArg(moleculeStartIndex);
         kineticEnergyKernel->addArg(numMolecules);
         kineticEnergyKernel->addArg(cc.getVelm());
         kineticEnergyKernel->addArg(moleculeAtoms);
@@ -4343,8 +4353,19 @@ void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
     kernel->setArg(3, (float) scaleXY);
     kernel->setArg(4, (float) scaleXZ);
     kernel->setArg(5, (float) scaleYZ);
-    setPeriodicBoxArgs(cc, kernel, 7);
-    kernel->execute(numMolecules);
+    setPeriodicBoxArgs(cc, kernel, 8);
+    if (numMolecules > numLargeMolecules)
+        kernel->execute(numMolecules-numLargeMolecules);
+    if (numLargeMolecules > 0) {
+        largeMoleculeKernel->setArg(0, (float) scaleX);
+        largeMoleculeKernel->setArg(1, (float) scaleY);
+        largeMoleculeKernel->setArg(2, (float) scaleZ);
+        largeMoleculeKernel->setArg(3, (float) scaleXY);
+        largeMoleculeKernel->setArg(4, (float) scaleXZ);
+        largeMoleculeKernel->setArg(5, (float) scaleYZ);
+        setPeriodicBoxArgs(cc, largeMoleculeKernel, 7);
+        largeMoleculeKernel->execute(numLargeMolecules*cc.ThreadBlockSize, cc.ThreadBlockSize);
+    }
 }
 
 void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
