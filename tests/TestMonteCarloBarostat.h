@@ -316,12 +316,12 @@ void testMoleculeScaling(bool rigid) {
 }
 
 void testLargeMoleculeScaling() {
-    // Molecules with many atoms are scaled by a different kernel than small ones, so
-    // check a mixture of sizes: each molecule's center should scale with the box and
-    // its internal geometry should not change.
+    // Molecules with many atoms are scaled differently from small ones, so check a
+    // mixture of sizes: each molecule's center should scale with the box and its
+    // internal geometry should not change.
 
-    const int sizes[] = {2, 40, 3, 100, 33, 5, 1, 300, 32};
-    const int numMolecules = sizeof(sizes)/sizeof(sizes[0]);
+    const vector<int> sizes = {2, 40, 3, 100, 33, 5, 1, 300, 32};
+    const int numMolecules = sizes.size();
     double initialWidth = 4.0;
     System system;
     Vec3 initialBox[] = {Vec3(initialWidth, 0, 0), Vec3(0, initialWidth, 0), Vec3(0, 0, initialWidth)};
