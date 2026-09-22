@@ -315,6 +315,65 @@ void testMoleculeScaling(bool rigid) {
     }
 }
 
+void testLargeMoleculeScaling() {
+    // Molecules with many atoms are scaled differently from small ones, so check a
+    // mixture of sizes: each molecule's center should scale with the box and its
+    // internal geometry should not change.
+
+    const vector<int> sizes = {2, 40, 3, 100, 33, 5, 1, 300, 32};
+    const int numMolecules = sizes.size();
+    double initialWidth = 4.0;
+    System system;
+    Vec3 initialBox[] = {Vec3(initialWidth, 0, 0), Vec3(0, initialWidth, 0), Vec3(0, 0, initialWidth)};
+    system.setDefaultPeriodicBoxVectors(initialBox[0], initialBox[1], initialBox[2]);
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    system.addForce(bonds);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    system.addForce(nonbonded);
+    system.addForce(new MonteCarloBarostat(1.0, 300.0, 1, true));
+    vector<Vec3> positions;
+    vector<int> firstAtom;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numMolecules; i++) {
+        firstAtom.push_back(positions.size());
+        Vec3 pos(initialWidth*genrand_real2(sfmt), initialWidth*genrand_real2(sfmt), initialWidth*genrand_real2(sfmt));
+        for (int j = 0; j < sizes[i]; j++) {
+            int atom = system.addParticle(1.0);
+            nonbonded->addParticle(0.0, 0.1, 1.0);
+            if (j > 0) {
+                bonds->addBond(atom-1, atom, 0.1, 1000.0);
+                pos += Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5)*0.1;
+            }
+            positions.push_back(pos);
+        }
+    }
+    firstAtom.push_back(positions.size());
+    CustomIntegrator integrator(1.0);
+    integrator.addUpdateContextState();
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    integrator.step(100);
+    State state = context.getState(State::Positions);
+    Vec3 finalBox[3];
+    state.getPeriodicBoxVectors(finalBox[0], finalBox[1], finalBox[2]);
+    ASSERT(finalBox[0][0] != initialBox[0][0]);
+    Vec3 boxScale(finalBox[0][0]/initialBox[0][0], finalBox[1][1]/initialBox[1][1], finalBox[2][2]/initialBox[2][2]);
+    for (int i = 0; i < numMolecules; i++) {
+        Vec3 center1, center2;
+        for (int atom = firstAtom[i]; atom < firstAtom[i+1]; atom++) {
+            center1 += positions[atom];
+            center2 += state.getPositions()[atom];
+        }
+        center1 /= sizes[i];
+        center2 /= sizes[i];
+        ASSERT_EQUAL_VEC(Vec3(center1[0]*boxScale[0], center1[1]*boxScale[1], center1[2]*boxScale[2]), center2, 1e-5);
+        for (int atom = firstAtom[i]+1; atom < firstAtom[i+1]; atom++)
+            ASSERT_EQUAL_VEC(positions[atom]-positions[atom-1], state.getPositions()[atom]-state.getPositions()[atom-1], 1e-5);
+    }
+}
+
 void testMolecularGas(bool rigid) {
     const int numMolecules = 256;
     const int frequency = 5;
@@ -558,6 +617,7 @@ int main(int argc, char* argv[]) {
         testContinuity();
         testMoleculeScaling(true);
         testMoleculeScaling(false);
+        testLargeMoleculeScaling();
         testMolecularGas(true);
         testMolecularGas(false);
         testRandomSeed();

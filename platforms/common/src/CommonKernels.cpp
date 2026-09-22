@@ -4286,6 +4286,10 @@ void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) 
                 molecules[i].push_back(i);
         }
         numMolecules = molecules.size();
+
+        // Molecules with many atoms are placed first, since the kernel processes them differently.
+
+        numLargeMolecules = stable_partition(molecules.begin(), molecules.end(), [] (const vector<int>& m) { return m.size() > 32; })-molecules.begin();
         moleculeAtoms.initialize<int>(cc, cc.getNumAtoms(), "moleculeAtoms");
         moleculeStartIndex.initialize<int>(cc, numMolecules+1, "moleculeStartIndex");
         vector<int> atoms(moleculeAtoms.getSize());
@@ -4302,12 +4306,9 @@ void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) 
 
         // Initialize the kernel arguments.
 
-        kernel->addArg();
-        kernel->addArg();
-        kernel->addArg();
-        kernel->addArg();
-        kernel->addArg();
-        kernel->addArg();
+        for (int i = 0; i < 6; i++)
+            kernel->addArg();
+        kernel->addArg(numLargeMolecules);
         kernel->addArg(numMolecules);
         for (int i = 0; i < 5; i++)
             kernel->addArg();
@@ -4343,8 +4344,8 @@ void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
     kernel->setArg(3, (float) scaleXY);
     kernel->setArg(4, (float) scaleXZ);
     kernel->setArg(5, (float) scaleYZ);
-    setPeriodicBoxArgs(cc, kernel, 7);
-    kernel->execute(numMolecules);
+    setPeriodicBoxArgs(cc, kernel, 8);
+    kernel->execute(numMolecules, cc.ThreadBlockSize);
 }
 
 void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
