@@ -34,14 +34,13 @@
 #include "openmm/kernels.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/RPMDIntegrator.h"
-#include "SimTKOpenMMRealType.h"
+#include "SimTKOpenMMUtilities.h"
 #include <cmath>
 #include <vector>
 #include <algorithm>
 
 using namespace OpenMM;
-using namespace OpenMM_SFMT;
-using std::vector;
+using namespace std;
 
 RPMDMonteCarloBarostatImpl::RPMDMonteCarloBarostatImpl(const RPMDMonteCarloBarostat& owner) : owner(owner), step(0) {
 }
@@ -61,10 +60,7 @@ void RPMDMonteCarloBarostatImpl::initialize(ContextImpl& context) {
     volumeScale = 0.01*volume;
     numAttempted = 0;
     numAccepted = 0;
-    int randSeed = owner.getRandomNumberSeed();
-    // A random seed of 0 means use a unique one
-    if (randSeed == 0) randSeed = osrngseed();
-    init_gen_rand(randSeed, random);
+    SimTKOpenMMUtilities::setRandomNumberSeed(owner.getRandomNumberSeed());
 }
 
 void RPMDMonteCarloBarostatImpl::updateRPMDState(ContextImpl& context) {
@@ -72,16 +68,14 @@ void RPMDMonteCarloBarostatImpl::updateRPMDState(ContextImpl& context) {
         return;
     step = 0;
 
-    // Compute the current potential energy.
-
-    RPMDIntegrator& integrator = dynamic_cast<RPMDIntegrator&>(context.getIntegrator());
-
     // Record the initial positions and energy
 
+    RPMDIntegrator& integrator = dynamic_cast<RPMDIntegrator&>(context.getIntegrator());
+    int groups = integrator.getIntegrationForceGroups();
     double initialEnergy = 0;
     int numCopies = integrator.getNumCopies();
     for (int i = 0; i < numCopies; i++) {
-        State state = integrator.getState(i, State::Positions | State::Energy);
+        State state = integrator.getState(i, State::Positions | State::Energy, false, groups);
         savedPositions[i] = state.getPositions();
         initialEnergy += state.getPotentialEnergy();
     }
@@ -101,9 +95,9 @@ void RPMDMonteCarloBarostatImpl::updateRPMDState(ContextImpl& context) {
     Vec3 box[3];
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
-    double deltaVolume = volumeScale*2*(genrand_real2(random)-0.5);
+    double deltaVolume = volumeScale*2*(SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber()-0.5);
     double newVolume = volume+deltaVolume;
-    double lengthScale = std::pow(newVolume/volume, 1.0/3.0);
+    double lengthScale = pow(newVolume/volume, 1.0/3.0);
     context.setPositions(centroid);
     kernel.getAs<ApplyMonteCarloBarostatKernel>().saveCoordinates(context);
     context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale, box[1]*lengthScale, box[2]*lengthScale);
@@ -121,21 +115,20 @@ void RPMDMonteCarloBarostatImpl::updateRPMDState(ContextImpl& context) {
         for (int i = 0; i < numParticles; i++)
             positions[i] = savedPositions[copy][i]+delta[i];
         integrator.setPositions(copy, positions);
-        finalEnergy += integrator.getState(copy, State::Energy).getPotentialEnergy();
+        finalEnergy += integrator.getState(copy, State::Energy, false, groups).getPotentialEnergy();
     }
 
     // Compute the energy of the modified system.
 
     double pressure = context.getParameter(RPMDMonteCarloBarostat::Pressure())*(AVOGADRO*1e-25);
     double kT = BOLTZ*integrator.getTemperature();
-    double w = (finalEnergy-initialEnergy)/numCopies + pressure*deltaVolume - context.getMolecules().size()*kT*std::log(newVolume/volume);
-    if (w > 0 && genrand_real2(random) > std::exp(-w/kT)) {
+    double w = (finalEnergy-initialEnergy)/numCopies + pressure*deltaVolume - context.getMolecules().size()*kT*log(newVolume/volume);
+    if (w > 0 && SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() > exp(-w/kT)) {
         // Reject the step.
 
+        context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
         for (int copy = 0; copy < numCopies; copy++)
             integrator.setPositions(copy, savedPositions[copy]);
-        context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
-        volume = newVolume;
     }
     else
         numAccepted++;
@@ -147,17 +140,17 @@ void RPMDMonteCarloBarostatImpl::updateRPMDState(ContextImpl& context) {
             numAccepted = 0;
         }
         else if (numAccepted > 0.75*numAttempted) {
-            volumeScale = std::min(volumeScale*1.1, volume*0.3);
+            volumeScale = min(volumeScale*1.1, volume*0.3);
             numAttempted = 0;
             numAccepted = 0;
         }
     }
 }
 
-std::map<std::string, double> RPMDMonteCarloBarostatImpl::getDefaultParameters() {
+map<string, double> RPMDMonteCarloBarostatImpl::getDefaultParameters() {
     return {{RPMDMonteCarloBarostat::Pressure(), getOwner().getDefaultPressure()}};
 }
 
-std::vector<std::string> RPMDMonteCarloBarostatImpl::getKernelNames() {
+vector<string> RPMDMonteCarloBarostatImpl::getKernelNames() {
     return {ApplyMonteCarloBarostatKernel::Name()};
 }
