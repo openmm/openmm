@@ -2640,7 +2640,7 @@ void CommonCalcCustomCVForceKernel::initialize(const System& system, const Custo
     stringstream args, add;
     for (int i = 0; i < numCVs; i++) {
         args << ", GLOBAL mm_long * RESTRICT force" << i << ", real dEdV" << i;
-        add << "forces[i] += realToFixedPoint(force" << i << "[i]*dEdV" << i << "/(real) 0x100000000);\n";
+        add << "forces[i] += (mm_long) (force" << i << "[i]*dEdV" << i << ");\n";
     }
     map<string, string> replacements;
     replacements["PARAMETER_ARGUMENTS"] = args.str();
