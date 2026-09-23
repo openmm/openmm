@@ -10,9 +10,9 @@ __kernel void reduceReal4Buffer(__global real4* restrict buffer, __global long* 
         for (int i = index+bufferSize; i < totalSize; i += bufferSize)
             sum += buffer[i];
         buffer[index] = sum;
-        longBuffer[index] = (long) (sum.x*0x100000000);
-        longBuffer[index+bufferSize] = (long) (sum.y*0x100000000);
-        longBuffer[index+2*bufferSize] = (long) (sum.z*0x100000000);
+        longBuffer[index] = realToFixedPoint(sum.x);
+        longBuffer[index+bufferSize] = realToFixedPoint(sum.y);
+        longBuffer[index+2*bufferSize] = realToFixedPoint(sum.z);
         index += get_global_size(0);
     }
 }

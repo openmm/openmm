@@ -124,8 +124,8 @@ KERNEL void contractForces(GLOBAL mm_long* force, GLOBAL mm_long* contracted) {
         
         // Store results.
         
-        force[forceIndex] += (mm_long) (FORCE_SCALE*freal[indexInBlock].x);
-        force[forceIndex+PADDED_NUM_ATOMS] += (mm_long) (FORCE_SCALE*freal[indexInBlock].y);
-        force[forceIndex+PADDED_NUM_ATOMS*2] += (mm_long) (FORCE_SCALE*freal[indexInBlock].z);
+        force[forceIndex] += realToFixedPoint(FORCE_SCALE*freal[indexInBlock].x/(mixed) 0x100000000);
+        force[forceIndex+PADDED_NUM_ATOMS] += realToFixedPoint(FORCE_SCALE*freal[indexInBlock].y/(mixed) 0x100000000);
+        force[forceIndex+PADDED_NUM_ATOMS*2] += realToFixedPoint(FORCE_SCALE*freal[indexInBlock].z/(mixed) 0x100000000);
     }
 }

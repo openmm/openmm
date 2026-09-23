@@ -20,9 +20,10 @@ KERNEL void hybridForce(int numParticles,
         mm_long fx1 = force1[index1]+dforce1[index];
         mm_long fy1 = force1[index1+paddedNumParticles]+dforce1[index+paddedNumParticles];
         mm_long fz1 = force1[index1+paddedNumParticles*2]+dforce1[index+paddedNumParticles*2];
-        force[index]                      += (mm_long) (dEdu0*fx0 + dEdu1*fx1);
-        force[index+paddedNumParticles]   += (mm_long) (dEdu0*fy0 + dEdu1*fy1);
-        force[index+paddedNumParticles*2] += (mm_long) (dEdu0*fz0 + dEdu1*fz1);
+        // The forces are already fixed point: scale back so realToFixedPoint can saturate the sum.
+        force[index]                      += realToFixedPoint((dEdu0*fx0 + dEdu1*fx1)/(real) 0x100000000);
+        force[index+paddedNumParticles]   += realToFixedPoint((dEdu0*fy0 + dEdu1*fy1)/(real) 0x100000000);
+        force[index+paddedNumParticles*2] += realToFixedPoint((dEdu0*fz0 + dEdu1*fz1)/(real) 0x100000000);
     }
 }
 

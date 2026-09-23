@@ -78,5 +78,7 @@ typedef unsigned long mm_ulong;
 #define atan2f(x, y) atan2(x, y)
 
 inline long realToFixedPoint(real x) {
-    return (long) (x * 0x100000000);
+    // The minimizer detects overflow by looking for values near the limits of the range, but a plain
+    // conversion of an out of range value is implementation-defined, and wraps on some GPUs.
+    return convert_long_sat(x * 0x100000000);
 }

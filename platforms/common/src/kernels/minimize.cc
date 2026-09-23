@@ -259,8 +259,6 @@ KERNEL void getConstraintEnergyForces(
 ) {
     LOCAL volatile mixed temp[TEMP_SIZE];
 
-    const mixed scale = 0x100000000;
-
     mixed energy = 0;
     for (int i = GLOBAL_ID; i < numConstraints; i += GLOBAL_SIZE) {
         int2 indices = constraintIndices[i];
@@ -274,9 +272,9 @@ KERNEL void getConstraintEnergyForces(
         mixed dr = r - distance;
         mixed kdr = kRestraint * dr;
         energy += (mixed) 0.5 * kdr * dr;
-        mm_long fx = (mm_long) (kdr * scale * delta.x);
-        mm_long fy = (mm_long) (kdr * scale * delta.y);
-        mm_long fz = (mm_long) (kdr * scale * delta.z);
+        mm_long fx = realToFixedPoint(kdr * delta.x);
+        mm_long fy = realToFixedPoint(kdr * delta.y);
+        mm_long fz = realToFixedPoint(kdr * delta.z);
         ATOMIC_ADD(&forceBuffer[indices.x], (mm_ulong) fx);
         ATOMIC_ADD(&forceBuffer[indices.x + numPadded], (mm_ulong) fy);
         ATOMIC_ADD(&forceBuffer[indices.x + 2 * numPadded], (mm_ulong) fz);

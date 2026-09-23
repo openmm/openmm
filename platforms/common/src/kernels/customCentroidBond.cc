@@ -90,9 +90,10 @@ KERNEL void applyForcesToAtoms(int numParticleGroups, GLOBAL const int* RESTRICT
         for (int index = LOCAL_ID; index < lastIndex-firstIndex; index += LOCAL_SIZE) {
             int atom = groupParticles[firstIndex+index];
             real weight = groupWeights[firstIndex+index];
-            ATOMIC_ADD(&atomForce[atom], (mm_ulong) ((mm_long) (fx*weight)));
-            ATOMIC_ADD(&atomForce[atom+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (fy*weight)));
-            ATOMIC_ADD(&atomForce[atom+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (fz*weight)));
+            // The group forces are already fixed point: scale back so realToFixedPoint can saturate them.
+            ATOMIC_ADD(&atomForce[atom], (mm_ulong) realToFixedPoint(fx*weight/(real) 0x100000000));
+            ATOMIC_ADD(&atomForce[atom+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(fy*weight/(real) 0x100000000));
+            ATOMIC_ADD(&atomForce[atom+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(fz*weight/(real) 0x100000000));
         }
     }
 }
