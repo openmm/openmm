@@ -1,10 +1,13 @@
+#ifndef OPENMM_RPMDMONTECARLOANISOTROPICBAROSTATIMPL_H_
+#define OPENMM_RPMDMONTECARLOANISOTROPICBAROSTATIMPL_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2026 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,20 +30,45 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "HipTests.h"
-#include "TestRpmdBarostats.h"
+#include "openmm/RPMDMonteCarloAnisotropicBarostat.h"
+#include "openmm/RPMDUpdater.h"
+#include "openmm/Kernel.h"
+#include "openmm/Vec3.h"
+#include "sfmt/SFMT.h"
+#include <string>
+#include <vector>
 
-extern "C" void registerRPMDHipKernelFactories();
+namespace OpenMM {
 
-using namespace OpenMM;
+/**
+ * This is the internal implementation of RPMDMonteCarloAnisotropicBarostat.
+ */
 
-void runPlatformTests() {
-    testWater();
-    testAnisotropicWater();
-}
+class RPMDMonteCarloAnisotropicBarostatImpl : public RPMDUpdater {
+public:
+    RPMDMonteCarloAnisotropicBarostatImpl(const RPMDMonteCarloAnisotropicBarostat& owner);
+    void initialize(ContextImpl& context);
+    const RPMDMonteCarloAnisotropicBarostat& getOwner() const {
+        return owner;
+    }
+    void updateRPMDState(ContextImpl& context);
+    void updateContextState(ContextImpl& context, bool& forcesInvalid) {
+        // This is unused, since the updating is done in updateRPMDState().
+    }
+    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+        // This force doesn't apply forces to particles.
+        return 0.0;
+    }
+    std::map<std::string, double> getDefaultParameters();
+    std::vector<std::string> getKernelNames();
+private:
+    const RPMDMonteCarloAnisotropicBarostat& owner;
+    int step, numAttempted[3], numAccepted[3];
+    double volumeScale[3];
+    std::vector<std::vector<Vec3> > savedPositions;
+    Kernel kernel;
+};
 
-void setupKernels (int argc, char* argv[]) {
-    registerRPMDHipKernelFactories();
-    platform = dynamic_cast<HipPlatform&>(Platform::getPlatformByName("HIP"));
-    initializeTests(argc, argv);
-}
+} // namespace OpenMM
+
+#endif /*OPENMM_RPMDMONTECARLOANISOTROPICBAROSTATIMPL_H_*/

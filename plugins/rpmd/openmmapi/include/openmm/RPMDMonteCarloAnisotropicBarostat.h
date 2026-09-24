@@ -1,5 +1,5 @@
-#ifndef OPENMM_RPMDMONTECARLOBAROSTAT_H_
-#define OPENMM_RPMDMONTECARLOBAROSTAT_H_
+#ifndef OPENMM_RPMDMONTECARLOANISOTROPICBAROSTAT_H_
+#define OPENMM_RPMDMONTECARLOANISOTROPICBAROSTAT_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -31,41 +31,61 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Force.h"
+#include "openmm/Vec3.h"
 #include <string>
 #include "internal/windowsExportRpmd.h"
 
 namespace OpenMM {
 
 /**
- * This class is very similar to MonteCarloBarostat, but it is specifically designed for use
+ * This class is very similar to MonteCarloAnisotropicBarostat, but it is specifically designed for use
  * with RPMDIntegrator.  For each trial move, it scales all copies of the system by the same
  * amount, then accepts or rejects the move based on the change to the total energy of the
  * ring polymer (as returned by the integrator's getTotalEnergy() method).
  */
 
-class OPENMM_EXPORT_RPMD RPMDMonteCarloBarostat : public Force {
+class OPENMM_EXPORT_RPMD RPMDMonteCarloAnisotropicBarostat : public Force {
 public:
     /**
      * This is the name of the parameter which stores the current pressure acting on
-     * the system (in bar).
+     * the X-axis (in bar).
      */
-    static const std::string& Pressure() {
-        static const std::string key = "RPMDMonteCarloPressure";
+    static const std::string& PressureX() {
+        static const std::string key = "MonteCarloPressureX";
         return key;
     }
     /**
-     * Create a RPMDMonteCarloBarostat.
+     * This is the name of the parameter which stores the current pressure acting on
+     * the Y-axis (in bar).
+     */
+    static const std::string& PressureY() {
+        static const std::string key = "MonteCarloPressureY";
+        return key;
+    }
+    /**
+     * This is the name of the parameter which stores the current pressure acting on
+     * the Z-axis (in bar).
+     */
+    static const std::string& PressureZ() {
+        static const std::string key = "MonteCarloPressureZ";
+        return key;
+    }
+    /**
+     * Create a RPMDMonteCarloAnisotropicBarostat.
      *
      * @param defaultPressure   the default pressure acting on the system (in bar)
+     * @param scaleX            whether to allow the X dimension of the periodic box to change size
+     * @param scaleY            whether to allow the Y dimension of the periodic box to change size
+     * @param scaleZ            whether to allow the Z dimension of the periodic box to change size
      * @param frequency         the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
      */
-    RPMDMonteCarloBarostat(double defaultPressure, int frequency = 25);
+    RPMDMonteCarloAnisotropicBarostat(const Vec3& defaultPressure, bool scaleX=true, bool scaleY=true, bool scaleZ=true, int frequency = 25);
     /**
      * Get the default pressure acting on the system (in bar).
      *
      * @return the default pressure acting on the system, measured in bar.
      */
-    double getDefaultPressure() const {
+    const Vec3& getDefaultPressure() const {
         return defaultPressure;
     }
     /**
@@ -74,7 +94,25 @@ public:
      *
      * @param pressure   the default pressure acting on the system, measured in bar.
      */
-    void setDefaultPressure(double pressure);
+    void setDefaultPressure(const Vec3& pressure);
+    /**
+     * Get whether to allow the X dimension of the periodic box to change size.
+     */
+    bool getScaleX() const {
+        return scaleX;
+    }
+    /**
+     * Get whether to allow the Y dimension of the periodic box to change size.
+     */
+    bool getScaleY() const {
+        return scaleY;
+    }
+    /**
+     * Get whether to allow the Z dimension of the periodic box to change size.
+     */
+    bool getScaleZ() const {
+        return scaleZ;
+    }
     /**
      * Get the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
      * 0, the barostat is disabled.
@@ -119,10 +157,11 @@ public:
 protected:
     ForceImpl* createImpl() const;
 private:
-    double defaultPressure;
+    Vec3 defaultPressure;
+    bool scaleX, scaleY, scaleZ;
     int frequency, randomNumberSeed;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_RPMDMONTECARLOBAROSTAT_H_*/
+#endif /*OPENMM_RPMDMONTECARLOANISOTROPICBAROSTAT_H_*/

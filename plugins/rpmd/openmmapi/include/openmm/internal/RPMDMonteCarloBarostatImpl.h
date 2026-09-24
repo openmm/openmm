@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,7 +34,6 @@
 #include "openmm/RPMDUpdater.h"
 #include "openmm/Kernel.h"
 #include "openmm/Vec3.h"
-#include "sfmt/SFMT.h"
 #include <string>
 #include <vector>
 
@@ -65,7 +64,6 @@ private:
     const RPMDMonteCarloBarostat& owner;
     int step, numAttempted, numAccepted;
     double volumeScale;
-    OpenMM_SFMT::SFMT random;
     std::vector<std::vector<Vec3> > savedPositions;
     Kernel kernel;
 };
