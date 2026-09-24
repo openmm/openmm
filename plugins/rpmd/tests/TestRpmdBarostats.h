@@ -42,6 +42,7 @@
 #include "openmm/RPMDMonteCarloAnisotropicBarostat.h"
 #include "openmm/RPMDMonteCarloBarostat.h"
 #include "openmm/RPMDMonteCarloFlexibleBarostat.h"
+#include "openmm/RPMDMonteCarloMembraneBarostat.h"
 #include "SimTKOpenMMUtilities.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
@@ -285,6 +286,71 @@ void testFlexibleIdealGas() {
     ASSERT_USUALLY_EQUAL_TOL(expected, volume, 0.05);
 }
 
+void testMembraneIdealGas(RPMDMonteCarloMembraneBarostat::XYMode xymode, RPMDMonteCarloMembraneBarostat::ZMode zmode) {
+    const int numCopies = 3;
+    const int numParticles = 64;
+    const int frequency = 1;
+    const int steps = 1000;
+    const double pressure = 1.5;
+    const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
+    const double tension = (zmode == RPMDMonteCarloMembraneBarostat::ZFixed ? 0.2 : 0.0);
+    const double tensionInMD = tension*(AVOGADRO*1e-25); // surface tension in kJ/mol/nm^2
+    const double temp = 300.0;
+    const double initialVolume = numParticles*BOLTZ*temp/pressureInMD;
+    const double initialLength = std::pow(initialVolume, 1.0/3.0);
+
+    // Create a gas of noninteracting particles.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.5*initialLength, 0), Vec3(0, 0, 2*initialLength));
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(1.0);
+        positions[i] = Vec3(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
+    }
+    RPMDMonteCarloMembraneBarostat* barostat = new RPMDMonteCarloMembraneBarostat(pressure, tension, xymode, zmode, frequency);
+    system.addForce(barostat);
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    bonds->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(bonds); // So it won't complain the system is non-periodic.
+
+    // Try simulating it.
+
+    RPMDIntegrator integrator(numCopies, temp, 0.1, 0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+
+    // Let it equilibrate.
+
+    integrator.step(1000);
+
+    // Now run it for a while and see if the volume is correct.
+
+    double volume = 0.0, zsize = 0.0;
+    for (int j = 0; j < steps; ++j) {
+        Vec3 box[3];
+        context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
+        volume += box[0][0]*box[1][1]*box[2][2];
+        zsize += box[2][2];
+        if (xymode == RPMDMonteCarloMembraneBarostat::XYIsotropic)
+            ASSERT_EQUAL_TOL(0.5*box[0][0], box[1][1], 1e-5);
+        if (zmode == RPMDMonteCarloMembraneBarostat::ZFixed)
+            ASSERT_EQUAL_TOL(2*initialLength, box[2][2], 1e-5);
+        if (zmode == RPMDMonteCarloMembraneBarostat::ConstantVolume)
+            ASSERT_EQUAL_TOL(initialVolume, box[0][0]*box[1][1]*box[2][2], 1e-5);
+        integrator.step(frequency);
+    }
+    volume /= steps;
+    zsize /= steps;
+    if (zmode != RPMDMonteCarloMembraneBarostat::ConstantVolume) {
+        double effectivePressure = pressureInMD-tensionInMD/zsize;
+        double expected = (numParticles+1)*BOLTZ*temp/effectivePressure;
+        ASSERT_USUALLY_EQUAL_TOL(expected, volume, 0.05);
+    }
+}
+
 void testWater() {
     const int numCopies = 8;
     const int gridSize = 8;
@@ -515,6 +581,12 @@ int main(int argc, char* argv[]) {
         testIdealGasAxis(1);
         testIdealGasAxis(2);
         testFlexibleIdealGas();
+        testMembraneIdealGas(RPMDMonteCarloMembraneBarostat::XYIsotropic, RPMDMonteCarloMembraneBarostat::ZFree);
+        testMembraneIdealGas(RPMDMonteCarloMembraneBarostat::XYIsotropic, RPMDMonteCarloMembraneBarostat::ZFixed);
+        testMembraneIdealGas(RPMDMonteCarloMembraneBarostat::XYIsotropic, RPMDMonteCarloMembraneBarostat::ConstantVolume);
+        testMembraneIdealGas(RPMDMonteCarloMembraneBarostat::XYAnisotropic, RPMDMonteCarloMembraneBarostat::ZFree);
+        testMembraneIdealGas(RPMDMonteCarloMembraneBarostat::XYAnisotropic, RPMDMonteCarloMembraneBarostat::ZFixed);
+        testMembraneIdealGas(RPMDMonteCarloMembraneBarostat::XYAnisotropic, RPMDMonteCarloMembraneBarostat::ConstantVolume);
         runPlatformTests();
     }
     catch(const std::exception& e) {
