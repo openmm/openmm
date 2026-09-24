@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2017-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2017-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,4 +45,8 @@ void ForceImpl::updateContextState(ContextImpl& context) {
 
 vector<const Force*> ForceImpl::getContainedForces() const {
     return {};
+}
+
+bool ForceImpl::getPeriodicBoxIsFlexible() const {
+    return false;
 }

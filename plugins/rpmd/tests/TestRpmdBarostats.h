@@ -41,6 +41,7 @@
 #include "openmm/RPMDIntegrator.h"
 #include "openmm/RPMDMonteCarloAnisotropicBarostat.h"
 #include "openmm/RPMDMonteCarloBarostat.h"
+#include "openmm/RPMDMonteCarloFlexibleBarostat.h"
 #include "SimTKOpenMMUtilities.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
@@ -231,15 +232,68 @@ void testIdealGasAxis(int axis) {
     }
 }
 
+void testFlexibleIdealGas() {
+    const int numCopies = 3;
+    const int numParticles = 64;
+    const int frequency = 1;
+    const int steps = 1000;
+    const double pressure = 3.0;
+    const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
+    const double temp = 300.0;
+    const double initialVolume = numParticles*BOLTZ*temp/pressureInMD;
+    const double initialLength = std::pow(initialVolume, 1.0/3.0);
+
+    // Create a gas of noninteracting particles.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.5*initialLength, 0), Vec3(0, 0, 2*initialLength));
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(1.0);
+        positions[i] = Vec3(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
+    }
+    RPMDMonteCarloFlexibleBarostat* barostat = new RPMDMonteCarloFlexibleBarostat(pressure, frequency);
+    system.addForce(barostat);
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    bonds->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(bonds); // So it won't complain the system is non-periodic.
+
+    // Try simulating it.
+
+    RPMDIntegrator integrator(numCopies, temp, 0.1, 0.01);
+    Context context(system, integrator, platform);
+    for (int copy = 0; copy < numCopies; copy++)
+        integrator.setPositions(copy, positions);
+
+    // Let it equilibrate.
+
+    integrator.step(1000);
+
+    // Now run it for a while and see if the volume is correct.
+
+    double volume = 0.0;
+    for (int j = 0; j < steps; ++j) {
+        Vec3 box[3];
+        context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
+        volume += box[0][0]*box[1][1]*box[2][2];
+        integrator.step(frequency);
+    }
+    volume /= steps;
+    double expected = (numParticles+1)*BOLTZ*temp/pressureInMD;
+    ASSERT_USUALLY_EQUAL_TOL(expected, volume, 0.05);
+}
+
 void testWater() {
-    const int numCopies = 10;
+    const int numCopies = 8;
     const int gridSize = 8;
     const int numMolecules = gridSize*gridSize*gridSize;
     const int frequency = 10;
     const int steps = 400;
     const double temp = 273.15;
     const double pressure = 3;
-    const double spacing = 0.32;
+    const double spacing = 0.31;
     const double angle = 112*M_PI/180;
     const double dOH = 0.1;
 
@@ -304,14 +358,14 @@ void testWater() {
 }
 
 void testAnisotropicWater() {
-    const int numCopies = 10;
+    const int numCopies = 8;
     const int gridSize = 8;
     const int numMolecules = gridSize*gridSize*gridSize;
     const int frequency = 10;
     const int steps = 400;
     const double temp = 273.15;
     const double pressure = 3;
-    const double spacing = 0.32;
+    const double spacing = 0.31;
     const double angle = 112*M_PI/180;
     const double dOH = 0.1;
 
@@ -377,6 +431,78 @@ void testAnisotropicWater() {
     ASSERT_USUALLY_EQUAL_TOL(1.0, density, 0.04);
 }
 
+void testFlexibleWater() {
+    const int numCopies = 8;
+    const int gridSize = 8;
+    const int numMolecules = gridSize*gridSize*gridSize;
+    const int frequency = 10;
+    const int steps = 400;
+    const double temp = 273.15;
+    const double pressure = 3;
+    const double spacing = 0.31;
+    const double angle = 112*M_PI/180;
+    const double dOH = 0.1;
+
+    // Create a box of q-SPC/Fw water molecules.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(gridSize*spacing, 0, 0), Vec3(0, gridSize*spacing, 0), Vec3(0, 0, gridSize*spacing));
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nonbonded->setUseDispersionCorrection(true);
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    HarmonicAngleForce* angles = new HarmonicAngleForce();
+    vector<Vec3> positions;
+    Vec3 offset1(dOH, 0, 0);
+    Vec3 offset2(dOH*std::cos(angle), dOH*std::sin(angle), 0);
+    for (int i = 0; i < gridSize; ++i) {
+        for (int j = 0; j < gridSize; ++j) {
+            for (int k = 0; k < gridSize; ++k) {
+                int firstParticle = system.getNumParticles();
+                system.addParticle(16.0);
+                system.addParticle(1.0);
+                system.addParticle(1.0);
+                nonbonded->addParticle(-0.84, 0.3165492, 0.650143);
+                nonbonded->addParticle(0.42, 1, 0);
+                nonbonded->addParticle(0.42, 1, 0);
+                Vec3 pos = Vec3(spacing*i, spacing*j, spacing*k);
+                positions.push_back(pos);
+                positions.push_back(pos+offset1);
+                positions.push_back(pos+offset2);
+                bonds->addBond(firstParticle, firstParticle+1, dOH, 443153.38);
+                bonds->addBond(firstParticle, firstParticle+2, dOH, 443153.38);
+                angles->addAngle(firstParticle+1, firstParticle, firstParticle+2, angle, 317.5656);
+                nonbonded->addException(firstParticle, firstParticle+1, 0, 1, 0);
+                nonbonded->addException(firstParticle, firstParticle+2, 0, 1, 0);
+                nonbonded->addException(firstParticle+1, firstParticle+2, 0, 1, 0);
+            }
+        }
+    }
+    system.addForce(nonbonded);
+    system.addForce(bonds);
+    system.addForce(angles);
+    RPMDMonteCarloFlexibleBarostat* barostat = new RPMDMonteCarloFlexibleBarostat(pressure, frequency);
+    system.addForce(barostat);
+
+    // Simulate it and see if the density matches the expected value (1 g/mL).
+
+    RPMDIntegrator integrator(numCopies, temp, 1.0, 0.001);
+    Context context(system, integrator, platform);
+    for (int copy = 0; copy < numCopies; copy++)
+        integrator.setPositions(copy, positions);
+    integrator.step(4000);
+    double volume = 0.0;
+    for (int j = 0; j < steps; ++j) {
+        Vec3 box[3];
+        context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
+        volume += box[0][0]*box[1][1]*box[2][2];
+        integrator.step(frequency);
+    }
+    volume /= steps;
+    double density = numMolecules*18/(AVOGADRO*volume*1e-21);
+    ASSERT_USUALLY_EQUAL_TOL(1.0, density, 0.07);
+}
+
 void setupKernels(int argc, char* argv[]);
 void runPlatformTests();
 
@@ -388,6 +514,7 @@ int main(int argc, char* argv[]) {
         testIdealGasAxis(0);
         testIdealGasAxis(1);
         testIdealGasAxis(2);
+        testFlexibleIdealGas();
         runPlatformTests();
     }
     catch(const std::exception& e) {

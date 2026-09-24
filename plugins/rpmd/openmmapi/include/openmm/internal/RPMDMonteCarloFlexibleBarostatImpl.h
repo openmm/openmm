@@ -1,10 +1,13 @@
+#ifndef OPENMM_RPMDMONTECARLOFLEXIBLEBAROSTATIMPL_H_
+#define OPENMM_RPMDMONTECARLOFLEXIBLEBAROSTATIMPL_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2026 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,21 +30,45 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CudaTests.h"
-#include "TestRpmdBarostats.h"
+#include "openmm/RPMDMonteCarloFlexibleBarostat.h"
+#include "openmm/RPMDUpdater.h"
+#include "openmm/Kernel.h"
+#include "openmm/Vec3.h"
+#include <string>
+#include <vector>
 
-extern "C" void registerRPMDCudaKernelFactories();
+namespace OpenMM {
 
-using namespace OpenMM;
+/**
+ * This is the internal implementation of RPMDMonteCarloFlexibleBarostat.
+ */
 
-void runPlatformTests() {
-    testWater();
-    testAnisotropicWater();
-    testFlexibleWater();
-}
+class RPMDMonteCarloFlexibleBarostatImpl : public RPMDUpdater {
+public:
+    RPMDMonteCarloFlexibleBarostatImpl(const RPMDMonteCarloFlexibleBarostat& owner);
+    void initialize(ContextImpl& context);
+    const RPMDMonteCarloFlexibleBarostat& getOwner() const {
+        return owner;
+    }
+    void updateRPMDState(ContextImpl& context);
+    void updateContextState(ContextImpl& context, bool& forcesInvalid) {
+        // This is unused, since the updating is done in updateRPMDState().
+    }
+    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+        // This force doesn't apply forces to particles.
+        return 0.0;
+    }
+    std::map<std::string, double> getDefaultParameters();
+    std::vector<std::string> getKernelNames();
+    bool getPeriodicBoxIsFlexible() const;
+private:
+    const RPMDMonteCarloFlexibleBarostat& owner;
+    int step, numAttempted, numAccepted;
+    double lengthScale;
+    std::vector<std::vector<Vec3> > savedPositions;
+    Kernel kernel;
+};
 
-void setupKernels (int argc, char* argv[]) {
-    registerRPMDCudaKernelFactories();
-    platform = dynamic_cast<CudaPlatform&>(Platform::getPlatformByName("CUDA"));
-    initializeTests(argc, argv);
-}
+} // namespace OpenMM
+
+#endif /*OPENMM_RPMDMONTECARLOFLEXIBLEBAROSTATIMPL_H_*/

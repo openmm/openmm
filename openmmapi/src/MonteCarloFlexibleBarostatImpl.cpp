@@ -319,3 +319,7 @@ void MonteCarloFlexibleBarostatImpl::setBoxVectors(ContextImpl& context, Vec3 a,
     b = b - a*round(b[0]/a[0]);
     context.getOwner().setPeriodicBoxVectors(a, b, c);
 }
+
+bool MonteCarloFlexibleBarostatImpl::getPeriodicBoxIsFlexible() const {
+    return true;
+}

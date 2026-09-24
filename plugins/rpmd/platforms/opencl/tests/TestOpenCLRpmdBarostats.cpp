@@ -37,6 +37,7 @@ using namespace OpenMM;
 void runPlatformTests() {
     testWater();
     testAnisotropicWater();
+    testFlexibleWater();
 }
 
 void setupKernels (int argc, char* argv[]) {
