@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -52,7 +52,7 @@ void RPMDMonteCarloBarostatImpl::initialize(ContextImpl& context) {
     if (!integrator->getApplyThermostat())
         throw OpenMMException("RPMDMonteCarloBarostat requires the integrator's thermostat to be enabled");;
     kernel = context.getPlatform().createKernel(ApplyMonteCarloBarostatKernel::Name(), context);
-    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner, 1);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner, 1, owner.getScaleMoleculesAsRigid());
     savedPositions.resize(integrator->getNumCopies());
     Vec3 box[3];
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
@@ -120,9 +120,14 @@ void RPMDMonteCarloBarostatImpl::updateRPMDState(ContextImpl& context) {
 
     // Compute the energy of the modified system.
 
+    double numberOfScaledParticles;
+    if (owner.getScaleMoleculesAsRigid())
+        numberOfScaledParticles = context.getMolecules().size();
+    else
+        numberOfScaledParticles = context.getSystem().getNumParticles();
     double pressure = context.getParameter(RPMDMonteCarloBarostat::Pressure())*(AVOGADRO*1e-25);
     double kT = BOLTZ*integrator.getTemperature();
-    double w = (finalEnergy-initialEnergy)/numCopies + pressure*deltaVolume - context.getMolecules().size()*kT*log(newVolume/volume);
+    double w = (finalEnergy-initialEnergy)/numCopies + pressure*deltaVolume - numberOfScaledParticles*kT*log(newVolume/volume);
     if (w > 0 && SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() > exp(-w/kT)) {
         // Reject the step.
 

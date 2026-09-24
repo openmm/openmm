@@ -32,8 +32,8 @@
 
 using namespace OpenMM;
 
-RPMDMonteCarloAnisotropicBarostat::RPMDMonteCarloAnisotropicBarostat(const Vec3& defaultPressure, bool scaleX, bool scaleY, bool scaleZ, int frequency) :
-        scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ) {
+RPMDMonteCarloAnisotropicBarostat::RPMDMonteCarloAnisotropicBarostat(const Vec3& defaultPressure, bool scaleX, bool scaleY, bool scaleZ,
+        int frequency, bool scaleMoleculesAsRigid) : scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ), scaleMoleculesAsRigid(scaleMoleculesAsRigid) {
     setDefaultPressure(defaultPressure);
     setFrequency(frequency);
     setRandomNumberSeed(0);

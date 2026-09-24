@@ -51,7 +51,7 @@ void RPMDMonteCarloAnisotropicBarostatImpl::initialize(ContextImpl& context) {
     if (!integrator->getApplyThermostat())
         throw OpenMMException("RPMDMonteCarloAnisotropicBarostat requires the integrator's thermostat to be enabled");;
     kernel = context.getPlatform().createKernel(ApplyMonteCarloBarostatKernel::Name(), context);
-    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner, 1);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner, 1, owner.getScaleMoleculesAsRigid());
     savedPositions.resize(integrator->getNumCopies());
     Vec3 box[3];
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
@@ -153,8 +153,13 @@ void RPMDMonteCarloAnisotropicBarostatImpl::updateRPMDState(ContextImpl& context
 
     // Compute the energy of the modified system.
 
+    double numberOfScaledParticles;
+    if (owner.getScaleMoleculesAsRigid())
+        numberOfScaledParticles = context.getMolecules().size();
+    else
+        numberOfScaledParticles = context.getSystem().getNumParticles();
     double kT = BOLTZ*integrator.getTemperature();
-    double w = (finalEnergy-initialEnergy)/numCopies + pressure*deltaVolume - context.getMolecules().size()*kT*log(newVolume/volume);
+    double w = (finalEnergy-initialEnergy)/numCopies + pressure*deltaVolume - numberOfScaledParticles*kT*log(newVolume/volume);
     if (w > 0 && SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() > exp(-w/kT)) {
         // Reject the step.
 

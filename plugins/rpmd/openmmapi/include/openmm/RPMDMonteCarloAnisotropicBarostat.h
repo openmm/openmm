@@ -73,13 +73,15 @@ public:
     /**
      * Create a RPMDMonteCarloAnisotropicBarostat.
      *
-     * @param defaultPressure   the default pressure acting on the system (in bar)
-     * @param scaleX            whether to allow the X dimension of the periodic box to change size
-     * @param scaleY            whether to allow the Y dimension of the periodic box to change size
-     * @param scaleZ            whether to allow the Z dimension of the periodic box to change size
-     * @param frequency         the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
+     * @param defaultPressure         the default pressure acting on the system (in bar)
+     * @param scaleX                  whether to allow the X dimension of the periodic box to change size
+     * @param scaleY                  whether to allow the Y dimension of the periodic box to change size
+     * @param scaleZ                  whether to allow the Z dimension of the periodic box to change size
+     * @param frequency               the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
+     * @param scaleMoleculesAsRigid   if true, coordinate scaling keeps molecules rigid, scaling only the center of mass
+     *                                of each one.  If false, every atom is scaled independently.
      */
-    RPMDMonteCarloAnisotropicBarostat(const Vec3& defaultPressure, bool scaleX=true, bool scaleY=true, bool scaleZ=true, int frequency = 25);
+    RPMDMonteCarloAnisotropicBarostat(const Vec3& defaultPressure, bool scaleX=true, bool scaleY=true, bool scaleZ=true, int frequency=25, bool scaleMoleculesAsRigid=true);
     /**
      * Get the default pressure acting on the system (in bar).
      *
@@ -154,11 +156,27 @@ public:
     bool usesPeriodicBoundaryConditions() const {
         return true;
     }
+    /**
+     * Get whether scaling is applied to the centroid of each molecule while keeping
+     * the molecules rigid, or to each atom independently.
+     *
+     * @returns true if scaling is applied to molecule centroids, false if it is applied to each atom independently.
+     */
+    bool getScaleMoleculesAsRigid() const {
+        return scaleMoleculesAsRigid;
+    }
+    /**
+     * Set whether scaling is applied to the centroid of each molecule while keeping
+     * the molecules rigid, or to each atom independently.
+     */
+    void setScaleMoleculesAsRigid(bool rigid) {
+        scaleMoleculesAsRigid = rigid;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:
     Vec3 defaultPressure;
-    bool scaleX, scaleY, scaleZ;
+    bool scaleMoleculesAsRigid, scaleX, scaleY, scaleZ;
     int frequency, randomNumberSeed;
 };
 

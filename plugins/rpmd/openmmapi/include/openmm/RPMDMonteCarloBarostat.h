@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -56,10 +56,12 @@ public:
     /**
      * Create a RPMDMonteCarloBarostat.
      *
-     * @param defaultPressure   the default pressure acting on the system (in bar)
-     * @param frequency         the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
+     * @param defaultPressure         the default pressure acting on the system (in bar)
+     * @param frequency               the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
+     * @param scaleMoleculesAsRigid   if true, coordinate scaling keeps molecules rigid, scaling only the center of mass
+     *                                of each one.  If false, every atom is scaled independently.
      */
-    RPMDMonteCarloBarostat(double defaultPressure, int frequency = 25);
+    RPMDMonteCarloBarostat(double defaultPressure, int frequency=25, bool scaleMoleculesAsRigid=true);
     /**
      * Get the default pressure acting on the system (in bar).
      *
@@ -116,9 +118,26 @@ public:
     bool usesPeriodicBoundaryConditions() const {
         return true;
     }
+    /**
+     * Get whether scaling is applied to the centroid of each molecule while keeping
+     * the molecules rigid, or to each atom independently.
+     *
+     * @returns true if scaling is applied to molecule centroids, false if it is applied to each atom independently.
+     */
+    bool getScaleMoleculesAsRigid() const {
+        return scaleMoleculesAsRigid;
+    }
+    /**
+     * Set whether scaling is applied to the centroid of each molecule while keeping
+     * the molecules rigid, or to each atom independently.
+     */
+    void setScaleMoleculesAsRigid(bool rigid) {
+        scaleMoleculesAsRigid = rigid;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:
+    bool scaleMoleculesAsRigid;
     double defaultPressure;
     int frequency, randomNumberSeed;
 };
