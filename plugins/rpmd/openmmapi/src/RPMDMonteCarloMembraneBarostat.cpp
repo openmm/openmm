@@ -35,12 +35,17 @@ using namespace OpenMM;
 RPMDMonteCarloMembraneBarostat::RPMDMonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, XYMode xymode,
         ZMode zmode, int frequency, bool scaleMoleculesAsRigid) : xymode(xymode), zmode(zmode), scaleMoleculesAsRigid(scaleMoleculesAsRigid) {
     setDefaultPressure(defaultPressure);
+    setDefaultSurfaceTension(defaultSurfaceTension);
     setFrequency(frequency);
     setRandomNumberSeed(0);
 }
 
 void RPMDMonteCarloMembraneBarostat::setDefaultPressure(double pressure) {
     defaultPressure = pressure;
+}
+
+void RPMDMonteCarloMembraneBarostat::setDefaultSurfaceTension(double surfaceTension) {
+    defaultSurfaceTension = surfaceTension;
 }
 
 void RPMDMonteCarloMembraneBarostat::setFrequency(int freq) {
