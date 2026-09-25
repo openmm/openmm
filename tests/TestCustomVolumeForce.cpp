@@ -46,6 +46,7 @@ void testVolume() {
     system.setDefaultPeriodicBoxVectors(a, b, c);
     system.addParticle(1.0);
     CustomVolumeForce* force = new CustomVolumeForce("2*v");
+    force->setForceGroup(1);
     system.addForce(force);
     VerletIntegrator integrator(0.01);
     Context context(system, integrator, Platform::getPlatform("Reference"));
@@ -63,6 +64,8 @@ void testVolume() {
         double energy = context.getState(State::Energy).getPotentialEnergy();
         ASSERT_EQUAL_TOL(2*a[0]*b[1]*c[2], energy, 1e-6);
     }
+    double energy = context.getState(State::Energy, false, 1<<0).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(0.0, energy, 1e-6);
 }
 
 void testBoxVectors() {

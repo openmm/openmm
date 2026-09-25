@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2025 Stanford University and the Authors.           *
+ * Portions copyright (c) 2025-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,7 +30,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CustomCPPForceImpl.h"
+#include "ForceImpl.h"
 #include "openmm/CustomVolumeForce.h"
 #include "lepton/CompiledExpression.h"
 #include <string>
@@ -41,15 +41,16 @@ namespace OpenMM {
  * This is the internal implementation of CustomVolumeForce.
  */
 
-class CustomVolumeForceImpl : public CustomCPPForceImpl {
+class CustomVolumeForceImpl : public ForceImpl {
 public:
     CustomVolumeForceImpl(const CustomVolumeForce& owner);
     void initialize(ContextImpl& context);
     const CustomVolumeForce& getOwner() const {
         return owner;
     }
-    double computeForce(ContextImpl& context, const std::vector<Vec3>& positions, std::vector<Vec3>& forces);
+    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
     std::map<std::string, double> getDefaultParameters();
+    std::vector<std::string> getKernelNames();
 private:
     const CustomVolumeForce& owner;
     std::map<std::string, double> defaultParameters;
