@@ -49,6 +49,7 @@ ComputeContext::ComputeContext(const System& system) : system(system), time(0.0)
 }
 
 ComputeContext::~ComputeContext() {
+    delete workThread;
 }
 
 void ComputeContext::initializeKernels() {
