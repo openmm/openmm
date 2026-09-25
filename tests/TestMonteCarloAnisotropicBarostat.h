@@ -49,7 +49,7 @@ using namespace std;
 void testIdealGas() {
     const int numParticles = 64;
     const int frequency = 2;
-    const int steps = 1000;
+    const int steps = 4000;
     const double pressure = 3.0;
     const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
     const double temp[] = {300.0, 600.0};
@@ -254,7 +254,7 @@ void testMolecularGas(bool rigid) {
     const int numMolecules = 256;
     const int frequency = 5;
     const int steps = 5000;
-    const double pressure = 3.0;
+    const double pressure = 2.0;
     const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
     const double temp = 300.0;
     const double initialVolume = numMolecules*BOLTZ*temp/pressureInMD;
