@@ -50,6 +50,7 @@ public:
     }
     IntegrateRPMDStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~IntegrateRPMDStepKernel();
     /**
      * Initialize the kernel.
      *

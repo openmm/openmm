@@ -1,6 +1,3 @@
-#ifndef OPENMM_KERNELIMPL_H_
-#define OPENMM_KERNELIMPL_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -30,44 +27,18 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Platform.h"
-#include <string>
-#include <cassert>
-#include "openmm/internal/windowsExport.h"
+#include "openmm/amoebaKernels.h"
 
-namespace OpenMM {
+using namespace OpenMM;
 
-/**
- * A KernelImpl defines the internal implementation of a Kernel object.  A subclass will typically
- * declare an abstract execute() method which defines the API for executing the kernel.  Other classes
- * will in turn subclass it and provide concrete implementations of the execute() method.
- */
+CalcAmoebaTorsionTorsionForceKernel::~CalcAmoebaTorsionTorsionForceKernel() = default;
 
-class OPENMM_EXPORT KernelImpl {
-public:
-    /**
-     * Create a KernelImpl.
-     * 
-     * @param name      the name of the kernel to create
-     * @param platform  the Platform that created this kernel
-     */
-    KernelImpl(std::string name, const Platform& platform);
-    virtual ~KernelImpl();
-    /**
-     * Get the name of this kernel.
-     */
-    std::string getName() const;
-    /**
-     * Get the Platform that created this KernelImpl.
-     */
-    const Platform& getPlatform();
-private:
-    friend class Kernel;
-    std::string name;
-    const Platform* platform;
-    int referenceCount;
-};
+CalcAmoebaMultipoleForceKernel::~CalcAmoebaMultipoleForceKernel() = default;
 
-} // namespace OpenMM
+CalcAmoebaGeneralizedKirkwoodForceKernel::~CalcAmoebaGeneralizedKirkwoodForceKernel() = default;
 
-#endif /*OPENMM_KERNELIMPL_H_*/
+CalcAmoebaVdwForceKernel::~CalcAmoebaVdwForceKernel() = default;
+
+CalcAmoebaWcaDispersionForceKernel::~CalcAmoebaWcaDispersionForceKernel() = default;
+
+CalcHippoNonbondedForceKernel::~CalcHippoNonbondedForceKernel() = default;
