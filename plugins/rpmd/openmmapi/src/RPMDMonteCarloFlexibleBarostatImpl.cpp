@@ -27,7 +27,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/internal/RPMDMonteCarloBarostatImpl.h"
+#include "openmm/internal/RPMDMonteCarloFlexibleBarostatImpl.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/OSRngSeed.h"
 #include "openmm/Context.h"
@@ -42,28 +42,28 @@
 using namespace OpenMM;
 using namespace std;
 
-RPMDMonteCarloBarostatImpl::RPMDMonteCarloBarostatImpl(const RPMDMonteCarloBarostat& owner) : owner(owner), step(0) {
+RPMDMonteCarloFlexibleBarostatImpl::RPMDMonteCarloFlexibleBarostatImpl(const RPMDMonteCarloFlexibleBarostat& owner) : owner(owner), step(0) {
 }
 
-void RPMDMonteCarloBarostatImpl::initialize(ContextImpl& context) {
+void RPMDMonteCarloFlexibleBarostatImpl::initialize(ContextImpl& context) {
     RPMDIntegrator* integrator = dynamic_cast<RPMDIntegrator*>(&context.getIntegrator());
     if (integrator == NULL)
-        throw OpenMMException("RPMDMonteCarloBarostat must be used with an RPMDIntegrator");;
+        throw OpenMMException("RPMDMonteCarloFlexibleBarostat must be used with an RPMDIntegrator");;
     if (!integrator->getApplyThermostat())
-        throw OpenMMException("RPMDMonteCarloBarostat requires the integrator's thermostat to be enabled");;
+        throw OpenMMException("RPMDMonteCarloFlexibleBarostat requires the integrator's thermostat to be enabled");;
     kernel = context.getPlatform().createKernel(ApplyMonteCarloBarostatKernel::Name(), context);
-    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner, 1, owner.getScaleMoleculesAsRigid());
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner, 6, owner.getScaleMoleculesAsRigid());
     savedPositions.resize(integrator->getNumCopies());
     Vec3 box[3];
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
-    volumeScale = 0.01*volume;
+    lengthScale = 0.01*volume;
     numAttempted = 0;
     numAccepted = 0;
     SimTKOpenMMUtilities::setRandomNumberSeed(owner.getRandomNumberSeed());
 }
 
-void RPMDMonteCarloBarostatImpl::updateRPMDState(ContextImpl& context) {
+void RPMDMonteCarloFlexibleBarostatImpl::updateRPMDState(ContextImpl& context) {
     if (++step < owner.getFrequency() || owner.getFrequency() == 0)
         return;
     step = 0;
@@ -90,18 +90,34 @@ void RPMDMonteCarloBarostatImpl::updateRPMDState(ContextImpl& context) {
         centroid[i] *= 1.0/numCopies;
     }
 
+    // Generate trial box vectors
+
+    Vec3 box[3], trial[3];
+    context.getPeriodicBoxVectors(box[0], box[1], box[2]);
+    trial[0][0] = box[0][0] + lengthScale*2*(SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber()-0.5);
+    trial[1][0] = box[1][0] + lengthScale*2*(SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber()-0.5);
+    trial[1][1] = box[1][1] + lengthScale*2*(SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber()-0.5);
+    trial[2][0] = box[2][0] + lengthScale*2*(SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber()-0.5);
+    trial[2][1] = box[2][1] + lengthScale*2*(SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber()-0.5);
+    trial[2][2] = box[2][2] + lengthScale*2*(SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber()-0.5);
+
+    // Recompute reduced form by flipping/linear combinations.
+
+    for (auto i = 0; i < 3; i++)
+        if (trial[i][i] < 0)
+            trial[i] = -trial[i];
+    trial[2] -= trial[1]*round(trial[2][1]/trial[1][1]);
+    trial[2] -= trial[0]*round(trial[2][0]/trial[0][0]);
+    trial[1] -= trial[0]*round(trial[1][0]/trial[0][0]);
+    double volume = box[0][0]*box[1][1]*box[2][2];
+    double newVolume = trial[0][0]*trial[1][1]*trial[2][2];
+
     // Modify the periodic box size and scale the coordinates of the centroid.
 
-    Vec3 box[3];
-    context.getPeriodicBoxVectors(box[0], box[1], box[2]);
-    double volume = box[0][0]*box[1][1]*box[2][2];
-    double deltaVolume = volumeScale*2*(SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber()-0.5);
-    double newVolume = volume+deltaVolume;
-    double lengthScale = pow(newVolume/volume, 1.0/3.0);
     context.setPositions(centroid);
     kernel.getAs<ApplyMonteCarloBarostatKernel>().saveCoordinates(context);
-    context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale, box[1]*lengthScale, box[2]*lengthScale);
-    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale, lengthScale, lengthScale);
+    context.getOwner().setPeriodicBoxVectors(trial[0], trial[1], trial[2]);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, trial[0][0]/box[0][0], trial[1][1]/box[1][1], trial[2][2]/box[2][2]);
     State scaledState = context.getOwner().getState(State::Positions);
 
     // Now apply the same offset to all the copies.
@@ -118,16 +134,20 @@ void RPMDMonteCarloBarostatImpl::updateRPMDState(ContextImpl& context) {
         finalEnergy += integrator.getState(copy, State::Energy, false, groups).getPotentialEnergy();
     }
 
-    // Compute the energy of the modified system.
+    // Decide whether to accept the step.
 
     double numberOfScaledParticles;
     if (owner.getScaleMoleculesAsRigid())
         numberOfScaledParticles = context.getMolecules().size();
     else
         numberOfScaledParticles = context.getSystem().getNumParticles();
-    double pressure = context.getParameter(RPMDMonteCarloBarostat::Pressure())*(AVOGADRO*1e-25);
+    double pressure = context.getParameter(RPMDMonteCarloFlexibleBarostat::Pressure())*(AVOGADRO*1e-25);
     double kT = BOLTZ*integrator.getTemperature();
-    double w = (finalEnergy-initialEnergy)/numCopies + pressure*deltaVolume - numberOfScaledParticles*kT*log(newVolume/volume);
+    double w0 = (finalEnergy-initialEnergy)/numCopies;
+    double w1 = pressure*(newVolume-volume);
+    double w2 = -(numberOfScaledParticles-2)*kT*log(newVolume/volume);
+    double w3 = -kT*log((trial[0][0]*trial[0][0]*trial[1][1])/(box[0][0]*box[0][0]*box[1][1]));
+    double w  = w0+w1+w2+w3;
     if (w > 0 && SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() > exp(-w/kT)) {
         // Reject the step.
 
@@ -140,22 +160,26 @@ void RPMDMonteCarloBarostatImpl::updateRPMDState(ContextImpl& context) {
     numAttempted++;
     if (numAttempted >= 10) {
         if (numAccepted < 0.25*numAttempted) {
-            volumeScale /= 1.1;
+            lengthScale /= 1.1;
             numAttempted = 0;
             numAccepted = 0;
         }
         else if (numAccepted > 0.75*numAttempted) {
-            volumeScale = min(volumeScale*1.1, volume*0.3);
+            lengthScale = min(lengthScale*1.1, pow(newVolume, 1.0/3.0)*0.3);
             numAttempted = 0;
             numAccepted = 0;
         }
     }
 }
 
-map<string, double> RPMDMonteCarloBarostatImpl::getDefaultParameters() {
-    return {{RPMDMonteCarloBarostat::Pressure(), getOwner().getDefaultPressure()}};
+map<string, double> RPMDMonteCarloFlexibleBarostatImpl::getDefaultParameters() {
+    return {{RPMDMonteCarloFlexibleBarostat::Pressure(), getOwner().getDefaultPressure()}};
 }
 
-vector<string> RPMDMonteCarloBarostatImpl::getKernelNames() {
+vector<string> RPMDMonteCarloFlexibleBarostatImpl::getKernelNames() {
     return {ApplyMonteCarloBarostatKernel::Name()};
+}
+
+bool RPMDMonteCarloFlexibleBarostatImpl::getPeriodicBoxIsFlexible() const {
+    return true;
 }

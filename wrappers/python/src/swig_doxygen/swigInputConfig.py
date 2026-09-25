@@ -502,6 +502,8 @@ UNITS = {
 ("MonteCarloMembraneBarostat", "MonteCarloMembraneBarostat") : (None, ("unit.bar", "unit.bar*unit.nanometer", "unit.kelvin", None, None, None)),
 ("MonteCarloMembraneBarostat", "getXYMode") : (None, ()),
 ("MonteCarloMembraneBarostat", "getZMode") : (None, ()),
+("RPMDMonteCarloMembraneBarostat", "getXYMode") : (None, ()),
+("RPMDMonteCarloMembraneBarostat", "getZMode") : (None, ()),
 ("CustomIntegrator", "CustomIntegrator") : (None, ("unit.picosecond",)),
 ("BrownianIntegrator", "BrownianIntegrator") : (None, ("unit.kelvin", "unit.picosecond**-1", "unit.picosecond")),
 ("LangevinIntegrator", "LangevinIntegrator") : (None, ("unit.kelvin", "unit.picosecond**-1", "unit.picosecond")),

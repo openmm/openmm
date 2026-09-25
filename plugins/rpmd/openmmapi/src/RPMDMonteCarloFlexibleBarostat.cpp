@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2017-2026 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,26 +27,28 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/internal/ForceImpl.h"
+#include "openmm/RPMDMonteCarloFlexibleBarostat.h"
+#include "openmm/internal/RPMDMonteCarloFlexibleBarostatImpl.h"
 
 using namespace OpenMM;
-using namespace std;
 
-void ForceImpl::updateContextState(ContextImpl& context, bool& forcesInvalid) {
-    // Usually subclasses will override this.  If they don't, call the old
-    // (single argument) version instead, and just assume they invalidate forces.
-
-    updateContextState(context);
-    forcesInvalid = true;
+RPMDMonteCarloFlexibleBarostat::RPMDMonteCarloFlexibleBarostat(double defaultPressure, int frequency, bool scaleMoleculesAsRigid) :
+            scaleMoleculesAsRigid(scaleMoleculesAsRigid) {
+    setDefaultPressure(defaultPressure);
+    setFrequency(frequency);
+    setRandomNumberSeed(0);
 }
 
-void ForceImpl::updateContextState(ContextImpl& context) {
+void RPMDMonteCarloFlexibleBarostat::setDefaultPressure(double pressure) {
+    defaultPressure = pressure;
 }
 
-vector<const Force*> ForceImpl::getContainedForces() const {
-    return {};
+void RPMDMonteCarloFlexibleBarostat::setFrequency(int freq) {
+    if (freq <= 0)
+        throw OpenMMException("Frequency must be positive");
+    frequency = freq;
 }
 
-bool ForceImpl::getPeriodicBoxIsFlexible() const {
-    return false;
+ForceImpl* RPMDMonteCarloFlexibleBarostat::createImpl() const {
+    return new RPMDMonteCarloFlexibleBarostatImpl(*this);
 }

@@ -1,10 +1,13 @@
+#ifndef OPENMM_RPMDMONTECARLOMEMBRANEBAROSTATIMPL_H_
+#define OPENMM_RPMDMONTECARLOMEMBRANEBAROSTATIMPL_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2017-2026 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,26 +30,45 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/internal/ForceImpl.h"
+#include "openmm/RPMDMonteCarloMembraneBarostat.h"
+#include "openmm/RPMDUpdater.h"
+#include "openmm/Kernel.h"
+#include "openmm/Vec3.h"
+#include "sfmt/SFMT.h"
+#include <string>
+#include <vector>
 
-using namespace OpenMM;
-using namespace std;
+namespace OpenMM {
 
-void ForceImpl::updateContextState(ContextImpl& context, bool& forcesInvalid) {
-    // Usually subclasses will override this.  If they don't, call the old
-    // (single argument) version instead, and just assume they invalidate forces.
+/**
+ * This is the internal implementation of RPMDMonteCarloMembraneBarostat.
+ */
 
-    updateContextState(context);
-    forcesInvalid = true;
-}
+class RPMDMonteCarloMembraneBarostatImpl : public RPMDUpdater {
+public:
+    RPMDMonteCarloMembraneBarostatImpl(const RPMDMonteCarloMembraneBarostat& owner);
+    void initialize(ContextImpl& context);
+    const RPMDMonteCarloMembraneBarostat& getOwner() const {
+        return owner;
+    }
+    void updateRPMDState(ContextImpl& context);
+    void updateContextState(ContextImpl& context, bool& forcesInvalid) {
+        // This is unused, since the updating is done in updateRPMDState().
+    }
+    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+        // This force doesn't apply forces to particles.
+        return 0.0;
+    }
+    std::map<std::string, double> getDefaultParameters();
+    std::vector<std::string> getKernelNames();
+private:
+    const RPMDMonteCarloMembraneBarostat& owner;
+    int step, numAttempted[3], numAccepted[3];
+    double volumeScale[3];
+    std::vector<std::vector<Vec3> > savedPositions;
+    Kernel kernel;
+};
 
-void ForceImpl::updateContextState(ContextImpl& context) {
-}
+} // namespace OpenMM
 
-vector<const Force*> ForceImpl::getContainedForces() const {
-    return {};
-}
-
-bool ForceImpl::getPeriodicBoxIsFlexible() const {
-    return false;
-}
+#endif /*OPENMM_RPMDMONTECARLOMEMBRANEBAROSTATIMPL_H_*/

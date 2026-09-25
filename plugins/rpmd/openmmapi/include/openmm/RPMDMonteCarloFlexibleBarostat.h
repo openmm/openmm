@@ -1,5 +1,5 @@
-#ifndef OPENMM_RPMDMONTECARLOBAROSTAT_H_
-#define OPENMM_RPMDMONTECARLOBAROSTAT_H_
+#ifndef OPENMM_RPMDMONTECARLOFLEXIBLEBAROSTAT_H_
+#define OPENMM_RPMDMONTECARLOFLEXIBLEBAROSTAT_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -37,13 +37,13 @@
 namespace OpenMM {
 
 /**
- * This class is very similar to MonteCarloBarostat, but it is specifically designed for use
+ * This class is very similar to MonteCarloFlexibleBarostat, but it is specifically designed for use
  * with RPMDIntegrator.  For each trial move, it scales all copies of the system by the same
  * amount, then accepts or rejects the move based on the change to the total energy of the
  * ring polymer (as returned by the integrator's getTotalEnergy() method).
  */
 
-class OPENMM_EXPORT_RPMD RPMDMonteCarloBarostat : public Force {
+class OPENMM_EXPORT_RPMD RPMDMonteCarloFlexibleBarostat : public Force {
 public:
     /**
      * This is the name of the parameter which stores the current pressure acting on
@@ -54,14 +54,14 @@ public:
         return key;
     }
     /**
-     * Create a RPMDMonteCarloBarostat.
+     * Create a RPMDMonteCarloFlexibleBarostat.
      *
      * @param defaultPressure         the default pressure acting on the system (in bar)
      * @param frequency               the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
      * @param scaleMoleculesAsRigid   if true, coordinate scaling keeps molecules rigid, scaling only the center of mass
      *                                of each one.  If false, every atom is scaled independently.
      */
-    RPMDMonteCarloBarostat(double defaultPressure, int frequency=25, bool scaleMoleculesAsRigid=true);
+    RPMDMonteCarloFlexibleBarostat(double defaultPressure, int frequency=25, bool scaleMoleculesAsRigid=true);
     /**
      * Get the default pressure acting on the system (in bar).
      *
@@ -144,4 +144,4 @@ private:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_RPMDMONTECARLOBAROSTAT_H_*/
+#endif /*OPENMM_RPMDMONTECARLOFLEXIBLEBAROSTAT_H_*/

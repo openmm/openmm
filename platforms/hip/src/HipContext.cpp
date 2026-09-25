@@ -41,12 +41,12 @@
 #include "openmm/common/ComputeArray.h"
 #include "openmm/common/ContextSelector.h"
 #include "SHA1.h"
-#include "openmm/MonteCarloFlexibleBarostat.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
 #include "openmm/VirtualSite.h"
 #include "HipExpressionUtilities.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/ForceImpl.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -277,9 +277,10 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
     boxIsTriclinic = (boxVectors[0][1] != 0.0 || boxVectors[0][2] != 0.0 ||
                       boxVectors[1][0] != 0.0 || boxVectors[1][2] != 0.0 ||
                       boxVectors[2][0] != 0.0 || boxVectors[2][1] != 0.0);
-    for (int i = 0; i < system.getNumForces(); i++)
-        if (dynamic_cast<const MonteCarloFlexibleBarostat*>(&system.getForce(i)) != NULL)
-            boxIsTriclinic = true;
+    if (platformData.context != NULL)
+        for (const ForceImpl* force : platformData.context->getForceImpls())
+            if (force->getPeriodicBoxIsFlexible())
+                boxIsTriclinic = true;
     if (boxIsTriclinic) {
         compilationDefines["APPLY_PERIODIC_TO_DELTA(delta)"] =
             "{"

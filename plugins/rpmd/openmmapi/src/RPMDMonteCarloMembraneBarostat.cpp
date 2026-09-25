@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2017-2026 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,26 +27,33 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/internal/ForceImpl.h"
+#include "openmm/RPMDMonteCarloMembraneBarostat.h"
+#include "openmm/internal/RPMDMonteCarloMembraneBarostatImpl.h"
 
 using namespace OpenMM;
-using namespace std;
 
-void ForceImpl::updateContextState(ContextImpl& context, bool& forcesInvalid) {
-    // Usually subclasses will override this.  If they don't, call the old
-    // (single argument) version instead, and just assume they invalidate forces.
-
-    updateContextState(context);
-    forcesInvalid = true;
+RPMDMonteCarloMembraneBarostat::RPMDMonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, XYMode xymode,
+        ZMode zmode, int frequency, bool scaleMoleculesAsRigid) : xymode(xymode), zmode(zmode), scaleMoleculesAsRigid(scaleMoleculesAsRigid) {
+    setDefaultPressure(defaultPressure);
+    setDefaultSurfaceTension(defaultSurfaceTension);
+    setFrequency(frequency);
+    setRandomNumberSeed(0);
 }
 
-void ForceImpl::updateContextState(ContextImpl& context) {
+void RPMDMonteCarloMembraneBarostat::setDefaultPressure(double pressure) {
+    defaultPressure = pressure;
 }
 
-vector<const Force*> ForceImpl::getContainedForces() const {
-    return {};
+void RPMDMonteCarloMembraneBarostat::setDefaultSurfaceTension(double surfaceTension) {
+    defaultSurfaceTension = surfaceTension;
 }
 
-bool ForceImpl::getPeriodicBoxIsFlexible() const {
-    return false;
+void RPMDMonteCarloMembraneBarostat::setFrequency(int freq) {
+    if (freq <= 0)
+        throw OpenMMException("Frequency must be positive");
+    frequency = freq;
+}
+
+ForceImpl* RPMDMonteCarloMembraneBarostat::createImpl() const {
+    return new RPMDMonteCarloMembraneBarostatImpl(*this);
 }

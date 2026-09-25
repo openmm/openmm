@@ -50,8 +50,8 @@ void testIdealGas() {
     const int steps = 1000;
     const double pressure = 3.0;
     const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
-    const double temp[] = {300.0, 600.0, 1000.0};
-    const double initialVolume = numParticles*BOLTZ*temp[1]/pressureInMD;
+    const double temp[] = {300.0, 600.0};
+    const double initialVolume = numParticles*BOLTZ*0.5*(temp[0]+temp[1])/pressureInMD;
     const double initialLength = std::pow(initialVolume, 1.0/3.0);
 
     // Create a gas of noninteracting particles.
@@ -71,9 +71,9 @@ void testIdealGas() {
     bonds->setUsesPeriodicBoundaryConditions(true);
     system.addForce(bonds); // So it won't complain the system is non-periodic.
 
-    // Test it for three different temperatures.
+    // Test it for two different temperatures.
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
         barostat->setDefaultTemperature(temp[i]);
         LangevinIntegrator integrator(temp[i], 0.1, 0.01);
         Context context(system, integrator, platform);

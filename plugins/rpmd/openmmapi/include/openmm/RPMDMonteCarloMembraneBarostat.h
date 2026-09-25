@@ -1,5 +1,5 @@
-#ifndef OPENMM_RPMDMONTECARLOBAROSTAT_H_
-#define OPENMM_RPMDMONTECARLOBAROSTAT_H_
+#ifndef OPENMM_RPMDMONTECARLOMEMBRANEBAROSTAT_H_
+#define OPENMM_RPMDMONTECARLOMEMBRANEBAROSTAT_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -31,37 +31,80 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Force.h"
+#include "openmm/Vec3.h"
 #include <string>
 #include "internal/windowsExportRpmd.h"
 
 namespace OpenMM {
 
 /**
- * This class is very similar to MonteCarloBarostat, but it is specifically designed for use
+ * This class is very similar to MonteCarloMembraneBarostat, but it is specifically designed for use
  * with RPMDIntegrator.  For each trial move, it scales all copies of the system by the same
  * amount, then accepts or rejects the move based on the change to the total energy of the
  * ring polymer (as returned by the integrator's getTotalEnergy() method).
  */
 
-class OPENMM_EXPORT_RPMD RPMDMonteCarloBarostat : public Force {
+class OPENMM_EXPORT_RPMD RPMDMonteCarloMembraneBarostat : public Force {
 public:
+    /**
+     * This is an enumeration of the different behaviors for the X and Y axes.
+     */
+    enum XYMode {
+        /**
+         * The X and Y axes are always scaled by the same amount, so the ratio of their lengths remains constant.
+         */
+        XYIsotropic = 0,
+        /**
+         * The X and Y axes are allowed to vary independently of each other.
+         */
+        XYAnisotropic = 1
+    };
+    /**
+     * This is an enumeration of the different behaviors for Z axis.
+     */
+    enum ZMode {
+        /**
+         * The Z axis is allowed to vary freely, independent of the other two axes.
+         */
+        ZFree = 0,
+        /**
+         * The Z axis is held fixed and does not change.
+         */
+        ZFixed = 1,
+        /**
+         * The Z axis is always scaled in inverse proportion to the other two axes so the box volume remains
+         * fixed.  Note that in this mode pressure has no effect on the system, only surface tension.
+         */
+        ConstantVolume = 2
+    };
     /**
      * This is the name of the parameter which stores the current pressure acting on
      * the system (in bar).
      */
     static const std::string& Pressure() {
-        static const std::string key = "RPMDMonteCarloPressure";
+        static const std::string key = "MembraneMonteCarloPressure";
         return key;
     }
     /**
-     * Create a RPMDMonteCarloBarostat.
-     *
-     * @param defaultPressure         the default pressure acting on the system (in bar)
-     * @param frequency               the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
-     * @param scaleMoleculesAsRigid   if true, coordinate scaling keeps molecules rigid, scaling only the center of mass
-     *                                of each one.  If false, every atom is scaled independently.
+     * This is the name of the parameter which stores the current surface tension acting on
+     * the system (in bar*nm).
      */
-    RPMDMonteCarloBarostat(double defaultPressure, int frequency=25, bool scaleMoleculesAsRigid=true);
+    static const std::string& SurfaceTension() {
+        static const std::string key = "MembraneMonteCarloSurfaceTension";
+        return key;
+    }
+    /**
+     * Create a RPMDMonteCarloMembraneBarostat.
+     *
+     * @param defaultPressure        the default pressure acting on the system (in bar)
+     * @param defaultSurfaceTension  the default surface tension acting on the system (in bar*nm)
+     * @param xymode                 the mode specifying the behavior of the X and Y axes
+     * @param zmode                  the mode specifying the behavior of the Z axis
+     * @param frequency              the frequency at which Monte Carlo volume changes should be attempted (in time steps)
+     * @param scaleMoleculesAsRigid  if true, coordinate scaling keeps molecules rigid, scaling only the center of mass
+     *                               of each one.  If false, every atom is scaled independently.
+     */
+    RPMDMonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, XYMode xymode, ZMode zmode, int frequency=25, bool scaleMoleculesAsRigid=true);
     /**
      * Get the default pressure acting on the system (in bar).
      *
@@ -78,6 +121,21 @@ public:
      */
     void setDefaultPressure(double pressure);
     /**
+     * Get the default surface tension acting on the system (in bar*nm).
+     *
+     * @return the default surface tension acting on the system, measured in bar*nm.
+     */
+    double getDefaultSurfaceTension() const {
+        return defaultSurfaceTension;
+    }
+    /**
+     * Set the default surface tension acting on the system.  This will affect any new Contexts you create,
+     * but not ones that already exist.
+     *
+     * @param surfaceTension   the default surface tension acting on the system, measured in bar.
+     */
+    void setDefaultSurfaceTension(double surfaceTension);
+    /**
      * Get the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
      * 0, the barostat is disabled.
      */
@@ -89,6 +147,30 @@ public:
      * 0, the barostat is disabled.
      */
     void setFrequency(int freq);
+    /**
+     * Get the mode specifying the behavior of the X and Y axes.
+     */
+    XYMode getXYMode() const {
+        return xymode;
+    }
+    /**
+     * Set the mode specifying the behavior of the X and Y axes.
+     */
+    void setXYMode(XYMode mode) {
+        xymode = mode;
+    }
+    /**
+     * Get the mode specifying the behavior of the Z axis.
+     */
+    ZMode getZMode() const {
+        return zmode;
+    }
+    /**
+     * Set the mode specifying the behavior of the Z axis.
+     */
+    void setZMode(ZMode mode) {
+        zmode = mode;
+    }
     /**
      * Get the random number seed.  See setRandomNumberSeed() for details.
      */
@@ -137,11 +219,13 @@ public:
 protected:
     ForceImpl* createImpl() const;
 private:
-    bool scaleMoleculesAsRigid;
-    double defaultPressure;
+    double defaultPressure, defaultSurfaceTension;
+    XYMode xymode;
+    ZMode zmode;
     int frequency, randomNumberSeed;
+    bool scaleMoleculesAsRigid;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_RPMDMONTECARLOBAROSTAT_H_*/
+#endif /*OPENMM_RPMDMONTECARLOMEMBRANEBAROSTAT_H_*/

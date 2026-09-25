@@ -74,6 +74,9 @@ potentials, or to otherwise modify the simulation from step to step.
     generated/RGForce
     generated/RMSDForce
     generated/RPMDMonteCarloBarostat
+    generated/RPMDMonteCarloAnisotropicBarostat
+    generated/RPMDMonteCarloFlexibleBarostat
+    generated/RPMDMonteCarloMembraneBarostat
 
 
 .. _custom-forces:

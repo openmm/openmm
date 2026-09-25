@@ -184,12 +184,12 @@ void RPMDIntegrator::step(int steps) {
         context->getOwner().setPositions(p);
         isFirstStep = false;
     }
-    for (auto impl : context->getForceImpls()) {
-        RPMDUpdater* updater = dynamic_cast<RPMDUpdater*>(impl);
-        if (updater != NULL)
-            updater->updateRPMDState(*context);
-    }
     for (int i = 0; i < steps; ++i) {
+        for (auto impl : context->getForceImpls()) {
+            RPMDUpdater* updater = dynamic_cast<RPMDUpdater*>(impl);
+            if (updater != NULL)
+                updater->updateRPMDState(*context);
+        }
         kernel.getAs<IntegrateRPMDStepKernel>().execute(*context, *this, forcesAreValid);
         forcesAreValid = true;
     }

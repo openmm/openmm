@@ -32,7 +32,7 @@
 
 using namespace OpenMM;
 
-RPMDMonteCarloBarostat::RPMDMonteCarloBarostat(double defaultPressure, int frequency) {
+RPMDMonteCarloBarostat::RPMDMonteCarloBarostat(double defaultPressure, int frequency, bool scaleMoleculesAsRigid) : scaleMoleculesAsRigid(scaleMoleculesAsRigid) {
     setDefaultPressure(defaultPressure);
     setFrequency(frequency);
     setRandomNumberSeed(0);
