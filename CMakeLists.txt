@@ -357,6 +357,13 @@ IF(OPENMM_BUILD_HIP_LIB)
     ADD_SUBDIRECTORY(platforms/hip)
 ENDIF(OPENMM_BUILD_HIP_LIB)
 
+# Metal Platform
+
+SET(OPENMM_BUILD_METAL_LIB OFF CACHE BOOL "Build the experimental Metal Platform")
+IF(OPENMM_BUILD_METAL_LIB)
+    ADD_SUBDIRECTORY(platforms/metal)
+ENDIF(OPENMM_BUILD_METAL_LIB)
+
 # Common compute files
 
 SET(OPENMM_BUILD_COMMON OFF CACHE BOOL "Build common files even if CUDA or OpenCL platforms are not built")
