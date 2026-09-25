@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2025 Stanford University and the Authors.           *
+ * Portions copyright (c) 2025-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,7 +35,8 @@
 using namespace OpenMM;
 using namespace std;
 
-CustomVolumeForceImpl::CustomVolumeForceImpl(const CustomVolumeForce& owner) : CustomCPPForceImpl(owner), owner(owner) {
+CustomVolumeForceImpl::CustomVolumeForceImpl(const CustomVolumeForce& owner) : owner(owner) {
+    forceGroup = owner.getForceGroup();
     Lepton::ParsedExpression expression = Lepton::Parser::parse(owner.getEnergyFunction());
     energyExpression = expression.createCompiledExpression();
     map<string, double*> variableLocations;
@@ -58,10 +59,11 @@ CustomVolumeForceImpl::CustomVolumeForceImpl(const CustomVolumeForce& owner) : C
 }
 
 void CustomVolumeForceImpl::initialize(ContextImpl& context) {
-    CustomCPPForceImpl::initialize(context);
 }
 
-double CustomVolumeForceImpl::computeForce(ContextImpl& context, const vector<Vec3>& positions, vector<Vec3>& forces) {
+double CustomVolumeForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&(1<<forceGroup)) == 0)
+        return 0.0;
     for (int i = 0; i < globalParameterNames.size(); i++)
         globalValues[i] = context.getParameter(globalParameterNames[i]);
     context.getPeriodicBoxVectors(a, b, c);
@@ -71,4 +73,8 @@ double CustomVolumeForceImpl::computeForce(ContextImpl& context, const vector<Ve
 
 map<string, double> CustomVolumeForceImpl::getDefaultParameters() {
     return defaultParameters;
+}
+
+vector<string> CustomVolumeForceImpl::getKernelNames() {
+    return {};
 }
