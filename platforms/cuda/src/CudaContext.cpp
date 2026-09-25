@@ -274,9 +274,10 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     boxIsTriclinic = (boxVectors[0][1] != 0.0 || boxVectors[0][2] != 0.0 ||
                       boxVectors[1][0] != 0.0 || boxVectors[1][2] != 0.0 ||
                       boxVectors[2][0] != 0.0 || boxVectors[2][1] != 0.0);
-    for (const ForceImpl* force : platformData.context->getForceImpls())
-        if (force->getPeriodicBoxIsFlexible())
-            boxIsTriclinic = true;
+    if (platformData.context != NULL)
+        for (const ForceImpl* force : platformData.context->getForceImpls())
+            if (force->getPeriodicBoxIsFlexible())
+                boxIsTriclinic = true;
     if (boxIsTriclinic) {
         compilationDefines["APPLY_PERIODIC_TO_DELTA(delta)"] =
             "{"
