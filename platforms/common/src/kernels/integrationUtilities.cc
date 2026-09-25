@@ -721,8 +721,11 @@ KERNEL void multiplyByCCMAConstraintMatrixKernel(GLOBAL const mixed* RESTRICT de
  */
 DEVICE void updateCCMAAtomPositions(GLOBAL const int* RESTRICT atoms, GLOBAL const int* RESTRICT numAtomConstraints, GLOBAL const int* RESTRICT atomConstraints,
         GLOBAL const mixed4* RESTRICT constraintDistance, GLOBAL mixed4* RESTRICT atomPositions, GLOBAL const mixed4* RESTRICT velm,
-        GLOBAL const mixed* RESTRICT delta1, GLOBAL const mixed* RESTRICT delta2, int iteration) {
-    mixed damping = (iteration < 2 ? 0.5f : 1.0f);
+        GLOBAL const mixed* RESTRICT delta1, GLOBAL const mixed* RESTRICT delta2, int iteration, int constrainVelocities) {
+    // Preserve the initial damping, then use half steps for slow position solves
+    // to reduce oscillatory divergence.
+    const int positionDampingStart = 12;
+    mixed damping = (iteration < 2 || (!constrainVelocities && iteration >= positionDampingStart) ? 0.5f : 1.0f);
     for (int i = GLOBAL_ID; i < NUM_CCMA_ATOMS; i += GLOBAL_SIZE) {
         // Compute the new position of this atom.
 
@@ -747,13 +750,13 @@ DEVICE void updateCCMAAtomPositions(GLOBAL const int* RESTRICT atoms, GLOBAL con
 
 KERNEL void updateCCMAAtomPositionsKernel(GLOBAL const int* RESTRICT atoms, GLOBAL const int* RESTRICT numAtomConstraints, GLOBAL const int* RESTRICT atomConstraints,
         GLOBAL const mixed4* RESTRICT constraintDistance, GLOBAL mixed4* RESTRICT atomPositions, GLOBAL const mixed4* RESTRICT velm,
-        GLOBAL const mixed* RESTRICT delta1, GLOBAL const mixed* RESTRICT delta2, GLOBAL int* RESTRICT converged, int iteration) {
+        GLOBAL const mixed* RESTRICT delta1, GLOBAL const mixed* RESTRICT delta2, GLOBAL int* RESTRICT converged, int iteration, int constrainVelocities) {
     if (GROUP_ID == 0 && LOCAL_ID == 0)
         converged[1-iteration%2] = 1;
     if (converged[iteration%2])
         return; // The constraint iteration has already converged.
     updateCCMAAtomPositions(atoms, numAtomConstraints, atomConstraints, constraintDistance, atomPositions, velm,
-            delta1, delta2, iteration);
+            delta1, delta2, iteration, constrainVelocities);
 }
 
 /**
@@ -789,10 +792,10 @@ KERNEL void runCCMA(int constrainVelocities, GLOBAL const int* RESTRICT atoms, G
         SYNC_THREADS
         if (constrainVelocities)
             updateCCMAAtomPositions(atoms, numAtomConstraints, atomConstraints, constraintDistance, velm, velm,
-                    delta1, delta2, iteration);
+                    delta1, delta2, iteration, constrainVelocities);
         else
             updateCCMAAtomPositions(atoms, numAtomConstraints, atomConstraints, constraintDistance, posDelta, velm,
-                    delta1, delta2, iteration);
+                    delta1, delta2, iteration, constrainVelocities);
         SYNC_THREADS
         if (groupConverged)
             return;
