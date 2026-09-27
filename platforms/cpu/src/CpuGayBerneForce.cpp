@@ -403,7 +403,7 @@ double CpuGayBerneForce::computeOneInteraction(int particle1, int particle2, dou
         if (p.isPointParticle)
             continue;
         Vec3 dudq = (kappa*G[particle]).cross(kappa*(temp*dUSLJdr));
-        Vec3 dchidq = (iota*B[particle]).cross(iota)*(-4*rInv2);
+        Vec3 dchidq = (iota*B[particle]).cross(iota)*(-8*rInv2*sqrt(chi));
         double (&g12)[3][3] = G12.v;
         double (&a)[3][3] = A[particle].v;
         Vec3 scale = Vec3(p.rx*p.rx, p.ry*p.ry, p.rz*p.rz)*(-0.5*eta/detG12);
