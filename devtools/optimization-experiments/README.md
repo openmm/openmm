@@ -1,6 +1,6 @@
-# WIP CUDA and common-compute optimization experiments
+# CUDA and common-compute optimization experiments
 
-This draft exposes the complete implemented optimization suite from a local OpenMM 8.2 experiment as a current-master source port. It targets CPU launch preparation, PME, bonded forces, constrained integration, neighbor-list preparation, reordering, and coordinate transfers. It is **not ready for merge or default enablement**. No performance improvement or scientific equivalence is established for the current-master port.
+This contribution exposes the complete implemented optimization suite from a local OpenMM 8.2 experiment as a current-master source port. It targets CPU launch preparation, PME, bonded forces, constrained integration, neighbor-list preparation, reordering, and coordinate transfers. It is submitted for review; the validation listed below remains required before merging or default enablement. No performance improvement or scientific equivalence is established for the current-master port.
 
 The starting upstream commit is `0c4bcaba734ea574f52f5e09ffaaf4d6fe6109c2`. The earlier CUDA argument-pointer cache commit remains in the branch with its regression test. Unlike the historical local build, all newly added experimental paths require explicit environment opt-in and their runtime eligibility checks. The argument-pointer cache is the already-contributed unconditional host optimization. Existing upstream optimizations stay enabled as upstream defines them.
 
@@ -60,4 +60,4 @@ Run force/energy/derivative comparisons, constrained trajectories and RNG/checkp
 
 ## AI assistance and provenance
 
-AI assistance (OpenAI Codex) was used for implementation, porting, review, checks and this description. This draft makes that explicit under the repository's AI policy and does not assert that CPU checks replace scientific validation. Existing OpenMM and bundled Rice University license notices are retained. The large suite is presented together for review of its complete scope; it can be split into focused changes before any merge decision.
+AI assistance (OpenAI Codex) was used for implementation, porting, review, checks and this description. This contribution makes that explicit under the repository's AI policy and does not assert that CPU checks replace scientific validation. Existing OpenMM and bundled Rice University license notices are retained. The large suite is presented together for review of its complete scope; it can be split into focused changes before any merge decision.
