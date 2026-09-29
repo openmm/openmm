@@ -30,8 +30,13 @@
 #include "openmm/internal/ThreadPool.h"
 #include "CommonKernelSources.h"
 #include "hilbert.h"
+#include "ReorderHilbert.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <limits>
+#include <new>
 #include <set>
 #include <sstream>
 #include <unordered_set>
@@ -680,18 +685,68 @@ void ComputeContext::reorderAtoms() {
         reorderAtomsImpl<float, mm_float4, float, mm_float4>();
 }
 
+void ComputeContext::reorderDataOnDevice(const vector<int>& sourcePhysical) {
+    throw OpenMMException("Device atom reorder is not supported by this platform");
+}
+
+
+// molBins is freshly constructed as (bin, i), in increasing i order.  A stable
+// sort on bin therefore has exactly the original std::pair lexicographic order.
+// Keep this helper specific to that construction; arbitrary pair inputs do not
+// satisfy this precondition. Four stable byte passes preserve all signed keys.
+static void stableRadixSortReorderBins(vector<pair<int, int> >& bins, vector<pair<int, int> >& scratch) {
+    static_assert(std::numeric_limits<int>::digits == 31, "Atom reorder radix sort requires signed 32-bit int");
+    const size_t count = bins.size();
+    try {
+        if (scratch.size() < count)
+            scratch.resize(count);
+    }
+    catch (const std::bad_alloc&) {
+        // Optional scratch allocation failed before bins was modified. Preserve
+        // the original allocation-free sorting path instead of adding a new
+        // failure after periodic wrapping already updated host cell offsets.
+        sort(bins.begin(), bins.end());
+        return;
+    }
+    vector<pair<int, int> >* input = &bins;
+    vector<pair<int, int> >* output = &scratch;
+    for (unsigned int shift = 0; shift < 32; shift += 8) {
+        size_t offsets[256] = {};
+        for (size_t i = 0; i < count; i++) {
+            const uint32_t key = static_cast<uint32_t>((*input)[i].first)^UINT32_C(0x80000000);
+            offsets[(key >> shift)&255]++;
+        }
+        size_t start = 0;
+        for (int bucket = 0; bucket < 256; bucket++) {
+            const size_t bucketCount = offsets[bucket];
+            offsets[bucket] = start;
+            start += bucketCount;
+        }
+        // Forward traversal and advancing offsets are essential for stability.
+        for (size_t i = 0; i < count; i++) {
+            const uint32_t key = static_cast<uint32_t>((*input)[i].first)^UINT32_C(0x80000000);
+            (*output)[offsets[(key >> shift)&255]++] = (*input)[i];
+        }
+        std::swap(input, output);
+    }
+    // Four passes are even: the final sorted sequence is already in bins.
+}
+
 template <class Real, class Real4, class Mixed, class Mixed4>
 void ComputeContext::reorderAtomsImpl() {
 
     // Find the range of positions and the number of bins along each axis.
 
+    const bool reorderDataOnGpu = prepareReorderDataOnDevice();
     vector<Real4> oldPosq(paddedNumAtoms);
-    vector<Real4> oldPosqCorrection(paddedNumAtoms);
-    vector<Mixed4> oldVelm(paddedNumAtoms);
+    vector<Real4> oldPosqCorrection(reorderDataOnGpu ? 0 : paddedNumAtoms);
+    vector<Mixed4> oldVelm(reorderDataOnGpu ? 0 : paddedNumAtoms);
     getPosq().download(oldPosq);
-    getVelm().download(oldVelm);
-    if (getUseMixedPrecision())
-        getPosqCorrection().download(oldPosqCorrection);
+    if (!reorderDataOnGpu) {
+        getVelm().download(oldVelm);
+        if (getUseMixedPrecision())
+            getPosqCorrection().download(oldPosqCorrection);
+    }
     Real minx = oldPosq[0].x, maxx = oldPosq[0].x;
     Real miny = oldPosq[0].y, maxy = oldPosq[0].y;
     Real minz = oldPosq[0].z, maxz = oldPosq[0].z;
@@ -719,10 +774,21 @@ void ComputeContext::reorderAtomsImpl() {
     // Loop over each group of identical molecules and reorder them.
 
     
+    const char* radixEnv = std::getenv("OPENMM_EXPERIMENT_REORDER_RADIX_SORT");
+    const bool useRadixSort = (radixEnv != NULL && radixEnv[0] == '1' && radixEnv[1] == '\0');
+    const char* hilbertEnv = std::getenv("OPENMM_EXPERIMENT_REORDER_HILBERT_LUT");
+    // Restrict the new integer-only helper to the existing mixed CUDA device
+    // gather path. All coordinate arithmetic and molecule ordering stay here.
+    const bool useHilbertLut = hilbertEnv != NULL && hilbertEnv[0] == '1' && hilbertEnv[1] == '\0'
+            && reorderDataOnGpu && getUseMixedPrecision() && getNumContexts() == 1;
+    // One optional workspace per actual reorder, reused across molecule groups.
+    // No persistent class state, ABI change, or checkpoint state is introduced.
+    vector<pair<int, int> > radixScratch;
     vector<int> originalIndex(numAtoms);
     vector<Real4> newPosq(paddedNumAtoms, Real4(0,0,0,0));
-    vector<Real4> newPosqCorrection(paddedNumAtoms, Real4(0,0,0,0));
-    vector<Mixed4> newVelm(paddedNumAtoms, Mixed4(0,0,0,0));
+    vector<Real4> newPosqCorrection(reorderDataOnGpu ? 0 : paddedNumAtoms, Real4(0,0,0,0));
+    vector<Mixed4> newVelm(reorderDataOnGpu ? 0 : paddedNumAtoms, Mixed4(0,0,0,0));
+    vector<int> sourcePhysical(reorderDataOnGpu ? paddedNumAtoms : 0, -1);
     vector<mm_int4> newCellOffsets(numAtoms);
     for (auto& mol : moleculeGroups) {
         // Find the center of each molecule.
@@ -794,17 +860,13 @@ void ComputeContext::reorderAtomsImpl() {
         int xbins = 1 + (int) ((maxx-minx)*invBinWidth);
         int ybins = 1 + (int) ((maxy-miny)*invBinWidth);
         vector<pair<int, int> > molBins(numMolecules);
-        bitmask_t coords[3];
         for (int i = 0; i < numMolecules; i++) {
             int x = (int) ((molPos[i].x-minx)*invBinWidth);
             int y = (int) ((molPos[i].y-miny)*invBinWidth);
             int z = (int) ((molPos[i].z-minz)*invBinWidth);
             int bin;
             if (useHilbert) {
-                coords[0] = x;
-                coords[1] = y;
-                coords[2] = z;
-                bin = (int) hilbert_c2i(3, 8, coords);
+                bin = computeReorderHilbert3D8(x, y, z, useHilbertLut);
             }
             else {
                 int yodd = y&1;
@@ -815,7 +877,10 @@ void ComputeContext::reorderAtomsImpl() {
             }
             molBins[i] = pair<int, int>(bin, i);
         }
-        sort(molBins.begin(), molBins.end());
+        if (useRadixSort && numMolecules >= 4096)
+            stableRadixSortReorderBins(molBins, radixScratch);
+        else
+            sort(molBins.begin(), molBins.end());
 
         // Reorder the atoms.
 
@@ -825,9 +890,13 @@ void ComputeContext::reorderAtomsImpl() {
                 int newIndex = mol.offsets[i]+atom;
                 originalIndex[newIndex] = atomIndex[oldIndex];
                 newPosq[newIndex] = oldPosq[oldIndex];
-                if (getUseMixedPrecision())
-                    newPosqCorrection[newIndex] = oldPosqCorrection[oldIndex];
-                newVelm[newIndex] = oldVelm[oldIndex];
+                if (reorderDataOnGpu)
+                    sourcePhysical[newIndex] = oldIndex;
+                else {
+                    if (getUseMixedPrecision())
+                        newPosqCorrection[newIndex] = oldPosqCorrection[oldIndex];
+                    newVelm[newIndex] = oldVelm[oldIndex];
+                }
                 newCellOffsets[newIndex] = posCellOffsets[oldIndex];
             }
         }
@@ -841,9 +910,13 @@ void ComputeContext::reorderAtomsImpl() {
         posCellOffsets[i] = newCellOffsets[i];
     }
     getPosq().upload(newPosq);
-    if (getUseMixedPrecision())
-        getPosqCorrection().upload(newPosqCorrection);
-    getVelm().upload(newVelm);
+    if (reorderDataOnGpu)
+        reorderDataOnDevice(sourcePhysical);
+    else {
+        if (getUseMixedPrecision())
+            getPosqCorrection().upload(newPosqCorrection);
+        getVelm().upload(newVelm);
+    }
     getAtomIndexArray().upload(atomIndex);
     for (auto listener : reorderListeners)
         listener->execute();

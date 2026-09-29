@@ -1,0 +1,119 @@
+{
+  "date_utc": "2026-09-29T17:24:17.563100+00:00",
+  "upstream_base": "0c4bcaba734ea574f52f5e09ffaaf4d6fe6109c2",
+  "scope": "Current-master port; no GPU runtime or performance validation",
+  "native_build": {
+    "configuration": "Windows x64 / MSVC 19.44 / Release / CUDA 11.8 headers and import libraries",
+    "targets": [
+      "OpenMM",
+      "OpenMMCUDA",
+      "TestCudaKernel"
+    ],
+    "result": "PASS",
+    "tests_executed": false,
+    "warnings_present": true
+  },
+  "cpu_checks": [
+    {
+      "pass": true,
+      "exhaustive_points": 16777216,
+      "outside_fallback_cases": 1267,
+      "disabled_cases": 1331,
+      "checksum": 140737479966720,
+      "comparison": "bundled original hilbert.cpp compiled as separate translation unit",
+      "GPU_executed": false,
+      "timing_benchmark": false
+    },
+    {
+      "pass": true,
+      "accepted_cases": 5,
+      "rejected_cases": 24,
+      "finite_cutoffs": 15,
+      "padding_cases": 150,
+      "expected_overflow_cases": 5,
+      "checks": 598,
+      "GPU_executed": false,
+      "timing_benchmark": false
+    },
+    {
+      "cases": 314,
+      "fused_cases": 153,
+      "fallback_cases": 161,
+      "failure_cases": 6,
+      "exact_output_bytes": true,
+      "mock_workers_only": true,
+      "GPU_executed": false
+    }
+  ],
+  "offline_common_compilation": {
+    "compiler": "NVRTC 11.8",
+    "target": "compute_90 PTX",
+    "options": [
+      "-arch=compute_90",
+      "--use_fast_math"
+    ],
+    "compile_cases": 13,
+    "host_generated_cases": 4,
+    "result": "PASS",
+    "driver_loaded": false,
+    "gpu_executed": false,
+    "limitation": "Representative reconstructed device sources; not driver JIT, runtime binding, scientific or performance evidence."
+  },
+  "gpu_tests": "NOT RUN",
+  "benchmarks": "NOT RUN",
+  "source_sha256_lf": {
+    "openmmapi/src/MonteCarloBarostatImpl.cpp": "a193e16292318d61037ca7f0023d8057b326a8bae38fa98f691dc39c4fcea0ec",
+    "platforms/common/include/openmm/common/BondedUtilities.h": "7f78ba1add250688e742b9f2c50068ca8c618ca2299a86c64d58b2ff907256ab",
+    "platforms/common/include/openmm/common/CommonCalcNonbondedForce.h": "a9d2e0b1d6515b09e7d58a9152c87c6304956ef0956d25709126d3303dcba948",
+    "platforms/common/include/openmm/common/CommonKernels.h": "1a3c40a738d8854be3d74515cc145cf86732673653831022ce5fd749ff326115",
+    "platforms/common/include/openmm/common/ComputeContext.h": "9bd957a455a2d5e262771c2d3719982d337c9046a2a07503385cef58c08d2bac",
+    "platforms/common/include/openmm/common/IntegrationUtilities.h": "2204f974849d0bf2b082c7215bb53fcbdf5ac939417ed48bb03bbaa1eacd4eda",
+    "platforms/common/src/BondedUtilities.cpp": "8b2cee1a3b73ea33e138753b50d65ae810e08e839bb240375842e4bed3271eb5",
+    "platforms/common/src/CommonCalcNonbondedForce.cpp": "725454c3f88c7c01c0e2f6cbb6cc480de28bd06e3ed1c8f531123870163d62b6",
+    "platforms/common/src/CommonKernels.cpp": "4fd9a315bfe75883fc36b24249835ccdca89631aa541da008e17c522d1c98e97",
+    "platforms/common/src/ComputeContext.cpp": "7b4ac2077bae7c5c9095823a854051f60d7a4403039f68e9d720b1000172d8c4",
+    "platforms/common/src/IntegrationUtilities.cpp": "57b5777cdcc69bad241c9fa73db706042e5b10c04751b03de92534aa733941ce",
+    "platforms/common/src/ReorderHilbert.h": "8af6f4991cf90ebade2502af9e1b537e96397c0de030b1b3aae1debfbfc36a14",
+    "platforms/common/src/kernels/langevinMiddle.cc": "68152a4231637fe4e145ae97adfe682477d205e7c9cda2f78fe9d35171e8e6da",
+    "platforms/common/src/kernels/langevinMiddleKickSettle.cc": "02d96104989ec11b59e0b17d1ebbc4f677656be51deb4ea14076a208ceb6965d",
+    "platforms/common/src/kernels/langevinMiddleSettle.cc": "e6c6b52954e092ae8860d104d551eb0dc63e86fec64d88cecea7b1a6d0cada55",
+    "platforms/common/src/kernels/pme.cc": "0fc0f7b67b9a0bd0bb0975881552d5a973c280fc13a8d40a635a04a757cd8e7a",
+    "platforms/common/src/kernels/removeCM.cc": "9530704950fd0fcd008c5b93d78c4784a9110f87877bcd76f1004aa7d28c4101",
+    "platforms/cuda/include/CudaContext.h": "ccca10600db917124375224d7beb6d404cbbc85776817ec2147f20c13c119f78",
+    "platforms/cuda/include/CudaIntegrationUtilities.h": "c2161bc295bec37dbfac84438929dcbf1d878010428129e986804da5191845c6",
+    "platforms/cuda/include/CudaKernel.h": "cee1a8d788ba28056f968c5fd2670d8c432c989558601be30fb8901772ae3ef9",
+    "platforms/cuda/include/CudaKernels.h": "c66aa62bfbd9c3288ed5b0d1c467994738d75aee813b7af4f036991a45587d45",
+    "platforms/cuda/include/CudaNonbondedUtilities.h": "6ae363f398dbdf7716c72c02b21e33f8cd6545227ece704928c2fd2b9005599d",
+    "platforms/cuda/include/CudaSort.h": "4a6c82f3e1ee6c96b31ba281d8ec306cdf0f180412314a7bfae770a803e6f15b",
+    "platforms/cuda/src/CudaContext.cpp": "1fc3bf31148b2f0961218f8760cf599612aa9de9dd86aeeb02b84b3e2ab14e92",
+    "platforms/cuda/src/CudaIntegrationUtilities.cpp": "7b2a0fc2528ed19997c7c5b006b5893eeb7cba5803136289c7deff056f66c568",
+    "platforms/cuda/src/CudaKernel.cpp": "e63e847c65bb16db795a73a7342c38631dae810a16f6f8bf98317528f8fc495e",
+    "platforms/cuda/src/CudaKernels.cpp": "7a793ec707cdf5c06049c82e3b06fba9a239ffcbaced7d456390e480f0896e7b",
+    "platforms/cuda/src/CudaNonbondedUtilities.cpp": "dc6415adec2ee30e54b1bcec4fdb99a8bd83deedb63f7d5ce7aebfa4a9b86019",
+    "platforms/cuda/src/CudaSort.cpp": "f3ceabf39e0a2e1034a4600e955e67267481d5f9dde9ed6a79e3239f90e58227",
+    "platforms/cuda/src/NeighborSkinPolicy.h": "3bb3d684169a2432143cd5b13291e59b67cfd6395b4d04e38cd11e6195a0e256",
+    "platforms/cuda/src/kernels/findInteractingBlocks.cu": "29918ae0f6dbe47047b447dae89a6d2de3da5539a1f846ec5a0e98a05495c802",
+    "platforms/cuda/src/kernels/nonbonded.cu": "89f7d12cd1fed97105de4c779b79e1081f88d8971384a12dda160ea36a861926",
+    "platforms/cuda/src/kernels/reduceEnergyMerged.cu": "d0bcd2ed08f3c12dfb7cb785fb63a3e7b9d5dfa2987f26ec0e140ad9b7cee0ab",
+    "platforms/cuda/src/kernels/sort.cu": "d8408926d3d3dd5446f1b77de6dfcd56375c927a202424bfa66171eca20c1683",
+    "platforms/cuda/tests/TestCudaKernel.cpp": "f4db3578e13d49e81c5bfa960dd8423ea5e97724cc4c4b9747576ac66be93982"
+  },
+  "offline_pme_compilation": {
+    "status": "PASS",
+    "offline_nvrtc_compile_cases": 9,
+    "compiler": "NVRTC 11.8",
+    "compiler_options": [
+      "-arch=compute_90",
+      "--use_fast_math"
+    ],
+    "driver_loaded": false,
+    "openmm_loaded": false,
+    "GPU_executed": false,
+    "timing_measured": false,
+    "limitations": [
+      "Current raw kernel source and current CudaSort/CudaContext replacements are reconstructed offline, not captured from a live Context.",
+      "Representative 65536 particles, 64^3 PME grid, order 5, ordinary mixed CUDA and posq charges. This does not validate every configuration.",
+      "NVRTC PTX compilation is not driver JIT, execution, parameter binding, numerical validation, race checking, or performance measurement."
+    ]
+  }
+}

@@ -103,6 +103,13 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     }
     else
         throw OpenMMException("Illegal value for Precision: "+precision);
+    const char* fusedEnergyVariable = getenv("OPENMM_EXPERIMENT_FUSED_PME_ENERGY_REDUCTION");
+    experimentFusedPmeEnergyReduction = (fusedEnergyVariable != NULL && string(fusedEnergyVariable) == "1" && useMixedPrecision);
+    reduceEnergyMergedKernel = NULL;
+    pendingPmeEnergyMerge = NULL;
+    const char* reorderGatherVariable = getenv("OPENMM_EXPERIMENT_REORDER_GATHER");
+    experimentReorderGather = (reorderGatherVariable != NULL && string(reorderGatherVariable) == "1");
+    reorderGatherKernel = NULL;
     char* cacheVariable = getenv("OPENMM_CACHE_DIR");
     cacheDir = (cacheVariable == NULL ? tempDir : string(cacheVariable));
 #ifdef WIN32
@@ -367,6 +374,77 @@ CudaContext::~CudaContext() {
     if (contextIsValid && !isLinkedContext)
         cuCtxDestroy(context);
     contextIsValid = false;
+}
+
+bool CudaContext::prepareReorderDataOnDevice() {
+    static_assert(sizeof(mm_double4) == 8*sizeof(unsigned int), "Unexpected mixed velocity layout");
+    static_assert(sizeof(mm_float4) == 4*sizeof(unsigned int), "Unexpected position correction layout");
+    // No changes to other precision modes, platforms, linked/multi-device
+    // contexts, or callers currently using an auxiliary stream.
+    if (!experimentReorderGather || !useMixedPrecision || getNumContexts() != 1 || isLinkedContext || getCurrentStream() != 0)
+        return false;
+    ContextSelector selector(*this);
+    if (!reorderSourcePhysical.isInitialized())
+        reorderSourcePhysical.initialize<int>(*this, paddedNumAtoms, "reorderSourcePhysical");
+    if (!reorderVelocityScratch.isInitialized())
+        reorderVelocityScratch.initialize(*this, paddedNumAtoms, sizeof(mm_double4), "reorderVelocityScratch");
+    if (!reorderCorrectionScratch.isInitialized())
+        reorderCorrectionScratch.initialize(*this, paddedNumAtoms, sizeof(mm_float4), "reorderCorrectionScratch");
+    if (reorderGatherKernel == NULL) {
+        // Copy integer representations without a floating-point conversion.
+        // Source and destination allocations are distinct. Padding is zeroed
+        // exactly as in the original host vectors; source padding is ignored.
+        const string source = R"OPENMM(
+extern "C" __global__ void reorderMixedData(
+        const int* __restrict__ sourcePhysical,
+        const unsigned int* __restrict__ velocity,
+        const unsigned int* __restrict__ correction,
+        unsigned int* __restrict__ velocityScratch,
+        unsigned int* __restrict__ correctionScratch,
+        int numAtoms, int paddedNumAtoms) {
+    for (int destination = blockIdx.x*blockDim.x+threadIdx.x;
+            destination < paddedNumAtoms; destination += blockDim.x*gridDim.x) {
+        if (destination < numAtoms) {
+            const int source = sourcePhysical[destination];
+            for (int word = 0; word < 8; word++)
+                velocityScratch[8ull*destination+word] = velocity[8ull*source+word];
+            for (int word = 0; word < 4; word++)
+                correctionScratch[4ull*destination+word] = correction[4ull*source+word];
+        }
+        else {
+            for (int word = 0; word < 8; word++)
+                velocityScratch[8ull*destination+word] = 0;
+            for (int word = 0; word < 4; word++)
+                correctionScratch[4ull*destination+word] = 0;
+        }
+    }
+}
+)OPENMM";
+        CUmodule module = createModule(source);
+        reorderGatherKernel = getKernel(module, "reorderMixedData");
+    }
+    return true;
+}
+
+void CudaContext::reorderDataOnDevice(const vector<int>& sourcePhysical) {
+    // These checks happen before reading the mapping on the device. A failed
+    // optimization must throw, never continue with partially reordered arrays.
+    if (!useMixedPrecision || reorderGatherKernel == NULL || getCurrentStream() != 0 || sourcePhysical.size() != paddedNumAtoms)
+        throw OpenMMException("Invalid state for CUDA mixed atom reorder");
+    for (int i = 0; i < numAtoms; i++)
+        if (sourcePhysical[i] < 0 || sourcePhysical[i] >= numAtoms)
+            throw OpenMMException("Invalid physical source in CUDA mixed atom reorder");
+    ContextSelector selector(*this);
+    reorderSourcePhysical.upload(sourcePhysical);
+    void* args[] = {&reorderSourcePhysical.getDevicePointer(), &unwrap(velm).getDevicePointer(),
+            &unwrap(posqCorrection).getDevicePointer(), &reorderVelocityScratch.getDevicePointer(),
+            &reorderCorrectionScratch.getDevicePointer(), &numAtoms, &paddedNumAtoms};
+    executeKernel(reorderGatherKernel, args, paddedNumAtoms);
+    // Keep original allocation addresses: pre-bound kernels, listeners and
+    // checkpoint/barostat buffers must never see a swapped owner or pointer.
+    reorderVelocityScratch.copyTo(unwrap(velm));
+    reorderCorrectionScratch.copyTo(unwrap(posqCorrection));
+    CHECK_RESULT2(cuStreamSynchronize(getCurrentStream()), "Error completing CUDA mixed atom reorder");
 }
 
 void CudaContext::initialize() {
@@ -703,13 +781,42 @@ int CudaContext::computeThreadBlockSize(double memory) const {
     return threads;
 }
 
+bool CudaContext::deferPmeEnergyForReduction(CudaArray& pmeEnergy) {
+    // Only the sole built-in PME stream post-computation calls this.
+    // Keep multi-device/linked contexts and all other precision modes unchanged.
+    if (!experimentFusedPmeEnergyReduction || !useMixedPrecision || isLinkedContext ||
+            platformData.contexts.size() != 1 || postComputations.size() != 1 ||
+            pendingPmeEnergyMerge != NULL || pmeEnergy.getSize() <= 0 ||
+            pmeEnergy.getSize() > energyBuffer.getSize() ||
+            pmeEnergy.getElementSize() != sizeof(double) || energyBuffer.getElementSize() != sizeof(double) ||
+            pmeEnergy.getDevicePointer() == energyBuffer.getDevicePointer())
+        return false;
+    pendingPmeEnergyMerge = &pmeEnergy;
+    return true;
+}
+
 double CudaContext::reduceEnergy() {
     int workGroupSize  = 512;
-    reduceEnergyKernel->setArg(0, energyBuffer);
-    reduceEnergyKernel->setArg(1, energySum);
-    reduceEnergyKernel->setArg(2, energyBuffer.getSize());
-    reduceEnergyKernel->setArg(3, workGroupSize);
-    reduceEnergyKernel->execute(workGroupSize*energySum.getSize(), workGroupSize);
+    CudaArray* pmeEnergy = pendingPmeEnergyMerge;
+    pendingPmeEnergyMerge = NULL; // Consume before launch, including exceptional exits.
+    if (pmeEnergy != NULL) {
+        if (reduceEnergyMergedKernel == NULL) {
+            CUmodule module = createModule(CudaKernelSources::reduceEnergyMerged);
+            reduceEnergyMergedKernel = getKernel(module, "reduceEnergyMerged");
+        }
+        int bufferSize = energyBuffer.getSize();
+        int pmeSize = pmeEnergy->getSize();
+        void* args[] = {&energyBuffer.getDevicePointer(), &pmeEnergy->getDevicePointer(), &unwrap(energySum).getDevicePointer(),
+                &bufferSize, &pmeSize, &workGroupSize};
+        executeKernel(reduceEnergyMergedKernel, args, workGroupSize*energySum.getSize(), workGroupSize, workGroupSize*sizeof(double));
+    }
+    else {
+        reduceEnergyKernel->setArg(0, energyBuffer);
+        reduceEnergyKernel->setArg(1, energySum);
+        reduceEnergyKernel->setArg(2, energyBuffer.getSize());
+        reduceEnergyKernel->setArg(3, workGroupSize);
+        reduceEnergyKernel->execute(workGroupSize*energySum.getSize(), workGroupSize);
+    }
     energySum.download(pinnedBuffer);
     double result = 0;
     if (getUseDoublePrecision() || getUseMixedPrecision()) {

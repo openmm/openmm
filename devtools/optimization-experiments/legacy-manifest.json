@@ -1,0 +1,308 @@
+{
+  "base_repository": "https://github.com/openmm/openmm",
+  "base_tag": "8.2.0",
+  "base_commit": "53770948682c40bd460b39830d4e0f0fd3a4b868",
+  "current_port_base": "0c4bcaba734ea574f52f5e09ffaaf4d6fe6109c2",
+  "description": "Complete source experiment difference against public OpenMM 8.2.0. Historical review material; not applied to current master by the build. Line endings are normalized to LF in the patch.",
+  "patch_sha256": "b651572ec572180c34eff7fb47c047c0b9bf3e65fc73097f93dedeffdc93329b",
+  "apply_and_text_equality_check": "PASS",
+  "files": [
+    {
+      "path": "openmmapi/src/MonteCarloBarostatImpl.cpp",
+      "status": "modified",
+      "original_sha256": "594fbaf207387fe4f07be0999bfbfee98de8ffc33b171fb73e0a0edb9729382b",
+      "live_sha256": "901bb5a0dc41d6ceaca324d0118112b9058b3bf51b7c6661c202889b8703e08f",
+      "diff_lines": 53,
+      "present_in_master": true,
+      "live_lf_sha256": "b594fb191e0d017cce306856e2059bd0ae3d74537859186806346fe0e98ce0ed"
+    },
+    {
+      "path": "platforms/common/include/openmm/common/BondedUtilities.h",
+      "status": "modified",
+      "original_sha256": "06066d4439c6885c162ca81539d2ad42982c7f9f17a4cbca8315993cd464d71f",
+      "live_sha256": "33ae1beae24eefb237153eb333470870793d0efff42424f018164e8064852afe",
+      "diff_lines": 48,
+      "present_in_master": true,
+      "live_lf_sha256": "33ae1beae24eefb237153eb333470870793d0efff42424f018164e8064852afe"
+    },
+    {
+      "path": "platforms/common/include/openmm/common/CommonKernels.h",
+      "status": "modified",
+      "original_sha256": "b1cae09f80f2cb5beebcf6ba12e5117cc410b5ad84456bf2e64b4657d265e2d6",
+      "live_sha256": "5b897a56d41c6cbc08efe1aaf445e6ada34f23e1899464500fd922c3c603ec8e",
+      "diff_lines": 63,
+      "present_in_master": true,
+      "live_lf_sha256": "5b897a56d41c6cbc08efe1aaf445e6ada34f23e1899464500fd922c3c603ec8e"
+    },
+    {
+      "path": "platforms/common/include/openmm/common/ComputeContext.h",
+      "status": "modified",
+      "original_sha256": "1010b4f349eeeabac0d1244730b321c6d68cb618bf1408c7997a1c3ad75a142d",
+      "live_sha256": "cd4d5047e92ec2e510662bf8b1a73376e4b566b8f2f339ea4e94739c41790dd4",
+      "diff_lines": 19,
+      "present_in_master": true,
+      "live_lf_sha256": "26ff3539aa8b2eaeb3b40312ca59dab9fd3eb18bb20f39eb77a62861ac6eab0b"
+    },
+    {
+      "path": "platforms/common/include/openmm/common/IntegrationUtilities.h",
+      "status": "modified",
+      "original_sha256": "bd6b683d58a9f77b85d88cb99c277b62768c16fbf77dc5b251e1b2a72e8539a6",
+      "live_sha256": "21cf56569057a21aec0799c28e30274119b0d3891ae6b1fc56a28d4b06cd1fa5",
+      "diff_lines": 40,
+      "present_in_master": true,
+      "live_lf_sha256": "21cf56569057a21aec0799c28e30274119b0d3891ae6b1fc56a28d4b06cd1fa5"
+    },
+    {
+      "path": "platforms/common/src/BondedUtilities.cpp",
+      "status": "modified",
+      "original_sha256": "7adab777d72a36b707f021fae5cc7d69bd8137102e0f533d97f98214bc3e27dd",
+      "live_sha256": "23c3335f5827ea9f6953378674b50e17d11572dcd77c2ec28c00ec006ab26910",
+      "diff_lines": 271,
+      "present_in_master": true,
+      "live_lf_sha256": "23c3335f5827ea9f6953378674b50e17d11572dcd77c2ec28c00ec006ab26910"
+    },
+    {
+      "path": "platforms/common/src/CommonKernels.cpp",
+      "status": "modified",
+      "original_sha256": "d04270c8f3597578f24c286f0bef031f98febd56bdc8a7b60dbe082a94c00d0a",
+      "live_sha256": "a83d8f1d091a08c6084a289b8143edaf4c0cd2e333ec2599246bb07d0348f3a3",
+      "diff_lines": 903,
+      "present_in_master": true,
+      "live_lf_sha256": "a83d8f1d091a08c6084a289b8143edaf4c0cd2e333ec2599246bb07d0348f3a3"
+    },
+    {
+      "path": "platforms/common/src/ComputeContext.cpp",
+      "status": "modified",
+      "original_sha256": "656a997cb985c377653d8c224e7cc2647f7976a1eecba996bf23b69cd30ef6c3",
+      "live_sha256": "4816c07284dcd87bf70222472c36a57da12e26edbb4e16832edff2e36e05fffd",
+      "diff_lines": 179,
+      "present_in_master": true,
+      "live_lf_sha256": "4816c07284dcd87bf70222472c36a57da12e26edbb4e16832edff2e36e05fffd"
+    },
+    {
+      "path": "platforms/common/src/IntegrationUtilities.cpp",
+      "status": "modified",
+      "original_sha256": "d9d7c8784beeffe558e60c70cf9bbf13c123778be2fa197e19f0b218fe0ce85a",
+      "live_sha256": "128c99f668964a30f5983eea89bc8e0b2b78a15672c2fdf9b39d65ef43ae4ff2",
+      "diff_lines": 45,
+      "present_in_master": true,
+      "live_lf_sha256": "128c99f668964a30f5983eea89bc8e0b2b78a15672c2fdf9b39d65ef43ae4ff2"
+    },
+    {
+      "path": "platforms/common/src/ReorderHilbert.h",
+      "status": "added",
+      "original_sha256": null,
+      "live_sha256": "8af6f4991cf90ebade2502af9e1b537e96397c0de030b1b3aae1debfbfc36a14",
+      "diff_lines": 120,
+      "present_in_master": true,
+      "live_lf_sha256": "8af6f4991cf90ebade2502af9e1b537e96397c0de030b1b3aae1debfbfc36a14"
+    },
+    {
+      "path": "platforms/common/src/kernels/langevinMiddle.cc",
+      "status": "modified",
+      "original_sha256": "d5be18fd3f5070ec1da418047e3e0cb9fb01c46ba0491c301635bda4f62af8aa",
+      "live_sha256": "02f109b286695bab9384feae30f9a233e51bb86fe9325c103c4aafed9c965f60",
+      "diff_lines": 41,
+      "present_in_master": true,
+      "live_lf_sha256": "68152a4231637fe4e145ae97adfe682477d205e7c9cda2f78fe9d35171e8e6da"
+    },
+    {
+      "path": "platforms/common/src/kernels/langevinMiddleKickSettle.cc",
+      "status": "added",
+      "original_sha256": null,
+      "live_sha256": "b4c902476cfcebab7e6792e5ddd41720a683a221ec6a479c8b1f5a5a7adbf148",
+      "diff_lines": 111,
+      "present_in_master": true,
+      "live_lf_sha256": "b4c902476cfcebab7e6792e5ddd41720a683a221ec6a479c8b1f5a5a7adbf148"
+    },
+    {
+      "path": "platforms/common/src/kernels/langevinMiddleSettle.cc",
+      "status": "added",
+      "original_sha256": null,
+      "live_sha256": "e6c6b52954e092ae8860d104d551eb0dc63e86fec64d88cecea7b1a6d0cada55",
+      "diff_lines": 270,
+      "present_in_master": true,
+      "live_lf_sha256": "e6c6b52954e092ae8860d104d551eb0dc63e86fec64d88cecea7b1a6d0cada55"
+    },
+    {
+      "path": "platforms/common/src/kernels/monteCarloBarostatParallel.cc",
+      "status": "added",
+      "original_sha256": null,
+      "live_sha256": "a13193a365603b68ea2e38e08fcaa8f2fb386eb1a090053d31cd8089f7c50299",
+      "diff_lines": 81,
+      "present_in_master": false,
+      "live_lf_sha256": "b2b3cd04fd019495fc0e04d63e92dca74caa5866efefe24963f6e48a3c770d77"
+    },
+    {
+      "path": "platforms/common/src/kernels/pme.cc",
+      "status": "modified",
+      "original_sha256": "97a355aeec21a097cde4c1605b79b81fb366219220560878895fa36d020f088d",
+      "live_sha256": "f1cc4a14842e165147eb16f6620ee1daa20ac355468ee839bd4e61339d0c8207",
+      "diff_lines": 134,
+      "present_in_master": true,
+      "live_lf_sha256": "f1cc4a14842e165147eb16f6620ee1daa20ac355468ee839bd4e61339d0c8207"
+    },
+    {
+      "path": "platforms/common/src/kernels/removeCM.cc",
+      "status": "modified",
+      "original_sha256": "8e30829df375af3d0246c31768dc376ff7a0ac141c582477869dee527eac89b0",
+      "live_sha256": "9530704950fd0fcd008c5b93d78c4784a9110f87877bcd76f1004aa7d28c4101",
+      "diff_lines": 113,
+      "present_in_master": true,
+      "live_lf_sha256": "9530704950fd0fcd008c5b93d78c4784a9110f87877bcd76f1004aa7d28c4101"
+    },
+    {
+      "path": "platforms/cuda/include/CudaContext.h",
+      "status": "modified",
+      "original_sha256": "e23e58b06fca13581d98c23556ea76d3aeb5afb990c2ff6ed9cbd484dc2f08ab",
+      "live_sha256": "79071baaa5f68e4a56751cbfc055c6d9e18657c35983fce55859b2ad3d3a81fa",
+      "diff_lines": 45,
+      "present_in_master": true,
+      "live_lf_sha256": "c41912a45eec12d26be2d279327a5fca2b438187fe05de5863e57562192e73c3"
+    },
+    {
+      "path": "platforms/cuda/include/CudaIntegrationUtilities.h",
+      "status": "modified",
+      "original_sha256": "b4aa4726d59e24a510c2fcf4af1bc0577be429799376d0db0e2fee70a0af2ffa",
+      "live_sha256": "26d8d85b8a24f8ef02624fcbf0a5dce8ba65f14b55f91e52385a9554805512ef",
+      "diff_lines": 11,
+      "present_in_master": true,
+      "live_lf_sha256": "26d8d85b8a24f8ef02624fcbf0a5dce8ba65f14b55f91e52385a9554805512ef"
+    },
+    {
+      "path": "platforms/cuda/include/CudaKernel.h",
+      "status": "modified",
+      "original_sha256": "aed7de0bf5f536817e0c2c468ee104d26790cb8feaa9a344e8f1d38dd84b8d90",
+      "live_sha256": "1804342931796714ada65712d6b671188e29c30e34e3d22bfb1e2ef6397b973e",
+      "diff_lines": 11,
+      "present_in_master": true,
+      "live_lf_sha256": "7776fac34909b029eff423978653e3199b70548c542def3e4ca8687849004059"
+    },
+    {
+      "path": "platforms/cuda/include/CudaKernels.h",
+      "status": "modified",
+      "original_sha256": "fdf474f126750a86ef4d9cfb74cf6d2857bc290ba0322d2b092a54f9f0ba4865",
+      "live_sha256": "31568db4dc86aa8a4e2dfe40e3085a0a92cdba4137ffaf09900d8cbfe226de68",
+      "diff_lines": 56,
+      "present_in_master": true,
+      "live_lf_sha256": "31568db4dc86aa8a4e2dfe40e3085a0a92cdba4137ffaf09900d8cbfe226de68"
+    },
+    {
+      "path": "platforms/cuda/include/CudaNonbondedUtilities.h",
+      "status": "modified",
+      "original_sha256": "b978ab3db183b4a8052434cb6c5b10e3cd727fcde72f7989a84e52e369e05a90",
+      "live_sha256": "000e5e41f5149e5300fc5344f2bf3e9ad5dc9cd67cb098a82636c6c90ed28ce8",
+      "diff_lines": 48,
+      "present_in_master": true,
+      "live_lf_sha256": "000e5e41f5149e5300fc5344f2bf3e9ad5dc9cd67cb098a82636c6c90ed28ce8"
+    },
+    {
+      "path": "platforms/cuda/include/CudaSort.h",
+      "status": "modified",
+      "original_sha256": "9090caae64ae629fd00e2fbd728e033f7f005cde70ed2d1c1b8e5d409b22697e",
+      "live_sha256": "7da3cec7363b5f7c0ded63893dc901750f19ce0dd2104ba72a594ea062fca6d2",
+      "diff_lines": 78,
+      "present_in_master": true,
+      "live_lf_sha256": "7da3cec7363b5f7c0ded63893dc901750f19ce0dd2104ba72a594ea062fca6d2"
+    },
+    {
+      "path": "platforms/cuda/src/CudaContext.cpp",
+      "status": "modified",
+      "original_sha256": "ecd4dedd02da90c5e0d6e54a3e8dfe071d37c928f0d9b15afd254801b3b3ea7e",
+      "live_sha256": "d2a7fa330f38ef019a9d207e4224ef93c65bd2dfbfabd287c740c761f7a6027b",
+      "diff_lines": 153,
+      "present_in_master": true,
+      "live_lf_sha256": "279157f52b70be54ac6880c31556d7e6f99153e688da88bcb5bf0ede1ce9c877"
+    },
+    {
+      "path": "platforms/cuda/src/CudaIntegrationUtilities.cpp",
+      "status": "modified",
+      "original_sha256": "1882de751829e846d04331c986aaef89a487e64d736f959d7b60793bc988dcc7",
+      "live_sha256": "57df51fda1eb99ba10daa85a8d1523cdc5c514a6cc2a7797bbfe517a61779e71",
+      "diff_lines": 60,
+      "present_in_master": true,
+      "live_lf_sha256": "57df51fda1eb99ba10daa85a8d1523cdc5c514a6cc2a7797bbfe517a61779e71"
+    },
+    {
+      "path": "platforms/cuda/src/CudaKernel.cpp",
+      "status": "modified",
+      "original_sha256": "7024e3805711d66334f68043dde396ecf92e3baec3c01bc62bba9549fb092dfb",
+      "live_sha256": "53eb88154d3fdd76ed20d92af113845099f57f92d8b8b43001770f7246426982",
+      "diff_lines": 76,
+      "present_in_master": true,
+      "live_lf_sha256": "e913d2c46460e20b0bdd963faeb13c96d34a559297e898d65842cf361edabb9f"
+    },
+    {
+      "path": "platforms/cuda/src/CudaKernels.cpp",
+      "status": "modified",
+      "original_sha256": "dfc258539960d45a3e914be73814d7aa394beff32f1c54c60bf26dea523f07c2",
+      "live_sha256": "f917c86e41024b3fbc0f4bfe8181a27e8e5d5dc2f21a8da04e1b0871dce13754",
+      "diff_lines": 343,
+      "present_in_master": true,
+      "live_lf_sha256": "f917c86e41024b3fbc0f4bfe8181a27e8e5d5dc2f21a8da04e1b0871dce13754"
+    },
+    {
+      "path": "platforms/cuda/src/CudaNonbondedUtilities.cpp",
+      "status": "modified",
+      "original_sha256": "621d51be22d994f7b984712932b9ca32bdd987c358b0a3ffde8e3177a0bca5dd",
+      "live_sha256": "bd6d6f8615dd8cee5a686ed9995ce93200ce6d0e9916bf5ddcbf0296a0df3202",
+      "diff_lines": 245,
+      "present_in_master": true,
+      "live_lf_sha256": "bd6d6f8615dd8cee5a686ed9995ce93200ce6d0e9916bf5ddcbf0296a0df3202"
+    },
+    {
+      "path": "platforms/cuda/src/CudaSort.cpp",
+      "status": "modified",
+      "original_sha256": "c18a32ef950661af908067d2a2bcbae9169dc71eed7319be8e9780fb22fe9271",
+      "live_sha256": "21762c6e811185104150ac437f9afe2edaa84e678e362fdd78eefae18aebee92",
+      "diff_lines": 211,
+      "present_in_master": true,
+      "live_lf_sha256": "21762c6e811185104150ac437f9afe2edaa84e678e362fdd78eefae18aebee92"
+    },
+    {
+      "path": "platforms/cuda/src/NeighborSkinPolicy.h",
+      "status": "added",
+      "original_sha256": null,
+      "live_sha256": "3bb3d684169a2432143cd5b13291e59b67cfd6395b4d04e38cd11e6195a0e256",
+      "diff_lines": 37,
+      "present_in_master": true,
+      "live_lf_sha256": "3bb3d684169a2432143cd5b13291e59b67cfd6395b4d04e38cd11e6195a0e256"
+    },
+    {
+      "path": "platforms/cuda/src/kernels/findInteractingBlocks.cu",
+      "status": "modified",
+      "original_sha256": "eb87b125034f21fab1cd39714a9a26c98d90f87e0d65f03f260732504924190c",
+      "live_sha256": "f66df080bad1672caf9bc0edf88b831322a20b47336e7ed5291c1b0174227da2",
+      "diff_lines": 159,
+      "present_in_master": true,
+      "live_lf_sha256": "838b9a2acf36a3305020040d163515ff7a2218ce9ee45d8b95f6c5279913f07b"
+    },
+    {
+      "path": "platforms/cuda/src/kernels/nonbonded.cu",
+      "status": "modified",
+      "original_sha256": "35ef646f5ecf72b74e9c5cfa2ad240fc5eddd9b0690cb6fa80b52c79e03084ef",
+      "live_sha256": "89f7d12cd1fed97105de4c779b79e1081f88d8971384a12dda160ea36a861926",
+      "diff_lines": 16,
+      "present_in_master": true,
+      "live_lf_sha256": "89f7d12cd1fed97105de4c779b79e1081f88d8971384a12dda160ea36a861926"
+    },
+    {
+      "path": "platforms/cuda/src/kernels/reduceEnergyMerged.cu",
+      "status": "added",
+      "original_sha256": null,
+      "live_sha256": "e877ccc3c1fdd4171a795395644147c1825bd1187bf562c74bf79939a3c9aa11",
+      "diff_lines": 34,
+      "present_in_master": true,
+      "live_lf_sha256": "d0bcd2ed08f3c12dfb7cb785fb63a3e7b9d5dfa2987f26ec0e140ad9b7cee0ab"
+    },
+    {
+      "path": "platforms/cuda/src/kernels/sort.cu",
+      "status": "modified",
+      "original_sha256": "796e8461f61b3ace92fed68fcaec24fdf3858d4b658efdd76c429869b1213132",
+      "live_sha256": "d8408926d3d3dd5446f1b77de6dfcd56375c927a202424bfa66171eca20c1683",
+      "diff_lines": 99,
+      "present_in_master": true,
+      "live_lf_sha256": "d8408926d3d3dd5446f1b77de6dfcd56375c927a202424bfa66171eca20c1683"
+    }
+  ]
+}

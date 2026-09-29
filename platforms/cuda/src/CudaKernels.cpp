@@ -24,6 +24,7 @@
 
 #include "CudaKernels.h"
 #include "CudaForceInfo.h"
+#include "CudaSort.h"
 #include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
@@ -63,6 +64,7 @@ void CudaCalcForcesAndEnergyKernel::initialize(const System& system) {
 void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     cu.setForcesValid(true);
     ContextSelector selector(cu);
+    cu.resetDeferredPmeEnergy();
     cu.clearAutoclearBuffers();
     cu.updateGlobalParamValues();
     for (auto computation : cu.getPreComputations())
@@ -77,7 +79,7 @@ void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool 
 
 double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
     ContextSelector selector(cu);
-    cu.getBondedUtilities().computeInteractions(groups);
+    cu.getBondedUtilities().computeInteractions(groups, includeForces, includeEnergy);
     cu.getNonbondedUtilities().computeInteractions(groups, includeForces, includeEnergy);
     double sum = 0.0;
     for (auto computation : cu.getPostComputations())
@@ -100,4 +102,26 @@ void CudaCalcConstantPotentialForceKernel::initialize(const System& system, cons
     bool usePmeQueue, useFixedPointChargeSpreading;
     getCudaPmeParameters(cu, usePmeQueue, useFixedPointChargeSpreading);
     commonInitialize(system, force, false, useFixedPointChargeSpreading);
+}
+
+ComputeSort CudaCalcNonbondedForceKernel::createPmeSort(ComputeSortImpl::SortTrait* trait, int length, int knownMaximum) {
+    return ComputeSort(new CudaSort(cu, trait, length, true, NULL, knownMaximum));
+}
+
+bool CudaCalcNonbondedForceKernel::tryPmePermutation(ComputeSort sorter, ComputeArray& data,
+        ComputeKernel generator, bool coarseBuckets, bool directPhysicalIndices) {
+    CudaSort* cudaSort = dynamic_cast<CudaSort*>(sorter.get());
+    if (cudaSort == NULL)
+        return false;
+    if (generator)
+        return cudaSort->sortWithGeneratedKeys(cu.unwrap(data), generator, !coarseBuckets, directPhysicalIndices);
+    if (coarseBuckets) {
+        cudaSort->bucketize(cu.unwrap(data));
+        return true;
+    }
+    return false;
+}
+
+bool CudaCalcNonbondedForceKernel::deferPmeEnergy(ComputeArray& energy) {
+    return cu.deferPmeEnergyForReduction(cu.unwrap(energy));
 }

@@ -1,0 +1,32 @@
+# PME, CUDA context and sorting port
+
+Target: current upstream-based PR checkout at `openmm-pr` (starting HEAD `773ca815`). Source of experimental behavior: the cumulative OpenMM 8.2 to Round9 comparison. This is a source port, not a claim of validated GPU correctness or speedup on current upstream.
+
+## Feature accounting
+
+All newly ported environment switches are **OFF unless their value is exactly `1`**. Existing upstream behavior is retained when an experiment is disabled or its runtime applicability checks fail.
+
+| Historical feature / option | Status | Current implementation and limitations |
+|---|---|---|
+| `OPENMM_EXPERIMENT_PME_COEFFICIENT_CACHE` | Ported | `CommonCalcNonbondedForce` stores convolution coefficients in a persistent `ComputeArray`. Enabled only through the CUDA support hook for ordinary mixed PME, one context, GPU PME queue, no parameter offsets, no fixed-point spreading/LJPME; execution additionally requires exact `LangevinMiddleIntegrator`. Exact host box plus GPU reciprocal-box bits form the key; parameter updates invalidate it. |
+| `OPENMM_EXPERIMENT_PME_SORT_CADENCE` | Already upstream | Current upstream already assigns `(numAtoms > 15000) ? 1 : 3` between sorts. That code is preserved unchanged. The legacy large-system cadence switch is not reintroduced. |
+| `OPENMM_EXPERIMENT_PME_KNOWN_SORT_RANGE` | Ported | A CUDA-specific protected factory creates `CudaSort` with the known integer maximum. Ordinary `ComputeSortImpl` and other backends are unchanged. Mixed ordinary CUDA PME guard, >15000 atoms, and exactly representable grid-key bound of at most 2^24 grid points. |
+| `OPENMM_EXPERIMENT_PME_COARSE_BUCKETS` | Ported | Explicit permutation-only bucketization, never represented as a complete key sort. Requires known-range guard and exact Middle integrator. Existing callers continue to use complete sorting. |
+| `OPENMM_EXPERIMENT_PME_GRID_ASSIGNMENT_FUSION` | Ported | Current `ComputeKernel` generators reserve 15 arguments: the original ten PME inputs plus five sorter workspaces. Unsupported generated sorting returns false before device enqueue; fallback regenerates all int2 data. Runtime launch failures propagate. |
+| `OPENMM_EXPERIMENT_PME_DIRECT_PERMUTATION` | Ported | Requires coarse buckets and generated-key fusion. Generator writes physical-index metadata; scatter produces `int2(physicalIndex, 0)`. Current spread and interpolation consume only `.x`; fallback regenerates all `.y` keys. No generic sort contract is weakened. |
+| `OPENMM_EXPERIMENT_FUSED_PME_ENERGY_REDUCTION` | Ported | Current common queue post-computation waits for the PME event, then calls a CUDA-only hook. Only energy-only, mixed precision, one nonlinked context, sole post-computation, compatible nonaliased buffers are accepted. Buffer contents and per-block reduction schedule are preserved; explicit double round-to-nearest adds retain the elementwise-add boundary. |
+| Energy-only PME inverse FFT / force-half omission (legacy unconditional narrow optimization) | Ported with new switch | New `OPENMM_EXPERIMENT_PME_ENERGY_ONLY_SKIP_FORCE`. Restricted to the ordinary mixed CUDA PME eligibility contract and exact Middle integrator. Forward FFT and energy evaluation still run; the convolution, inverse FFT and force interpolation are omitted only for energy-only calls. |
+| Real-grid half clear (legacy unconditional narrow optimization) | Ported with new switch and current layout | New `OPENMM_EXPERIMENT_PME_REAL_GRID_CLEAR`. The current CUDA backend always uses cuFFT for its out-of-place R2C/C2R path. On the guarded ordinary mixed floating-point PME path, `pmeGrid1` is allocated as `gridElements` real values rather than `gridElements` complex-sized values. Existing autoclear therefore clears exactly the real extent. No alias/view ownership or generic autoclear API change is needed; LJPME/fixed-point/other platforms retain existing allocation. |
+| `OPENMM_EXPERIMENT_DIRECT_CUTOFF_GUARD` | Ported to new code location | CUDA-only opt-in wrapper around this standard PME Coulomb/LJ interaction, mixed precision, one context, no offsets and no switching. Collectives, other interactions and final accumulation remain outside the wrapper. Moved from legacy `CudaKernels.cpp` to current `CommonCalcNonbondedForce.cpp`. |
+| `OPENMM_EXPERIMENT_REORDER_GATHER` | Ported | `CudaContext` overrides the hooks added by the reorder agent. Mixed precision, one nonlinked context, default stream only. Bitwise device gather of velocity/correction into scratch, copy back into original allocations, synchronize before returning. |
+| Conditional neighbor block sorting | Support ported | `CudaSort` retains 4/5/6-argument constructors, including optional device int flag. Every long-list stage is guarded, including range/bucket reset. Short-list flags are rejected; flag element type/size and owning context are checked. Neighbor activation belongs to the reorder/neighbor agent. |
+| Extra direct-force launch blocks / energy capacity | Already structurally supported upstream; integrated with neighbor agent | Current `CudaContext` already caps general kernels at six blocks/SM and allocates energy capacity as `max(general thread count, nonbonded energy requirement)`. These mechanisms are preserved. The neighbor agent updates the nonbonded requirement/launch count; no duplicate context cap is added. |
+
+## Current upstream differences explicitly preserved
+
+- PME implementation now lives in `CommonCalcNonbondedForce`, and CUDA delegates to it. CUDA headers were not added to common code. Protected no-op hooks preserve the other backends' behavior.
+- `CudaSort` still inherits `ComputeSortImpl`, accepts `ComputeSortImpl::SortTrait`, and implements `sort(ArrayInterface&)`. Validation and empty-array return happen before unwrapping.
+- Current upstream zeroes the zero Fourier mode during Coulomb convolution. The coefficient application **also zeroes it**, instead of restoring OpenMM 8.2's leave-unchanged behavior.
+- Current neutralizing-plasma correction, parameter handling, small- and large-system sort cadence, real FFT abstraction, and force/energy group flow are retained.
+- PME stream/event synchronization is unchanged. The fused reduction hook executes only after the queue wait; pending state is reset at the next force evaluation and consumed before reduction launch.
+- CUDA force finalization now passes `includeForces` and `includeEnergy` to the bonded utility overload provided by the other agent.

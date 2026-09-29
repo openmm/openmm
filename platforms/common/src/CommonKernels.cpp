@@ -52,6 +52,25 @@
 #include <iterator>
 #include <set>
 
+#include "openmm/CMMotionRemover.h"
+#include "openmm/HarmonicAngleForce.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/MonteCarloBarostat.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/PeriodicTorsionForce.h"
+#include <atomic>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <limits>
+#include <new>
+#include <type_traits>
+#include <typeinfo>
+#if defined(_MSC_VER) && defined(_M_X64)
+#include <xmmintrin.h>
+#endif
+
 using namespace OpenMM;
 using namespace std;
 using namespace Lepton;
@@ -97,15 +116,58 @@ void CommonUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3
     int numParticles = context.getSystem().getNumParticles();
     positions.resize(numParticles);
     vector<mm_float4> posCorrection;
+    static_assert(std::is_trivially_copyable<mm_float4>::value, "Position correction byte copies require a trivially copyable type");
+    unsigned char* positionCorrectionBytes = NULL;
     if (cc.getUseDoublePrecision()) {
         mm_double4* posq = (mm_double4*) cc.getPinnedBuffer();
         cc.getPosq().download(posq);
     }
     else if (cc.getUseMixedPrecision()) {
         mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
+        const char* pinnedTailEnv = std::getenv("OPENMM_EXPERIMENT_GETPOSITIONS_PINNED_TAIL");
+        bool usePinnedCorrectionTail = pinnedTailEnv != NULL && pinnedTailEnv[0] == '1' && pinnedTailEnv[1] == '\0'
+                && numParticles >= 4096 && cc.getNumContexts() == 1 && getPlatform().getName() == "CUDA";
+        if (usePinnedCorrectionTail) {
+            // Check the platform property before issuing the asynchronous copy.
+            // The shared pinned buffer must not be borrowed while CPU PME runs.
+            try {
+                usePinnedCorrectionTail = (getPlatform().getPropertyValue(context.getOwner(), "UseCpuPme") == "false");
+            }
+            catch (const OpenMMException&) {
+                usePinnedCorrectionTail = false;
+            }
+        }
+        if (usePinnedCorrectionTail) {
+            const int paddedSize = cc.getPaddedNumAtoms();
+            // ComputeContext guarantees room for any returned array. In CUDA
+            // mixed precision, velm is 32P bytes, enough for both 16P arrays.
+            // Size/element checks avoid byte-count overflow and preserve 16B alignment.
+            usePinnedCorrectionTail = paddedSize >= numParticles
+                    && static_cast<size_t>(paddedSize) <= std::numeric_limits<size_t>::max()/(2*sizeof(mm_float4))
+                    && cc.getPosq().getSize() == paddedSize && cc.getPosqCorrection().getSize() == paddedSize
+                    && cc.getPosq().getElementSize() == sizeof(mm_float4)
+                    && cc.getPosqCorrection().getElementSize() == sizeof(mm_float4)
+                    && cc.getVelm().getSize() >= paddedSize && cc.getVelm().getElementSize()/2 >= sizeof(mm_float4)
+                    && reinterpret_cast<uintptr_t>(posq)%sizeof(mm_float4) == 0;
+        }
         cc.getPosq().download(posq, false);
-        posCorrection.resize(numParticles);
-        cc.getPosqCorrection().download(posCorrection);
+        if (usePinnedCorrectionTail) {
+            // Borrow only this call's unused pinned tail. The blocking second
+            // download and existing ThreadPool join precede any buffer reuse.
+            positionCorrectionBytes = reinterpret_cast<unsigned char*>(cc.getPinnedBuffer())
+                    +static_cast<size_t>(cc.getPaddedNumAtoms())*sizeof(mm_float4);
+            cc.getPosqCorrection().download(positionCorrectionBytes);
+        }
+        else {
+            // Lower-priority alternative: one pageable allocation at device size.
+            const char* singleAllocationEnv = std::getenv("OPENMM_EXPERIMENT_GETPOSITIONS_SINGLE_ALLOCATION");
+            const bool singleCorrectionAllocation = singleAllocationEnv != NULL && singleAllocationEnv[0] == '1' && singleAllocationEnv[1] == '\0'
+                    && numParticles >= 4096 && cc.getNumContexts() == 1 && getPlatform().getName() == "CUDA";
+            if (!singleCorrectionAllocation)
+                posCorrection.resize(numParticles);
+            cc.getPosqCorrection().download(posCorrection);
+            positionCorrectionBytes = reinterpret_cast<unsigned char*>(posCorrection.data());
+        }
     }
     else {
         mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
@@ -136,7 +198,8 @@ void CommonUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3
                 mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
                 for (int i = start; i < end; ++i) {
                     mm_float4 pos1 = posq[i];
-                    mm_float4 pos2 = posCorrection[i];
+                    mm_float4 pos2;
+                    std::memcpy(&pos2, positionCorrectionBytes+static_cast<size_t>(i)*sizeof(pos2), sizeof(pos2));
                     positions[order[i]] = Vec3((double)pos1.x+(double)pos2.x, (double)pos1.y+(double)pos2.y, (double)pos1.z+(double)pos2.z);
                 }
             }
@@ -161,7 +224,8 @@ void CommonUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3
                 mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
                 for (int i = start; i < end; ++i) {
                     mm_float4 pos1 = posq[i];
-                    mm_float4 pos2 = posCorrection[i];
+                    mm_float4 pos2;
+                    std::memcpy(&pos2, positionCorrectionBytes+static_cast<size_t>(i)*sizeof(pos2), sizeof(pos2));
                     mm_int4 offset = cc.getPosCellOffsets()[i];
                     positions[order[i]] = Vec3((double)pos1.x+(double)pos2.x, (double)pos1.y+(double)pos2.y, (double)pos1.z+(double)pos2.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
                 }
@@ -179,11 +243,112 @@ void CommonUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3
     cc.getThreadPool().waitForThreads();
 }
 
+// Use the existing pool without allocating a std::function or changing worker
+// state. ThreadPool does not transport worker exceptions, so copyRange contains
+// only the original unchecked array access and independent scalar conversions.
+template <class CopyRange>
+static bool runParallelPositionCopy(ThreadPool& pool, int numParticles, const CopyRange& copyRange) {
+#if defined(_MSC_VER) && defined(_M_X64)
+    // On this target the scalar conversions use SSE. Compare all control bits
+    // (rounding, FTZ, DAZ, exception masks), excluding sticky exception flags.
+    const unsigned int control = _mm_getcsr()&0xffc0;
+    if ((control&0x1f80) != 0x1f80)
+        return false; // Preserve the original caller path for unmasked traps.
+    class CopyTask : public ThreadPool::Task {
+    public:
+        CopyTask(int count, unsigned int control, const CopyRange& copy) :
+                count(count), control(control), copy(copy), mismatchedControl(false) {
+        }
+        void execute(ThreadPool& threads, int threadIndex) override {
+            if ((_mm_getcsr()&0xffc0) != control) {
+                mismatchedControl.store(true);
+                return;
+            }
+            const int numThreads = threads.getNumThreads();
+            const int start = (int) ((long long) threadIndex*count/numThreads);
+            const int end = (int) ((long long) (threadIndex+1)*count/numThreads);
+            copy(start, end);
+        }
+        int count;
+        unsigned int control;
+        const CopyRange& copy;
+        std::atomic<bool> mismatchedControl;
+    };
+    CopyTask task(numParticles, control, copyRange);
+    pool.execute(task);
+    pool.waitForThreads();
+    // A mismatch does not commit a partially converted upload: the caller
+    // rewrites the whole range serially before padding or the original upload.
+    return !task.mismatchedControl.load();
+#else
+    return false;
+#endif
+}
+
 void CommonUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<Vec3>& positions) {
     ContextSelector selector(cc);
     const vector<int>& order = cc.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
-    if (cc.getUseDoublePrecision()) {
+    const char* parallelEnv = std::getenv("OPENMM_EXPERIMENT_PARALLEL_SET_POSITIONS");
+    const bool parallelPositions = parallelEnv != NULL && parallelEnv[0] == '1' && parallelEnv[1] == '\0'
+            && cc.getUseMixedPrecision() && numParticles >= 4096 && cc.getNumContexts() == 1
+            && getPlatform().getName() == "CUDA" && cc.getThreadPool().getNumThreads() > 1;
+    const char* fusedEnv = std::getenv("OPENMM_EXPERIMENT_FUSED_SET_POSITIONS");
+    bool fusedPositions = fusedEnv != NULL && fusedEnv[0] == '1' && fusedEnv[1] == '\0'
+            && cc.getUseMixedPrecision() && !cc.getUseDoublePrecision()
+            && numParticles >= 4096 && cc.getNumContexts() == 1 && getPlatform().getName() == "CUDA";
+#if defined(_MSC_VER) && defined(_M_X64)
+    // A different arithmetic order can change which unmasked trap occurs first.
+    // Keep the original two-pass caller path whenever traps are unmasked.
+    fusedPositions = fusedPositions && (_mm_getcsr()&0x1f80) == 0x1f80;
+#else
+    fusedPositions = false;
+#endif
+    if (fusedPositions) {
+        const int paddedSize = cc.getPaddedNumAtoms();
+        // CUDA mixed pinned storage has at least 32P bytes (velm's size).
+        // Pack xyz into the first 12N bytes, and keep the 16P-byte correction
+        // array in the aligned second half. Do not restore the old posq download.
+        fusedPositions = paddedSize >= numParticles
+                && static_cast<size_t>(paddedSize) <= std::numeric_limits<size_t>::max()/(2*sizeof(mm_float4))
+                && cc.getPosq().getSize() == paddedSize && cc.getPosqCorrection().getSize() == paddedSize
+                && cc.getPosq().getElementSize() == sizeof(mm_float4)
+                && cc.getPosqCorrection().getElementSize() == sizeof(mm_float4)
+                && cc.getVelm().getSize() >= paddedSize && cc.getVelm().getElementSize()/2 >= sizeof(mm_float4)
+                && reinterpret_cast<uintptr_t>(cc.getPinnedBuffer())%sizeof(mm_float4) == 0;
+    }
+    if (fusedPositions) {
+        static_assert(std::is_trivially_copyable<mm_float4>::value, "Mixed setter byte copies require a trivially copyable type");
+        float* pos = (float*) cc.getPinnedBuffer();
+        unsigned char* correctionBytes = reinterpret_cast<unsigned char*>(cc.getPinnedBuffer())
+                +static_cast<size_t>(cc.getPaddedNumAtoms())*sizeof(mm_float4);
+        auto copyMixedPositions = [&] (int start, int end) {
+            for (int i = start; i < end; ++i) {
+                const Vec3& p = positions[order[i]];
+                const float x = (float) p[0];
+                const float y = (float) p[1];
+                const float z = (float) p[2];
+                pos[3*i] = x;
+                pos[3*i+1] = y;
+                pos[3*i+2] = z;
+                const mm_float4 correction((float) (p[0]-x), (float) (p[1]-y), (float) (p[2]-z), 0.0f);
+                // The pinned tail is raw storage, not a constructed array.
+                std::memcpy(correctionBytes+static_cast<size_t>(i)*sizeof(correction), &correction, sizeof(correction));
+            }
+        };
+        // A worker-control mismatch rewrites both full spans on the caller
+        // before either upload, preserving the original conversion controls.
+        if (!parallelPositions || !runParallelPositionCopy(cc.getThreadPool(), numParticles, copyMixedPositions))
+            copyMixedPositions(0, numParticles);
+        const mm_float4 zero(0.0f, 0.0f, 0.0f, 0.0f);
+        for (int i = numParticles; i < cc.getPaddedNumAtoms(); i++)
+            std::memcpy(correctionBytes+static_cast<size_t>(i)*sizeof(zero), &zero, sizeof(zero));
+        floatBuffer.upload(pos);
+        copyFloatKernel->setArg(1, cc.getPosq());
+        copyFloatKernel->execute(numParticles);
+        cc.getPosqCorrection().upload(correctionBytes);
+    }
+    else if (cc.getUseDoublePrecision()) {
         double* pos = (double*) cc.getPinnedBuffer();
         for (int i = 0; i < numParticles; ++i) {
             const Vec3& p = positions[order[i]];
@@ -197,26 +362,34 @@ void CommonUpdateStateDataKernel::setPositions(ContextImpl& context, const vecto
     }
     else {
         float* pos = (float*) cc.getPinnedBuffer();
-        for (int i = 0; i < numParticles; ++i) {
-            const Vec3& p = positions[order[i]];
-            pos[3*i] = (float) p[0];
-            pos[3*i+1] = (float) p[1];
-            pos[3*i+2] = (float) p[2];
-        }
+        auto copyPositions = [&] (int start, int end) {
+            for (int i = start; i < end; ++i) {
+                const Vec3& p = positions[order[i]];
+                pos[3*i] = (float) p[0];
+                pos[3*i+1] = (float) p[1];
+                pos[3*i+2] = (float) p[2];
+            }
+        };
+        if (!parallelPositions || !runParallelPositionCopy(cc.getThreadPool(), numParticles, copyPositions))
+            copyPositions(0, numParticles);
         floatBuffer.upload(pos);
         copyFloatKernel->setArg(1, cc.getPosq());
         copyFloatKernel->execute(numParticles);
     }
-    if (cc.getUseMixedPrecision()) {
+    if (cc.getUseMixedPrecision() && !fusedPositions) {
         mm_float4* posCorrection = (mm_float4*) cc.getPinnedBuffer();
-        for (int i = 0; i < numParticles; ++i) {
-            mm_float4& c = posCorrection[i];
-            const Vec3& p = positions[order[i]];
-            c.x = (float) (p[0]-(float)p[0]);
-            c.y = (float) (p[1]-(float)p[1]);
-            c.z = (float) (p[2]-(float)p[2]);
-            c.w = 0;
-        }
+        auto copyCorrections = [&] (int start, int end) {
+            for (int i = start; i < end; ++i) {
+                mm_float4& c = posCorrection[i];
+                const Vec3& p = positions[order[i]];
+                c.x = (float) (p[0]-(float)p[0]);
+                c.y = (float) (p[1]-(float)p[1]);
+                c.z = (float) (p[2]-(float)p[2]);
+                c.w = 0;
+            }
+        };
+        if (!parallelPositions || !runParallelPositionCopy(cc.getThreadPool(), numParticles, copyCorrections))
+            copyCorrections(0, numParticles);
         for (int i = numParticles; i < cc.getPaddedNumAtoms(); i++)
             posCorrection[i] = mm_float4(0.0f, 0.0f, 0.0f, 0.0f);
         cc.getPosqCorrection().upload(posCorrection);
@@ -335,10 +508,33 @@ void CommonUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, co
     // If any particles have been wrapped to the first periodic box, we need to unwrap them
     // to avoid changing their positions.
 
-    vector<Vec3> positions;
+    vector<Vec3> localPositions;
+    vector<Vec3>* positions = &localPositions;
+    bool haveUnwrappedPositions = false;
     for (auto offset : cc.getPosCellOffsets()) {
         if (offset.x != 0 || offset.y != 0 || offset.z != 0) {
-            getPositions(context, positions);
+            const char* scratchEnv = std::getenv("OPENMM_EXPERIMENT_BOX_POSITION_SCRATCH_REUSE");
+            const int numParticles = context.getSystem().getNumParticles();
+            const bool useScratch = scratchEnv != NULL && scratchEnv[0] == '1' && scratchEnv[1] == '\0'
+                    && numParticles >= 4096 && cc.getUseMixedPrecision()
+                    && cc.getNumContexts() == 1 && getPlatform().getName() == "CUDA";
+            if (useScratch) {
+                try {
+                    // Reserve before any download or box mutation. Keep size
+                    // across calls so getPositions.resize(N) does not zero an
+                    // existing Vec3 array that the getter fully overwrites.
+                    boxPositionScratch.reserve(numParticles);
+                    positions = &boxPositionScratch;
+                }
+                catch (const std::bad_alloc&) {
+                    // Retain the original local-vector path on optional OOM.
+                    // No getter or box operation has run for this call yet.
+                }
+            }
+            getPositions(context, *positions);
+            // Persistent scratch can contain an earlier call's data. Only a
+            // successful getter in this call permits any setter below.
+            haveUnwrappedPositions = !positions->empty();
             break;
         }
     }
@@ -347,8 +543,8 @@ void CommonUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, co
 
     for (auto ctx : cc.getAllContexts())
         ctx->setPeriodicBoxVectors(a, b, c);
-    if (positions.size() > 0)
-        setPositions(context, positions);
+    if (haveUnwrappedPositions)
+        setPositions(context, *positions);
 }
 
 void CommonUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
@@ -487,6 +683,157 @@ private:
     const HarmonicBondForce& force;
 };
 
+namespace {
+
+bool allowExperimentalWaterBondGroups(const System& system) {
+    int harmonicForces = 0;
+    for (int i = 0; i < system.getNumForces(); i++) {
+        const type_info& type = typeid(system.getForce(i));
+        if (type == typeid(HarmonicBondForce)) harmonicForces++;
+        else if (type != typeid(HarmonicAngleForce) && type != typeid(PeriodicTorsionForce) &&
+                type != typeid(NonbondedForce) && type != typeid(MonteCarloBarostat) && type != typeid(CMMotionRemover))
+            return false;
+    }
+    return harmonicForces == 1;
+}
+
+// The graph uses only topology, never assumes water parameters are equal.  Every
+// selected atom has exactly two constraint edges and two unique harmonic edges
+// within one isolated triangle.  All incomplete/overlapping cases stay generic.
+void findExperimentalWaterBondGroups(const System& system, const vector<vector<int> >& bonds,
+        vector<vector<int> >& triangles, vector<mm_int4>& bondMap, vector<int>& residual) {
+    int n = system.getNumParticles();
+    vector<mm_int4> bondGraph(n, mm_int4(-1, -1, 0, 0));
+    vector<mm_int4> constraintGraph(n, mm_int4(-1, -1, 0, 0));
+    for (int i = 0; i < bonds.size(); i++) {
+        for (int endpoint = 0; endpoint < 2; endpoint++) {
+            mm_int4& g = bondGraph[bonds[i][endpoint]];
+            if (g.z == 0) g.x = i;
+            if (g.z == 1) g.y = i;
+            g.z++;
+        }
+    }
+    for (int i = 0; i < system.getNumConstraints(); i++) {
+        int a, b;
+        double distance;
+        system.getConstraintParameters(i, a, b, distance);
+        int ends[] = {a, b};
+        for (int j = 0; j < 2; j++) {
+            mm_int4& g = constraintGraph[ends[j]];
+            if (g.z == 0) g.x = ends[1-j];
+            if (g.z == 1) g.y = ends[1-j];
+            g.z++;
+        }
+    }
+    vector<bool> selectedBond(bonds.size(), false), ownedAtom(n, false);
+    for (int a = 0; a < n; a++) {
+        if (bondGraph[a].z != 2 || constraintGraph[a].z != 2)
+            continue;
+        int b = (bonds[bondGraph[a].x][0] == a ? bonds[bondGraph[a].x][1] : bonds[bondGraph[a].x][0]);
+        int c = (bonds[bondGraph[a].y][0] == a ? bonds[bondGraph[a].y][1] : bonds[bondGraph[a].y][0]);
+        if (a >= b || a >= c || b == c)
+            continue;
+        if (b > c) swap(b, c);
+        int vertices[] = {a, b, c};
+        bool valid = true;
+        set<int> ids;
+        set<pair<int, int> > uniqueEdges;
+        for (int j = 0; j < 3; j++) {
+            int atom = vertices[j];
+            if (bondGraph[atom].z != 2 || constraintGraph[atom].z != 2 || ownedAtom[atom] ||
+                    !(system.getParticleMass(atom) > 0) || system.isVirtualSite(atom)) {
+                valid = false;
+                break;
+            }
+            int neighbors[] = {constraintGraph[atom].x, constraintGraph[atom].y};
+            if (neighbors[0] == neighbors[1]) valid = false;
+            for (int k = 0; k < 2; k++) {
+                if (neighbors[k] == atom || (neighbors[k] != a && neighbors[k] != b && neighbors[k] != c))
+                    valid = false;
+            }
+            int edges[] = {bondGraph[atom].x, bondGraph[atom].y};
+            for (int k = 0; k < 2; k++) {
+                int edge = edges[k];
+                int p = bonds[edge][0], q = bonds[edge][1];
+                if (selectedBond[edge] || p == q ||
+                        (p != a && p != b && p != c) || (q != a && q != b && q != c))
+                    valid = false;
+                ids.insert(edge);
+                uniqueEdges.insert(make_pair(min(p, q), max(p, q)));
+            }
+        }
+        if (!valid || ids.size() != 3 || uniqueEdges.size() != 3)
+            continue;
+        vector<int> indices(ids.begin(), ids.end()); // Original bond order, stable.
+        int direction = 0;
+        for (int j = 0; j < 3; j++) {
+            int p = bonds[indices[j]][0], q = bonds[indices[j]][1];
+            int pSlot = (p == a ? 0 : (p == b ? 1 : 2));
+            int qSlot = (q == a ? 0 : (q == b ? 1 : 2));
+            direction |= (pSlot << (4*j)) | (qSlot << (4*j+2));
+            selectedBond[indices[j]] = true;
+            ownedAtom[vertices[j]] = true;
+        }
+        triangles.push_back(vector<int>(vertices, vertices+3));
+        bondMap.push_back(mm_int4(indices[0], indices[1], indices[2], direction));
+    }
+    for (int i = 0; i < bonds.size(); i++)
+        if (!selectedBond[i]) residual.push_back(i);
+}
+
+// Specialize only after inspecting every immutable topology map entry.  Bond
+// parameters remain dynamically indexed, including updateParametersInContext.
+int getExperimentalUniformWaterBondDirection(const vector<mm_int4>& bondMap) {
+    const char* enabled = getenv("OPENMM_EXPERIMENT_WATER_BOND_STATIC_DIRECTION");
+    if (enabled == NULL || strcmp(enabled, "1") != 0 || bondMap.empty())
+        return -1;
+    const int direction = bondMap[0].w;
+    for (int i = 1; i < bondMap.size(); i++)
+        if (bondMap[i].w != direction)
+            return -1;
+    return direction;
+}
+
+string createExperimentalWaterBondSource(const string& mappingArgument, const string& originalBondSource, int uniformDirection) {
+    stringstream s;
+    s<<"const real4 trianglePos1 = pos1, trianglePos2 = pos2, trianglePos3 = pos3;\n";
+    s<<"const int4 triangleBonds = "<<mappingArgument<<"[index];\n";
+    for (int atom = 1; atom <= 3; atom++)
+        s<<"mm_ulong fixedForce"<<atom<<"X=0, fixedForce"<<atom<<"Y=0, fixedForce"<<atom<<"Z=0;\n";
+    const string members[] = {"x", "y", "z"};
+    const string axes[] = {"X", "Y", "Z"};
+    for (int bond = 0; bond < 3; bond++) {
+        s<<"{\nconst unsigned int index = triangleBonds."<<members[bond]<<";\n";
+        if (uniformDirection >= 0) {
+            s<<"const int firstSlot = "<<((uniformDirection >> (4*bond)) & 3)<<";\n";
+            s<<"const int secondSlot = "<<((uniformDirection >> (4*bond+2)) & 3)<<";\n";
+        }
+        else {
+            s<<"const int firstSlot = (triangleBonds.w >> "<<(4*bond)<<") & 3;\n";
+            s<<"const int secondSlot = (triangleBonds.w >> "<<(4*bond+2)<<") & 3;\n";
+        }
+        s<<"const real4 pos1 = (firstSlot == 0 ? trianglePos1 : (firstSlot == 1 ? trianglePos2 : trianglePos3));\n";
+        s<<"const real4 pos2 = (secondSlot == 0 ? trianglePos1 : (secondSlot == 1 ? trianglePos2 : trianglePos3));\n";
+        // Literal original bond source preserves endpoint direction, raw posq,
+        // periodic wrapping, SQRT/divide and the separate force1/force2 values.
+        s<<originalBondSource<<"\n";
+        for (int endpoint = 1; endpoint <= 2; endpoint++) {
+            for (int axis = 0; axis < 3; axis++)
+                s<<"const mm_ulong contribution"<<endpoint<<axes[axis]<<" = (mm_ulong) realToFixedPoint(force"<<endpoint<<"."<<members[axis]<<");\n";
+            for (int atom = 1; atom <= 3; atom++) {
+                s<<(atom == 1 ? "if" : "else if")<<" ("<<(endpoint == 1 ? "firstSlot" : "secondSlot")<<" == "<<(atom-1)<<") {\n";
+                for (int axis = 0; axis < 3; axis++)
+                    s<<"fixedForce"<<atom<<axes[axis]<<" += contribution"<<endpoint<<axes[axis]<<";\n";
+                s<<"}\n";
+            }
+        }
+        s<<"}\n";
+    }
+    return s.str();
+}
+
+} // namespace
+
 void CommonCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
     ContextSelector selector(cc);
     int numContexts = cc.getNumContexts();
@@ -508,7 +855,43 @@ void CommonCalcHarmonicBondForceKernel::initialize(const System& system, const H
     replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
     replacements["COMPUTE_FORCE"] = CommonKernelSources::harmonicBondForce;
     replacements["PARAMS"] = cc.getBondedUtilities().addArgument(params, "float2");
-    cc.getBondedUtilities().addInteraction(atoms, cc.replaceStrings(CommonKernelSources::bondForce, replacements), force.getForceGroup());
+    string originalBondSource = cc.replaceStrings(CommonKernelSources::bondForce, replacements);
+    const char* experiment = getenv("OPENMM_EXPERIMENT_WATER_BOND_INTEGER_SUM");
+    bool enabled = (experiment != NULL && strcmp(experiment, "1") == 0) &&
+            getPlatform().getName() == "CUDA" && cc.getUseMixedPrecision() && numContexts == 1 &&
+            allowExperimentalWaterBondGroups(system);
+    vector<vector<int> > triangles;
+    vector<mm_int4> triangleMap;
+    vector<int> residual;
+    if (enabled)
+        findExperimentalWaterBondGroups(system, atoms, triangles, triangleMap, residual);
+    if (triangles.empty())
+        cc.getBondedUtilities().addInteraction(atoms, originalBondSource, force.getForceGroup());
+    else {
+        BondedUtilities& bonded = cc.getBondedUtilities();
+        // Energy-bearing and neither-requested calls retain the full original
+        // loop, original parameter indices, and original energy summation order.
+        bonded.addInteractionWithExecutionMode(atoms, originalBondSource, force.getForceGroup(), BondedUtilities::OtherEvaluations, false);
+        if (!residual.empty()) {
+            vector<vector<int> > residualAtoms;
+            for (int i = 0; i < residual.size(); i++) residualAtoms.push_back(atoms[residual[i]]);
+            experimentalResidualBondMap.initialize<int>(cc, residual.size(), "experimentalResidualBondMap");
+            experimentalResidualBondMap.upload(residual);
+            string residualArgument = bonded.addArgument(experimentalResidualBondMap, "int");
+            // force1/force2 must remain visible to the generic atomic wrapper.
+            map<string, string> residualReplacements;
+            residualReplacements[replacements["PARAMS"]+"[index]"] = replacements["PARAMS"]+"[originalIndex]";
+            string residualSource = "const unsigned int originalIndex = "+residualArgument+"[index];\n"+
+                    cc.replaceStrings(originalBondSource, residualReplacements);
+            bonded.addInteractionWithExecutionMode(residualAtoms, residualSource, force.getForceGroup(), BondedUtilities::ForceOnlyEvaluations, false);
+        }
+        experimentalWaterBondMap.initialize<mm_int4>(cc, triangleMap.size(), "experimentalWaterBondMap");
+        experimentalWaterBondMap.upload(triangleMap);
+        string triangleArgument = bonded.addArgument(experimentalWaterBondMap, "int4");
+        bonded.addInteractionWithExecutionMode(triangles, createExperimentalWaterBondSource(triangleArgument, originalBondSource,
+                getExperimentalUniformWaterBondDirection(triangleMap)),
+                force.getForceGroup(), BondedUtilities::ForceOnlyEvaluations, true);
+    }
     info = new ForceInfo(force);
     cc.addForce(info);
 }
@@ -3120,8 +3503,153 @@ double CommonIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& contex
 void CommonIntegrateLangevinMiddleStepKernel::initialize(const System& system, const LangevinMiddleIntegrator& integrator) {
     cc.initializeContexts();
     ContextSelector selector(cc);
-    cc.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::langevinMiddle);
+    IntegrationUtilities& integration = cc.getIntegrationUtilities();
+    integration.initRandomNumberGenerator(integrator.getRandomNumberSeed());
+    // Residual-tail fusion is independently opt-in and requires SETTLE fusion.
+    const char* tailEnv = std::getenv("OPENMM_EXPERIMENT_MIDDLE_FUSED_TAIL");
+    const char* tailTraceEnv = std::getenv("OPENMM_EXPERIMENT_MIDDLE_FUSED_TAIL_TRACE");
+    bool tailRequested = (tailEnv != NULL && string(tailEnv) == "1");
+    bool tailTrace = (tailTraceEnv != NULL && string(tailTraceEnv) == "1");
+    useResidualTail = false;
+    numResidualTailAtoms = 0;
+    // Independent resource experiments: unset/invalid values keep the baseline.
+    const char* blockEnv = std::getenv("OPENMM_EXPERIMENT_SETTLE_BLOCK_SIZE");
+    const char* reloadEnv = std::getenv("OPENMM_EXPERIMENT_SETTLE_RELOAD_DELTA");
+    const char* occupancyTraceEnv = std::getenv("OPENMM_EXPERIMENT_SETTLE_OCCUPANCY_TRACE");
+    int requestedBlockSize = 64;
+    if (blockEnv != NULL && string(blockEnv) == "128")
+        requestedBlockSize = 128;
+    bool reloadRequested = (reloadEnv != NULL && string(reloadEnv) == "1");
+    bool occupancyTrace = (occupancyTraceEnv != NULL && string(occupancyTraceEnv) == "1");
+    settleFusionBlockSize = -1;
+    reloadSettleOriginalDelta = false;
+    traceSettleOccupancy = false;
+    const char* fusionEnv = std::getenv("OPENMM_LANGEVIN_MIDDLE_SETTLE_FUSION");
+    const char* traceEnv = std::getenv("OPENMM_LANGEVIN_MIDDLE_SETTLE_FUSION_TRACE");
+    bool requested = (fusionEnv != NULL && string(fusionEnv) == "1");
+    bool trace = (traceEnv != NULL && string(traceEnv) == "1");
+    useSettleFusion = requested && typeid(integrator) == typeid(LangevinMiddleIntegrator)
+            && getPlatform().getName() == "CUDA" && cc.getUseMixedPrecision()
+            && cc.getNumContexts() == 1 && integration.getNumVirtualSites() == 0
+            && integration.getNumSettleClusters() > 0;
+    int numFusedAtoms = 0;
+    if (useSettleFusion) {
+        // Use the actual utility-selected, disjoint SETTLE slots, not a second
+        // topology classifier.  Identical-molecule reordering preserves slots.
+        vector<mm_int4> clusters;
+        integration.getSettleAtomsForLangevinMiddle().download(clusters);
+        vector<int> mask(cc.getPaddedNumAtoms(), 0);
+        for (auto cluster : clusters) {
+            int atoms[] = {cluster.x, cluster.y, cluster.z};
+            for (int atom : atoms) {
+                if (atom < 0 || atom >= system.getNumParticles() || mask[atom] != 0
+                        || !(system.getParticleMass(atom) > 0) || !std::isfinite(system.getParticleMass(atom))) {
+                    useSettleFusion = false;
+                    break;
+                }
+                mask[atom] = 1;
+                numFusedAtoms++;
+            }
+            if (!useSettleFusion)
+                break;
+        }
+        if (useSettleFusion) {
+            settleFusionMask.initialize<int>(cc, cc.getPaddedNumAtoms(), "langevinMiddleSettleMask");
+            settleFusionMask.upload(mask);
+            if (tailRequested) {
+                // Complement the existing SETTLE slots, excluding padded atoms.
+                // No new topology classifier and no change to atom ordering.
+                vector<int> residual;
+                for (int atom = 0; atom < cc.getNumAtoms(); atom++)
+                    if (mask[atom] == 0)
+                        residual.push_back(atom);
+                numResidualTailAtoms = (int) residual.size();
+                // A zero-length tail still needs a valid unused array argument.
+                if (residual.empty())
+                    residual.push_back(-1);
+                residualTailAtoms.initialize<int>(cc, residual.size(), "langevinMiddleResidualTail");
+                residualTailAtoms.upload(residual);
+                useResidualTail = true;
+            }
+        }
+    }
+    // This additional boundary fusion is independently OFF by default. Reuse
+    // the existing exact-Middle, CUDA/mixed/single, no-vsite validated partition.
+    const char* kickEnv = std::getenv("OPENMM_EXPERIMENT_MIDDLE_KICK_SETTLE");
+    const char* kickTraceEnv = std::getenv("OPENMM_EXPERIMENT_MIDDLE_KICK_SETTLE_TRACE");
+    bool kickRequested = (kickEnv != NULL && string(kickEnv) == "1");
+    bool kickTrace = (kickTraceEnv != NULL && string(kickTraceEnv) == "1");
+    useKickSettleFusion = kickRequested && useSettleFusion && useResidualTail;
+    traceKickSettleFusion = kickTrace && useKickSettleFusion;
+    kickSettleBlockSize = -1;
+    if (useKickSettleFusion) {
+        ComputeProgram kickProgram = cc.compileProgram(CommonKernelSources::langevinMiddleKickSettle);
+        kickSettleFusionKernel = kickProgram->createKernel("integrateLangevinMiddleKickSettle");
+        const char* velocityBlockEnv = std::getenv("OPENMM_EXPERIMENT_VELOCITY_SETTLE_BLOCK128");
+        if (velocityBlockEnv != NULL && string(velocityBlockEnv) == "1"
+                && kickSettleFusionKernel->getMaxBlockSize() >= 128)
+            kickSettleBlockSize = 128;
+        kickSettleFusionKernel->addArg(integration.getNumSettleClusters());
+        kickSettleFusionKernel->addArg(cc.getPaddedNumAtoms());
+        kickSettleFusionKernel->addArg(cc.getPosq());
+        kickSettleFusionKernel->addArg(cc.getPosqCorrection());
+        kickSettleFusionKernel->addArg(cc.getVelm());
+        kickSettleFusionKernel->addArg(cc.getLongForceBuffer());
+        kickSettleFusionKernel->addArg(integration.getStepSize());
+        kickSettleFusionKernel->addArg(integration.getSettleAtomsForLangevinMiddle());
+        kickSettleFusionKernel->addArg(numResidualTailAtoms);
+        kickSettleFusionKernel->addArg(residualTailAtoms);
+    }
+    if (kickTrace)
+        std::fprintf(stderr, "[middle-kick-settle] requested=%d enabled=%d clusters=%d residual_atoms=%d block=%d\n",
+                (int) kickRequested, (int) useKickSettleFusion, integration.getNumSettleClusters(),
+                numResidualTailAtoms, kickSettleBlockSize == -1 ? 64 : kickSettleBlockSize);
+    traceResidualTail = tailTrace && useResidualTail;
+    if (tailTrace)
+        std::fprintf(stderr, "[middle-fused-tail] requested=%d enabled=%d residual_atoms=%d\n",
+                (int) tailRequested, (int) useResidualTail, numResidualTailAtoms);
+    traceSettleFusion = trace && useSettleFusion;
+    if (trace)
+        std::fprintf(stderr, "[settle-fusion] requested=%d enabled=%d clusters=%d fused_atoms=%d residual_atoms=%d\n",
+                (int) requested, (int) useSettleFusion, integration.getNumSettleClusters(),
+                useSettleFusion ? numFusedAtoms : 0, cc.getNumAtoms()-(useSettleFusion ? numFusedAtoms : 0));
+    map<string, string> defines;
+    if (useSettleFusion)
+        defines["USE_LANGEVIN_MIDDLE_SETTLE_FUSION"] = "1";
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::langevinMiddle, defines);
+    if (useSettleFusion) {
+        map<string, string> settleDefines;
+        reloadSettleOriginalDelta = reloadRequested;
+        if (reloadSettleOriginalDelta)
+            settleDefines["RELOAD_LANGEVIN_MIDDLE_ORIGINAL_DELTA"] = "1";
+        if (useResidualTail)
+            settleDefines["FUSE_LANGEVIN_MIDDLE_RESIDUAL_TAIL"] = "1";
+        ComputeProgram settleProgram = cc.compileProgram(CommonKernelSources::langevinMiddleSettle, settleDefines);
+        settleFusionKernel = settleProgram->createKernel("applySettleAndLangevinMiddlePart3");
+        // Change only this independent-cluster kernel's launch shape. Do not
+        // retune global CUDA defaults, RNG mapping, or CMM reduction blocks.
+        if (requestedBlockSize != 64 && requestedBlockSize <= settleFusionKernel->getMaxBlockSize())
+            settleFusionBlockSize = requestedBlockSize;
+        traceSettleOccupancy = occupancyTrace;
+        settleFusionKernel->addArg(integration.getNumSettleClusters());
+        settleFusionKernel->addArg(); // constraint tolerance, same mixed type
+        settleFusionKernel->addArg(cc.getPosq());
+        settleFusionKernel->addArg(integration.getPosDelta());
+        settleFusionKernel->addArg(cc.getVelm());
+        settleFusionKernel->addArg(integration.getSettleAtomsForLangevinMiddle());
+        settleFusionKernel->addArg(integration.getSettleParamsForLangevinMiddle());
+        settleFusionKernel->addArg(cc.getPosqCorrection());
+        settleFusionKernel->addArg(integration.getStepSize());
+        if (useResidualTail) {
+            settleFusionKernel->addArg(numResidualTailAtoms);
+            settleFusionKernel->addArg(residualTailAtoms);
+            settleFusionKernel->addArg(); // oldDelta is allocated below; bind at first execute.
+        }
+    }
+    if (occupancyTrace)
+        std::fprintf(stderr, "[settle-occupancy] fusion=%d tail=%d reload_requested=%d reload_enabled=%d block_requested=%d block_selected=%d\n",
+                (int) useSettleFusion, (int) useResidualTail, (int) reloadRequested,
+                (int) reloadSettleOriginalDelta, requestedBlockSize, settleFusionBlockSize == -1 ? 64 : settleFusionBlockSize);
     kernel1 = program->createKernel("integrateLangevinMiddlePart1");
     kernel2 = program->createKernel("integrateLangevinMiddlePart2");
     kernel3 = program->createKernel("integrateLangevinMiddlePart3");
@@ -3156,6 +3684,8 @@ void CommonIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, cons
         kernel2->addArg(integration.getStepSize());
         kernel2->addArg(integration.getRandom());
         kernel2->addArg(); // Random index will be set just before it is executed.
+        if (useSettleFusion)
+            kernel2->addArg(settleFusionMask);
         kernel3->addArg(numAtoms);
         kernel3->addArg(cc.getPosq());
         kernel3->addArg(cc.getVelm());
@@ -3164,6 +3694,10 @@ void CommonIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, cons
         kernel3->addArg(integration.getStepSize());
         if (cc.getUseMixedPrecision())
             kernel3->addArg(cc.getPosqCorrection());
+        if (useSettleFusion)
+            kernel3->addArg(settleFusionMask);
+        if (useResidualTail)
+            settleFusionKernel->setArg(11, oldDelta);
     }
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
@@ -3187,11 +3721,49 @@ void CommonIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, cons
     // Perform the integration.
 
     kernel2->setArg(7, integration.prepareRandomNumbers(cc.getPaddedNumAtoms()));
-    kernel1->execute(numAtoms);
-    integration.applyVelocityConstraints(integrator.getConstraintTolerance());
+    if (useKickSettleFusion) {
+        // The fused launch also kicks every residual atom. Finish their SHAKE/
+        // CCMA velocity constraints before the unchanged stochastic Part2.
+        kickSettleFusionKernel->execute(integration.getNumSettleClusters(), kickSettleBlockSize);
+        integration.applyLangevinMiddleVelocityConstraintsWithoutSettle(integrator.getConstraintTolerance());
+        if (traceKickSettleFusion) {
+            std::fprintf(stderr, "[middle-kick-settle] first-launch-enqueued block=%d part1_skipped=1 velocity_settle_skipped=1 residual_atoms=%d\n",
+                    kickSettleBlockSize == -1 ? 64 : kickSettleBlockSize, numResidualTailAtoms);
+            traceKickSettleFusion = false;
+        }
+    }
+    else {
+        kernel1->execute(numAtoms);
+        integration.applyVelocityConstraints(integrator.getConstraintTolerance());
+    }
     kernel2->execute(numAtoms);
-    integration.applyConstraints(integrator.getConstraintTolerance());
-    kernel3->execute(numAtoms);
+    if (useSettleFusion) {
+        // These constraints only own the mask==0 atoms.  Complete them before
+        // the fused kernel finalizes both disjoint atom sets in one launch.
+        if (useResidualTail)
+            integration.applyLangevinMiddleConstraintsWithoutSettle(integrator.getConstraintTolerance());
+        settleFusionKernel->setArg(1, integrator.getConstraintTolerance());
+        settleFusionKernel->execute(integration.getNumSettleClusters(), settleFusionBlockSize);
+        if (traceSettleOccupancy) {
+            std::fprintf(stderr, "[settle-occupancy] first-launch-enqueued reload=%d block=%d tail=%d\n",
+                    (int) reloadSettleOriginalDelta, settleFusionBlockSize == -1 ? 64 : settleFusionBlockSize, (int) useResidualTail);
+            traceSettleOccupancy = false;
+        }
+        if (traceSettleFusion) {
+            std::fprintf(stderr, "[settle-fusion] first-launch-enqueued clusters=%d\n", integration.getNumSettleClusters());
+            traceSettleFusion = false;
+        }
+        if (traceResidualTail) {
+            std::fprintf(stderr, "[middle-fused-tail] first-launch-enqueued residual_atoms=%d generic_part3_skipped=1\n", numResidualTailAtoms);
+            traceResidualTail = false;
+        }
+        if (!useResidualTail)
+            integration.applyLangevinMiddleConstraintsWithoutSettle(integrator.getConstraintTolerance());
+    }
+    else
+        integration.applyConstraints(integrator.getConstraintTolerance());
+    if (!useResidualTail)
+        kernel3->execute(numAtoms);
     integration.computeVirtualSites();
 
     // Update the time and step count.
@@ -3676,12 +4248,30 @@ void CommonRemoveCMMotionKernel::initialize(const System& system, const CMMotion
     ContextSelector selector(cc);
     frequency = force.getFrequency();
     int numAtoms = cc.getNumAtoms();
-    cmMomentum.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "cmMomentum");
+    // Match CudaContext::executeKernel(threads=numAtoms, blockSize=64).
+    const int numGroups = min((numAtoms+63)/64, cc.getNumThreadBlocks());
+    const bool eligible = (getPlatform().getName() == "CUDA" && cc.getUseMixedPrecision() &&
+            cc.getNumContexts() == 1 && numGroups > 1);
+    const char* reduceSetting = getenv("OPENMM_EXPERIMENT_CMM_REDUCE_ONCE");
+    const char* compactSetting = getenv("OPENMM_EXPERIMENT_CMM_COMPACT_BUFFER");
+    const bool reduceOnce = eligible && (reduceSetting != NULL && string(reduceSetting) == "1");
+    const bool compactBuffer = eligible && (compactSetting != NULL && string(compactSetting) == "1");
+    // Each producer block writes one partial.  The final slot is written only by
+    // the optional one-block reduction, before the separate velocity kernel.
+    int momentumSize = compactBuffer ? numGroups+(reduceOnce ? 1 : 0) : cc.getPaddedNumAtoms();
+    cmMomentum.initialize<mm_float4>(cc, momentumSize, "cmMomentum");
     double totalMass = 0.0;
     for (int i = 0; i < numAtoms; i++)
         totalMass += system.getParticleMass(i);
     map<string, string> defines;
     defines["INVERSE_TOTAL_MASS"] = cc.doubleToString(totalMass == 0 ? 0.0 : 1.0/totalMass);
+    if (reduceOnce) {
+        defines["CMM_REDUCE_ONCE"] = "1";
+        defines["CMM_ORIGINAL_NUM_GROUPS"] = cc.intToString(numGroups);
+    }
+    const char* warpSetting = getenv("OPENMM_EXPERIMENT_CMM_WARP_REDUCTION");
+    if (reduceOnce && warpSetting != NULL && string(warpSetting) == "1")
+        defines["CMM_WARP_REDUCTION"] = "1";
     ComputeProgram program = cc.compileProgram(CommonKernelSources::removeCM, defines);
     kernel1 = program->createKernel("calcCenterOfMassMomentum");
     kernel1->addArg(numAtoms);
@@ -3691,12 +4281,23 @@ void CommonRemoveCMMotionKernel::initialize(const System& system, const CMMotion
     kernel2->addArg(numAtoms);
     kernel2->addArg(cc.getVelm());
     kernel2->addArg(cmMomentum);
+    if (reduceOnce) {
+        applyCMKernel = program->createKernel("applyCenterOfMassVelocity");
+        applyCMKernel->addArg(numAtoms);
+        applyCMKernel->addArg(cc.getVelm());
+        applyCMKernel->addArg(cmMomentum);
+    }
 }
 
 void CommonRemoveCMMotionKernel::execute(ContextImpl& context) {
     ContextSelector selector(cc);
     kernel1->execute(cc.getNumAtoms(), 64);
-    kernel2->execute(cc.getNumAtoms(), 64);
+    if (applyCMKernel) {
+        kernel2->execute(64, 64);
+        applyCMKernel->execute(cc.getNumAtoms(), 64);
+    }
+    else
+        kernel2->execute(cc.getNumAtoms(), 64);
 }
 
 class CommonCalcRMSDForceKernel::ForceInfo : public ComputeForceInfo {
@@ -4991,13 +5592,13 @@ double CommonCalcPythonForceKernel::addForces(bool includeForces, bool includeEn
         cc.getWorkThread().flush();
 
     // Add in the forces.
-    
+
     if (includeForces) {
         ContextSelector selector(cc);
         addForcesKernel->execute(cc.getNumAtoms());
     }
 
     // Return the energy.
-    
+
     return energy;
 }

@@ -81,12 +81,71 @@ public:
      *                   distribution.
      */
     CudaSort(CudaContext& context, ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform=true);
+    /**
+     * Experimental conditional long-list sort.  Every stage reads the same immutable
+     * device int flag.  If zero, all stages leave input and scratch arrays untouched.
+     * The flag must belong to this context and outlive the sorter.  It must be set
+     * on the current stream before sort() and not modified until sort() completes.
+     * Short lists are deliberately unsupported (their host copy would be unguarded).
+     */
+    CudaSort(CudaContext& context, ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform, CudaArray* executionFlag);
+    /**
+     * Experimental known-range integer sort.  A nonnegative maximum promises
+     * every key is in [0, knownIntegerMaximum].  Only unguarded uniform int-key
+     * sorting is supported; -1 retains the original range calculation.
+     * The fixed range changes bucket/tie ordering, not key ordering.
+     */
+    CudaSort(CudaContext& context, ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform,
+             CudaArray* executionFlag, int knownIntegerMaximum);
     ~CudaSort();
     /**
      * Sort an array.
      */
     void sort(ArrayInterface& data);
+    /**
+     * Experimental coarse permutation: partition into the same buckets without
+     * sorting within a bucket.  The result is NOT guaranteed to be key-sorted.
+     * Short lists and conditional sorts retain the complete sorting path.
+     * Only callers that require permutation coverage, such as PME, may use it.
+     */
+    void bucketize(CudaArray& data);
+    /**
+     * Generate int2/value.y keys while assigning buckets. The generator receives
+     * caller arguments followed by numBuckets, dataRange, bucketOffset,
+     * bucketOfElement and offsetInBucket. It must initialize every data element.
+     * Returns false without enqueuing work if the fixed-range long-list contract
+     * is unavailable. Launch errors propagate; they must not trigger fallback.
+     * sortWithinBuckets=false has the same permutation contract as bucketize().
+     */
+    bool sortWithGeneratedKeys(CudaArray& data, CUfunction generator, void* const* arguments,
+            int numArguments, bool sortWithinBuckets);
+    /**
+     * Experimental physical-index permutation for the bounded PME coarse path.
+     * The generator initializes bucketOfElement/offsetInBucket for physical
+     * indices [0, length); it need not write data. The final scatter overwrites
+     * data with int2(physicalIndex, 0), so keys and original values are discarded.
+     * Only consumers of .x permutation coverage may use the result. Before any
+     * later generic sort, the caller must regenerate every complete data/key pair.
+     * Workspace arguments match sortWithGeneratedKeys. Unsupported contracts
+     * return false before any enqueue; errors after enqueue propagate.
+     */
+    bool bucketizeGeneratedPhysicalIndices(CudaArray& data, CUfunction generator,
+            void* const* arguments, int numArguments);
+    /**
+     * Generate bounded int2 keys with a ComputeKernel.  Arguments [0, 9] are
+     * initialized by the caller and [10, 14] must be reserved for workspace.
+     * A false result guarantees that no device work was enqueued.
+     */
+    bool sortWithGeneratedKeys(CudaArray& data, ComputeKernel generator,
+            bool sortWithinBuckets, bool directPhysicalIndices);
 private:
+    void sortImpl(CudaArray& data, bool sortWithinBuckets);
+    void sortImpl(CudaArray& data, bool sortWithinBuckets, CUfunction generator,
+            void* const* arguments, int numArguments);
+    void sortImpl(CudaArray& data, bool sortWithinBuckets, CUfunction generator,
+            void* const* arguments, int numArguments, bool directPhysicalIndices, ComputeKernel commonGenerator=ComputeKernel());
+    void sortConditional(CudaArray& data);
+    CudaArray* executionFlag;
     CudaContext& context;
     ComputeSortImpl::SortTrait* trait;
     CudaArray dataRange;
@@ -95,8 +154,9 @@ private:
     CudaArray bucketOffset;
     CudaArray buckets;
     CUfunction shortListKernel, shortList2Kernel, computeRangeKernel, assignElementsKernel, computeBucketPositionsKernel, copyToBucketsKernel, sortBucketsKernel;
+    CUfunction scatterPhysicalIndicesKernel;
     unsigned int dataLength, rangeKernelSize, positionsKernelSize, sortKernelSize;
-    bool isShortList, uniform;
+    bool isShortList, uniform, hasFixedRange;
 };
 
 } // namespace OpenMM

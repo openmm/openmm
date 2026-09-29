@@ -64,6 +64,8 @@ public:
     void distributeForcesFromVirtualSites();
 private:
     void applyConstraintsImpl(bool constrainVelocities, double tol);
+    int velocitySettleBlockSize;
+    bool traceVelocitySettleBlock, initializedVelocitySettleBlock;
     int* ccmaConvergedMemory;
     CUdeviceptr ccmaConvergedDeviceMemory;
     CUevent ccmaEvent;

@@ -81,6 +81,28 @@ public:
      * @param tol             the constraint tolerance
      */
     void applyConstraints(double tol);
+    /** Internal opt-in CUDA LangevinMiddle path: SETTLE positions were completed
+     *  by the integrator.  Retain the ordinary SHAKE/CCMA position solvers.
+     *  Normal applyConstraints() and all velocity constraints remain unchanged.
+     */
+    void applyLangevinMiddleConstraintsWithoutSettle(double tol);
+    /** Internal CUDA/mixed exact Middle path after fused kick + velocity
+     *  SETTLE. Only disjoint residual velocity constraints remain.
+     *  Normal public velocity-constraint calls keep all solvers.
+     */
+    void applyLangevinMiddleVelocityConstraintsWithoutSettle(double tol);
+    int getNumSettleClusters() const {
+        return settleAtoms.isInitialized() ? settleAtoms.getSize() : 0;
+    }
+    int getNumVirtualSites() const {
+        return numVsites;
+    }
+    ComputeArray& getSettleAtomsForLangevinMiddle() {
+        return settleAtoms;
+    }
+    ComputeArray& getSettleParamsForLangevinMiddle() {
+        return settleParams;
+    }
     /**
      * Apply constraints to the atom velocities.
      *
@@ -138,6 +160,8 @@ public:
 protected:
     virtual void applyConstraintsImpl(bool constrainVelocities, double tol) = 0;
     ComputeContext& context;
+    bool skipSettleForLangevinMiddle;
+    bool skipVelocitySettleForLangevinMiddle;
     ComputeKernel settlePosKernel, settleVelKernel;
     ComputeKernel shakePosKernel, shakeVelKernel;
     ComputeKernel ccmaDirectionsKernel, ccmaPosForceKernel, ccmaVelForceKernel;

@@ -652,6 +652,16 @@ protected:
      */
     void initializeKernels();
     /**
+     * Optional platform path for the data-only portion of atom reordering.
+     * Preparation must finish before host downloads are skipped. The mapping
+     * maps new physical indices to old physical indices, not particle IDs.
+     * Unsupported platforms retain the existing host-copy implementation.
+     */
+    virtual bool prepareReorderDataOnDevice() {
+        return false;
+    }
+    virtual void reorderDataOnDevice(const std::vector<int>& sourcePhysical);
+    /**
      * This is the internal implementation of reorderAtoms(), templatized by the numerical precision in use.
      */
     template <class Real, class Real4, class Mixed, class Mixed4>

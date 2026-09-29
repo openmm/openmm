@@ -157,6 +157,9 @@ private:
     ComputeContext& cc;
     ComputeArray floatBuffer, doubleBuffer;
     ComputeKernel copyFloatKernel, copyDoubleKernel;
+    // Context-owned temporary output, never checkpoint state. A successful
+    // getPositions overwrites every real element before this call consumes it.
+    std::vector<Vec3> boxPositionScratch;
 };
 
 /**
@@ -257,6 +260,7 @@ private:
     ForceInfo* info;
     const System& system;
     ComputeArray params;
+    ComputeArray experimentalWaterBondMap, experimentalResidualBondMap;
 };
 
 /**
@@ -972,8 +976,15 @@ private:
     ComputeContext& cc;
     double prevTemp, prevFriction, prevStepSize;
     bool hasInitializedKernels;
-    ComputeArray params, oldDelta;
-    ComputeKernel kernel1, kernel2, kernel3;
+    bool useSettleFusion, traceSettleFusion;
+    bool useResidualTail, traceResidualTail;
+    int numResidualTailAtoms;
+    int settleFusionBlockSize;
+    bool reloadSettleOriginalDelta, traceSettleOccupancy;
+    ComputeArray params, oldDelta, settleFusionMask, residualTailAtoms;
+    bool useKickSettleFusion, traceKickSettleFusion;
+    int kickSettleBlockSize;
+    ComputeKernel kernel1, kernel2, kernel3, settleFusionKernel, kickSettleFusionKernel;
 };
 
 /**
@@ -1153,7 +1164,7 @@ private:
     ComputeContext& cc;
     int frequency;
     ComputeArray cmMomentum;
-    ComputeKernel kernel1, kernel2;
+    ComputeKernel kernel1, kernel2, applyCMKernel;
 };
 
 /**

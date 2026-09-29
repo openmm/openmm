@@ -35,12 +35,50 @@ private:
     __half v[3];
 };
 
+#ifdef USE_NEIGHBOR_REUSE_PRECHECK
+// A separate launch is required: no CTA may reset a flag another CTA is setting.
+extern "C" __global__ void initNeighborListReuse(int* __restrict__ rebuildNeighborList, bool forceRebuild) {
+    if (blockIdx.x == 0 && threadIdx.x == 0)
+        rebuildNeighborList[0] = (forceRebuild ? 1 : 0);
+}
+
+extern "C" __global__ void checkNeighborListReuse(const real4* __restrict__ posq, const real4* __restrict__ oldPositions,
+        int* __restrict__ rebuildNeighborList, bool forceRebuild) {
+    if (forceRebuild)
+        return; // First use/reorder/box change: oldPositions need not be initialized.
+    bool rebuild = false;
+    for (int i = threadIdx.x+blockIdx.x*blockDim.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
+        real4 delta = oldPositions[i]-posq[i];
+        // Keep the original raw displacement and strict threshold, including its precision.
+        if (delta.x*delta.x + delta.y*delta.y + delta.z*delta.z > 0.25f*PADDING*PADDING)
+            rebuild = true;
+    }
+    // executeKernel uses full 64-thread blocks.  Every lane reaches this collective.
+    int anyRebuild = __any_sync(0xffffffff, rebuild);
+    if (anyRebuild && threadIdx.x%32 == 0)
+        atomicOr(rebuildNeighborList, 1);
+}
+#endif
+
 /**
  * Find a bounding box for the atoms in each block.
  */
 extern "C" __global__ void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         const real4* __restrict__ posq, real4* __restrict__ blockCenter, real4* __restrict__ blockBoundingBox, int* __restrict__ rebuildNeighborList,
-        real2* __restrict__ blockSizeRange) {
+        real2* __restrict__ blockSizeRange
+#ifdef USE_FORCED_NEIGHBOR_REBUILD
+        , bool forceRebuild
+#endif
+        ) {
+#ifdef USE_NEIGHBOR_REUSE_PRECHECK
+#ifdef USE_FORCED_NEIGHBOR_REBUILD
+    // All CTAs receive the same by-value argument.  On the forced branch there
+    // is no source-level read of the stale GPU flag that thread zero will set.
+    const bool rebuild = (forceRebuild ? true : (rebuildNeighborList[0] != 0));
+#else
+    const bool rebuild = (rebuildNeighborList[0] != 0);
+#endif
+#endif
     int index = blockIdx.x*blockDim.x+threadIdx.x;
     int base = index*TILE_SIZE;
     real minSize = 1e38, maxSize = 0;
@@ -64,6 +102,9 @@ extern "C" __global__ void findBlockBounds(int numAtoms, real4 periodicBoxSize, 
         real4 blockSize = 0.5f*(maxPos-minPos);
         real4 center = 0.5f*(maxPos+minPos);
         center.w = 0;
+#ifdef USE_NEIGHBOR_REUSE_PRECHECK
+        if (rebuild) {
+#endif
         for (int i = base; i < last; i++) {
             pos = posq[i];
             real4 delta = posq[i]-center;
@@ -73,15 +114,30 @@ extern "C" __global__ void findBlockBounds(int numAtoms, real4 periodicBoxSize, 
             center.w = max(center.w, delta.x*delta.x+delta.y*delta.y+delta.z*delta.z);
         }
         center.w = sqrt(center.w);
+#ifdef USE_NEIGHBOR_REUSE_PRECHECK
+        }
+#endif
         blockBoundingBox[index] = blockSize;
         blockCenter[index] = center;
+#ifdef USE_NEIGHBOR_REUSE_PRECHECK
+        if (rebuild) {
+#endif
         real totalSize = blockSize.x+blockSize.y+blockSize.z;
         minSize = min(minSize, totalSize);
         maxSize = max(maxSize, totalSize);
+#ifdef USE_NEIGHBOR_REUSE_PRECHECK
+        }
+#endif
         index += blockDim.x*gridDim.x;
         base = index*TILE_SIZE;
     }
     
+#ifdef USE_NEIGHBOR_REUSE_PRECHECK
+    // Uniform for the entire CTA, and before any block barrier.  xyz bounds above
+    // remain fresh because the direct kernel uses them for periodic imaging.
+    if (!rebuild)
+        return;
+#endif
     // Record the range of sizes seen by threads in this block.
 
     __shared__ real minBuffer[64], maxBuffer[64];
@@ -97,11 +153,27 @@ extern "C" __global__ void findBlockBounds(int numAtoms, real4 periodicBoxSize, 
     }
     if (threadIdx.x == 0)
         blockSizeRange[blockIdx.x] = make_real2(minBuffer[0], maxBuffer[0]);
+#ifdef USE_FORCED_NEIGHBOR_REBUILD
+    // Publication is consumed only by later kernels on the same stream.  All
+    // bounds CTAs used forceRebuild directly and do not wait on this store.
+    if (forceRebuild && blockIdx.x == 0 && threadIdx.x == 0)
+        rebuildNeighborList[0] = 1;
+#endif
+#ifndef USE_NEIGHBOR_REUSE_PRECHECK
     if (blockIdx.x == 0 && threadIdx.x == 0)
         rebuildNeighborList[0] = 0;
+#endif
 }
 
-extern "C" __global__ void computeSortKeys(const real4* __restrict__ blockBoundingBox, unsigned int* __restrict__ sortedBlocks, real2* __restrict__ blockSizeRange, int numSizes) {
+extern "C" __global__ void computeSortKeys(const real4* __restrict__ blockBoundingBox, unsigned int* __restrict__ sortedBlocks, real2* __restrict__ blockSizeRange, int numSizes
+#ifdef USE_NEIGHBOR_REUSE_PRECHECK
+        , const int* __restrict__ rebuildNeighborList
+#endif
+        ) {
+#ifdef USE_NEIGHBOR_REUSE_PRECHECK
+    if (rebuildNeighborList[0] == 0)
+        return;
+#endif
     // Find the total range of sizes recorded by all blocks.
 
     __shared__ real2 sizeRange;
@@ -143,6 +215,10 @@ extern "C" __global__ void sortBoxData(const unsigned int* __restrict__ sortedBl
 #endif
         const real4* __restrict__ posq, const real4* __restrict__ oldPositions,
         unsigned int* __restrict__ interactionCount, int* __restrict__ rebuildNeighborList, bool forceRebuild) {
+#ifdef USE_NEIGHBOR_REUSE_PRECHECK
+    if (rebuildNeighborList[0] == 0)
+        return;
+#endif
     for (int i = threadIdx.x+blockIdx.x*blockDim.x; i < NUM_BLOCKS; i += blockDim.x*gridDim.x) {
         unsigned int index = sortedBlocks[i] & BLOCK_INDEX_MASK;
         sortedBlockCenter[i] = blockCenter[index];
@@ -170,6 +246,13 @@ extern "C" __global__ void sortBoxData(const unsigned int* __restrict__ sortedBl
 #endif
     }
 
+#ifdef USE_NEIGHBOR_REUSE_PRECHECK
+    // Single writer; the following list-builder starts only after this kernel ends.
+    if (blockIdx.x == 0 && threadIdx.x == 0) {
+        interactionCount[0] = 0;
+        interactionCount[1] = 0;
+    }
+#else
     // Also check whether any atom has moved enough so that we really need to rebuild the neighbor list.
 
     bool rebuild = forceRebuild;
@@ -183,6 +266,7 @@ extern "C" __global__ void sortBoxData(const unsigned int* __restrict__ sortedBl
         interactionCount[0] = 0;
         interactionCount[1] = 0;
     }
+#endif
 }
 
 __device__ int saveSinglePairs(int x, int* atoms, int* flags, int length, unsigned int maxSinglePairs, unsigned int* singlePairCount, int2* singlePairs, int* sumBuffer, volatile unsigned int& pairStartIndex) {

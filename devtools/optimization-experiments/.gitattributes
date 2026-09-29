@@ -1,0 +1,3 @@
+# A unified patch is data: blank context lines carry a literal leading space.
+# Retain LF so the published provenance hash and patch bytes are portable.
+legacy-openmm82.patch text eol=lf whitespace=-blank-at-eol

@@ -93,6 +93,10 @@ public:
      * @param group    the force group in which the interaction should be calculated
      */
     void addInteraction(const std::vector<std::vector<int> >& atoms, const std::string& source, int group);
+    /** Experimental execution selection. Retains the original addInteraction ABI. */
+    enum ExecutionMode {AllEvaluations, ForceOnlyEvaluations, OtherEvaluations};
+    void addInteractionWithExecutionMode(const std::vector<std::vector<int> >& atoms, const std::string& source,
+                                        int group, ExecutionMode mode, bool fixedPointOutput);
     /**
      * Add an argument that should be passed to the interaction kernel.
      * 
@@ -128,21 +132,34 @@ public:
      * @param groups        a set of bit flags for which force groups to include
      */
     void computeInteractions(int groups);
+    /**
+     * Compute the bonded interactions, preserving the legacy path except for
+     * the opt-in ordinary-force, mixed-precision force-only specialization.
+     * The flags are independent: energy-only and neither-requested calls use
+     * the original kernel, including all original force writes.
+     */
+    void computeInteractions(int groups, bool includeForces, bool includeEnergy);
 private:
+    void initializeKernelArguments(ComputeKernel selectedKernel);
     std::string createForceSource(int forceIndex, int numBonds, int numAtoms, int group, const std::string& computeForce);
+    std::string createForceSource(int forceIndex, int numBonds, int numAtoms, int group, const std::string& computeForce,
+                                  std::vector<std::string::size_type>* wrapperFenceOffsets, std::string::size_type sourceOffset);
     ComputeContext& context;
-    ComputeKernel kernel;
+    ComputeKernel kernel, forceOnlyKernel;
     std::vector<std::vector<std::vector<int> > > forceAtoms;
     std::vector<std::vector<int> > indexWidth;
     std::vector<std::string> forceSource;
     std::vector<int> forceGroup;
+    std::vector<ExecutionMode> executionMode;
+    std::vector<bool> fixedPointOutput;
     std::vector<ArrayInterface*> arguments;
     std::vector<std::string> argTypes;
     std::vector<std::vector<ComputeArray> > atomIndices;
     std::vector<std::string> prefixCode;
     std::vector<std::string> energyParameterDerivatives;
     int numForceBuffers, maxBonds, allGroups;
-    bool hasInitializedKernels, hasInteractions;
+    int evaluationFlagsArg;
+    bool hasInitializedKernels, hasInteractions, usesEvaluationFlags;
 };
 
 } // namespace OpenMM
