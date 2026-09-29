@@ -31,7 +31,7 @@
 using namespace OpenMM;
 using namespace std;
 
-CudaKernel::CudaKernel(CudaContext& context, CUfunction kernel, const string& name) : context(context), kernel(kernel), name(name) {
+CudaKernel::CudaKernel(CudaContext& context, CUfunction kernel, const string& name) : context(context), kernel(kernel), name(name), cachedPrimitiveArgs(NULL) {
 }
 
 string CudaKernel::getName() const {
@@ -48,12 +48,17 @@ int CudaKernel::getMaxBlockSize() const {
 
 void CudaKernel::execute(int threads, int blockSize) {
     int numArgs = arrayArgs.size();
-    argPointers.resize(numArgs);
-    for (int i = 0; i < numArgs; i++) {
-        if (arrayArgs[i] != NULL)
-            argPointers[i] = &arrayArgs[i]->getDevicePointer();
-        else
-            argPointers[i] = &primitiveArgs[i];
+    if (argPointers.size() != numArgs || cachedPrimitiveArgs != primitiveArgs.data()) {
+        // Cache addresses of argument storage, so changes to values (including device pointers)
+        // are still visible.  Check primitive storage in case it was reallocated or this kernel was copied.
+        argPointers.resize(numArgs);
+        for (int i = 0; i < numArgs; i++) {
+            if (arrayArgs[i] != NULL)
+                argPointers[i] = &arrayArgs[i]->getDevicePointer();
+            else
+                argPointers[i] = &primitiveArgs[i];
+        }
+        cachedPrimitiveArgs = primitiveArgs.data();
     }
     context.executeKernel(kernel, argPointers.data(), threads, blockSize);
 }
@@ -77,7 +82,11 @@ void CudaKernel::addEmptyArg() {
 
 void CudaKernel::setArrayArg(int index, ArrayInterface& value) {
     ASSERT_VALID_INDEX(index, arrayArgs);
-    arrayArgs[index] = &context.unwrap(value);
+    CudaArray* array = &context.unwrap(value);
+    if (arrayArgs[index] != array) {
+        arrayArgs[index] = array;
+        argPointers.clear();
+    }
 }
 
 void CudaKernel::setPrimitiveArg(int index, const void* value, int size) {
@@ -85,5 +94,7 @@ void CudaKernel::setPrimitiveArg(int index, const void* value, int size) {
     if (size > sizeof(double4))
         throw OpenMMException("Unsupported value type for kernel argument");
     memcpy(&primitiveArgs[index], value, size);
+    if (arrayArgs[index] != NULL)
+        argPointers.clear();
     arrayArgs[index] = NULL;
 }

@@ -105,6 +105,7 @@ private:
     std::vector<double4> primitiveArgs;
     std::vector<CudaArray*> arrayArgs;
     std::vector<void*> argPointers;
+    const double4* cachedPrimitiveArgs;
 };
 
 } // namespace OpenMM
