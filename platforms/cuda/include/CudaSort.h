@@ -81,12 +81,22 @@ public:
      *                   distribution.
      */
     CudaSort(CudaContext& context, ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform=true);
+    /**
+     * Experimental conditional long-list sort.  Every stage reads the same immutable
+     * device int flag.  If zero, all stages leave input and scratch arrays untouched.
+     * The flag must belong to this context and outlive the sorter.  It must be set
+     * on the current stream before sort() and not modified until sort() completes.
+     * Short lists are deliberately unsupported (their host copy would be unguarded).
+     */
+    CudaSort(CudaContext& context, ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform, CudaArray* executionFlag);
     ~CudaSort();
     /**
      * Sort an array.
      */
     void sort(ArrayInterface& data);
 private:
+    void sortConditional(CudaArray& data);
+    CudaArray* executionFlag;
     CudaContext& context;
     ComputeSortImpl::SortTrait* trait;
     CudaArray dataRange;

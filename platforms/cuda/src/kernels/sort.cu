@@ -78,7 +78,8 @@ __global__ void sortShortList2(const DATA_TYPE* __restrict__ dataIn, DATA_TYPE* 
  * is executed as a single work group.
  */
 __global__ void computeRange(const DATA_TYPE* __restrict__ data, unsigned int length, KEY_TYPE* __restrict__ range,
-        unsigned int numBuckets, unsigned int* __restrict__ bucketOffset) {
+        unsigned int numBuckets, unsigned int* __restrict__ bucketOffset GUARDED_SORT_ARGUMENTS) {
+    GUARDED_SORT_BODY
 #if UNIFORM
     extern __shared__ KEY_TYPE minBuffer[];
     KEY_TYPE* maxBuffer = minBuffer+blockDim.x;
@@ -123,7 +124,8 @@ __global__ void computeRange(const DATA_TYPE* __restrict__ data, unsigned int le
  * Assign elements to buckets.  This version is optimized for uniformly distributed data.
  */
 __global__ void assignElementsToBuckets(const DATA_TYPE* __restrict__ data, unsigned int length, unsigned int numBuckets, const KEY_TYPE* __restrict__ range,
-        unsigned int* __restrict__ bucketOffset, unsigned int* __restrict__ bucketOfElement, unsigned int* __restrict__ offsetInBucket) {
+        unsigned int* __restrict__ bucketOffset, unsigned int* __restrict__ bucketOfElement, unsigned int* __restrict__ offsetInBucket GUARDED_SORT_ARGUMENTS) {
+    GUARDED_SORT_BODY
     float minValue = (float) (range[0]);
     float maxValue = (float) (range[1]);
     float bucketWidth = (maxValue-minValue)/numBuckets;
@@ -139,7 +141,8 @@ __global__ void assignElementsToBuckets(const DATA_TYPE* __restrict__ data, unsi
  * Assign elements to buckets.  This version is optimized for non-uniformly distributed data.
  */
 __global__ void assignElementsToBuckets2(const DATA_TYPE* __restrict__ data, unsigned int length, unsigned int numBuckets, const KEY_TYPE* __restrict__ range,
-        unsigned int* __restrict__ bucketOffset, unsigned int* __restrict__ bucketOfElement, unsigned int* __restrict__ offsetInBucket) {
+        unsigned int* __restrict__ bucketOffset, unsigned int* __restrict__ bucketOfElement, unsigned int* __restrict__ offsetInBucket GUARDED_SORT_ARGUMENTS) {
+    GUARDED_SORT_BODY
     // Load 64 datapoints and sort them to get an estimate of the data distribution.
 
     __shared__ KEY_TYPE elements[64];
@@ -218,7 +221,8 @@ __global__ void assignElementsToBuckets2(const DATA_TYPE* __restrict__ data, uns
  * Sum the bucket sizes to compute the start position of each bucket.  This kernel
  * is executed as a single work group.
  */
-__global__ void computeBucketPositions(unsigned int numBuckets, unsigned int* __restrict__ bucketOffset) {
+__global__ void computeBucketPositions(unsigned int numBuckets, unsigned int* __restrict__ bucketOffset GUARDED_SORT_ARGUMENTS) {
+    GUARDED_SORT_BODY
     extern __shared__ unsigned int posBuffer[];
     unsigned int globalOffset = 0;
     for (unsigned int startBucket = 0; startBucket < numBuckets; startBucket += blockDim.x) {
@@ -249,7 +253,8 @@ __global__ void computeBucketPositions(unsigned int numBuckets, unsigned int* __
 /**
  * Copy the input data into the buckets for sorting.
  */
-__global__ void copyDataToBuckets(const DATA_TYPE* __restrict__ data, DATA_TYPE* __restrict__ buckets, unsigned int length, const unsigned int* __restrict__ bucketOffset, const unsigned int* __restrict__ bucketOfElement, const unsigned int* __restrict__ offsetInBucket) {
+__global__ void copyDataToBuckets(const DATA_TYPE* __restrict__ data, DATA_TYPE* __restrict__ buckets, unsigned int length, const unsigned int* __restrict__ bucketOffset, const unsigned int* __restrict__ bucketOfElement, const unsigned int* __restrict__ offsetInBucket GUARDED_SORT_ARGUMENTS) {
+    GUARDED_SORT_BODY
     for (unsigned int index = blockDim.x*blockIdx.x+threadIdx.x; index < length; index += blockDim.x*gridDim.x) {
         DATA_TYPE element = data[index];
         unsigned int bucketIndex = bucketOfElement[index];
@@ -261,7 +266,8 @@ __global__ void copyDataToBuckets(const DATA_TYPE* __restrict__ data, DATA_TYPE*
 /**
  * Sort the data in each bucket.
  */
-__global__ void sortBuckets(DATA_TYPE* __restrict__ data, const DATA_TYPE* __restrict__ buckets, unsigned int numBuckets, const unsigned int* __restrict__ bucketOffset) {
+__global__ void sortBuckets(DATA_TYPE* __restrict__ data, const DATA_TYPE* __restrict__ buckets, unsigned int numBuckets, const unsigned int* __restrict__ bucketOffset GUARDED_SORT_ARGUMENTS) {
+    GUARDED_SORT_BODY
     extern __shared__ DATA_TYPE dataBuffer[];
     for (unsigned int index = blockIdx.x; index < numBuckets; index += gridDim.x) {
         unsigned int startIndex = (index == 0 ? 0 : bucketOffset[index-1]);

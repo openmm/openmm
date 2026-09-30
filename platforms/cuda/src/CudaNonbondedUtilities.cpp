@@ -28,6 +28,17 @@
 #include "CudaContext.h"
 #include "CudaKernelSources.h"
 #include "CudaExpressionUtilities.h"
+#include "CudaSort.h"
+#include "NeighborSkinPolicy.h"
+#include "openmm/CMMotionRemover.h"
+#include "openmm/HarmonicAngleForce.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/MonteCarloBarostat.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/PeriodicTorsionForce.h"
+#include <typeinfo>
+#include <cstdlib>
+#include <cstring>
 #include <algorithm>
 #include <map>
 #include <set>
@@ -57,7 +68,19 @@ public:
     const char* getSortKey() const {return "value";}
 };
 
+// ComputeContext owns this listener. Checkpoint restore invokes it as well.
+class CudaNonbondedUtilities::NeighborReuseReorderListener : public ComputeContext::ReorderListener {
+public:
+    NeighborReuseReorderListener(bool& forceRebuild) : forceRebuild(forceRebuild) {}
+    void execute() {
+        forceRebuild = true;
+    }
+private:
+    bool& forceRebuild;
+};
+
 CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), useCutoff(false), usePeriodic(false), useNeighborList(false), anyExclusions(false), usePadding(true),
+        useNeighborReuse(false), neighborReuseBoxValid(false), useForcedNeighborRebuild(false), neighborSkinFraction(0.08),
         pinnedCountBuffer(NULL), forceRebuildNeighborList(true), groupFlags(0), canUsePairList(true), tilesAfterReorder(0) {
     // Decide how many thread blocks to use.
 
@@ -158,6 +181,27 @@ static bool compareInt2(int2 a, int2 b) {
     return ((a.y < b.y) || (a.y == b.y && a.x < b.x));
 }
 
+// Unknown/custom forces can call padCutoff() before this initialization, so
+// retain the original fraction for those systems. One ordinary PME force plus
+// these known forces is the deliberately narrow experimental scope.
+static bool supportsNeighborSkinExperiment(const System& system) {
+    int nonbondedCount = 0;
+    for (int i = 0; i < system.getNumForces(); i++) {
+        const Force& force = system.getForce(i);
+        const std::type_info& type = typeid(force);
+        if (type == typeid(NonbondedForce)) {
+            if (static_cast<const NonbondedForce&>(force).getNonbondedMethod() != NonbondedForce::PME)
+                return false;
+            nonbondedCount++;
+        }
+        else if (type != typeid(HarmonicBondForce) && type != typeid(HarmonicAngleForce) &&
+                 type != typeid(PeriodicTorsionForce) && type != typeid(CMMotionRemover) &&
+                 type != typeid(MonteCarloBarostat))
+            return false;
+    }
+    return nonbondedCount == 1;
+}
+
 void CudaNonbondedUtilities::initialize(const System& system) {
     string errorMessage = "Error initializing nonbonded utilities";    
     if (atomExclusions.size() == 0) {
@@ -173,6 +217,23 @@ void CudaNonbondedUtilities::initialize(const System& system) {
     numAtoms = context.getNumAtoms();
     int numAtomBlocks = context.getNumAtomBlocks();
     int numContexts = context.getPlatformData().contexts.size();
+    const char* neighborReuseEnv = std::getenv("OPENMM_EXPERIMENT_NEIGHBOR_REUSE");
+    useNeighborReuse = ((neighborReuseEnv != NULL && std::string(neighborReuseEnv) == "1") &&
+            context.getUseMixedPrecision() && numContexts == 1 && numAtomBlocks > 3000 &&
+            useCutoff && usePeriodic && usePadding && useNeighborList &&
+            kernelSource == CudaKernelSources::nonbonded);
+    // New experiment: default OFF, read once before group kernels are created.
+    // The old 0.08 fraction stays in effect for unsupported configurations.
+    const char* skinEnv = std::getenv("OPENMM_EXPERIMENT_NEIGHBOR_SKIN_FRACTION");
+    if (skinEnv != NULL && useNeighborReuse && supportsNeighborSkinExperiment(system)) {
+        if (!NeighborSkinPolicy::selectFraction(skinEnv, neighborSkinFraction))
+            throw OpenMMException("OPENMM_EXPERIMENT_NEIGHBOR_SKIN_FRACTION must be 0, 0.08, 0.10, or 0.12");
+    }
+    // This second experiment is default OFF, even in the all-on baseline.
+    const char* forcedRebuildEnv = std::getenv("OPENMM_EXPERIMENT_NEIGHBOR_FORCED_REBUILD");
+    useForcedNeighborRebuild = (useNeighborReuse && forcedRebuildEnv != NULL && std::string(forcedRebuildEnv) == "1");
+    if (useNeighborReuse)
+        context.addReorderListener(new NeighborReuseReorderListener(forceRebuildNeighborList));
     setAtomBlockRange(context.getContextIndex()/(double) numContexts, (context.getContextIndex()+1)/(double) numContexts);
 
     // Build a list of tiles that contain exclusions.
@@ -271,7 +332,10 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         largeBlockBoundingBox.initialize(context, numAtomBlocks, 4*elementSize, "largeBlockBoundingBox");
         oldPositions.initialize(context, numAtoms, 4*elementSize, "oldPositions");
         rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
-        blockSorter = context.createSort(new BlockSortTrait(), numAtomBlocks, false);
+        if (useNeighborReuse)
+            blockSorter = ComputeSort(new CudaSort(context, new BlockSortTrait(), numAtomBlocks, false, &rebuildNeighborList));
+        else
+            blockSorter = context.createSort(new BlockSortTrait(), numAtomBlocks, false);
         vector<unsigned int> count(2, 0);
         interactionCount.upload(count);
         rebuildNeighborList.upload(&count[0]);
@@ -308,6 +372,14 @@ void CudaNonbondedUtilities::initialize(const System& system) {
     if (energyParameterDerivatives.size() > 0)
         forceArgs.push_back(&context.unwrap(context.getEnergyParamDerivBuffer()).getDevicePointer());
     if (useCutoff) {
+        if (useNeighborReuse) {
+            initNeighborReuseArgs.push_back(&rebuildNeighborList.getDevicePointer());
+            initNeighborReuseArgs.push_back(&forceRebuildNeighborList);
+            checkNeighborReuseArgs.push_back(&context.unwrap(context.getPosq()).getDevicePointer());
+            checkNeighborReuseArgs.push_back(&oldPositions.getDevicePointer());
+            checkNeighborReuseArgs.push_back(&rebuildNeighborList.getDevicePointer());
+            checkNeighborReuseArgs.push_back(&forceRebuildNeighborList);
+        }
         findBlockBoundsArgs.push_back(&numAtoms);
         findBlockBoundsArgs.push_back(context.getPeriodicBoxSizePointer());
         findBlockBoundsArgs.push_back(context.getInvPeriodicBoxSizePointer());
@@ -319,10 +391,14 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         findBlockBoundsArgs.push_back(&blockBoundingBox.getDevicePointer());
         findBlockBoundsArgs.push_back(&rebuildNeighborList.getDevicePointer());
         findBlockBoundsArgs.push_back(&blockSizeRange.getDevicePointer());
+        if (useForcedNeighborRebuild)
+            findBlockBoundsArgs.push_back(&forceRebuildNeighborList);
         computeSortKeysArgs.push_back(&blockBoundingBox.getDevicePointer());
         computeSortKeysArgs.push_back(&sortedBlocks.getDevicePointer());
         computeSortKeysArgs.push_back(&blockSizeRange.getDevicePointer());
         computeSortKeysArgs.push_back(&numBlockSizes);
+        if (useNeighborReuse)
+            computeSortKeysArgs.push_back(&rebuildNeighborList.getDevicePointer());
         sortBoxDataArgs.push_back(&sortedBlocks.getDevicePointer());
         sortBoxDataArgs.push_back(&blockCenter.getDevicePointer());
         sortBoxDataArgs.push_back(&blockBoundingBox.getDevicePointer());
@@ -378,8 +454,7 @@ double CudaNonbondedUtilities::getMaxCutoffDistance() {
 }
 
 double CudaNonbondedUtilities::padCutoff(double cutoff) {
-    double padding = (usePadding ? 0.08*cutoff : 0.0);
-    return cutoff+padding;
+    return NeighborSkinPolicy::padCutoff(cutoff, usePadding, neighborSkinFraction);
 }
 
 void CudaNonbondedUtilities::prepareInteractions(int forceGroups) {
@@ -401,6 +476,28 @@ void CudaNonbondedUtilities::prepareInteractions(int forceGroups) {
 
     // Compute the neighbor list.
 
+    if (useNeighborReuse) {
+        // The displacement proof requires an unchanged periodic metric. Compare
+        // all nine host doubles, including triclinic off-diagonal components.
+        Vec3 vectors[3];
+        context.getPeriodicBoxVectors(vectors[0], vectors[1], vectors[2]);
+        double box[9];
+        for (int i = 0; i < 3; i++)
+            for (int j = 0; j < 3; j++)
+                box[3*i+j] = vectors[i][j];
+        if (!neighborReuseBoxValid || std::memcmp(box, neighborReuseBox, sizeof(box)) != 0)
+            forceRebuildNeighborList = true;
+        std::memcpy(neighborReuseBox, box, sizeof(box));
+        neighborReuseBoxValid = true;
+
+        // Separate launches provide grid-wide ordering on the current stream:
+        // reset -> atomic OR -> consumers. Mandatory rebuilds may skip the
+        // precheck; bounds receives the host flag and publishes GPU flag=1.
+        if (!useForcedNeighborRebuild || !forceRebuildNeighborList) {
+            context.executeKernel(kernels.initNeighborReuseKernel, &initNeighborReuseArgs[0], 1);
+            context.executeKernel(kernels.checkNeighborReuseKernel, &checkNeighborReuseArgs[0], context.getNumAtoms());
+        }
+    }
     context.executeKernel(kernels.findBlockBoundsKernel, &findBlockBoundsArgs[0], context.getNumAtomBlocks());
     context.executeKernel(kernels.computeSortKeysKernel, &computeSortKeysArgs[0], context.getNumAtomBlocks());
     blockSorter->sort(sortedBlocks);
@@ -506,6 +603,10 @@ void CudaNonbondedUtilities::createKernelsForGroups(int groups) {
     if (useCutoff) {
         double paddedCutoff = padCutoff(maxCutoff);
         map<string, string> defines;
+        if (useNeighborReuse)
+            defines["USE_NEIGHBOR_REUSE_PRECHECK"] = "1";
+        if (useForcedNeighborRebuild)
+            defines["USE_FORCED_NEIGHBOR_REBUILD"] = "1";
         defines["TILE_SIZE"] = context.intToString(CudaContext::TileSize);
         defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
         defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
@@ -527,6 +628,10 @@ void CudaNonbondedUtilities::createKernelsForGroups(int groups) {
         defines["BIN_SHIFT"] = context.intToString(binShift);
         defines["BLOCK_INDEX_MASK"] = context.intToString((1<<binShift)-1);
         CUmodule interactingBlocksProgram = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::findInteractingBlocks, defines);
+        if (useNeighborReuse) {
+            kernels.initNeighborReuseKernel = context.getKernel(interactingBlocksProgram, "initNeighborListReuse");
+            kernels.checkNeighborReuseKernel = context.getKernel(interactingBlocksProgram, "checkNeighborListReuse");
+        }
         kernels.findBlockBoundsKernel = context.getKernel(interactingBlocksProgram, "findBlockBounds");
         kernels.computeSortKeysKernel = context.getKernel(interactingBlocksProgram, "computeSortKeys");
         kernels.sortBoxDataKernel = context.getKernel(interactingBlocksProgram, "sortBoxData");
@@ -714,5 +819,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
 }
 
 void CudaNonbondedUtilities::setKernelSource(const string& source) {
+    if (useNeighborReuse && source != CudaKernelSources::nonbonded)
+        throw OpenMMException("The experimental neighbor reuse path requires the default nonbonded kernel");
     kernelSource = source;
 }
