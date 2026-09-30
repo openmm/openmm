@@ -48,6 +48,7 @@ option(OPENMM_METAL_NATIVE_FLOAT_ATOMICS
     "Use native Metal float atomic addition instead of the OpenCL-style CAS loop" OFF)
 option(OPENMM_METAL_FAST_MATH
     "Allow broad Metal fast math except where compensated or robust arithmetic is required" OFF)
+option(OPENMM_METAL_FAST_PME_FLOAT_SPREAD "Use the Common floating-grid spreading path for PME" OFF)
 
 # Each optional algorithm can be compared independently with the OpenCL path.
 set(METAL_OPTIMIZATION_SWITCHES
@@ -159,7 +160,7 @@ target_compile_definitions(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
     OPENMM_COMMON_BUILDING_SHARED_LIBRARY
     OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS=$<BOOL:${OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS}>
     OPENMM_METAL_NATIVE_FLOAT_ATOMICS=$<BOOL:${OPENMM_METAL_NATIVE_FLOAT_ATOMICS}>
-
+    OPENMM_METAL_FAST_PME_FLOAT_SPREAD=$<BOOL:${OPENMM_METAL_FAST_PME_FLOAT_SPREAD}>
 
 
 

@@ -175,7 +175,8 @@ double MetalCalcForcesAndEnergyKernel::finishComputation(ContextImpl& simulation
 }
 
 void MetalCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
-    commonInitialize(system, force, false, false, true, false);
+    const bool floatGrid = force.getNonbondedMethod() != NonbondedForce::LJPME && OPENMM_METAL_FAST_PME_FLOAT_SPREAD;
+    commonInitialize(system, force, false, false, !floatGrid, false);
 }
 
 void MetalCalcConstantPotentialForceKernel::initialize(const System& system, const ConstantPotentialForce& force) {
