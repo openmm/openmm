@@ -21,6 +21,7 @@ This series introduces the OpenCL/Common baseline in component-sized changes bef
 | `OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS` | Q32.32 minimization with limited range diagnostics; no CPU fallback | Scoped GPU floating accumulators for large-force minimization (default) |
 | `OPENMM_METAL_NATIVE_FLOAT_ATOMICS` | OpenCL-style float-add CAS loop | Native Metal float atomic add, independently of accumulator representation |
 | `OPENMM_METAL_FAST_MATH` | Strict Metal compilation | Broad fast math where compatible with numerical safety requirements |
+| `OPENMM_METAL_FAST_SHORT_LIST_SORT` | OpenCL sorting selection | CUDA short-list selection using the shared alternative kernel |
 | `OPENMM_METAL_FAST_MINIMIZE_SHUFFLE` | Common local-memory reduction | Common CUDA/HIP shuffle reduction in the minimizer only |
 | `OPENMM_METAL_FAST_CONSTANT_POTENTIAL_REDUCTION` | Base ConstantPotential local-memory reduction | Common shuffle reduction in the base ConstantPotential kernels only |
 | `OPENMM_METAL_FAST_CONSTANT_POTENTIAL_CG_REDUCTION` | CG local-memory reductions | Common scalar and compensated `float2` shuffle reductions in CG only |

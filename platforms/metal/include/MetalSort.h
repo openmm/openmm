@@ -105,9 +105,9 @@ private:
     ComputeArray offsetInBucket;
     ComputeArray bucketOffset;
     ComputeArray buckets;
-    ComputeKernel shortListKernel, computeRangeKernel, assignElementsKernel, computeBucketPositionsKernel, copyToBucketsKernel, sortBucketsKernel;
+    ComputeKernel shortListKernel, shortList2Kernel, computeRangeKernel, assignElementsKernel, computeBucketPositionsKernel, copyToBucketsKernel, sortBucketsKernel;
     unsigned int dataLength, rangeKernelSize, positionsKernelSize, sortKernelSize;
-    bool isShortList, uniform;
+    bool isShortList, useShortList2, uniform;
 };
 
 } // namespace OpenMM
