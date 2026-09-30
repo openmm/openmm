@@ -51,6 +51,7 @@ public:
     }
     CalcDrudeForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcDrudeForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -86,6 +87,7 @@ public:
     }
     IntegrateDrudeLangevinStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~IntegrateDrudeLangevinStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -117,6 +119,7 @@ public:
     }
     IntegrateDrudeSCFStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~IntegrateDrudeSCFStepKernel();
     /**
      * Initialize the kernel.
      *

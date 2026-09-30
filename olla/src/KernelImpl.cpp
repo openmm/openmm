@@ -35,6 +35,10 @@ using namespace std;
 KernelImpl::KernelImpl(string name, const Platform& platform) : name(name), platform(&platform), referenceCount(0) {
 }
 
+KernelImpl::~KernelImpl() {
+    assert(referenceCount == 0);
+}
+
 std::string KernelImpl::getName() const {
     return name;
 }
