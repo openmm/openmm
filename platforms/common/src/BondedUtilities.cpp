@@ -30,14 +30,21 @@
 using namespace OpenMM;
 using namespace std;
 
-BondedUtilities::BondedUtilities(ComputeContext& context) : context(context), numForceBuffers(0), maxBonds(0), allGroups(0), hasInitializedKernels(false) {
+BondedUtilities::BondedUtilities(ComputeContext& context) : context(context), numForceBuffers(0), maxBonds(0), allGroups(0), hasInitializedKernels(false), usesEvaluationFlags(false) {
 }
 
 void BondedUtilities::addInteraction(const vector<vector<int> >& atoms, const string& source, int group) {
+    addInteractionWithExecutionMode(atoms, source, group, AllEvaluations, false);
+}
+
+void BondedUtilities::addInteractionWithExecutionMode(const vector<vector<int> >& atoms, const string& source,
+        int group, ExecutionMode mode, bool fixedPoint) {
     if (atoms.size() > 0) {
         forceAtoms.push_back(atoms);
         forceSource.push_back(source);
         forceGroup.push_back(group);
+        executionMode.push_back(mode);
+        fixedPointOutput.push_back(fixedPoint);
         allGroups |= 1<<group;
     }
 }
@@ -71,8 +78,6 @@ void BondedUtilities::addPrefixCode(const string& source) {
 void BondedUtilities::initialize(const System& system) {
     int numForces = forceAtoms.size();
     hasInteractions = (numForces > 0);
-    if (!hasInteractions)
-        return;
     
     // Build the lists of atom indices.
     
@@ -114,7 +119,12 @@ void BondedUtilities::initialize(const System& system) {
         s<<", GLOBAL "<<argTypes[i]<<"* customArg"<<(i+1);
     if (energyParameterDerivatives.size() > 0)
         s<<", GLOBAL mixed* RESTRICT energyParamDerivs";
-    s<<") {\n";
+    usesEvaluationFlags = false;
+    for (auto mode : executionMode)
+        if (mode != AllEvaluations)
+            usesEvaluationFlags = true;
+    // Preserve the original generated signature when grouping is disabled.
+    s<<(usesEvaluationFlags ? ", int includeForces, int includeEnergy) {\n" : ") {\n");
     s<<"mixed energy = 0;\n";
     for (int i = 0; i < energyParameterDerivatives.size(); i++)
         s<<"mixed energyParamDeriv"<<i<<" = 0;\n";
@@ -141,7 +151,12 @@ string BondedUtilities::createForceSource(int forceIndex, int numBonds, int numA
     string suffix1[] = {""};
     string suffix4[] = {".x", ".y", ".z", ".w"};
     stringstream s;
-    s<<"if ((groups&"<<(1<<group)<<") != 0)\n";
+    s<<"if ((groups&"<<(1<<group)<<") != 0";
+    if (executionMode[forceIndex] == ForceOnlyEvaluations)
+        s<<" && includeForces && !includeEnergy";
+    else if (executionMode[forceIndex] == OtherEvaluations)
+        s<<" && !(includeForces && !includeEnergy)";
+    s<<")\n";
     s<<"for (unsigned int index = GLOBAL_ID; index < "<<numBonds<<"; index += GLOBAL_SIZE) {\n";
     int startAtom = 0;
     for (int i = 0; i < (int) atomIndices[forceIndex].size(); i++) {
@@ -158,9 +173,16 @@ string BondedUtilities::createForceSource(int forceIndex, int numBonds, int numA
     }
     s<<computeForce<<"\n";
     for (int i = 0; i < numAtoms; i++) {
-        s<<"    ATOMIC_ADD(&forceBuffer[atom"<<(i+1)<<"], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".x));\n";
-        s<<"    ATOMIC_ADD(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".y));\n";
-        s<<"    ATOMIC_ADD(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS*2], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".z));\n";
+        if (fixedPointOutput[forceIndex]) {
+            s<<"    ATOMIC_ADD(&forceBuffer[atom"<<(i+1)<<"], fixedForce"<<(i+1)<<"X);\n";
+            s<<"    ATOMIC_ADD(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS], fixedForce"<<(i+1)<<"Y);\n";
+            s<<"    ATOMIC_ADD(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS*2], fixedForce"<<(i+1)<<"Z);\n";
+        }
+        else {
+            s<<"    ATOMIC_ADD(&forceBuffer[atom"<<(i+1)<<"], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".x));\n";
+            s<<"    ATOMIC_ADD(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".y));\n";
+            s<<"    ATOMIC_ADD(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS*2], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".z));\n";
+        }
         s<<"    MEM_FENCE;\n";
     }
     s<<"}\n";
@@ -168,7 +190,11 @@ string BondedUtilities::createForceSource(int forceIndex, int numBonds, int numA
 }
 
 void BondedUtilities::computeInteractions(int groups) {
-    if ((groups&allGroups) == 0)
+    computeInteractions(groups, true, true);
+}
+
+void BondedUtilities::computeInteractions(int groups, bool includeForces, bool includeEnergy) {
+    if ((groups&allGroups) == 0 || !hasInteractions)
         return;
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
@@ -184,10 +210,19 @@ void BondedUtilities::computeInteractions(int groups) {
             kernel->addArg(*arguments[i]);
         if (energyParameterDerivatives.size() > 0)
             kernel->addArg(context.getEnergyParamDerivBuffer());
+        evaluationFlagsArg = 9+arguments.size()+(energyParameterDerivatives.empty() ? 0 : 1);
+        for (int i = 0; i < (int) atomIndices.size(); i++)
+            evaluationFlagsArg += atomIndices[i].size();
+        if (usesEvaluationFlags) {
+            kernel->addArg();
+            kernel->addArg();
+        }
     }
-    if (!hasInteractions)
-        return;
     kernel->setArg(3, groups);
+    if (usesEvaluationFlags) {
+        kernel->setArg(evaluationFlagsArg, (int) includeForces);
+        kernel->setArg(evaluationFlagsArg+1, (int) includeEnergy);
+    }
     Vec3 a, b, c;
     context.getPeriodicBoxVectors(a, b, c);
     if (context.getUseDoublePrecision()) {

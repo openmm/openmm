@@ -257,6 +257,7 @@ private:
     ForceInfo* info;
     const System& system;
     ComputeArray params;
+    ComputeArray experimentalWaterBondMap, experimentalResidualBondMap;
 };
 
 /**

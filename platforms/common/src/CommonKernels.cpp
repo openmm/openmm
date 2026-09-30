@@ -52,6 +52,16 @@
 #include <iterator>
 #include <set>
 
+#include "openmm/CMMotionRemover.h"
+#include "openmm/HarmonicAngleForce.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/MonteCarloBarostat.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/PeriodicTorsionForce.h"
+#include <cstdlib>
+#include <cstring>
+#include <typeinfo>
+
 using namespace OpenMM;
 using namespace std;
 using namespace Lepton;
@@ -487,6 +497,157 @@ private:
     const HarmonicBondForce& force;
 };
 
+namespace {
+
+bool allowExperimentalWaterBondGroups(const System& system) {
+    int harmonicForces = 0;
+    for (int i = 0; i < system.getNumForces(); i++) {
+        const type_info& type = typeid(system.getForce(i));
+        if (type == typeid(HarmonicBondForce)) harmonicForces++;
+        else if (type != typeid(HarmonicAngleForce) && type != typeid(PeriodicTorsionForce) &&
+                type != typeid(NonbondedForce) && type != typeid(MonteCarloBarostat) && type != typeid(CMMotionRemover))
+            return false;
+    }
+    return harmonicForces == 1;
+}
+
+// The graph uses only topology, never assumes water parameters are equal.  Every
+// selected atom has exactly two constraint edges and two unique harmonic edges
+// within one isolated triangle.  All incomplete/overlapping cases stay generic.
+void findExperimentalWaterBondGroups(const System& system, const vector<vector<int> >& bonds,
+        vector<vector<int> >& triangles, vector<mm_int4>& bondMap, vector<int>& residual) {
+    int n = system.getNumParticles();
+    vector<mm_int4> bondGraph(n, mm_int4(-1, -1, 0, 0));
+    vector<mm_int4> constraintGraph(n, mm_int4(-1, -1, 0, 0));
+    for (int i = 0; i < bonds.size(); i++) {
+        for (int endpoint = 0; endpoint < 2; endpoint++) {
+            mm_int4& g = bondGraph[bonds[i][endpoint]];
+            if (g.z == 0) g.x = i;
+            if (g.z == 1) g.y = i;
+            g.z++;
+        }
+    }
+    for (int i = 0; i < system.getNumConstraints(); i++) {
+        int a, b;
+        double distance;
+        system.getConstraintParameters(i, a, b, distance);
+        int ends[] = {a, b};
+        for (int j = 0; j < 2; j++) {
+            mm_int4& g = constraintGraph[ends[j]];
+            if (g.z == 0) g.x = ends[1-j];
+            if (g.z == 1) g.y = ends[1-j];
+            g.z++;
+        }
+    }
+    vector<bool> selectedBond(bonds.size(), false), ownedAtom(n, false);
+    for (int a = 0; a < n; a++) {
+        if (bondGraph[a].z != 2 || constraintGraph[a].z != 2)
+            continue;
+        int b = (bonds[bondGraph[a].x][0] == a ? bonds[bondGraph[a].x][1] : bonds[bondGraph[a].x][0]);
+        int c = (bonds[bondGraph[a].y][0] == a ? bonds[bondGraph[a].y][1] : bonds[bondGraph[a].y][0]);
+        if (a >= b || a >= c || b == c)
+            continue;
+        if (b > c) swap(b, c);
+        int vertices[] = {a, b, c};
+        bool valid = true;
+        set<int> ids;
+        set<pair<int, int> > uniqueEdges;
+        for (int j = 0; j < 3; j++) {
+            int atom = vertices[j];
+            if (bondGraph[atom].z != 2 || constraintGraph[atom].z != 2 || ownedAtom[atom] ||
+                    !(system.getParticleMass(atom) > 0) || system.isVirtualSite(atom)) {
+                valid = false;
+                break;
+            }
+            int neighbors[] = {constraintGraph[atom].x, constraintGraph[atom].y};
+            if (neighbors[0] == neighbors[1]) valid = false;
+            for (int k = 0; k < 2; k++) {
+                if (neighbors[k] == atom || (neighbors[k] != a && neighbors[k] != b && neighbors[k] != c))
+                    valid = false;
+            }
+            int edges[] = {bondGraph[atom].x, bondGraph[atom].y};
+            for (int k = 0; k < 2; k++) {
+                int edge = edges[k];
+                int p = bonds[edge][0], q = bonds[edge][1];
+                if (selectedBond[edge] || p == q ||
+                        (p != a && p != b && p != c) || (q != a && q != b && q != c))
+                    valid = false;
+                ids.insert(edge);
+                uniqueEdges.insert(make_pair(min(p, q), max(p, q)));
+            }
+        }
+        if (!valid || ids.size() != 3 || uniqueEdges.size() != 3)
+            continue;
+        vector<int> indices(ids.begin(), ids.end()); // Original bond order, stable.
+        int direction = 0;
+        for (int j = 0; j < 3; j++) {
+            int p = bonds[indices[j]][0], q = bonds[indices[j]][1];
+            int pSlot = (p == a ? 0 : (p == b ? 1 : 2));
+            int qSlot = (q == a ? 0 : (q == b ? 1 : 2));
+            direction |= (pSlot << (4*j)) | (qSlot << (4*j+2));
+            selectedBond[indices[j]] = true;
+            ownedAtom[vertices[j]] = true;
+        }
+        triangles.push_back(vector<int>(vertices, vertices+3));
+        bondMap.push_back(mm_int4(indices[0], indices[1], indices[2], direction));
+    }
+    for (int i = 0; i < bonds.size(); i++)
+        if (!selectedBond[i]) residual.push_back(i);
+}
+
+// Specialize only after inspecting every immutable topology map entry.  Bond
+// parameters remain dynamically indexed, including updateParametersInContext.
+int getExperimentalUniformWaterBondDirection(const vector<mm_int4>& bondMap) {
+    const char* enabled = getenv("OPENMM_EXPERIMENT_WATER_BOND_STATIC_DIRECTION");
+    if (enabled == NULL || strcmp(enabled, "1") != 0 || bondMap.empty())
+        return -1;
+    const int direction = bondMap[0].w;
+    for (int i = 1; i < bondMap.size(); i++)
+        if (bondMap[i].w != direction)
+            return -1;
+    return direction;
+}
+
+string createExperimentalWaterBondSource(const string& mappingArgument, const string& originalBondSource, int uniformDirection) {
+    stringstream s;
+    s<<"const real4 trianglePos1 = pos1, trianglePos2 = pos2, trianglePos3 = pos3;\n";
+    s<<"const int4 triangleBonds = "<<mappingArgument<<"[index];\n";
+    for (int atom = 1; atom <= 3; atom++)
+        s<<"mm_ulong fixedForce"<<atom<<"X=0, fixedForce"<<atom<<"Y=0, fixedForce"<<atom<<"Z=0;\n";
+    const string members[] = {"x", "y", "z"};
+    const string axes[] = {"X", "Y", "Z"};
+    for (int bond = 0; bond < 3; bond++) {
+        s<<"{\nconst unsigned int index = triangleBonds."<<members[bond]<<";\n";
+        if (uniformDirection >= 0) {
+            s<<"const int firstSlot = "<<((uniformDirection >> (4*bond)) & 3)<<";\n";
+            s<<"const int secondSlot = "<<((uniformDirection >> (4*bond+2)) & 3)<<";\n";
+        }
+        else {
+            s<<"const int firstSlot = (triangleBonds.w >> "<<(4*bond)<<") & 3;\n";
+            s<<"const int secondSlot = (triangleBonds.w >> "<<(4*bond+2)<<") & 3;\n";
+        }
+        s<<"const real4 pos1 = (firstSlot == 0 ? trianglePos1 : (firstSlot == 1 ? trianglePos2 : trianglePos3));\n";
+        s<<"const real4 pos2 = (secondSlot == 0 ? trianglePos1 : (secondSlot == 1 ? trianglePos2 : trianglePos3));\n";
+        // Literal original bond source preserves endpoint direction, raw posq,
+        // periodic wrapping, SQRT/divide and the separate force1/force2 values.
+        s<<originalBondSource<<"\n";
+        for (int endpoint = 1; endpoint <= 2; endpoint++) {
+            for (int axis = 0; axis < 3; axis++)
+                s<<"const mm_ulong contribution"<<endpoint<<axes[axis]<<" = (mm_ulong) realToFixedPoint(force"<<endpoint<<"."<<members[axis]<<");\n";
+            for (int atom = 1; atom <= 3; atom++) {
+                s<<(atom == 1 ? "if" : "else if")<<" ("<<(endpoint == 1 ? "firstSlot" : "secondSlot")<<" == "<<(atom-1)<<") {\n";
+                for (int axis = 0; axis < 3; axis++)
+                    s<<"fixedForce"<<atom<<axes[axis]<<" += contribution"<<endpoint<<axes[axis]<<";\n";
+                s<<"}\n";
+            }
+        }
+        s<<"}\n";
+    }
+    return s.str();
+}
+
+} // namespace
+
 void CommonCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
     ContextSelector selector(cc);
     int numContexts = cc.getNumContexts();
@@ -508,7 +669,43 @@ void CommonCalcHarmonicBondForceKernel::initialize(const System& system, const H
     replacements["APPLY_PERIODIC"] = (force.usesPeriodicBoundaryConditions() ? "1" : "0");
     replacements["COMPUTE_FORCE"] = CommonKernelSources::harmonicBondForce;
     replacements["PARAMS"] = cc.getBondedUtilities().addArgument(params, "float2");
-    cc.getBondedUtilities().addInteraction(atoms, cc.replaceStrings(CommonKernelSources::bondForce, replacements), force.getForceGroup());
+    string originalBondSource = cc.replaceStrings(CommonKernelSources::bondForce, replacements);
+    const char* experiment = getenv("OPENMM_EXPERIMENT_WATER_BOND_INTEGER_SUM");
+    bool enabled = (experiment != NULL && strcmp(experiment, "1") == 0) &&
+            getPlatform().getName() == "CUDA" && cc.getUseMixedPrecision() && numContexts == 1 &&
+            allowExperimentalWaterBondGroups(system);
+    vector<vector<int> > triangles;
+    vector<mm_int4> triangleMap;
+    vector<int> residual;
+    if (enabled)
+        findExperimentalWaterBondGroups(system, atoms, triangles, triangleMap, residual);
+    if (triangles.empty())
+        cc.getBondedUtilities().addInteraction(atoms, originalBondSource, force.getForceGroup());
+    else {
+        BondedUtilities& bonded = cc.getBondedUtilities();
+        // Energy-bearing and neither-requested calls retain the full original
+        // loop, original parameter indices, and original energy summation order.
+        bonded.addInteractionWithExecutionMode(atoms, originalBondSource, force.getForceGroup(), BondedUtilities::OtherEvaluations, false);
+        if (!residual.empty()) {
+            vector<vector<int> > residualAtoms;
+            for (int i = 0; i < residual.size(); i++) residualAtoms.push_back(atoms[residual[i]]);
+            experimentalResidualBondMap.initialize<int>(cc, residual.size(), "experimentalResidualBondMap");
+            experimentalResidualBondMap.upload(residual);
+            string residualArgument = bonded.addArgument(experimentalResidualBondMap, "int");
+            // force1/force2 must remain visible to the generic atomic wrapper.
+            map<string, string> residualReplacements;
+            residualReplacements[replacements["PARAMS"]+"[index]"] = replacements["PARAMS"]+"[originalIndex]";
+            string residualSource = "const unsigned int originalIndex = "+residualArgument+"[index];\n"+
+                    cc.replaceStrings(originalBondSource, residualReplacements);
+            bonded.addInteractionWithExecutionMode(residualAtoms, residualSource, force.getForceGroup(), BondedUtilities::ForceOnlyEvaluations, false);
+        }
+        experimentalWaterBondMap.initialize<mm_int4>(cc, triangleMap.size(), "experimentalWaterBondMap");
+        experimentalWaterBondMap.upload(triangleMap);
+        string triangleArgument = bonded.addArgument(experimentalWaterBondMap, "int4");
+        bonded.addInteractionWithExecutionMode(triangles, createExperimentalWaterBondSource(triangleArgument, originalBondSource,
+                getExperimentalUniformWaterBondDirection(triangleMap)),
+                force.getForceGroup(), BondedUtilities::ForceOnlyEvaluations, true);
+    }
     info = new ForceInfo(force);
     cc.addForce(info);
 }

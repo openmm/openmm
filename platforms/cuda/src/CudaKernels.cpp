@@ -77,7 +77,7 @@ void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool 
 
 double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
     ContextSelector selector(cu);
-    cu.getBondedUtilities().computeInteractions(groups);
+    cu.getBondedUtilities().computeInteractions(groups, includeForces, includeEnergy);
     cu.getNonbondedUtilities().computeInteractions(groups, includeForces, includeEnergy);
     double sum = 0.0;
     for (auto computation : cu.getPostComputations())
