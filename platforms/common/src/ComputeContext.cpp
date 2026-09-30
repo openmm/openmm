@@ -50,6 +50,18 @@ ComputeContext::ComputeContext(const System& system) : system(system), time(0.0)
 ComputeContext::~ComputeContext() {
 }
 
+void ComputeContext::downloadFixedPointBuffer(ArrayInterface& array, vector<double>& values) {
+    if (array.getElementSize() != sizeof(long long))
+        throw OpenMMException("Expected a 64-bit fixed-point accumulator buffer");
+    values.resize(array.getSize());
+    if (values.empty())
+        return;
+    vector<long long> fixed(values.size());
+    array.download(fixed.data());
+    for (size_t i = 0; i < fixed.size(); i++)
+        values[i] = fixed[i]*(1.0/4294967296.0);
+}
+
 ComputeQueue ComputeContext::getCurrentQueue() {
     return currentQueue;
 }

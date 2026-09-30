@@ -405,6 +405,12 @@ public:
      */
     virtual ArrayInterface& getLongForceBuffer() = 0;
     /**
+     * Download and decode a scalar accumulator buffer. The default representation
+     * is signed Q32.32. Platforms with a different private accumulator format
+     * may override this without changing shared force algorithms.
+     */
+    virtual void downloadFixedPointBuffer(ArrayInterface& array, std::vector<double>& values);
+    /**
      * Get the array which contains the buffer in which energy is computed.
      */
     virtual ArrayInterface& getEnergyBuffer() = 0;

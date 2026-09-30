@@ -706,9 +706,9 @@ void CommonConstantPotentialCGSolver::ensureValid(CommonCalcConstantPotentialFor
         kernel.pmeShouldSort = true;
         kernel.pmeExecute(false, false, true);
         kernel.pmeShouldSort = true;
-        vector<long> derivatives(numElectrodeParticles);
-        kernel.chargeDerivativesFixed.download(derivatives);
-        double pmeTerm = derivatives[0] / (double) 0x100000000;
+        vector<double> derivatives;
+        kernel.cc.downloadFixedPointBuffer(kernel.chargeDerivativesFixed, derivatives);
+        double pmeTerm = derivatives[0];
 
         // Restore all positions and charges.
         kernel.cc.getPosq().upload(posqSave, true);
