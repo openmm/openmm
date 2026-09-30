@@ -148,6 +148,53 @@ KERNEL void atomics(GLOBAL int* integers, GLOBAL float* floats, GLOBAL mm_ulong*
     ASSERT(rejected);
 }
 
+/** @brief Grouped Q32.32 writes preserve exact unsigned sums across carries, signs, and inactive lanes. */
+void testGroupedFixedPoint(MetalContext& context) {
+    const string source = R"(
+KERNEL void grouped(GLOBAL const mm_ulong* input, GLOBAL mm_ulong* output,
+        unsigned int count, unsigned int bins, unsigned int mask) {
+    for (unsigned int i = GLOBAL_ID; i < count; i += GLOBAL_SIZE) {
+        if ((mask>>(LOCAL_ID&31))&1u)
+            METAL_ACCUMULATE_SPARSE_FORCE(output, (i*7+i/32)%bins, input[i]);
+    }
+}
+
+)";
+    const uint64_t patterns[] = {0, 1, ~uint64_t(0), uint64_t(1)<<32,
+        (uint64_t(1)<<32)-1, uint64_t(1)<<63, 0x0000ffffffffffffULL,
+        0xfedcba9876543210ULL, 0x123456789abcdef0ULL};
+    const int count = 4099;
+    vector<uint64_t> input(count);
+    for (int i = 0; i < count; i++) input[i] = patterns[i%9];
+    ComputeArray values;
+    values.initialize<uint64_t>(context, count, "groupedFixedPointValues");
+    values.upload(input);
+    for (int enabled = 0; enabled < 2; enabled++) {
+        map<string, string> defines;
+        defines["OPENMM_METAL_FAST_SPARSE_FORCE_AGGREGATION"] = to_string(enabled);
+        ComputeKernel kernel = context.compileProgram(source, defines)->createKernel("grouped");
+        for (int i = 0; i < 5; i++) kernel->addArg();
+        for (int bins : {1, 3, 17, 32, 67}) {
+            ComputeArray output;
+            output.initialize<uint64_t>(context, bins, "groupedFixedPointOutput");
+            for (unsigned int mask : {0u, 1u, 0x80000000u, 0xaaaaaaaau, 0x55555555u, 0xffffffffu}) {
+                context.clearBuffer(output);
+                kernel->setArg(0, values);
+                kernel->setArg(1, output);
+                kernel->setArg(2, (unsigned int) count);
+                kernel->setArg(3, (unsigned int) bins);
+                kernel->setArg(4, mask);
+                kernel->execute(count, 64);
+                vector<uint64_t> actual, expected(bins, 0);
+                output.download(actual);
+                for (int i = 0; i < count; i++)
+                    if ((mask>>(i&31))&1u) expected[(i*7+i/32)%bins] += input[i];
+                ASSERT_EQUAL_CONTAINERS(expected, actual);
+            }
+        }
+    }
+}
+
 /** @brief CUDA's 64-bit parameter shuffles transport two words without converting to float. */
 void testWideShuffle(MetalContext& context) {
     ComputeArray input, output;
@@ -187,6 +234,7 @@ int main() {
         MetalContext context(system);
         testCollectives(context);
         testAtomics(context);
+        testGroupedFixedPoint(context);
         testWideShuffle(context);
     }
     catch (const exception& error) {

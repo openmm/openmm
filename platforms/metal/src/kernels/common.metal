@@ -257,9 +257,34 @@ inline void atomicMaxUInt64(device ulong* address, ulong value) {
 // metalAtomicAdd(ulong*) reduction above is deliberately not a fetch-add API.
 inline ulong atomicAddUInt64(device ulong*, ulong) = delete;
 
-/** @brief Preserve the ordinary Q32.32 write for each sparse-pair contribution. */
+/**
+ * @brief Experimental equal-target reduction for the sparse-pair force helper.
+ * Every active lane must pass the same buffer base. Indices may differ and
+ * inactive lanes are excluded by the ballot. Q32.32 conversion happens BEFORE
+ * this call: unsigned modular addition therefore preserves every integer bit.
+ * Sum two 16-bit digits and the upper 32-bit word separately; digit sums fit in
+ * uint for 32 lanes, while upper-word wrap is the desired modulo-2^64 result.
+ * This is not a fetch-add and no result may be read until the dispatch ends.
+ */
 inline void metalAccumulateSparseForce(MetalExecutionContext context, device ulong* buffer, uint index, ulong value) {
+#if OPENMM_METAL_FAST_SPARSE_FORCE_AGGREGATION
+    uint remaining = simdBallot(true);
+    while (remaining != 0) {
+        uint leader = ctz(remaining);
+        uint target = simdShuffle(index, leader);
+        uint peers = simdBallot(index == target);
+        ulong selected = index == target ? value : ulong(0);
+        uint lower = simdReduceAdd(uint(selected)&0xffffu);
+        uint middle = simdReduceAdd((uint(selected)>>16)&0xffffu);
+        uint upper = simdReduceAdd(uint(selected>>32));
+        ulong total = ulong(lower)+(ulong(middle)<<16)+(ulong(upper)<<32);
+        if ((context.localId&31u) == leader)
+            metalAtomicAdd(buffer+target, total);
+        remaining &= ~peers;
+    }
+#else
     metalAtomicAdd(buffer+index, value);
+#endif
 }
 /** @brief Floating minimization retains its original atomic ordering and primitive. */
 inline void metalAccumulateSparseForce(MetalExecutionContext context, device float* buffer, uint index, float value) {
