@@ -44,6 +44,8 @@ option(OPENMM_METAL_RECORD_AND_COMMIT
     "Commit each Metal compute/blit operation instead of batching (no additional CPU wait)" ON)
 option(OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS
     "Use scoped GPU floating accumulators for minimization beyond the Q32.32 force range" ON)
+option(OPENMM_METAL_FAST_MATH
+    "Allow broad Metal fast math except where compensated or robust arithmetic is required" OFF)
 
 # Each optional algorithm can be compared independently with the OpenCL path.
 set(METAL_OPTIMIZATION_SWITCHES
@@ -110,6 +112,8 @@ file(GLOB COMMON_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/../common/src/*.cpp")
 list(REMOVE_ITEM COMMON_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/../common/src/CommonParallelKernels.cpp")
 
 add_library(OpenMMMetalVkFFT OBJECT src/MetalVkFFT.cpp)
+target_compile_definitions(OpenMMMetalVkFFT PRIVATE
+    OPENMM_METAL_FAST_MATH=$<BOOL:${OPENMM_METAL_FAST_MATH}>)
 target_include_directories(OpenMMMetalVkFFT SYSTEM PRIVATE
     "${METAL_CPP_INCLUDE_DIR}" "${CMAKE_SOURCE_DIR}/libraries/vkfft/include")
 set_target_properties(OpenMMMetalVkFFT PROPERTIES CXX_STANDARD 17 POSITION_INDEPENDENT_CODE ON)
@@ -157,7 +161,7 @@ target_compile_definitions(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
 
 
 
-
+    OPENMM_METAL_FAST_MATH=$<BOOL:${OPENMM_METAL_FAST_MATH}>
 
 
 

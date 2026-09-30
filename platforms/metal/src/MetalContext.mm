@@ -375,7 +375,7 @@ ComputeProgram MetalContext::compileProgram(const string source, const map<strin
         // overflow behavior. Floating minimization needs finite-value checks.
         const bool strictMath = source == CommonKernelSources::constantPotentialCGSolver ||
                 allDefines.count("OPENMM_METAL_REQUIRE_SAFE_MATH") != 0;
-        const bool fastMath = false;
+        const bool fastMath = OPENMM_METAL_FAST_MATH && !floatingAccumulators && !strictMath;
         if (@available(macOS 15.0, *)) {
             options.mathMode = fastMath ? MTLMathModeFast : MTLMathModeSafe;
             options.mathFloatingPointFunctions = fastMath ? MTLMathFloatingPointFunctionsFast : MTLMathFloatingPointFunctionsPrecise;

@@ -34,7 +34,7 @@
 // VkFFT defines Metal-cpp's implementation macros: include it in this TU only.
 #define VKFFT_BACKEND 5
 // Keep FFT compilation under the same build-time policy as other Metal kernels.
-#define VKFFT_METAL_FAST_MATH 0
+#define VKFFT_METAL_FAST_MATH OPENMM_METAL_FAST_MATH
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #include "vkFFT.h"

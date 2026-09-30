@@ -70,7 +70,7 @@ struct MetalProgram::Impl {
             code += MetalKernelSources::common+MetalSourceAdapter::translate(source, floating);
             MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
             options.languageVersion = MTLLanguageVersion3_0;
-            const bool fastMath = false;
+            const bool fastMath = OPENMM_METAL_FAST_MATH && !floating && !strictMath;
             if (@available(macOS 15.0, *)) {
                 options.mathMode = fastMath ? MTLMathModeFast : MTLMathModeSafe;
                 options.mathFloatingPointFunctions = fastMath ? MTLMathFloatingPointFunctionsFast : MTLMathFloatingPointFunctionsPrecise;
