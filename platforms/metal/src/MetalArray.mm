@@ -119,6 +119,7 @@ void MetalArray::uploadSubArray(const void* data, int offset, int elements, bool
         throw OpenMMException("Null source for Metal array upload");
     @autoreleasepool {
         MetalQueue& queue = context->getCurrentMetalQueue();
+        auto queueLock = queue.lock();
         id<MTLDevice> device = (__bridge id<MTLDevice>) context->getDevice();
         size_t bytes = size_t(elements)*elementSize;
         id<MTLBuffer> staging;
@@ -131,8 +132,7 @@ void MetalArray::uploadSubArray(const void* data, int offset, int elements, bool
         }
         if (staging == nil)
             throw OpenMMException("Error creating upload buffer for "+name);
-        id<MTLCommandQueue> commandQueue = (__bridge id<MTLCommandQueue>) queue.getQueue();
-        id<MTLCommandBuffer> command = [commandQueue commandBuffer];
+        id<MTLCommandBuffer> command = (__bridge id<MTLCommandBuffer>) queue.getCommandBuffer();
         id<MTLBlitCommandEncoder> encoder = [command blitCommandEncoder];
         if (encoder == nil)
             throw OpenMMException("Error creating Metal upload command");
@@ -154,6 +154,7 @@ void MetalArray::download(void* data, bool blocking) const {
         throw OpenMMException("Null destination for Metal array download");
     @autoreleasepool {
         MetalQueue& queue = context->getCurrentMetalQueue();
+        auto queueLock = queue.lock();
         id<MTLDevice> device = (__bridge id<MTLDevice>) context->getDevice();
         size_t bytes = size*elementSize;
         id<MTLBuffer> staging;
@@ -166,8 +167,7 @@ void MetalArray::download(void* data, bool blocking) const {
         }
         if (staging == nil)
             throw OpenMMException("Error creating download buffer for "+name);
-        id<MTLCommandQueue> commandQueue = (__bridge id<MTLCommandQueue>) queue.getQueue();
-        id<MTLCommandBuffer> command = [commandQueue commandBuffer];
+        id<MTLCommandBuffer> command = (__bridge id<MTLCommandBuffer>) queue.getCommandBuffer();
         id<MTLBlitCommandEncoder> encoder = [command blitCommandEncoder];
         if (encoder == nil)
             throw OpenMMException("Error creating Metal download command");
@@ -191,8 +191,8 @@ void MetalArray::copyTo(ArrayInterface& dest) const {
         return;
     @autoreleasepool {
         MetalQueue& queue = context->getCurrentMetalQueue();
-        id<MTLCommandQueue> commandQueue = (__bridge id<MTLCommandQueue>) queue.getQueue();
-        id<MTLCommandBuffer> command = [commandQueue commandBuffer];
+        auto queueLock = queue.lock();
+        id<MTLCommandBuffer> command = (__bridge id<MTLCommandBuffer>) queue.getCommandBuffer();
         id<MTLBlitCommandEncoder> encoder = [command blitCommandEncoder];
         if (encoder == nil)
             throw OpenMMException("Error creating Metal copy command");

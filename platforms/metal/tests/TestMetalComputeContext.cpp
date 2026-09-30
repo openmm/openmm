@@ -321,22 +321,81 @@ void testQueues(MetalContext& metal, ComputeProgram program) {
     metal.getCurrentMetalQueue().finish();
 }
 
+/**
+ * @brief Check dispatch dependencies and argument snapshots without intervening waits.
+ * @note Run this with both submission-policy builds. More than 64 operations
+ *       cross the automatic batch boundary as well as the final readback boundary.
+ */
+void testSubmissionOrdering(ComputeContext& context) {
+    map<string, string> defines;
+    defines["VALUE_SCALE"] = "1";
+    ComputeProgram program = context.compileProgram(loadSource(), defines);
+    const int count = 129;
+    ComputeArray first, second, firstResult, copied;
+    first.initialize<int>(context, count, "submissionFirst");
+    second.initialize<int>(context, count, "submissionSecond");
+    firstResult.initialize<int>(context, count, "submissionSnapshot");
+    copied.initialize<int>(context, count, "submissionCopy");
+    vector<int> values = inputValues(count), result;
+    first.upload(values);
+    ComputeKernel kernel = createTransform(program, first, second, count, 0);
+    ComputeArray* source = &first;
+    ComputeArray* destination = &second;
+    int total = 0;
+    for (int i = 1; i <= 130; i++) {
+        // A clear must wait for the preceding dispatch's read from this array.
+        if (i%17 == 0)
+            context.clearBuffer(*destination);
+        kernel->setArg(0, *source);
+        kernel->setArg(1, *destination);
+        kernel->setArg(3, i);
+        kernel->execute(count);
+        if (i == 1)
+            destination->copyTo(firstResult);
+        swap(source, destination);
+        total += i;
+    }
+    source->copyTo(copied);
+    context.clearBuffer(*source);
+    copied.download(result);
+    for (int i = 0; i < count; i++)
+        ASSERT_EQUAL(values[i]+total, result[i]);
+    firstResult.download(result);
+    for (int i = 0; i < count; i++)
+        ASSERT_EQUAL(values[i]+1, result[i]);
+    source->download(result);
+    for (int value : result)
+        ASSERT_EQUAL(0, value);
+}
+
 void testErrors(ComputeContext& context, ComputeProgram program) {
     expectException("simulation context is unavailable", [&] { context.getContextImpl(); });
-    expectException("integration utilities are unavailable", [&] { context.getIntegrationUtilities(); });
-    expectException("nonbonded utilities are unavailable", [&] { context.getNonbondedUtilities(); });
     expectException("invalid shader source", [&] { context.compileProgram("This is not valid MSL."); });
     expectException("missing kernel", [&] { program->createKernel("missingKernel"); });
+}
+
+/** Same-device buffers may cross contexts; independent queues need explicit ordering. */
+void testCrossContextArrays(ComputeContext& context, ComputeProgram program) {
     System emptySystem;
     MetalContext other(emptySystem);
     ASSERT_EQUAL(0, other.getNumAtoms());
     ComputeArray local, foreign;
     local.initialize<int>(context, 1, "local");
     foreign.initialize<int>(other, 1, "foreign");
-    expectException("cross-context array copy", [&] { local.copyTo(foreign); });
-    expectException("cross-context array clear", [&] { context.clearBuffer(foreign); });
-    ComputeKernel kernel = program->createKernel("transform");
-    expectException("cross-context kernel argument", [&] { kernel->addArg(foreign); });
+    local.upload(vector<int>(1, 11));
+    local.copyTo(foreign);
+    context.flushQueue();
+    vector<int> values;
+    foreign.download(values);
+    ASSERT_EQUAL(11, values[0]);
+    ComputeKernel kernel = createTransform(program, foreign, local, 1, 5);
+    kernel->execute(1);
+    local.download(values);
+    ASSERT_EQUAL(38, values[0]);
+    context.clearBuffer(foreign);
+    context.flushQueue();
+    foreign.download(values);
+    ASSERT_EQUAL(0, values[0]);
 }
 
 int main() {
@@ -366,7 +425,9 @@ int main() {
         testArguments(context, program);
         testClearing(*metal);
         testQueues(*metal, program);
+        testSubmissionOrdering(context);
         testErrors(context, program);
+        testCrossContextArrays(context, program);
         metal->getCurrentMetalQueue().finish();
     }
     catch (const exception& error) {

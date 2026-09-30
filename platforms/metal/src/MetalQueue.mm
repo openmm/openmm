@@ -41,7 +41,10 @@ using namespace std;
 
 class MetalQueue::Impl {
 public:
+    recursive_mutex mutex;
     id<MTLCommandQueue> queue;
+    id<MTLCommandBuffer> recording;
+    int recordedOperations = 0;
     deque<id<MTLCommandBuffer>> pending;
 };
 
@@ -55,6 +58,11 @@ MetalQueue::MetalQueue(void* device) : impl(new Impl()) {
 
 MetalQueue::~MetalQueue() {
     // Finish outstanding device work; explicit waits report execution errors.
+    // Do not use flush(), since reaping earlier GPU errors could throw here.
+    if (impl->recording != nil) {
+        [impl->recording commit];
+        [impl->recording waitUntilCompleted];
+    }
     for (id<MTLCommandBuffer> buffer : impl->pending)
         [buffer waitUntilCompleted];
 }
@@ -63,25 +71,73 @@ void* MetalQueue::getQueue() const {
     return (__bridge void*) impl->queue;
 }
 
+unique_lock<recursive_mutex> MetalQueue::lock() {
+    return unique_lock<recursive_mutex>(impl->mutex);
+}
+
+void* MetalQueue::getCommandBuffer() {
+    auto guard = lock();
+    if (impl->recording == nil) {
+        impl->recording = [impl->queue commandBuffer];
+        if (impl->recording == nil)
+            throw OpenMMException("Error creating Metal command buffer");
+    }
+    return (__bridge void*) impl->recording;
+}
+
 void MetalQueue::submit(void* commandBuffer) {
+    auto guard = lock();
     id<MTLCommandBuffer> buffer = (__bridge id<MTLCommandBuffer>) commandBuffer;
     if (buffer == nil || buffer.commandQueue != impl->queue)
         throw OpenMMException("Metal command buffer does not belong to this queue");
     if (buffer.status >= MTLCommandBufferStatusCommitted)
         throw OpenMMException("Metal command buffer has already been submitted");
+    if (buffer == impl->recording) {
+        impl->recordedOperations++;
+#if OPENMM_METAL_RECORD_AND_COMMIT
+        flush();
+#else
+        // Bound resources retained by an unfinished batch, even without readbacks.
+        if (impl->recordedOperations >= 64)
+            flush();
+#endif
+    }
+    else {
+        // Event markers and waits must not overtake an unfinished batch.
+        flush();
+        commit(commandBuffer);
+    }
+}
+
+void MetalQueue::commit(void* commandBuffer) {
+    id<MTLCommandBuffer> buffer = (__bridge id<MTLCommandBuffer>) commandBuffer;
     while (!impl->pending.empty() && impl->pending.front().status >= MTLCommandBufferStatusCompleted)
         wait((__bridge void*) impl->pending.front());
     impl->pending.push_back(buffer);
     [buffer commit];
 }
 
+void MetalQueue::flush() {
+    auto guard = lock();
+    if (impl->recording != nil) {
+        commit((__bridge void*) impl->recording);
+        impl->recording = nil;
+        impl->recordedOperations = 0;
+    }
+}
+
 void MetalQueue::finish() {
+    auto guard = lock();
+    flush();
     if (!impl->pending.empty())
         wait((__bridge void*) impl->pending.back());
 }
 
 void MetalQueue::wait(void* commandBuffer) {
+    auto guard = lock();
     id<MTLCommandBuffer> marker = (__bridge id<MTLCommandBuffer>) commandBuffer;
+    if (marker != nil && marker == impl->recording)
+        flush();
     if (marker == nil || marker.commandQueue != impl->queue || marker.status < MTLCommandBufferStatusCommitted)
         throw OpenMMException("Cannot wait for an unsubmitted or foreign Metal command buffer");
     auto markerPosition = find(impl->pending.begin(), impl->pending.end(), marker);

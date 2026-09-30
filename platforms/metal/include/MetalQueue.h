@@ -34,6 +34,7 @@
 
 #include "openmm/common/ComputeQueue.h"
 #include <memory>
+#include <mutex>
 
 namespace OpenMM {
 
@@ -42,7 +43,8 @@ namespace OpenMM {
  *
  * Adapted from CudaQueue. Native handles are kept opaque so callers can include
  * this header from ordinary C++ code.
- * @warning Host calls must be serialized by the caller; this wrapper has no lock.
+ * Recording operations hold lock() across encoding and submission. This permits
+ * Common's worker-thread uploads to share a queue with the simulation thread.
  */
 class MetalQueue : public ComputeQueueImpl {
 public:
@@ -62,34 +64,58 @@ public:
      * @note Submit its command buffers through submit() so completion and errors are tracked.
      */
     void* getQueue() const;
+    /** @brief Serialize a complete encoding operation, including its submission.
+     *  @note Recursive so an operation may call the synchronized queue methods.
+     */
+    std::unique_lock<std::recursive_mutex> lock();
     /**
-     * @brief Retain and commit a command buffer without waiting for GPU execution.
+     * @brief Get the command buffer for the next compute or blit operation.
+     * @return A borrowed, uncommitted native @c id<MTLCommandBuffer> handle.
+     * @note Hold lock(), end the encoder, and call submit() after each operation. With
+     *       OPENMM_METAL_RECORD_AND_COMMIT=0, consecutive operations share a
+     *       command buffer until a submission boundary or 64 operations.
+     */
+    void* getCommandBuffer();
+    /**
+     * @brief Finish recording an operation without waiting for GPU execution.
      * @param commandBuffer Borrowed native @c id<MTLCommandBuffer> from this queue,
      *                      not yet committed.
      * @throws OpenMMException If the buffer is null, foreign, or already committed,
      *         or an earlier completed submission reports an error.
-     * @note Completed submissions are reaped first. If one reports an error, the
-     *       supplied command buffer is not committed by this call.
+     * @note OPENMM_METAL_RECORD_AND_COMMIT=1 commits each operation. When it is 0,
+     *       buffers obtained from getCommandBuffer() are batched. Externally
+     *       created buffers, including event markers and waits, always flush
+     *       earlier recordings and commit immediately to preserve ordering.
      */
     void submit(void* commandBuffer);
     /**
-     * @brief Wait for all currently tracked submissions and report execution errors.
+     * @brief Commit recorded operations without waiting for GPU execution.
+     * @throws OpenMMException If an earlier completed submission reports an error.
+     * @note This is not ComputeContext::flushQueue(), which also waits for execution.
+     */
+    void flush();
+    /**
+     * @brief Submit recorded operations, wait for all submissions, and report errors.
      * @throws OpenMMException If GPU execution fails.
      * @note An empty queue requires no wait. Other queues are not synchronized.
      */
     void finish();
     /**
      * @brief Wait through a submitted marker, checking preceding tracked commands for errors.
-     * @param commandBuffer Borrowed native @c id<MTLCommandBuffer> already committed
-     *                      on this queue; it may already have completed or been reaped.
-     * @throws OpenMMException If the marker is null, uncommitted, or foreign, or GPU
-     *         execution fails. Tracked commands through the marker are drained before
-     *         their first execution error is reported.
+     * @param commandBuffer Borrowed native @c id<MTLCommandBuffer> committed on
+     *                      this queue, or the current recording buffer from
+     *                      getCommandBuffer(), which is submitted before waiting.
+     * @throws OpenMMException If the marker is null, foreign, or an uncommitted
+     *         external buffer, or GPU execution fails. Tracked commands through
+     *         the marker are drained before their first execution error is reported.
      * @note Later submissions are not waited for. Errors from already-reaped preceding
      *       commands are not retained; the marker's own status is always checked.
+     *       Waiting for a recording buffer submits and waits for its entire batch.
      */
     void wait(void* commandBuffer);
 private:
+    /** Commit one buffer and track it until execution completes. */
+    void commit(void* commandBuffer);
     class Impl;
     std::unique_ptr<Impl> impl;
 };
