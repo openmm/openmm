@@ -30,13 +30,96 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "openmm/CustomVolumeForce.h"
+#include "openmm/CustomIntegrator.h"
 #include "openmm/Platform.h"
+#include "openmm/internal/ForceImpl.h"
 #include "openmm/VerletIntegrator.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
 
 using namespace OpenMM;
 using namespace std;
+
+
+class CountingForce : public Force {
+public:
+    mutable int evaluations = 0;
+
+    bool usesPeriodicBoundaryConditions() const override {
+        return false;
+    }
+
+protected:
+    ForceImpl* createImpl() const override;
+};
+
+class CountingForceImpl : public ForceImpl {
+public:
+    CountingForceImpl(const CountingForce& owner) : owner(owner) {
+        forceGroup = owner.getForceGroup();
+    }
+
+    void initialize(ContextImpl& context) override {
+    }
+
+    const CountingForce& getOwner() const override {
+        return owner;
+    }
+
+    void updateContextState(ContextImpl& context, bool& forcesInvalid) override {
+        // This force does not modify the context.
+    }
+
+    double calcForcesAndEnergy(ContextImpl& context, bool includeForces,
+                               bool includeEnergy, int groups) override {
+        if ((groups & (1<<forceGroup)) != 0)
+            owner.evaluations++;
+        return 0.0;
+    }
+
+    map<string, double> getDefaultParameters() override {
+        return {};
+    }
+
+    vector<string> getKernelNames() override {
+        return {};
+    }
+
+private:
+    const CountingForce& owner;
+};
+
+ForceImpl* CountingForce::createImpl() const {
+    return new CountingForceImpl(*this);
+}
+
+void testNoSpuriousForceInvalidation() {
+    System system;
+    system.setDefaultPeriodicBoxVectors(
+        Vec3(2, 0, 0), Vec3(0, 2, 0), Vec3(0, 0, 2));
+    system.addParticle(1.0);
+
+    CountingForce* counter = new CountingForce();
+    system.addForce(counter);
+
+    // CustomVolumeForce does not modify positions, parameters, or other state.
+    system.addForce(new CustomVolumeForce("v"));
+
+    CustomIntegrator integrator(0.001);
+    integrator.addPerDofVariable("scratch", 0);
+    integrator.addComputePerDof("scratch", "f");
+    integrator.addUpdateContextState();
+    integrator.addComputePerDof("scratch", "f");
+
+    Context context(system, integrator, Platform::getPlatform("Reference"));
+    context.setPositions({Vec3()});
+
+    counter->evaluations = 0;
+    integrator.step(1);
+
+    cout << "Force evaluations: " << counter->evaluations << endl;
+    ASSERT_EQUAL(1, counter->evaluations);
+}
 
 void testVolume() {
     System system;
@@ -126,6 +209,7 @@ int main(int argc, char* argv[]) {
         testVolume();
         testBoxVectors();
         testGlobalParameters();
+        testNoSpuriousForceInvalidation();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
