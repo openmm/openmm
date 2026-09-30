@@ -1,0 +1,159 @@
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * This is part of the OpenMM molecular simulation toolkit.                   *
+ * See https://openmm.org/development.                                        *
+ *                                                                            *
+ * Metal Platform code:                                                       *
+ * Portions copyright (c) 2026 Chun-Chi Hung.                                 *
+ * Authors: Chun-Chi Hung                                                     *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU Lesser General Public License as published   *
+ * by the Free Software Foundation, either version 3 of the License, or       *
+ * (at your option) any later version.                                        *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the        *
+ * implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. *
+ * See the GNU Lesser General Public License for more details.                *
+ * You should have received a copy of the GNU Lesser General Public License  *
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.       *
+ * -------------------------------------------------------------------------- */
+
+#include "MetalContext.h"
+#include "MetalSourceAdapter.h"
+#include "CommonKernelSources.h"
+#include "openmm/System.h"
+#include "openmm/common/ComputeArray.h"
+#include "openmm/internal/AssertionUtilities.h"
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <iostream>
+#include <limits>
+
+using namespace OpenMM;
+using namespace std;
+
+/** A same-named user helper must retain its own atomic operation semantics. */
+void testSelection() {
+    string unrelated = "DEVICE void atomicAddMixed(GLOBAL mixed* target, mixed value) { *target = value; }\n"
+        "KERNEL void probe(GLOBAL int* result) { result[GLOBAL_ID] = 0; }\n";
+    ASSERT(MetalSourceAdapter::translate(unrelated).find("metalAtomicAdd(target, value)") == string::npos);
+}
+
+/** Stress both float atomic primitives and their fetch-add return contract. */
+void testFloatAtomics() {
+    System system;
+    system.addParticle(1);
+    MetalContext context(system);
+    const string& minimize = CommonKernelSources::minimize;
+    size_t begin = minimize.find("DEVICE void atomicAddMixed(");
+    size_t end = minimize.find("KERNEL void recordInitialPos(", begin);
+    ASSERT(begin != string::npos && end != string::npos);
+    const string source = minimize.substr(begin, end-begin)+R"(
+KERNEL void accumulate(GLOBAL float* sums, GLOBAL float* previous, int count) {
+    for (int i = GLOBAL_ID; i < count; i += GLOBAL_SIZE) {
+        atomicAddMixed(sums, 1.0f);
+        ATOMIC_ADD(sums+1, -1.0f);
+        previous[i] = ATOMIC_ADD(sums+2, 1.0f);
+    }
+}
+
+)";
+    const int count = 10001;
+    ComputeArray sums, previous;
+    sums.initialize<float>(context, 3, "floatAtomicSums");
+    previous.initialize<float>(context, count, "floatAtomicPrevious");
+    {
+        ComputeKernel kernel = context.compileProgram(source)->createKernel("accumulate");
+        kernel->addArg(sums);
+        kernel->addArg(previous);
+        kernel->addArg(count);
+        context.clearBuffer(sums);
+        kernel->execute(count);
+        vector<float> values;
+        sums.download(values);
+        ASSERT_EQUAL(float(count), values[0]);
+        ASSERT_EQUAL(-float(count), values[1]);
+        ASSERT_EQUAL(float(count), values[2]);
+        previous.download(values);
+        sort(values.begin(), values.end());
+        for (int i = 0; i < count; i++) ASSERT_EQUAL(float(i), values[i]);
+    }
+}
+
+/** Verify the checked conversion and its hidden Common buffer binding on the GPU. */
+void testFixedPointRangeDiagnostic() {
+    System system;
+    system.addParticle(1);
+    MetalContext context(system);
+    const string source = R"(
+KERNEL void diagnosticState(GLOBAL uint* state, int action) {
+    if (GLOBAL_ID != 0) return;
+#if OPENMM_METAL_CHECK_FIXED_POINT_RANGE
+    if (action == 1) {
+        atomic_store_explicit(_metal.fixedPointRange, 1u, memory_order_relaxed);
+        atomic_store_explicit(_metal.fixedPointRange+1, 0u, memory_order_relaxed);
+    }
+    if (action == 2)
+        atomic_store_explicit(_metal.fixedPointRange, 0u, memory_order_relaxed);
+    state[0] = 1;
+    state[1] = atomic_load_explicit(_metal.fixedPointRange+1, memory_order_relaxed);
+#else
+    state[0] = 0;
+    state[1] = 0;
+#endif
+}
+KERNEL void convertChecked(GLOBAL const float* input, GLOBAL mm_long* output) {
+    if (GLOBAL_ID < 8) output[GLOBAL_ID] = realToFixedPoint(input[GLOBAL_ID]);
+}
+)";
+    ComputeArray state, input, output;
+    state.initialize<unsigned int>(context, 2, "fixedPointDiagnosticState");
+    input.initialize<float>(context, 8, "fixedPointDiagnosticInput");
+    output.initialize<int64_t>(context, 8, "fixedPointDiagnosticOutput");
+    ComputeProgram program = context.compileProgram(source);
+    ComputeKernel inspect = program->createKernel("diagnosticState");
+    inspect->addArg(state);
+    inspect->addArg(1);
+    inspect->execute(32, 32);
+    vector<unsigned int> flags;
+    state.download(flags);
+    if (flags[0] == 0) return; // Float-minimization builds do not require this diagnostic ABI.
+    ASSERT_EQUAL(0u, flags[1]);
+    const float limit = 2147483648.0f;
+    input.upload(vector<float>{1.25f, -3.5f, limit, -limit,
+        numeric_limits<float>::infinity(), -numeric_limits<float>::infinity(),
+        numeric_limits<float>::quiet_NaN(), nextafter(limit, 0.0f)});
+    ComputeKernel convert = program->createKernel("convertChecked");
+    convert->addArg(input);
+    convert->addArg(output);
+    convert->execute(32, 32);
+    vector<int64_t> values;
+    output.download(values);
+    ASSERT_EQUAL(int64_t(5368709120), values[0]);
+    ASSERT_EQUAL(int64_t(-15032385536), values[1]);
+    for (int i = 2; i <= 6; i++) ASSERT_EQUAL(int64_t(0), values[i]);
+    ASSERT_EQUAL(int64_t(2147483520)*int64_t(4294967296), values[7]);
+    inspect->setArg(1, 0);
+    inspect->execute(32, 32);
+    state.download(flags);
+    ASSERT_EQUAL(1u, flags[1]);
+    inspect->setArg(1, 2);
+    inspect->execute(32, 32);
+}
+
+int main() {
+    try {
+        testSelection();
+        testFloatAtomics();
+        testFixedPointRangeDiagnostic();
+    }
+    catch (const exception& error) {
+        if (string(error.what()).find("No Metal device") != string::npos)
+            return 77;
+        cerr << error.what() << endl;
+        return 1;
+    }
+    cout << "Metal source adapter tests passed" << endl;
+    return 0;
+}
