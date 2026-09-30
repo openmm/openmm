@@ -33,37 +33,80 @@ inline void replace(std::string& source, const std::string& before, const std::s
     } while (offset != std::string::npos);
 }
 
-/** @brief Adapt only CUDA's sparse-pair fragments; tiled interactions remain OpenCL. */
+/** @brief Retain CUDA's register-shuffle algorithm, replacing only its platform spelling. */
+inline std::string cudaSource() {
+    // Single precision does not need CUDA's PTX double/64-bit shuffle overloads.
+    const std::string& original = MetalCudaKernelSources::nonbonded;
+    size_t start = original.find("__device__ void saveSingleForce");
+    if (start == std::string::npos)
+        throw OpenMMException("CUDA nonbonded template no longer contains saveSingleForce");
+    std::string source = original.substr(start);
+    replace(source, "static_cast<unsigned long long>", "(mm_ulong)");
+    replace(source, "unsigned long long", "mm_ulong");
+    replace(source, "long long", "mm_long");
+    replace(source, "extern \"C\" __global__", "KERNEL");
+    replace(source, "__device__", "DEVICE");
+    replace(source, "__shared__", "LOCAL");
+    replace(source, "__restrict__", "RESTRICT");
+    replace(source, "atomicAdd(", "ATOMIC_ADD(");
+    // Only CUDA's single-pair helper uses these atom-index spellings. The
+    // independently gated aggregation macro is identical to ATOMIC_ADD when OFF.
+    for (const std::string offset : {"atom", "atom+PADDED_NUM_ATOMS", "atom+2*PADDED_NUM_ATOMS"})
+        replace(source, "ATOMIC_ADD(&forceBuffers["+offset+"],",
+            "METAL_ACCUMULATE_SPARSE_FORCE(forceBuffers, "+offset+",");
+    replace(source, "blockIdx.x", "get_group_id(0)");
+    replace(source, "blockDim.x", "get_local_size(0)");
+    replace(source, "gridDim.x", "get_num_groups(0)");
+    replace(source, "threadIdx.x", "get_local_id(0)");
+    // Keep atom indices in registers along with CUDA's positions/parameters.
+    // Their source lane follows the same tile rotation as the pair data.
+    replace(source, "LOCAL int atomIndices[THREAD_BLOCK_SIZE];", "uint shflAtomIndex;");
+    replace(source, "atomIndices[get_local_id(0)] = j;", "shflAtomIndex = j;");
+    replace(source, "atomIndices[tbx+tj]", "simdShuffle(shflAtomIndex, uint(tj))");
+    replace(source, "atomIndices[get_local_id(0)]", "shflAtomIndex");
+    replace(source, "// atomIndices can probably be shuffled as well\n    // but it probably wouldn't make things any faster",
+        "// The Metal adaptation also keeps atom indices in SIMD registers.");
+    // The no-cutoff exclusion skip list is another 32-lane broadcast. Retain
+    // CUDA's search algorithm without its implicit shared-memory warp ordering.
+    replace(source, "LOCAL volatile int skipTiles[THREAD_BLOCK_SIZE];", "int skipTile;");
+    replace(source, "skipTiles[get_local_id(0)]", "skipTile");
+    replace(source, "skipTiles[tbx+TILE_SIZE-1]", "simdShuffle(skipTile, uint(TILE_SIZE-1))");
+    replace(source, "skipTiles[currentSkipIndex]", "simdShuffle(skipTile, uint(currentSkipIndex-tbx))");
+    // Only the original template is processed; generated parameter arguments
+    // already have Common address spaces when substituted by the caller.
+    for (const std::string type : {"mm_ulong", "mixed", "real4", "tileflags", "int2", "int", "unsigned int"}) {
+        const std::string mutablePointer = type+"* RESTRICT";
+        const std::string constantPointer = "const "+type+"* RESTRICT";
+        if (source.find(constantPointer) != std::string::npos)
+            replace(source, constantPointer, "GLOBAL const "+type+"* RESTRICT");
+        else if (source.find(mutablePointer) != std::string::npos)
+            replace(source, mutablePointer, "GLOBAL "+type+"* RESTRICT");
+    }
+    replace(source, "mm_ulong* forceBuffers", "GLOBAL mm_ulong* forceBuffers");
+    replace(source, ", unsigned int maxSinglePairs,\n        GLOBAL const int2* RESTRICT singlePairs",
+        "\n#ifdef USE_SPARSE_PAIRS\n, unsigned int maxSinglePairs, GLOBAL const int2* RESTRICT singlePairs\n#endif\n");
+    replace(source, "#if USE_NEIGHBOR_LIST", "#ifdef USE_SPARSE_PAIRS");
+    // MSL source lanes must explicitly wrap, unlike CUDA's SHFL lane operand.
+    return "#define WARPS_PER_GROUP (THREAD_BLOCK_SIZE/TILE_SIZE)\n"
+        "#define real_shfl(value, lane) simdShuffle(value, uint(lane)&31u)\n"
+        "typedef uint tileflags;\n"+source;
+}
+
+/** @brief Reuse CUDA's sparse-pair force loop with either tiled force algorithm. */
 inline void addOpenCLPairs(std::string& source) {
-    const std::string& cuda = MetalCudaKernelSources::nonbonded;
-    size_t helperBegin = cuda.find("__device__ void saveSingleForce");
-    size_t helperEnd = cuda.find("/**", helperBegin);
+    const std::string cuda = cudaSource();
+    size_t helperEnd = cuda.find("/**", cuda.find("DEVICE void saveSingleForce"));
     size_t pairsBegin = cuda.find("    // Third loop: single pairs");
     size_t pairsEnd = cuda.find("#ifdef INCLUDE_ENERGY", pairsBegin);
-    if (helperBegin == std::string::npos || helperEnd == std::string::npos ||
-            pairsBegin == std::string::npos || pairsEnd == std::string::npos)
+    if (helperEnd == std::string::npos || pairsBegin == std::string::npos || pairsEnd == std::string::npos)
         throw OpenMMException("CUDA sparse-pair template changed");
-    std::string helper = cuda.substr(helperBegin, helperEnd-helperBegin);
-    replace(helper, "static_cast<unsigned long long>", "(mm_ulong)");
-    replace(helper, "unsigned long long", "mm_ulong");
-    replace(helper, "__device__", "DEVICE");
-    replace(helper, "atomicAdd(", "ATOMIC_ADD(");
-    for (const std::string offset : {"atom", "atom+PADDED_NUM_ATOMS", "atom+2*PADDED_NUM_ATOMS"})
-        replace(helper, "ATOMIC_ADD(&forceBuffers["+offset+"],",
-            "METAL_ACCUMULATE_SPARSE_FORCE(forceBuffers, "+offset+",");
-    replace(helper, "mm_ulong* forceBuffers", "GLOBAL mm_ulong* forceBuffers");
-    std::string pairs = cuda.substr(pairsBegin, pairsEnd-pairsBegin);
-    replace(pairs, "blockIdx.x", "get_group_id(0)");
-    replace(pairs, "blockDim.x", "get_local_size(0)");
-    replace(pairs, "gridDim.x", "get_num_groups(0)");
-    replace(pairs, "threadIdx.x", "get_local_id(0)");
-    replace(pairs, "#if USE_NEIGHBOR_LIST", "#ifdef USE_SPARSE_PAIRS");
     const std::string anchor = "#ifdef INCLUDE_ENERGY\n    energyBuffer[get_global_id(0)] += energy;";
-    replace(source, anchor, pairs+anchor);
+    replace(source, anchor, cuda.substr(pairsBegin, pairsEnd-pairsBegin)+anchor);
     replace(source, "__global const int* restrict interactingAtoms\n#endif",
         "__global const int* restrict interactingAtoms\n"
         "#ifdef USE_SPARSE_PAIRS\n, unsigned int maxSinglePairs, GLOBAL const int2* singlePairs\n#endif\n#endif");
-    source = helper+source;
+    const size_t helperBegin = cuda.find("DEVICE void saveSingleForce");
+    source = cuda.substr(helperBegin, helperEnd-helperBegin)+source;
 }
 
 /** @brief Shared by the production compression and its boundary-value regression. */
