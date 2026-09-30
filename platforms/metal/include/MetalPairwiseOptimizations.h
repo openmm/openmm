@@ -44,6 +44,7 @@ public:
     struct Settings {
         bool customGBValue = false;
         bool customGBEnergy = false;
+        bool dpdParticles = false;
     };
 
     /** @return Settings selected by the independent build-time switches. */

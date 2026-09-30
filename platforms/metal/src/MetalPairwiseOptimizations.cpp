@@ -149,6 +149,32 @@ string customGB(string source) {
     return source;
 }
 
+/** DPD preserves i=0..31 visitation, hence the original per-lane RNG consumption. */
+string dpdParticles(string source) {
+    replace(source, "LOCAL mixed3 localPos[WORK_GROUP_SIZE];", "mixed3 localPos = make_mixed3(0);", 1);
+    replace(source, "LOCAL mixed4 localVel[WORK_GROUP_SIZE];", "mixed4 localVel = make_mixed4(0);", 1);
+    replace(source, "LOCAL volatile int localType[WORK_GROUP_SIZE];", "int localType = 0;", 1);
+    replace(source, "LOCAL int atomIndices[WORK_GROUP_SIZE];", "int atomIndices = 0;", 1);
+    for (const string& name : {"localPos", "localVel", "localType", "atomIndices"}) {
+        replace(source, name+"[LOCAL_ID]", name);
+        replace(source, name+"[tbx+i]", "_metal_broadcast_"+name);
+    }
+    // Padded atom1 lanes still provide their particle to other active lanes.
+    replace(source, "if (atom1 < numAtoms) {", "{", 3);
+    replace(source, "if ((x != y || atom1 < atom2) && atom2 < numAtoms)",
+            "if (atom1 < numAtoms && (x != y || atom1 < atom2) && atom2 < numAtoms)", 1);
+    replace(source, "if (atom2 < numAtoms)", "if (atom1 < numAtoms && atom2 < numAtoms)", 2);
+    const string loop = "for (int i = 0; i < TILE_SIZE; i++) {";
+    const string broadcast = "\nmixed3 _metal_broadcast_localPos = simdShuffle(localPos, i);\n"
+            "mixed4 _metal_broadcast_localVel = simdShuffle(localVel, i);\n"
+            "int _metal_broadcast_localType = simdShuffle(localType, i);\n";
+    const size_t split = source.find("// Second loop: process tiles from the neighbor list.");
+    string first = source.substr(0, split), second = source.substr(split);
+    replace(first, loop, loop+broadcast, 1);
+    replace(second, loop, loop+broadcast+"int _metal_broadcast_atomIndices = simdShuffle(atomIndices, i);\n", 2);
+    return first+second;
+}
+
 const set<string> customGBHoles = {"PARAMETER_ARGUMENTS", "ATOM_PARAMETER_DATA", "LOAD_ATOM1_PARAMETERS",
     "LOAD_ATOM2_PARAMETERS", "LOAD_LOCAL_PARAMETERS_FROM_1", "LOAD_LOCAL_PARAMETERS_FROM_GLOBAL",
     "COMPUTE_VALUE", "ADD_TEMP_DERIVS1", "ADD_TEMP_DERIVS2", "STORE_PARAM_DERIVS1", "STORE_PARAM_DERIVS2",
@@ -165,6 +191,9 @@ MetalPairwiseOptimizations::Settings MetalPairwiseOptimizations::getBuildSetting
 #if OPENMM_METAL_FAST_CUSTOM_GB_ENERGY_SHUFFLE
     settings.customGBEnergy = true;
 #endif
+#if OPENMM_METAL_FAST_DPD_PARTICLE_SHUFFLE
+    settings.dpdParticles = true;
+#endif
     return settings;
 }
 
@@ -177,5 +206,7 @@ string MetalPairwiseOptimizations::apply(const string& source, const Settings& s
         return checkedSource(customGB(source));
     if (settings.customGBEnergy && matchesTemplate(source, CommonKernelSources::customGBEnergyN2, customGBHoles))
         return checkedSource(customGB(source));
+    if (settings.dpdParticles && source == CommonKernelSources::dpd)
+        return checkedSource(dpdParticles(source));
     return source;
 }
