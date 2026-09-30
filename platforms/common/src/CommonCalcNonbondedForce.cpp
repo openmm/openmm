@@ -34,11 +34,18 @@
 #include <algorithm>
 #include <assert.h>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <iterator>
 #include <set>
 
 using namespace OpenMM;
 using namespace std;
+
+static bool isPmeExperimentEnabled(const char* name) {
+    const char* value = getenv(name);
+    return value != NULL && strcmp(value, "1") == 0;
+}
 
 class CommonCalcNonbondedForceKernel::ForceInfo : public ComputeForceInfo {
 public:
@@ -419,6 +426,12 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
                 pmeDefines["USE_FIXED_POINT_CHARGE_SPREADING"] = "1";
             if (deviceIsCpu)
                 pmeDefines["DEVICE_IS_CPU"] = "1";
+            // These experiments were developed only for ordinary mixed CUDA
+            // PME using its cuFFT backend. Every option is explicit opt-in.
+            const bool eligiblePme = supportsPmeExperiments() && nonbondedMethod == PME && hasCoulomb &&
+                    !doLJPME && cc.getUseMixedPrecision() && !useFixedPointChargeSpreading && !hasOffsets &&
+                    usePmeQueue && !useCpuPme && !deviceIsCpu && cc.getNumContexts() == 1;
+            usePmeRealGridClear = eligiblePme && isPmeExperimentEnabled("OPENMM_EXPERIMENT_PME_REAL_GRID_CLEAR");
             if (useCpuPme && !doLJPME && usePosqCharges) {
                 // Create the CPU PME kernel.
 
@@ -443,7 +456,9 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
                 if (doLJPME) {
                     gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);
                 }
-                pmeGrid1.initialize(cc, gridElements, 2*elementSize, "pmeGrid1");
+                // CUDA out-of-place R2C/C2R uses a real input/output array. On the
+                // guarded path allocate and autoclear exactly that real extent.
+                pmeGrid1.initialize(cc, gridElements, (usePmeRealGridClear ? 1 : 2)*elementSize, "pmeGrid1");
                 pmeGrid2.initialize(cc, gridElements, 2*elementSize, "pmeGrid2");
                 if (useFixedPointChargeSpreading)
                     cc.addAutoclearBuffer(pmeGrid2);
