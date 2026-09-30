@@ -864,9 +864,6 @@ typedef struct {
 typedef struct {
 	uint32_t dataUint32[10];
 	uint64_t dataUint64[10];
-#if(VKFFT_BACKEND == 5)
-	MTL::Buffer* dataUintBuffer;
-#endif
 	//specify what can be in layout
 	uint64_t performWorkGroupShift[3];
 	uint64_t workGroupShift[3];
@@ -28456,10 +28453,6 @@ static inline void deleteAxis(VkFFTApplication* app, VkFFTAxis* axis) {
 		if (res == ZE_RESULT_SUCCESS)axis->VkFFTKernel = 0;
 	}
 #elif(VKFFT_BACKEND==5)
-	if (axis->pushConstants.dataUintBuffer) {
-		axis->pushConstants.dataUintBuffer->release();
-		axis->pushConstants.dataUintBuffer = 0;
-	}
 	if ((app->configuration.useLUT == 1) && (!axis->referenceLUT) && (axis->bufferLUT != 0)) {
 		((MTL::Buffer*)axis->bufferLUT)->release();
 		//free(axis->bufferLUT);
@@ -41110,7 +41103,6 @@ static inline VkFFTResult dispatchEnhanced(VkFFTApplication* app, VkFFTAxis* axi
 				}
 #elif(VKFFT_BACKEND==5)
 				app->configuration.commandEncoder->setComputePipelineState(axis->pipeline);
-				void* args[10];
 				app->configuration.commandEncoder->setBuffer(axis->inputBuffer[0], 0, 0);
 				app->configuration.commandEncoder->setBuffer(axis->outputBuffer[0], 0, 1);
 				app->configuration.commandEncoder->setThreadgroupMemoryLength((uint64_t)ceil(axis->specializationConstants.usedSharedMemory / 16.0) * 16, 0);
@@ -41139,33 +41131,14 @@ static inline VkFFTResult dispatchEnhanced(VkFFTApplication* app, VkFFTAxis* axi
 					app->configuration.commandEncoder->setBuffer(app->bufferBluestein[axis->specializationConstants.axis_id], 0, args_id);
 					args_id++;
 				}
-				//args[args_id] = &axis->pushConstants;
+				// setBytes snapshots constants for this dispatch. Reusing shared memory
+				// here corrupts earlier encoded dispatches before GPU execution.
 				if (axis->pushConstants.structSize > 0) {
-					if (app->configuration.useUint64) {
-						if (!axis->pushConstants.dataUintBuffer) {
-							axis->pushConstants.dataUintBuffer = app->configuration.device->newBuffer(axis->pushConstants.structSize, MTL::ResourceStorageModeShared);
-							memcpy(axis->pushConstants.dataUintBuffer->contents(), axis->pushConstants.dataUint64, axis->pushConstants.structSize);
-							axis->updatePushConstants = 0;
-						}
-						else if (axis->updatePushConstants) {
-							memcpy(axis->pushConstants.dataUintBuffer->contents(), axis->pushConstants.dataUint64, axis->pushConstants.structSize);
-							axis->updatePushConstants = 0;
-						}
-						app->configuration.commandEncoder->setBuffer(axis->pushConstants.dataUintBuffer, 0, args_id);
-					}
-					else {
-						if (!axis->pushConstants.dataUintBuffer) {
-							axis->pushConstants.dataUintBuffer = app->configuration.device->newBuffer(axis->pushConstants.structSize, MTL::ResourceStorageModeShared);
-							memcpy(axis->pushConstants.dataUintBuffer->contents(), axis->pushConstants.dataUint32, axis->pushConstants.structSize);
-							axis->updatePushConstants = 0;
-						}
-						else if (axis->updatePushConstants) {
-							memcpy(axis->pushConstants.dataUintBuffer->contents(), axis->pushConstants.dataUint32, axis->pushConstants.structSize);
-							axis->updatePushConstants = 0;
-						}
-						app->configuration.commandEncoder->setBuffer(axis->pushConstants.dataUintBuffer, 0, args_id);
-					}
-					args_id++;
+					const void* values = app->configuration.useUint64
+						? (const void*)axis->pushConstants.dataUint64
+						: (const void*)axis->pushConstants.dataUint32;
+					app->configuration.commandEncoder->setBytes(values, axis->pushConstants.structSize, args_id);
+					axis->updatePushConstants = 0;
 				}
 				MTL::Size threadsPerGrid = { dispatchSize[0] * axis->specializationConstants.localSize[0], dispatchSize[1] * axis->specializationConstants.localSize[1],dispatchSize[2] * axis->specializationConstants.localSize[2] };
 				MTL::Size threadsPerThreadgroup = { axis->specializationConstants.localSize[0],axis->specializationConstants.localSize[1], axis->specializationConstants.localSize[2] };
