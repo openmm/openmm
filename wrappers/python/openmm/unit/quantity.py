@@ -682,7 +682,11 @@ class Quantity(object):
                 value = copy.deepcopy(self._value)
                 result = Quantity(self._scale_sequence(value, factor, post_multiply), new_unit)
         if (new_unit.is_dimensionless()):
-            return result._value
+            # A dimensionless unit can still carry a conversion factor, e.g.
+            # nanometer/angstrom is dimensionless but equals 10.  Returning
+            # _value directly would drop that factor and silently produce a
+            # number that is wrong by it, so reduce instead.
+            return result.reduce_unit()
         else:
             return result
 

@@ -607,6 +607,19 @@ class TestUnits(QuantityTestCase):
         """ Test that illegal operations on Quantity objects fails """
         self.assertRaises(TypeError, lambda: u.milli * (1.0 * u.second))
 
+    def testDimensionlessUnitWithScaleFactor(self):
+        """ Tests that scalar arithmetic keeps the scale factor of a dimensionless unit """
+        # nanometer/angstrom is dimensionless but equals 10, so this quantity
+        # is 30. Multiplying or dividing by a scalar must not drop that factor.
+        x = 3.0 * (u.nanometer/u.angstrom)
+        self.assertEqual(x.value_in_unit(u.dimensionless), 30.0)
+        self.assertAlmostEqual(x * 3.0, 90.0)
+        self.assertAlmostEqual(3.0 * x, 90.0)
+        self.assertAlmostEqual(x / 3.0, 10.0)
+        # a dimensionless unit whose factor is 1 is unaffected
+        y = 3.0 * (u.nanometer/u.nanometer)
+        self.assertAlmostEqual(y * 3.0, 9.0)
+
     def testQuantityFormat(self):
         """ Tests the format method on Quantity instances """
         x = 5.439999999 * u.picosecond
