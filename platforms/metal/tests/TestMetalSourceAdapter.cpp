@@ -33,9 +33,21 @@
 using namespace OpenMM;
 using namespace std;
 
-/** A same-named user helper must retain its own atomic operation semantics. */
+/** Verify each independent switch actually selects its exact template function. */
 void testSelection() {
-    string unrelated = "DEVICE void atomicAddMixed(GLOBAL mixed* target, mixed value) { *target = value; }\n"
+    for (bool floating : {false, true}) {
+        string groups = MetalSourceAdapter::translate(CommonKernelSources::customNonbondedGroups, floating);
+        ASSERT_EQUAL(bool(OPENMM_METAL_FAST_CUSTOM_NONBONDED_GROUPS_SHUFFLE), groups.find("simd_shuffle_xor(") != string::npos);
+        for (const string& source : {groups}) {
+            ASSERT(source.find("#define __CUDA_ARCH__") == string::npos);
+            ASSERT(source.find("#define USE_HIP") == string::npos);
+        }
+    }
+    // A user helper with the same name must not acquire an unrelated fast path.
+    string unrelated = "DEVICE int reduceMax(int val, LOCAL_ARG int* temp) { return val; }\n"
+        "KERNEL void probe(GLOBAL int* result) { result[GLOBAL_ID] = 0; }\n";
+    ASSERT(MetalSourceAdapter::translate(unrelated).find("simd_shuffle_xor(") == string::npos);
+    unrelated = "DEVICE void atomicAddMixed(GLOBAL mixed* target, mixed value) { *target = value; }\n"
         "KERNEL void probe(GLOBAL int* result) { result[GLOBAL_ID] = 0; }\n";
     ASSERT(MetalSourceAdapter::translate(unrelated).find("metalAtomicAdd(target, value)") == string::npos);
 }
@@ -154,11 +166,38 @@ KERNEL void convertChecked(GLOBAL const float* input, GLOBAL mm_long* output) {
     inspect->execute(32, 32);
 }
 
+/** Exercise the exact MSL3 xor-shuffle reduction across two SIMD groups. */
+void testShuffle() {
+    System system;
+    system.addParticle(1);
+    MetalContext context(system);
+    const string source = R"(
+#include <metal_stdlib>
+using namespace metal;
+kernel void shuffleMaximum(device uint* output [[buffer(0)]], uint gid [[thread_position_in_grid]]) {
+    uint maximum = gid;
+    for (int mask = 16; mask > 0; mask /= 2)
+        maximum = max(maximum, simd_shuffle_xor(maximum, mask));
+    output[gid] = maximum;
+}
+)";
+    ComputeArray output;
+    output.initialize<unsigned int>(context, 64, "shuffleMaximumOutput");
+    ComputeKernel kernel = context.compileProgram(source)->createKernel("shuffleMaximum");
+    kernel->addArg(output);
+    kernel->execute(64, 64);
+    vector<unsigned int> result;
+    output.download(result);
+    for (int i = 0; i < 64; i++)
+        ASSERT_EQUAL(32u*(i/32)+31u, result[i]);
+}
+
 int main() {
     try {
         testSelection();
         testFloatAtomics();
         testFixedPointRangeDiagnostic();
+        testShuffle();
     }
     catch (const exception& error) {
         if (string(error.what()).find("No Metal device") != string::npos)
@@ -166,6 +205,6 @@ int main() {
         cerr << error.what() << endl;
         return 1;
     }
-    cout << "Metal source adapter tests passed" << endl;
+    cout << "Metal source adapter fast-path tests passed" << endl;
     return 0;
 }

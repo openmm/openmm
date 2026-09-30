@@ -35,6 +35,8 @@ namespace OpenMM {
  * the host program supplies the matching argument encoder. Scoped minimization
  * additionally adapts audited fixed-point accumulator types and conversions to
  * float, preserving ordinary 64-bit integer indices and random-number state.
+ * Independent build switches can select existing CUDA branches within exact
+ * Common template functions, without changing other kernels' platform defines.
  */
 class MetalSourceAdapter {
 public:

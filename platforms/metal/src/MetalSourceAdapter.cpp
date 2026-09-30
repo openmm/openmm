@@ -197,6 +197,46 @@ string templateFunction(const string& source, const string& name) {
 }
 
 /**
+ * Select the existing CUDA shuffle branch only inside its exact Common helper.
+ * Keep other program functions and platform preprocessor branches unchanged.
+ */
+void appendFastPathEdits(const string& source, const vector<Token>& tokens,
+        const vector<Function>& functions, vector<Edit>& edits) {
+    for (const Function& function : functions) {
+        if (function.name != "reduceMax") continue;
+        bool shuffle = false;
+        const string body = source.substr(tokens[function.start].begin,
+                tokens[function.end].end-tokens[function.start].begin);
+#if OPENMM_METAL_FAST_CUSTOM_NONBONDED_GROUPS_SHUFFLE
+        static const string original = templateFunction(CommonKernelSources::customNonbondedGroups, "reduceMax");
+        shuffle = (body == original);
+#endif
+        if (!shuffle) continue;
+        int selectedBranches = 0, calls = 0;
+        for (size_t i = function.body+1; i < function.end; i++) {
+            const Token& token = tokens[i];
+            if (token.directive) {
+                string directive;
+                for (char c : token.text)
+                    if (!isspace(static_cast<unsigned char>(c))) directive += c;
+                if (directive == "#ifdefined(__CUDA_ARCH__)&&__CUDA_ARCH__>=700") {
+                    edits.push_back({token.begin, token.end, "#if 1 // Scoped Metal CUDA-derived fast path\n"});
+                    selectedBranches++;
+                }
+                continue;
+            }
+            if (token.text == "__shfl_xor_sync" && i+3 < function.end &&
+                    tokens[i+1].text == "(" && tokens[i+2].text == "0xffffffff" && tokens[i+3].text == ",") {
+                edits.push_back({token.begin, tokens[i+3].end, "simd_shuffle_xor("});
+                calls++;
+            }
+        }
+        if (selectedBranches != 1 || calls != 1)
+            throw OpenMMException("Common template changed: review the Metal fast path for "+function.name);
+    }
+}
+
+/**
  * Rewrite the audited fixed-point ABI for scoped floating-accumulator execution.
  * Integer tile counts, matrix indices, and the DPD random state stay 64-bit.
  * This pass precedes signature adaptation, so reflection sees float pointers.
@@ -334,6 +374,7 @@ string MetalSourceAdapter::translate(const string& originalSource, bool floating
     const vector<Token> tokens = tokenize(source);
     const vector<Function> functions = findFunctions(tokens);
     vector<Edit> edits;
+    appendFastPathEdits(source, tokens, functions, edits);
     set<string> helpers;
     set<size_t> declarations;
     vector<pair<size_t, size_t>> replaced;
