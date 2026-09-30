@@ -103,6 +103,10 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     }
     else
         throw OpenMMException("Illegal value for Precision: "+precision);
+    const char* fusedEnergyVariable = getenv("OPENMM_EXPERIMENT_FUSED_PME_ENERGY_REDUCTION");
+    experimentFusedPmeEnergyReduction = (fusedEnergyVariable != NULL && string(fusedEnergyVariable) == "1" && useMixedPrecision);
+    reduceEnergyMergedKernel = NULL;
+    pendingPmeEnergyMerge = NULL;
     char* cacheVariable = getenv("OPENMM_CACHE_DIR");
     cacheDir = (cacheVariable == NULL ? tempDir : string(cacheVariable));
 #ifdef WIN32
@@ -703,13 +707,42 @@ int CudaContext::computeThreadBlockSize(double memory) const {
     return threads;
 }
 
+bool CudaContext::deferPmeEnergyForReduction(CudaArray& pmeEnergy) {
+    // Only the sole built-in PME stream post-computation calls this.
+    // Keep multi-device/linked contexts and all other precision modes unchanged.
+    if (!experimentFusedPmeEnergyReduction || !useMixedPrecision || isLinkedContext ||
+            platformData.contexts.size() != 1 || postComputations.size() != 1 ||
+            pendingPmeEnergyMerge != NULL || pmeEnergy.getSize() <= 0 ||
+            pmeEnergy.getSize() > energyBuffer.getSize() ||
+            pmeEnergy.getElementSize() != sizeof(double) || energyBuffer.getElementSize() != sizeof(double) ||
+            pmeEnergy.getDevicePointer() == energyBuffer.getDevicePointer())
+        return false;
+    pendingPmeEnergyMerge = &pmeEnergy;
+    return true;
+}
+
 double CudaContext::reduceEnergy() {
     int workGroupSize  = 512;
-    reduceEnergyKernel->setArg(0, energyBuffer);
-    reduceEnergyKernel->setArg(1, energySum);
-    reduceEnergyKernel->setArg(2, energyBuffer.getSize());
-    reduceEnergyKernel->setArg(3, workGroupSize);
-    reduceEnergyKernel->execute(workGroupSize*energySum.getSize(), workGroupSize);
+    CudaArray* pmeEnergy = pendingPmeEnergyMerge;
+    pendingPmeEnergyMerge = NULL; // Consume before launch, including exceptional exits.
+    if (pmeEnergy != NULL) {
+        if (reduceEnergyMergedKernel == NULL) {
+            CUmodule module = createModule(CudaKernelSources::reduceEnergyMerged);
+            reduceEnergyMergedKernel = getKernel(module, "reduceEnergyMerged");
+        }
+        int bufferSize = energyBuffer.getSize();
+        int pmeSize = pmeEnergy->getSize();
+        void* args[] = {&energyBuffer.getDevicePointer(), &pmeEnergy->getDevicePointer(), &unwrap(energySum).getDevicePointer(),
+                &bufferSize, &pmeSize, &workGroupSize};
+        executeKernel(reduceEnergyMergedKernel, args, workGroupSize*energySum.getSize(), workGroupSize, workGroupSize*sizeof(double));
+    }
+    else {
+        reduceEnergyKernel->setArg(0, energyBuffer);
+        reduceEnergyKernel->setArg(1, energySum);
+        reduceEnergyKernel->setArg(2, energyBuffer.getSize());
+        reduceEnergyKernel->setArg(3, workGroupSize);
+        reduceEnergyKernel->execute(workGroupSize*energySum.getSize(), workGroupSize);
+    }
     energySum.download(pinnedBuffer);
     double result = 0;
     if (getUseDoublePrecision() || getUseMixedPrecision()) {

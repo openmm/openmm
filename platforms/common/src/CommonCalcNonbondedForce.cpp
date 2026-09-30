@@ -183,7 +183,7 @@ private:
 
 class CommonCalcNonbondedForceKernel::SyncQueuePostComputation : public ComputeContext::ForcePostComputation {
 public:
-    SyncQueuePostComputation(ComputeContext& cc, ComputeEvent event, ComputeArray& pmeEnergyBuffer, int forceGroup) : cc(cc), event(event),
+    SyncQueuePostComputation(CommonCalcNonbondedForceKernel& owner, ComputeContext& cc, ComputeEvent event, ComputeArray& pmeEnergyBuffer, int forceGroup) : owner(owner), cc(cc), event(event),
             pmeEnergyBuffer(pmeEnergyBuffer), forceGroup(forceGroup) {
     }
     void setKernel(ComputeKernel kernel) {
@@ -195,13 +195,19 @@ public:
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<forceGroup)) != 0) {
             event->queueWait(cc.getCurrentQueue());
-            if (includeEnergy)
+            if (includeEnergy) {
+                // Always wait for PME. Defer only the sole mixed-precision,
+                // energy-only addition accepted by the CUDA backend.
+                if (!includeForces && owner.deferPmeEnergy(pmeEnergyBuffer))
+                    return 0.0;
                 addEnergyKernel->execute(pmeEnergyBuffer.getSize());
+            }
         }
         return 0.0;
     }
 private:
     ComputeContext& cc;
+    CommonCalcNonbondedForceKernel& owner;
     ComputeEvent event;
     ComputeKernel addEnergyKernel;
     ComputeArray& pmeEnergyBuffer;
@@ -475,7 +481,7 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
                     pmeSyncEvent = cc.createEvent();
                     paramsSyncEvent = cc.createEvent();
                     cc.addPreComputation(new SyncQueuePreComputation(cc, pmeQueue, pmeSyncEvent, recipForceGroup));
-                    cc.addPostComputation(syncQueue = new SyncQueuePostComputation(cc, pmeSyncEvent, pmeEnergyBuffer, recipForceGroup));
+                    cc.addPostComputation(syncQueue = new SyncQueuePostComputation(*this, cc, pmeSyncEvent, pmeEnergyBuffer, recipForceGroup));
                 }
 
                 // Initialize the b-spline moduli.

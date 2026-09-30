@@ -291,6 +291,8 @@ public:
      * Sum the buffer containing energy.
      */
     double reduceEnergy();
+    bool deferPmeEnergyForReduction(CudaArray& pmeEnergy);
+    void resetDeferredPmeEnergy() { pendingPmeEnergyMerge = NULL; }
     /**
      * Get the maximum number of threads in a thread block supported by this device.
      */
@@ -483,6 +485,9 @@ private:
     CUdevice device;
     void* pinnedBuffer;
     CudaArray energyBuffer;
+    bool experimentFusedPmeEnergyReduction;
+    CUfunction reduceEnergyMergedKernel;
+    CudaArray* pendingPmeEnergyMerge;
     CudaIntegrationUtilities* integration;
     CudaExpressionUtilities* expression;
     CudaBondedUtilities* bonded;

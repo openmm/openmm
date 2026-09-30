@@ -63,6 +63,7 @@ void CudaCalcForcesAndEnergyKernel::initialize(const System& system) {
 void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     cu.setForcesValid(true);
     ContextSelector selector(cu);
+    cu.resetDeferredPmeEnergy();
     cu.clearAutoclearBuffers();
     cu.updateGlobalParamValues();
     for (auto computation : cu.getPreComputations())
@@ -100,4 +101,8 @@ void CudaCalcConstantPotentialForceKernel::initialize(const System& system, cons
     bool usePmeQueue, useFixedPointChargeSpreading;
     getCudaPmeParameters(cu, usePmeQueue, useFixedPointChargeSpreading);
     commonInitialize(system, force, false, useFixedPointChargeSpreading);
+}
+
+bool CudaCalcNonbondedForceKernel::deferPmeEnergy(ComputeArray& energy) {
+    return cu.deferPmeEnergyForReduction(cu.unwrap(energy));
 }
