@@ -40,6 +40,8 @@ if(CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "13.0")
 endif()
 enable_language(OBJCXX)
 
+option(OPENMM_METAL_RECORD_AND_COMMIT
+    "Commit each Metal compute/blit operation instead of batching (no additional CPU wait)" ON)
 option(OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS
     "Use scoped GPU floating accumulators for minimization beyond the Q32.32 force range" ON)
 
@@ -165,7 +167,7 @@ target_compile_definitions(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
 
 
 
-)
+    OPENMM_METAL_RECORD_AND_COMMIT=$<BOOL:${OPENMM_METAL_RECORD_AND_COMMIT}>)
 foreach(feature IN LISTS METAL_OPTIMIZATION_SWITCHES)
     target_compile_definitions(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
         OPENMM_METAL_FAST_${feature}=$<BOOL:${OPENMM_METAL_FAST_${feature}}>)
@@ -276,17 +278,27 @@ if(BUILD_TESTING)
     add_test(NAME TestMetalComputeContext COMMAND TestMetalComputeContext)
     set_tests_properties(TestMetalComputeContext PROPERTIES SKIP_RETURN_CODE 77)
 
-    add_executable(TestMetalQueueImmediate tests/TestMetalQueue.mm src/MetalQueue.mm)
-    target_include_directories(TestMetalQueueImmediate PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/include"
-        "${CMAKE_CURRENT_SOURCE_DIR}/../common/include")
-    target_link_libraries(TestMetalQueueImmediate PRIVATE
-        ${OPENMM_LIBRARY_NAME} ${METAL_FRAMEWORK} ${FOUNDATION_FRAMEWORK})
-    target_compile_options(TestMetalQueueImmediate PRIVATE -fobjc-arc)
-    set_target_properties(TestMetalQueueImmediate PROPERTIES
-        OBJCXX_STANDARD 11
-        COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}"
-        LINK_FLAGS "${EXTRA_LINK_FLAGS}")
-    add_test(NAME TestMetalQueueImmediate COMMAND TestMetalQueueImmediate)
-    set_tests_properties(TestMetalQueueImmediate PROPERTIES SKIP_RETURN_CODE 77)
+    # Exercise both policies independently of the selected platform build option.
+    foreach(mode IN ITEMS Immediate Batched)
+        if(mode STREQUAL "Immediate")
+            set(record_and_commit 1)
+        else()
+            set(record_and_commit 0)
+        endif()
+        add_executable(TestMetalQueue${mode} tests/TestMetalQueue.mm src/MetalQueue.mm)
+        target_include_directories(TestMetalQueue${mode} PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/include"
+            "${CMAKE_CURRENT_SOURCE_DIR}/../common/include")
+        target_link_libraries(TestMetalQueue${mode} PRIVATE
+            ${OPENMM_LIBRARY_NAME} ${METAL_FRAMEWORK} ${FOUNDATION_FRAMEWORK})
+        target_compile_options(TestMetalQueue${mode} PRIVATE -fobjc-arc)
+        target_compile_definitions(TestMetalQueue${mode} PRIVATE
+            OPENMM_METAL_RECORD_AND_COMMIT=${record_and_commit})
+        set_target_properties(TestMetalQueue${mode} PROPERTIES
+            OBJCXX_STANDARD 11
+            COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}"
+            LINK_FLAGS "${EXTRA_LINK_FLAGS}")
+        add_test(NAME TestMetalQueue${mode} COMMAND TestMetalQueue${mode})
+        set_tests_properties(TestMetalQueue${mode} PROPERTIES SKIP_RETURN_CODE 77)
+    endforeach()
 endif()

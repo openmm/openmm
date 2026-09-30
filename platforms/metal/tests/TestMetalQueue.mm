@@ -66,8 +66,15 @@ void testSubmissionPolicy(id<MTLDevice> device) {
     id<MTLBuffer> buffer = [device newBufferWithLength:256 options:MTLResourceStorageModeShared];
     id<MTLCommandBuffer> first = fill(queue, buffer, 7);
     id<MTLCommandBuffer> second = fill(queue, buffer, 9);
+#if OPENMM_METAL_RECORD_AND_COMMIT
     ASSERT(first != second);
     ASSERT(first.status >= MTLCommandBufferStatusCommitted);
+    ASSERT(second.status >= MTLCommandBufferStatusCommitted);
+#else
+    ASSERT(first == second);
+    ASSERT(first.status < MTLCommandBufferStatusCommitted);
+#endif
+    queue.flush();
     ASSERT(second.status >= MTLCommandBufferStatusCommitted);
     queue.finish();
     checkBytes(buffer, 9);
@@ -84,6 +91,17 @@ void testBlockingBoundary(id<MTLDevice> device) {
     queue.wait((__bridge void*) command);
 }
 
+void testBoundedBatch(id<MTLDevice> device) {
+    MetalQueue queue((__bridge void*) device);
+    id<MTLBuffer> buffer = [device newBufferWithLength:256 options:MTLResourceStorageModeShared];
+    id<MTLCommandBuffer> first = fill(queue, buffer, 0);
+    for (int i = 1; i < 64; i++)
+        fill(queue, buffer, i);
+    ASSERT(first.status >= MTLCommandBufferStatusCommitted);
+    queue.finish();
+    checkBytes(buffer, 63);
+}
+
 void testEventOrdering(id<MTLDevice> device) {
     MetalQueue producer((__bridge void*) device), consumer((__bridge void*) device);
     id<MTLBuffer> source = [device newBufferWithLength:256 options:MTLResourceStorageModePrivate];
@@ -91,7 +109,7 @@ void testEventOrdering(id<MTLDevice> device) {
     id<MTLEvent> event = [device newEvent];
     id<MTLCommandBuffer> recorded = fill(producer, source, 37);
 
-    // External markers must follow the preceding operations before signaling.
+    // External markers must submit the preceding batch before signaling.
     id<MTLCommandQueue> producerQueue = (__bridge id<MTLCommandQueue>) producer.getQueue();
     id<MTLCommandBuffer> marker = [producerQueue commandBuffer];
     [marker encodeSignalEvent:event value:1];
@@ -99,7 +117,7 @@ void testEventOrdering(id<MTLDevice> device) {
     ASSERT(recorded.status >= MTLCommandBufferStatusCommitted);
     ASSERT(marker.status >= MTLCommandBufferStatusCommitted);
 
-    // An external wait must follow previously submitted consumer commands too.
+    // An external wait must follow previously recorded consumer commands too.
     id<MTLCommandBuffer> prior = fill(consumer, result, 0);
     id<MTLCommandQueue> consumerQueue = (__bridge id<MTLCommandQueue>) consumer.getQueue();
     id<MTLCommandBuffer> wait = [consumerQueue commandBuffer];
@@ -123,7 +141,7 @@ void testValidation(id<MTLDevice> device) {
     queue.submit((__bridge void*) external);
     id<MTLCommandBuffer> unsubmitted = [nativeQueue commandBuffer];
     id<MTLBuffer> buffer = [device newBufferWithLength:256 options:MTLResourceStorageModeShared];
-    fill(queue, buffer, 19);
+    id<MTLCommandBuffer> recorded = fill(queue, buffer, 19);
     expectException([&] { queue.submit(nullptr); });
     expectException([&] { queue.wait(nullptr); });
     expectException([&] { queue.wait((__bridge void*) unsubmitted); });
@@ -131,6 +149,10 @@ void testValidation(id<MTLDevice> device) {
     expectException([&] { queue.submit(other.getCommandBuffer()); });
     expectException([&] { queue.submit((__bridge void*) external); });
     expectException([&] { other.wait((__bridge void*) external); });
+#if !OPENMM_METAL_RECORD_AND_COMMIT
+    // Rejecting invalid arguments must not accidentally submit the current batch.
+    ASSERT(recorded.status < MTLCommandBufferStatusCommitted);
+#endif
     queue.finish();
     checkBytes(buffer, 19);
 }
@@ -173,6 +195,7 @@ int main() {
         try {
             testSubmissionPolicy(device);
             testBlockingBoundary(device);
+            testBoundedBatch(device);
             testEventOrdering(device);
             testValidation(device);
             testDestructor(device);
@@ -182,7 +205,8 @@ int main() {
             cerr << error.what() << endl;
             return 1;
         }
-        cout << "Metal queue tests passed" << endl;
+        cout << "Metal queue tests passed (OPENMM_METAL_RECORD_AND_COMMIT="
+             << OPENMM_METAL_RECORD_AND_COMMIT << ")" << endl;
     }
     return 0;
 }

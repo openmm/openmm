@@ -71,22 +71,31 @@ public:
     /**
      * @brief Get the command buffer for the next compute or blit operation.
      * @return A borrowed, uncommitted native @c id<MTLCommandBuffer> handle.
-     * @note Each call creates a new buffer. Hold lock(), end the encoder, and call
-     *       submit() after recording the operation.
+     * @note Hold lock(), end the encoder, and call submit() after each operation. With
+     *       OPENMM_METAL_RECORD_AND_COMMIT=0, consecutive operations share a
+     *       command buffer until a submission boundary or 64 operations.
      */
     void* getCommandBuffer();
     /**
-     * @brief Commit an operation without waiting for GPU execution.
+     * @brief Finish recording an operation without waiting for GPU execution.
      * @param commandBuffer Borrowed native @c id<MTLCommandBuffer> from this queue,
      *                      not yet committed.
      * @throws OpenMMException If the buffer is null, foreign, or already committed,
      *         or an earlier completed submission reports an error.
-     * @note Buffers obtained from getCommandBuffer() and externally created
-     *       buffers, including event markers and waits, are committed immediately.
+     * @note OPENMM_METAL_RECORD_AND_COMMIT=1 commits each operation. When it is 0,
+     *       buffers obtained from getCommandBuffer() are batched. Externally
+     *       created buffers, including event markers and waits, always flush
+     *       earlier recordings and commit immediately to preserve ordering.
      */
     void submit(void* commandBuffer);
     /**
-     * @brief Wait for all submissions and report errors.
+     * @brief Commit recorded operations without waiting for GPU execution.
+     * @throws OpenMMException If an earlier completed submission reports an error.
+     * @note This is not ComputeContext::flushQueue(), which also waits for execution.
+     */
+    void flush();
+    /**
+     * @brief Submit recorded operations, wait for all submissions, and report errors.
      * @throws OpenMMException If GPU execution fails.
      * @note An empty queue requires no wait. Other queues are not synchronized.
      */
@@ -94,15 +103,19 @@ public:
     /**
      * @brief Wait through a submitted marker, checking preceding tracked commands for errors.
      * @param commandBuffer Borrowed native @c id<MTLCommandBuffer> committed on
-     *                      this queue.
-     * @throws OpenMMException If the marker is null, foreign, or uncommitted,
-     *         or GPU execution fails. Tracked commands through
+     *                      this queue, or the current recording buffer from
+     *                      getCommandBuffer(), which is submitted before waiting.
+     * @throws OpenMMException If the marker is null, foreign, or an uncommitted
+     *         external buffer, or GPU execution fails. Tracked commands through
      *         the marker are drained before their first execution error is reported.
      * @note Later submissions are not waited for. Errors from already-reaped preceding
      *       commands are not retained; the marker's own status is always checked.
+     *       Waiting for a recording buffer submits and waits for its entire batch.
      */
     void wait(void* commandBuffer);
 private:
+    /** Commit one buffer and track it until execution completes. */
+    void commit(void* commandBuffer);
     class Impl;
     std::unique_ptr<Impl> impl;
 };
