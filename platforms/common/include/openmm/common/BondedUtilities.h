@@ -128,10 +128,20 @@ public:
      * @param groups        a set of bit flags for which force groups to include
      */
     void computeInteractions(int groups);
+    /**
+     * Compute the bonded interactions, preserving the legacy path except for
+     * the opt-in ordinary-force, mixed-precision force-only specialization.
+     * The flags are independent: energy-only and neither-requested calls use
+     * the original kernel, including all original force writes.
+     */
+    void computeInteractions(int groups, bool includeForces, bool includeEnergy);
 private:
+    void initializeKernelArguments(ComputeKernel selectedKernel);
     std::string createForceSource(int forceIndex, int numBonds, int numAtoms, int group, const std::string& computeForce);
+    std::string createForceSource(int forceIndex, int numBonds, int numAtoms, int group, const std::string& computeForce,
+                                  std::vector<std::string::size_type>* wrapperFenceOffsets, std::string::size_type sourceOffset);
     ComputeContext& context;
-    ComputeKernel kernel;
+    ComputeKernel kernel, forceOnlyKernel;
     std::vector<std::vector<std::vector<int> > > forceAtoms;
     std::vector<std::vector<int> > indexWidth;
     std::vector<std::string> forceSource;
@@ -142,7 +152,8 @@ private:
     std::vector<std::string> prefixCode;
     std::vector<std::string> energyParameterDerivatives;
     int numForceBuffers, maxBonds, allGroups;
-    bool hasInitializedKernels, hasInteractions;
+    int evaluationFlagsArg;
+    bool hasInitializedKernels, hasInteractions, usesEvaluationFlags;
 };
 
 } // namespace OpenMM
