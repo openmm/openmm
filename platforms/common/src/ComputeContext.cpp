@@ -680,18 +680,25 @@ void ComputeContext::reorderAtoms() {
         reorderAtomsImpl<float, mm_float4, float, mm_float4>();
 }
 
+void ComputeContext::reorderDataOnDevice(const vector<int>& sourcePhysical) {
+    throw OpenMMException("Device atom reorder is not supported by this platform");
+}
+
 template <class Real, class Real4, class Mixed, class Mixed4>
 void ComputeContext::reorderAtomsImpl() {
 
     // Find the range of positions and the number of bins along each axis.
 
+    const bool reorderDataOnGpu = prepareReorderDataOnDevice();
     vector<Real4> oldPosq(paddedNumAtoms);
-    vector<Real4> oldPosqCorrection(paddedNumAtoms);
-    vector<Mixed4> oldVelm(paddedNumAtoms);
+    vector<Real4> oldPosqCorrection(reorderDataOnGpu ? 0 : paddedNumAtoms);
+    vector<Mixed4> oldVelm(reorderDataOnGpu ? 0 : paddedNumAtoms);
     getPosq().download(oldPosq);
-    getVelm().download(oldVelm);
-    if (getUseMixedPrecision())
-        getPosqCorrection().download(oldPosqCorrection);
+    if (!reorderDataOnGpu) {
+        getVelm().download(oldVelm);
+        if (getUseMixedPrecision())
+            getPosqCorrection().download(oldPosqCorrection);
+    }
     Real minx = oldPosq[0].x, maxx = oldPosq[0].x;
     Real miny = oldPosq[0].y, maxy = oldPosq[0].y;
     Real minz = oldPosq[0].z, maxz = oldPosq[0].z;
@@ -721,8 +728,9 @@ void ComputeContext::reorderAtomsImpl() {
     
     vector<int> originalIndex(numAtoms);
     vector<Real4> newPosq(paddedNumAtoms, Real4(0,0,0,0));
-    vector<Real4> newPosqCorrection(paddedNumAtoms, Real4(0,0,0,0));
-    vector<Mixed4> newVelm(paddedNumAtoms, Mixed4(0,0,0,0));
+    vector<Real4> newPosqCorrection(reorderDataOnGpu ? 0 : paddedNumAtoms, Real4(0,0,0,0));
+    vector<Mixed4> newVelm(reorderDataOnGpu ? 0 : paddedNumAtoms, Mixed4(0,0,0,0));
+    vector<int> sourcePhysical(reorderDataOnGpu ? paddedNumAtoms : 0, -1);
     vector<mm_int4> newCellOffsets(numAtoms);
     for (auto& mol : moleculeGroups) {
         // Find the center of each molecule.
@@ -825,9 +833,13 @@ void ComputeContext::reorderAtomsImpl() {
                 int newIndex = mol.offsets[i]+atom;
                 originalIndex[newIndex] = atomIndex[oldIndex];
                 newPosq[newIndex] = oldPosq[oldIndex];
-                if (getUseMixedPrecision())
-                    newPosqCorrection[newIndex] = oldPosqCorrection[oldIndex];
-                newVelm[newIndex] = oldVelm[oldIndex];
+                if (reorderDataOnGpu)
+                    sourcePhysical[newIndex] = oldIndex;
+                else {
+                    if (getUseMixedPrecision())
+                        newPosqCorrection[newIndex] = oldPosqCorrection[oldIndex];
+                    newVelm[newIndex] = oldVelm[oldIndex];
+                }
                 newCellOffsets[newIndex] = posCellOffsets[oldIndex];
             }
         }
@@ -841,9 +853,13 @@ void ComputeContext::reorderAtomsImpl() {
         posCellOffsets[i] = newCellOffsets[i];
     }
     getPosq().upload(newPosq);
-    if (getUseMixedPrecision())
-        getPosqCorrection().upload(newPosqCorrection);
-    getVelm().upload(newVelm);
+    if (reorderDataOnGpu)
+        reorderDataOnDevice(sourcePhysical);
+    else {
+        if (getUseMixedPrecision())
+            getPosqCorrection().upload(newPosqCorrection);
+        getVelm().upload(newVelm);
+    }
     getAtomIndexArray().upload(atomIndex);
     for (auto listener : reorderListeners)
         listener->execute();

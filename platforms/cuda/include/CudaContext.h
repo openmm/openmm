@@ -461,6 +461,9 @@ public:
      * CUDA has been initialized without creating a CudaContext.
      */
     static void ensureCudaInitialized();
+protected:
+    bool prepareReorderDataOnDevice() override;
+    void reorderDataOnDevice(const std::vector<int>& sourcePhysical) override;
 private:
     /**
      * Compute a sorted list of device indices in decreasing order of desirability
@@ -483,6 +486,9 @@ private:
     CUdevice device;
     void* pinnedBuffer;
     CudaArray energyBuffer;
+    bool experimentReorderGather;
+    CUfunction reorderGatherKernel;
+    CudaArray reorderSourcePhysical, reorderVelocityScratch, reorderCorrectionScratch;
     CudaIntegrationUtilities* integration;
     CudaExpressionUtilities* expression;
     CudaBondedUtilities* bonded;
