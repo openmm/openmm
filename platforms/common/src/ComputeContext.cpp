@@ -30,8 +30,10 @@
 #include "openmm/internal/ThreadPool.h"
 #include "CommonKernelSources.h"
 #include "hilbert.h"
+#include "ReorderHilbert.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <set>
 #include <sstream>
 #include <unordered_set>
@@ -719,6 +721,11 @@ void ComputeContext::reorderAtomsImpl() {
     // Loop over each group of identical molecules and reorder them.
 
     
+    const char* hilbertEnv = std::getenv("OPENMM_EXPERIMENT_REORDER_HILBERT_LUT");
+    // The integer lookup is exact over its 3D/8-bit domain and falls back
+    // outside it, independently of how the reordered arrays are copied.
+    const bool useHilbertLut = hilbertEnv != NULL && hilbertEnv[0] == '1' && hilbertEnv[1] == '\0'
+            && getUseMixedPrecision() && getNumContexts() == 1;
     vector<int> originalIndex(numAtoms);
     vector<Real4> newPosq(paddedNumAtoms, Real4(0,0,0,0));
     vector<Real4> newPosqCorrection(paddedNumAtoms, Real4(0,0,0,0));
@@ -794,17 +801,13 @@ void ComputeContext::reorderAtomsImpl() {
         int xbins = 1 + (int) ((maxx-minx)*invBinWidth);
         int ybins = 1 + (int) ((maxy-miny)*invBinWidth);
         vector<pair<int, int> > molBins(numMolecules);
-        bitmask_t coords[3];
         for (int i = 0; i < numMolecules; i++) {
             int x = (int) ((molPos[i].x-minx)*invBinWidth);
             int y = (int) ((molPos[i].y-miny)*invBinWidth);
             int z = (int) ((molPos[i].z-minz)*invBinWidth);
             int bin;
             if (useHilbert) {
-                coords[0] = x;
-                coords[1] = y;
-                coords[2] = z;
-                bin = (int) hilbert_c2i(3, 8, coords);
+                bin = computeReorderHilbert3D8(x, y, z, useHilbertLut);
             }
             else {
                 int yodd = y&1;
