@@ -32,6 +32,10 @@
 #include "hilbert.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <limits>
+#include <new>
 #include <set>
 #include <sstream>
 #include <unordered_set>
@@ -680,6 +684,48 @@ void ComputeContext::reorderAtoms() {
         reorderAtomsImpl<float, mm_float4, float, mm_float4>();
 }
 
+// molBins is freshly constructed as (bin, i), in increasing i order.  A stable
+// sort on bin therefore has exactly the original std::pair lexicographic order.
+// Keep this helper specific to that construction; arbitrary pair inputs do not
+// satisfy this precondition. Four stable byte passes preserve all signed keys.
+static void stableRadixSortReorderBins(vector<pair<int, int> >& bins, vector<pair<int, int> >& scratch) {
+    static_assert(std::numeric_limits<int>::digits == 31, "Atom reorder radix sort requires signed 32-bit int");
+    const size_t count = bins.size();
+    try {
+        if (scratch.size() < count)
+            scratch.resize(count);
+    }
+    catch (const std::bad_alloc&) {
+        // Optional scratch allocation failed before bins was modified. Preserve
+        // the original allocation-free sorting path instead of adding a new
+        // failure after periodic wrapping already updated host cell offsets.
+        sort(bins.begin(), bins.end());
+        return;
+    }
+    vector<pair<int, int> >* input = &bins;
+    vector<pair<int, int> >* output = &scratch;
+    for (unsigned int shift = 0; shift < 32; shift += 8) {
+        size_t offsets[256] = {};
+        for (size_t i = 0; i < count; i++) {
+            const uint32_t key = static_cast<uint32_t>((*input)[i].first)^UINT32_C(0x80000000);
+            offsets[(key >> shift)&255]++;
+        }
+        size_t start = 0;
+        for (int bucket = 0; bucket < 256; bucket++) {
+            const size_t bucketCount = offsets[bucket];
+            offsets[bucket] = start;
+            start += bucketCount;
+        }
+        // Forward traversal and advancing offsets are essential for stability.
+        for (size_t i = 0; i < count; i++) {
+            const uint32_t key = static_cast<uint32_t>((*input)[i].first)^UINT32_C(0x80000000);
+            (*output)[offsets[(key >> shift)&255]++] = (*input)[i];
+        }
+        std::swap(input, output);
+    }
+    // Four passes are even: the final sorted sequence is already in bins.
+}
+
 template <class Real, class Real4, class Mixed, class Mixed4>
 void ComputeContext::reorderAtomsImpl() {
 
@@ -719,6 +765,11 @@ void ComputeContext::reorderAtomsImpl() {
     // Loop over each group of identical molecules and reorder them.
 
     
+    const char* radixEnv = std::getenv("OPENMM_EXPERIMENT_REORDER_RADIX_SORT");
+    const bool useRadixSort = (radixEnv != NULL && radixEnv[0] == '1' && radixEnv[1] == '\0');
+    // One optional workspace per actual reorder, reused across molecule groups.
+    // No persistent class state, ABI change, or checkpoint state is introduced.
+    vector<pair<int, int> > radixScratch;
     vector<int> originalIndex(numAtoms);
     vector<Real4> newPosq(paddedNumAtoms, Real4(0,0,0,0));
     vector<Real4> newPosqCorrection(paddedNumAtoms, Real4(0,0,0,0));
@@ -815,7 +866,10 @@ void ComputeContext::reorderAtomsImpl() {
             }
             molBins[i] = pair<int, int>(bin, i);
         }
-        sort(molBins.begin(), molBins.end());
+        if (useRadixSort && numMolecules >= 4096)
+            stableRadixSortReorderBins(molBins, radixScratch);
+        else
+            sort(molBins.begin(), molBins.end());
 
         // Reorder the atoms.
 
