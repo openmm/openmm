@@ -946,6 +946,7 @@ typedef struct {
 	MTL::Buffer** outputBuffer;
 	MTL::Library* library;
 	MTL::ComputePipelineState* pipeline;
+	MTL::ComputePipelineState* pipelineInPlace;
 	MTL::Buffer* bufferLUT;
 	MTL::Buffer* bufferRaderUintLUT;
 	MTL::Buffer** bufferBluestein;
@@ -26319,7 +26320,7 @@ static inline VkFFTResult shaderGenVkFFT_R2C_decomposition(char* output, VkFFTSp
 	if (res != VKFFT_SUCCESS) return res;
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
 #elif(VKFFT_BACKEND==5)
-	sc->tempLen = sprintf(sc->tempStr, "kernel void VkFFT_main_R2C ");
+	sc->tempLen = sprintf(sc->tempStr, "constant bool VkFFT_outOfPlace [[function_constant(0)]];\nkernel void VkFFT_main_R2C ");
 	res = VkAppendLine(sc);
 	if (res != VKFFT_SUCCESS) return res;
 	sc->tempLen = sprintf(sc->tempStr, "(%s3 thread_position_in_grid [[thread_position_in_grid]], ", uintType_32);
@@ -26331,7 +26332,7 @@ static inline VkFFTResult shaderGenVkFFT_R2C_decomposition(char* output, VkFFTSp
 	sc->tempLen = sprintf(sc->tempStr, "%s3 thread_position_in_threadgroup [[thread_position_in_threadgroup]], ", uintType_32);
 	res = VkAppendLine(sc);
 	if (res != VKFFT_SUCCESS) return res;
-	sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", vecTypeInput, vecTypeOutput);
+	sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputsBuffer[[buffer(1), function_constant(VkFFT_outOfPlace)]]", vecTypeInput, vecTypeOutput);
 	res = VkAppendLine(sc);
 	if (res != VKFFT_SUCCESS) return res;
 	int args_id = 2;
@@ -26353,7 +26354,7 @@ static inline VkFFTResult shaderGenVkFFT_R2C_decomposition(char* output, VkFFTSp
 		if (res != VKFFT_SUCCESS) return res;
 		args_id++;
 	}
-	sc->tempLen = sprintf(sc->tempStr, ") {\n");
+	sc->tempLen = sprintf(sc->tempStr, ") {\nauto outputs = VkFFT_outOfPlace ? outputsBuffer : reinterpret_cast<decltype(outputsBuffer)>(inputs);\n");
 	res = VkAppendLine(sc);
 	if (res != VKFFT_SUCCESS) return res;
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
@@ -27579,7 +27580,7 @@ static inline VkFFTResult shaderGenVkFFT(char* output, VkFFTSpecializationConsta
 		return res;
 	}
 #elif(VKFFT_BACKEND==5)
-	sc->tempLen = sprintf(sc->tempStr, "kernel void VkFFT_main ");
+	sc->tempLen = sprintf(sc->tempStr, "constant bool VkFFT_outOfPlace [[function_constant(0)]];\nkernel void VkFFT_main ");
 	res = VkAppendLine(sc);
 	if (res != VKFFT_SUCCESS) return res;
 	sc->tempLen = sprintf(sc->tempStr, "(%s3 thread_position_in_grid [[thread_position_in_grid]], ", uintType_32);
@@ -27600,77 +27601,77 @@ static inline VkFFTResult shaderGenVkFFT(char* output, VkFFTSpecializationConsta
 	switch (type) {
 	case 5:
 	{
-		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", floatTypeInputMemory, vecTypeOutput);
+		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputsBuffer[[buffer(1), function_constant(VkFFT_outOfPlace)]]", floatTypeInputMemory, vecTypeOutput);
 		break;
 	}
 	case 6:
 	{
-		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", vecTypeInput, floatTypeOutputMemory);
+		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputsBuffer[[buffer(1), function_constant(VkFFT_outOfPlace)]]", vecTypeInput, floatTypeOutputMemory);
 		break;
 	}
 	case 110:
 	{
-		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", floatTypeInputMemory, floatTypeOutputMemory);
+		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputsBuffer[[buffer(1), function_constant(VkFFT_outOfPlace)]]", floatTypeInputMemory, floatTypeOutputMemory);
 		break;
 	}
 	case 111:
 	{
-		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", floatTypeInputMemory, floatTypeOutputMemory);
+		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputsBuffer[[buffer(1), function_constant(VkFFT_outOfPlace)]]", floatTypeInputMemory, floatTypeOutputMemory);
 		break;
 	}
 	case 120:
 	{
-		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", floatTypeInputMemory, floatTypeOutputMemory);
+		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputsBuffer[[buffer(1), function_constant(VkFFT_outOfPlace)]]", floatTypeInputMemory, floatTypeOutputMemory);
 		break;
 	}
 	case 121:
 	{
-		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", floatTypeInputMemory, floatTypeOutputMemory);
+		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputsBuffer[[buffer(1), function_constant(VkFFT_outOfPlace)]]", floatTypeInputMemory, floatTypeOutputMemory);
 		break;
 	}
 	case 130:
 	{
-		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", floatTypeInputMemory, floatTypeOutputMemory);
+		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputsBuffer[[buffer(1), function_constant(VkFFT_outOfPlace)]]", floatTypeInputMemory, floatTypeOutputMemory);
 		break;
 	}
 	case 131:
 	{
-		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", floatTypeInputMemory, floatTypeOutputMemory);
+		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputsBuffer[[buffer(1), function_constant(VkFFT_outOfPlace)]]", floatTypeInputMemory, floatTypeOutputMemory);
 		break;
 	}
 	case 140:
 	{
-		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", floatTypeInputMemory, floatTypeOutputMemory);
+		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputsBuffer[[buffer(1), function_constant(VkFFT_outOfPlace)]]", floatTypeInputMemory, floatTypeOutputMemory);
 		break;
 	}
 	case 141:
 	{
-		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", floatTypeInputMemory, floatTypeOutputMemory);
+		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputsBuffer[[buffer(1), function_constant(VkFFT_outOfPlace)]]", floatTypeInputMemory, floatTypeOutputMemory);
 		break;
 	}
 	case 142:
 	{
-		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", floatTypeInputMemory, floatTypeOutputMemory);
+		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputsBuffer[[buffer(1), function_constant(VkFFT_outOfPlace)]]", floatTypeInputMemory, floatTypeOutputMemory);
 		break;
 	}
 	case 143:
 	{
-		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", floatTypeInputMemory, floatTypeOutputMemory);
+		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputsBuffer[[buffer(1), function_constant(VkFFT_outOfPlace)]]", floatTypeInputMemory, floatTypeOutputMemory);
 		break;
 	}
 	case 144:
 	{
-		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", floatTypeInputMemory, floatTypeOutputMemory);
+		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputsBuffer[[buffer(1), function_constant(VkFFT_outOfPlace)]]", floatTypeInputMemory, floatTypeOutputMemory);
 		break;
 	}
 	case 145:
 	{
-		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", floatTypeInputMemory, floatTypeOutputMemory);
+		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputsBuffer[[buffer(1), function_constant(VkFFT_outOfPlace)]]", floatTypeInputMemory, floatTypeOutputMemory);
 		break;
 	}
 	default:
 	{
-		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", vecTypeInput, vecTypeOutput);
+		sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputsBuffer[[buffer(1), function_constant(VkFFT_outOfPlace)]]", vecTypeInput, vecTypeOutput);
 		break;
 	}
 	}
@@ -27731,7 +27732,7 @@ static inline VkFFTResult shaderGenVkFFT(char* output, VkFFTSpecializationConsta
 		if (res != VKFFT_SUCCESS) return res;
 		args_id++;
 	}
-	sc->tempLen = sprintf(sc->tempStr, ") {\n");
+	sc->tempLen = sprintf(sc->tempStr, ") {\nauto outputs = VkFFT_outOfPlace ? outputsBuffer : reinterpret_cast<decltype(outputsBuffer)>(inputs);\n");
 	res = VkAppendLine(sc);
 	if (res != VKFFT_SUCCESS) return res;
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
@@ -28462,6 +28463,10 @@ static inline void deleteAxis(VkFFTApplication* app, VkFFTAxis* axis) {
 		axis->pipeline->release();
 		//free(axis->pipeline);
 		axis->pipeline = 0;
+	}
+	if (axis->pipelineInPlace != 0) {
+		axis->pipelineInPlace->release();
+		axis->pipelineInPlace = 0;
 	}
 	if (axis->library != 0) {
 		axis->library->release();
@@ -33979,6 +33984,34 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 	}
 	return VKFFT_SUCCESS;
 }
+#if(VKFFT_BACKEND==5)
+// Metal stage-buffer arguments may not alias. Remove the output argument from
+// the in-place specialization and derive its pointer from the input instead.
+static inline VkFFTResult VkFFTCreateMetalPipelines(VkFFTApplication* app, VkFFTAxis* axis, const char* name) {
+	MTL::FunctionConstantValues* constants = MTL::FunctionConstantValues::alloc()->init();
+	if (!constants) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
+	for (int inPlace = 0; inPlace < 2; inPlace++) {
+		bool outOfPlace = !inPlace;
+		constants->setConstantValue(&outOfPlace, MTL::DataTypeBool, NS::UInteger(0));
+		NS::Error* error = nullptr;
+		MTL::Function* function = axis->library->newFunction(NS::String::string(name, NS::UTF8StringEncoding), constants, &error);
+		if (!function) {
+			constants->release();
+			return VKFFT_ERROR_FAILED_TO_GET_FUNCTION;
+		}
+		MTL::ComputePipelineState* pipeline = app->configuration.device->newComputePipelineState(function, &error);
+		function->release();
+		if (!pipeline) {
+			constants->release();
+			return VKFFT_ERROR_FAILED_TO_CREATE_PIPELINE;
+		}
+		if (inPlace) axis->pipelineInPlace = pipeline;
+		else axis->pipeline = pipeline;
+	}
+	constants->release();
+	return VKFFT_SUCCESS;
+}
+#endif
 static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication* app, VkFFTPlan* FFTPlan, uint64_t inverse) {
 	//get radix stages
 	VkFFTResult resFFT = VKFFT_SUCCESS;
@@ -35722,10 +35755,12 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 			deleteVkFFT(app);
 			return VKFFT_ERROR_FAILED_TO_COMPILE_PROGRAM;
 		}
-		NS::String* str = NS::String::string(function_name, NS::UTF8StringEncoding);
-		MTL::Function* function = axis->library->newFunction(str);
-		axis->pipeline = app->configuration.device->newComputePipelineState(function, &error);
-		function->release();
+		resFFT = VkFFTCreateMetalPipelines(app, axis, function_name);
+		if (resFFT != VKFFT_SUCCESS) {
+			free(code0);
+			deleteVkFFT(app);
+			return resFFT;
+		}
 #endif
 		if (!app->configuration.keepShaderCode) {
 			free(code0);
@@ -39000,10 +39035,12 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 			deleteVkFFT(app);
 			return VKFFT_ERROR_FAILED_TO_COMPILE_PROGRAM;
 		}
-		NS::String* str = NS::String::string(function_name, NS::UTF8StringEncoding);
-		MTL::Function* function = axis->library->newFunction(str);
-		axis->pipeline = app->configuration.device->newComputePipelineState(function, &error);
-		function->release();
+		resFFT = VkFFTCreateMetalPipelines(app, axis, function_name);
+		if (resFFT != VKFFT_SUCCESS) {
+			free(code0);
+			deleteVkFFT(app);
+			return resFFT;
+		}
 #endif
 		if (!app->configuration.keepShaderCode) {
 			free(code0);
@@ -41102,9 +41139,12 @@ static inline VkFFTResult dispatchEnhanced(VkFFTApplication* app, VkFFTAxis* axi
 					return VKFFT_ERROR_FAILED_TO_LAUNCH_KERNEL;
 				}
 #elif(VKFFT_BACKEND==5)
-				app->configuration.commandEncoder->setComputePipelineState(axis->pipeline);
+				if (!axis->inputBuffer || !axis->inputBuffer[0] || !axis->outputBuffer || !axis->outputBuffer[0])
+					return VKFFT_ERROR_EMPTY_buffer;
+				bool inPlace = (axis->inputBuffer[0] == axis->outputBuffer[0]);
+				app->configuration.commandEncoder->setComputePipelineState(inPlace ? axis->pipelineInPlace : axis->pipeline);
 				app->configuration.commandEncoder->setBuffer(axis->inputBuffer[0], 0, 0);
-				app->configuration.commandEncoder->setBuffer(axis->outputBuffer[0], 0, 1);
+				if (!inPlace) app->configuration.commandEncoder->setBuffer(axis->outputBuffer[0], 0, 1);
 				app->configuration.commandEncoder->setThreadgroupMemoryLength((uint64_t)ceil(axis->specializationConstants.usedSharedMemory / 16.0) * 16, 0);
 
 				uint64_t args_id = 2;
