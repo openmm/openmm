@@ -38,9 +38,11 @@ void testSelection() {
     for (bool floating : {false, true}) {
         string groups = MetalSourceAdapter::translate(CommonKernelSources::customNonbondedGroups, floating);
         string many = MetalSourceAdapter::translate(CommonKernelSources::customManyParticle, floating);
+        string lcpo = MetalSourceAdapter::translate(CommonKernelSources::lcpo, floating);
         ASSERT_EQUAL(bool(OPENMM_METAL_FAST_CUSTOM_NONBONDED_GROUPS_SHUFFLE), groups.find("simd_shuffle_xor(") != string::npos);
         ASSERT_EQUAL(bool(OPENMM_METAL_FAST_CUSTOM_MANY_PARTICLE_BALLOT), many.find("simd_ballot(") != string::npos);
-        for (const string& source : {groups, many}) {
+        ASSERT_EQUAL(bool(OPENMM_METAL_FAST_LCPO_BALLOT), lcpo.find("simd_ballot(") != string::npos);
+        for (const string& source : {groups, many, lcpo}) {
             ASSERT(source.find("#define __CUDA_ARCH__") == string::npos);
             ASSERT(source.find("#define USE_HIP") == string::npos);
         }

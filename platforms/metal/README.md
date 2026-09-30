@@ -29,6 +29,7 @@ This series introduces the OpenCL/Common baseline in component-sized changes bef
 | `OPENMM_METAL_FAST_CONSTANT_POTENTIAL_MATRIX_BROADCAST` | Matrix-solver local-memory broadcasts | Common lane-shuffle broadcasts in the matrix solver only |
 | `OPENMM_METAL_FAST_CUSTOM_NONBONDED_GROUPS_SHUFFLE` | Interaction-group local-memory maximum | Common CUDA xor-shuffle maximum for CustomNonbonded interaction groups |
 | `OPENMM_METAL_FAST_CUSTOM_MANY_PARTICLE_BALLOT` | CustomManyParticle local neighbor-block flags | Common CUDA ballot-based neighbor-block scan |
+| `OPENMM_METAL_FAST_LCPO_BALLOT` | LCPO local neighbor-block flags | Common CUDA ballot-based neighbor-block scan |
 | `OPENMM_METAL_FAST_PME_FLOAT_SPREAD` | Fixed-point PME grid | Common floating-grid PME spreading, without the conversion dispatch |
 | `OPENMM_METAL_FAST_LJPME_FLOAT_SPREAD` | Fixed-point grids in LJPME systems | Floating electrostatic and dispersion grids in LJPME systems |
 | `OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD` | Fixed-point ConstantPotential PME grid | Common floating-grid spreading |

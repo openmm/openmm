@@ -197,9 +197,9 @@ string templateFunction(const string& source, const string& name) {
 }
 
 /**
- * Select two existing CUDA branches only inside exact Common template functions.
+ * Select three existing CUDA branches only inside exact Common template functions.
  * Keep mathematical bodies and synchronization unchanged; never impersonate CUDA
- * or HIP for the rest of a program. The ballot kernel visits padded 32-lane warps.
+ * or HIP for the rest of a program. Both ballot kernels visit padded 32-lane warps.
  */
 void appendFastPathEdits(const string& source, const vector<Token>& tokens,
         const vector<Function>& functions, vector<Edit>& edits) {
@@ -218,6 +218,12 @@ void appendFastPathEdits(const string& source, const vector<Token>& tokens,
         if (function.name == "findNeighbors") {
             static const string original = templateFunction(CommonKernelSources::customManyParticle, "findNeighbors");
             ballot = (body == original);
+        }
+#endif
+#if OPENMM_METAL_FAST_LCPO_BALLOT
+        if (function.name == "findNeighbors") {
+            static const string original = templateFunction(CommonKernelSources::lcpo, "findNeighbors");
+            ballot |= (body == original);
         }
 #endif
         if (!shuffle && !ballot) continue;
