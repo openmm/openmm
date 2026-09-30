@@ -181,6 +181,23 @@ string dpd(string source, bool particles, bool tile) {
     return first+second;
 }
 
+/** Move acceptor forces along with their coordinates; return to owners at j=32. */
+string hbond(string source) {
+    if (source.find("typedef struct {\n    real3 pos1, pos2, pos3;\n    real3 f1, f2, f3;\n} AcceptorData;") == string::npos)
+        throw OpenMMException("Common Hbond acceptor fields changed: review Metal register transport");
+    replace(source, "LOCAL AcceptorData localData[THREAD_BLOCK_SIZE];", "AcceptorData localData = {};", 1);
+    replace(source, "localData[LOCAL_ID]", "localData");
+    replace(source, "localData[tbx+index]", "localData");
+    replace(source, "if (donorIndex < NUM_DONORS) {\n            int index = indexInWarp;",
+            "{\n            int index = indexInWarp;", 1);
+    replace(source, "if (acceptorIndex < NUM_ACCEPTORS", "if (donorIndex < NUM_DONORS && acceptorIndex < NUM_ACCEPTORS", 2);
+    string rotate;
+    for (const string& field : {"pos1", "pos2", "pos3", "f1", "f2", "f3"})
+        rotate += shuffleAssignment("localData."+field, "localData."+field, "(indexInWarp+1)&31");
+    replace(source, "index = (index+1)%32;", "index = (index+1)%32;\n"+rotate, 1);
+    return source;
+}
+
 const set<string> customGBHoles = {"PARAMETER_ARGUMENTS", "ATOM_PARAMETER_DATA", "LOAD_ATOM1_PARAMETERS",
     "LOAD_ATOM2_PARAMETERS", "LOAD_LOCAL_PARAMETERS_FROM_1", "LOAD_LOCAL_PARAMETERS_FROM_GLOBAL",
     "COMPUTE_VALUE", "ADD_TEMP_DERIVS1", "ADD_TEMP_DERIVS2", "STORE_PARAM_DERIVS1", "STORE_PARAM_DERIVS2",
@@ -203,6 +220,9 @@ MetalPairwiseOptimizations::Settings MetalPairwiseOptimizations::getBuildSetting
 #if OPENMM_METAL_FAST_DPD_TILE_BROADCAST
     settings.dpdTile = true;
 #endif
+#if OPENMM_METAL_FAST_CUSTOM_HBOND_SHUFFLE
+    settings.customHbond = true;
+#endif
     return settings;
 }
 
@@ -217,5 +237,7 @@ string MetalPairwiseOptimizations::apply(const string& source, const Settings& s
         return checkedSource(customGB(source));
     if ((settings.dpdParticles || settings.dpdTile) && source == CommonKernelSources::dpd)
         return checkedSource(dpd(source, settings.dpdParticles, settings.dpdTile));
+    if (settings.customHbond && matchesTemplate(source, CommonKernelSources::customHbondForce, {"PARAMETER_ARGUMENTS", "COMPUTE_FORCE"}))
+        return checkedSource(hbond(source));
     return source;
 }

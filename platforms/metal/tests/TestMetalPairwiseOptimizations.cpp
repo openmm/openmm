@@ -45,12 +45,13 @@ void testSelection() {
         CommonKernelSources::gbsaObc, CommonKernelSources::dpd, CommonKernelSources::customHbondForce};
     for (const string& source : templates)
         ASSERT_EQUAL(source, MetalPairwiseOptimizations::apply(source, Settings()));
-    vector<Settings> options(4);
+    vector<Settings> options(5);
     options[0].customGBValue = true;
     options[1].customGBEnergy = true;
     options[2].dpdParticles = true;
     options[3].dpdTile = true;
-    const int selected[] = {0,1,3,3};
+    options[4].customHbond = true;
+    const int selected[] = {0,1,3,3,4};
     for (int i = 0; i < options.size(); i++) {
         for (int j = 0; j < templates.size(); j++) {
             string source = MetalPairwiseOptimizations::apply(templates[j], options[i]);
@@ -165,6 +166,68 @@ void testCustomGBValue(int count, bool floating) {
     }
 }
 
+/** A partial donor warp still transports every acceptor and its force accumulator. */
+void testHbond(int donors, int acceptors, bool floating) {
+    System system;
+    const int count = donors+acceptors, padded = 32*((count+31)/32);
+    for (int i = 0; i < count; i++) system.addParticle(1);
+    MetalContext context(system, nullptr, nullptr, floating);
+    map<string,string> substitutions;
+    substitutions["PARAMETER_ARGUMENTS"] = "";
+    substitutions["COMPUTE_FORCE"] = "energy += 1;\nf1 -= make_real3(1,2,3);\nlocalData[tbx+index].f1 += make_real3(1,2,3);\n";
+    string source = context.replaceStrings(CommonKernelSources::customHbondForce, substitutions);
+    Settings settings;
+    settings.customHbond = true;
+    const string fast = MetalPairwiseOptimizations::apply(source, settings);
+    ASSERT(fast != source);
+    map<string,string> defines;
+    defines["PADDED_NUM_ATOMS"] = to_string(padded);
+    defines["NUM_DONORS"] = to_string(donors);
+    defines["NUM_ACCEPTORS"] = to_string(acceptors);
+    defines["NUM_DONOR_BLOCKS"] = to_string((donors+31)/32);
+    defines["NUM_ACCEPTOR_BLOCKS"] = to_string((acceptors+31)/32);
+    defines["THREAD_BLOCK_SIZE"] = "64";
+    defines["USE_EXCLUSIONS"] = "1";
+    defines["M_PI"] = "3.14159265358979323846f";
+    ComputeArray positions, donorAtoms, acceptorAtoms, exclusions, forces, energy;
+    positions.initialize<mm_float4>(context, padded, "hbondPositions");
+    donorAtoms.initialize<mm_int4>(context, donors, "hbondDonors");
+    acceptorAtoms.initialize<mm_int4>(context, acceptors, "hbondAcceptors");
+    exclusions.initialize<mm_int4>(context, donors, "hbondExclusions");
+    forces.initialize<int64_t>(context, padded*3, "hbondForces");
+    energy.initialize<float>(context, 64, "hbondEnergy");
+    vector<mm_int4> da(donors), aa(acceptors), ex(donors, mm_int4(-1,-1,-1,-1));
+    for (int i = 0; i < donors; i++) da[i] = mm_int4(i,-1,-1,-1);
+    for (int i = 0; i < acceptors; i++) aa[i] = mm_int4(donors+i,-1,-1,-1);
+    ex[0].x = acceptors-1;
+    positions.upload(vector<mm_float4>(padded, mm_float4(0,0,0,0)));
+    donorAtoms.upload(da);
+    acceptorAtoms.upload(aa);
+    exclusions.upload(ex);
+    context.clearBuffer(forces);
+    context.clearBuffer(energy);
+    ComputeKernel kernel = context.compileProgram(fast, defines)->createKernel("computeHbondForces");
+    kernel->addArg(forces);
+    kernel->addArg(energy);
+    kernel->addArg(positions);
+    kernel->addArg(exclusions);
+    kernel->addArg(donorAtoms);
+    kernel->addArg(acceptorAtoms);
+    for (int i = 0; i < 5; i++) kernel->addArg(mm_float4(0,0,0,0));
+    kernel->execute(64,64);
+    vector<double> result;
+    context.downloadFixedPointBuffer(forces, result);
+    for (int i = 0; i < count; i++) {
+        const int pairs = i < donors ? -(acceptors-(i == 0)) : donors-(i == count-1);
+        for (int k = 0; k < 3; k++) ASSERT_EQUAL(double((k+1)*pairs), result[i+k*padded]);
+    }
+    vector<float> energies;
+    energy.download(energies);
+    double total = 0;
+    for (float e : energies) total += e;
+    ASSERT_EQUAL(double(donors*acceptors-1), total);
+}
+
 /** Preserve DPD's per-lane random stream and masked pair order in a full tile. */
 void testDPD(int count, bool floating, bool periodic) {
     System system;
@@ -273,6 +336,7 @@ int main(int argc, char** argv) {
         }
         for (bool floating : {false, true}) {
             for (int count : {1,31,32,33,63,65}) testCustomGBValue(count, floating);
+            for (int count : {1,31,32,33,63,65}) testHbond(count, 66-count, floating);
             for (int count : {31,33,65}) {
                 testDPD(count, floating, false);
                 testDPD(count, floating, true);
