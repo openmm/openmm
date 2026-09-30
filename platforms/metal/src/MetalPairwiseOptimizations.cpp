@@ -150,7 +150,13 @@ string customGB(string source) {
 }
 
 /** DPD preserves i=0..31 visitation, hence the original per-lane RNG consumption. */
-string dpdParticles(string source) {
+string dpd(string source, bool particles, bool tile) {
+    if (tile) {
+        replace(source, "LOCAL int nextTile[WORK_GROUP_SIZE/TILE_SIZE];", "", 1);
+        replace(source, "if (tgx == 0)\n            nextTile[tbx/TILE_SIZE] = ATOMIC_ADD(tileCounter, 1);\n        SYNC_WARPS;\n        int tileIndex = nextTile[tbx/TILE_SIZE];",
+                "int tileIndex = 0;\n        if (tgx == 0) tileIndex = ATOMIC_ADD(tileCounter, 1);\n        tileIndex = simdShuffle(tileIndex, 0);", 1);
+    }
+    if (!particles) return source;
     replace(source, "LOCAL mixed3 localPos[WORK_GROUP_SIZE];", "mixed3 localPos = make_mixed3(0);", 1);
     replace(source, "LOCAL mixed4 localVel[WORK_GROUP_SIZE];", "mixed4 localVel = make_mixed4(0);", 1);
     replace(source, "LOCAL volatile int localType[WORK_GROUP_SIZE];", "int localType = 0;", 1);
@@ -194,6 +200,9 @@ MetalPairwiseOptimizations::Settings MetalPairwiseOptimizations::getBuildSetting
 #if OPENMM_METAL_FAST_DPD_PARTICLE_SHUFFLE
     settings.dpdParticles = true;
 #endif
+#if OPENMM_METAL_FAST_DPD_TILE_BROADCAST
+    settings.dpdTile = true;
+#endif
     return settings;
 }
 
@@ -206,7 +215,7 @@ string MetalPairwiseOptimizations::apply(const string& source, const Settings& s
         return checkedSource(customGB(source));
     if (settings.customGBEnergy && matchesTemplate(source, CommonKernelSources::customGBEnergyN2, customGBHoles))
         return checkedSource(customGB(source));
-    if (settings.dpdParticles && source == CommonKernelSources::dpd)
-        return checkedSource(dpdParticles(source));
+    if ((settings.dpdParticles || settings.dpdTile) && source == CommonKernelSources::dpd)
+        return checkedSource(dpd(source, settings.dpdParticles, settings.dpdTile));
     return source;
 }

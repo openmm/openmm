@@ -45,11 +45,12 @@ void testSelection() {
         CommonKernelSources::gbsaObc, CommonKernelSources::dpd, CommonKernelSources::customHbondForce};
     for (const string& source : templates)
         ASSERT_EQUAL(source, MetalPairwiseOptimizations::apply(source, Settings()));
-    vector<Settings> options(3);
+    vector<Settings> options(4);
     options[0].customGBValue = true;
     options[1].customGBEnergy = true;
     options[2].dpdParticles = true;
-    const int selected[] = {0,1,3};
+    options[3].dpdTile = true;
+    const int selected[] = {0,1,3,3};
     for (int i = 0; i < options.size(); i++) {
         for (int j = 0; j < templates.size(); j++) {
             string source = MetalPairwiseOptimizations::apply(templates[j], options[i]);
@@ -66,6 +67,10 @@ void testSelection() {
         changed.insert(changed.find("KERNEL void"), "// modified template skeleton\n");
         ASSERT_EQUAL(changed, MetalPairwiseOptimizations::apply(changed, options[i]));
     }
+    // The two DPD strategies can also be combined.
+    Settings both;
+    both.dpdParticles = both.dpdTile = true;
+    ASSERT(MetalPairwiseOptimizations::apply(CommonKernelSources::dpd, both).find("LOCAL mixed3 localPos") == string::npos);
 }
 
 /** Exact Common value template with asymmetric parameters and a parameter derivative. */
@@ -216,9 +221,10 @@ void testDPD(int count, bool floating, bool periodic) {
     defines["WORK_GROUP_SIZE"] = "32";
     if (periodic) defines["USE_PERIODIC"] = "1";
     vector<double> reference;
-    for (int mode = 0; mode < 2; mode++) {
+    for (int mode = 0; mode < 4; mode++) {
         Settings settings;
         settings.dpdParticles = (mode&1) != 0;
+        settings.dpdTile = (mode&2) != 0;
         string source = MetalPairwiseOptimizations::apply(CommonKernelSources::dpd, settings);
         if (mode == 0) source = "// unchanged DPD baseline\n"+source;
         context.clearBuffer(output);

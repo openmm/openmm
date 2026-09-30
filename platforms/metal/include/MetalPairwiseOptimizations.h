@@ -45,6 +45,7 @@ public:
         bool customGBValue = false;
         bool customGBEnergy = false;
         bool dpdParticles = false;
+        bool dpdTile = false;
     };
 
     /** @return Settings selected by the independent build-time switches. */

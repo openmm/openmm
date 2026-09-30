@@ -72,7 +72,7 @@ option(OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD "Use floating-grid spre
 
 # Each optional algorithm can be compared independently with the OpenCL path.
 set(METAL_OPTIMIZATION_SWITCHES
-    CUSTOM_GB_VALUE_SHUFFLE CUSTOM_GB_ENERGY_SHUFFLE DPD_PARTICLE_SHUFFLE)
+    CUSTOM_GB_VALUE_SHUFFLE CUSTOM_GB_ENERGY_SHUFFLE DPD_PARTICLE_SHUFFLE DPD_TILE_BROADCAST)
 foreach(feature IN LISTS METAL_OPTIMIZATION_SWITCHES)
     option(OPENMM_METAL_FAST_${feature} "Enable the independent Metal ${feature} algorithm" OFF)
 endforeach()
