@@ -52,6 +52,8 @@ option(OPENMM_METAL_FAST_MINIMIZE_SHUFFLE
     "Use the Common CUDA/HIP shuffle reduction in the minimizer" OFF)
 option(OPENMM_METAL_FAST_CONSTANT_POTENTIAL_REDUCTION
     "Use the Common CUDA/HIP shuffle reduction in the base ConstantPotential kernels" OFF)
+option(OPENMM_METAL_FAST_CONSTANT_POTENTIAL_CG_REDUCTION
+    "Use the Common CUDA/HIP shuffle reductions in the ConstantPotential CG solver" OFF)
 option(OPENMM_METAL_FAST_PME_FLOAT_SPREAD "Use the Common floating-grid spreading path for PME" OFF)
 option(OPENMM_METAL_FAST_LJPME_FLOAT_SPREAD "Use floating grids for both reciprocal terms of LJPME" OFF)
 option(OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD "Use floating-grid spreading in ConstantPotential PME" OFF)
@@ -174,7 +176,7 @@ target_compile_definitions(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
     OPENMM_METAL_FAST_MINIMIZE_SHUFFLE=$<BOOL:${OPENMM_METAL_FAST_MINIMIZE_SHUFFLE}>
 
     OPENMM_METAL_FAST_CONSTANT_POTENTIAL_REDUCTION=$<BOOL:${OPENMM_METAL_FAST_CONSTANT_POTENTIAL_REDUCTION}>
-
+    OPENMM_METAL_FAST_CONSTANT_POTENTIAL_CG_REDUCTION=$<BOOL:${OPENMM_METAL_FAST_CONSTANT_POTENTIAL_CG_REDUCTION}>
 
 
 
