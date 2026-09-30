@@ -15,6 +15,7 @@
 #define OPENMM_METALNONBONDEDSOURCES_H_
 
 #include "MetalCudaKernelSources.h"
+#include "MetalKernelSources.h"
 #include "openmm/OpenMMException.h"
 #include <string>
 
@@ -65,8 +66,17 @@ inline void addOpenCLPairs(std::string& source) {
     source = helper+source;
 }
 
-/** @brief Add optional sparse pairs to the OpenCL neighbor list. */
+/** @brief Apply independent block-bounds and sparse-pair options to OpenCL. */
 inline std::string neighbors(std::string source, bool sparsePairs) {
+#if OPENMM_METAL_FAST_BLOCK_BOUNDS
+    {
+        size_t first = source.find("__kernel void findBlockBounds(");
+        size_t last = source.find("__kernel void computeSortKeys(", first);
+        if (first == std::string::npos || last == std::string::npos)
+            throw OpenMMException("OpenCL block bounds template changed");
+        source.replace(first, last-first, MetalKernelSources::neighborBounds+"\n");
+    }
+#endif
     if (sparsePairs) {
         // Count sparse atom-to-block interactions before OpenCL's compaction.
         // This deliberately does not depend on the optional ballot algorithm.

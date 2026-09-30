@@ -344,7 +344,11 @@ void MetalNonbondedUtilities::prepareInteractions(int forceGroups) {
     // Compute the neighbor list.
 
     setPeriodicBoxArgs(context, kernels.findBlockBoundsKernel, 1);
+#if OPENMM_METAL_FAST_BLOCK_BOUNDS
+    kernels.findBlockBoundsKernel->execute(numBlockSizes*64, 64);
+#else
     kernels.findBlockBoundsKernel->execute(context.getNumAtomBlocks());
+#endif
     kernels.computeSortKeysKernel->execute(context.getNumAtomBlocks());
     if (useLargeBlocks)
         setPeriodicBoxArgs(context, kernels.sortBoxDataKernel, 12);
