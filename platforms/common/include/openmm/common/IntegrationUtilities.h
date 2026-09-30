@@ -81,6 +81,20 @@ public:
      * @param tol             the constraint tolerance
      */
     void applyConstraints(double tol);
+    /** Internal CUDA/mixed exact Middle path after fused kick + velocity
+     *  SETTLE. Only disjoint residual velocity constraints remain.
+     *  Normal public velocity-constraint calls keep all solvers.
+     */
+    void applyLangevinMiddleVelocityConstraintsWithoutSettle(double tol);
+    int getNumSettleClusters() const {
+        return settleAtoms.isInitialized() ? settleAtoms.getSize() : 0;
+    }
+    int getNumVirtualSites() const {
+        return numVsites;
+    }
+    ComputeArray& getSettleAtomsForLangevinMiddle() {
+        return settleAtoms;
+    }
     /**
      * Apply constraints to the atom velocities.
      *
@@ -138,6 +152,7 @@ public:
 protected:
     virtual void applyConstraintsImpl(bool constrainVelocities, double tol) = 0;
     ComputeContext& context;
+    bool skipVelocitySettleForLangevinMiddle;
     ComputeKernel settlePosKernel, settleVelKernel;
     ComputeKernel shakePosKernel, shakeVelKernel;
     ComputeKernel ccmaDirectionsKernel, ccmaPosForceKernel, ccmaVelForceKernel;

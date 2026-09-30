@@ -52,6 +52,10 @@
 #include <iterator>
 #include <set>
 
+#include <cstdlib>
+#include <cstdio>
+#include <typeinfo>
+
 using namespace OpenMM;
 using namespace std;
 using namespace Lepton;
@@ -3120,7 +3124,73 @@ double CommonIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& contex
 void CommonIntegrateLangevinMiddleStepKernel::initialize(const System& system, const LangevinMiddleIntegrator& integrator) {
     cc.initializeContexts();
     ContextSelector selector(cc);
-    cc.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
+    IntegrationUtilities& integration = cc.getIntegrationUtilities();
+    integration.initRandomNumberGenerator(integrator.getRandomNumberSeed());
+    const char* kickEnv = std::getenv("OPENMM_EXPERIMENT_MIDDLE_KICK_SETTLE");
+    const char* kickTraceEnv = std::getenv("OPENMM_EXPERIMENT_MIDDLE_KICK_SETTLE_TRACE");
+    bool kickRequested = (kickEnv != NULL && string(kickEnv) == "1");
+    bool kickTrace = (kickTraceEnv != NULL && string(kickTraceEnv) == "1");
+    useKickSettleFusion = kickRequested && typeid(integrator) == typeid(LangevinMiddleIntegrator)
+            && getPlatform().getName() == "CUDA" && cc.getUseMixedPrecision()
+            && cc.getNumContexts() == 1 && integration.getNumVirtualSites() == 0
+            && integration.getNumSettleClusters() > 0;
+    numKickResidualAtoms = 0;
+    if (useKickSettleFusion) {
+        // Validate the actual utility-selected, disjoint SETTLE slots. This
+        // partition is independent of position SETTLE or Part3 finalization.
+        vector<mm_int4> clusters;
+        integration.getSettleAtomsForLangevinMiddle().download(clusters);
+        vector<int> mask(cc.getPaddedNumAtoms(), 0);
+        for (auto cluster : clusters) {
+            int atoms[] = {cluster.x, cluster.y, cluster.z};
+            for (int atom : atoms) {
+                if (atom < 0 || atom >= system.getNumParticles() || mask[atom] != 0
+                        || !(system.getParticleMass(atom) > 0) || !std::isfinite(system.getParticleMass(atom))) {
+                    useKickSettleFusion = false;
+                    break;
+                }
+                mask[atom] = 1;
+            }
+            if (!useKickSettleFusion)
+                break;
+        }
+        if (useKickSettleFusion) {
+            vector<int> residual;
+            for (int atom = 0; atom < cc.getNumAtoms(); atom++)
+                if (mask[atom] == 0)
+                    residual.push_back(atom);
+            numKickResidualAtoms = (int) residual.size();
+            // Keep a valid unused argument even when every real atom is SETTLE.
+            if (residual.empty())
+                residual.push_back(-1);
+            kickResidualAtoms.initialize<int>(cc, residual.size(), "langevinMiddleKickResidualAtoms");
+            kickResidualAtoms.upload(residual);
+        }
+    }
+    traceKickSettleFusion = kickTrace && useKickSettleFusion;
+    kickSettleBlockSize = -1;
+    if (useKickSettleFusion) {
+        ComputeProgram kickProgram = cc.compileProgram(CommonKernelSources::langevinMiddleKickSettle);
+        kickSettleFusionKernel = kickProgram->createKernel("integrateLangevinMiddleKickSettle");
+        const char* velocityBlockEnv = std::getenv("OPENMM_EXPERIMENT_VELOCITY_SETTLE_BLOCK128");
+        if (velocityBlockEnv != NULL && string(velocityBlockEnv) == "1"
+                && kickSettleFusionKernel->getMaxBlockSize() >= 128)
+            kickSettleBlockSize = 128;
+        kickSettleFusionKernel->addArg(integration.getNumSettleClusters());
+        kickSettleFusionKernel->addArg(cc.getPaddedNumAtoms());
+        kickSettleFusionKernel->addArg(cc.getPosq());
+        kickSettleFusionKernel->addArg(cc.getPosqCorrection());
+        kickSettleFusionKernel->addArg(cc.getVelm());
+        kickSettleFusionKernel->addArg(cc.getLongForceBuffer());
+        kickSettleFusionKernel->addArg(integration.getStepSize());
+        kickSettleFusionKernel->addArg(integration.getSettleAtomsForLangevinMiddle());
+        kickSettleFusionKernel->addArg(numKickResidualAtoms);
+        kickSettleFusionKernel->addArg(kickResidualAtoms);
+    }
+    if (kickTrace)
+        std::fprintf(stderr, "[middle-kick-settle] requested=%d enabled=%d clusters=%d residual_atoms=%d block=%d\n",
+                (int) kickRequested, (int) useKickSettleFusion, integration.getNumSettleClusters(),
+                numKickResidualAtoms, kickSettleBlockSize == -1 ? 64 : kickSettleBlockSize);
     ComputeProgram program = cc.compileProgram(CommonKernelSources::langevinMiddle);
     kernel1 = program->createKernel("integrateLangevinMiddlePart1");
     kernel2 = program->createKernel("integrateLangevinMiddlePart2");
@@ -3187,8 +3257,21 @@ void CommonIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, cons
     // Perform the integration.
 
     kernel2->setArg(7, integration.prepareRandomNumbers(cc.getPaddedNumAtoms()));
-    kernel1->execute(numAtoms);
-    integration.applyVelocityConstraints(integrator.getConstraintTolerance());
+    if (useKickSettleFusion) {
+        // The fused launch also kicks every residual atom. Finish their SHAKE/
+        // CCMA velocity constraints before the unchanged stochastic Part2.
+        kickSettleFusionKernel->execute(integration.getNumSettleClusters(), kickSettleBlockSize);
+        integration.applyLangevinMiddleVelocityConstraintsWithoutSettle(integrator.getConstraintTolerance());
+        if (traceKickSettleFusion) {
+            std::fprintf(stderr, "[middle-kick-settle] first-launch-enqueued block=%d part1_skipped=1 velocity_settle_skipped=1 residual_atoms=%d\n",
+                    kickSettleBlockSize == -1 ? 64 : kickSettleBlockSize, numKickResidualAtoms);
+            traceKickSettleFusion = false;
+        }
+    }
+    else {
+        kernel1->execute(numAtoms);
+        integration.applyVelocityConstraints(integrator.getConstraintTolerance());
+    }
     kernel2->execute(numAtoms);
     integration.applyConstraints(integrator.getConstraintTolerance());
     kernel3->execute(numAtoms);

@@ -89,7 +89,7 @@ struct IntegrationUtilities::ConstraintOrderer {
 };
 
 IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System& system) : context(context),
-        randomPos(0), hasOverlappingVsites(false) {
+        skipVelocitySettleForLangevinMiddle(false), randomPos(0), hasOverlappingVsites(false) {
     // Create workspace arrays.
 
     lastStepSize = mm_double2(0.0, 0.0);
@@ -820,6 +820,19 @@ double IntegrationUtilities::getLastStepSize() {
 
 void IntegrationUtilities::applyConstraints(double tol) {
     applyConstraintsImpl(false, tol);
+}
+
+void IntegrationUtilities::applyLangevinMiddleVelocityConstraintsWithoutSettle(double tol) {
+    bool previous = skipVelocitySettleForLangevinMiddle;
+    skipVelocitySettleForLangevinMiddle = true;
+    try {
+        applyConstraintsImpl(true, tol);
+    }
+    catch (...) {
+        skipVelocitySettleForLangevinMiddle = previous;
+        throw;
+    }
+    skipVelocitySettleForLangevinMiddle = previous;
 }
 
 void IntegrationUtilities::applyVelocityConstraints(double tol) {

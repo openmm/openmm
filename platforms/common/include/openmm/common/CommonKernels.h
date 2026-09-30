@@ -972,8 +972,10 @@ private:
     ComputeContext& cc;
     double prevTemp, prevFriction, prevStepSize;
     bool hasInitializedKernels;
-    ComputeArray params, oldDelta;
-    ComputeKernel kernel1, kernel2, kernel3;
+    bool useKickSettleFusion, traceKickSettleFusion;
+    int kickSettleBlockSize, numKickResidualAtoms;
+    ComputeArray params, oldDelta, kickResidualAtoms;
+    ComputeKernel kernel1, kernel2, kernel3, kickSettleFusionKernel;
 };
 
 /**
