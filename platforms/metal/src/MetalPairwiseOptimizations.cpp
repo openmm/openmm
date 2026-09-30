@@ -105,8 +105,9 @@ string customGB(string source) {
     vector<Register> registers;
     for (sregex_iterator i(source.begin(), source.end(), declaration), end; i != end; ++i) {
         const string name = (*i)[2];
-        const bool readOnly = name == "local_pos" || name.find("local_params") == 0;
-        const bool accumulator = name == "local_value" || name.find("local_dValue0dParam") == 0;
+        const bool readOnly = name == "local_pos" || name.find("local_params") == 0 || name.find("local_values") == 0;
+        const bool accumulator = name == "local_value" || name == "local_force" ||
+                name.find("local_deriv") == 0 || name.find("local_dValue0dParam") == 0;
         if (!readOnly && !accumulator)
             throw OpenMMException("Unrecognized Common CustomGB lane field: "+name);
         registers.push_back({(*i)[1], name, readOnly});
@@ -132,6 +133,8 @@ string customGB(string source) {
     replace(diagonal, "SYNC_WARPS;", "");
     source = diagonal+rest;
     for (const Register& reg : registers) scalarize(source, reg.name);
+    // Common emits this token-pasting macro before the energy kernel.
+    replace(source, "local_deriv##INDEX[LOCAL_ID]", "local_deriv##INDEX");
     replace(source, "LOCAL int atomIndices[LOCAL_BUFFER_SIZE];", "", 1);
     replace(source, "const unsigned int tbx = LOCAL_ID - tgx;", "const unsigned int tbx = LOCAL_ID - tgx;\nint atomIndices = 0;", 1);
     scalarize(source, "atomIndices");
@@ -148,7 +151,9 @@ string customGB(string source) {
 
 const set<string> customGBHoles = {"PARAMETER_ARGUMENTS", "ATOM_PARAMETER_DATA", "LOAD_ATOM1_PARAMETERS",
     "LOAD_ATOM2_PARAMETERS", "LOAD_LOCAL_PARAMETERS_FROM_1", "LOAD_LOCAL_PARAMETERS_FROM_GLOBAL",
-    "COMPUTE_VALUE", "ADD_TEMP_DERIVS1", "STORE_PARAM_DERIVS1", "STORE_PARAM_DERIVS2", "SAVE_PARAM_DERIVS"};
+    "COMPUTE_VALUE", "ADD_TEMP_DERIVS1", "ADD_TEMP_DERIVS2", "STORE_PARAM_DERIVS1", "STORE_PARAM_DERIVS2",
+    "INIT_PARAM_DERIVS", "DECLARE_ATOM1_DERIVATIVES", "CLEAR_LOCAL_DERIVATIVES", "COMPUTE_INTERACTION",
+    "RECORD_DERIVATIVE_2", "STORE_DERIVATIVES_1", "STORE_DERIVATIVES_2", "SAVE_PARAM_DERIVS"};
 
 } // namespace
 
@@ -156,6 +161,9 @@ MetalPairwiseOptimizations::Settings MetalPairwiseOptimizations::getBuildSetting
     Settings settings;
 #if OPENMM_METAL_FAST_CUSTOM_GB_VALUE_SHUFFLE
     settings.customGBValue = true;
+#endif
+#if OPENMM_METAL_FAST_CUSTOM_GB_ENERGY_SHUFFLE
+    settings.customGBEnergy = true;
 #endif
     return settings;
 }
@@ -166,6 +174,8 @@ string MetalPairwiseOptimizations::apply(const string& source) {
 
 string MetalPairwiseOptimizations::apply(const string& source, const Settings& settings) {
     if (settings.customGBValue && matchesTemplate(source, CommonKernelSources::customGBValueN2, customGBHoles))
+        return checkedSource(customGB(source));
+    if (settings.customGBEnergy && matchesTemplate(source, CommonKernelSources::customGBEnergyN2, customGBHoles))
         return checkedSource(customGB(source));
     return source;
 }

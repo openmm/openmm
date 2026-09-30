@@ -45,9 +45,10 @@ void testSelection() {
         CommonKernelSources::gbsaObc, CommonKernelSources::dpd, CommonKernelSources::customHbondForce};
     for (const string& source : templates)
         ASSERT_EQUAL(source, MetalPairwiseOptimizations::apply(source, Settings()));
-    vector<Settings> options(1);
+    vector<Settings> options(2);
     options[0].customGBValue = true;
-    const int selected[] = {0};
+    options[1].customGBEnergy = true;
+    const int selected[] = {0,1};
     for (int i = 0; i < options.size(); i++) {
         for (int j = 0; j < templates.size(); j++) {
             string source = MetalPairwiseOptimizations::apply(templates[j], options[i]);

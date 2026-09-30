@@ -43,6 +43,7 @@ public:
     /** Independently selectable transformations; defaults are the Common path. */
     struct Settings {
         bool customGBValue = false;
+        bool customGBEnergy = false;
     };
 
     /** @return Settings selected by the independent build-time switches. */
