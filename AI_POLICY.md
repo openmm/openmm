@@ -1,13 +1,24 @@
 # AI Policy
 
 This document describes the policy on using artificial intelligence in OpenMM development.  This field is changing very
-quickly, and this policy is expected to evolve with time.
+quickly, and this policy is expected to evolve with time. It is based on the OpenMM maintainers' current and past
+experiences with where AI contributions have and have not proved useful.
 
 ## What Is Required
 
-Any use of AI in issues and pull requests must be disclosed.  Examples might include using AI to fix a bug, implement
-a new feature, or generate an issue summary.  In every case it must be stated that AI was used.  This requirement is not
+Any use of AI in issues and pull requests must be disclosed.  Examples might include using AI to fix a bug, implement a
+new feature, or generate an issue summary.  In every case it must be stated that AI was used.  This requirement is not
 meant to discourage any particular use of AI.  It is simply so that everyone understands what they are dealing with.
+
+Every issue and pull request must begin with a summary that you have written yourself in your own words. Some AI
+generated summaries can be little more than hallucinations, convincingly imitating the form of a summary without
+actually making sense or providing useful information.
+
+The human written summary may be followed by AI generated output as long as it is clearly labeled as such, and as long
+as you have verified that it is accurate and contains useful information.
+
+When someone asks a question about an issue or pull request, they are asking you, not an AI.  Please do not use AI to
+generate an answer!
 
 ## What AI Is Good For
 
@@ -18,15 +29,24 @@ tools you used in investigating them.
 
 ### Fixing Bugs
 
-In some cases, AI can also be useful for suggesting how to fix bugs.  This is mainly true for localized fixes that
+In some cases, AI can be useful for suggesting how to fix bugs.  This is mainly true for localized fixes that
 change only a few lines of code and are easy to verify.  It is generally less suitable for more involved fixes that
 affect many pieces of code or involve large amounts of new code.
 
+Before submitting a pull request to fix a bug, it is your responsibility to understand both the problem and the proposed
+fix, and to verify that the fix is correct.  In our experience, AI generated bug fixes are frequently incorrect.
+Dealing with them takes the maintainers' time away from doing useful work.  If you are not confident that a fix is
+correct, it is much better to just report the bug and let the maintainers fix it on their own.
+
 ### Writing Code That Will Not Be Included In OpenMM
 
-For example, when reporting a bug, it is always best if you can provide a self-contained test that reproduces the
-problem.  You should feel free to use AI in creating the test, as long as you verify that it runs and really does
-reproduce the bug.
+When reporting a bug, it is always best if you can provide a self-contained test that reproduces the problem.  You
+should feel free to use AI in creating the test, as long as you verify that it runs and really does reproduce the bug.
+
+### Translating From Another Language
+
+If English is not your native language, you should feel free to use AI machine translation software.  This is a powerful
+tool that can help to improve communication.  Its use is always acceptable.
 
 ## What AI Is Not Good For
 
@@ -50,8 +70,3 @@ they were trained on.  Laundering copyrighted code through an AI model does not 
 the obligation to follow the terms of the license.  Any large block of AI generated code therefore has a risk of being
 encumbered by copyright.  If you are not absolutely certain you have the legal right to submit it, please do not submit
 it!
-
-### Replying To Questions
-
-When someone asks a question about an issue or pull request, they are asking you, not an AI.  Please do not use AI to
-generate an answer!
