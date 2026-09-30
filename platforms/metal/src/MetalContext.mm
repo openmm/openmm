@@ -381,6 +381,10 @@ ComputeProgram MetalContext::compileProgram(const string source, const map<strin
         if (source == CommonKernelSources::constantPotentialMatrixSolver)
             allDefines["WARP_SHUFFLE_DOWN(value, offset)"] = "simd_shuffle_down(value, offset)";
 #endif
+#if OPENMM_METAL_FAST_CONSTANT_POTENTIAL_MATRIX_BROADCAST
+        if (source == CommonKernelSources::constantPotentialMatrixSolver)
+            allDefines["WARP_SHUFFLE(value, index)"] = "simd_shuffle(value, index)";
+#endif
         for (auto& define : defines)
             allDefines[define.first] = define.second;
         if (commonSource && floatingAccumulators)
