@@ -23,6 +23,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Context.h"
+#include "openmm/LangevinMiddleIntegrator.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/common/BondedUtilities.h"
 #include "openmm/common/CommonCalcNonbondedForce.h"
@@ -34,11 +35,19 @@
 #include <algorithm>
 #include <assert.h>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <typeinfo>
 #include <iterator>
 #include <set>
 
 using namespace OpenMM;
 using namespace std;
+
+static bool isPmeExperimentEnabled(const char* name) {
+    const char* value = getenv(name);
+    return value != NULL && strcmp(value, "1") == 0;
+}
 
 class CommonCalcNonbondedForceKernel::ForceInfo : public ComputeForceInfo {
 public:
@@ -419,6 +428,14 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
                 pmeDefines["USE_FIXED_POINT_CHARGE_SPREADING"] = "1";
             if (deviceIsCpu)
                 pmeDefines["DEVICE_IS_CPU"] = "1";
+            // These experiments were developed only for ordinary mixed CUDA
+            // PME using its cuFFT backend. Every option is explicit opt-in.
+            const bool eligiblePme = supportsPmeExperiments() && nonbondedMethod == PME && hasCoulomb &&
+                    !doLJPME && cc.getUseMixedPrecision() && !useFixedPointChargeSpreading && !hasOffsets &&
+                    usePmeQueue && !useCpuPme && !deviceIsCpu && cc.getNumContexts() == 1;
+            usePmeCoefficientCache = eligiblePme && isPmeExperimentEnabled("OPENMM_EXPERIMENT_PME_COEFFICIENT_CACHE");
+            if (usePmeCoefficientCache)
+                pmeDefines["EXPERIMENT_PME_COEFFICIENT_CACHE"] = "1";
             if (useCpuPme && !doLJPME && usePosqCharges) {
                 // Create the CPU PME kernel.
 
@@ -779,6 +796,19 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeGridIndexKernel->addArg(pmeAtomGridIndex);
             for (int i = 0; i < 8; i++)
                 pmeGridIndexKernel->addArg();
+            if (usePmeCoefficientCache) {
+                pmeConvolutionCoefficients.initialize<float>(cc, gridSizeX*gridSizeY*(gridSizeZ/2+1), "pmeConvolutionCoefficients");
+                pmeBuildCoefficientsKernel = program->createKernel("buildReciprocalConvolutionCoefficients");
+                pmeBuildCoefficientsKernel->addArg(pmeConvolutionCoefficients);
+                pmeBuildCoefficientsKernel->addArg(pmeBsplineModuliX);
+                pmeBuildCoefficientsKernel->addArg(pmeBsplineModuliY);
+                pmeBuildCoefficientsKernel->addArg(pmeBsplineModuliZ);
+                for (int i = 0; i < 3; i++)
+                    pmeBuildCoefficientsKernel->addArg();
+                pmeApplyCoefficientsKernel = program->createKernel("applyReciprocalConvolutionCoefficients");
+                pmeApplyCoefficientsKernel->addArg(pmeGrid2);
+                pmeApplyCoefficientsKernel->addArg(pmeConvolutionCoefficients);
+            }
             pmeSpreadChargeKernel->addArg(cc.getPosq());
             if (useFixedPointChargeSpreading)
                 pmeSpreadChargeKernel->addArg(pmeGrid2);
@@ -898,6 +928,7 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         energy = ewaldSelfEnergy - totalCharge*totalCharge/(8*EPSILON0*volume*alpha*alpha);
     }
     if (recomputeParams || hasOffsets) {
+        pmeCoefficientsValid = false;
         computeParamsKernel->setArg(1, (int) (includeEnergy && includeReciprocal));
         computeParamsKernel->execute(cc.getNumAtoms());
         if (exclusionParams.isInitialized())
@@ -1014,7 +1045,33 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             }
             if (includeEnergy)
                 pmeEvalEnergyKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
-            pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
+            if (usePmeCoefficientCache && includeForces &&
+                    typeid(context.getIntegrator()) == typeid(LangevinMiddleIntegrator)) {
+                unsigned char key[sizeof(pmeCoefficientKey)];
+                int offset = 0;
+                for (int i = 0; i < 3; i++)
+                    for (int j = 0; j < 3; j++) {
+                        double value = boxVectors[i][j];
+                        memcpy(key+offset, &value, sizeof(value));
+                        offset += sizeof(value);
+                    }
+                for (int i = 0; i < 3; i++) {
+                    const float values[] = {recipBoxVectorsFloat[i].x, recipBoxVectorsFloat[i].y,
+                            recipBoxVectorsFloat[i].z, recipBoxVectorsFloat[i].w};
+                    memcpy(key+offset, values, sizeof(values));
+                    offset += sizeof(values);
+                }
+                if (!pmeCoefficientsValid || memcmp(key, pmeCoefficientKey, sizeof(key)) != 0) {
+                    for (int i = 0; i < 3; i++)
+                        pmeBuildCoefficientsKernel->setArg(4+i, recipBoxVectorsFloat[i]);
+                    pmeBuildCoefficientsKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
+                    memcpy(pmeCoefficientKey, key, sizeof(key));
+                    pmeCoefficientsValid = true; // Enqueued on this same PME queue.
+                }
+                pmeApplyCoefficientsKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
+            }
+            else
+                pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
             fft->execFFT(pmeGrid2, pmeGrid1, false);
             setPeriodicBoxArgs(cc, pmeInterpolateForceKernel, 3);
             if (cc.getUseDoublePrecision()) {

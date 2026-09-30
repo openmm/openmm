@@ -188,6 +188,54 @@ KERNEL void reciprocalConvolution(GLOBAL real2* RESTRICT pmeGrid, GLOBAL const r
     }
 }
 
+#if defined(EXPERIMENT_PME_COEFFICIENT_CACHE) && !defined(USE_LJPME)
+
+// Keep the original real-valued arithmetic and signed-mode convention. This
+// persistent table belongs to one Context/kernel generation and one exact box.
+KERNEL void buildReciprocalConvolutionCoefficients(GLOBAL real* RESTRICT coefficients,
+        GLOBAL const real* RESTRICT pmeBsplineModuliX, GLOBAL const real* RESTRICT pmeBsplineModuliY,
+        GLOBAL const real* RESTRICT pmeBsplineModuliZ,
+        real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
+    const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*(GRID_SIZE_Z/2+1);
+    const real recipScaleFactor = RECIP(M_PI)*recipBoxVecX.x*recipBoxVecY.y*recipBoxVecZ.z;
+    for (int index = GLOBAL_ID; index < gridSize; index += GLOBAL_SIZE) {
+        int kx = index/(GRID_SIZE_Y*(GRID_SIZE_Z/2+1));
+        int remainder = index-kx*GRID_SIZE_Y*(GRID_SIZE_Z/2+1);
+        int ky = remainder/(GRID_SIZE_Z/2+1);
+        int kz = remainder-ky*(GRID_SIZE_Z/2+1);
+        int mx = (kx < (GRID_SIZE_X+1)/2) ? kx : (kx-GRID_SIZE_X);
+        int my = (ky < (GRID_SIZE_Y+1)/2) ? ky : (ky-GRID_SIZE_Y);
+        int mz = (kz < (GRID_SIZE_Z+1)/2) ? kz : (kz-GRID_SIZE_Z);
+        real mhx = mx*recipBoxVecX.x;
+        real mhy = mx*recipBoxVecY.x+my*recipBoxVecY.y;
+        real mhz = mx*recipBoxVecZ.x+my*recipBoxVecZ.y+mz*recipBoxVecZ.z;
+        real bx = pmeBsplineModuliX[kx];
+        real by = pmeBsplineModuliY[ky];
+        real bz = pmeBsplineModuliZ[kz];
+        real m2 = mhx*mhx+mhy*mhy+mhz*mhz;
+        real denom = m2*bx*by*bz;
+        real eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)/denom;
+        coefficients[index] = (index == 0 ? 0 : eterm);
+    }
+}
+
+KERNEL void applyReciprocalConvolutionCoefficients(GLOBAL real2* RESTRICT pmeGrid,
+        GLOBAL const real* RESTRICT coefficients) {
+    const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*(GRID_SIZE_Z/2+1);
+    for (int index = GLOBAL_ID; index < gridSize; index += GLOBAL_SIZE) {
+        // Preserve the current reciprocalConvolution zero-mode behavior.
+        if (index != 0) {
+            real2 grid = pmeGrid[index];
+            real eterm = coefficients[index];
+            pmeGrid[index] = make_real2(grid.x*eterm, grid.y*eterm);
+        }
+        else
+            pmeGrid[index] = make_real2(0);
+    }
+}
+
+#endif
+
 KERNEL void gridEvaluateEnergy(GLOBAL real2* RESTRICT pmeGrid, GLOBAL mixed* RESTRICT energyBuffer,
                       GLOBAL const real* RESTRICT pmeBsplineModuliX, GLOBAL const real* RESTRICT pmeBsplineModuliY, GLOBAL const real* RESTRICT pmeBsplineModuliZ,
                       real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
