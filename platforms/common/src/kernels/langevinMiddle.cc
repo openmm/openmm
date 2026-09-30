@@ -25,6 +25,9 @@ KERNEL void integrateLangevinMiddlePart1(int numAtoms, int paddedNumAtoms, GLOBA
 
 KERNEL void integrateLangevinMiddlePart2(int numAtoms, GLOBAL mixed4* RESTRICT velm, GLOBAL mixed4* RESTRICT posDelta,
         GLOBAL mixed4* RESTRICT oldDelta, GLOBAL const mixed* RESTRICT paramBuffer, GLOBAL const mixed2* RESTRICT dt, GLOBAL const float4* RESTRICT random, unsigned int randomIndex
+#ifdef USE_LANGEVIN_MIDDLE_SETTLE_FUSION
+        , GLOBAL const int* RESTRICT settleFusionMask
+#endif
         ) {
     mixed vscale = paramBuffer[VelScale];
     mixed noisescale = paramBuffer[NoiseScale];
@@ -42,7 +45,10 @@ KERNEL void integrateLangevinMiddlePart2(int numAtoms, GLOBAL mixed4* RESTRICT v
             velm[index] = velocity;
             delta += make_mixed4(halfdt*velocity.x, halfdt*velocity.y, halfdt*velocity.z, 0);
             posDelta[index] = delta;
-            oldDelta[index] = delta;
+#ifdef USE_LANGEVIN_MIDDLE_SETTLE_FUSION
+            if (settleFusionMask[index] == 0)
+#endif
+                oldDelta[index] = delta;
         }
         randomIndex += GLOBAL_SIZE;
         index += GLOBAL_SIZE;
@@ -59,9 +65,16 @@ KERNEL void integrateLangevinMiddlePart3(int numAtoms, GLOBAL real4* RESTRICT po
 #ifdef USE_MIXED_PRECISION
         , GLOBAL real4* RESTRICT posqCorrection
 #endif
+#ifdef USE_LANGEVIN_MIDDLE_SETTLE_FUSION
+        , GLOBAL const int* RESTRICT settleFusionMask
+#endif
         ) {
     mixed invDt = 1/dt[0].y;
     for (int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SIZE) {
+#ifdef USE_LANGEVIN_MIDDLE_SETTLE_FUSION
+        if (settleFusionMask[index] != 0)
+            continue;
+#endif
         mixed4 velocity = velm[index];
         if (velocity.w != 0.0) {
             mixed4 delta = posDelta[index];

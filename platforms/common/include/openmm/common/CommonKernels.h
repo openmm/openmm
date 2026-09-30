@@ -972,8 +972,13 @@ private:
     ComputeContext& cc;
     double prevTemp, prevFriction, prevStepSize;
     bool hasInitializedKernels;
-    ComputeArray params, oldDelta;
-    ComputeKernel kernel1, kernel2, kernel3;
+    bool useSettleFusion, traceSettleFusion;
+    bool useResidualTail, traceResidualTail;
+    int numResidualTailAtoms;
+    int settleFusionBlockSize;
+    bool reloadSettleOriginalDelta, traceSettleOccupancy;
+    ComputeArray params, oldDelta, settleFusionMask, residualTailAtoms;
+    ComputeKernel kernel1, kernel2, kernel3, settleFusionKernel;
 };
 
 /**

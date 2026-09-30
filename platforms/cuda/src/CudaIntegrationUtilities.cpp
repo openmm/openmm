@@ -77,7 +77,7 @@ void CudaIntegrationUtilities::applyConstraintsImpl(bool constrainVelocities, do
         shakeKernel = shakePosKernel;
         ccmaForceKernel = ccmaPosForceKernel;
     }
-    if (settleAtoms.isInitialized()) {
+    if (settleAtoms.isInitialized() && (constrainVelocities || !skipSettleForLangevinMiddle)) {
         if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
             settleKernel->setArg(1, tol);
         else

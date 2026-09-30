@@ -52,6 +52,10 @@
 #include <iterator>
 #include <set>
 
+#include <cstdlib>
+#include <cstdio>
+#include <typeinfo>
+
 using namespace OpenMM;
 using namespace std;
 using namespace Lepton;
@@ -3120,8 +3124,122 @@ double CommonIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& contex
 void CommonIntegrateLangevinMiddleStepKernel::initialize(const System& system, const LangevinMiddleIntegrator& integrator) {
     cc.initializeContexts();
     ContextSelector selector(cc);
-    cc.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::langevinMiddle);
+    IntegrationUtilities& integration = cc.getIntegrationUtilities();
+    integration.initRandomNumberGenerator(integrator.getRandomNumberSeed());
+    // Residual-tail fusion is independently opt-in and requires SETTLE fusion.
+    const char* tailEnv = std::getenv("OPENMM_EXPERIMENT_MIDDLE_FUSED_TAIL");
+    const char* tailTraceEnv = std::getenv("OPENMM_EXPERIMENT_MIDDLE_FUSED_TAIL_TRACE");
+    bool tailRequested = (tailEnv != NULL && string(tailEnv) == "1");
+    bool tailTrace = (tailTraceEnv != NULL && string(tailTraceEnv) == "1");
+    useResidualTail = false;
+    numResidualTailAtoms = 0;
+    // Independent resource experiments: unset/invalid values keep the baseline.
+    const char* blockEnv = std::getenv("OPENMM_EXPERIMENT_SETTLE_BLOCK_SIZE");
+    const char* reloadEnv = std::getenv("OPENMM_EXPERIMENT_SETTLE_RELOAD_DELTA");
+    const char* occupancyTraceEnv = std::getenv("OPENMM_EXPERIMENT_SETTLE_OCCUPANCY_TRACE");
+    int requestedBlockSize = 64;
+    if (blockEnv != NULL && string(blockEnv) == "128")
+        requestedBlockSize = 128;
+    bool reloadRequested = (reloadEnv != NULL && string(reloadEnv) == "1");
+    bool occupancyTrace = (occupancyTraceEnv != NULL && string(occupancyTraceEnv) == "1");
+    settleFusionBlockSize = -1;
+    reloadSettleOriginalDelta = false;
+    traceSettleOccupancy = false;
+    const char* fusionEnv = std::getenv("OPENMM_LANGEVIN_MIDDLE_SETTLE_FUSION");
+    const char* traceEnv = std::getenv("OPENMM_LANGEVIN_MIDDLE_SETTLE_FUSION_TRACE");
+    bool requested = (fusionEnv != NULL && string(fusionEnv) == "1");
+    bool trace = (traceEnv != NULL && string(traceEnv) == "1");
+    useSettleFusion = requested && typeid(integrator) == typeid(LangevinMiddleIntegrator)
+            && getPlatform().getName() == "CUDA" && cc.getUseMixedPrecision()
+            && cc.getNumContexts() == 1 && integration.getNumVirtualSites() == 0
+            && integration.getNumSettleClusters() > 0;
+    int numFusedAtoms = 0;
+    if (useSettleFusion) {
+        // Use the actual utility-selected, disjoint SETTLE slots, not a second
+        // topology classifier.  Identical-molecule reordering preserves slots.
+        vector<mm_int4> clusters;
+        integration.getSettleAtomsForLangevinMiddle().download(clusters);
+        vector<int> mask(cc.getPaddedNumAtoms(), 0);
+        for (auto cluster : clusters) {
+            int atoms[] = {cluster.x, cluster.y, cluster.z};
+            for (int atom : atoms) {
+                if (atom < 0 || atom >= system.getNumParticles() || mask[atom] != 0
+                        || !(system.getParticleMass(atom) > 0) || !std::isfinite(system.getParticleMass(atom))) {
+                    useSettleFusion = false;
+                    break;
+                }
+                mask[atom] = 1;
+                numFusedAtoms++;
+            }
+            if (!useSettleFusion)
+                break;
+        }
+        if (useSettleFusion) {
+            settleFusionMask.initialize<int>(cc, cc.getPaddedNumAtoms(), "langevinMiddleSettleMask");
+            settleFusionMask.upload(mask);
+            if (tailRequested) {
+                // Complement the existing SETTLE slots, excluding padded atoms.
+                // No new topology classifier and no change to atom ordering.
+                vector<int> residual;
+                for (int atom = 0; atom < cc.getNumAtoms(); atom++)
+                    if (mask[atom] == 0)
+                        residual.push_back(atom);
+                numResidualTailAtoms = (int) residual.size();
+                // A zero-length tail still needs a valid unused array argument.
+                if (residual.empty())
+                    residual.push_back(-1);
+                residualTailAtoms.initialize<int>(cc, residual.size(), "langevinMiddleResidualTail");
+                residualTailAtoms.upload(residual);
+                useResidualTail = true;
+            }
+        }
+    }
+    traceResidualTail = tailTrace && useResidualTail;
+    if (tailTrace)
+        std::fprintf(stderr, "[middle-fused-tail] requested=%d enabled=%d residual_atoms=%d\n",
+                (int) tailRequested, (int) useResidualTail, numResidualTailAtoms);
+    traceSettleFusion = trace && useSettleFusion;
+    if (trace)
+        std::fprintf(stderr, "[settle-fusion] requested=%d enabled=%d clusters=%d fused_atoms=%d residual_atoms=%d\n",
+                (int) requested, (int) useSettleFusion, integration.getNumSettleClusters(),
+                useSettleFusion ? numFusedAtoms : 0, cc.getNumAtoms()-(useSettleFusion ? numFusedAtoms : 0));
+    map<string, string> defines;
+    if (useSettleFusion)
+        defines["USE_LANGEVIN_MIDDLE_SETTLE_FUSION"] = "1";
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::langevinMiddle, defines);
+    if (useSettleFusion) {
+        map<string, string> settleDefines;
+        reloadSettleOriginalDelta = reloadRequested;
+        if (reloadSettleOriginalDelta)
+            settleDefines["RELOAD_LANGEVIN_MIDDLE_ORIGINAL_DELTA"] = "1";
+        if (useResidualTail)
+            settleDefines["FUSE_LANGEVIN_MIDDLE_RESIDUAL_TAIL"] = "1";
+        ComputeProgram settleProgram = cc.compileProgram(CommonKernelSources::langevinMiddleSettle, settleDefines);
+        settleFusionKernel = settleProgram->createKernel("applySettleAndLangevinMiddlePart3");
+        // Change only this independent-cluster kernel's launch shape. Do not
+        // retune global CUDA defaults, RNG mapping, or CMM reduction blocks.
+        if (requestedBlockSize != 64 && requestedBlockSize <= settleFusionKernel->getMaxBlockSize())
+            settleFusionBlockSize = requestedBlockSize;
+        traceSettleOccupancy = occupancyTrace;
+        settleFusionKernel->addArg(integration.getNumSettleClusters());
+        settleFusionKernel->addArg(); // constraint tolerance, same mixed type
+        settleFusionKernel->addArg(cc.getPosq());
+        settleFusionKernel->addArg(integration.getPosDelta());
+        settleFusionKernel->addArg(cc.getVelm());
+        settleFusionKernel->addArg(integration.getSettleAtomsForLangevinMiddle());
+        settleFusionKernel->addArg(integration.getSettleParamsForLangevinMiddle());
+        settleFusionKernel->addArg(cc.getPosqCorrection());
+        settleFusionKernel->addArg(integration.getStepSize());
+        if (useResidualTail) {
+            settleFusionKernel->addArg(numResidualTailAtoms);
+            settleFusionKernel->addArg(residualTailAtoms);
+            settleFusionKernel->addArg(); // oldDelta is allocated below; bind at first execute.
+        }
+    }
+    if (occupancyTrace)
+        std::fprintf(stderr, "[settle-occupancy] fusion=%d tail=%d reload_requested=%d reload_enabled=%d block_requested=%d block_selected=%d\n",
+                (int) useSettleFusion, (int) useResidualTail, (int) reloadRequested,
+                (int) reloadSettleOriginalDelta, requestedBlockSize, settleFusionBlockSize == -1 ? 64 : settleFusionBlockSize);
     kernel1 = program->createKernel("integrateLangevinMiddlePart1");
     kernel2 = program->createKernel("integrateLangevinMiddlePart2");
     kernel3 = program->createKernel("integrateLangevinMiddlePart3");
@@ -3156,6 +3274,8 @@ void CommonIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, cons
         kernel2->addArg(integration.getStepSize());
         kernel2->addArg(integration.getRandom());
         kernel2->addArg(); // Random index will be set just before it is executed.
+        if (useSettleFusion)
+            kernel2->addArg(settleFusionMask);
         kernel3->addArg(numAtoms);
         kernel3->addArg(cc.getPosq());
         kernel3->addArg(cc.getVelm());
@@ -3164,6 +3284,10 @@ void CommonIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, cons
         kernel3->addArg(integration.getStepSize());
         if (cc.getUseMixedPrecision())
             kernel3->addArg(cc.getPosqCorrection());
+        if (useSettleFusion)
+            kernel3->addArg(settleFusionMask);
+        if (useResidualTail)
+            settleFusionKernel->setArg(11, oldDelta);
     }
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
@@ -3190,8 +3314,33 @@ void CommonIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, cons
     kernel1->execute(numAtoms);
     integration.applyVelocityConstraints(integrator.getConstraintTolerance());
     kernel2->execute(numAtoms);
-    integration.applyConstraints(integrator.getConstraintTolerance());
-    kernel3->execute(numAtoms);
+    if (useSettleFusion) {
+        // These constraints only own the mask==0 atoms.  Complete them before
+        // the fused kernel finalizes both disjoint atom sets in one launch.
+        if (useResidualTail)
+            integration.applyLangevinMiddleConstraintsWithoutSettle(integrator.getConstraintTolerance());
+        settleFusionKernel->setArg(1, integrator.getConstraintTolerance());
+        settleFusionKernel->execute(integration.getNumSettleClusters(), settleFusionBlockSize);
+        if (traceSettleOccupancy) {
+            std::fprintf(stderr, "[settle-occupancy] first-launch-enqueued reload=%d block=%d tail=%d\n",
+                    (int) reloadSettleOriginalDelta, settleFusionBlockSize == -1 ? 64 : settleFusionBlockSize, (int) useResidualTail);
+            traceSettleOccupancy = false;
+        }
+        if (traceSettleFusion) {
+            std::fprintf(stderr, "[settle-fusion] first-launch-enqueued clusters=%d\n", integration.getNumSettleClusters());
+            traceSettleFusion = false;
+        }
+        if (traceResidualTail) {
+            std::fprintf(stderr, "[middle-fused-tail] first-launch-enqueued residual_atoms=%d generic_part3_skipped=1\n", numResidualTailAtoms);
+            traceResidualTail = false;
+        }
+        if (!useResidualTail)
+            integration.applyLangevinMiddleConstraintsWithoutSettle(integrator.getConstraintTolerance());
+    }
+    else
+        integration.applyConstraints(integrator.getConstraintTolerance());
+    if (!useResidualTail)
+        kernel3->execute(numAtoms);
     integration.computeVirtualSites();
 
     // Update the time and step count.

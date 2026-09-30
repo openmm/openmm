@@ -89,7 +89,7 @@ struct IntegrationUtilities::ConstraintOrderer {
 };
 
 IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System& system) : context(context),
-        randomPos(0), hasOverlappingVsites(false) {
+        skipSettleForLangevinMiddle(false), randomPos(0), hasOverlappingVsites(false) {
     // Create workspace arrays.
 
     lastStepSize = mm_double2(0.0, 0.0);
@@ -820,6 +820,20 @@ double IntegrationUtilities::getLastStepSize() {
 
 void IntegrationUtilities::applyConstraints(double tol) {
     applyConstraintsImpl(false, tol);
+}
+
+void IntegrationUtilities::applyLangevinMiddleConstraintsWithoutSettle(double tol) {
+    // Restore the flag even if a launch fails.  No state survives this host call.
+    bool previous = skipSettleForLangevinMiddle;
+    skipSettleForLangevinMiddle = true;
+    try {
+        applyConstraintsImpl(false, tol);
+    }
+    catch (...) {
+        skipSettleForLangevinMiddle = previous;
+        throw;
+    }
+    skipSettleForLangevinMiddle = previous;
 }
 
 void IntegrationUtilities::applyVelocityConstraints(double tol) {
