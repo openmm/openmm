@@ -175,7 +175,10 @@ double MetalCalcForcesAndEnergyKernel::finishComputation(ContextImpl& simulation
 }
 
 void MetalCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
-    const bool floatGrid = force.getNonbondedMethod() != NonbondedForce::LJPME && OPENMM_METAL_FAST_PME_FLOAT_SPREAD;
+    // Common already has a floating-grid path that omits finishSpreadCharge.
+    // The force accumulator ABI is independent of the reciprocal grid format.
+    const bool floatGrid = force.getNonbondedMethod() == NonbondedForce::LJPME ?
+            OPENMM_METAL_FAST_LJPME_FLOAT_SPREAD : OPENMM_METAL_FAST_PME_FLOAT_SPREAD;
     commonInitialize(system, force, false, false, !floatGrid, false);
 }
 
