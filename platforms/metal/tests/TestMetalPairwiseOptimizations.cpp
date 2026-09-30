@@ -45,6 +45,117 @@ void testSelection() {
         CommonKernelSources::gbsaObc, CommonKernelSources::dpd, CommonKernelSources::customHbondForce};
     for (const string& source : templates)
         ASSERT_EQUAL(source, MetalPairwiseOptimizations::apply(source, Settings()));
+    vector<Settings> options(1);
+    options[0].customGBValue = true;
+    const int selected[] = {0};
+    for (int i = 0; i < options.size(); i++) {
+        for (int j = 0; j < templates.size(); j++) {
+            string source = MetalPairwiseOptimizations::apply(templates[j], options[i]);
+            ASSERT_EQUAL(j == selected[i], source != templates[j]);
+            if (source != templates[j]) {
+                ASSERT(source.find("simdShuffle(") != string::npos);
+                ASSERT(source.find("#define USE_HIP") == string::npos);
+                ASSERT(source.find("#define __CUDA_ARCH__") == string::npos);
+            }
+        }
+        const string unrelated = "KERNEL void computeN2Value(GLOBAL float* output) { output[GLOBAL_ID] = 0; }\n";
+        ASSERT_EQUAL(unrelated, MetalPairwiseOptimizations::apply(unrelated, options[i]));
+        string changed = templates[selected[i]];
+        changed.insert(changed.find("KERNEL void"), "// modified template skeleton\n");
+        ASSERT_EQUAL(changed, MetalPairwiseOptimizations::apply(changed, options[i]));
+    }
+}
+
+/** Exact Common value template with asymmetric parameters and a parameter derivative. */
+void testCustomGBValue(int count, bool floating) {
+    System system;
+    for (int i = 0; i < count; i++) system.addParticle(1);
+    MetalContext context(system, nullptr, nullptr, floating);
+    const int padded = 32*((count+31)/32), blocks = padded/32;
+    map<string,string> substitutions;
+    substitutions["PARAMETER_ARGUMENTS"] = ", GLOBAL const float4* global_params1, GLOBAL mm_ulong* global_dValue0dParam1";
+    substitutions["ATOM_PARAMETER_DATA"] = "LOCAL float4 local_params1[LOCAL_BUFFER_SIZE];\nLOCAL real local_dValue0dParam1[LOCAL_BUFFER_SIZE];\n";
+    substitutions["LOAD_ATOM1_PARAMETERS"] = "float4 params11 = global_params1[atom1];\nreal dValue0dParam1 = 0;\n";
+    substitutions["LOAD_LOCAL_PARAMETERS_FROM_1"] = "local_params1[localAtomIndex] = params11;\n";
+    substitutions["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = "local_params1[localAtomIndex] = global_params1[j];\nlocal_dValue0dParam1[localAtomIndex] = 0;\n";
+    substitutions["LOAD_ATOM2_PARAMETERS"] = "float4 params12 = local_params1[atom2];\nreal temp_dValue0dParam1_1 = 0, temp_dValue0dParam1_2 = 0;\n";
+    substitutions["COMPUTE_VALUE"] = "tempValue1 = params11.x+2*params12.x+0.25f*r;\n"
+            "tempValue2 = params12.x+2*params11.x+0.25f*r;\n"
+            "temp_dValue0dParam1_1 = params12.y;\ntemp_dValue0dParam1_2 = params11.y;\n";
+    substitutions["ADD_TEMP_DERIVS1"] = "dValue0dParam1 += temp_dValue0dParam1_1;\n";
+    substitutions["ADD_TEMP_DERIVS2"] = "local_dValue0dParam1[tbx+tj] += temp_dValue0dParam1_2;\n";
+    substitutions["STORE_PARAM_DERIVS1"] = "ATOMIC_ADD(&global_dValue0dParam1[offset1], (mm_ulong) realToFixedPoint(dValue0dParam1));\n";
+    substitutions["STORE_PARAM_DERIVS2"] = "ATOMIC_ADD(&global_dValue0dParam1[offset2], (mm_ulong) realToFixedPoint(local_dValue0dParam1[LOCAL_ID]));\n";
+    string source = context.replaceStrings(CommonKernelSources::customGBValueN2, substitutions);
+    Settings settings;
+    settings.customGBValue = true;
+    const string fast = MetalPairwiseOptimizations::apply(source, settings);
+    ASSERT(fast != source);
+    vector<mm_int2> tiles;
+    for (int i = 0; i < blocks; i++) tiles.push_back(mm_int2(i,i));
+    if (blocks > 1) tiles.push_back(mm_int2(1,0));
+    sort(tiles.begin(), tiles.end(), [blocks](const mm_int2& a, const mm_int2& b) {
+        return a.x+a.y*blocks-a.y*(a.y+1)/2 < b.x+b.y*blocks-b.y*(b.y+1)/2;
+    });
+    vector<unsigned int> exclusions(tiles.size()*32, ~0u);
+    for (int t = 0; t < tiles.size(); t++)
+        for (int i = 0; i < 32; i++)
+            for (int j = 0; j < 32; j++) {
+                const int a = 32*tiles[t].x+i, b = 32*tiles[t].y+j;
+                if (a == b || (a == 0 && b == 31) || (a == 31 && b == 0)) exclusions[t*32+i] &= ~(1u<<j);
+            }
+    map<string,string> defines;
+    defines["NUM_ATOMS"] = to_string(count);
+    defines["PADDED_NUM_ATOMS"] = to_string(padded);
+    defines["NUM_BLOCKS"] = to_string(blocks);
+    defines["TILE_SIZE"] = "32";
+    defines["LOCAL_BUFFER_SIZE"] = "64";
+    defines["FIRST_EXCLUSION_TILE"] = "0";
+    defines["LAST_EXCLUSION_TILE"] = to_string(tiles.size());
+    defines["NUM_TILES_WITH_EXCLUSIONS"] = to_string(tiles.size());
+    defines["USE_EXCLUSIONS"] = "1";
+    ComputeArray positions, params, exclusionBits, exclusionTiles, output, derivative;
+    positions.initialize<mm_float4>(context, padded, "pairwisePositions");
+    params.initialize<mm_float4>(context, padded, "pairwiseParams");
+    exclusionBits.initialize<unsigned int>(context, exclusions.size(), "pairwiseExclusions");
+    exclusionTiles.initialize<mm_int2>(context, tiles.size(), "pairwiseExclusionTiles");
+    output.initialize<int64_t>(context, padded, "pairwiseValues");
+    derivative.initialize<int64_t>(context, padded, "pairwiseDerivatives");
+    vector<mm_float4> pos(padded), par(padded);
+    for (int i = 0; i < padded; i++) {
+        pos[i] = mm_float4(0.125f*i, 0, 0, 0);
+        par[i] = mm_float4(0.25f*(i+1), 0.5f*(i+1), 0, 0);
+    }
+    positions.upload(pos);
+    params.upload(par);
+    exclusionBits.upload(exclusions);
+    exclusionTiles.upload(tiles);
+    for (const string& program : {"// unoptimized reference\n"+source, fast}) {
+        context.clearBuffer(output);
+        context.clearBuffer(derivative);
+        ComputeKernel kernel = context.compileProgram(program, defines)->createKernel("computeN2Value");
+        kernel->addArg(positions);
+        kernel->addArg(exclusionBits);
+        kernel->addArg(exclusionTiles);
+        kernel->addArg(output);
+        kernel->addArg(blocks*(blocks+1)/2);
+        kernel->addArg(params);
+        kernel->addArg(derivative);
+        kernel->execute(64,64);
+        vector<double> values, derivs;
+        context.downloadFixedPointBuffer(output, values);
+        context.downloadFixedPointBuffer(derivative, derivs);
+        for (int i = 0; i < count; i++) {
+            double expected = 0, expectedDeriv = 0;
+            for (int j = 0; j < count; j++)
+                if (i != j && !(i == 0 && j == 31) && !(i == 31 && j == 0)) {
+                    expected += par[i].x+2*par[j].x+0.25*abs(pos[i].x-pos[j].x);
+                    expectedDeriv += par[j].y;
+                }
+            ASSERT_EQUAL_TOL(expected, values[i], 1e-6);
+            ASSERT_EQUAL_TOL(expectedDeriv, derivs[i], 1e-6);
+        }
+    }
 }
 
 int main(int argc, char** argv) {
@@ -53,6 +164,9 @@ int main(int argc, char** argv) {
         if (argc == 2 && string(argv[1]) == "--selection-only") {
             cout << "Metal pairwise template selection tests passed" << endl;
             return 0;
+        }
+        for (bool floating : {false, true}) {
+            for (int count : {1,31,32,33,63,65}) testCustomGBValue(count, floating);
         }
     }
     catch (const exception& error) {

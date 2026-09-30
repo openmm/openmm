@@ -42,6 +42,7 @@ class MetalPairwiseOptimizations {
 public:
     /** Independently selectable transformations; defaults are the Common path. */
     struct Settings {
+        bool customGBValue = false;
     };
 
     /** @return Settings selected by the independent build-time switches. */

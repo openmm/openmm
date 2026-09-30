@@ -33,8 +33,130 @@
 using namespace OpenMM;
 using namespace std;
 
+namespace {
+
+/** Match all literal template text, allowing only Common's existing holes. */
+bool matchesTemplate(const string& source, const string& pattern, const set<string>& holes = {}) {
+    vector<string> literals;
+    size_t literalStart = 0;
+    for (size_t i = 0; i < pattern.size();) {
+        if (!isalpha(static_cast<unsigned char>(pattern[i])) && pattern[i] != '_') {
+            i++;
+            continue;
+        }
+        size_t end = i+1;
+        while (end < pattern.size() && (isalnum(static_cast<unsigned char>(pattern[end])) || pattern[end] == '_')) end++;
+        if (holes.count(pattern.substr(i, end-i))) {
+            literals.push_back(pattern.substr(literalStart, i-literalStart));
+            literalStart = end;
+        }
+        i = end;
+    }
+    literals.push_back(pattern.substr(literalStart));
+    if (literals.size() == 1)
+        return source == pattern;
+    size_t cursor = 0;
+    for (size_t i = 0; i < literals.size(); i++) {
+        size_t next = source.find(literals[i], cursor);
+        if (next == string::npos || (i == 0 && next != 0)) return false;
+        cursor = next+literals[i].size();
+    }
+    return cursor == source.size();
+}
+
+/** Replace a reviewed literal and optionally check its template occurrence count. */
+void replace(string& source, const string& oldText, const string& newText, int expected = -1) {
+    size_t pos = 0;
+    int count = 0;
+    while ((pos = source.find(oldText, pos)) != string::npos) {
+        source.replace(pos, oldText.size(), newText);
+        pos += newText.size();
+        count++;
+    }
+    if (expected >= 0 && count != expected)
+        throw OpenMMException("Common template changed: review Metal pairwise transformation of "+oldText);
+}
+
+/** Read-only lane data or a lane-owned accumulator that travels with its particle. */
+struct Register {
+    string type, name;
+    bool readOnly;
+};
+
+string shuffleAssignment(const string& destination, const string& value, const string& lane) {
+    return destination+" = simdShuffle("+value+", "+lane+");\n";
+}
+
+/** MetalKernel separately verifies the hardware SIMD width and padded launch. */
+string checkedSource(const string& source) {
+    return "#if defined(TILE_SIZE) && TILE_SIZE != 32\n"
+            "#error Metal pairwise register paths require TILE_SIZE=32\n#endif\n"+source;
+}
+
+/** Replace a known array's audited subscripts after diagonal broadcasts are made. */
+void scalarize(string& source, const string& name) {
+    for (const string& index : {"LOCAL_ID", "localAtomIndex", "atom2", "tbx+tj"})
+        replace(source, name+"["+index+"]", name);
+}
+
+/** Keep diagonal broadcast shuffles before any cutoff or particle validity branch. */
+string customGB(string source) {
+    const regex declaration("LOCAL ([A-Za-z0-9_]+) (local_[A-Za-z0-9_]+)\\[LOCAL_BUFFER_SIZE\\];");
+    vector<Register> registers;
+    for (sregex_iterator i(source.begin(), source.end(), declaration), end; i != end; ++i) {
+        const string name = (*i)[2];
+        const bool readOnly = name == "local_pos" || name.find("local_params") == 0;
+        const bool accumulator = name == "local_value" || name.find("local_dValue0dParam") == 0;
+        if (!readOnly && !accumulator)
+            throw OpenMMException("Unrecognized Common CustomGB lane field: "+name);
+        registers.push_back({(*i)[1], name, readOnly});
+    }
+    if (registers.empty()) throw OpenMMException("Missing Common CustomGB lane data");
+    source = regex_replace(source, declaration, "$1 $2 = $1(0);");
+    const string diagonalEnd = "\n        else {\n            // This is an off-diagonal tile.";
+    const size_t end = source.find(diagonalEnd);
+    if (end == string::npos) throw OpenMMException("Missing Common CustomGB diagonal tile");
+    string diagonal = source.substr(0, end);
+    string rest = source.substr(end);
+    string broadcast;
+    for (const Register& reg : registers) {
+        if (reg.readOnly) {
+            const string value = "_metal_broadcast_"+reg.name;
+            broadcast += reg.type+" "+shuffleAssignment(value, reg.name, "j");
+            replace(diagonal, reg.name+"[atom2]", value);
+        }
+    }
+    const string diagonalLoop = "for (unsigned int j = 0; j < TILE_SIZE; j++) {";
+    replace(diagonal, diagonalLoop, diagonalLoop+"\n"+broadcast, 1);
+    // The diagonal no longer communicates through local memory.
+    replace(diagonal, "SYNC_WARPS;", "");
+    source = diagonal+rest;
+    for (const Register& reg : registers) scalarize(source, reg.name);
+    replace(source, "LOCAL int atomIndices[LOCAL_BUFFER_SIZE];", "", 1);
+    replace(source, "const unsigned int tbx = LOCAL_ID - tgx;", "const unsigned int tbx = LOCAL_ID - tgx;\nint atomIndices = 0;", 1);
+    scalarize(source, "atomIndices");
+    string rotate;
+    for (const Register& reg : registers)
+        rotate += shuffleAssignment(reg.name, reg.name, "(tgx+1)&31");
+    rotate += shuffleAssignment("atomIndices", "atomIndices", "(tgx+1)&31");
+    const regex next("tj = \\(tj \\+ 1\\) & \\(TILE_SIZE - 1\\);\\s*SYNC_WARPS;");
+    if (distance(sregex_iterator(source.begin(), source.end(), next), sregex_iterator()) != 3)
+        throw OpenMMException("Missing Common CustomGB ring steps");
+    source = regex_replace(source, next, "tj = (tj + 1) & (TILE_SIZE - 1);\n"+rotate);
+    return source;
+}
+
+const set<string> customGBHoles = {"PARAMETER_ARGUMENTS", "ATOM_PARAMETER_DATA", "LOAD_ATOM1_PARAMETERS",
+    "LOAD_ATOM2_PARAMETERS", "LOAD_LOCAL_PARAMETERS_FROM_1", "LOAD_LOCAL_PARAMETERS_FROM_GLOBAL",
+    "COMPUTE_VALUE", "ADD_TEMP_DERIVS1", "STORE_PARAM_DERIVS1", "STORE_PARAM_DERIVS2", "SAVE_PARAM_DERIVS"};
+
+} // namespace
+
 MetalPairwiseOptimizations::Settings MetalPairwiseOptimizations::getBuildSettings() {
     Settings settings;
+#if OPENMM_METAL_FAST_CUSTOM_GB_VALUE_SHUFFLE
+    settings.customGBValue = true;
+#endif
     return settings;
 }
 
@@ -43,5 +165,7 @@ string MetalPairwiseOptimizations::apply(const string& source) {
 }
 
 string MetalPairwiseOptimizations::apply(const string& source, const Settings& settings) {
+    if (settings.customGBValue && matchesTemplate(source, CommonKernelSources::customGBValueN2, customGBHoles))
+        return checkedSource(customGB(source));
     return source;
 }
