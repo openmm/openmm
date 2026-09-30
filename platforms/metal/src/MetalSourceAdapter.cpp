@@ -197,41 +197,77 @@ string templateFunction(const string& source, const string& name) {
 }
 
 /**
- * Select the existing CUDA shuffle branch only inside its exact Common helper.
- * Keep other program functions and platform preprocessor branches unchanged.
+ * Select two existing CUDA branches only inside exact Common template functions.
+ * Keep mathematical bodies and synchronization unchanged; never impersonate CUDA
+ * or HIP for the rest of a program. The ballot kernel visits padded 32-lane warps.
  */
 void appendFastPathEdits(const string& source, const vector<Token>& tokens,
         const vector<Function>& functions, vector<Edit>& edits) {
     for (const Function& function : functions) {
-        if (function.name != "reduceMax") continue;
-        bool shuffle = false;
+        if (function.name != "reduceMax" && function.name != "findNeighbors") continue;
+        bool shuffle = false, ballot = false;
         const string body = source.substr(tokens[function.start].begin,
                 tokens[function.end].end-tokens[function.start].begin);
 #if OPENMM_METAL_FAST_CUSTOM_NONBONDED_GROUPS_SHUFFLE
-        static const string original = templateFunction(CommonKernelSources::customNonbondedGroups, "reduceMax");
-        shuffle = (body == original);
+        if (function.name == "reduceMax") {
+            static const string original = templateFunction(CommonKernelSources::customNonbondedGroups, "reduceMax");
+            shuffle = (body == original);
+        }
 #endif
-        if (!shuffle) continue;
-        int selectedBranches = 0, calls = 0;
+#if OPENMM_METAL_FAST_CUSTOM_MANY_PARTICLE_BALLOT
+        if (function.name == "findNeighbors") {
+            static const string original = templateFunction(CommonKernelSources::customManyParticle, "findNeighbors");
+            ballot = (body == original);
+        }
+#endif
+        if (!shuffle && !ballot) continue;
+        int selectedBranches = 0, skippedBranches = 0, calls = 0, scans = 0, masks = 0;
         for (size_t i = function.body+1; i < function.end; i++) {
             const Token& token = tokens[i];
             if (token.directive) {
                 string directive;
                 for (char c : token.text)
                     if (!isspace(static_cast<unsigned char>(c))) directive += c;
-                if (directive == "#ifdefined(__CUDA_ARCH__)&&__CUDA_ARCH__>=700") {
+                if ((shuffle && directive == "#ifdefined(__CUDA_ARCH__)&&__CUDA_ARCH__>=700") ||
+                        (ballot && directive == "#ifdefined(__CUDA_ARCH__)||defined(USE_HIP)")) {
                     edits.push_back({token.begin, token.end, "#if 1 // Scoped Metal CUDA-derived fast path\n"});
                     selectedBranches++;
                 }
+                else if (ballot && directive == "#if!(defined(__CUDA_ARCH__)||defined(USE_HIP))") {
+                    edits.push_back({token.begin, token.end, "#if 0 // Ballot replaces the local flag array\n"});
+                    skippedBranches++;
+                }
                 continue;
             }
-            if (token.text == "__shfl_xor_sync" && i+3 < function.end &&
+            if (shuffle && token.text == "__shfl_xor_sync" && i+3 < function.end &&
                     tokens[i+1].text == "(" && tokens[i+2].text == "0xffffffff" && tokens[i+3].text == ",") {
                 edits.push_back({token.begin, tokens[i+3].end, "simd_shuffle_xor("});
                 calls++;
             }
+            if (ballot && (token.text == "BALLOT" || token.text == "__ffs") && tokens[i+1].text == "(") {
+                size_t close = matching(tokens, i+1, "(", ")");
+                if (token.text == "BALLOT") {
+                    edits.push_back({token.begin, token.end, "uint(simd_vote::vote_t(simd_ballot"});
+                    edits.push_back({tokens[close].end, tokens[close].end, "))"});
+                    calls++;
+                }
+                else {
+                    // The surrounding while guarantees a nonzero mask, so
+                    // CUDA's one-based ffs is precisely ctz(mask)+1 here.
+                    edits.push_back({token.begin, token.end, "(ctz"});
+                    edits.push_back({tokens[close].end, tokens[close].end, "+1)"});
+                    scans++;
+                }
+            }
+            if (ballot && token.text == "int" && tokens[i+1].text == "includeBlockFlags") {
+                // A lane-31-only ballot is INT_MIN as a signed integer; its
+                // flags-1 step must use unsigned modulo arithmetic.
+                edits.push_back({token.begin, token.end, "uint"});
+                masks++;
+            }
         }
-        if (selectedBranches != 1 || calls != 1)
+        if (selectedBranches != 1 || calls != 1 ||
+                (ballot && (skippedBranches != 1 || scans != 1 || masks != 1)))
             throw OpenMMException("Common template changed: review the Metal fast path for "+function.name);
     }
 }

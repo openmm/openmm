@@ -62,6 +62,8 @@ option(OPENMM_METAL_FAST_CONSTANT_POTENTIAL_MATRIX_BROADCAST
     "Use the Common CUDA/HIP lane broadcasts in the ConstantPotential matrix solver" OFF)
 option(OPENMM_METAL_FAST_CUSTOM_NONBONDED_GROUPS_SHUFFLE
     "Use the Common CUDA xor-shuffle maximum in CustomNonbonded interaction groups" OFF)
+option(OPENMM_METAL_FAST_CUSTOM_MANY_PARTICLE_BALLOT
+    "Use the Common CUDA neighbor-block ballot in CustomManyParticle" OFF)
 option(OPENMM_METAL_FAST_PME_FLOAT_SPREAD "Use the Common floating-grid spreading path for PME" OFF)
 option(OPENMM_METAL_FAST_LJPME_FLOAT_SPREAD "Use floating grids for both reciprocal terms of LJPME" OFF)
 option(OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD "Use floating-grid spreading in ConstantPotential PME" OFF)
@@ -188,7 +190,7 @@ target_compile_definitions(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
     OPENMM_METAL_FAST_CONSTANT_POTENTIAL_MATRIX_REDUCTION=$<BOOL:${OPENMM_METAL_FAST_CONSTANT_POTENTIAL_MATRIX_REDUCTION}>
     OPENMM_METAL_FAST_CONSTANT_POTENTIAL_MATRIX_BROADCAST=$<BOOL:${OPENMM_METAL_FAST_CONSTANT_POTENTIAL_MATRIX_BROADCAST}>
     OPENMM_METAL_FAST_CUSTOM_NONBONDED_GROUPS_SHUFFLE=$<BOOL:${OPENMM_METAL_FAST_CUSTOM_NONBONDED_GROUPS_SHUFFLE}>
-
+    OPENMM_METAL_FAST_CUSTOM_MANY_PARTICLE_BALLOT=$<BOOL:${OPENMM_METAL_FAST_CUSTOM_MANY_PARTICLE_BALLOT}>
 
     OPENMM_METAL_RECORD_AND_COMMIT=$<BOOL:${OPENMM_METAL_RECORD_AND_COMMIT}>)
 foreach(feature IN LISTS METAL_OPTIMIZATION_SWITCHES)
@@ -227,7 +229,7 @@ if(BUILD_TESTING)
         target_compile_definitions(TestMetalNonbondedOptimizations PRIVATE
             OPENMM_METAL_FAST_${feature}=$<BOOL:${OPENMM_METAL_FAST_${feature}}>)
     endforeach()
-    foreach(option IN ITEMS CUSTOM_NONBONDED_GROUPS_SHUFFLE)
+    foreach(option IN ITEMS CUSTOM_NONBONDED_GROUPS_SHUFFLE CUSTOM_MANY_PARTICLE_BALLOT)
         target_compile_definitions(TestMetalSourceAdapter PRIVATE
             OPENMM_METAL_FAST_${option}=$<BOOL:${OPENMM_METAL_FAST_${option}}>)
     endforeach()

@@ -37,8 +37,10 @@ using namespace std;
 void testSelection() {
     for (bool floating : {false, true}) {
         string groups = MetalSourceAdapter::translate(CommonKernelSources::customNonbondedGroups, floating);
+        string many = MetalSourceAdapter::translate(CommonKernelSources::customManyParticle, floating);
         ASSERT_EQUAL(bool(OPENMM_METAL_FAST_CUSTOM_NONBONDED_GROUPS_SHUFFLE), groups.find("simd_shuffle_xor(") != string::npos);
-        for (const string& source : {groups}) {
+        ASSERT_EQUAL(bool(OPENMM_METAL_FAST_CUSTOM_MANY_PARTICLE_BALLOT), many.find("simd_ballot(") != string::npos);
+        for (const string& source : {groups, many}) {
             ASSERT(source.find("#define __CUDA_ARCH__") == string::npos);
             ASSERT(source.find("#define USE_HIP") == string::npos);
         }
@@ -166,30 +168,50 @@ KERNEL void convertChecked(GLOBAL const float* input, GLOBAL mm_long* output) {
     inspect->execute(32, 32);
 }
 
-/** Exercise the exact MSL3 xor-shuffle reduction across two SIMD groups. */
-void testShuffle() {
+/** Exercise the exact MSL3 primitives, including empty and lane-31-only masks. */
+void testVoteAndShuffle() {
     System system;
     system.addParticle(1);
     MetalContext context(system);
     const string source = R"(
 #include <metal_stdlib>
 using namespace metal;
-kernel void shuffleMaximum(device uint* output [[buffer(0)]], uint gid [[thread_position_in_grid]]) {
+kernel void voteAndShuffle(device uint4* output [[buffer(0)]], constant uint& selected [[buffer(1)]],
+        uint lane [[thread_index_in_simdgroup]], uint gid [[thread_position_in_grid]]) {
+    uint bits = uint(simd_vote::vote_t(simd_ballot((selected & (1u << lane)) != 0)));
+    uint remaining = bits, count = 0, sum = 0;
+    while (remaining != 0) {
+        int index = (ctz(remaining)+1)-1;
+        remaining &= remaining-1;
+        count++;
+        sum += index;
+    }
     uint maximum = gid;
     for (int mask = 16; mask > 0; mask /= 2)
         maximum = max(maximum, simd_shuffle_xor(maximum, mask));
-    output[gid] = maximum;
+    output[gid] = uint4(bits, count, sum, maximum);
 }
 )";
     ComputeArray output;
-    output.initialize<unsigned int>(context, 64, "shuffleMaximumOutput");
-    ComputeKernel kernel = context.compileProgram(source)->createKernel("shuffleMaximum");
+    output.initialize<mm_int4>(context, 64, "voteAndShuffleOutput");
+    ComputeKernel kernel = context.compileProgram(source)->createKernel("voteAndShuffle");
     kernel->addArg(output);
-    kernel->execute(64, 64);
-    vector<unsigned int> result;
-    output.download(result);
-    for (int i = 0; i < 64; i++)
-        ASSERT_EQUAL(32u*(i/32)+31u, result[i]);
+    kernel->addArg(0u);
+    for (unsigned int mask : {0u, 1u, 0x80000000u, 0xffffffffu, 5u}) {
+        kernel->setArg(1, mask);
+        kernel->execute(64, 64);
+        vector<mm_int4> result;
+        output.download(result);
+        int count = 0, sum = 0;
+        for (int lane = 0; lane < 32; lane++)
+            if ((mask & (1u << lane)) != 0) { count++; sum += lane; }
+        for (int i = 0; i < 64; i++) {
+            ASSERT_EQUAL(mask, (unsigned int) result[i].x);
+            ASSERT_EQUAL(count, result[i].y);
+            ASSERT_EQUAL(sum, result[i].z);
+            ASSERT_EQUAL(32*(i/32)+31, result[i].w);
+        }
+    }
 }
 
 int main() {
@@ -197,7 +219,7 @@ int main() {
         testSelection();
         testFloatAtomics();
         testFixedPointRangeDiagnostic();
-        testShuffle();
+        testVoteAndShuffle();
     }
     catch (const exception& error) {
         if (string(error.what()).find("No Metal device") != string::npos)
