@@ -210,6 +210,62 @@ if(BUILD_TESTING)
     target_compile_definitions(TestMetalSourceAdapter PRIVATE
 
         OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS=$<BOOL:${OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS}>)
+    set(METAL_CORE_TESTS HarmonicBondForce HarmonicAngleForce PeriodicTorsionForce
+        RBTorsionForce CMAPTorsionForce CustomBondForce CustomAngleForce
+        CustomTorsionForce CustomExternalForce CustomCompoundBondForce
+        CustomCentroidBondForce NonbondedForce Ewald DispersionPME
+        GBSAOBCForce CustomGBForce CustomNonbondedForce CustomHbondForce
+        CustomManyParticleForce GayBerneForce LCPOForce ConstantPotentialForce
+        CustomCVForce ATMForce CustomCPPForce PythonForce OrientationRestraintForce RGForce
+        RMSDForce VerletIntegrator LangevinIntegrator LangevinMiddleIntegrator
+        BrownianIntegrator VariableVerletIntegrator VariableLangevinIntegrator
+        CustomIntegrator CompoundIntegrator DPDIntegrator QTBIntegrator
+        NoseHooverIntegrator AndersenThermostat CMMotionRemover VirtualSites
+        Settle Checkpoints MultipleForces LocalEnergyMinimizer
+        MonteCarloBarostat MonteCarloAnisotropicBarostat MonteCarloFlexibleBarostat)
+    foreach(test IN LISTS METAL_CORE_TESTS)
+        add_executable(TestMetal${test} tests/TestMetalCommon.cpp)
+        target_link_libraries(TestMetal${test} PRIVATE ${OPENMMMETAL_LIBRARY_NAME})
+        target_compile_definitions(TestMetal${test} PRIVATE METAL_COMMON_TEST_HEADER="Test${test}.h")
+        add_test(NAME TestMetal${test} COMMAND TestMetal${test})
+        set_tests_properties(TestMetal${test} PROPERTIES LABELS "Metal;Core;Single" TIMEOUT 600)
+    endforeach()
+    target_compile_definitions(TestMetalNonbondedForce PRIVATE METAL_TEST_NONBONDED)
+    target_compile_definitions(TestMetalCheckpoints PRIVATE METAL_TEST_CHECKPOINTS)
+    target_compile_definitions(TestMetalLocalEnergyMinimizer PRIVATE METAL_TEST_MINIMIZER)
+    target_compile_definitions(TestMetalLocalEnergyMinimizer PRIVATE
+        OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS=$<BOOL:${OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS}>)
+    target_compile_definitions(TestMetalConstantPotentialForce PRIVATE METAL_TEST_CONSTANT_POTENTIAL)
+    target_compile_definitions(TestMetalMonteCarloBarostat PRIVATE METAL_TEST_MONTE_CARLO_BAROSTAT)
+    target_compile_definitions(TestMetalMonteCarloAnisotropicBarostat PRIVATE METAL_TEST_MONTE_CARLO_ANISOTROPIC_BAROSTAT)
+    # Validate the private GPU-only minimization representation with unchanged
+    # force assertions, not only the extreme-overlap minimizer regression.
+    set(METAL_FLOAT_TESTS HarmonicBondForce HarmonicAngleForce PeriodicTorsionForce
+        RBTorsionForce CMAPTorsionForce CustomBondForce CustomAngleForce
+        CustomTorsionForce CustomExternalForce CustomCompoundBondForce
+        NonbondedForce Ewald DispersionPME GBSAOBCForce CustomGBForce
+        CustomNonbondedForce CustomHbondForce CustomManyParticleForce GayBerneForce
+        LCPOForce ConstantPotentialForce CustomCVForce ATMForce CustomCPPForce
+        PythonForce CustomCentroidBondForce OrientationRestraintForce RGForce RMSDForce
+        MultipleForces VirtualSites LocalEnergyMinimizer)
+    if(NOT OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS)
+        # A permanently floating test Context is not the fixed-point minimizer baseline.
+        list(REMOVE_ITEM METAL_FLOAT_TESTS LocalEnergyMinimizer)
+    endif()
+    foreach(test IN LISTS METAL_FLOAT_TESTS)
+        add_executable(TestMetalFloat${test} tests/TestMetalCommon.cpp)
+        target_link_libraries(TestMetalFloat${test} PRIVATE ${OPENMMMETAL_LIBRARY_NAME})
+        target_compile_definitions(TestMetalFloat${test} PRIVATE
+            METAL_TEST_FLOAT_ACCUMULATORS METAL_COMMON_TEST_HEADER="Test${test}.h")
+        add_test(NAME TestMetalFloat${test} COMMAND TestMetalFloat${test})
+        set_tests_properties(TestMetalFloat${test} PROPERTIES LABELS "Metal;FloatAccumulators;Single" TIMEOUT 600)
+    endforeach()
+    target_compile_definitions(TestMetalFloatNonbondedForce PRIVATE METAL_TEST_NONBONDED)
+    target_compile_definitions(TestMetalFloatConstantPotentialForce PRIVATE METAL_TEST_CONSTANT_POTENTIAL)
+    if(TARGET TestMetalFloatLocalEnergyMinimizer)
+        target_compile_definitions(TestMetalFloatLocalEnergyMinimizer PRIVATE METAL_TEST_MINIMIZER
+            OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS=$<BOOL:${OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS}>)
+    endif()
     add_executable(TestMetalComputeContext tests/TestMetalComputeContext.cpp)
     target_link_libraries(TestMetalComputeContext PRIVATE ${OPENMMMETAL_LIBRARY_NAME})
     target_compile_definitions(TestMetalComputeContext PRIVATE
