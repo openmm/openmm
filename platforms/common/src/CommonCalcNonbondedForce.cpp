@@ -23,6 +23,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Context.h"
+#include "openmm/LangevinMiddleIntegrator.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/common/BondedUtilities.h"
 #include "openmm/common/CommonCalcNonbondedForce.h"
@@ -34,11 +35,19 @@
 #include <algorithm>
 #include <assert.h>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <typeinfo>
 #include <iterator>
 #include <set>
 
 using namespace OpenMM;
 using namespace std;
+
+static bool isPmeExperimentEnabled(const char* name) {
+    const char* value = getenv(name);
+    return value != NULL && strcmp(value, "1") == 0;
+}
 
 class CommonCalcNonbondedForceKernel::ForceInfo : public ComputeForceInfo {
 public:
@@ -419,6 +428,12 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
                 pmeDefines["USE_FIXED_POINT_CHARGE_SPREADING"] = "1";
             if (deviceIsCpu)
                 pmeDefines["DEVICE_IS_CPU"] = "1";
+            // These experiments were developed only for ordinary mixed CUDA
+            // PME using its cuFFT backend. Every option is explicit opt-in.
+            const bool eligiblePme = supportsPmeExperiments() && nonbondedMethod == PME && hasCoulomb &&
+                    !doLJPME && cc.getUseMixedPrecision() && !useFixedPointChargeSpreading && !hasOffsets &&
+                    usePmeQueue && !useCpuPme && !deviceIsCpu && cc.getNumContexts() == 1;
+            usePmeEnergyOnlySkipForce = eligiblePme && isPmeExperimentEnabled("OPENMM_EXPERIMENT_PME_ENERGY_ONLY_SKIP_FORCE");
             if (useCpuPme && !doLJPME && usePosqCharges) {
                 // Create the CPU PME kernel.
 
@@ -1014,23 +1029,26 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             }
             if (includeEnergy)
                 pmeEvalEnergyKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
-            pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
-            fft->execFFT(pmeGrid2, pmeGrid1, false);
-            setPeriodicBoxArgs(cc, pmeInterpolateForceKernel, 3);
-            if (cc.getUseDoublePrecision()) {
-                pmeInterpolateForceKernel->setArg(8, recipBoxVectors[0]);
-                pmeInterpolateForceKernel->setArg(9, recipBoxVectors[1]);
-                pmeInterpolateForceKernel->setArg(10, recipBoxVectors[2]);
+            if (!usePmeEnergyOnlySkipForce || includeForces || !includeEnergy ||
+                    typeid(context.getIntegrator()) != typeid(LangevinMiddleIntegrator)) {
+                pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
+                fft->execFFT(pmeGrid2, pmeGrid1, false);
+                setPeriodicBoxArgs(cc, pmeInterpolateForceKernel, 3);
+                if (cc.getUseDoublePrecision()) {
+                    pmeInterpolateForceKernel->setArg(8, recipBoxVectors[0]);
+                    pmeInterpolateForceKernel->setArg(9, recipBoxVectors[1]);
+                    pmeInterpolateForceKernel->setArg(10, recipBoxVectors[2]);
+                }
+                else {
+                    pmeInterpolateForceKernel->setArg(8, recipBoxVectorsFloat[0]);
+                    pmeInterpolateForceKernel->setArg(9, recipBoxVectorsFloat[1]);
+                    pmeInterpolateForceKernel->setArg(10, recipBoxVectorsFloat[2]);
+                }
+                if (deviceIsCpu)
+                    pmeInterpolateForceKernel->execute(cc.getNumThreadBlocks(), 1);
+                else
+                    pmeInterpolateForceKernel->execute(cc.getNumAtoms());
             }
-            else {
-                pmeInterpolateForceKernel->setArg(8, recipBoxVectorsFloat[0]);
-                pmeInterpolateForceKernel->setArg(9, recipBoxVectorsFloat[1]);
-                pmeInterpolateForceKernel->setArg(10, recipBoxVectorsFloat[2]);
-            }
-            if (deviceIsCpu)
-                pmeInterpolateForceKernel->execute(cc.getNumThreadBlocks(), 1);
-            else
-                pmeInterpolateForceKernel->execute(cc.getNumAtoms());
         }
 
         if (doLJPME && hasLJ) {

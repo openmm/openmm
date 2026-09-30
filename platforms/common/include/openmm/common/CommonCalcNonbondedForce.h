@@ -45,7 +45,7 @@ namespace OpenMM {
 class CommonCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     CommonCalcNonbondedForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcNonbondedForceKernel(name, platform),
-            hasInitializedKernel(false), cc(cc), pmeio(NULL), stepsToSort(0) {
+            hasInitializedKernel(false), cc(cc), pmeio(NULL), stepsToSort(0), usePmeEnergyOnlySkipForce(false) {
     }
     ~CommonCalcNonbondedForceKernel();
     /**
@@ -99,6 +99,9 @@ public:
      * @param nz      the number of grid points along the Z axis
      */
     void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+protected:
+    // Optional backend hook. Other platforms retain their existing behavior.
+    virtual bool supportsPmeExperiments() const { return false; }
 private:
     class SortTrait : public ComputeSortImpl::SortTrait {
         int getDataSize() const {return 8;}
@@ -168,6 +171,7 @@ private:
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
     int stepsToSort;
+    bool usePmeEnergyOnlySkipForce;
     bool usePmeQueue, deviceIsCpu, useFixedPointChargeSpreading, useCpuPme;
     bool hasCoulomb, hasLJ, doLJPME, usePosqCharges, recomputeParams, hasOffsets;
     NonbondedMethod nonbondedMethod;
