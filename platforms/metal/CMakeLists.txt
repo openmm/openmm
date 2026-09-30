@@ -76,7 +76,12 @@ option(OPENMM_METAL_EXPERIMENTAL_MATRIX_SCREEN
 
 # Each optional algorithm can be compared independently with the OpenCL path.
 set(METAL_OPTIMIZATION_SWITCHES
-    BLOCK_BOUNDS FP16_BOUNDS NEIGHBOR_BALLOT SPARSE_PAIRS NONBONDED_SHUFFLE CUSTOM_GB_VALUE_SHUFFLE CUSTOM_GB_ENERGY_SHUFFLE GBSA_BORN_SHUFFLE GBSA_FORCE_SHUFFLE DPD_PARTICLE_SHUFFLE DPD_TILE_BROADCAST CUSTOM_HBOND_SHUFFLE CENTROID_REDUCTION RG_REDUCTION RMSD_REDUCTION ORIENTATION_REDUCTION LCPO_NEIGHBOR_SCAN CUSTOM_MANY_PARTICLE_NEIGHBOR_SCAN SORT_BUCKET_SCAN SORT_REGISTER_BITONIC)
+    BLOCK_BOUNDS FP16_BOUNDS NEIGHBOR_BALLOT SPARSE_PAIRS NONBONDED_SHUFFLE
+    CUSTOM_GB_VALUE_SHUFFLE CUSTOM_GB_ENERGY_SHUFFLE GBSA_BORN_SHUFFLE GBSA_FORCE_SHUFFLE
+    DPD_PARTICLE_SHUFFLE DPD_TILE_BROADCAST CUSTOM_HBOND_SHUFFLE
+    CENTROID_REDUCTION RG_REDUCTION RMSD_REDUCTION ORIENTATION_REDUCTION
+    LCPO_NEIGHBOR_SCAN CUSTOM_MANY_PARTICLE_NEIGHBOR_SCAN
+    SORT_BUCKET_SCAN SORT_REGISTER_BITONIC)
 foreach(feature IN LISTS METAL_OPTIMIZATION_SWITCHES)
     option(OPENMM_METAL_FAST_${feature} "Enable the independent Metal ${feature} algorithm" OFF)
 endforeach()
@@ -218,6 +223,27 @@ file(GLOB METAL_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
 install(FILES ${METAL_HEADERS} DESTINATION include/openmm/metal)
 
 if(BUILD_TESTING)
+    # A standalone, opt-in build target, never timed as part of CTest correctness.
+    get_cmake_property(metalCacheVariables CACHE_VARIABLES)
+    list(SORT metalCacheVariables)
+    set(METAL_BUILD_CONFIGURATION "")
+    foreach(variable IN LISTS metalCacheVariables)
+        get_property(type CACHE ${variable} PROPERTY TYPE)
+        if(variable MATCHES "^OPENMM_METAL_" AND type STREQUAL "BOOL")
+            if(METAL_BUILD_CONFIGURATION)
+                string(APPEND METAL_BUILD_CONFIGURATION ",")
+            endif()
+            if(${variable})
+                string(APPEND METAL_BUILD_CONFIGURATION "\"${variable}\":true")
+            else()
+                string(APPEND METAL_BUILD_CONFIGURATION "\"${variable}\":false")
+            endif()
+        endif()
+    endforeach()
+    configure_file(cmake/MetalBuildConfiguration.h.in src/MetalBuildConfiguration.h @ONLY)
+    add_executable(BenchmarkMetal EXCLUDE_FROM_ALL tests/BenchmarkMetal.cpp)
+    target_include_directories(BenchmarkMetal PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/src")
+    target_link_libraries(BenchmarkMetal PRIVATE ${OPENMMMETAL_LIBRARY_NAME})
     if(OPENMM_METAL_EXPERIMENTAL_MATRIX_SCREEN)
         add_executable(TestMetalMatrixScreening tests/TestMetalMatrixScreening.cpp)
         target_include_directories(TestMetalMatrixScreening PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/src")
