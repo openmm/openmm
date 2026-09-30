@@ -363,6 +363,12 @@ ComputeProgram MetalContext::compileProgram(const string source, const map<strin
         string code;
         bool commonSource = MetalSourceAdapter::isCommonSource(source);
         map<string, string> allDefines = commonSource ? compilationDefines : map<string, string>();
+#if OPENMM_METAL_FAST_MINIMIZE_SHUFFLE
+        // Scope this switch to the exact minimizer program, not other solvers
+        // that happen to use the same Common CUDA/HIP shuffle macro.
+        if (source == CommonKernelSources::minimize)
+            allDefines["WARP_SHUFFLE_DOWN(value, offset)"] = "simd_shuffle_down(value, offset)";
+#endif
         for (auto& define : defines)
             allDefines[define.first] = define.second;
         if (commonSource && floatingAccumulators)

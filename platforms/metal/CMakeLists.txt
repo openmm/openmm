@@ -48,6 +48,8 @@ option(OPENMM_METAL_NATIVE_FLOAT_ATOMICS
     "Use native Metal float atomic addition instead of the OpenCL-style CAS loop" OFF)
 option(OPENMM_METAL_FAST_MATH
     "Allow broad Metal fast math except where compensated or robust arithmetic is required" OFF)
+option(OPENMM_METAL_FAST_MINIMIZE_SHUFFLE
+    "Use the Common CUDA/HIP shuffle reduction in the minimizer" OFF)
 option(OPENMM_METAL_FAST_PME_FLOAT_SPREAD "Use the Common floating-grid spreading path for PME" OFF)
 option(OPENMM_METAL_FAST_LJPME_FLOAT_SPREAD "Use floating grids for both reciprocal terms of LJPME" OFF)
 option(OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD "Use floating-grid spreading in ConstantPotential PME" OFF)
@@ -167,7 +169,7 @@ target_compile_definitions(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
     OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD=$<BOOL:${OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD}>
 
     OPENMM_METAL_FAST_MATH=$<BOOL:${OPENMM_METAL_FAST_MATH}>
-
+    OPENMM_METAL_FAST_MINIMIZE_SHUFFLE=$<BOOL:${OPENMM_METAL_FAST_MINIMIZE_SHUFFLE}>
 
 
 
