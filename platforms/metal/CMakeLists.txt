@@ -22,8 +22,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 # --------------------------------------------------------------------------
 
-# Metal Platform: minimal implementation of the Common compute interfaces.
-# This target does not yet register an OpenMM simulation Platform.
+# Metal Platform: Common Compute with an OpenCL-semantic GPU baseline.
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     message(FATAL_ERROR "The Metal Platform is only available on macOS")
@@ -41,13 +40,80 @@ if(CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "13.0")
 endif()
 enable_language(OBJCXX)
 
+option(OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS
+    "Use scoped GPU floating accumulators for minimization beyond the Q32.32 force range" ON)
+
+# Each optional algorithm can be compared independently with the OpenCL path.
+set(METAL_OPTIMIZATION_SWITCHES
+    )
+foreach(feature IN LISTS METAL_OPTIMIZATION_SWITCHES)
+    option(OPENMM_METAL_FAST_${feature} "Enable the independent Metal ${feature} algorithm" OFF)
+endforeach()
+
 find_library(METAL_FRAMEWORK Metal)
 find_library(FOUNDATION_FRAMEWORK Foundation)
+find_library(QUARTZCORE_FRAMEWORK QuartzCore)
 if(NOT METAL_FRAMEWORK OR NOT FOUNDATION_FRAMEWORK)
     message(FATAL_ERROR "The Metal Platform requires the Metal and Foundation frameworks")
 endif()
 
+# VkFFT's Metal backend uses metal-cpp. Keep C++17 private to that translation
+# unit; public interfaces and the Objective-C++ runtime remain C++11.
+find_path(METAL_CPP_INCLUDE_DIR Metal/Metal.hpp DOC "Path to Apple's metal-cpp headers")
+if(NOT METAL_CPP_INCLUDE_DIR OR NOT QUARTZCORE_FRAMEWORK)
+    message(FATAL_ERROR "Metal VkFFT requires metal-cpp headers (METAL_CPP_INCLUDE_DIR) and QuartzCore")
+endif()
+
+# Keep this dependency check's C++17 requirement private to the probe and VkFFT.
+function(check_metal_cpp_math_options)
+    include(CheckCXXSourceCompiles)
+    set(CMAKE_CXX_STANDARD 17)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+    set(CMAKE_REQUIRED_INCLUDES "${METAL_CPP_INCLUDE_DIR}")
+    # A reconfigure may point at a different external header release.
+    unset(OPENMM_METAL_CPP_HAS_MATH_OPTIONS CACHE)
+    check_cxx_source_compiles([=[
+        #include <Metal/Metal.hpp>
+        void check(MTL::CompileOptions* options) {
+            options->setMathMode(MTL::MathModeSafe);
+            options->setMathMode(MTL::MathModeFast);
+            options->setMathFloatingPointFunctions(MTL::MathFloatingPointFunctionsPrecise);
+            options->setMathFloatingPointFunctions(MTL::MathFloatingPointFunctionsFast);
+        }
+    ]=] OPENMM_METAL_CPP_HAS_MATH_OPTIONS)
+    if(NOT OPENMM_METAL_CPP_HAS_MATH_OPTIONS)
+        message(FATAL_ERROR "Metal requires metal-cpp headers with mathMode and mathFloatingPointFunctions (macOS 15 release or newer)")
+    endif()
+endfunction()
+check_metal_cpp_math_options()
+
+function(encode_metal_sources class source_dir extension)
+    if(ARGC GREATER 3)
+        set(source_file "${source_dir}/${ARGV3}.${extension}")
+        set(kernels "${source_file}")
+    else()
+        set(source_file "")
+        file(GLOB kernels "${source_dir}/*.${extension}")
+    endif()
+    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/src/${class}.cpp" "${CMAKE_CURRENT_BINARY_DIR}/src/${class}.h"
+        COMMAND ${CMAKE_COMMAND} "-DSOURCE_DIR=${source_dir}" "-DEXTENSION=${extension}"
+            "-DCLASS=${class}" "-DOUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}/src" "-DSOURCE_FILE=${source_file}"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/EncodeSources.cmake"
+        DEPENDS ${kernels} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/EncodeSources.cmake")
+endfunction()
+encode_metal_sources(MetalKernelSources "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels" metal)
+encode_metal_sources(MetalOpenCLKernelSources "${CMAKE_CURRENT_SOURCE_DIR}/../opencl/src/kernels" cl)
+file(GLOB COMMON_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/../common/src/*.cpp")
+list(REMOVE_ITEM COMMON_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/../common/src/CommonParallelKernels.cpp")
+
+add_library(OpenMMMetalVkFFT OBJECT src/MetalVkFFT.cpp)
+target_include_directories(OpenMMMetalVkFFT SYSTEM PRIVATE
+    "${METAL_CPP_INCLUDE_DIR}" "${CMAKE_SOURCE_DIR}/libraries/vkfft/include")
+set_target_properties(OpenMMMetalVkFFT PROPERTIES CXX_STANDARD 17 POSITION_INDEPENDENT_CODE ON)
+
 set(OPENMMMETAL_LIBRARY_NAME OpenMMMetal)
+set_source_files_properties("${CMAKE_CURRENT_BINARY_DIR}/../common/src/CommonKernelSources.cpp" PROPERTIES GENERATED TRUE)
 add_library(${OPENMMMETAL_LIBRARY_NAME} SHARED
     src/MetalContext.mm
     src/MetalArray.mm
@@ -55,20 +121,52 @@ add_library(${OPENMMMETAL_LIBRARY_NAME} SHARED
     src/MetalProgram.mm
     src/MetalQueue.mm
     src/MetalEvent.mm
-    ../common/src/ComputeArray.cpp
-    ../common/src/ComputeContext.cpp
-    ../common/src/ComputeForceInfo.cpp)
+    src/MetalSourceAdapter.cpp
+    src/MetalPairwiseOptimizations.cpp
+    src/MetalReductionOptimizations.cpp
+    src/MetalNonbondedUtilities.cpp
+    src/MetalIntegrationUtilities.cpp
+    src/MetalSort.cpp
+    src/MetalFFT3D.mm
+    $<TARGET_OBJECTS:OpenMMMetalVkFFT>
+    ${COMMON_SOURCES}
+    "${CMAKE_CURRENT_BINARY_DIR}/src/MetalKernelSources.cpp"
+    "${CMAKE_CURRENT_BINARY_DIR}/src/MetalOpenCLKernelSources.cpp"
+    "${CMAKE_CURRENT_BINARY_DIR}/../common/src/CommonKernelSources.cpp")
+add_dependencies(${OPENMMMETAL_LIBRARY_NAME} CommonKernels)
 target_include_directories(${OPENMMMETAL_LIBRARY_NAME}
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include"
            "${CMAKE_CURRENT_SOURCE_DIR}/../common/include"
-    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src" "${CMAKE_CURRENT_BINARY_DIR}/src"
+            "${CMAKE_CURRENT_BINARY_DIR}/../common/src")
 target_link_libraries(${OPENMMMETAL_LIBRARY_NAME}
     PUBLIC ${OPENMM_LIBRARY_NAME}
-    PRIVATE ${METAL_FRAMEWORK} ${FOUNDATION_FRAMEWORK})
+    PRIVATE ${METAL_FRAMEWORK} ${FOUNDATION_FRAMEWORK} ${QUARTZCORE_FRAMEWORK})
 target_compile_options(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
     "$<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>")
 target_compile_definitions(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
-    OPENMM_COMMON_BUILDING_SHARED_LIBRARY)
+    OPENMM_COMMON_BUILDING_SHARED_LIBRARY
+    OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS=$<BOOL:${OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS}>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+)
+foreach(feature IN LISTS METAL_OPTIMIZATION_SWITCHES)
+    target_compile_definitions(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
+        OPENMM_METAL_FAST_${feature}=$<BOOL:${OPENMM_METAL_FAST_${feature}}>)
+endforeach()
 set_target_properties(${OPENMMMETAL_LIBRARY_NAME} PROPERTIES
     CXX_STANDARD 11
     OBJCXX_STANDARD 11
@@ -76,6 +174,27 @@ set_target_properties(${OPENMMMETAL_LIBRARY_NAME} PROPERTIES
     LINK_FLAGS "${EXTRA_LINK_FLAGS}")
 
 if(BUILD_TESTING)
+    foreach(test IN ITEMS SourceAdapter Sort FFT3D Primitives PairwiseOptimizations ReductionOptimizations NonbondedOptimizations)
+        add_executable(TestMetal${test} tests/TestMetal${test}.cpp)
+        target_include_directories(TestMetal${test} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/../common/src"
+            "${CMAKE_CURRENT_BINARY_DIR}/src")
+        target_link_libraries(TestMetal${test} PRIVATE ${OPENMMMETAL_LIBRARY_NAME})
+        add_test(NAME TestMetal${test} COMMAND TestMetal${test})
+        set_tests_properties(TestMetal${test} PROPERTIES SKIP_RETURN_CODE 77)
+    endforeach()
+    target_include_directories(TestMetalNonbondedOptimizations PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+    foreach(feature IN ITEMS )
+        target_compile_definitions(TestMetalNonbondedOptimizations PRIVATE
+            OPENMM_METAL_FAST_${feature}=$<BOOL:${OPENMM_METAL_FAST_${feature}}>)
+    endforeach()
+    foreach(option IN ITEMS )
+        target_compile_definitions(TestMetalSourceAdapter PRIVATE
+            OPENMM_METAL_FAST_${option}=$<BOOL:${OPENMM_METAL_FAST_${option}}>)
+    endforeach()
+    # Reuse the existing single-precision core tests without copying algorithms.
+    target_compile_definitions(TestMetalSourceAdapter PRIVATE
+
+        OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS=$<BOOL:${OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS}>)
     add_executable(TestMetalComputeContext tests/TestMetalComputeContext.cpp)
     target_link_libraries(TestMetalComputeContext PRIVATE ${OPENMMMETAL_LIBRARY_NAME})
     target_compile_definitions(TestMetalComputeContext PRIVATE
@@ -85,4 +204,18 @@ if(BUILD_TESTING)
         LINK_FLAGS "${EXTRA_LINK_FLAGS}")
     add_test(NAME TestMetalComputeContext COMMAND TestMetalComputeContext)
     set_tests_properties(TestMetalComputeContext PROPERTIES SKIP_RETURN_CODE 77)
+
+    add_executable(TestMetalQueueImmediate tests/TestMetalQueue.mm src/MetalQueue.mm)
+    target_include_directories(TestMetalQueueImmediate PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../common/include")
+    target_link_libraries(TestMetalQueueImmediate PRIVATE
+        ${OPENMM_LIBRARY_NAME} ${METAL_FRAMEWORK} ${FOUNDATION_FRAMEWORK})
+    target_compile_options(TestMetalQueueImmediate PRIVATE -fobjc-arc)
+    set_target_properties(TestMetalQueueImmediate PROPERTIES
+        OBJCXX_STANDARD 11
+        COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}"
+        LINK_FLAGS "${EXTRA_LINK_FLAGS}")
+    add_test(NAME TestMetalQueueImmediate COMMAND TestMetalQueueImmediate)
+    set_tests_properties(TestMetalQueueImmediate PROPERTIES SKIP_RETURN_CODE 77)
 endif()

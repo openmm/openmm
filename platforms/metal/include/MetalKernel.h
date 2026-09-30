@@ -34,7 +34,9 @@
 
 #include "openmm/common/ComputeKernel.h"
 #include "openmm/common/ComputeVectorTypes.h"
+#include <functional>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 namespace OpenMM {
@@ -45,10 +47,9 @@ class MetalContext;
 /**
  * @brief Executes a Metal compute pipeline through the Common kernel interface.
  *
- * Arguments use consecutive direct Metal buffer bindings starting at zero.
- * Arrays and copied primitive values share the same 31 slots (indices 0-30). The
- * caller must match the native MSL signature, byte layouts, and resource-access
- * rules; this class does not inspect or translate the shader's argument ABI.
+ * Native MSL uses consecutive direct buffer bindings. Adapted Common kernels
+ * use a reflected argument buffer, preserving Common argument order without
+ * the 31-direct-buffer limit. Each dispatch snapshots its primitive arguments.
  *
  * @note The context must outlive this kernel. Array arguments are non-owning
  *       references and must remain alive while bound; their current buffers are
@@ -57,37 +58,54 @@ class MetalContext;
 class MetalKernel : public ComputeKernelImpl {
 public:
     /**
-     * @brief Retains a native compute pipeline for subsequent launches.
+     * @brief Creates the current ABI pipeline and lazily caches its alternate.
      * @param context The Metal context, which must outlive this kernel.
-     * @param pipeline A valid MTLComputePipelineState from the context's device,
-     *                 bridged to void*. The caller's ownership is unchanged.
      * @param name The shader entry-point name used for diagnostics.
+     * @param commonSource Whether to use reflected Common argument bindings.
+     * @param libraryLookup Returns a borrowed MTLLibrary for the requested ABI.
+     *        The retained callback must keep each returned library alive.
      */
-    MetalKernel(MetalContext& context, void* pipeline, const std::string& name);
+    MetalKernel(MetalContext& context, const std::string& name, bool commonSource,
+            const std::function<void*(bool)>& libraryLookup);
     /** @brief Releases the retained pipeline and argument storage without waiting. */
     ~MetalKernel();
     /** @return The shader entry-point name. */
     std::string getName() const override { return name; }
-    /** @return The pipeline's maximum threads per threadgroup. */
+    /** @return The active ABI pipeline's maximum threads per threadgroup. */
     int getMaxBlockSize() const override;
     /**
      * @brief Enqueues a one-dimensional launch on the context's current queue.
      * @param threads The nonnegative logical thread count; zero enqueues no work.
      * @param blockSize Threads per group, or -1 for ComputeContext::ThreadBlockSize.
-     * @throws OpenMMException If the thread count or block size is invalid, a
-     *         nonempty launch has more than 31 or unbound arguments, or submission fails.
+     * @throws OpenMMException If the thread count or block size is invalid,
+     *         arguments do not match the binding ABI, total threadgroup storage
+     *         exceeds device limits, or submission fails. Native MSL is limited
+     *         to 31 direct buffer arguments; adapted Common kernels are not.
      * @note Launches complete threadgroups, rounding up and capping the group
      *       count at context.getNumThreadBlocks(). The shader must handle bounds
      *       and use grid-stride iteration when the capped grid is smaller than
      *       its workload. This method does not wait for GPU completion.
      */
     void execute(int threads, int blockSize=-1) override;
+    /**
+     * @brief Append dynamic threadgroup storage for a translated OpenCL kernel.
+     * @param bytes Nonzero byte count, validated with all other local storage at launch.
+     */
+    void addLocalArg(size_t bytes);
+    /**
+     * @brief Bind dynamic threadgroup storage at an original Common argument index.
+     * @param index An existing placeholder for a LOCAL_ARG or __local parameter.
+     * @param bytes Required byte count; it must be nonzero and fit device limits.
+     */
+    void setLocalArg(int index, size_t bytes);
 protected:
     /**
      * @brief Appends a non-owning array argument at the next buffer binding.
      * @param value An initialized MetalArray, or ComputeArray wrapping one,
-     *              from this kernel's context.
-     * @throws OpenMMException If value is uninitialized or from another backend or context.
+     *              from the same Metal device.
+     * @throws OpenMMException If value is uninitialized or from another backend or device.
+     * @note Linked contexts share a queue; callers must otherwise establish any
+     *       required ordering with the owning context before launching work.
      */
     void addArrayArg(ArrayInterface& value) override;
     /**
@@ -100,15 +118,15 @@ protected:
     void addPrimitiveArg(const void* value, int size) override;
     /**
      * @brief Appends an unbound argument slot.
-     * @note Bind it with setArg() before a nonempty launch. The 31-slot limit is
-     *       checked at execution, not when the placeholder is appended.
+     * @note Bind it with setArg() before a nonempty launch. Native MSL's 31-slot
+     *       limit is checked at execution, not when the placeholder is appended.
      */
     void addEmptyArg() override;
     /**
      * @brief Replaces an existing slot with a non-owning array binding.
      * @param index The zero-based index of an already appended argument.
      * @param value An initialized MetalArray, or ComputeArray wrapping one,
-     *              from this kernel's context.
+     *              from the same Metal device.
      * @throws OpenMMException If the index is invalid or the array is incompatible.
      * @note The previous slot may hold a primitive value, an array, or a placeholder.
      */
@@ -125,12 +143,18 @@ protected:
     void setPrimitiveArg(int index, const void* value, int size) override;
 private:
     struct Impl;
-    std::unique_ptr<Impl> impl;
+    /** @return Cached pipeline and binding metadata for the context's current mode. */
+    Impl& getActiveImpl() const;
+    mutable std::unique_ptr<Impl> variants[2];
+    mutable std::mutex variantMutex;
     MetalContext& context;
     std::string name;
+    bool commonSource;
+    std::function<void*(bool)> libraryLookup;
     std::vector<mm_double4> primitiveArgs;
     std::vector<int> primitiveArgSizes;
     std::vector<MetalArray*> arrayArgs;
+    std::vector<size_t> localArgSizes;
 };
 
 } // namespace OpenMM

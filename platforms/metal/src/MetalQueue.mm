@@ -41,7 +41,10 @@ using namespace std;
 
 class MetalQueue::Impl {
 public:
+    recursive_mutex mutex;
     id<MTLCommandQueue> queue;
+    // Keep the borrowed opaque handle alive until its operation is submitted.
+    id<MTLCommandBuffer> encoding;
     deque<id<MTLCommandBuffer>> pending;
 };
 
@@ -63,7 +66,20 @@ void* MetalQueue::getQueue() const {
     return (__bridge void*) impl->queue;
 }
 
+unique_lock<recursive_mutex> MetalQueue::lock() {
+    return unique_lock<recursive_mutex>(impl->mutex);
+}
+
+void* MetalQueue::getCommandBuffer() {
+    auto guard = lock();
+    impl->encoding = [impl->queue commandBuffer];
+    if (impl->encoding == nil)
+        throw OpenMMException("Error creating Metal command buffer");
+    return (__bridge void*) impl->encoding;
+}
+
 void MetalQueue::submit(void* commandBuffer) {
+    auto guard = lock();
     id<MTLCommandBuffer> buffer = (__bridge id<MTLCommandBuffer>) commandBuffer;
     if (buffer == nil || buffer.commandQueue != impl->queue)
         throw OpenMMException("Metal command buffer does not belong to this queue");
@@ -73,14 +89,18 @@ void MetalQueue::submit(void* commandBuffer) {
         wait((__bridge void*) impl->pending.front());
     impl->pending.push_back(buffer);
     [buffer commit];
+    if (buffer == impl->encoding)
+        impl->encoding = nil;
 }
 
 void MetalQueue::finish() {
+    auto guard = lock();
     if (!impl->pending.empty())
         wait((__bridge void*) impl->pending.back());
 }
 
 void MetalQueue::wait(void* commandBuffer) {
+    auto guard = lock();
     id<MTLCommandBuffer> marker = (__bridge id<MTLCommandBuffer>) commandBuffer;
     if (marker == nil || marker.commandQueue != impl->queue || marker.status < MTLCommandBufferStatusCommitted)
         throw OpenMMException("Cannot wait for an unsubmitted or foreign Metal command buffer");

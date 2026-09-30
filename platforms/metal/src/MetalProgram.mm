@@ -32,17 +32,70 @@
 #include "MetalProgram.h"
 #include "MetalContext.h"
 #include "MetalKernel.h"
+#include "MetalKernelSources.h"
+#include "MetalSourceAdapter.h"
 #import <Metal/Metal.h>
+#include <mutex>
 
 using namespace OpenMM;
 using namespace std;
 
 struct MetalProgram::Impl {
-    id<MTLLibrary> library;
+    MetalContext& context;
+    id<MTLLibrary> libraries[2];
+    string source;
+    map<string, string> defines;
+    bool commonSource, strictMath;
+    mutex libraryMutex;
+
+    Impl(MetalContext& context, const string& source, const map<string, string>& defines, bool commonSource, bool strictMath) :
+            context(context), source(source), defines(defines), commonSource(commonSource), strictMath(strictMath) {
+        libraries[0] = nil;
+        libraries[1] = nil;
+        this->defines.erase("OPENMM_METAL_FLOAT_ACCUMULATORS");
+    }
+
+    /** Compile the other ABI only when a kernel first needs it. */
+    id<MTLLibrary> getLibrary(bool floating) {
+        lock_guard<mutex> lock(libraryMutex);
+        int index = commonSource && floating ? 1 : 0;
+        if (libraries[index] == nil) {
+            if (!commonSource || source.empty())
+                throw OpenMMException("Metal program has no Common source for an alternate accumulator ABI");
+            string code;
+            for (const auto& define : defines)
+                code += "#define "+define.first+" "+define.second+"\n";
+            if (floating)
+                code += "#define OPENMM_METAL_FLOAT_ACCUMULATORS 1\n";
+            code += MetalKernelSources::common+MetalSourceAdapter::translate(source, floating);
+            MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
+            options.languageVersion = MTLLanguageVersion3_0;
+            const bool fastMath = false;
+            if (@available(macOS 15.0, *)) {
+                options.mathMode = fastMath ? MTLMathModeFast : MTLMathModeSafe;
+                options.mathFloatingPointFunctions = fastMath ? MTLMathFloatingPointFunctionsFast : MTLMathFloatingPointFunctionsPrecise;
+            }
+            else {
+                // macOS 13/14 runtimes do not expose the replacement properties.
+                options.fastMathEnabled = fastMath;
+            }
+            NSError* error = nil;
+            id<MTLDevice> device = (__bridge id<MTLDevice>) context.getDevice();
+            libraries[index] = [device newLibraryWithSource:[NSString stringWithUTF8String:code.c_str()]
+                    options:options error:&error];
+            if (libraries[index] == nil)
+                throw OpenMMException("Error compiling Metal accumulator variant: "+
+                        (error == nil ? string("unknown error") : string(error.localizedDescription.UTF8String)));
+        }
+        return libraries[index];
+    }
 };
 
-MetalProgram::MetalProgram(MetalContext& context, void* library) : impl(new Impl()), context(context) {
-    impl->library = (__bridge id<MTLLibrary>) library;
+MetalProgram::MetalProgram(MetalContext& context, void* library, bool commonSource, const string& source,
+        const map<string, string>& defines, bool strictMath) :
+        impl(new Impl(context, source, defines, commonSource, strictMath)), context(context), commonSource(commonSource) {
+    int index = commonSource && context.getUseFloatingPointAccumulators() ? 1 : 0;
+    impl->libraries[index] = (__bridge id<MTLLibrary>) library;
 }
 
 MetalProgram::~MetalProgram() {
@@ -50,15 +103,12 @@ MetalProgram::~MetalProgram() {
 
 ComputeKernel MetalProgram::createKernel(const string& name) {
     @autoreleasepool {
-        id<MTLFunction> function = [impl->library newFunctionWithName:[NSString stringWithUTF8String:name.c_str()]];
-        if (function == nil)
-            throw OpenMMException("Unknown Metal kernel: "+name);
-        id<MTLDevice> device = (__bridge id<MTLDevice>) context.getDevice();
-        NSError* error = nil;
-        id<MTLComputePipelineState> pipeline = [device newComputePipelineStateWithFunction:function error:&error];
-        if (pipeline == nil)
-            throw OpenMMException("Error creating Metal pipeline "+name+": "+
-                    (error == nil ? string("unknown error") : string(error.localizedDescription.UTF8String)));
-        return ComputeKernel(new MetalKernel(context, (__bridge void*) pipeline, name));
+        // This shared capture retains both strong library slots even if the
+        // caller releases the ComputeProgram before its kernels.
+        shared_ptr<Impl> libraries = impl;
+        auto lookup = [libraries](bool floating) -> void* {
+            return (__bridge void*) libraries->getLibrary(floating);
+        };
+        return ComputeKernel(new MetalKernel(context, name, commonSource, lookup));
     }
 }

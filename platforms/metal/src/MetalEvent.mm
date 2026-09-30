@@ -52,6 +52,7 @@ MetalEvent::~MetalEvent() {
 
 void MetalEvent::enqueue() {
     MetalQueue& queue = context.getCurrentMetalQueue();
+    auto queueLock = queue.lock();
     id<MTLCommandQueue> commandQueue = (__bridge id<MTLCommandQueue>) queue.getQueue();
     // Separate recordings must not signal each other when made on different queues.
     id<MTLEvent> event = [commandQueue.device newEvent];
@@ -74,6 +75,7 @@ void MetalEvent::queueWait(ComputeQueue queue) {
     MetalQueue* target = dynamic_cast<MetalQueue*>(queue.get());
     if (target == nullptr)
         throw OpenMMException("Metal event requires a Metal command queue");
+    auto queueLock = target->lock();
     id<MTLCommandQueue> commandQueue = (__bridge id<MTLCommandQueue>) target->getQueue();
     if (commandQueue.device != (__bridge id<MTLDevice>) context.getDevice())
         throw OpenMMException("Metal event and command queue belong to different devices");
