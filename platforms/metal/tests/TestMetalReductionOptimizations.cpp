@@ -76,9 +76,10 @@ void testSelection() {
             ASSERT_EQUAL(optimized, MetalReductionOptimizations::apply(optimized, settings));
         }
     }
-    for (int option = 0; option < 1; option++) {
+    for (int option = 0; option < 2; option++) {
         Settings settings;
         settings.lcpoScan = option == 0;
+        settings.manyParticleScan = option == 1;
         int index = 0;
         for (const string* source : {&CommonKernelSources::lcpo, &CommonKernelSources::customManyParticle,
                 &MetalOpenCLKernelSources::sort}) {
@@ -93,6 +94,7 @@ void testSelection() {
     all.rmsd = true;
     all.orientation = true;
     all.lcpoScan = true;
+    all.manyParticleScan = true;
     const string unrelated = "DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) { return value; }";
     ASSERT_EQUAL(unrelated, MetalReductionOptimizations::apply(unrelated, all));
     // A recognizable function name is insufficient: an unreviewed body must
@@ -105,13 +107,14 @@ void testSelection() {
         "KERNEL void computeRMSDPart1(", "KERNEL void computeCorrelationMatrix(",
         "KERNEL void computeNeighborStartIndices(", "KERNEL void computeNeighborStartIndices(",
         "__kernel void computeBucketPositions(", "__kernel void sortShortList("};
-    for (int option = 0; option < 5; option++) {
+    for (int option = 0; option < 6; option++) {
         Settings settings;
         settings.centroid = option == 0;
         settings.rg = option == 1;
         settings.rmsd = option == 2;
         settings.orientation = option == 3;
         settings.lcpoScan = option == 4;
+        settings.manyParticleScan = option == 5;
         string modified = *originals[option];
         size_t body = modified.find('{', modified.find(signatures[option]));
         ASSERT(body != string::npos);
@@ -229,11 +232,12 @@ void testCentroids(MetalContext& context) {
 
 /** @brief Exercise inclusive scans, chunk carries, overflow exits, and neighbor-counter clearing. */
 void testNeighborScans(MetalContext& context) {
-    {
-        const string& original = CommonKernelSources::lcpo;
+    for (bool lcpo : {false, true}) {
+        const string& original = lcpo ? CommonKernelSources::lcpo : CommonKernelSources::customManyParticle;
         for (bool enabled : {false, true}) {
             MetalReductionOptimizations::Settings settings;
-            settings.lcpoScan = enabled;
+            settings.lcpoScan = lcpo && enabled;
+            settings.manyParticleScan = !lcpo && enabled;
             string transformed = MetalReductionOptimizations::apply(original, settings);
             string kernelSource = extractFunction(transformed, "KERNEL void computeNeighborStartIndices(");
             if (enabled)
@@ -251,9 +255,16 @@ void testNeighborScans(MetalContext& context) {
                 pairCount.initialize<int>(context, 1, "scanPairCount");
                 map<string, string> defines{{"NUM_ACTIVE", to_string(count)}, {"NUM_ATOMS", to_string(count)}, {"THREAD_BLOCK_SIZE", "256"}};
                 ComputeKernel kernel = context.compileProgram(kernelSource, defines)->createKernel("neighborScanProbe");
-                kernel->addArg(pairCount);
-                kernel->addArg(countsBuffer);
-                kernel->addArg(startsBuffer);
+                if (lcpo) {
+                    kernel->addArg(pairCount);
+                    kernel->addArg(countsBuffer);
+                    kernel->addArg(startsBuffer);
+                }
+                else {
+                    kernel->addArg(countsBuffer);
+                    kernel->addArg(startsBuffer);
+                    kernel->addArg(pairCount);
+                }
                 kernel->addArg(total);
                 for (int width : {7, 32, 33, 64, 256}) {
                     for (bool overflow : {false, true}) {
@@ -266,7 +277,7 @@ void testNeighborScans(MetalContext& context) {
                         countsBuffer.download(remaining);
                         int expected = 0;
                         for (int i = 0; i <= count; i++) {
-                            ASSERT_EQUAL(overflow ? -7 : expected, starts[i]);
+                            ASSERT_EQUAL(overflow ? (lcpo ? -7 : 0) : expected, starts[i]);
                             if (i < count) {
                                 expected += counts[i];
                                 ASSERT_EQUAL(overflow ? counts[i] : 0, remaining[i]);

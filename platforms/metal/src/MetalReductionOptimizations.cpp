@@ -158,6 +158,9 @@ MetalReductionOptimizations::Settings MetalReductionOptimizations::getBuildSetti
 #if OPENMM_METAL_FAST_LCPO_NEIGHBOR_SCAN
     settings.lcpoScan = true;
 #endif
+#if OPENMM_METAL_FAST_CUSTOM_MANY_PARTICLE_NEIGHBOR_SCAN
+    settings.manyParticleScan = true;
+#endif
     return settings;
 }
 
@@ -195,6 +198,11 @@ string MetalReductionOptimizations::apply(const string& source, const Settings& 
     }
     if (settings.lcpoScan) {
         string original = functionText(CommonKernelSources::lcpo, "KERNEL void computeNeighborStartIndices(");
+        replaceFunction(result, original, scannedFunction(original,
+                "for (unsigned int step = 1; step < LOCAL_SIZE; step *= 2)", "posBuffer"));
+    }
+    if (settings.manyParticleScan) {
+        string original = functionText(CommonKernelSources::customManyParticle, "KERNEL void computeNeighborStartIndices(");
         replaceFunction(result, original, scannedFunction(original,
                 "for (unsigned int step = 1; step < LOCAL_SIZE; step *= 2)", "posBuffer"));
     }
