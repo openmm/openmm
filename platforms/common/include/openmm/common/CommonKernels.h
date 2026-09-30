@@ -157,6 +157,8 @@ private:
     ComputeContext& cc;
     ComputeArray floatBuffer, doubleBuffer;
     ComputeKernel copyFloatKernel, copyDoubleKernel;
+    // Temporary output only; every use follows a successful getter in this call.
+    std::vector<Vec3> boxPositionScratch;
 };
 
 /**

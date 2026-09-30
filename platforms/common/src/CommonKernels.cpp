@@ -52,6 +52,9 @@
 #include <iterator>
 #include <set>
 
+#include <cstdlib>
+#include <new>
+
 using namespace OpenMM;
 using namespace std;
 using namespace Lepton;
@@ -335,10 +338,33 @@ void CommonUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, co
     // If any particles have been wrapped to the first periodic box, we need to unwrap them
     // to avoid changing their positions.
 
-    vector<Vec3> positions;
+    vector<Vec3> localPositions;
+    vector<Vec3>* positions = &localPositions;
+    bool haveUnwrappedPositions = false;
     for (auto offset : cc.getPosCellOffsets()) {
         if (offset.x != 0 || offset.y != 0 || offset.z != 0) {
-            getPositions(context, positions);
+            const char* scratchEnv = std::getenv("OPENMM_EXPERIMENT_BOX_POSITION_SCRATCH_REUSE");
+            const int numParticles = context.getSystem().getNumParticles();
+            const bool useScratch = scratchEnv != NULL && scratchEnv[0] == '1' && scratchEnv[1] == '\0'
+                    && numParticles >= 4096 && cc.getUseMixedPrecision()
+                    && cc.getNumContexts() == 1 && getPlatform().getName() == "CUDA";
+            if (useScratch) {
+                try {
+                    // Reserve before any download or box mutation. Keep size
+                    // across calls so getPositions.resize(N) does not zero an
+                    // existing Vec3 array that the getter fully overwrites.
+                    boxPositionScratch.reserve(numParticles);
+                    positions = &boxPositionScratch;
+                }
+                catch (const std::bad_alloc&) {
+                    // Retain the original local-vector path on optional OOM.
+                    // No getter or box operation has run for this call yet.
+                }
+            }
+            getPositions(context, *positions);
+            // Persistent scratch can contain an earlier call's data. Only a
+            // successful getter in this call permits any setter below.
+            haveUnwrappedPositions = !positions->empty();
             break;
         }
     }
@@ -347,8 +373,8 @@ void CommonUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, co
 
     for (auto ctx : cc.getAllContexts())
         ctx->setPeriodicBoxVectors(a, b, c);
-    if (positions.size() > 0)
-        setPositions(context, positions);
+    if (haveUnwrappedPositions)
+        setPositions(context, *positions);
 }
 
 void CommonUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
