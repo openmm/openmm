@@ -1,6 +1,7 @@
 // This file is part of VkFFT, a Vulkan Fast Fourier Transform library
 //
 // Copyright (C) 2020 - present Dmitrii Tolmachev <dtolm96@gmail.com>
+// Metal backend integration fixes copyright (C) 2026 Chun-Chi Hung.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -28222,19 +28223,28 @@ static inline VkFFTResult VkFFT_transferDataFromCPU(VkFFTApplication* app, void*
 		return VKFFT_ERROR_FAILED_TO_SYNCHRONIZE;
 	}
 #elif(VKFFT_BACKEND==5)
+	if (!input_buffer || !((MTL::Buffer**)input_buffer)[0])
+		return VKFFT_ERROR_EMPTY_buffer;
 	MTL::Buffer* stagingBuffer = app->configuration.device->newBuffer(cpu_arr, transferSize, MTL::ResourceStorageModeShared);
+	if (!stagingBuffer) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
 	MTL::CommandBuffer* copyCommandBuffer = app->configuration.queue->commandBuffer();
-	if (copyCommandBuffer == 0) return VKFFT_ERROR_FAILED_TO_CREATE_COMMAND_LIST;
+	if (copyCommandBuffer == 0) {
+		stagingBuffer->release();
+		return VKFFT_ERROR_FAILED_TO_CREATE_COMMAND_LIST;
+	}
 	MTL::BlitCommandEncoder* blitCommandEncoder = copyCommandBuffer->blitCommandEncoder();
-	if (blitCommandEncoder == 0) return VKFFT_ERROR_FAILED_TO_CREATE_COMMAND_LIST;
+	if (blitCommandEncoder == 0) {
+		stagingBuffer->release();
+		return VKFFT_ERROR_FAILED_TO_CREATE_COMMAND_LIST;
+	}
 	MTL::Buffer* buffer = ((MTL::Buffer**)input_buffer)[0];
 	blitCommandEncoder->copyFromBuffer((MTL::Buffer*)stagingBuffer, 0, (MTL::Buffer*)buffer, 0, transferSize);
 	blitCommandEncoder->endEncoding();
 	copyCommandBuffer->commit();
 	copyCommandBuffer->waitUntilCompleted();
-	blitCommandEncoder->release();
-	copyCommandBuffer->release();
 	stagingBuffer->release();
+	if (copyCommandBuffer->status() == MTL::CommandBufferStatusError)
+		return VKFFT_ERROR_FAILED_TO_COPY;
 #endif
 	return resFFT;
 }
@@ -28335,18 +28345,29 @@ static inline VkFFTResult VkFFT_transferDataToCPU(VkFFTApplication* app, void* c
 		return VKFFT_ERROR_FAILED_TO_SYNCHRONIZE;
 	}
 #elif(VKFFT_BACKEND==5)
+	if (!output_buffer || !((MTL::Buffer**)output_buffer)[0])
+		return VKFFT_ERROR_EMPTY_buffer;
 	MTL::Buffer* stagingBuffer = app->configuration.device->newBuffer(transferSize, MTL::ResourceStorageModeShared);
+	if (!stagingBuffer) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
 	MTL::CommandBuffer* copyCommandBuffer = app->configuration.queue->commandBuffer();
-	if (copyCommandBuffer == 0) return VKFFT_ERROR_FAILED_TO_CREATE_COMMAND_LIST;
+	if (copyCommandBuffer == 0) {
+		stagingBuffer->release();
+		return VKFFT_ERROR_FAILED_TO_CREATE_COMMAND_LIST;
+	}
 	MTL::BlitCommandEncoder* blitCommandEncoder = copyCommandBuffer->blitCommandEncoder();
-	if (blitCommandEncoder == 0) return VKFFT_ERROR_FAILED_TO_CREATE_COMMAND_LIST;
+	if (blitCommandEncoder == 0) {
+		stagingBuffer->release();
+		return VKFFT_ERROR_FAILED_TO_CREATE_COMMAND_LIST;
+	}
 	MTL::Buffer* buffer = ((MTL::Buffer**)output_buffer)[0];
 	blitCommandEncoder->copyFromBuffer((MTL::Buffer*)buffer, 0, (MTL::Buffer*)stagingBuffer, 0, transferSize);
 	blitCommandEncoder->endEncoding();
 	copyCommandBuffer->commit();
 	copyCommandBuffer->waitUntilCompleted();
-	blitCommandEncoder->release();
-	copyCommandBuffer->release();
+	if (copyCommandBuffer->status() == MTL::CommandBufferStatusError) {
+		stagingBuffer->release();
+		return VKFFT_ERROR_FAILED_TO_COPY;
+	}
 	memcpy(cpu_arr, stagingBuffer->contents(), transferSize);
 	stagingBuffer->release();
 #endif
@@ -32174,8 +32195,11 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 			commandEncoder->endEncoding();
 			commandBuffer->commit();
 			commandBuffer->waitUntilCompleted();
-			commandEncoder->release();
-			commandBuffer->release();
+			if (commandBuffer->status() == MTL::CommandBufferStatusError) {
+				free(phaseVectors);
+				deleteVkFFT(&kernelPreparationApplication);
+				return VKFFT_ERROR_FAILED_TO_SYNCHRONIZE;
+			}
 #endif
 		}
 		if ((FFTPlan->numAxisUploads[axis_id] > 1) && (!app->configuration.makeForwardPlanOnly)) {
@@ -32548,8 +32572,11 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 			commandEncoder->endEncoding();
 			commandBuffer->commit();
 			commandBuffer->waitUntilCompleted();
-			commandEncoder->release();
-			commandBuffer->release();
+			if (commandBuffer->status() == MTL::CommandBufferStatusError) {
+				free(phaseVectors);
+				deleteVkFFT(&kernelPreparationApplication);
+				return VKFFT_ERROR_FAILED_TO_SYNCHRONIZE;
+			}
 		}
 		if ((FFTPlan->numAxisUploads[axis_id] == 1) && (!app->configuration.makeForwardPlanOnly)) {
 			MTL::CommandBuffer* commandBuffer = app->configuration.queue->commandBuffer();
@@ -32569,8 +32596,11 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 			commandEncoder->endEncoding();
 			commandBuffer->commit();
 			commandBuffer->waitUntilCompleted();
-			commandEncoder->release();
-			commandBuffer->release();
+			if (commandBuffer->status() == MTL::CommandBufferStatusError) {
+				free(phaseVectors);
+				deleteVkFFT(&kernelPreparationApplication);
+				return VKFFT_ERROR_FAILED_TO_SYNCHRONIZE;
+			}
 		}
 #endif
 #if(VKFFT_BACKEND==0)
@@ -32930,8 +32960,12 @@ static inline VkFFTResult VkFFTGenerateRaderFFTKernel(VkFFTApplication* app, VkF
 				commandEncoder->endEncoding();
 				commandBuffer->commit();
 				commandBuffer->waitUntilCompleted();
-				commandEncoder->release();
-				commandBuffer->release();
+				if (commandBuffer->status() == MTL::CommandBufferStatusError) {
+					bufferRaderFFT->release();
+					free(axis->specializationConstants.raderContainer[i].raderFFTkernel);
+					deleteVkFFT(&kernelPreparationApplication);
+					return VKFFT_ERROR_FAILED_TO_SYNCHRONIZE;
+				}
 #endif
 				resFFT = VkFFT_transferDataToCPU(&kernelPreparationApplication, axis->specializationConstants.raderContainer[i].raderFFTkernel, &bufferRaderFFT, bufferSize);
 				if (resFFT != VKFFT_SUCCESS) {
@@ -35649,7 +35683,7 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 			return VKFFT_ERROR_FAILED_TO_CREATE_SHADER_MODULE;
 		}
 #elif(VKFFT_BACKEND==5)
-		NS::Error* error;
+		NS::Error* error = nullptr;
 		if (app->configuration.loadApplicationFromString) {
 			char* code;
 			uint64_t codeSize;
@@ -35667,34 +35701,38 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 			app->currentApplicationStringPos += codeSize + sizeof(uint64_t);
 			dispatch_data_t data = dispatch_data_create(code, codeSize, 0, 0);
 			axis->library = app->configuration.device->newLibrary(data, &error);
+			dispatch_release(data);
 			free(code);
 			code = 0;
 		}
 		else {
 			size_t codelen = strlen(code0);
-			MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc();
+			MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc()->init();
 			compileOptions->setFastMathEnabled(true);
 			NS::String* str = NS::String::string(code0, NS::UTF8StringEncoding);
 			axis->library = app->configuration.device->newLibrary(str, compileOptions, &error);
-			if (error) {
-				printf("%s\n%s\n", error->debugDescription()->cString(NS::ASCIIStringEncoding), error->localizedDescription()->cString(NS::ASCIIStringEncoding));
+			compileOptions->release();
+			if (!axis->library) {
+				if (error) fprintf(stderr, "%s\n", error->localizedDescription()->utf8String());
 				free(code0);
 				code0 = 0;
 				deleteVkFFT(app);
 				return VKFFT_ERROR_FAILED_TO_COMPILE_PROGRAM;
 			}
-			compileOptions->release();
 			if (app->configuration.saveApplicationToString) {
 
 			}
-			str->release();
 		}
 		const char function_name[20] = "VkFFT_main_R2C";
+		if (!axis->library) {
+			free(code0);
+			deleteVkFFT(app);
+			return VKFFT_ERROR_FAILED_TO_COMPILE_PROGRAM;
+		}
 		NS::String* str = NS::String::string(function_name, NS::UTF8StringEncoding);
 		MTL::Function* function = axis->library->newFunction(str);
 		axis->pipeline = app->configuration.device->newComputePipelineState(function, &error);
 		function->release();
-		str->release();
 #endif
 		if (!app->configuration.keepShaderCode) {
 			free(code0);
@@ -38922,7 +38960,7 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 			return VKFFT_ERROR_FAILED_TO_CREATE_SHADER_MODULE;
 		}
 #elif(VKFFT_BACKEND==5)
-		NS::Error* error;
+		NS::Error* error = nullptr;
 		if (app->configuration.loadApplicationFromString) {
 			char* code;
 			uint64_t codeSize;
@@ -38940,35 +38978,39 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 			app->currentApplicationStringPos += codeSize + sizeof(uint64_t);
 			dispatch_data_t data = dispatch_data_create(code, codeSize, 0, 0);
 			axis->library = app->configuration.device->newLibrary(data, &error);
-			if (error)std::cout << error->debugDescription()->cString(NS::ASCIIStringEncoding) << error->localizedDescription()->cString(NS::ASCIIStringEncoding) << std::endl;
+			dispatch_release(data);
+			if (error && !axis->library) fprintf(stderr, "%s\n", error->localizedDescription()->utf8String());
 			free(code);
 			code = 0;
 		}
 		else {
 			size_t codelen = strlen(code0);
-			MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc();
+			MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc()->init();
 			compileOptions->setFastMathEnabled(true);
 			NS::String* str = NS::String::string(code0, NS::UTF8StringEncoding);
 			axis->library = app->configuration.device->newLibrary(str, compileOptions, &error);
-			if (error) {
-				printf("%s\n%s\n", error->debugDescription()->cString(NS::ASCIIStringEncoding), error->localizedDescription()->cString(NS::ASCIIStringEncoding));
+			compileOptions->release();
+			if (!axis->library) {
+				if (error) fprintf(stderr, "%s\n", error->localizedDescription()->utf8String());
 				free(code0);
 				code0 = 0;
 				deleteVkFFT(app);
 				return VKFFT_ERROR_FAILED_TO_COMPILE_PROGRAM;
 			}
-			compileOptions->release();
 			if (app->configuration.saveApplicationToString) {
 
 			}
-			str->release();
 		}
 		const char function_name[20] = "VkFFT_main";
+		if (!axis->library) {
+			free(code0);
+			deleteVkFFT(app);
+			return VKFFT_ERROR_FAILED_TO_COMPILE_PROGRAM;
+		}
 		NS::String* str = NS::String::string(function_name, NS::UTF8StringEncoding);
 		MTL::Function* function = axis->library->newFunction(str);
 		axis->pipeline = app->configuration.device->newComputePipelineState(function, &error);
 		function->release();
-		str->release();
 #endif
 		if (!app->configuration.keepShaderCode) {
 			free(code0);
@@ -39870,13 +39912,29 @@ static inline VkFFTResult initializeVkFFT(VkFFTApplication* app, VkFFTConfigurat
 	const char dummy_kernel[50] = "kernel void VkFFT_dummy (){}";
 	const char function_name[20] = "VkFFT_dummy";
 
-	NS::Error* error;
-	MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc();
+	NS::Error* error = nullptr;
+	MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc()->init();
 	NS::String* str_code = NS::String::string(dummy_kernel, NS::UTF8StringEncoding);
 	MTL::Library* dummy_library = app->configuration.device->newLibrary(str_code, compileOptions, &error);
+	compileOptions->release();
+	if (!dummy_library) {
+		deleteVkFFT(app);
+		return VKFFT_ERROR_FAILED_TO_COMPILE_PROGRAM;
+	}
 	NS::String* str_name = NS::String::string(function_name, NS::UTF8StringEncoding);
 	MTL::Function* function = dummy_library->newFunction(str_name);
+	if (!function) {
+		dummy_library->release();
+		deleteVkFFT(app);
+		return VKFFT_ERROR_FAILED_TO_GET_FUNCTION;
+	}
 	MTL::ComputePipelineState* dummy_state = app->configuration.device->newComputePipelineState(function, &error);
+	if (!dummy_state) {
+		function->release();
+		dummy_library->release();
+		deleteVkFFT(app);
+		return VKFFT_ERROR_FAILED_TO_CREATE_PIPELINE;
+	}
 
 	MTL::Size size = app->configuration.device->maxThreadsPerThreadgroup();
 	app->configuration.maxThreadsNum = dummy_state->maxTotalThreadsPerThreadgroup();
@@ -39916,10 +39974,7 @@ static inline VkFFTResult initializeVkFFT(VkFFTApplication* app, VkFFTConfigurat
 
 	dummy_state->release();
 	function->release();
-	str_name->release();
 	dummy_library->release();
-	str_code->release();
-	compileOptions->release();
 #endif
 
 	resFFT = initializeBluesteinAutoPadding(app);
