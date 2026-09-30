@@ -52,6 +52,12 @@
 #include <iterator>
 #include <set>
 
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <limits>
+#include <type_traits>
+
 using namespace OpenMM;
 using namespace std;
 using namespace Lepton;
@@ -97,15 +103,58 @@ void CommonUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3
     int numParticles = context.getSystem().getNumParticles();
     positions.resize(numParticles);
     vector<mm_float4> posCorrection;
+    static_assert(std::is_trivially_copyable<mm_float4>::value, "Position correction byte copies require a trivially copyable type");
+    unsigned char* positionCorrectionBytes = NULL;
     if (cc.getUseDoublePrecision()) {
         mm_double4* posq = (mm_double4*) cc.getPinnedBuffer();
         cc.getPosq().download(posq);
     }
     else if (cc.getUseMixedPrecision()) {
         mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
+        const char* pinnedTailEnv = std::getenv("OPENMM_EXPERIMENT_GETPOSITIONS_PINNED_TAIL");
+        bool usePinnedCorrectionTail = pinnedTailEnv != NULL && pinnedTailEnv[0] == '1' && pinnedTailEnv[1] == '\0'
+                && numParticles >= 4096 && cc.getNumContexts() == 1 && getPlatform().getName() == "CUDA";
+        if (usePinnedCorrectionTail) {
+            // Check the platform property before issuing the asynchronous copy.
+            // The shared pinned buffer must not be borrowed while CPU PME runs.
+            try {
+                usePinnedCorrectionTail = (getPlatform().getPropertyValue(context.getOwner(), "UseCpuPme") == "false");
+            }
+            catch (const OpenMMException&) {
+                usePinnedCorrectionTail = false;
+            }
+        }
+        if (usePinnedCorrectionTail) {
+            const int paddedSize = cc.getPaddedNumAtoms();
+            // ComputeContext guarantees room for any returned array. In CUDA
+            // mixed precision, velm is 32P bytes, enough for both 16P arrays.
+            // Size/element checks avoid byte-count overflow and preserve 16B alignment.
+            usePinnedCorrectionTail = paddedSize >= numParticles
+                    && static_cast<size_t>(paddedSize) <= std::numeric_limits<size_t>::max()/(2*sizeof(mm_float4))
+                    && cc.getPosq().getSize() == paddedSize && cc.getPosqCorrection().getSize() == paddedSize
+                    && cc.getPosq().getElementSize() == sizeof(mm_float4)
+                    && cc.getPosqCorrection().getElementSize() == sizeof(mm_float4)
+                    && cc.getVelm().getSize() >= paddedSize && cc.getVelm().getElementSize()/2 >= sizeof(mm_float4)
+                    && reinterpret_cast<uintptr_t>(posq)%sizeof(mm_float4) == 0;
+        }
         cc.getPosq().download(posq, false);
-        posCorrection.resize(numParticles);
-        cc.getPosqCorrection().download(posCorrection);
+        if (usePinnedCorrectionTail) {
+            // Borrow only this call's unused pinned tail. The blocking second
+            // download and existing ThreadPool join precede any buffer reuse.
+            positionCorrectionBytes = reinterpret_cast<unsigned char*>(cc.getPinnedBuffer())
+                    +static_cast<size_t>(cc.getPaddedNumAtoms())*sizeof(mm_float4);
+            cc.getPosqCorrection().download(positionCorrectionBytes);
+        }
+        else {
+            // Lower-priority alternative: one pageable allocation at device size.
+            const char* singleAllocationEnv = std::getenv("OPENMM_EXPERIMENT_GETPOSITIONS_SINGLE_ALLOCATION");
+            const bool singleCorrectionAllocation = singleAllocationEnv != NULL && singleAllocationEnv[0] == '1' && singleAllocationEnv[1] == '\0'
+                    && numParticles >= 4096 && cc.getNumContexts() == 1 && getPlatform().getName() == "CUDA";
+            if (!singleCorrectionAllocation)
+                posCorrection.resize(numParticles);
+            cc.getPosqCorrection().download(posCorrection);
+            positionCorrectionBytes = reinterpret_cast<unsigned char*>(posCorrection.data());
+        }
     }
     else {
         mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
@@ -136,7 +185,8 @@ void CommonUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3
                 mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
                 for (int i = start; i < end; ++i) {
                     mm_float4 pos1 = posq[i];
-                    mm_float4 pos2 = posCorrection[i];
+                    mm_float4 pos2;
+                    std::memcpy(&pos2, positionCorrectionBytes+static_cast<size_t>(i)*sizeof(pos2), sizeof(pos2));
                     positions[order[i]] = Vec3((double)pos1.x+(double)pos2.x, (double)pos1.y+(double)pos2.y, (double)pos1.z+(double)pos2.z);
                 }
             }
@@ -161,7 +211,8 @@ void CommonUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3
                 mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
                 for (int i = start; i < end; ++i) {
                     mm_float4 pos1 = posq[i];
-                    mm_float4 pos2 = posCorrection[i];
+                    mm_float4 pos2;
+                    std::memcpy(&pos2, positionCorrectionBytes+static_cast<size_t>(i)*sizeof(pos2), sizeof(pos2));
                     mm_int4 offset = cc.getPosCellOffsets()[i];
                     positions[order[i]] = Vec3((double)pos1.x+(double)pos2.x, (double)pos1.y+(double)pos2.y, (double)pos1.z+(double)pos2.z)-boxVectors[0]*offset.x-boxVectors[1]*offset.y-boxVectors[2]*offset.z;
                 }
