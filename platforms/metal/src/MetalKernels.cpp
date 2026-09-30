@@ -183,7 +183,7 @@ void MetalCalcNonbondedForceKernel::initialize(const System& system, const Nonbo
 }
 
 void MetalCalcConstantPotentialForceKernel::initialize(const System& system, const ConstantPotentialForce& force) {
-    commonInitialize(system, force, false, true);
+    commonInitialize(system, force, false, !OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD);
 }
 
 ComputeContext& MetalCalcCustomCVForceKernel::getInnerComputeContext(ContextImpl& innerContext) {

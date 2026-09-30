@@ -50,6 +50,7 @@ option(OPENMM_METAL_FAST_MATH
     "Allow broad Metal fast math except where compensated or robust arithmetic is required" OFF)
 option(OPENMM_METAL_FAST_PME_FLOAT_SPREAD "Use the Common floating-grid spreading path for PME" OFF)
 option(OPENMM_METAL_FAST_LJPME_FLOAT_SPREAD "Use floating grids for both reciprocal terms of LJPME" OFF)
+option(OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD "Use floating-grid spreading in ConstantPotential PME" OFF)
 
 # Each optional algorithm can be compared independently with the OpenCL path.
 set(METAL_OPTIMIZATION_SWITCHES
@@ -163,7 +164,7 @@ target_compile_definitions(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
     OPENMM_METAL_NATIVE_FLOAT_ATOMICS=$<BOOL:${OPENMM_METAL_NATIVE_FLOAT_ATOMICS}>
     OPENMM_METAL_FAST_PME_FLOAT_SPREAD=$<BOOL:${OPENMM_METAL_FAST_PME_FLOAT_SPREAD}>
     OPENMM_METAL_FAST_LJPME_FLOAT_SPREAD=$<BOOL:${OPENMM_METAL_FAST_LJPME_FLOAT_SPREAD}>
-
+    OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD=$<BOOL:${OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD}>
 
     OPENMM_METAL_FAST_MATH=$<BOOL:${OPENMM_METAL_FAST_MATH}>
 
