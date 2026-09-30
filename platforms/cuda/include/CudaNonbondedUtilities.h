@@ -122,7 +122,8 @@ public:
      * Get the number of energy buffers required for nonbonded forces.
      */
     int getNumEnergyBuffers() {
-        return numForceThreadBlocks*forceThreadBlockSize;
+        // Direct geometry can grow independently of other force consumers.
+        return numDirectForceThreadBlocks*forceThreadBlockSize;
     }
     /**
      * Get whether a cutoff is being used.
@@ -333,6 +334,7 @@ private:
     unsigned int maxTiles, maxSinglePairs, tilesAfterReorder;
     long long numTiles;
     std::string kernelSource;
+    int numDirectForceThreadBlocks;
 };
 
 /**

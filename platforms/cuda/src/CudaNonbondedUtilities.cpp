@@ -28,6 +28,8 @@
 #include "CudaContext.h"
 #include "CudaKernelSources.h"
 #include "CudaExpressionUtilities.h"
+#include <cstdlib>
+#include <cstring>
 #include <algorithm>
 #include <map>
 #include <set>
@@ -68,6 +70,18 @@ CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(c
     CHECK_RESULT(cuMemHostAlloc((void**) &pinnedCountBuffer, 2*sizeof(unsigned int), CU_MEMHOSTALLOC_PORTABLE));
     numForceThreadBlocks = 4*multiprocessors;
     forceThreadBlockSize = (context.getComputeCapability() < 2.0 ? 128 : 256);
+    numDirectForceThreadBlocks = numForceThreadBlocks;
+    // Keep the block and kernel layout unchanged.  This opt-in experiment
+    // only supplies more independent tile ranges on SM 12.0.  It is bounded
+    // by CudaContext's six-blocks-per-SM launch cap, and is read before the
+    // energy and parameter-derivative buffers are allocated.
+    const char* directBlocks = getenv("OPENMM_EXPERIMENT_DIRECT_BLOCKS_PER_SM");
+    if (context.getComputeCapability() == 12.0 && context.getUseMixedPrecision() && context.getNumAtoms() > 90000 && directBlocks != NULL) {
+        if (strcmp(directBlocks, "5") == 0)
+            numDirectForceThreadBlocks = 5*multiprocessors;
+        else if (strcmp(directBlocks, "6") == 0)
+            numDirectForceThreadBlocks = 6*multiprocessors;
+    }
     
     // When building the neighbor list, we can optionally use large blocks (1024 atoms) to
     // accelerate the process.  This makes building the neighbor list faster, but it prevents
@@ -430,7 +444,8 @@ void CudaNonbondedUtilities::computeInteractions(int forceGroups, bool includeFo
             kernel = createInteractionKernel(kernels.source, parameters, arguments, true, true, forceGroups, includeForces, includeEnergy);
         if (!hasInitializedParams)
             initParamArgs();
-        context.executeKernel(kernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+        const int forceBlocks = (kernelSource == CudaKernelSources::nonbonded ? numDirectForceThreadBlocks : numForceThreadBlocks);
+        context.executeKernel(kernel, &forceArgs[0], forceBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     if (useNeighborList && numTiles > 0) {
         cuEventSynchronize(downloadCountEvent);
@@ -685,6 +700,10 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     if (includeEnergy)
         defines["INCLUDE_ENERGY"] = "1";
     defines["THREAD_BLOCK_SIZE"] = context.intToString(forceThreadBlockSize);
+    // The larger grid increases the warp*exclusionCount product.  Widen it
+    // only for this experiment; preserve the original OFF kernel source.
+    if (kernelSource == CudaKernelSources::nonbonded && numDirectForceThreadBlocks > numForceThreadBlocks)
+        defines["EXPERIMENT_WIDE_EXCLUSION_PARTITION"] = "1";
     double maxCutoff = 0.0;
     for (int i = 0; i < 32; i++) {
         if ((groups&(1<<i)) != 0) {
