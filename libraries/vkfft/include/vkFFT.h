@@ -66,6 +66,22 @@
 #include "Foundation/Foundation.hpp"
 #include "QuartzCore/QuartzCore.hpp"
 #include "Metal/Metal.hpp"
+// Preserve VkFFT's default unless the Metal caller supplies its own policy.
+#ifndef VKFFT_METAL_FAST_MATH
+#define VKFFT_METAL_FAST_MATH 1
+#endif
+// Keep arithmetic optimization and FP32 function selection explicit. The old
+// setter is used only on deployment systems without the replacement API.
+static inline void VkFFTSetMetalMathOptions(MTL::CompileOptions* options) {
+	const bool fast = VKFFT_METAL_FAST_MATH != 0;
+	if (__builtin_available(macOS 15.0, *)) {
+		options->setMathMode(fast ? MTL::MathModeFast : MTL::MathModeSafe);
+		options->setMathFloatingPointFunctions(fast ? MTL::MathFloatingPointFunctionsFast : MTL::MathFloatingPointFunctionsPrecise);
+	}
+	else {
+		options->setFastMathEnabled(fast);
+	}
+}
 #endif
 #ifdef VkFFT_use_FP128_Bluestein_RaderFFT
 #include "fftw3.h"
@@ -35734,7 +35750,8 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 		else {
 			size_t codelen = strlen(code0);
 			MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc()->init();
-			compileOptions->setFastMathEnabled(true);
+			compileOptions->setLanguageVersion(MTL::LanguageVersion3_0);
+			VkFFTSetMetalMathOptions(compileOptions);
 			NS::String* str = NS::String::string(code0, NS::UTF8StringEncoding);
 			axis->library = app->configuration.device->newLibrary(str, compileOptions, &error);
 			compileOptions->release();
@@ -39014,7 +39031,8 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 		else {
 			size_t codelen = strlen(code0);
 			MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc()->init();
-			compileOptions->setFastMathEnabled(true);
+			compileOptions->setLanguageVersion(MTL::LanguageVersion3_0);
+			VkFFTSetMetalMathOptions(compileOptions);
 			NS::String* str = NS::String::string(code0, NS::UTF8StringEncoding);
 			axis->library = app->configuration.device->newLibrary(str, compileOptions, &error);
 			compileOptions->release();
@@ -39944,6 +39962,8 @@ static inline VkFFTResult initializeVkFFT(VkFFTApplication* app, VkFFTConfigurat
 
 	NS::Error* error = nullptr;
 	MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc()->init();
+	compileOptions->setLanguageVersion(MTL::LanguageVersion3_0);
+	VkFFTSetMetalMathOptions(compileOptions);
 	NS::String* str_code = NS::String::string(dummy_kernel, NS::UTF8StringEncoding);
 	MTL::Library* dummy_library = app->configuration.device->newLibrary(str_code, compileOptions, &error);
 	compileOptions->release();
