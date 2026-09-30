@@ -149,15 +149,18 @@ string customGB(string source) {
     return source;
 }
 
-/** Scalarize the fixed GBSA Born-sum struct, rotating every field with its accumulator. */
-string gbsaBorn(string source) {
-    const string type = "AtomData1";
-    const string declaration =
-            "typedef struct ALIGN {\n    real x, y, z;\n    real q;\n    float radius, scaledRadius;\n    real bornSum;\n} AtomData1;";
+/** Scalarize the fixed GBSA structs, rotating every field with its accumulator. */
+string gbsa(string source, bool born) {
+    const string type = born ? "AtomData1" : "AtomData2";
+    const string declaration = born ?
+            "typedef struct ALIGN {\n    real x, y, z;\n    real q;\n    float radius, scaledRadius;\n    real bornSum;\n} AtomData1;" :
+            "typedef struct ALIGN {\n    real x, y, z;\n    real q;\n    real fx, fy, fz, fw;\n    real bornRadius;\n} AtomData2;";
     if (source.find(declaration) == string::npos)
         throw OpenMMException("Common GBSA particle fields changed: review Metal register transport");
-    const vector<string> fields = {"x", "y", "z", "q", "radius", "scaledRadius", "bornSum"};
-    const vector<string> readOnly = {"x", "y", "z", "radius", "scaledRadius"};
+    const vector<string> fields = born ? vector<string>{"x", "y", "z", "q", "radius", "scaledRadius", "bornSum"} :
+            vector<string>{"x", "y", "z", "q", "fx", "fy", "fz", "fw", "bornRadius"};
+    const vector<string> readOnly = born ? vector<string>{"x", "y", "z", "radius", "scaledRadius"} :
+            vector<string>{"x", "y", "z", "q", "bornRadius"};
     replace(source, "LOCAL "+type+" localData[FORCE_WORK_GROUP_SIZE];", type+" localData = {};\nint atomIndices = 0;", 1);
     string broadcast = type+" _metal_broadcast = {};\n";
     for (const string& field : readOnly)
@@ -252,6 +255,9 @@ MetalPairwiseOptimizations::Settings MetalPairwiseOptimizations::getBuildSetting
 #if OPENMM_METAL_FAST_GBSA_BORN_SHUFFLE
     settings.gbsaBorn = true;
 #endif
+#if OPENMM_METAL_FAST_GBSA_FORCE_SHUFFLE
+    settings.gbsaForce = true;
+#endif
 #if OPENMM_METAL_FAST_DPD_PARTICLE_SHUFFLE
     settings.dpdParticles = true;
 #endif
@@ -273,11 +279,12 @@ string MetalPairwiseOptimizations::apply(const string& source, const Settings& s
         return checkedSource(customGB(source));
     if (settings.customGBEnergy && matchesTemplate(source, CommonKernelSources::customGBEnergyN2, customGBHoles))
         return checkedSource(customGB(source));
-    if (settings.gbsaBorn && source == CommonKernelSources::gbsaObc) {
+    if ((settings.gbsaBorn || settings.gbsaForce) && source == CommonKernelSources::gbsaObc) {
         const size_t second = source.find("typedef struct ALIGN {", source.find("typedef struct ALIGN {")+1);
         if (second == string::npos) throw OpenMMException("Missing second Common GBSA template");
         string first = source.substr(0, second), last = source.substr(second);
-        first = gbsaBorn(first);
+        if (settings.gbsaBorn) first = gbsa(first, true);
+        if (settings.gbsaForce) last = gbsa(last, false);
         return checkedSource(first+last);
     }
     if ((settings.dpdParticles || settings.dpdTile) && source == CommonKernelSources::dpd)

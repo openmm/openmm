@@ -36,6 +36,7 @@ This series introduces the OpenCL/Common baseline in component-sized changes bef
 | `OPENMM_METAL_FAST_CUSTOM_GB_VALUE_SHUFFLE` | Common CustomGB value local arrays | Register exchange for value, parameters, and secondary accumulators |
 | `OPENMM_METAL_FAST_CUSTOM_GB_ENERGY_SHUFFLE` | Common CustomGB energy local arrays | Register exchange for force and parameter-derivative state |
 | `OPENMM_METAL_FAST_GBSA_BORN_SHUFFLE` | Common Born-sum local structs | Register exchange of Born data and secondary sums |
+| `OPENMM_METAL_FAST_GBSA_FORCE_SHUFFLE` | Common GBSA force local structs | Register exchange of force/Born state |
 | `OPENMM_METAL_FAST_DPD_PARTICLE_SHUFFLE` | Common DPD local particle arrays | Register broadcasts preserving original pair/RNG visitation order |
 | `OPENMM_METAL_FAST_DPD_TILE_BROADCAST` | Local-memory tile-counter broadcast | SIMD lane-zero broadcast |
 | `OPENMM_METAL_FAST_CUSTOM_HBOND_SHUFFLE` | Common local acceptor structs | Register rotation of acceptor positions and forces |
