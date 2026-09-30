@@ -76,10 +76,11 @@ void testSelection() {
             ASSERT_EQUAL(optimized, MetalReductionOptimizations::apply(optimized, settings));
         }
     }
-    for (int option = 0; option < 2; option++) {
+    for (int option = 0; option < 3; option++) {
         Settings settings;
         settings.lcpoScan = option == 0;
         settings.manyParticleScan = option == 1;
+        settings.sortBucketScan = option == 2;
         int index = 0;
         for (const string* source : {&CommonKernelSources::lcpo, &CommonKernelSources::customManyParticle,
                 &MetalOpenCLKernelSources::sort}) {
@@ -95,6 +96,7 @@ void testSelection() {
     all.orientation = true;
     all.lcpoScan = true;
     all.manyParticleScan = true;
+    all.sortBucketScan = true;
     const string unrelated = "DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) { return value; }";
     ASSERT_EQUAL(unrelated, MetalReductionOptimizations::apply(unrelated, all));
     // A recognizable function name is insufficient: an unreviewed body must
@@ -107,7 +109,7 @@ void testSelection() {
         "KERNEL void computeRMSDPart1(", "KERNEL void computeCorrelationMatrix(",
         "KERNEL void computeNeighborStartIndices(", "KERNEL void computeNeighborStartIndices(",
         "__kernel void computeBucketPositions(", "__kernel void sortShortList("};
-    for (int option = 0; option < 6; option++) {
+    for (int option = 0; option < 7; option++) {
         Settings settings;
         settings.centroid = option == 0;
         settings.rg = option == 1;
@@ -115,6 +117,7 @@ void testSelection() {
         settings.orientation = option == 3;
         settings.lcpoScan = option == 4;
         settings.manyParticleScan = option == 5;
+        settings.sortBucketScan = option == 6;
         string modified = *originals[option];
         size_t body = modified.find('{', modified.find(signatures[option]));
         ASSERT(body != string::npos);
@@ -290,6 +293,43 @@ void testNeighborScans(MetalContext& context) {
     }
 }
 
+/** @brief Verify bucket scans for empty/partial SIMD groups and multiple chunks. */
+void testBucketScans(MetalContext& context) {
+    for (bool enabled : {false, true}) {
+        MetalReductionOptimizations::Settings settings;
+        settings.sortBucketScan = enabled;
+        string transformed = MetalReductionOptimizations::apply(MetalOpenCLKernelSources::sort, settings);
+        string source = extractFunction(transformed, "__kernel void computeBucketPositions(");
+        if (enabled)
+            source = extractFunction(transformed, "DEVICE unsigned int metalBlockInclusiveScan(")+source;
+        source = context.replaceStrings(source, {{"computeBucketPositions", "bucketScanProbe"}});
+        ComputeProgram program = context.compileProgram(source);
+        for (int count : {0, 1, 31, 33, 257, 4099}) {
+            vector<unsigned int> values(max(1, count));
+            for (int i = 0; i < count; i++)
+                values[i] = i%13;
+            ComputeArray buffer;
+            buffer.initialize<unsigned int>(context, values.size(), "bucketScanValues");
+            ComputeKernel kernel = program->createKernel("bucketScanProbe");
+            kernel->addArg((unsigned int) count);
+            kernel->addArg(buffer);
+            static_cast<MetalKernel&>(*kernel).addLocalArg(256*sizeof(unsigned int));
+            for (int width : {1, 7, 32, 33, 64, 256}) {
+                buffer.upload(values);
+                static_cast<MetalKernel&>(*kernel).setLocalArg(2, width*sizeof(unsigned int));
+                kernel->execute(width, width);
+                vector<unsigned int> result;
+                buffer.download(result);
+                unsigned int expected = 0;
+                for (int i = 0; i < count; i++) {
+                    expected += values[i];
+                    ASSERT_EQUAL(expected, result[i]);
+                }
+            }
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
     try {
         testSelection();
@@ -303,6 +343,7 @@ int main(int argc, char* argv[]) {
         testReductions(context);
         testCentroids(context);
         testNeighborScans(context);
+        testBucketScans(context);
     }
     catch (const exception& error) {
         cerr << "exception: " << error.what() << endl;

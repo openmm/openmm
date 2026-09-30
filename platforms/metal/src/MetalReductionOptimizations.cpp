@@ -29,6 +29,7 @@
 
 #include "MetalReductionOptimizations.h"
 #include "CommonKernelSources.h"
+#include "MetalOpenCLKernelSources.h"
 #include "openmm/OpenMMException.h"
 
 using namespace OpenMM;
@@ -161,6 +162,9 @@ MetalReductionOptimizations::Settings MetalReductionOptimizations::getBuildSetti
 #if OPENMM_METAL_FAST_CUSTOM_MANY_PARTICLE_NEIGHBOR_SCAN
     settings.manyParticleScan = true;
 #endif
+#if OPENMM_METAL_FAST_SORT_BUCKET_SCAN
+    settings.sortBucketScan = true;
+#endif
     return settings;
 }
 
@@ -205,6 +209,11 @@ string MetalReductionOptimizations::apply(const string& source, const Settings& 
         string original = functionText(CommonKernelSources::customManyParticle, "KERNEL void computeNeighborStartIndices(");
         replaceFunction(result, original, scannedFunction(original,
                 "for (unsigned int step = 1; step < LOCAL_SIZE; step *= 2)", "posBuffer"));
+    }
+    if (settings.sortBucketScan) {
+        string original = functionText(MetalOpenCLKernelSources::sort, "__kernel void computeBucketPositions(");
+        replaceFunction(result, original, scannedFunction(original,
+                "for (uint step = 1; step < get_local_size(0); step *= 2)", "buffer"));
     }
     return result;
 }
