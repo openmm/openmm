@@ -25,6 +25,8 @@
 #include "CudaIntegrationUtilities.h"
 #include "CudaContext.h"
 #include "openmm/common/ContextSelector.h"
+#include <cstdlib>
+#include <cstdio>
 
 using namespace OpenMM;
 using namespace std;
@@ -38,7 +40,19 @@ using namespace std;
     }
 
 CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const System& system) : IntegrationUtilities(context, system),
-        ccmaConvergedMemory(NULL) {
+        velocitySettleBlockSize(-1), traceVelocitySettleBlock(false), initializedVelocitySettleBlock(false), ccmaConvergedMemory(NULL) {
+        const char* blockEnv = std::getenv("OPENMM_EXPERIMENT_VELOCITY_SETTLE_BLOCK128");
+        const char* traceEnv = std::getenv("OPENMM_EXPERIMENT_VELOCITY_SETTLE_BLOCK128_TRACE");
+        bool requested = (blockEnv != NULL && std::string(blockEnv) == "1");
+        bool trace = (traceEnv != NULL && std::string(traceEnv) == "1");
+        // Only launch geometry changes. Cluster-local velocity equations and
+        // their place in the calling integrator/public constraint API are intact.
+        if (requested && context.getUseMixedPrecision())
+            velocitySettleBlockSize = 128;
+        traceVelocitySettleBlock = trace;
+        if (trace)
+            std::fprintf(stderr, "[velocity-settle-block] requested=%d mixed=%d pending_resolution=1\n",
+                    (int) requested, (int) context.getUseMixedPrecision());
         CHECK_RESULT2(cuEventCreate(&ccmaEvent, context.getEventFlags()), "Error creating event for CCMA");
         CHECK_RESULT2(cuMemHostAlloc((void**) &ccmaConvergedMemory, sizeof(int), CU_MEMHOSTALLOC_DEVICEMAP), "Error allocating pinned memory");
         CHECK_RESULT2(cuMemHostGetDevicePointer(&ccmaConvergedDeviceMemory, ccmaConvergedMemory, 0), "Error getting device address for pinned memory");
@@ -78,11 +92,24 @@ void CudaIntegrationUtilities::applyConstraintsImpl(bool constrainVelocities, do
         ccmaForceKernel = ccmaPosForceKernel;
     }
     if (settleAtoms.isInitialized()) {
+        if (constrainVelocities && !initializedVelocitySettleBlock) {
+            // The CudaContext constructor has not yet inserted itself into the
+            // platform context vector. Resolve this guard after construction.
+            if (velocitySettleBlockSize == 128 && (context.getNumContexts() != 1
+                    || settleKernel->getMaxBlockSize() < 128))
+                velocitySettleBlockSize = -1;
+            initializedVelocitySettleBlock = true;
+        }
         if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
             settleKernel->setArg(1, tol);
         else
             settleKernel->setArg(1, (float) tol);
-        settleKernel->execute(settleAtoms.getSize());
+        settleKernel->execute(settleAtoms.getSize(), constrainVelocities ? velocitySettleBlockSize : -1);
+        if (constrainVelocities && traceVelocitySettleBlock) {
+            std::fprintf(stderr, "[velocity-settle-block] first-launch-enqueued block=%d clusters=%d\n",
+                    velocitySettleBlockSize == -1 ? 64 : velocitySettleBlockSize, (int) settleAtoms.getSize());
+            traceVelocitySettleBlock = false;
+        }
     }
     if (shakeAtoms.isInitialized()) {
         if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
