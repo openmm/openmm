@@ -11,6 +11,7 @@ This series introduces the OpenCL/Common baseline in component-sized changes bef
 - OpenCL-derived neighbor lists, sorting and integration utilities.
 - Bundled VkFFT with a private C++17/metal-cpp bridge.
 - Scoped floating accumulator variants for GPU-only minimization.
+- Core force/integrator/state Platform registration; no optional force plugins.
 
 ## Independent comparison switches
 

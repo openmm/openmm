@@ -124,6 +124,9 @@ add_library(${OPENMMMETAL_LIBRARY_NAME} SHARED
     src/MetalSourceAdapter.cpp
     src/MetalPairwiseOptimizations.cpp
     src/MetalReductionOptimizations.cpp
+    src/MetalPlatform.mm
+    src/MetalKernelFactory.cpp
+    src/MetalKernels.cpp
     src/MetalNonbondedUtilities.cpp
     src/MetalIntegrationUtilities.cpp
     src/MetalSort.cpp
@@ -173,7 +176,19 @@ set_target_properties(${OPENMMMETAL_LIBRARY_NAME} PROPERTIES
     COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}"
     LINK_FLAGS "${EXTRA_LINK_FLAGS}")
 
+# The core Platform loads through OpenMM's normal platform-library mechanism;
+# this does not enable optional force plugins such as AMOEBA or Drude.
+install(TARGETS ${OPENMMMETAL_LIBRARY_NAME} LIBRARY DESTINATION lib/plugins)
+file(GLOB METAL_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
+install(FILES ${METAL_HEADERS} DESTINATION include/openmm/metal)
+
 if(BUILD_TESTING)
+    add_executable(TestMetalPlatform tests/TestMetalPlatform.cpp)
+    target_link_libraries(TestMetalPlatform PRIVATE ${OPENMM_LIBRARY_NAME})
+    target_compile_definitions(TestMetalPlatform PRIVATE METAL_LIBRARY_PATH="$<TARGET_FILE:OpenMMMetal>")
+    add_dependencies(TestMetalPlatform OpenMMMetal)
+    add_test(NAME TestMetalPlatform COMMAND TestMetalPlatform)
+    set_tests_properties(TestMetalPlatform PROPERTIES SKIP_RETURN_CODE 77 LABELS "Metal")
     foreach(test IN ITEMS SourceAdapter Sort FFT3D Primitives PairwiseOptimizations ReductionOptimizations NonbondedOptimizations)
         add_executable(TestMetal${test} tests/TestMetal${test}.cpp)
         target_include_directories(TestMetal${test} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/../common/src"
