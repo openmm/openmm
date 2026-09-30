@@ -103,6 +103,9 @@ MetalReductionOptimizations::Settings MetalReductionOptimizations::getBuildSetti
 #if OPENMM_METAL_FAST_CENTROID_REDUCTION
     settings.centroid = true;
 #endif
+#if OPENMM_METAL_FAST_RG_REDUCTION
+    settings.rg = true;
+#endif
     return settings;
 }
 
@@ -112,6 +115,13 @@ string MetalReductionOptimizations::apply(const string& source) {
 
 string MetalReductionOptimizations::apply(const string& source, const Settings& settings) {
     string result = source;
+    // These sources share a reduceValue helper; require a distinctive kernel
+    // fingerprint as well so one force's switch never enables another's helper.
+    const string* reductionSource = nullptr;
+    if (settings.rg && result.find(functionText(CommonKernelSources::rg, "KERNEL void computeCenterPosition(")) != string::npos)
+        reductionSource = &CommonKernelSources::rg;
+    if (reductionSource != nullptr)
+        replaceFunction(result, functionText(*reductionSource, "DEVICE real reduceValue("), reductionFunction("reduceValue"));
     if (settings.centroid) {
         string original = functionText(CommonKernelSources::customCentroidBond, "KERNEL void computeGroupCenters(");
         string replacement = original.substr(0, original.find("        // Sum the values."));

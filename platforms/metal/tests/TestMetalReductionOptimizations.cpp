@@ -62,9 +62,10 @@ void testSelection() {
             &CommonKernelSources::orientationRestraintForce, &CommonKernelSources::customCentroidBond,
             &CommonKernelSources::lcpo, &CommonKernelSources::customManyParticle, &MetalOpenCLKernelSources::sort})
         ASSERT_EQUAL(*source, MetalReductionOptimizations::apply(*source, none));
-    for (int option = 0; option < 1; option++) {
+    for (int option = 0; option < 2; option++) {
         Settings settings;
         settings.centroid = option == 0;
+        settings.rg = option == 1;
         int index = 0;
         for (const string* source : {&CommonKernelSources::customCentroidBond, &CommonKernelSources::rg,
                 &CommonKernelSources::rmsd, &CommonKernelSources::orientationRestraintForce}) {
@@ -75,6 +76,7 @@ void testSelection() {
     }
     Settings all;
     all.centroid = true;
+    all.rg = true;
     const string unrelated = "DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) { return value; }";
     ASSERT_EQUAL(unrelated, MetalReductionOptimizations::apply(unrelated, all));
     // A recognizable function name is insufficient: an unreviewed body must
@@ -87,14 +89,65 @@ void testSelection() {
         "KERNEL void computeRMSDPart1(", "KERNEL void computeCorrelationMatrix(",
         "KERNEL void computeNeighborStartIndices(", "KERNEL void computeNeighborStartIndices(",
         "__kernel void computeBucketPositions(", "__kernel void sortShortList("};
-    for (int option = 0; option < 1; option++) {
+    for (int option = 0; option < 2; option++) {
         Settings settings;
         settings.centroid = option == 0;
+        settings.rg = option == 1;
         string modified = *originals[option];
         size_t body = modified.find('{', modified.find(signatures[option]));
         ASSERT(body != string::npos);
         modified.insert(body+1, "\n/* Unreviewed template body. */\n");
         ASSERT_EQUAL(modified, MetalReductionOptimizations::apply(modified, settings));
+    }
+}
+
+/** @brief Compare every lane's reduction result, including partially occupied SIMD groups and scratch reuse. */
+void testReductions(MetalContext& context) {
+    MetalReductionOptimizations::Settings settings;
+    settings.rg = true;
+    const string optimized = MetalReductionOptimizations::apply(CommonKernelSources::rg, settings);
+    const string probe = R"(
+KERNEL void reduceProbe(GLOBAL const real* input, GLOBAL real* output, int count) {
+    LOCAL volatile real temp[1024];
+    real first = 0, second = 0;
+    for (int i = LOCAL_ID; i < count; i += LOCAL_SIZE) {
+        first += input[i];
+        second += input[i]*input[i];
+    }
+    first = reduceValue(first, temp);
+    second = reduceValue(second, temp);
+    output[LOCAL_ID] = first;
+    output[LOCAL_ID+LOCAL_SIZE] = second;
+}
+)";
+    const int count = 4001;
+    vector<float> values(count);
+    double first = 0, second = 0;
+    for (int i = 0; i < count; i++) {
+        values[i] = i%17-8;
+        first += values[i];
+        second += values[i]*values[i];
+    }
+    ComputeArray input, output;
+    input.initialize<float>(context, count, "reductionInput");
+    output.initialize<float>(context, 2048, "reductionOutput");
+    input.upload(values);
+    for (const string* source : {&CommonKernelSources::rg, &optimized}) {
+        ComputeKernel kernel = context.compileProgram(extractFunction(*source, "DEVICE real reduceValue(")+probe)->createKernel("reduceProbe");
+        kernel->addArg(input);
+        kernel->addArg(output);
+        kernel->addArg(count);
+        for (int width : {1, 7, 31, 32, 33, 63, 64, 65, 127, 128, 255, 256, 1024}) {
+            if (width > kernel->getMaxBlockSize())
+                continue;
+            kernel->execute(width, width);
+            vector<float> result;
+            output.download(result);
+            for (int lane = 0; lane < width; lane++) {
+                ASSERT_EQUAL(first, result[lane]);
+                ASSERT_EQUAL(second, result[lane+width]);
+            }
+        }
     }
 }
 
@@ -165,6 +218,7 @@ int main(int argc, char* argv[]) {
         System system;
         system.addParticle(1.0);
         MetalContext context(system);
+        testReductions(context);
         testCentroids(context);
     }
     catch (const exception& error) {
