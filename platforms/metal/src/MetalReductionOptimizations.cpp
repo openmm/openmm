@@ -109,6 +109,9 @@ MetalReductionOptimizations::Settings MetalReductionOptimizations::getBuildSetti
 #if OPENMM_METAL_FAST_RMSD_REDUCTION
     settings.rmsd = true;
 #endif
+#if OPENMM_METAL_FAST_ORIENTATION_REDUCTION
+    settings.orientation = true;
+#endif
     return settings;
 }
 
@@ -125,6 +128,8 @@ string MetalReductionOptimizations::apply(const string& source, const Settings& 
         reductionSource = &CommonKernelSources::rg;
     if (settings.rmsd && result.find(functionText(CommonKernelSources::rmsd, "KERNEL void computeRMSDPart1(")) != string::npos)
         reductionSource = &CommonKernelSources::rmsd;
+    if (settings.orientation && result.find(functionText(CommonKernelSources::orientationRestraintForce, "KERNEL void computeCorrelationMatrix(")) != string::npos)
+        reductionSource = &CommonKernelSources::orientationRestraintForce;
     if (reductionSource != nullptr)
         replaceFunction(result, functionText(*reductionSource, "DEVICE real reduceValue("), reductionFunction("reduceValue"));
     if (settings.centroid) {
