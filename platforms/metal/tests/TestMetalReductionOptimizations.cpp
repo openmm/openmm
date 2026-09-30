@@ -90,13 +90,8 @@ void testSelection() {
         }
     }
     Settings all;
-    all.centroid = true;
-    all.rg = true;
-    all.rmsd = true;
-    all.orientation = true;
-    all.lcpoScan = true;
-    all.manyParticleScan = true;
-    all.sortBucketScan = true;
+    all.centroid = all.rg = all.rmsd = all.orientation = true;
+    all.lcpoScan = all.manyParticleScan = all.sortBucketScan = all.sortRegisterBitonic = true;
     const string unrelated = "DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) { return value; }";
     ASSERT_EQUAL(unrelated, MetalReductionOptimizations::apply(unrelated, all));
     // A recognizable function name is insufficient: an unreviewed body must
@@ -109,7 +104,7 @@ void testSelection() {
         "KERNEL void computeRMSDPart1(", "KERNEL void computeCorrelationMatrix(",
         "KERNEL void computeNeighborStartIndices(", "KERNEL void computeNeighborStartIndices(",
         "__kernel void computeBucketPositions(", "__kernel void sortShortList("};
-    for (int option = 0; option < 7; option++) {
+    for (int option = 0; option < 8; option++) {
         Settings settings;
         settings.centroid = option == 0;
         settings.rg = option == 1;
@@ -118,6 +113,7 @@ void testSelection() {
         settings.lcpoScan = option == 4;
         settings.manyParticleScan = option == 5;
         settings.sortBucketScan = option == 6;
+        settings.sortRegisterBitonic = option == 7;
         string modified = *originals[option];
         size_t body = modified.find('{', modified.find(signatures[option]));
         ASSERT(body != string::npos);
@@ -330,6 +326,124 @@ void testBucketScans(MetalContext& context) {
     }
 }
 
+/** @brief Test register sorting with duplicate keys, padding lanes, maximum unsigned keys, and payloads. */
+void testRegisterSort(MetalContext& context) {
+    MetalReductionOptimizations::Settings settings;
+    settings.sortRegisterBitonic = true;
+    string transformed = MetalReductionOptimizations::apply(MetalOpenCLKernelSources::sort, settings);
+    const string source = extractFunction(transformed, "KEY_TYPE getValue(")+
+            extractFunction(transformed, "__kernel void sortShortList(");
+    for (int kind = 0; kind < 3; kind++) {
+        bool records = kind != 0;
+        bool floatRecords = kind == 2;
+        map<string, string> replacements;
+        replacements["DATA_TYPE"] = floatRecords ? "float4" : (records ? "int2" : "unsigned int");
+        replacements["KEY_TYPE"] = floatRecords ? "float" : (records ? "int" : "unsigned int");
+        replacements["SORT_KEY"] = records ? "value.x" : "value";
+        replacements["MAX_VALUE"] = floatRecords ? "make_float4(MAXFLOAT)" : (records ? "make_int2(0x7FFFFFFF, 0)" : "0xFFFFFFFFu");
+        ComputeProgram program = context.compileProgram(context.replaceStrings(source, replacements),
+                {{"OPENMM_METAL_REQUIRE_SAFE_MATH", "1"}});
+        for (int count : {0, 1, 2, 3, 7, 15, 16, 17, 31, 32}) {
+            ComputeArray data;
+            int elementSize = floatRecords ? sizeof(mm_float4) : (records ? sizeof(mm_int2) : sizeof(unsigned int));
+            data.initialize(context, max(count, 1), elementSize, "registerSortData");
+            vector<mm_int2> pairs(max(1, count));
+            vector<mm_float4> vectors(max(1, count));
+            vector<unsigned int> values(max(1, count));
+            for (int i = 0; i < count; i++) {
+                pairs[i] = mm_int2(i%7-3, i);
+                vectors[i] = mm_float4(i%7-3, i, 2*i, -i);
+                values[i] = (i%3 == 0 ? 0xFFFFFFFFu : (i%3 == 1 ? 0x80000000u : 0u));
+            }
+            if (floatRecords)
+                data.upload(vectors);
+            else if (records)
+                data.upload(pairs);
+            else
+                data.upload(values);
+            ComputeKernel kernel = program->createKernel("sortShortList");
+            kernel->addArg(data);
+            kernel->addArg((unsigned int) count);
+            static_cast<MetalKernel&>(*kernel).addLocalArg(max(1, count)*elementSize);
+            kernel->execute(32, 32);
+            if (floatRecords) {
+                vector<mm_float4> result;
+                data.download(result);
+                stable_sort(vectors.begin(), vectors.begin()+count, [](const mm_float4& first, const mm_float4& second) { return first.x < second.x; });
+                for (int i = 0; i < count; i++) {
+                    ASSERT_EQUAL(vectors[i].x, result[i].x);
+                    ASSERT_EQUAL(vectors[i].y, result[i].y);
+                    ASSERT_EQUAL(vectors[i].z, result[i].z);
+                    ASSERT_EQUAL(vectors[i].w, result[i].w);
+                }
+            }
+            else if (records) {
+                vector<mm_int2> result;
+                data.download(result);
+                stable_sort(pairs.begin(), pairs.begin()+count, [](const mm_int2& first, const mm_int2& second) { return first.x < second.x; });
+                for (int i = 0; i < count; i++) {
+                    ASSERT_EQUAL(pairs[i].x, result[i].x);
+                    ASSERT_EQUAL(pairs[i].y, result[i].y);
+                }
+            }
+            else {
+                vector<unsigned int> result;
+                data.download(result);
+                sort(values.begin(), values.begin()+count);
+                for (int i = 0; i < count; i++)
+                    ASSERT_EQUAL(values[i], result[i]);
+            }
+        }
+    }
+}
+
+/** @brief Preserve every key/payload bit for NaNs, infinities, signed zeros, and padded lanes. */
+void testRegisterSortSpecialValues(MetalContext& context) {
+    MetalReductionOptimizations::Settings settings;
+    settings.sortRegisterBitonic = true; // Exercise this even in a default-OFF build.
+    const string transformed = MetalReductionOptimizations::apply(MetalOpenCLKernelSources::sort, settings);
+    const string source = extractFunction(transformed, "KEY_TYPE getValue(")+
+            extractFunction(transformed, "__kernel void sortShortList(");
+    const map<string, string> replacements = {{"DATA_TYPE", "float4"}, {"KEY_TYPE", "float"},
+        {"SORT_KEY", "value.x"}, {"MAX_VALUE", "make_float4(MAXFLOAT)"}};
+    ComputeProgram program = context.compileProgram(context.replaceStrings(source, replacements),
+            {{"OPENMM_METAL_REQUIRE_SAFE_MATH", "1"}});
+    const uint32_t patterns[] = {0x7fc12345u, 0x3f800000u, 0xff800000u, 0x00000000u,
+        0x80000000u, 0x7f800000u, 0xffc6789au, 0xc0000000u, 0x7f7fffffu, 0xff7fffffu,
+        0x7fc00001u, 0x3f800000u};
+    for (int count : {2, 3, 7, 15, 16, 17, 31, 32}) {
+        vector<mm_float4> values(count);
+        for (int i = 0; i < count; i++) {
+            float key;
+            uint32_t bits = patterns[i%12];
+            memcpy(&key, &bits, sizeof(key));
+            values[i] = mm_float4(key, i, 100+i, -100-i);
+        }
+        ComputeArray data;
+        data.initialize<mm_float4>(context, count, "specialRegisterSortData");
+        data.upload(values);
+        ComputeKernel kernel = program->createKernel("sortShortList");
+        kernel->addArg(data);
+        kernel->addArg((unsigned int) count);
+        static_cast<MetalKernel&>(*kernel).addLocalArg(count*sizeof(mm_float4));
+        kernel->execute(32, 32);
+        vector<mm_float4> result;
+        data.download(result);
+        stable_sort(values.begin(), values.end(), [](const mm_float4& a, const mm_float4& b) {
+            const bool aNaN = isnan(a.x), bNaN = isnan(b.x);
+            if (aNaN != bNaN) return !aNaN;
+            return !aNaN && a.x < b.x;
+        });
+        // Bitwise comparison checks NaN payloads and -0 as well as stable record identity.
+        for (int i = 0; i < count; i++) {
+            uint32_t expected[4], actual[4];
+            memcpy(expected, &values[i], sizeof(expected));
+            memcpy(actual, &result[i], sizeof(actual));
+            for (int j = 0; j < 4; j++) ASSERT_EQUAL(expected[j], actual[j]);
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
     try {
         testSelection();
@@ -344,6 +458,8 @@ int main(int argc, char* argv[]) {
         testCentroids(context);
         testNeighborScans(context);
         testBucketScans(context);
+        testRegisterSort(context);
+        testRegisterSortSpecialValues(context);
     }
     catch (const exception& error) {
         cerr << "exception: " << error.what() << endl;

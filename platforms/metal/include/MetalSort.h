@@ -107,7 +107,7 @@ private:
     ComputeArray buckets;
     ComputeKernel shortListKernel, shortList2Kernel, computeRangeKernel, assignElementsKernel, computeBucketPositionsKernel, copyToBucketsKernel, sortBucketsKernel;
     unsigned int dataLength, rangeKernelSize, positionsKernelSize, sortKernelSize;
-    bool isShortList, useShortList2, uniform;
+    bool isShortList, useShortList2, useRegisterBitonic, uniform;
 };
 
 } // namespace OpenMM

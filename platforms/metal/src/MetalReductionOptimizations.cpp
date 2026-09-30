@@ -140,6 +140,44 @@ string scannedFunction(const string& original, const string& loop, const string&
     return scanFunction+transformed;
 }
 
+/** @brief Sort a single full SIMD group; invalid lanes sort after all real records. */
+const string registerSort = R"(
+    if (length <= 32 && get_local_size(0) == 32) {
+        const uint lane = get_local_id(0);
+        DATA_TYPE value = (lane < length ? data[lane] : (DATA_TYPE) (MAX_VALUE));
+        uint valid = (lane < length ? 1u : 0u);
+        uint originalIndex = lane;
+        for (uint width = 2; width <= 32; width *= 2) {
+            for (uint stride = width/2; stride > 0; stride /= 2) {
+                DATA_TYPE other = simd_shuffle_xor(value, stride);
+                uint otherValid = simd_shuffle_xor(valid, stride);
+                uint otherIndex = simd_shuffle_xor(originalIndex, stride);
+                KEY_TYPE key = getValue(value);
+                KEY_TYPE otherKey = getValue(other);
+                // A strict order is required because partner lanes select their
+                // records independently. NaNs compare neither less nor equal;
+                // without explicit classification both lanes can keep one record.
+                bool keyNaN = (key != key);
+                bool otherNaN = (otherKey != otherKey);
+                bool keyBefore = ((!keyNaN && otherNaN) ||
+                    (!keyNaN && !otherNaN && key < otherKey));
+                bool tied = ((keyNaN && otherNaN) || key == otherKey);
+                bool before = (valid > otherValid || (valid == otherValid &&
+                    (keyBefore || (tied && originalIndex < otherIndex))));
+                bool keepLower = ((lane&width) == 0) == ((lane&stride) == 0);
+                if (keepLower != before) {
+                    value = other;
+                    valid = otherValid;
+                    originalIndex = otherIndex;
+                }
+            }
+        }
+        if (lane < length)
+            data[lane] = value;
+        return;
+    }
+)";
+
 } // namespace
 
 MetalReductionOptimizations::Settings MetalReductionOptimizations::getBuildSettings() {
@@ -164,6 +202,9 @@ MetalReductionOptimizations::Settings MetalReductionOptimizations::getBuildSetti
 #endif
 #if OPENMM_METAL_FAST_SORT_BUCKET_SCAN
     settings.sortBucketScan = true;
+#endif
+#if OPENMM_METAL_FAST_SORT_REGISTER_BITONIC
+    settings.sortRegisterBitonic = true;
 #endif
     return settings;
 }
@@ -214,6 +255,12 @@ string MetalReductionOptimizations::apply(const string& source, const Settings& 
         string original = functionText(MetalOpenCLKernelSources::sort, "__kernel void computeBucketPositions(");
         replaceFunction(result, original, scannedFunction(original,
                 "for (uint step = 1; step < get_local_size(0); step *= 2)", "buffer"));
+    }
+    if (settings.sortRegisterBitonic) {
+        string original = functionText(MetalOpenCLKernelSources::sort, "__kernel void sortShortList(");
+        string replacement = original;
+        replacement.insert(replacement.find('{')+1, registerSort);
+        replaceFunction(result, original, replacement);
     }
     return result;
 }
