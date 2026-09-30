@@ -186,8 +186,12 @@ inline int metalAtomicAdd(threadgroup int* address, int value) {
  * OpenCL-style float addition through 32-bit bitwise compare/exchange.
  * Every concurrent access is atomic, including the initial read. Failed weak
  * CAS updates expected, and comparing integer bits also permits NaN payloads.
+ * The optional native path changes only the atomic primitive, not storage.
  */
 inline float metalAtomicAdd(device float* address, float value) {
+#if OPENMM_METAL_NATIVE_FLOAT_ATOMICS
+    return atomic_fetch_add_explicit(reinterpret_cast<device atomic_float*>(address), value, memory_order_relaxed);
+#else
     device atomic_uint* bits = reinterpret_cast<device atomic_uint*>(address);
     uint expected = atomic_load_explicit(bits, memory_order_relaxed);
     while (true) {
@@ -196,6 +200,7 @@ inline float metalAtomicAdd(device float* address, float value) {
                 memory_order_relaxed, memory_order_relaxed))
             return as_type<float>(expected);
     }
+#endif
 }
 #define ATOMIC_ADD(address, value) metalAtomicAdd(address, value)
 #define atom_add(address, value) metalAtomicAdd(address, value)

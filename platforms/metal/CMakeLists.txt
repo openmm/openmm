@@ -44,6 +44,8 @@ option(OPENMM_METAL_RECORD_AND_COMMIT
     "Commit each Metal compute/blit operation instead of batching (no additional CPU wait)" ON)
 option(OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS
     "Use scoped GPU floating accumulators for minimization beyond the Q32.32 force range" ON)
+option(OPENMM_METAL_NATIVE_FLOAT_ATOMICS
+    "Use native Metal float atomic addition instead of the OpenCL-style CAS loop" OFF)
 option(OPENMM_METAL_FAST_MATH
     "Allow broad Metal fast math except where compensated or robust arithmetic is required" OFF)
 
@@ -156,7 +158,7 @@ target_compile_options(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
 target_compile_definitions(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
     OPENMM_COMMON_BUILDING_SHARED_LIBRARY
     OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS=$<BOOL:${OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS}>
-
+    OPENMM_METAL_NATIVE_FLOAT_ATOMICS=$<BOOL:${OPENMM_METAL_NATIVE_FLOAT_ATOMICS}>
 
 
 
@@ -214,7 +216,7 @@ if(BUILD_TESTING)
     endforeach()
     # Reuse the existing single-precision core tests without copying algorithms.
     target_compile_definitions(TestMetalSourceAdapter PRIVATE
-
+        OPENMM_METAL_NATIVE_FLOAT_ATOMICS=$<BOOL:${OPENMM_METAL_NATIVE_FLOAT_ATOMICS}>
         OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS=$<BOOL:${OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS}>)
     set(METAL_CORE_TESTS HarmonicBondForce HarmonicAngleForce PeriodicTorsionForce
         RBTorsionForce CMAPTorsionForce CustomBondForce CustomAngleForce

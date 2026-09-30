@@ -60,11 +60,23 @@ KERNEL void accumulate(GLOBAL float* sums, GLOBAL float* previous, int count) {
 
 )";
     const int count = 10001;
-    ComputeArray sums, previous;
+    ComputeArray sums, previous, mode;
     sums.initialize<float>(context, 3, "floatAtomicSums");
     previous.initialize<float>(context, count, "floatAtomicPrevious");
-    {
-        ComputeKernel kernel = context.compileProgram(source)->createKernel("accumulate");
+    mode.initialize<int>(context, 1, "configuredFloatAtomicMode");
+    ComputeKernel configured = context.compileProgram(
+        "KERNEL void configuredMode(GLOBAL int* output) { if (GLOBAL_ID == 0) output[0] = OPENMM_METAL_NATIVE_FLOAT_ATOMICS; }")
+        ->createKernel("configuredMode");
+    configured->addArg(mode);
+    configured->execute(32, 32);
+    vector<int> selected;
+    mode.download(selected);
+    ASSERT_EQUAL(OPENMM_METAL_NATIVE_FLOAT_ATOMICS, selected[0]);
+    for (int native = 0; native <= 1; native++) {
+        // Per-program overrides verify both primitives even in the OFF build.
+        map<string, string> defines;
+        defines["OPENMM_METAL_NATIVE_FLOAT_ATOMICS"] = to_string(native);
+        ComputeKernel kernel = context.compileProgram(source, defines)->createKernel("accumulate");
         kernel->addArg(sums);
         kernel->addArg(previous);
         kernel->addArg(count);

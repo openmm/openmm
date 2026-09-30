@@ -130,6 +130,7 @@ MetalContext::MetalContext(const System& system, ContextImpl* simulation, MetalC
                 if (dynamic_cast<const MonteCarloFlexibleBarostat*>(&system.getForce(i)) != nullptr)
                     flexibleBox = true;
             getCurrentMetalQueue().finish();
+            compilationDefines["OPENMM_METAL_NATIVE_FLOAT_ATOMICS"] = to_string(OPENMM_METAL_NATIVE_FLOAT_ATOMICS);
             // MSL 3.0 exposes only uint64 min/max, not uint64 add/CAS/load.
             // These operations additionally require Apple8 or newer on macOS.
             compilationDefines["OPENMM_METAL_HAS_UINT64_MIN_MAX"] =
