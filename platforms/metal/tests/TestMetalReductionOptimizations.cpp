@@ -62,10 +62,11 @@ void testSelection() {
             &CommonKernelSources::orientationRestraintForce, &CommonKernelSources::customCentroidBond,
             &CommonKernelSources::lcpo, &CommonKernelSources::customManyParticle, &MetalOpenCLKernelSources::sort})
         ASSERT_EQUAL(*source, MetalReductionOptimizations::apply(*source, none));
-    for (int option = 0; option < 2; option++) {
+    for (int option = 0; option < 3; option++) {
         Settings settings;
         settings.centroid = option == 0;
         settings.rg = option == 1;
+        settings.rmsd = option == 2;
         int index = 0;
         for (const string* source : {&CommonKernelSources::customCentroidBond, &CommonKernelSources::rg,
                 &CommonKernelSources::rmsd, &CommonKernelSources::orientationRestraintForce}) {
@@ -77,6 +78,7 @@ void testSelection() {
     Settings all;
     all.centroid = true;
     all.rg = true;
+    all.rmsd = true;
     const string unrelated = "DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) { return value; }";
     ASSERT_EQUAL(unrelated, MetalReductionOptimizations::apply(unrelated, all));
     // A recognizable function name is insufficient: an unreviewed body must
@@ -89,10 +91,11 @@ void testSelection() {
         "KERNEL void computeRMSDPart1(", "KERNEL void computeCorrelationMatrix(",
         "KERNEL void computeNeighborStartIndices(", "KERNEL void computeNeighborStartIndices(",
         "__kernel void computeBucketPositions(", "__kernel void sortShortList("};
-    for (int option = 0; option < 2; option++) {
+    for (int option = 0; option < 3; option++) {
         Settings settings;
         settings.centroid = option == 0;
         settings.rg = option == 1;
+        settings.rmsd = option == 2;
         string modified = *originals[option];
         size_t body = modified.find('{', modified.find(signatures[option]));
         ASSERT(body != string::npos);
