@@ -71,6 +71,8 @@ option(OPENMM_METAL_FAST_LJPME_FLOAT_SPREAD "Use floating grids for both recipro
 option(OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD "Use floating-grid spreading in ConstantPotential PME" OFF)
 option(OPENMM_METAL_FAST_SPARSE_FORCE_AGGREGATION
     "Experimentally combine equal-target Q32.32 sparse-pair contributions within a SIMD group" OFF)
+option(OPENMM_METAL_EXPERIMENTAL_MATRIX_SCREEN
+    "Build the isolated SIMD-matrix neighbor-screening experiment (not used by MD kernels)" OFF)
 
 # Each optional algorithm can be compared independently with the OpenCL path.
 set(METAL_OPTIMIZATION_SWITCHES
@@ -216,6 +218,13 @@ file(GLOB METAL_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
 install(FILES ${METAL_HEADERS} DESTINATION include/openmm/metal)
 
 if(BUILD_TESTING)
+    if(OPENMM_METAL_EXPERIMENTAL_MATRIX_SCREEN)
+        add_executable(TestMetalMatrixScreening tests/TestMetalMatrixScreening.cpp)
+        target_include_directories(TestMetalMatrixScreening PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/src")
+        target_link_libraries(TestMetalMatrixScreening PRIVATE ${OPENMMMETAL_LIBRARY_NAME})
+        add_test(NAME TestMetalMatrixScreening COMMAND TestMetalMatrixScreening)
+        set_tests_properties(TestMetalMatrixScreening PROPERTIES SKIP_RETURN_CODE 77 LABELS "Metal;Experimental")
+    endif()
     add_executable(TestMetalPlatform tests/TestMetalPlatform.cpp)
     target_link_libraries(TestMetalPlatform PRIVATE ${OPENMM_LIBRARY_NAME})
     target_compile_definitions(TestMetalPlatform PRIVATE METAL_LIBRARY_PATH="$<TARGET_FILE:OpenMMMetal>")
