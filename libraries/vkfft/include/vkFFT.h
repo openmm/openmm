@@ -1754,7 +1754,7 @@ static inline VkFFTResult appendBarrierVkFFT(VkFFTSpecializationConstantsLayout*
 	res = VkAppendLine(sc);
 	if (res != VKFFT_SUCCESS) return res;
 #elif(VKFFT_BACKEND==5)
-	sc->tempLen = sprintf(sc->tempStr, "%sthreadgroup_barrier(mem_flags::mem_none);\n\n", tabs);
+	sc->tempLen = sprintf(sc->tempStr, "%sthreadgroup_barrier(mem_flags::mem_threadgroup);\n\n", tabs);
 	res = VkAppendLine(sc);
 	if (res != VKFFT_SUCCESS) return res;
 #endif
