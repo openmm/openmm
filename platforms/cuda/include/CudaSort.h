@@ -81,12 +81,35 @@ public:
      *                   distribution.
      */
     CudaSort(CudaContext& context, ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform=true);
+    /**
+     * Known-range uniform integer sort. All keys must lie in [0, maximum],
+     * where maximum is in [1, 16777215]; -1 retains dynamic range discovery.
+     * Bucket/tie ordering may change, but complete key ordering is preserved.
+     */
+    CudaSort(CudaContext& context, ComputeSortImpl::SortTrait* trait, unsigned int length,
+            bool uniform, int knownIntegerMaximum);
     ~CudaSort();
     /**
      * Sort an array.
      */
     void sort(ArrayInterface& data);
+    /**
+     * Partition into buckets without sorting within each bucket. This provides
+     * permutation coverage, not complete key ordering. Short lists stay sorted.
+     */
+    void bucketize(CudaArray& data);
+    /**
+     * PME bounded-int2 generator: caller initializes arguments [0, 9] and
+     * reserves [10, 14] for bucket workspaces. False means no work was enqueued.
+     * Errors after enqueue propagate. directPhysicalIndices requires a coarse
+     * permutation and writes int2(physicalIndex, 0), discarding keys. Consumers
+     * must use only .x and regenerate complete pairs before a later normal sort.
+     */
+    bool sortWithGeneratedKeys(CudaArray& data, ComputeKernel generator,
+            bool sortWithinBuckets, bool directPhysicalIndices);
 private:
+    void sortImpl(CudaArray& data, bool sortWithinBuckets,
+            ComputeKernel commonGenerator=ComputeKernel(), bool directPhysicalIndices=false);
     CudaContext& context;
     ComputeSortImpl::SortTrait* trait;
     CudaArray dataRange;
@@ -95,8 +118,9 @@ private:
     CudaArray bucketOffset;
     CudaArray buckets;
     CUfunction shortListKernel, shortList2Kernel, computeRangeKernel, assignElementsKernel, computeBucketPositionsKernel, copyToBucketsKernel, sortBucketsKernel;
+    CUfunction scatterPhysicalIndicesKernel;
     unsigned int dataLength, rangeKernelSize, positionsKernelSize, sortKernelSize;
-    bool isShortList, uniform;
+    bool isShortList, uniform, hasFixedRange;
 };
 
 } // namespace OpenMM

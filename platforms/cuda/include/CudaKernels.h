@@ -97,6 +97,11 @@ public:
      * @param force      the NonbondedForce this kernel will be used for
      */
     void initialize(const System& system, const NonbondedForce& force);
+protected:
+    bool supportsPmeExperiments() const override { return true; }
+    ComputeSort createPmeSort(ComputeSortImpl::SortTrait* trait, int length, int knownMaximum) override;
+    bool tryPmePermutation(ComputeSort sorter, ComputeArray& data, ComputeKernel generator,
+            bool coarseBuckets, bool directPhysicalIndices) override;
 private:
     CudaContext& cu;
 };

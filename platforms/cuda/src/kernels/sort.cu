@@ -80,6 +80,14 @@ __global__ void sortShortList2(const DATA_TYPE* __restrict__ dataIn, DATA_TYPE* 
 __global__ void computeRange(const DATA_TYPE* __restrict__ data, unsigned int length, KEY_TYPE* __restrict__ range,
         unsigned int numBuckets, unsigned int* __restrict__ bucketOffset) {
 #if UNIFORM
+#if FIXED_RANGE_ENABLED
+    // PME grid keys have a compile-time bound.  Keep bucket reset below while
+    // avoiding the full-array min/max scan and its single-block reduction.
+    if (threadIdx.x == 0) {
+        range[0] = 0;
+        range[1] = FIXED_RANGE_UPPER;
+    }
+#else
     extern __shared__ KEY_TYPE minBuffer[];
     KEY_TYPE* maxBuffer = minBuffer+blockDim.x;
     KEY_TYPE minimum = MAX_KEY;
@@ -111,6 +119,7 @@ __global__ void computeRange(const DATA_TYPE* __restrict__ data, unsigned int le
         range[0] = minimum;
         range[1] = maximum;
     }
+#endif
 #endif
 
     // Clear the bucket counters in preparation for the next kernel.
@@ -245,6 +254,23 @@ __global__ void computeBucketPositions(unsigned int numBuckets, unsigned int* __
         globalOffset += posBuffer[blockDim.x-1];
     }
 }
+
+#if FIXED_RANGE_ENABLED
+/**
+ * PME-only coarse output: reconstruct physical indices without reading data.
+ * The caller has checked int2/value.y, fixed range, long list.
+ */
+__global__ void scatterPhysicalIndices(int2* __restrict__ data, unsigned int length,
+        const unsigned int* __restrict__ bucketOffset,
+        const unsigned int* __restrict__ bucketOfElement,
+        const unsigned int* __restrict__ offsetInBucket) {
+    for (unsigned int index = blockDim.x*blockIdx.x+threadIdx.x; index < length; index += blockDim.x*gridDim.x) {
+        unsigned int bucketIndex = bucketOfElement[index];
+        unsigned int offset = (bucketIndex == 0 ? 0 : bucketOffset[bucketIndex-1]);
+        data[offset+offsetInBucket[index]] = make_int2((int) index, 0);
+    }
+}
+#endif
 
 /**
  * Copy the input data into the buckets for sorting.

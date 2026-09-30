@@ -23,6 +23,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Context.h"
+#include "openmm/LangevinMiddleIntegrator.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/common/BondedUtilities.h"
 #include "openmm/common/CommonCalcNonbondedForce.h"
@@ -34,11 +35,19 @@
 #include <algorithm>
 #include <assert.h>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <typeinfo>
 #include <iterator>
 #include <set>
 
 using namespace OpenMM;
 using namespace std;
+
+static bool isPmeExperimentEnabled(const char* name) {
+    const char* value = getenv(name);
+    return value != NULL && strcmp(value, "1") == 0;
+}
 
 class CommonCalcNonbondedForceKernel::ForceInfo : public ComputeForceInfo {
 public:
@@ -419,6 +428,23 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
                 pmeDefines["USE_FIXED_POINT_CHARGE_SPREADING"] = "1";
             if (deviceIsCpu)
                 pmeDefines["DEVICE_IS_CPU"] = "1";
+            // These experiments were developed only for ordinary mixed CUDA
+            // PME using its cuFFT backend. Every option is explicit opt-in.
+            const bool eligiblePme = supportsPmeExperiments() && nonbondedMethod == PME && hasCoulomb &&
+                    !doLJPME && cc.getUseMixedPrecision() && !useFixedPointChargeSpreading && !hasOffsets &&
+                    usePmeQueue && !useCpuPme && !deviceIsCpu && cc.getNumContexts() == 1;
+            const long long gridXY = (long long) gridSizeX*gridSizeY;
+            usePmeKnownSortRange = eligiblePme && isPmeExperimentEnabled("OPENMM_EXPERIMENT_PME_KNOWN_SORT_RANGE") &&
+                    cc.getNumAtoms() > 15000 && gridSizeX > 0 && gridSizeY > 0 && gridSizeZ > 0 &&
+                    gridXY > 0 && gridXY <= 16777216 && gridSizeZ <= 16777216/gridXY && gridXY*gridSizeZ > 1;
+            usePmeCoarseBuckets = usePmeKnownSortRange && isPmeExperimentEnabled("OPENMM_EXPERIMENT_PME_COARSE_BUCKETS");
+            usePmeGridAssignmentFusion = usePmeKnownSortRange && isPmeExperimentEnabled("OPENMM_EXPERIMENT_PME_GRID_ASSIGNMENT_FUSION");
+            usePmeDirectPermutation = usePmeCoarseBuckets && usePmeGridAssignmentFusion &&
+                    isPmeExperimentEnabled("OPENMM_EXPERIMENT_PME_DIRECT_PERMUTATION");
+            if (usePmeGridAssignmentFusion)
+                pmeDefines["EXPERIMENT_PME_GRID_ASSIGNMENT_FUSION"] = "1";
+            if (usePmeDirectPermutation)
+                pmeDefines["EXPERIMENT_PME_DIRECT_PERMUTATION"] = "1";
             if (useCpuPme && !doLJPME && usePosqCharges) {
                 // Create the CPU PME kernel.
 
@@ -461,7 +487,8 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
                 int energyElementSize = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
                 pmeEnergyBuffer.initialize(cc, cc.getNumThreadBlocks()*ComputeContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
                 cc.clearBuffer(pmeEnergyBuffer);
-                sort = cc.createSort(new SortTrait(), cc.getNumAtoms());
+                sort = (usePmeKnownSortRange ? createPmeSort(new SortTrait(), cc.getNumAtoms(), gridElements-1) :
+                        cc.createSort(new SortTrait(), cc.getNumAtoms()));
                 fft = cc.createFFT(gridSizeX, gridSizeY, gridSizeZ, true);
                 if (doLJPME)
                     dispersionFft = cc.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
@@ -779,6 +806,20 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeGridIndexKernel->addArg(pmeAtomGridIndex);
             for (int i = 0; i < 8; i++)
                 pmeGridIndexKernel->addArg();
+            if (usePmeGridAssignmentFusion) {
+                pmeGridIndexAssignmentKernel = program->createKernel("findAtomGridIndexAndAssignBuckets");
+                pmeGridIndexAssignmentKernel->addArg(cc.getPosq());
+                pmeGridIndexAssignmentKernel->addArg(pmeAtomGridIndex);
+                for (int i = 0; i < 13; i++)
+                    pmeGridIndexAssignmentKernel->addArg();
+            }
+            if (usePmeDirectPermutation) {
+                pmeGridIndexDirectAssignmentKernel = program->createKernel("findAtomGridIndexAndAssignBucketsDirect");
+                pmeGridIndexDirectAssignmentKernel->addArg(cc.getPosq());
+                pmeGridIndexDirectAssignmentKernel->addArg(pmeAtomGridIndex);
+                for (int i = 0; i < 13; i++)
+                    pmeGridIndexDirectAssignmentKernel->addArg();
+            }
             pmeSpreadChargeKernel->addArg(cc.getPosq());
             if (useFixedPointChargeSpreading)
                 pmeSpreadChargeKernel->addArg(pmeGrid2);
@@ -975,8 +1016,23 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                     pmeGridIndexKernel->setArg(8, recipBoxVectorsFloat[1]);
                     pmeGridIndexKernel->setArg(9, recipBoxVectorsFloat[2]);
                 }
-                pmeGridIndexKernel->execute(cc.getNumAtoms());
-                sort->sort(pmeAtomGridIndex);
+                bool generated = false;
+                const bool exactMiddle = typeid(context.getIntegrator()) == typeid(LangevinMiddleIntegrator);
+                if (usePmeGridAssignmentFusion && exactMiddle) {
+                    ComputeKernel generator = usePmeDirectPermutation ? pmeGridIndexDirectAssignmentKernel : pmeGridIndexAssignmentKernel;
+                    setPeriodicBoxArgs(cc, generator, 2);
+                    for (int i = 0; i < 3; i++)
+                        generator->setArg(7+i, recipBoxVectorsFloat[i]);
+                    generated = tryPmePermutation(sort, pmeAtomGridIndex, generator, usePmeCoarseBuckets, usePmeDirectPermutation);
+                }
+                // Rejections enqueue nothing; device errors propagate. Regenerate
+                // all int2 pairs before a fallback from the keyless permutation.
+                if (!generated) {
+                    pmeGridIndexKernel->execute(cc.getNumAtoms());
+                    if (!(usePmeCoarseBuckets && exactMiddle &&
+                            tryPmePermutation(sort, pmeAtomGridIndex, ComputeKernel(), true, false)))
+                        sort->sort(pmeAtomGridIndex);
+                }
                 stepsToSort = (cc.getNumAtoms() > 15000) ? 1 : 3;
             }
             else

@@ -24,6 +24,7 @@
 
 #include "CudaKernels.h"
 #include "CudaForceInfo.h"
+#include "CudaSort.h"
 #include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
@@ -100,4 +101,22 @@ void CudaCalcConstantPotentialForceKernel::initialize(const System& system, cons
     bool usePmeQueue, useFixedPointChargeSpreading;
     getCudaPmeParameters(cu, usePmeQueue, useFixedPointChargeSpreading);
     commonInitialize(system, force, false, useFixedPointChargeSpreading);
+}
+
+ComputeSort CudaCalcNonbondedForceKernel::createPmeSort(ComputeSortImpl::SortTrait* trait, int length, int knownMaximum) {
+    return ComputeSort(new CudaSort(cu, trait, length, true, knownMaximum));
+}
+
+bool CudaCalcNonbondedForceKernel::tryPmePermutation(ComputeSort sorter, ComputeArray& data,
+        ComputeKernel generator, bool coarseBuckets, bool directPhysicalIndices) {
+    CudaSort* cudaSort = dynamic_cast<CudaSort*>(sorter.get());
+    if (cudaSort == NULL)
+        return false;
+    if (generator)
+        return cudaSort->sortWithGeneratedKeys(cu.unwrap(data), generator, !coarseBuckets, directPhysicalIndices);
+    if (coarseBuckets) {
+        cudaSort->bucketize(cu.unwrap(data));
+        return true;
+    }
+    return false;
 }

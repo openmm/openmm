@@ -31,7 +31,16 @@ using namespace OpenMM;
 using namespace std;
 
 CudaSort::CudaSort(CudaContext& context, ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform) :
-        context(context), trait(trait), dataLength(length), uniform(uniform) {
+        CudaSort(context, trait, length, uniform, -1) {
+}
+
+CudaSort::CudaSort(CudaContext& context, ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform,
+        int knownIntegerMaximum) :
+        context(context), trait(trait), dataLength(length), uniform(uniform),
+        hasFixedRange(knownIntegerMaximum >= 0) {
+    if (knownIntegerMaximum != -1 && (knownIntegerMaximum < 1 || knownIntegerMaximum > 16777215 ||
+            !uniform || string(trait->getKeyType()) != "int"))
+        throw OpenMMException("Known-range CudaSort requires uniform int keys and maximum in [1, 16777215]");
     // Create kernels.
 
     map<string, string> replacements;
@@ -42,6 +51,8 @@ CudaSort::CudaSort(CudaContext& context, ComputeSortImpl::SortTrait* trait, unsi
     replacements["MAX_KEY"] = trait->getMaxKey();
     replacements["MAX_VALUE"] = trait->getMaxValue();
     replacements["UNIFORM"] = (uniform ? "1" : "0");
+    replacements["FIXED_RANGE_ENABLED"] = (knownIntegerMaximum >= 0 ? "1" : "0");
+    replacements["FIXED_RANGE_UPPER"] = context.intToString(knownIntegerMaximum);
     CUmodule module = context.createModule(context.replaceStrings(CudaKernelSources::sort, replacements));
     shortListKernel = context.getKernel(module, "sortShortList");
     shortList2Kernel = context.getKernel(module, "sortShortList2");
@@ -50,6 +61,7 @@ CudaSort::CudaSort(CudaContext& context, ComputeSortImpl::SortTrait* trait, unsi
     computeBucketPositionsKernel = context.getKernel(module, "computeBucketPositions");
     copyToBucketsKernel = context.getKernel(module, "copyDataToBuckets");
     sortBucketsKernel = context.getKernel(module, "sortBuckets");
+    scatterPhysicalIndicesKernel = (hasFixedRange ? context.getKernel(module, "scatterPhysicalIndices") : NULL);
 
     // Work out the work group sizes for various kernels.
 
@@ -91,21 +103,51 @@ CudaSort::~CudaSort() {
 }
 
 void CudaSort::sort(ArrayInterface& data) {
+    // Preserve validation and zero-length behavior before unwrapping the array.
     if (data.getSize() != dataLength || data.getElementSize() != trait->getDataSize())
         throw OpenMMException("CudaSort called with different data size");
     if (data.getSize() == 0)
         return;
-    CudaArray& cudata = context.unwrap(data);
+    sortImpl(context.unwrap(data), true);
+}
+
+void CudaSort::bucketize(CudaArray& data) {
+    sortImpl(data, false);
+}
+
+bool CudaSort::sortWithGeneratedKeys(CudaArray& data, ComputeKernel generator,
+        bool sortWithinBuckets, bool directPhysicalIndices) {
+    if (data.getSize() != dataLength || data.getElementSize() != trait->getDataSize())
+        throw OpenMMException("CudaSort called with different data size");
+    if (data.getSize() == 0)
+        return true;
+    if (!hasFixedRange || isShortList || !uniform || !generator ||
+            dataLength > 0x7fffffffu || (directPhysicalIndices && (sortWithinBuckets || scatterPhysicalIndicesKernel == NULL)) ||
+            trait->getDataSize() != sizeof(int2) || trait->getKeySize() != sizeof(int) ||
+            string(trait->getDataType()) != "int2" || string(trait->getKeyType()) != "int" ||
+            string(trait->getSortKey()) != "value.y")
+        return false;
+    // The PME generator reserves the 15-argument contract before this call.
+    sortImpl(data, sortWithinBuckets, generator, directPhysicalIndices);
+    return true;
+}
+
+void CudaSort::sortImpl(CudaArray& data, bool sortWithinBuckets,
+        ComputeKernel commonGenerator, bool directPhysicalIndices) {
+    if (data.getSize() != dataLength || data.getElementSize() != trait->getDataSize())
+        throw OpenMMException("CudaSort called with different data size");
+    if (data.getSize() == 0)
+        return;
     if (isShortList) {
         // We can use a simpler sort kernel that does the entire operation in one kernel.
         
         if (dataLength <= CudaContext::ThreadBlockSize*context.getNumThreadBlocks()) {
-            void* sortArgs[] = {&cudata.getDevicePointer(), &buckets.getDevicePointer(), &dataLength};
+            void* sortArgs[] = {&data.getDevicePointer(), &buckets.getDevicePointer(), &dataLength};
             context.executeKernel(shortList2Kernel, sortArgs, dataLength);
-            buckets.copyTo(cudata);
+            buckets.copyTo(data);
         }
         else {
-            void* sortArgs[] = {&cudata.getDevicePointer(), &dataLength};
+            void* sortArgs[] = {&data.getDevicePointer(), &dataLength};
             context.executeKernel(shortListKernel, sortArgs, sortKernelSize, sortKernelSize, dataLength*trait->getDataSize());
         }
     }
@@ -113,29 +155,55 @@ void CudaSort::sort(ArrayInterface& data) {
         // Compute the range of data values.
 
         unsigned int numBuckets = bucketOffset.getSize();
-        void* rangeArgs[] = {&cudata.getDevicePointer(), &dataLength, &dataRange.getDevicePointer(), &numBuckets, &bucketOffset.getDevicePointer()};
+        void* rangeArgs[] = {&data.getDevicePointer(), &dataLength, &dataRange.getDevicePointer(), &numBuckets, &bucketOffset.getDevicePointer()};
         context.executeKernel(computeRangeKernel, rangeArgs, rangeKernelSize, rangeKernelSize, 2*rangeKernelSize*trait->getKeySize());
 
         // Assign array elements to buckets.
 
-        void* elementsArgs[] = {&cudata.getDevicePointer(), &dataLength, &numBuckets, &dataRange.getDevicePointer(),
-                &bucketOffset.getDevicePointer(), &bucketOfElement.getDevicePointer(), &offsetInBucket.getDevicePointer()};
-        context.executeKernel(assignElementsKernel, elementsArgs, cudata.getSize(), 128);
+        if (commonGenerator) {
+            commonGenerator->setArg(10, numBuckets);
+            commonGenerator->setArg(11, dataRange);
+            commonGenerator->setArg(12, bucketOffset);
+            commonGenerator->setArg(13, bucketOfElement);
+            commonGenerator->setArg(14, offsetInBucket);
+            commonGenerator->execute(data.getSize(), 128);
+        }
+        else {
+            void* elementsArgs[] = {&data.getDevicePointer(), &dataLength, &numBuckets, &dataRange.getDevicePointer(),
+                    &bucketOffset.getDevicePointer(), &bucketOfElement.getDevicePointer(), &offsetInBucket.getDevicePointer()};
+            context.executeKernel(assignElementsKernel, elementsArgs, data.getSize(), 128);
+        }
 
         // Compute the position of each bucket.
 
         void* computeArgs[] = {&numBuckets, &bucketOffset.getDevicePointer()};
         context.executeKernel(computeBucketPositionsKernel, computeArgs, positionsKernelSize, positionsKernelSize, positionsKernelSize*sizeof(int));
 
+        if (directPhysicalIndices) {
+            // The generator left only per-physical-index metadata. Read no data
+            // elements while scattering, so output aliases no scatter input.
+            void* directArgs[] = {&data.getDevicePointer(), &dataLength, &bucketOffset.getDevicePointer(),
+                    &bucketOfElement.getDevicePointer(), &offsetInBucket.getDevicePointer()};
+            context.executeKernel(scatterPhysicalIndicesKernel, directArgs, data.getSize());
+            return;
+        }
+
         // Copy the data into the buckets.
 
-        void* copyArgs[] = {&cudata.getDevicePointer(), &buckets.getDevicePointer(), &dataLength, &bucketOffset.getDevicePointer(),
+        void* copyArgs[] = {&data.getDevicePointer(), &buckets.getDevicePointer(), &dataLength, &bucketOffset.getDevicePointer(),
                 &bucketOfElement.getDevicePointer(), &offsetInBucket.getDevicePointer()};
-        context.executeKernel(copyToBucketsKernel, copyArgs, cudata.getSize());
+        context.executeKernel(copyToBucketsKernel, copyArgs, data.getSize());
 
-        // Sort each bucket.
-
-        void* sortArgs[] = {&cudata.getDevicePointer(), &buckets.getDevicePointer(), &numBuckets, &bucketOffset.getDevicePointer()};
-        context.executeKernel(sortBucketsKernel, sortArgs, ((cudata.getSize()+sortKernelSize-1)/sortKernelSize)*sortKernelSize, sortKernelSize, sortKernelSize*trait->getDataSize());
+        if (sortWithinBuckets) {
+            // Preserve the complete sorting contract for every existing caller.
+            void* sortArgs[] = {&data.getDevicePointer(), &buckets.getDevicePointer(), &numBuckets, &bucketOffset.getDevicePointer()};
+            context.executeKernel(sortBucketsKernel, sortArgs, ((data.getSize()+sortKernelSize-1)/sortKernelSize)*sortKernelSize, sortKernelSize, sortKernelSize*trait->getDataSize());
+        }
+        else {
+            // Partition already contains every element exactly once, including
+            // buckets larger than one block. Copy on the current PME stream;
+            // preserve both array ownership and all bound device pointers.
+            buckets.copyTo(data);
+        }
     }
 }
