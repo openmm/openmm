@@ -49,5 +49,6 @@ This series introduces the OpenCL/Common baseline in component-sized changes bef
 | `OPENMM_METAL_FAST_RG_REDUCTION` | Common radius-of-gyration local reduction | SIMD reductions with per-group shared partials |
 | `OPENMM_METAL_FAST_RMSD_REDUCTION` | Common RMSD local reduction | SIMD center and correlation reductions |
 | `OPENMM_METAL_FAST_ORIENTATION_REDUCTION` | Common orientation local reduction | SIMD center and correlation reductions |
+| `OPENMM_METAL_FAST_LCPO_NEIGHBOR_SCAN` | Common LCPO shared prefix scan | Hierarchical SIMD prefix scan |
 
 All performance alternatives default to OFF. The GPU-only minimizer mode defaults to ON. Q32.32 force accumulation retains the OpenCL two-word algorithm; there is no native 64-bit atomic add. Compilation or a skipped GPU test is not a performance or numerical-parity result.

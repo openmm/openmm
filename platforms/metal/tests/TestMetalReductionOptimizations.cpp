@@ -76,11 +76,23 @@ void testSelection() {
             ASSERT_EQUAL(optimized, MetalReductionOptimizations::apply(optimized, settings));
         }
     }
+    for (int option = 0; option < 1; option++) {
+        Settings settings;
+        settings.lcpoScan = option == 0;
+        int index = 0;
+        for (const string* source : {&CommonKernelSources::lcpo, &CommonKernelSources::customManyParticle,
+                &MetalOpenCLKernelSources::sort}) {
+            string optimized = MetalReductionOptimizations::apply(*source, settings);
+            ASSERT_EQUAL(option == index++, optimized.find("metalBlockInclusiveScan") != string::npos);
+            ASSERT_EQUAL(optimized, MetalReductionOptimizations::apply(optimized, settings));
+        }
+    }
     Settings all;
     all.centroid = true;
     all.rg = true;
     all.rmsd = true;
     all.orientation = true;
+    all.lcpoScan = true;
     const string unrelated = "DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) { return value; }";
     ASSERT_EQUAL(unrelated, MetalReductionOptimizations::apply(unrelated, all));
     // A recognizable function name is insufficient: an unreviewed body must
@@ -93,12 +105,13 @@ void testSelection() {
         "KERNEL void computeRMSDPart1(", "KERNEL void computeCorrelationMatrix(",
         "KERNEL void computeNeighborStartIndices(", "KERNEL void computeNeighborStartIndices(",
         "__kernel void computeBucketPositions(", "__kernel void sortShortList("};
-    for (int option = 0; option < 4; option++) {
+    for (int option = 0; option < 5; option++) {
         Settings settings;
         settings.centroid = option == 0;
         settings.rg = option == 1;
         settings.rmsd = option == 2;
         settings.orientation = option == 3;
+        settings.lcpoScan = option == 4;
         string modified = *originals[option];
         size_t body = modified.find('{', modified.find(signatures[option]));
         ASSERT(body != string::npos);
@@ -214,6 +227,58 @@ void testCentroids(MetalContext& context) {
     }
 }
 
+/** @brief Exercise inclusive scans, chunk carries, overflow exits, and neighbor-counter clearing. */
+void testNeighborScans(MetalContext& context) {
+    {
+        const string& original = CommonKernelSources::lcpo;
+        for (bool enabled : {false, true}) {
+            MetalReductionOptimizations::Settings settings;
+            settings.lcpoScan = enabled;
+            string transformed = MetalReductionOptimizations::apply(original, settings);
+            string kernelSource = extractFunction(transformed, "KERNEL void computeNeighborStartIndices(");
+            if (enabled)
+                kernelSource = extractFunction(transformed, "DEVICE unsigned int metalBlockInclusiveScan(")+kernelSource;
+            // Preserve explicit OFF in an all-options-ON build.
+            kernelSource = context.replaceStrings(kernelSource, {{"computeNeighborStartIndices", "neighborScanProbe"}});
+            for (int count : {0, 1, 31, 33, 257, 4099}) {
+                vector<int> counts(max(1, count));
+                for (int i = 0; i < count; i++)
+                    counts[i] = i%7;
+                int total = accumulate(counts.begin(), counts.end(), 0);
+                ComputeArray countsBuffer, startsBuffer, pairCount;
+                countsBuffer.initialize<int>(context, counts.size(), "scanCounts");
+                startsBuffer.initialize<int>(context, count+1, "scanStarts");
+                pairCount.initialize<int>(context, 1, "scanPairCount");
+                map<string, string> defines{{"NUM_ACTIVE", to_string(count)}, {"NUM_ATOMS", to_string(count)}, {"THREAD_BLOCK_SIZE", "256"}};
+                ComputeKernel kernel = context.compileProgram(kernelSource, defines)->createKernel("neighborScanProbe");
+                kernel->addArg(pairCount);
+                kernel->addArg(countsBuffer);
+                kernel->addArg(startsBuffer);
+                kernel->addArg(total);
+                for (int width : {7, 32, 33, 64, 256}) {
+                    for (bool overflow : {false, true}) {
+                        countsBuffer.upload(counts);
+                        startsBuffer.upload(vector<int>(count+1, -7));
+                        pairCount.upload(vector<int>{overflow ? total+1 : total});
+                        kernel->execute(width, width);
+                        vector<int> starts, remaining;
+                        startsBuffer.download(starts);
+                        countsBuffer.download(remaining);
+                        int expected = 0;
+                        for (int i = 0; i <= count; i++) {
+                            ASSERT_EQUAL(overflow ? -7 : expected, starts[i]);
+                            if (i < count) {
+                                expected += counts[i];
+                                ASSERT_EQUAL(overflow ? counts[i] : 0, remaining[i]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
     try {
         testSelection();
@@ -226,6 +291,7 @@ int main(int argc, char* argv[]) {
         MetalContext context(system);
         testReductions(context);
         testCentroids(context);
+        testNeighborScans(context);
     }
     catch (const exception& error) {
         cerr << "exception: " << error.what() << endl;

@@ -96,6 +96,49 @@ string reductionFunction(const string& name) {
 )";
 }
 
+/** @brief Inclusive uint scan over at most 1024 threads; all shuffle calls are converged. */
+const string scanFunction = R"(
+DEVICE unsigned int metalBlockInclusiveScan(unsigned int value, LOCAL_ARG unsigned int* scratch) {
+    const int lane = LOCAL_ID%32;
+    const int warp = LOCAL_ID/32;
+    const int warps = ((int) LOCAL_SIZE+31)/32;
+    // The argument may have been loaded from scratch: every thread must read it
+    // before a warp total overwrites the original shared array.
+    SYNC_THREADS;
+    for (int offset = 1; offset < 32; offset *= 2) {
+        unsigned int other = simd_shuffle_up(value, offset);
+        if (lane >= offset)
+            value += other;
+    }
+    if (lane == 31 || LOCAL_ID == LOCAL_SIZE-1)
+        scratch[warp] = value;
+    SYNC_THREADS;
+    unsigned int total = (LOCAL_ID < warps ? scratch[LOCAL_ID] : 0u);
+    if (warp == 0) {
+        for (int offset = 1; offset < 32; offset *= 2) {
+            unsigned int other = simd_shuffle_up(total, offset);
+            if (lane >= offset)
+                total += other;
+        }
+        if (lane < warps)
+            scratch[lane] = total;
+    }
+    SYNC_THREADS;
+    unsigned int result = value+(warp == 0 ? 0u : scratch[warp-1]);
+    SYNC_THREADS;
+    return result;
+}
+)";
+
+/** @brief Replace the shared-memory scan loop while retaining the surrounding algorithm. */
+string scannedFunction(const string& original, const string& loop, const string& buffer) {
+    const string oldLoop = functionText(original, loop);
+    string transformed = original;
+    replaceFunction(transformed, oldLoop, buffer+"[LOCAL_ID] = metalBlockInclusiveScan("+buffer+
+            "[LOCAL_ID], "+buffer+");\n        SYNC_THREADS;");
+    return scanFunction+transformed;
+}
+
 } // namespace
 
 MetalReductionOptimizations::Settings MetalReductionOptimizations::getBuildSettings() {
@@ -111,6 +154,9 @@ MetalReductionOptimizations::Settings MetalReductionOptimizations::getBuildSetti
 #endif
 #if OPENMM_METAL_FAST_ORIENTATION_REDUCTION
     settings.orientation = true;
+#endif
+#if OPENMM_METAL_FAST_LCPO_NEIGHBOR_SCAN
+    settings.lcpoScan = true;
 #endif
     return settings;
 }
@@ -146,6 +192,11 @@ string MetalReductionOptimizations::apply(const string& source, const Settings& 
     }
 })";
         replaceFunction(result, original, reductionFunction("metalReduceGroupValue")+replacement);
+    }
+    if (settings.lcpoScan) {
+        string original = functionText(CommonKernelSources::lcpo, "KERNEL void computeNeighborStartIndices(");
+        replaceFunction(result, original, scannedFunction(original,
+                "for (unsigned int step = 1; step < LOCAL_SIZE; step *= 2)", "posBuffer"));
     }
     return result;
 }
