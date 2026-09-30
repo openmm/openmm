@@ -91,7 +91,7 @@ public:
      * @param forceGroup     the force group in which the interaction should be calculated
      * @param useNeighborList  specifies whether a neighbor list should be used to optimize this interaction.  This should
      *                         be viewed as only a suggestion.  Even when it is false, a neighbor list may be used anyway.
-     * @param supportsPairList Common interface compatibility hint; this implementation uses only tiles
+     * @param supportsPairList specifies whether this interaction can work with a neighbor list that uses a separate pair list
      */
     void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance,
                         const std::vector<std::vector<int> >& exclusionList, const std::string& kernel,
@@ -314,6 +314,8 @@ private:
     ComputeArray interactingTiles;
     ComputeArray interactingAtoms;
     ComputeArray interactionCount;
+    /** @brief Sparse non-excluded atom pairs, independently optional from tiled shuffle. */
+    ComputeArray singlePairs;
     ComputeArray blockCenter;
     ComputeArray blockBoundingBox;
     ComputeArray sortedBlocks;
@@ -334,6 +336,7 @@ private:
     std::map<int, std::string> groupKernelSource;
     double maxCutoff;
     bool useCutoff, usePeriodic, anyExclusions, usePadding, useNeighborList, forceRebuildNeighborList, useLargeBlocks;
+    bool canUsePairList;
     int startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks;
     int forceThreadBlockSize, interactingBlocksThreadBlockSize, groupFlags, numBlockSizes;
     unsigned int tilesAfterReorder;

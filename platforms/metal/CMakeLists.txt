@@ -72,7 +72,7 @@ option(OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD "Use floating-grid spre
 
 # Each optional algorithm can be compared independently with the OpenCL path.
 set(METAL_OPTIMIZATION_SWITCHES
-    CUSTOM_GB_VALUE_SHUFFLE CUSTOM_GB_ENERGY_SHUFFLE GBSA_BORN_SHUFFLE GBSA_FORCE_SHUFFLE DPD_PARTICLE_SHUFFLE DPD_TILE_BROADCAST CUSTOM_HBOND_SHUFFLE)
+    SPARSE_PAIRS CUSTOM_GB_VALUE_SHUFFLE CUSTOM_GB_ENERGY_SHUFFLE GBSA_BORN_SHUFFLE GBSA_FORCE_SHUFFLE DPD_PARTICLE_SHUFFLE DPD_TILE_BROADCAST CUSTOM_HBOND_SHUFFLE)
 foreach(feature IN LISTS METAL_OPTIMIZATION_SWITCHES)
     option(OPENMM_METAL_FAST_${feature} "Enable the independent Metal ${feature} algorithm" OFF)
 endforeach()
@@ -131,6 +131,7 @@ function(encode_metal_sources class source_dir extension)
 endfunction()
 encode_metal_sources(MetalKernelSources "${CMAKE_CURRENT_SOURCE_DIR}/src/kernels" metal)
 encode_metal_sources(MetalOpenCLKernelSources "${CMAKE_CURRENT_SOURCE_DIR}/../opencl/src/kernels" cl)
+encode_metal_sources(MetalCudaKernelSources "${CMAKE_CURRENT_SOURCE_DIR}/../cuda/src/kernels" cu nonbonded)
 file(GLOB COMMON_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/../common/src/*.cpp")
 list(REMOVE_ITEM COMMON_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/../common/src/CommonParallelKernels.cpp")
 
@@ -164,6 +165,7 @@ add_library(${OPENMMMETAL_LIBRARY_NAME} SHARED
     ${COMMON_SOURCES}
     "${CMAKE_CURRENT_BINARY_DIR}/src/MetalKernelSources.cpp"
     "${CMAKE_CURRENT_BINARY_DIR}/src/MetalOpenCLKernelSources.cpp"
+    "${CMAKE_CURRENT_BINARY_DIR}/src/MetalCudaKernelSources.cpp"
     "${CMAKE_CURRENT_BINARY_DIR}/../common/src/CommonKernelSources.cpp")
 add_dependencies(${OPENMMMETAL_LIBRARY_NAME} CommonKernels)
 target_include_directories(${OPENMMMETAL_LIBRARY_NAME}
@@ -227,7 +229,7 @@ if(BUILD_TESTING)
         set_tests_properties(TestMetal${test} PROPERTIES SKIP_RETURN_CODE 77)
     endforeach()
     target_include_directories(TestMetalNonbondedOptimizations PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
-    foreach(feature IN ITEMS )
+    foreach(feature IN ITEMS SPARSE_PAIRS)
         target_compile_definitions(TestMetalNonbondedOptimizations PRIVATE
             OPENMM_METAL_FAST_${feature}=$<BOOL:${OPENMM_METAL_FAST_${feature}}>)
     endforeach()

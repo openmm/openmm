@@ -1,0 +1,109 @@
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * Ported from OpenMM's OpenCL/CUDA/HIP nonbonded kernels and utilities.
+ * Original code: Portions copyright (c) 2009-2025 Stanford University and
+ * the Authors. Authors: Peter Eastman and the OpenMM contributors.
+ * Metal code: Portions copyright (c) 2026 Chun-Chi Hung.
+ * Author: Chun-Chi Hung.
+ * This program is free software under the GNU Lesser General Public License,
+ * version 3 or (at your option) any later version. It is distributed without
+ * any warranty; see <http://www.gnu.org/licenses/> for the license.
+ * -------------------------------------------------------------------------- */
+
+#ifndef OPENMM_METALNONBONDEDSOURCES_H_
+#define OPENMM_METALNONBONDEDSOURCES_H_
+
+#include "MetalCudaKernelSources.h"
+#include "openmm/OpenMMException.h"
+#include <string>
+
+namespace OpenMM {
+namespace MetalNonbondedSources {
+
+/** @brief Apply a checked edit to a known upstream template, never arbitrary user code. */
+inline void replace(std::string& source, const std::string& before, const std::string& after) {
+    size_t offset = source.find(before);
+    if (offset == std::string::npos)
+        throw OpenMMException("OpenMM nonbonded template changed: missing Metal adaptation for "+before);
+    do {
+        source.replace(offset, before.size(), after);
+        offset = source.find(before, offset+after.size());
+    } while (offset != std::string::npos);
+}
+
+/** @brief Adapt only CUDA's sparse-pair fragments; tiled interactions remain OpenCL. */
+inline void addOpenCLPairs(std::string& source) {
+    const std::string& cuda = MetalCudaKernelSources::nonbonded;
+    size_t helperBegin = cuda.find("__device__ void saveSingleForce");
+    size_t helperEnd = cuda.find("/**", helperBegin);
+    size_t pairsBegin = cuda.find("    // Third loop: single pairs");
+    size_t pairsEnd = cuda.find("#ifdef INCLUDE_ENERGY", pairsBegin);
+    if (helperBegin == std::string::npos || helperEnd == std::string::npos ||
+            pairsBegin == std::string::npos || pairsEnd == std::string::npos)
+        throw OpenMMException("CUDA sparse-pair template changed");
+    std::string helper = cuda.substr(helperBegin, helperEnd-helperBegin);
+    replace(helper, "static_cast<unsigned long long>", "(mm_ulong)");
+    replace(helper, "unsigned long long", "mm_ulong");
+    replace(helper, "__device__", "DEVICE");
+    replace(helper, "atomicAdd(", "ATOMIC_ADD(");
+    for (const std::string offset : {"atom", "atom+PADDED_NUM_ATOMS", "atom+2*PADDED_NUM_ATOMS"})
+        replace(helper, "ATOMIC_ADD(&forceBuffers["+offset+"],",
+            "METAL_ACCUMULATE_SPARSE_FORCE(forceBuffers, "+offset+",");
+    replace(helper, "mm_ulong* forceBuffers", "GLOBAL mm_ulong* forceBuffers");
+    std::string pairs = cuda.substr(pairsBegin, pairsEnd-pairsBegin);
+    replace(pairs, "blockIdx.x", "get_group_id(0)");
+    replace(pairs, "blockDim.x", "get_local_size(0)");
+    replace(pairs, "gridDim.x", "get_num_groups(0)");
+    replace(pairs, "threadIdx.x", "get_local_id(0)");
+    replace(pairs, "#if USE_NEIGHBOR_LIST", "#ifdef USE_SPARSE_PAIRS");
+    const std::string anchor = "#ifdef INCLUDE_ENERGY\n    energyBuffer[get_global_id(0)] += energy;";
+    replace(source, anchor, pairs+anchor);
+    replace(source, "__global const int* restrict interactingAtoms\n#endif",
+        "__global const int* restrict interactingAtoms\n"
+        "#ifdef USE_SPARSE_PAIRS\n, unsigned int maxSinglePairs, GLOBAL const int2* singlePairs\n#endif\n#endif");
+    source = helper+source;
+}
+
+/** @brief Add optional sparse pairs to the OpenCL neighbor list. */
+inline std::string neighbors(std::string source, bool sparsePairs) {
+    if (sparsePairs) {
+        // Count sparse atom-to-block interactions before OpenCL's compaction.
+        // This deliberately does not depend on the optional ballot algorithm.
+        replace(source, "interactionCount[0] = 0;", "interactionCount[0] = 0;\n        interactionCount[1] = 0;");
+        const std::string argumentEnd = "__global const int* restrict rebuildNeighborList\n#ifdef USE_LARGE_BLOCKS";
+        replace(source, argumentEnd,
+            "__global const int* restrict rebuildNeighborList, unsigned int maxSinglePairs, GLOBAL int2* singlePairs\n#ifdef USE_LARGE_BLOCKS");
+        replace(source, "bool interacts = false;", "bool interacts = false;\n                    uint pairMask = 0;");
+        replace(source, "interacts |= (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < PADDED_CUTOFF_SQUARED);",
+            "if (x*TILE_SIZE+j < NUM_ATOMS && dot(delta, delta) < PADDED_CUTOFF_SQUARED) pairMask |= 1u<<j;");
+        const std::string compact = "                    // Do a prefix sum to compact the list of atoms.";
+        replace(source, compact, R"(
+                    interacts = pairMask != 0;
+                    uint sparseCount = popcount(pairMask);
+                    sparseCount = sparseCount <= 3 ? sparseCount : 0;
+                    uint sparseTotal = simdReduceAdd(sparseCount);
+                    uint sparseRank = simdPrefixExclusiveAdd(sparseCount);
+                    uint sparseFirst = 0;
+                    if (sparseTotal != 0 && indexInWarp == 0)
+                        sparseFirst = ATOMIC_ADD(interactionCount+1, sparseTotal);
+                    sparseFirst = simdShuffle(sparseFirst, 0);
+                    if (sparseCount != 0) {
+                        uint first = sparseFirst+sparseRank;
+                        while (pairMask != 0) {
+                            uint lane = ctz(pairMask);
+                            pairMask &= pairMask-1;
+                            if (first < maxSinglePairs)
+                                singlePairs[first] = make_int2(x*TILE_SIZE+lane, atom2);
+                            first++;
+                        }
+                        interacts = false;
+                    }
+)"+compact);
+    }
+    return source;
+}
+
+} // namespace MetalNonbondedSources
+} // namespace OpenMM
+#endif

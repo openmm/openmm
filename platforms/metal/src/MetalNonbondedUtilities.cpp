@@ -35,6 +35,7 @@
 #include "openmm/common/ComputeArray.h"
 #include "MetalContext.h"
 #include "MetalOpenCLKernelSources.h"
+#include "MetalNonbondedSources.h"
 #include <cstdint>
 #include <limits>
 #include <algorithm>
@@ -60,7 +61,7 @@ public:
 
 MetalNonbondedUtilities::MetalNonbondedUtilities(MetalContext& context) : context(context), downloadedCount(0),
         useCutoff(false), usePeriodic(false), anyExclusions(false), usePadding(true), useNeighborList(false),
-        forceRebuildNeighborList(true), groupFlags(0), tilesAfterReorder(0) {
+        forceRebuildNeighborList(true), canUsePairList(OPENMM_METAL_FAST_SPARSE_PAIRS), groupFlags(0), tilesAfterReorder(0) {
     numForceThreadBlocks = context.getNumThreadBlocks();
     forceThreadBlockSize = min(256, context.getMaxThreadBlockSize());
     forceThreadBlockSize -= forceThreadBlockSize%MetalContext::TileSize;
@@ -88,7 +89,7 @@ void MetalNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic,
     useCutoff = usesCutoff;
     usePeriodic = usesPeriodic;
     this->useNeighborList |= (useNeighborList && useCutoff);
-    (void) supportsPairList; // Common interface hint; this stage uses only tiles.
+    canUsePairList &= supportsPairList;
     groupCutoff[forceGroup] = cutoffDistance;
     groupFlags |= 1u<<forceGroup;
     if (kernel.size() > 0) {
@@ -262,7 +263,14 @@ void MetalNonbondedUtilities::initialize(const System& system) {
         int numAtoms = context.getNumAtoms();
         interactingTiles.initialize<int>(context, maxTiles, "interactingTiles");
         interactingAtoms.initialize<int>(context, MetalContext::TileSize*(size_t) maxTiles, "interactingAtoms");
-        interactionCount.initialize<unsigned int>(context, 1, "interactionCount");
+        canUsePairList &= useNeighborList;
+        interactionCount.initialize<unsigned int>(context, canUsePairList ? 2 : 1, "interactionCount");
+        if (canUsePairList) {
+            uint64_t maxPairs = max(uint64_t(1), uint64_t(5)*numAtoms);
+            if (maxPairs > (uint64_t) numeric_limits<int>::max())
+                throw OpenMMException("The sparse pair list exceeds the Metal array index limit");
+            singlePairs.initialize<mm_int2>(context, (int) maxPairs, "singlePairs");
+        }
         int elementSize = sizeof(float);
         blockCenter.initialize(context, numAtomBlocks, 4*elementSize, "blockCenter");
         blockBoundingBox.initialize(context, numAtomBlocks, 4*elementSize, "blockBoundingBox");
@@ -369,12 +377,14 @@ bool MetalNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return false;
     // Only GPU-generated counts are read on the host; interactions stay on the GPU.
-    interactionCount.download(&downloadedCount);
+    unsigned int counts[2] = {0, 0};
+    interactionCount.download(counts);
+    downloadedCount = counts[0];
     if (context.getStepsSinceReorder() == 0 || tilesAfterReorder == 0)
         tilesAfterReorder = downloadedCount;
     else if (context.getStepsSinceReorder() > 25 && downloadedCount > 1.1*tilesAfterReorder)
         context.forceReorder();
-    if (downloadedCount <= interactingTiles.getSize())
+    if (downloadedCount <= interactingTiles.getSize() && (!canUsePairList || counts[1] <= singlePairs.getSize()))
         return false;
 
     // The most recent timestep had too many interactions to fit in the arrays.  Make the arrays bigger to prevent
@@ -391,8 +401,24 @@ bool MetalNonbondedUtilities::updateNeighborListSize() {
         interactingTiles.resize(maxTiles);
         interactingAtoms.resize(MetalContext::TileSize*(size_t) maxTiles);
     }
+    if (canUsePairList && counts[1] > singlePairs.getSize()) {
+        uint64_t requestedPairs = (uint64_t) (1.2*counts[1]+1);
+        if (requestedPairs > (uint64_t) numeric_limits<int>::max())
+            throw OpenMMException("The sparse pair list exceeds the Metal array index limit");
+        singlePairs.resize((int) requestedPairs);
+    }
     for (map<int, KernelSet>::iterator iter = groupKernels.begin(); iter != groupKernels.end(); ++iter) {
         KernelSet& kernels = iter->second;
+        if (canUsePairList) {
+            for (ComputeKernel* kernel : {&kernels.forceKernel, &kernels.energyKernel, &kernels.forceEnergyKernel}) {
+                if (*kernel) {
+                    (*kernel)->setArg(18, (unsigned int) singlePairs.getSize());
+                    (*kernel)->setArg(19, singlePairs);
+                }
+            }
+            kernels.findInteractingBlocksKernel->setArg(19, (unsigned int) singlePairs.getSize());
+            kernels.findInteractingBlocksKernel->setArg(20, singlePairs);
+        }
         if (kernels.forceKernel) {
             kernels.forceKernel->setArg(7, interactingTiles);
             kernels.forceKernel->setArg(14, (unsigned int) (maxTiles));
@@ -486,7 +512,7 @@ void MetalNonbondedUtilities::createKernelsForGroups(int groups) {
             binShift++;
         defines["BIN_SHIFT"] = context.intToString(binShift);
         defines["BLOCK_INDEX_MASK"] = context.intToString((1<<binShift)-1);
-        string file = MetalOpenCLKernelSources::findInteractingBlocks;
+        string file = MetalNonbondedSources::neighbors(MetalOpenCLKernelSources::findInteractingBlocks, canUsePairList);
         int groupSize = min(256, context.getMaxThreadBlockSize());
         while (true) {
             defines["GROUP_SIZE"] = context.intToString(groupSize);
@@ -518,7 +544,7 @@ void MetalNonbondedUtilities::createKernelsForGroups(int groups) {
                 kernels.sortBoxDataKernel->setArg(10, largeBlockCenter);
                 kernels.sortBoxDataKernel->setArg(11, largeBlockBoundingBox);
             }
-            kernels.findInteractingBlocksKernel = createKernel(interactingBlocksProgram, "findBlocksWithInteractions", 19+(useLargeBlocks ? 2 : 0));
+            kernels.findInteractingBlocksKernel = createKernel(interactingBlocksProgram, "findBlocksWithInteractions", 19+(useLargeBlocks ? 2 : 0)+(canUsePairList ? 2 : 0));
             kernels.findInteractingBlocksKernel->setArg(5, interactionCount);
             kernels.findInteractingBlocksKernel->setArg(6, interactingTiles);
             kernels.findInteractingBlocksKernel->setArg(7, interactingAtoms);
@@ -533,9 +559,13 @@ void MetalNonbondedUtilities::createKernelsForGroups(int groups) {
             kernels.findInteractingBlocksKernel->setArg(16, exclusionRowIndices);
             kernels.findInteractingBlocksKernel->setArg(17, oldPositions);
             kernels.findInteractingBlocksKernel->setArg(18, rebuildNeighborList);
+            if (canUsePairList) {
+                kernels.findInteractingBlocksKernel->setArg(19, (unsigned int) singlePairs.getSize());
+                kernels.findInteractingBlocksKernel->setArg(20, singlePairs);
+            }
             if (useLargeBlocks) {
-                kernels.findInteractingBlocksKernel->setArg(19, largeBlockCenter);
-                kernels.findInteractingBlocksKernel->setArg(20, largeBlockBoundingBox);
+                kernels.findInteractingBlocksKernel->setArg(canUsePairList ? 21 : 19, largeBlockCenter);
+                kernels.findInteractingBlocksKernel->setArg(canUsePairList ? 22 : 20, largeBlockBoundingBox);
             }
             if (kernels.findInteractingBlocksKernel->getMaxBlockSize() < groupSize) {
                 // The device can't handle this block size, so reduce it.
@@ -553,7 +583,11 @@ void MetalNonbondedUtilities::createKernelsForGroups(int groups) {
 }
 
 ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& source, vector<ComputeParameterInfo>& params, vector<ComputeParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups, bool includeForces, bool includeEnergy) {
+    // Only the upstream template is adapted. Caller-provided kernels keep their ABI.
+    bool sparsePairs = canUsePairList && useCutoff;
     string sourceTemplate = kernelSource;
+    if (sparsePairs)
+        MetalNonbondedSources::addOpenCLPairs(sourceTemplate);
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
     const string suffixes[] = {"x", "y", "z", "w"};
@@ -651,6 +685,18 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
                 clearLocal<<"localData[localAtomIndex]."<<param.getName()<<"_"<<suffixes[j]<<" = 0;\n";
     }
     replacements["CLEAR_LOCAL_PARAMETERS"] = clearLocal.str();
+    // Sparse pairs reuse CUDA's direct atom loads even when the tiled algorithm
+    // remains OpenCL. Packed three-component parameters retain their 12-byte ABI.
+    auto globalParameter = [](const ComputeParameterInfo& param, const string& atom) {
+        string base = "global_"+param.getName();
+        if (param.getNumComponents() == 3)
+            return "make_"+param.getType()+"("+base+"[3*"+atom+"], "+base+"[3*"+atom+"+1], "+base+"[3*"+atom+"+2])";
+        return base+"["+atom+"]";
+    };
+    stringstream load2Global;
+    for (const ComputeParameterInfo& param : params)
+        load2Global<<param.getType()<<" "<<param.getName()<<"2 = "<<globalParameter(param, "atom2")<<";\n";
+    replacements["LOAD_ATOM2_PARAMETERS_FROM_GLOBAL"] = load2Global.str();
     stringstream initDerivs;
     for (int i = 0; i < energyParameterDerivatives.size(); i++)
         initDerivs<<"mixed energyParamDeriv"<<i<<" = 0;\n";
@@ -674,6 +720,8 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
         defines["USE_SYMMETRIC"] = "1";
     if (useNeighborList)
         defines["USE_NEIGHBOR_LIST"] = "1";
+    if (sparsePairs)
+        defines["USE_SPARSE_PAIRS"] = "1";
     if (useCutoff && context.getSIMDWidth() < 32)
         defines["PRUNE_BY_CUTOFF"] = "1";
     if (includeForces)
@@ -706,7 +754,7 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
     if ((localDataSize/4)%2 == 0)
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
     ComputeProgram program = context.compileProgram(context.replaceStrings(sourceTemplate, replacements), defines);
-    int argumentCount = 7+(useCutoff ? 11 : 0)+params.size()+arguments.size()+(energyParameterDerivatives.empty() ? 0 : 1);
+    int argumentCount = 7+(useCutoff ? 11 : 0)+(sparsePairs ? 2 : 0)+params.size()+arguments.size()+(energyParameterDerivatives.empty() ? 0 : 1);
     ComputeKernel kernel = createKernel(program, "computeNonbonded", argumentCount);
 
     // Set arguments to the Kernel.
@@ -727,6 +775,10 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
         kernel->setArg(index++, blockCenter);
         kernel->setArg(index++, blockBoundingBox);
         kernel->setArg(index++, interactingAtoms);
+        if (sparsePairs) {
+            kernel->setArg(index++, (unsigned int) singlePairs.getSize());
+            kernel->setArg(index++, singlePairs);
+        }
     }
     for (ComputeParameterInfo& param : params)
         kernel->setArg(index++, param.getArray());
