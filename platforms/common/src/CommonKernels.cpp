@@ -52,6 +52,15 @@
 #include <iterator>
 #include <set>
 
+#include <atomic>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <limits>
+#include <type_traits>
+#if defined(_MSC_VER) && defined(_M_X64)
+#include <xmmintrin.h>
+#endif
 using namespace OpenMM;
 using namespace std;
 using namespace Lepton;
@@ -179,11 +188,112 @@ void CommonUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3
     cc.getThreadPool().waitForThreads();
 }
 
+// Use the existing pool without allocating a std::function or changing worker
+// state. ThreadPool does not transport worker exceptions, so copyRange contains
+// only the original unchecked array access and independent scalar conversions.
+template <class CopyRange>
+static bool runParallelPositionCopy(ThreadPool& pool, int numParticles, const CopyRange& copyRange) {
+#if defined(_MSC_VER) && defined(_M_X64)
+    // On this target the scalar conversions use SSE. Compare all control bits
+    // (rounding, FTZ, DAZ, exception masks), excluding sticky exception flags.
+    const unsigned int control = _mm_getcsr()&0xffc0;
+    if ((control&0x1f80) != 0x1f80)
+        return false; // Preserve the original caller path for unmasked traps.
+    class CopyTask : public ThreadPool::Task {
+    public:
+        CopyTask(int count, unsigned int control, const CopyRange& copy) :
+                count(count), control(control), copy(copy), mismatchedControl(false) {
+        }
+        void execute(ThreadPool& threads, int threadIndex) override {
+            if ((_mm_getcsr()&0xffc0) != control) {
+                mismatchedControl.store(true);
+                return;
+            }
+            const int numThreads = threads.getNumThreads();
+            const int start = (int) ((long long) threadIndex*count/numThreads);
+            const int end = (int) ((long long) (threadIndex+1)*count/numThreads);
+            copy(start, end);
+        }
+        int count;
+        unsigned int control;
+        const CopyRange& copy;
+        std::atomic<bool> mismatchedControl;
+    };
+    CopyTask task(numParticles, control, copyRange);
+    pool.execute(task);
+    pool.waitForThreads();
+    // A mismatch does not commit a partially converted upload: the caller
+    // rewrites the whole range serially before padding or the original upload.
+    return !task.mismatchedControl.load();
+#else
+    return false;
+#endif
+}
+
 void CommonUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<Vec3>& positions) {
     ContextSelector selector(cc);
     const vector<int>& order = cc.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
-    if (cc.getUseDoublePrecision()) {
+    const char* parallelEnv = std::getenv("OPENMM_EXPERIMENT_PARALLEL_SET_POSITIONS");
+    const bool parallelPositions = parallelEnv != NULL && parallelEnv[0] == '1' && parallelEnv[1] == '\0'
+            && cc.getUseMixedPrecision() && numParticles >= 4096 && cc.getNumContexts() == 1
+            && getPlatform().getName() == "CUDA" && cc.getThreadPool().getNumThreads() > 1;
+    const char* fusedEnv = std::getenv("OPENMM_EXPERIMENT_FUSED_SET_POSITIONS");
+    bool fusedPositions = fusedEnv != NULL && fusedEnv[0] == '1' && fusedEnv[1] == '\0'
+            && cc.getUseMixedPrecision() && !cc.getUseDoublePrecision()
+            && numParticles >= 4096 && cc.getNumContexts() == 1 && getPlatform().getName() == "CUDA";
+#if defined(_MSC_VER) && defined(_M_X64)
+    // A different arithmetic order can change which unmasked trap occurs first.
+    // Keep the original two-pass caller path whenever traps are unmasked.
+    fusedPositions = fusedPositions && (_mm_getcsr()&0x1f80) == 0x1f80;
+#else
+    fusedPositions = false;
+#endif
+    if (fusedPositions) {
+        const int paddedSize = cc.getPaddedNumAtoms();
+        // CUDA mixed pinned storage has at least 32P bytes (velm's size).
+        // Pack xyz into the first 12N bytes, and keep the 16P-byte correction
+        // array in the aligned second half. Do not restore the old posq download.
+        fusedPositions = paddedSize >= numParticles
+                && static_cast<size_t>(paddedSize) <= std::numeric_limits<size_t>::max()/(2*sizeof(mm_float4))
+                && cc.getPosq().getSize() == paddedSize && cc.getPosqCorrection().getSize() == paddedSize
+                && cc.getPosq().getElementSize() == sizeof(mm_float4)
+                && cc.getPosqCorrection().getElementSize() == sizeof(mm_float4)
+                && cc.getVelm().getSize() >= paddedSize && cc.getVelm().getElementSize()/2 >= sizeof(mm_float4)
+                && reinterpret_cast<uintptr_t>(cc.getPinnedBuffer())%sizeof(mm_float4) == 0;
+    }
+    if (fusedPositions) {
+        static_assert(std::is_trivially_copyable<mm_float4>::value, "Mixed setter byte copies require a trivially copyable type");
+        float* pos = (float*) cc.getPinnedBuffer();
+        unsigned char* correctionBytes = reinterpret_cast<unsigned char*>(cc.getPinnedBuffer())
+                +static_cast<size_t>(cc.getPaddedNumAtoms())*sizeof(mm_float4);
+        auto copyMixedPositions = [&] (int start, int end) {
+            for (int i = start; i < end; ++i) {
+                const Vec3& p = positions[order[i]];
+                const float x = (float) p[0];
+                const float y = (float) p[1];
+                const float z = (float) p[2];
+                pos[3*i] = x;
+                pos[3*i+1] = y;
+                pos[3*i+2] = z;
+                const mm_float4 correction((float) (p[0]-x), (float) (p[1]-y), (float) (p[2]-z), 0.0f);
+                // The pinned tail is raw storage, not a constructed array.
+                std::memcpy(correctionBytes+static_cast<size_t>(i)*sizeof(correction), &correction, sizeof(correction));
+            }
+        };
+        // A worker-control mismatch rewrites both full spans on the caller
+        // before either upload, preserving the original conversion controls.
+        if (!parallelPositions || !runParallelPositionCopy(cc.getThreadPool(), numParticles, copyMixedPositions))
+            copyMixedPositions(0, numParticles);
+        const mm_float4 zero(0.0f, 0.0f, 0.0f, 0.0f);
+        for (int i = numParticles; i < cc.getPaddedNumAtoms(); i++)
+            std::memcpy(correctionBytes+static_cast<size_t>(i)*sizeof(zero), &zero, sizeof(zero));
+        floatBuffer.upload(pos);
+        copyFloatKernel->setArg(1, cc.getPosq());
+        copyFloatKernel->execute(numParticles);
+        cc.getPosqCorrection().upload(correctionBytes);
+    }
+    else if (cc.getUseDoublePrecision()) {
         double* pos = (double*) cc.getPinnedBuffer();
         for (int i = 0; i < numParticles; ++i) {
             const Vec3& p = positions[order[i]];
@@ -197,26 +307,34 @@ void CommonUpdateStateDataKernel::setPositions(ContextImpl& context, const vecto
     }
     else {
         float* pos = (float*) cc.getPinnedBuffer();
-        for (int i = 0; i < numParticles; ++i) {
-            const Vec3& p = positions[order[i]];
-            pos[3*i] = (float) p[0];
-            pos[3*i+1] = (float) p[1];
-            pos[3*i+2] = (float) p[2];
-        }
+        auto copyPositions = [&] (int start, int end) {
+            for (int i = start; i < end; ++i) {
+                const Vec3& p = positions[order[i]];
+                pos[3*i] = (float) p[0];
+                pos[3*i+1] = (float) p[1];
+                pos[3*i+2] = (float) p[2];
+            }
+        };
+        if (!parallelPositions || !runParallelPositionCopy(cc.getThreadPool(), numParticles, copyPositions))
+            copyPositions(0, numParticles);
         floatBuffer.upload(pos);
         copyFloatKernel->setArg(1, cc.getPosq());
         copyFloatKernel->execute(numParticles);
     }
-    if (cc.getUseMixedPrecision()) {
+    if (cc.getUseMixedPrecision() && !fusedPositions) {
         mm_float4* posCorrection = (mm_float4*) cc.getPinnedBuffer();
-        for (int i = 0; i < numParticles; ++i) {
-            mm_float4& c = posCorrection[i];
-            const Vec3& p = positions[order[i]];
-            c.x = (float) (p[0]-(float)p[0]);
-            c.y = (float) (p[1]-(float)p[1]);
-            c.z = (float) (p[2]-(float)p[2]);
-            c.w = 0;
-        }
+        auto copyCorrections = [&] (int start, int end) {
+            for (int i = start; i < end; ++i) {
+                mm_float4& c = posCorrection[i];
+                const Vec3& p = positions[order[i]];
+                c.x = (float) (p[0]-(float)p[0]);
+                c.y = (float) (p[1]-(float)p[1]);
+                c.z = (float) (p[2]-(float)p[2]);
+                c.w = 0;
+            }
+        };
+        if (!parallelPositions || !runParallelPositionCopy(cc.getThreadPool(), numParticles, copyCorrections))
+            copyCorrections(0, numParticles);
         for (int i = numParticles; i < cc.getPaddedNumAtoms(); i++)
             posCorrection[i] = mm_float4(0.0f, 0.0f, 0.0f, 0.0f);
         cc.getPosqCorrection().upload(posCorrection);
