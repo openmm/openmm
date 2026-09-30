@@ -35,6 +35,7 @@ This series introduces the OpenCL/Common baseline in component-sized changes bef
 | `OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD` | Fixed-point ConstantPotential PME grid | Common floating-grid spreading |
 | `OPENMM_METAL_FAST_BLOCK_BOUNDS` | Serial atom-block bounds | SIMD-cooperative bounds and radius reduction |
 | `OPENMM_METAL_FAST_FP16_BOUNDS` | Float sorted/large bounding boxes | Conservatively rounded half4 storage; public Common bounds remain float |
+| `OPENMM_METAL_FAST_NEIGHBOR_BALLOT` | OpenCL local flags and atom prefix sums | SIMD ballot/popcount block iteration and atom compaction |
 | `OPENMM_METAL_FAST_SPARSE_PAIRS` | All interactions in tiles | Separate sparse pairs and the CUDA sparse-pair force loop |
 | `OPENMM_METAL_FAST_CUSTOM_GB_VALUE_SHUFFLE` | Common CustomGB value local arrays | Register exchange for value, parameters, and secondary accumulators |
 | `OPENMM_METAL_FAST_CUSTOM_GB_ENERGY_SHUFFLE` | Common CustomGB energy local arrays | Register exchange for force and parameter-derivative state |

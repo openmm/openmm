@@ -82,7 +82,7 @@ DEVICE half4 metalBoundsHalf(real4 value) {
 )";
 }
 
-/** @brief Apply independent block-bounds, FP16, and sparse-pair options to OpenCL. */
+/** @brief Apply independent bounds, ballot/compaction, and sparse-pair options to OpenCL. */
 inline std::string neighbors(std::string source, bool sparsePairs) {
 #if OPENMM_METAL_FAST_BLOCK_BOUNDS
     {
@@ -141,6 +141,35 @@ inline std::string neighbors(std::string source, bool sparsePairs) {
                     }
 )"+compact);
     }
+#if OPENMM_METAL_FAST_NEIGHBOR_BALLOT
+    replace(source, "    __local bool includeBlockFlags[GROUP_SIZE];", "");
+    replace(source, "    __local volatile short2 atomCountBuffer[GROUP_SIZE];", "");
+    const std::string loopStart =
+        "            includeBlockFlags[get_local_id(0)] = includeBlock2;\n"
+        "            SYNC_WARPS;\n"
+        "            for (int i = 0; i < TILE_SIZE; i++) {\n"
+        "                while (i < TILE_SIZE && !includeBlockFlags[warpStart+i])\n"
+        "                    i++;\n"
+        "                if (i < TILE_SIZE) {";
+    replace(source, loopStart,
+        "            uint includeBlockMask = simdBallot(includeBlock2);\n"
+        "            while (includeBlockMask != 0) {\n"
+        "                int i = ctz(includeBlockMask);\n"
+        "                includeBlockMask &= includeBlockMask-1;\n                {");
+    replace(source, "                else {\n                    SYNC_WARPS;\n                }", "");
+    size_t first = source.find("                    atomCountBuffer[get_local_id(0)].x = (interacts ? 1 : 0);");
+    size_t last = source.find("                    if (neighborsInBuffer > BUFFER_SIZE-TILE_SIZE)", first);
+    if (first == std::string::npos || last == std::string::npos)
+        throw OpenMMException("OpenCL neighbor compaction template changed");
+    source.replace(first, last-first, R"(
+                    uint atomMask = simdBallot(interacts);
+                    uint lowerLanes = (1u<<uint(indexInWarp))-1u;
+                    if (interacts)
+                        buffer[neighborsInBuffer+popcount(atomMask&lowerLanes)] = atom2;
+                    neighborsInBuffer += popcount(atomMask);
+                    SYNC_WARPS;
+)");
+#endif
     return source;
 }
 

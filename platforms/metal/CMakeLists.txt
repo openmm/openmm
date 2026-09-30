@@ -72,7 +72,7 @@ option(OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD "Use floating-grid spre
 
 # Each optional algorithm can be compared independently with the OpenCL path.
 set(METAL_OPTIMIZATION_SWITCHES
-    BLOCK_BOUNDS FP16_BOUNDS SPARSE_PAIRS CUSTOM_GB_VALUE_SHUFFLE CUSTOM_GB_ENERGY_SHUFFLE GBSA_BORN_SHUFFLE GBSA_FORCE_SHUFFLE DPD_PARTICLE_SHUFFLE DPD_TILE_BROADCAST CUSTOM_HBOND_SHUFFLE)
+    BLOCK_BOUNDS FP16_BOUNDS NEIGHBOR_BALLOT SPARSE_PAIRS CUSTOM_GB_VALUE_SHUFFLE CUSTOM_GB_ENERGY_SHUFFLE GBSA_BORN_SHUFFLE GBSA_FORCE_SHUFFLE DPD_PARTICLE_SHUFFLE DPD_TILE_BROADCAST CUSTOM_HBOND_SHUFFLE)
 foreach(feature IN LISTS METAL_OPTIMIZATION_SWITCHES)
     option(OPENMM_METAL_FAST_${feature} "Enable the independent Metal ${feature} algorithm" OFF)
 endforeach()
@@ -229,7 +229,7 @@ if(BUILD_TESTING)
         set_tests_properties(TestMetal${test} PROPERTIES SKIP_RETURN_CODE 77)
     endforeach()
     target_include_directories(TestMetalNonbondedOptimizations PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
-    foreach(feature IN ITEMS BLOCK_BOUNDS FP16_BOUNDS SPARSE_PAIRS)
+    foreach(feature IN ITEMS BLOCK_BOUNDS FP16_BOUNDS NEIGHBOR_BALLOT SPARSE_PAIRS)
         target_compile_definitions(TestMetalNonbondedOptimizations PRIVATE
             OPENMM_METAL_FAST_${feature}=$<BOOL:${OPENMM_METAL_FAST_${feature}}>)
     endforeach()
