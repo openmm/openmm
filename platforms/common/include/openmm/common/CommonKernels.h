@@ -1153,7 +1153,7 @@ private:
     ComputeContext& cc;
     int frequency;
     ComputeArray cmMomentum;
-    ComputeKernel kernel1, kernel2;
+    ComputeKernel kernel1, kernel2, applyCMKernel;
 };
 
 /**

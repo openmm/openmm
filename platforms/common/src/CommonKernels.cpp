@@ -52,6 +52,8 @@
 #include <iterator>
 #include <set>
 
+#include <cstdlib>
+
 using namespace OpenMM;
 using namespace std;
 using namespace Lepton;
@@ -3676,12 +3678,30 @@ void CommonRemoveCMMotionKernel::initialize(const System& system, const CMMotion
     ContextSelector selector(cc);
     frequency = force.getFrequency();
     int numAtoms = cc.getNumAtoms();
-    cmMomentum.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "cmMomentum");
+    // Match CudaContext::executeKernel(threads=numAtoms, blockSize=64).
+    const int numGroups = min((numAtoms+63)/64, cc.getNumThreadBlocks());
+    const bool eligible = (getPlatform().getName() == "CUDA" && cc.getUseMixedPrecision() &&
+            cc.getNumContexts() == 1 && numGroups > 1);
+    const char* reduceSetting = getenv("OPENMM_EXPERIMENT_CMM_REDUCE_ONCE");
+    const char* compactSetting = getenv("OPENMM_EXPERIMENT_CMM_COMPACT_BUFFER");
+    const bool reduceOnce = eligible && (reduceSetting != NULL && string(reduceSetting) == "1");
+    const bool compactBuffer = eligible && (compactSetting != NULL && string(compactSetting) == "1");
+    // Each producer block writes one partial.  The final slot is written only by
+    // the optional one-block reduction, before the separate velocity kernel.
+    int momentumSize = compactBuffer ? numGroups+(reduceOnce ? 1 : 0) : cc.getPaddedNumAtoms();
+    cmMomentum.initialize<mm_float4>(cc, momentumSize, "cmMomentum");
     double totalMass = 0.0;
     for (int i = 0; i < numAtoms; i++)
         totalMass += system.getParticleMass(i);
     map<string, string> defines;
     defines["INVERSE_TOTAL_MASS"] = cc.doubleToString(totalMass == 0 ? 0.0 : 1.0/totalMass);
+    if (reduceOnce) {
+        defines["CMM_REDUCE_ONCE"] = "1";
+        defines["CMM_ORIGINAL_NUM_GROUPS"] = cc.intToString(numGroups);
+    }
+    const char* warpSetting = getenv("OPENMM_EXPERIMENT_CMM_WARP_REDUCTION");
+    if (reduceOnce && warpSetting != NULL && string(warpSetting) == "1")
+        defines["CMM_WARP_REDUCTION"] = "1";
     ComputeProgram program = cc.compileProgram(CommonKernelSources::removeCM, defines);
     kernel1 = program->createKernel("calcCenterOfMassMomentum");
     kernel1->addArg(numAtoms);
@@ -3691,12 +3711,23 @@ void CommonRemoveCMMotionKernel::initialize(const System& system, const CMMotion
     kernel2->addArg(numAtoms);
     kernel2->addArg(cc.getVelm());
     kernel2->addArg(cmMomentum);
+    if (reduceOnce) {
+        applyCMKernel = program->createKernel("applyCenterOfMassVelocity");
+        applyCMKernel->addArg(numAtoms);
+        applyCMKernel->addArg(cc.getVelm());
+        applyCMKernel->addArg(cmMomentum);
+    }
 }
 
 void CommonRemoveCMMotionKernel::execute(ContextImpl& context) {
     ContextSelector selector(cc);
     kernel1->execute(cc.getNumAtoms(), 64);
-    kernel2->execute(cc.getNumAtoms(), 64);
+    if (applyCMKernel) {
+        kernel2->execute(64, 64);
+        applyCMKernel->execute(cc.getNumAtoms(), 64);
+    }
+    else
+        kernel2->execute(cc.getNumAtoms(), 64);
 }
 
 class CommonCalcRMSDForceKernel::ForceInfo : public ComputeForceInfo {
