@@ -99,6 +99,9 @@ public:
      * @param nz      the number of grid points along the Z axis
      */
     void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+protected:
+    // Optional CUDA experiment; other platforms retain their existing behavior.
+    virtual bool supportsPmeExperiments() const { return false; }
 private:
     class SortTrait : public ComputeSortImpl::SortTrait {
         int getDataSize() const {return 8;}

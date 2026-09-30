@@ -34,11 +34,18 @@
 #include <algorithm>
 #include <assert.h>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <iterator>
 #include <set>
 
 using namespace OpenMM;
 using namespace std;
+
+static bool isPmeExperimentEnabled(const char* name) {
+    const char* value = getenv(name);
+    return value != NULL && strcmp(value, "1") == 0;
+}
 
 class CommonCalcNonbondedForceKernel::ForceInfo : public ComputeForceInfo {
 public:
@@ -596,7 +603,19 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
 
     // Add the interaction to the default nonbonded kernel.
 
-    string source = cc.replaceStrings(CommonKernelSources::coulombLennardJones, defines);
+    string source = CommonKernelSources::coulombLennardJones;
+    const bool useEarlyPairGuard = supportsPmeExperiments() &&
+            isPmeExperimentEnabled("OPENMM_EXPERIMENT_DIRECT_CUTOFF_GUARD") &&
+            nonbondedMethod == PME && cc.getUseMixedPrecision() && !hasOffsets &&
+            hasCoulomb && hasLJ && !force.getUseSwitchingFunction() && cc.getNumContexts() == 1;
+    if (useEarlyPairGuard) {
+        // Only this standard interaction is guarded. Other interactions,
+        // collectives, periodic mapping and final force accumulation stay outside.
+        source = "{\nif (!isExcluded && r2 < CUTOFF_SQUARED) {\n"
+                 "real invR = RSQRT(r2);\nreal r = r2*invR;\n"+source+
+                 "\n} else {\ntempEnergy += (real) 0;\ndEdR += (real) 0;\n}\n}\n";
+    }
+    source = cc.replaceStrings(source, defines);
     charges.initialize(cc, cc.getPaddedNumAtoms(), cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "charges");
     baseParticleParams.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "baseParticleParams");
     baseParticleParams.upload(baseParticleParamVec);

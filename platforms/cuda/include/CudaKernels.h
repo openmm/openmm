@@ -97,6 +97,8 @@ public:
      * @param force      the NonbondedForce this kernel will be used for
      */
     void initialize(const System& system, const NonbondedForce& force);
+protected:
+    bool supportsPmeExperiments() const override { return true; }
 private:
     CudaContext& cu;
 };
