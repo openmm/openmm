@@ -45,13 +45,14 @@ void testSelection() {
         CommonKernelSources::gbsaObc, CommonKernelSources::dpd, CommonKernelSources::customHbondForce};
     for (const string& source : templates)
         ASSERT_EQUAL(source, MetalPairwiseOptimizations::apply(source, Settings()));
-    vector<Settings> options(5);
+    vector<Settings> options(6);
     options[0].customGBValue = true;
     options[1].customGBEnergy = true;
-    options[2].dpdParticles = true;
-    options[3].dpdTile = true;
-    options[4].customHbond = true;
-    const int selected[] = {0,1,3,3,4};
+    options[2].gbsaBorn = true;
+    options[3].dpdParticles = true;
+    options[4].dpdTile = true;
+    options[5].customHbond = true;
+    const int selected[] = {0,1,2,3,3,4};
     for (int i = 0; i < options.size(); i++) {
         for (int j = 0; j < templates.size(); j++) {
             string source = MetalPairwiseOptimizations::apply(templates[j], options[i]);
@@ -68,9 +69,12 @@ void testSelection() {
         changed.insert(changed.find("KERNEL void"), "// modified template skeleton\n");
         ASSERT_EQUAL(changed, MetalPairwiseOptimizations::apply(changed, options[i]));
     }
-    // The two DPD strategies can also be combined.
+    // Born-sum transport leaves Force1 unchanged; DPD strategies can be combined.
     Settings both;
-    both.dpdParticles = both.dpdTile = true;
+    both.gbsaBorn = both.dpdParticles = both.dpdTile = true;
+    const string gbsaSource = MetalPairwiseOptimizations::apply(CommonKernelSources::gbsaObc, both);
+    ASSERT(gbsaSource.find("LOCAL AtomData1") == string::npos);
+    ASSERT(gbsaSource.find("LOCAL AtomData2") != string::npos);
     ASSERT(MetalPairwiseOptimizations::apply(CommonKernelSources::dpd, both).find("LOCAL mixed3 localPos") == string::npos);
 }
 

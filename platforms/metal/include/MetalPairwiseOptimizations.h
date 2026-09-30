@@ -44,6 +44,7 @@ public:
     struct Settings {
         bool customGBValue = false;
         bool customGBEnergy = false;
+        bool gbsaBorn = false;
         bool dpdParticles = false;
         bool dpdTile = false;
         bool customHbond = false;
