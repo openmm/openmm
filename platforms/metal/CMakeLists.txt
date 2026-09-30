@@ -189,7 +189,7 @@ if(BUILD_TESTING)
     add_dependencies(TestMetalPlatform OpenMMMetal)
     add_test(NAME TestMetalPlatform COMMAND TestMetalPlatform)
     set_tests_properties(TestMetalPlatform PROPERTIES SKIP_RETURN_CODE 77 LABELS "Metal")
-    foreach(test IN ITEMS SourceAdapter Sort FFT3D Primitives PairwiseOptimizations ReductionOptimizations NonbondedOptimizations)
+    foreach(test IN ITEMS CommonSources SourceAdapter Sort FFT3D Primitives PairwiseOptimizations ReductionOptimizations NonbondedOptimizations)
         add_executable(TestMetal${test} tests/TestMetal${test}.cpp)
         target_include_directories(TestMetal${test} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/../common/src"
             "${CMAKE_CURRENT_BINARY_DIR}/src")
