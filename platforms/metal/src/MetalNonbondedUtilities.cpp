@@ -272,15 +272,16 @@ void MetalNonbondedUtilities::initialize(const System& system) {
             singlePairs.initialize<mm_int2>(context, (int) maxPairs, "singlePairs");
         }
         int elementSize = sizeof(float);
+        int boundsElementSize = OPENMM_METAL_FAST_FP16_BOUNDS ? 2 : elementSize;
         blockCenter.initialize(context, numAtomBlocks, 4*elementSize, "blockCenter");
         blockBoundingBox.initialize(context, numAtomBlocks, 4*elementSize, "blockBoundingBox");
         sortedBlocks.initialize<unsigned int>(context, numAtomBlocks, "sortedBlocks");
         sortedBlockCenter.initialize(context, numAtomBlocks+1, 4*elementSize, "sortedBlockCenter");
-        sortedBlockBoundingBox.initialize(context, numAtomBlocks+1, 4*elementSize, "sortedBlockBoundingBox");
+        sortedBlockBoundingBox.initialize(context, numAtomBlocks+1, 4*boundsElementSize, "sortedBlockBoundingBox");
         numBlockSizes = min((context.getNumAtomBlocks()+63)/64, context.getNumThreadBlocks());
         blockSizeRange.initialize(context, numBlockSizes, 2*elementSize, "blockSizeRange");
         largeBlockCenter.initialize(context, numAtomBlocks, 4*elementSize, "largeBlockCenter");
-        largeBlockBoundingBox.initialize(context, numAtomBlocks, 4*elementSize, "largeBlockBoundingBox");
+        largeBlockBoundingBox.initialize(context, numAtomBlocks, 4*boundsElementSize, "largeBlockBoundingBox");
         oldPositions.initialize(context, numAtoms, 4*elementSize, "oldPositions");
         rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
         blockSorter = context.createSort(new BlockSortTrait(), numAtomBlocks, false);
@@ -495,6 +496,11 @@ void MetalNonbondedUtilities::createKernelsForGroups(int groups) {
     if (useCutoff) {
         double paddedCutoff = padCutoff(maxCutoff);
         map<string, string> defines;
+#if OPENMM_METAL_FAST_FP16_BOUNDS
+        // Half overflow is represented by +Inf, an outward bound. Keep this
+        // neighbor program safe even when force kernels select fast math.
+        defines["OPENMM_METAL_REQUIRE_SAFE_MATH"] = "1";
+#endif
         defines["TILE_SIZE"] = context.intToString(MetalContext::TileSize);
         defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
         defines["PADDING"] = context.doubleToString(paddedCutoff-maxCutoff);
