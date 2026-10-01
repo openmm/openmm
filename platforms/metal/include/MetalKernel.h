@@ -1,0 +1,113 @@
+#ifndef OPENMM_METALKERNEL_H_
+#define OPENMM_METALKERNEL_H_
+
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit.                   *
+ * See https://openmm.org/development.                                        *
+ *                                                                            *
+ * Portions copyright (c) 2026 Stanford University and the Authors.           *
+ * Authors: Peter Eastman                                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU Lesser General Public License as published   *
+ * by the Free Software Foundation, either version 3 of the License, or       *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU Lesser General Public License for more details.                        *
+ *                                                                            *
+ * You should have received a copy of the GNU Lesser General Public License   *
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
+ * -------------------------------------------------------------------------- */
+
+#include "MetalArray.h"
+#include "MetalContext.h"
+#include <string>
+#include <vector>
+
+namespace OpenMM {
+
+/**
+ * This is the Metal implementation of the ComputeKernelImpl interface.
+ */
+
+class MetalKernel : public ComputeKernelImpl {
+public:
+    /**
+     * Create a new MetalKernel.
+     * 
+     * @param context      the context this kernel belongs to
+     * @param pipeline     the pipeline state wrapping the kernel to be invoked
+     * @param name         the name of the kernel function
+     */
+    MetalKernel(MetalContext& context, MTL::ComputePipelineState* pipeline, const std::string& name);
+    ~MetalKernel();
+    /**
+     * Get the name of this kernel.
+     */
+    std::string getName() const;
+    /**
+     * Get the maximum block size that can be used when executing this kernel.
+     */
+    int getMaxBlockSize() const;
+    /**
+     * Execute this kernel.
+     *
+     * @param threads      the maximum number of threads that should be used.  Depending on the
+     *                     computing device, it may choose to use fewer threads than this number.
+     * @param blockSize    the number of threads in each thread block.  If this is omitted, a
+     *                     default size that is appropriate for the computing device is used.
+     */
+    void execute(int threads, int blockSize=-1);
+protected:
+    /**
+     * Add an argument to pass the kernel when it is invoked, where the value is a
+     * subclass of ArrayInterface.
+     * 
+     * @param value     the value to pass to the kernel
+     */
+    void addArrayArg(ArrayInterface& value);
+    /**
+     * Add an argument to pass the kernel when it is invoked, where the value is a primitive type.
+     * 
+     * @param value    a pointer to the argument value
+     * @param size     the size of the value in bytes
+     */
+    void addPrimitiveArg(const void* value, int size);
+    /**
+     * Add a placeholder for an argument without specifying its value.
+     */
+    void addEmptyArg();
+    /**
+     * Add an argument to pass the kernel when it is invoked, where the value is a
+     * subclass of ArrayInterface.
+     * 
+     * @param index     the index of the argument to set
+     * @param value     the value to pass to the kernel
+     */
+    void setArrayArg(int index, ArrayInterface& value);
+    /**
+     * Add an argument to pass the kernel when it is invoked, where the value is a primitive type.
+     * 
+     * @param index     the index of the argument to set
+     * @param value    a pointer to the argument value
+     * @param size     the size of the value in bytes
+     */
+    void setPrimitiveArg(int index, const void* value, int size);
+private:
+    MetalContext& context;
+    MTL::ComputePipelineState* pipeline;
+    std::string name;
+    std::vector<mm_double4> primitiveArgs;
+    std::vector<MetalArray*> arrayArgs;
+    std::vector<void*> argPointers;
+};
+
+} // namespace OpenMM
+
+#endif /*OPENMM_METALKERNEL_H_*/

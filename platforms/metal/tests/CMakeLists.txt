@@ -1,0 +1,19 @@
+#
+# Testing
+#
+
+ENABLE_TESTING()
+
+# Automatically create tests using files named "Test*.cpp"
+FILE(GLOB TEST_PROGS "*Test*.cpp")
+FOREACH(TEST_PROG ${TEST_PROGS})
+    GET_FILENAME_COMPONENT(TEST_ROOT ${TEST_PROG} NAME_WE)
+
+    # Link with shared library
+    ADD_EXECUTABLE(${TEST_ROOT} ${TEST_PROG})
+    TARGET_LINK_LIBRARIES(${TEST_ROOT} ${SHARED_TARGET})
+    SET_TARGET_PROPERTIES(${TEST_ROOT} PROPERTIES LINK_FLAGS "${EXTRA_COMPILE_FLAGS} -framework Foundation -framework Metal -framework QuartzCore" COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}")
+
+    ADD_TEST(${TEST_ROOT}Single ${EXECUTABLE_OUTPUT_PATH}/${TEST_ROOT} single)
+
+ENDFOREACH(TEST_PROG ${TEST_PROGS})

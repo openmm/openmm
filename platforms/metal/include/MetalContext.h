@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUDACONTEXT_H_
-#define OPENMM_CUDACONTEXT_H_
+#ifndef OPENMM_METALCONTEXT_H_
+#define OPENMM_METALCONTEXT_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -25,27 +25,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include "Metal.hpp"
 #include <map>
 #include <string>
 #include <utility>
-#define __CL_ENABLE_EXCEPTIONS
-#ifdef _MSC_VER
-    // Prevent Windows from defining macros that interfere with other code.
-    #define NOMINMAX
-#endif
-#include <cuda.h>
-#include <builtin_types.h>
-#include <vector_functions.h>
-#include "openmm/common/windowsExportCommon.h"
-#include "CudaArray.h"
-#include "CudaBondedUtilities.h"
-#include "CudaExpressionUtilities.h"
-#include "CudaIntegrationUtilities.h"
-#include "CudaNonbondedUtilities.h"
-#include "CudaPlatform.h"
-#include "CudaQueue.h"
+#include "MetalArray.h"
+#include "MetalIntegrationUtilities.h"
+#include "MetalNonbondedUtilities.h"
+#include "MetalPlatform.h"
 #include "openmm/OpenMMException.h"
+#include "openmm/common/BondedUtilities.h"
 #include "openmm/common/ComputeContext.h"
+#include "openmm/common/ExpressionUtilities.h"
 #include "openmm/Kernel.h"
 
 typedef unsigned int tileflags;
@@ -53,17 +44,10 @@ typedef unsigned int tileflags;
 namespace OpenMM {
 
 /**
- * This class contains the information associated with a Context by the CUDA Platform.  Each CudaContext is
- * specific to a particular device, and manages data structures and kernels for that device.  When running a simulation
- * in parallel on multiple devices, there is a separate CudaContext for each one.  The list of all contexts is
- * stored in the CudaPlatform::PlatformData.
- * <p>
- * In addition, a worker thread is created for each CudaContext.  This is used for parallel computations, so that
- * blocking calls to one device will not block other devices.  When only a single device is being used, the worker
- * thread is not used and calculations are performed on the main application thread.
+ * This class contains the information associated with a Context by the Metal Platform.
  */
 
-class OPENMM_EXPORT_COMMON CudaContext : public ComputeContext {
+class MetalContext : public ComputeContext {
 public:
     class WorkTask;
     class WorkThread;
@@ -72,69 +56,29 @@ public:
     class ForcePostComputation;
     static const int ThreadBlockSize;
     static const int TileSize;
-    CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const std::string& precision,
-            const std::string& tempDir, CudaPlatform::PlatformData& platformData, CudaContext* originalContext);
-    ~CudaContext();
+    MetalContext(const System& system, const std::string& precision, MetalPlatform::PlatformData& platformData, MetalContext* originalContext);
+    ~MetalContext();
     /**
      * This is called to initialize internal data structures after all Forces in the system
      * have been initialized.
      */
     void initialize();
     /**
-     * Get the CUcontext associated with this object.
+     * Get the MTL::Device associated with this object.
      */
-    CUcontext getContext() {
-        return context;
-    }
-    /**
-     * Get whether the CUcontext associated with this object is currently a valid contex.
-     */
-    bool getContextIsValid() const {
-        return contextIsValid;
-    }
-    /**
-     * Set the CUcontext associated with this object to be the current context.  If the context is not
-     * valid, this returns without doing anything.
-     */
-    void setAsCurrent();
-    /**
-     * Push the CUcontext associated with this object to be the current context.  If the context is not
-     * valid, this returns without doing anything.
-     */
-    void pushAsCurrent();
-    /**
-     * Pop the CUcontext associated with this object off the stack of contexts.  If the context is not
-     * valid, this returns without doing anything.
-     */
-    void popAsCurrent();
-    /**
-     * Get the CUdevice associated with this object.
-     */
-    CUdevice getDevice() {
-        return device;
-    }
-    /**
-     * Get the compute capability of the device associated with this object.
-     */
-    double getComputeCapability() const {
-        return computeCapability;
-    }
-    /**
-     * Get the index of the CUdevice associated with this object.
-     */
-    int getDeviceIndex() const {
-        return deviceIndex;
+    MTL::Device& getDevice() {
+        return *device;
     }
     /**
      * Get the PlatformData object this context is part of.
      */
-    CudaPlatform::PlatformData& getPlatformData() {
+    MetalPlatform::PlatformData& getPlatformData() {
         return platformData;
     }
     /**
      * Get the number of contexts being used for the current simulation.
      * This is relevant when a simulation is parallelized across multiple devices.  In that case,
-     * one CudaContext is created for each device.
+     * one MetalContext is created for each device.
      */
     int getNumContexts() const {
         return platformData.contexts.size();
@@ -167,14 +111,10 @@ public:
      */
     ComputeQueue createQueue();
     /**
-     * Get the stream currently being used for execution.
-     */
-    CUstream getCurrentStream();
-    /**
      * Construct an uninitialized array of the appropriate class for this platform.  The returned
      * value should be created on the heap with the "new" operator.
      */
-    CudaArray* createArray();
+    MetalArray* createArray();
     /**
      * Construct a ComputeEvent object of the appropriate class for this platform.
      */
@@ -200,11 +140,11 @@ public:
      */
     ComputeProgram compileProgram(const std::string source, const std::map<std::string, std::string>& defines=std::map<std::string, std::string>());
     /**
-     * Convert an array to an CudaArray.  If the argument is already an CudaArray, this simply casts it.
-     * If the argument is a ComputeArray that wraps a CudaArray, this returns the wrapped array.  For any
+     * Convert an array to an MetalArray.  If the argument is already an MetalArray, this simply casts it.
+     * If the argument is a ComputeArray that wraps a MetalArray, this returns the wrapped array.  For any
      * other argument, this throws an exception.
      */
-    CudaArray& unwrap(ArrayInterface& array) const;
+    MetalArray& unwrap(ArrayInterface& array) const;
     /**
      * Get the array which contains the force on each atom (represented as three long longs in 64 bit fixed point).
      */
@@ -212,23 +152,24 @@ public:
         return longForceBuffer;
     }
     /**
-     * The CUDA platform does not use floating point force buffers, so this throws an exception.
+     * The Metal platform does not use floating point force buffers, so this throws an exception.
      */
     ArrayInterface& getFloatForceBuffer() {
-        throw OpenMMException("CUDA platform does not use floating point force buffers");
+        throw OpenMMException("Metal platform does not use floating point force buffers");
     }
     /**
-     * All CUDA devices support 64 bit atomics, so this throws an exception.
+     * The Metal platform does not use floating point force buffers, so this throws an exception.
      */
     ArrayInterface& getForceBuffers() {
-        throw OpenMMException("CUDA platform does not use floating point force buffers");
+        throw OpenMMException("Metal platform does not use floating point force buffers");
     }
     /**
-     * Get a pointer to a block of pinned memory that can be used for efficient transfers between host and device.
-     * This is guaranteed to be at least as large as any of the arrays returned by methods of this class.
+     * Because Apple GPUs use unified memory, there is no such thing as pinned memory.  This just returns a pointer
+     * to a block of ordinary memory.  It is guaranteed to be at least as large as any of the arrays returned by methods
+     * of this class.
      */
     void* getPinnedBuffer() {
-        return pinnedBuffer;
+        return pinnedBuffer.data();
     }
     /**
      * Get a shared ThreadPool that code can use to parallelize operations.
@@ -241,30 +182,6 @@ public:
         return getPlatformData().threads;
     }
     /**
-     * Create a CUDA module from source code.
-     *
-     * @param source             the source code of the module
-     * @param optimizationFlags  the optimization flags to pass to the CUDA compiler.  If this is
-     *                           omitted, a default set of options will be used
-     */
-    CUmodule createModule(const std::string source, const char* optimizationFlags = NULL);
-    /**
-     * Create a CUDA module from source code.
-     *
-     * @param source             the source code of the module
-     * @param defines            a set of preprocessor definitions (name, value) to define when compiling the program
-     * @param optimizationFlags  the optimization flags to pass to the CUDA compiler.  If this is
-     *                           omitted, a default set of options will be used
-     */
-    CUmodule createModule(const std::string source, const std::map<std::string, std::string>& defines, const char* optimizationFlags = NULL);
-    /**
-     * Get a kernel from a CUDA module.
-     *
-     * @param module    the module to get the kernel from
-     * @param name      the name of the kernel to get
-     */
-    CUfunction getKernel(CUmodule& module, const std::string& name);
-    /**
      * Execute a kernel.
      *
      * @param kernel       the kernel to execute
@@ -273,7 +190,7 @@ public:
      * @param blockSize    the size of each thread block to use
      * @param sharedSize   the amount of dynamic shared memory to allocated for the kernel, in bytes
      */
-    void executeKernel(CUfunction kernel, void** arguments, int workUnits, int blockSize = -1, unsigned int sharedSize = 0);
+//    void executeKernel(CUfunction kernel, void** arguments, int workUnits, int blockSize = -1, unsigned int sharedSize = 0);
     /**
      * Compute the largest thread block size that can be used for a kernel that requires a particular amount of
      * shared memory per thread.
@@ -308,18 +225,20 @@ public:
      * Get whether the device being used supports 64 bit atomic operations on global memory.
      */
     bool getSupports64BitGlobalAtomics() const {
-        return true;
+        return false;
     }
     /**
      * Get whether the device being used supports double precision math.
      */
     bool getSupportsDoublePrecision() const {
-        return true;
+        return false;
     }
     /**
-     * Convert a CUDA result code to the corresponding string description.
+     * Get the number of cores in the GPU.
      */
-    static std::string getErrorString(CUresult result);
+    int getNumGPUCores() const {
+        return numGpuCores;
+    }
     /**
      * Get the vectors defining the periodic box.
      */
@@ -332,86 +251,51 @@ public:
      * Set the vectors defining the periodic box.
      */
     void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) {
-        periodicBoxVecX = make_double4(a[0], a[1], a[2], 0.0);
-        periodicBoxVecY = make_double4(b[0], b[1], b[2], 0.0);
-        periodicBoxVecZ = make_double4(c[0], c[1], c[2], 0.0);
-        periodicBoxVecXFloat = make_float4((float) a[0], (float) a[1], (float) a[2], 0.0f);
-        periodicBoxVecYFloat = make_float4((float) b[0], (float) b[1], (float) b[2], 0.0f);
-        periodicBoxVecZFloat = make_float4((float) c[0], (float) c[1], (float) c[2], 0.0f);
-        periodicBoxSize = make_double4(a[0], b[1], c[2], 0.0);
-        invPeriodicBoxSize = make_double4(1.0/a[0], 1.0/b[1], 1.0/c[2], 0.0);
-        periodicBoxSizeFloat = make_float4((float) a[0], (float) b[1], (float) c[2], 0.0f);
-        invPeriodicBoxSizeFloat = make_float4(1.0f/(float) a[0], 1.0f/(float) b[1], 1.0f/(float) c[2], 0.0f);
+        periodicBoxVecX = mm_double4(a[0], a[1], a[2], 0.0);
+        periodicBoxVecY = mm_double4(b[0], b[1], b[2], 0.0);
+        periodicBoxVecZ = mm_double4(c[0], c[1], c[2], 0.0);
+        periodicBoxVecXFloat = mm_float4((float) a[0], (float) a[1], (float) a[2], 0.0f);
+        periodicBoxVecYFloat = mm_float4((float) b[0], (float) b[1], (float) b[2], 0.0f);
+        periodicBoxVecZFloat = mm_float4((float) c[0], (float) c[1], (float) c[2], 0.0f);
+        periodicBoxSize = mm_double4(a[0], b[1], c[2], 0.0);
+        invPeriodicBoxSize = mm_double4(1.0/a[0], 1.0/b[1], 1.0/c[2], 0.0);
+        periodicBoxSizeFloat = mm_float4((float) a[0], (float) b[1], (float) c[2], 0.0f);
+        invPeriodicBoxSizeFloat = mm_float4(1.0f/(float) a[0], 1.0f/(float) b[1], 1.0f/(float) c[2], 0.0f);
     }
     /**
      * Get the size of the periodic box.
      */
-    double4 getPeriodicBoxSize() const {
+    mm_double4 getPeriodicBoxSize() const {
         return periodicBoxSize;
     }
     /**
      * Get the inverse of the size of the periodic box.
      */
-    double4 getInvPeriodicBoxSize() const {
+    mm_double4 getInvPeriodicBoxSize() const {
         return invPeriodicBoxSize;
     }
     /**
-     * Get a pointer to the size of the periodic box, represented as either a float4 or double4 depending on
-     * this context's precision.  This value is suitable for passing to kernels as an argument.
+     * Get the MetalIntegrationUtilities for this context.
      */
-    void* getPeriodicBoxSizePointer() {
-        return (useDoublePrecision ? reinterpret_cast<void*>(&periodicBoxSize) : reinterpret_cast<void*>(&periodicBoxSizeFloat));
-    }
-    /**
-     * Get a pointer to the inverse of the size of the periodic box, represented as either a float4 or double4 depending on
-     * this context's precision.  This value is suitable for passing to kernels as an argument.
-     */
-    void* getInvPeriodicBoxSizePointer() {
-        return (useDoublePrecision ? reinterpret_cast<void*>(&invPeriodicBoxSize) : reinterpret_cast<void*>(&invPeriodicBoxSizeFloat));
-    }
-    /**
-     * Get a pointer to the first periodic box vector, represented as either a float4 or double4 depending on
-     * this context's precision.  This value is suitable for passing to kernels as an argument.
-     */
-    void* getPeriodicBoxVecXPointer() {
-        return (useDoublePrecision ? reinterpret_cast<void*>(&periodicBoxVecX) : reinterpret_cast<void*>(&periodicBoxVecXFloat));
-    }
-    /**
-     * Get a pointer to the second periodic box vector, represented as either a float4 or double4 depending on
-     * this context's precision.  This value is suitable for passing to kernels as an argument.
-     */
-    void* getPeriodicBoxVecYPointer() {
-        return (useDoublePrecision ? reinterpret_cast<void*>(&periodicBoxVecY) : reinterpret_cast<void*>(&periodicBoxVecYFloat));
-    }
-    /**
-     * Get a pointer to the third periodic box vector, represented as either a float4 or double4 depending on
-     * this context's precision.  This value is suitable for passing to kernels as an argument.
-     */
-    void* getPeriodicBoxVecZPointer() {
-        return (useDoublePrecision ? reinterpret_cast<void*>(&periodicBoxVecZ) : reinterpret_cast<void*>(&periodicBoxVecZFloat));
-    }
-    /**
-     * Get the CudaIntegrationUtilities for this context.
-     */
-    CudaIntegrationUtilities& getIntegrationUtilities() {
+    MetalIntegrationUtilities& getIntegrationUtilities() {
         return *integration;
     }
     /**
-     * Get the CudaExpressionUtilities for this context.
+     * Get the MetalExpressionUtilities for this context.
      */
-    CudaExpressionUtilities& getExpressionUtilities() {
+    ExpressionUtilities& getExpressionUtilities() {
         return *expression;
     }
     /**
-     * Get the CudaBondedUtilities for this context.
+     * Get the MetalBondedUtilities for this context.
      */
-    CudaBondedUtilities& getBondedUtilities() {
+    BondedUtilities& getBondedUtilities() {
         return *bonded;
     }
     /**
-     * Get the CudaNonbondedUtilities for this context.
+     * Get the MetalNonbondedUtilities for this context.
      */
-    CudaNonbondedUtilities& getNonbondedUtilities() {
+    MetalNonbondedUtilities& getNonbondedUtilities() {
         return *nonbonded;
     }
     /**
@@ -420,8 +304,8 @@ public:
      * separate from the standard one.  The caller is responsible for deleting the object
      * when it is no longer needed.
      */
-    CudaNonbondedUtilities* createNonbondedUtilities() {
-        return new CudaNonbondedUtilities(*this);
+    MetalNonbondedUtilities* createNonbondedUtilities() {
+        return new MetalNonbondedUtilities(*this);
     }
     /**
      * Create an object for performing 3D FFTs.  The caller is responsible for deleting
@@ -445,68 +329,46 @@ public:
      * expense of reduced simulation performance.
      */
     void flushQueue();
-    /**
-     * Get the flags that should be used when creating CUevent objects.
-     */
-    unsigned int getEventFlags();
-    /**
-     * Ensure that CUDA has been initialized.  This usually does not need to be called directly, because
-     * it is called automatically when a CudaContext is created.  You can call it if you want to be sure
-     * CUDA has been initialized without creating a CudaContext.
-     */
-    static void ensureCudaInitialized();
 private:
-    /**
-     * Compute a sorted list of device indices in decreasing order of desirability
-     */
-    std::vector<int> getDevicePrecedence();
-    static bool hasInitializedCuda;
-    double computeCapability;
-    CudaPlatform::PlatformData& platformData;
-    int deviceIndex;
-    int contextIndex;
-    int gpuArchitecture;
-    bool useBlockingSync, contextIsValid;
+    MetalPlatform::PlatformData& platformData;
+    int contextIndex, numGpuCores;
     bool isLinkedContext;
-    std::string tempDir, cacheDir;
-    float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
-    double4 periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, periodicBoxSize, invPeriodicBoxSize;
+    mm_float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
+    mm_double4 periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, periodicBoxSize, invPeriodicBoxSize;
     std::string defaultOptimizationOptions;
     std::map<std::string, std::string> compilationDefines;
-    CUcontext context;
-    CUdevice device;
-    void* pinnedBuffer;
-    CudaIntegrationUtilities* integration;
-    CudaExpressionUtilities* expression;
-    CudaBondedUtilities* bonded;
-    CudaNonbondedUtilities* nonbonded;
-    Kernel compilerKernel;
+    MTL::Device* device;
+    std::vector<char> pinnedBuffer;
+    MetalIntegrationUtilities* integration;
+    ExpressionUtilities* expression;
+    BondedUtilities* bonded;
+    MetalNonbondedUtilities* nonbonded;
 };
 
 /**
  * This class exists only for backward compatibility.  Use ComputeContext::WorkTask instead.
  */
-class OPENMM_EXPORT_COMMON CudaContext::WorkTask : public ComputeContext::WorkTask {
+class MetalContext::WorkTask : public ComputeContext::WorkTask {
 };
 
 /**
  * This class exists only for backward compatibility.  Use ComputeContext::ReorderListener instead.
  */
-class OPENMM_EXPORT_COMMON CudaContext::ReorderListener : public ComputeContext::ReorderListener {
+class MetalContext::ReorderListener : public ComputeContext::ReorderListener {
 };
 
 /**
  * This class exists only for backward compatibility.  Use ComputeContext::ForcePreComputation instead.
  */
-class OPENMM_EXPORT_COMMON CudaContext::ForcePreComputation : public ComputeContext::ForcePreComputation {
+class MetalContext::ForcePreComputation : public ComputeContext::ForcePreComputation {
 };
 
 /**
  * This class exists only for backward compatibility.  Use ComputeContext::ForcePostComputation instead.
  */
-class OPENMM_EXPORT_COMMON CudaContext::ForcePostComputation : public ComputeContext::ForcePostComputation {
+class MetalContext::ForcePostComputation : public ComputeContext::ForcePostComputation {
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDACONTEXT_H_*/
+#endif /*OPENMM_METALCONTEXT_H_*/
