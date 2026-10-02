@@ -260,30 +260,43 @@ inline void atomicMaxUInt64(device ulong* address, ulong value) {
 inline ulong atomicAddUInt64(device ulong*, ulong) = delete;
 
 /**
- * @brief Experimental equal-target reduction for the sparse-pair force helper.
+ * @brief Bounded adjacent-target reduction for the sparse-pair force helper.
  * Every active lane must pass the same buffer base. Indices may differ and
  * inactive lanes are excluded by the ballot. Q32.32 conversion happens BEFORE
  * this call: unsigned modular addition therefore preserves every integer bit.
- * Sum two 16-bit digits and the upper 32-bit word separately; digit sums fit in
- * uint for 32 lanes, while upper-word wrap is the desired modulo-2^64 result.
+ * Only contiguous runs of equal targets are combined. Disconnected runs use
+ * separate atomic writes, avoiding a loop over every distinct target. The
+ * segmented scan takes at most five rounds; unique targets skip it entirely.
+ * Shuffles use the current lane whenever a predecessor is inactive or lies
+ * outside the run, so no result depends on an inactive source lane.
  * This is not a fetch-add and no result may be read until the dispatch ends.
  */
 inline void metalAccumulateSparseForce(MetalExecutionContext context, device ulong* buffer, uint index, ulong value) {
 #if OPENMM_METAL_FAST_SPARSE_FORCE_AGGREGATION
-    uint remaining = simdBallot(true);
-    while (remaining != 0) {
-        uint leader = ctz(remaining);
-        uint target = simdShuffle(index, leader);
-        uint peers = simdBallot(index == target);
-        ulong selected = index == target ? value : ulong(0);
-        uint lower = simdReduceAdd(uint(selected)&0xffffu);
-        uint middle = simdReduceAdd((uint(selected)>>16)&0xffffu);
-        uint upper = simdReduceAdd(uint(selected>>32));
-        ulong total = ulong(lower)+(ulong(middle)<<16)+(ulong(upper)<<32);
-        if ((context.localId&31u) == leader)
-            metalAtomicAdd(buffer+target, total);
-        remaining &= ~peers;
+    uint lane = context.localId&31u;
+    uint active = simdBallot(true);
+    uint previous = lane == 0 ? lane : lane-1;
+    bool hasPrevious = lane != 0 && (active&(1u<<previous)) != 0;
+    uint previousIndex = simdShuffle(index, hasPrevious ? previous : lane);
+    uint heads = simdBallot(!hasPrevious || index != previousIndex);
+    if (heads == active) {
+        metalAtomicAdd(buffer+index, value);
+        return;
     }
+    // The head at or before this lane is always active, so clz never sees zero.
+    uint head = 31u-clz(heads&(0xffffffffu>>(31u-lane)));
+    uint distance = lane-head;
+    uint maxDistance = simdReduceMax(distance);
+    for (uint offset = 1; offset <= maxDistance; offset <<= 1) {
+        bool inRun = distance >= offset;
+        ulong preceding = simdShuffle(value, inRun ? lane-offset : lane);
+        if (inRun)
+            value += preceding;
+    }
+    // A run ends immediately before an inactive lane or a new head (or lane 32).
+    uint continued = (active&~heads)>>1;
+    if ((continued&(1u<<lane)) == 0)
+        metalAtomicAdd(buffer+index, value);
 #else
     metalAtomicAdd(buffer+index, value);
 #endif
