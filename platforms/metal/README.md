@@ -104,6 +104,7 @@ The OFF host path mirrors OpenCL's Apple-device scheduling where possible:
 - Neighbor counts are copied into dedicated reusable host storage before force
   dispatches. The later host check waits only for that copy, not the force work.
 - Autoclears submit groups of up to six buffers, like OpenCL's fused clears.
+  Energy reduction reuses pinned storage.
 
 These baseline changes do not enable optional algorithm switches or general
 command batching. Metal submission costs, VkFFT, and shader compilation still

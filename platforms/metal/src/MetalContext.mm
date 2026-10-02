@@ -668,9 +668,11 @@ double MetalContext::reduceEnergy() {
     reduceEnergyKernel->setArg(3, blockSize);
     static_cast<MetalKernel&>(*reduceEnergyKernel).setLocalArg(4, blockSize*sizeof(float));
     reduceEnergyKernel->execute(blockSize*energySum.getSize(), blockSize);
-    vector<float> partials;
-    energySum.download(partials);
-    return accumulate(partials.begin(), partials.end(), 0.0);
+    // Reuse the same pinned workspace as OpenCL's blocking energy readback.
+    float* partials = static_cast<float*>(getPinnedBuffer());
+    energySum.download(partials, false);
+    getCurrentMetalQueue().finish();
+    return accumulate(partials, partials+energySum.getSize(), 0.0);
 }
 
 mm_float4 MetalContext::getPeriodicBoxSize() const {

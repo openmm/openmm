@@ -332,6 +332,22 @@ void testAutoclearGroups() {
     }
 }
 
+/** Check that the OpenCL-sized reduction covers every energy slot. */
+void testEnergyReduction(MetalContext& context) {
+    ArrayInterface& energy = context.getEnergyBuffer();
+    vector<float> values(energy.getSize());
+    for (int wave = 0; wave < 3; wave++) {
+        double expected = 0;
+        for (int i = 0; i < values.size(); i++) {
+            values[i] = (i%11-5)*(wave+1)*0.125f;
+            expected += values[i];
+        }
+        energy.upload(values);
+        ASSERT_EQUAL(expected, context.reduceEnergy());
+    }
+    context.clearBuffer(energy);
+}
+
 void testQueues(MetalContext& metal, ComputeProgram program) {
     ComputeContext& context = metal;
     ComputeQueue original = context.getCurrentQueue(), secondary = context.createQueue();
@@ -490,6 +506,7 @@ int main() {
         testArguments(context, program);
         testClearing(*metal);
         testAutoclearGroups();
+        testEnergyReduction(*metal);
         testQueues(*metal, program);
         testSubmissionOrdering(context);
         testErrors(context, program);
