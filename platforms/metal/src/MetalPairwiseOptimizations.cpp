@@ -99,6 +99,41 @@ void scalarize(string& source, const string& name) {
         replace(source, name+"["+index+"]", name);
 }
 
+/**
+ * Keep the no-cutoff exclusion skip list in lane-owned registers, as in the
+ * Metal adaptation of CUDA nonbonded.  Tile position, list cursor, and chunk
+ * refill are uniform within each SIMD group, so every source lane is active.
+ * Only the three barriers protecting this array are removed; other Common
+ * synchronization remains unchanged.
+ */
+void registerExclusionSkipList(string& source, const string& bufferSize) {
+    replace(source, "LOCAL volatile int skipTiles["+bufferSize+"];", "int skipTile;", 1);
+    replace(source, "skipTiles[LOCAL_ID] = -1;", "skipTile = -1;", 1);
+    replace(source,
+            "        SYNC_WARPS;\n        while (skipTiles[tbx+TILE_SIZE-1] < pos) {\n            SYNC_WARPS;",
+            "        while (simdShuffle(skipTile, uint(TILE_SIZE-1)) < pos) {", 1);
+    replace(source, "skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;",
+            "skipTile = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;", 1);
+    replace(source, "skipTiles[LOCAL_ID] = end;", "skipTile = end;", 1);
+    replace(source,
+            "            currentSkipIndex = tbx;\n            SYNC_WARPS;\n        }\n"
+            "        while (skipTiles[currentSkipIndex] < pos)\n            currentSkipIndex++;\n"
+            "        includeTile = (skipTiles[currentSkipIndex] != pos);",
+            "            currentSkipIndex = tbx;\n        }\n"
+            "        while (simdShuffle(skipTile, uint(currentSkipIndex-tbx)) < pos)\n            currentSkipIndex++;\n"
+            "        includeTile = (simdShuffle(skipTile, uint(currentSkipIndex-tbx)) != pos);", 1);
+}
+
+/** Remove only audited tile-load barriers after all transported fields are registers. */
+void removeRegisterPreloadBarriers(string& source, const string& position) {
+    replace(source,
+            "            }\n            SYNC_WARPS;\n#ifdef USE_PERIODIC\n            if (singlePeriodicCopy)",
+            "            }\n#ifdef USE_PERIODIC\n            if (singlePeriodicCopy)", 1);
+    replace(source,
+            "APPLY_PERIODIC_TO_POS_WITH_CENTER("+position+", blockCenterX)\n                SYNC_WARPS;",
+            "APPLY_PERIODIC_TO_POS_WITH_CENTER("+position+", blockCenterX)", 1);
+}
+
 /** Keep diagonal broadcast shuffles before any cutoff or particle validity branch. */
 string customGB(string source) {
     const regex declaration("LOCAL ([A-Za-z0-9_]+) (local_[A-Za-z0-9_]+)\\[LOCAL_BUFFER_SIZE\\];");
@@ -146,6 +181,10 @@ string customGB(string source) {
     if (distance(sregex_iterator(source.begin(), source.end(), next), sregex_iterator()) != 3)
         throw OpenMMException("Missing Common CustomGB ring steps");
     source = regex_replace(source, next, "tj = (tj + 1) & (TILE_SIZE - 1);\n"+rotate);
+    registerExclusionSkipList(source, "LOCAL_BUFFER_SIZE");
+    replace(source, "            SYNC_WARPS;\n#ifdef USE_EXCLUSIONS\n            excl =",
+            "#ifdef USE_EXCLUSIONS\n            excl =", 1);
+    removeRegisterPreloadBarriers(source, "local_pos");
     return source;
 }
 

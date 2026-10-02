@@ -77,12 +77,30 @@ void testSelection() {
     ASSERT(MetalPairwiseOptimizations::apply(CommonKernelSources::dpd, both).find("LOCAL mixed3 localPos") == string::npos);
 }
 
+/** The skip-list rewrite follows only the selected pairwise register path. */
+void testExclusionSkipListSelection() {
+    const vector<string> templates = {CommonKernelSources::customGBValueN2, CommonKernelSources::customGBEnergyN2};
+    for (int i = 0; i < templates.size(); i++) {
+        Settings settings;
+        settings.customGBValue = i == 0;
+        settings.customGBEnergy = i == 1;
+        ASSERT_EQUAL(templates[i], MetalPairwiseOptimizations::apply(templates[i], Settings()));
+        const string fast = MetalPairwiseOptimizations::apply(templates[i], settings);
+        ASSERT(fast.find("skipTiles") == string::npos);
+        ASSERT(fast.find("SYNC_WARPS;") == string::npos);
+        ASSERT(fast.find("simdShuffle(skipTile, uint(TILE_SIZE-1))") != string::npos);
+        ASSERT(fast.find("simdShuffle(skipTile, uint(currentSkipIndex-tbx))") != string::npos);
+    }
+}
+
 /** Exact Common value template with asymmetric parameters and a parameter derivative. */
-void testCustomGBValue(int count, bool floating) {
+void testCustomGBValue(int count, bool floating, bool cutoff=false, bool periodic=false) {
     System system;
     for (int i = 0; i < count; i++) system.addParticle(1);
     MetalContext context(system, nullptr, nullptr, floating);
     const int padded = 32*((count+31)/32), blocks = padded/32;
+    // A half-step relative to the position lattice avoids coincident periodic images.
+    const float box = 10.0625f;
     map<string,string> substitutions;
     substitutions["PARAMETER_ARGUMENTS"] = ", GLOBAL const float4* global_params1, GLOBAL mm_ulong* global_dValue0dParam1";
     substitutions["ATOM_PARAMETER_DATA"] = "LOCAL float4 local_params1[LOCAL_BUFFER_SIZE];\nLOCAL real local_dValue0dParam1[LOCAL_BUFFER_SIZE];\n";
@@ -105,6 +123,9 @@ void testCustomGBValue(int count, bool floating) {
     vector<mm_int2> tiles;
     for (int i = 0; i < blocks; i++) tiles.push_back(mm_int2(i,i));
     if (blocks > 1) tiles.push_back(mm_int2(1,0));
+    // The large no-cutoff case crosses a full 32-entry exclusion-list chunk
+    // and ends with a partial chunk whose unused lanes must provide `end`.
+    if (count > 1024) ASSERT(tiles.size() > 32 && tiles.size()%32 != 0);
     sort(tiles.begin(), tiles.end(), [blocks](const mm_int2& a, const mm_int2& b) {
         return a.x+a.y*blocks-a.y*(a.y+1)/2 < b.x+b.y*blocks-b.y*(b.y+1)/2;
     });
@@ -125,7 +146,14 @@ void testCustomGBValue(int count, bool floating) {
     defines["LAST_EXCLUSION_TILE"] = to_string(tiles.size());
     defines["NUM_TILES_WITH_EXCLUSIONS"] = to_string(tiles.size());
     defines["USE_EXCLUSIONS"] = "1";
+    if (cutoff) {
+        defines["USE_CUTOFF"] = "1";
+        defines["CUTOFF"] = "2.5f";
+        defines["CUTOFF_SQUARED"] = "6.25f";
+    }
+    if (periodic) defines["USE_PERIODIC"] = "1";
     ComputeArray positions, params, exclusionBits, exclusionTiles, output, derivative;
+    ComputeArray neighborTiles, interactionCount, centers, sizes, neighborAtoms;
     positions.initialize<mm_float4>(context, padded, "pairwisePositions");
     params.initialize<mm_float4>(context, padded, "pairwiseParams");
     exclusionBits.initialize<unsigned int>(context, exclusions.size(), "pairwiseExclusions");
@@ -141,6 +169,34 @@ void testCustomGBValue(int count, bool floating) {
     params.upload(par);
     exclusionBits.upload(exclusions);
     exclusionTiles.upload(tiles);
+    vector<int> neighborBlocks, neighbors;
+    if (cutoff) {
+        // Full off-diagonal tiles except (1,0), which is in the exclusion list.
+        for (int x = 0; x < blocks; x++)
+            for (int y = 0; y < x; y++)
+                if (x != 1 || y != 0) {
+                    neighborBlocks.push_back(x);
+                    for (int lane = 0; lane < 32; lane++) neighbors.push_back(32*y+lane);
+                }
+        ASSERT(!neighborBlocks.empty());
+        neighborTiles.initialize<int>(context, neighborBlocks.size(), "customGBNeighborTiles");
+        interactionCount.initialize<unsigned int>(context, 1, "customGBInteractionCount");
+        centers.initialize<mm_float4>(context, blocks, "customGBBlockCenters");
+        sizes.initialize<mm_float4>(context, blocks, "customGBBlockSizes");
+        neighborAtoms.initialize<int>(context, neighbors.size(), "customGBNeighborAtoms");
+        vector<mm_float4> blockCenters(blocks), blockSizes(blocks);
+        for (int i = 0; i < blocks; i++) {
+            blockCenters[i] = mm_float4(0.125f*(32*i+15.5f), 0, 0, 0);
+            // Actual block radius is at most 1.9375. Both values are conservative;
+            // alternating inflated bounds exercise both periodic-copy branches.
+            blockSizes[i] = mm_float4(i%2 ? 3.0f : 2.0f, 0, 0, 0);
+        }
+        neighborTiles.upload(neighborBlocks);
+        interactionCount.upload(vector<unsigned int>{static_cast<unsigned int>(neighborBlocks.size())});
+        centers.upload(blockCenters);
+        sizes.upload(blockSizes);
+        neighborAtoms.upload(neighbors);
+    }
     for (const string& program : {"// unoptimized reference\n"+source, fast}) {
         context.clearBuffer(output);
         context.clearBuffer(derivative);
@@ -149,7 +205,21 @@ void testCustomGBValue(int count, bool floating) {
         kernel->addArg(exclusionBits);
         kernel->addArg(exclusionTiles);
         kernel->addArg(output);
-        kernel->addArg(blocks*(blocks+1)/2);
+        if (cutoff) {
+            kernel->addArg(neighborTiles);
+            kernel->addArg(interactionCount);
+            kernel->addArg(mm_float4(box,box,box,0));
+            kernel->addArg(mm_float4(1/box,1/box,1/box,0));
+            kernel->addArg(mm_float4(box,0,0,0));
+            kernel->addArg(mm_float4(0,box,0,0));
+            kernel->addArg(mm_float4(0,0,box,0));
+            kernel->addArg(static_cast<unsigned int>(neighborBlocks.size()));
+            kernel->addArg(centers);
+            kernel->addArg(sizes);
+            kernel->addArg(neighborAtoms);
+        }
+        else
+            kernel->addArg(blocks*(blocks+1)/2);
         kernel->addArg(params);
         kernel->addArg(derivative);
         kernel->execute(64,64);
@@ -160,7 +230,10 @@ void testCustomGBValue(int count, bool floating) {
             double expected = 0, expectedDeriv = 0;
             for (int j = 0; j < count; j++)
                 if (i != j && !(i == 0 && j == 31) && !(i == 31 && j == 0)) {
-                    expected += par[i].x+2*par[j].x+0.25*abs(pos[i].x-pos[j].x);
+                    double delta = pos[i].x-pos[j].x;
+                    if (periodic) delta -= floor(delta/box+0.5)*box;
+                    if (cutoff && delta*delta >= 6.25) continue;
+                    expected += par[i].x+2*par[j].x+0.25*abs(delta);
                     expectedDeriv += par[j].y;
                 }
             ASSERT_EQUAL_TOL(expected, values[i], 1e-6);
@@ -333,12 +406,16 @@ void testDPD(int count, bool floating, bool periodic) {
 int main(int argc, char** argv) {
     try {
         testSelection();
+        testExclusionSkipListSelection();
         if (argc == 2 && string(argv[1]) == "--selection-only") {
             cout << "Metal pairwise template selection tests passed" << endl;
             return 0;
         }
         for (bool floating : {false, true}) {
             for (int count : {1,31,32,33,63,65}) testCustomGBValue(count, floating);
+            testCustomGBValue(1057, floating);
+            testCustomGBValue(129, floating, true, false);
+            testCustomGBValue(129, floating, true, true);
             for (int count : {1,31,32,33,63,65}) testHbond(count, 66-count, floating);
             for (int count : {31,33,65}) {
                 testDPD(count, floating, false);
