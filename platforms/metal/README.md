@@ -225,9 +225,10 @@ macros; `gbsaTransport.metal` provides register broadcast/rotation helpers.
 The Common force formulas stay in one place, and disabled branches preserve
 the original OpenCL/CUDA/HIP source. C++ selects switches instead of rewriting
 GBSA kernel bodies. CustomGB still uses checked template replacements.
-CustomGB retains its existing register exclusion skip list and preload-barrier
-cleanup. GBSA's source-level refactor retains the earlier local exclusion skip
-lists and preload barriers for both transport choices.
+CustomGB and GBSA register paths keep the no-cutoff exclusion skip list in
+lane-owned registers, removing only that list's local-memory rendezvous.
+This skip-list change does not affect cutoff workloads. GBSA still retains its
+earlier tile-preload barriers; CustomGB retains its existing preload cleanup.
 When both short-list sort switches are enabled, register bitonic takes precedence
 for supported records with at most 32 elements; the CUDA-style scan selection
 still applies to eligible larger lists. Register bitonic places NaN keys after

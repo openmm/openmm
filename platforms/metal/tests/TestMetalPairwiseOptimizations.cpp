@@ -113,7 +113,8 @@ void testExclusionSkipListSelection() {
         settings.gbsaForce = (mode&2) != 0;
         const string selected = MetalPairwiseOptimizations::apply(baseline, settings);
         checkGBSASelection(selected, settings);
-        // Particle transport is source-selected; exclusion lists still use local arrays.
+        // Source visibly retains both transports.  Shader preprocessing makes
+        // each kernel's independent choice; the host never removes its body.
         // Preload rendezvous are retained until the independent barrier cleanup.
         ASSERT(selected.find("GBSA_BORN_DATA(LOCAL_ID).bornSum = 0.0f;\n            SYNC_WARPS;") != string::npos);
         ASSERT(selected.find("GBSA_FORCE_DATA(LOCAL_ID).fw = 0.0f;\n            SYNC_WARPS;") != string::npos);
@@ -121,9 +122,8 @@ void testExclusionSkipListSelection() {
         ASSERT(selected.find("#define GBSA_FORCE_SKIP_TILE(index) skipTiles[index]") != string::npos);
         ASSERT(selected.find("GBSA_BORN_SKIP_TILE(tbx+TILE_SIZE-1)") != string::npos);
         ASSERT(selected.find("GBSA_FORCE_SKIP_TILE(currentSkipIndex)") != string::npos);
-        ASSERT(selected.find("int skipTile = -1;") == string::npos);
-        ASSERT(selected.find("simdShuffle(skipTile,") == string::npos);
-        ASSERT(selected.find("LOCAL volatile int skipTiles[FORCE_WORK_GROUP_SIZE];") != string::npos);
+        ASSERT(selected.find("#if !USE_GBSA_BORN_SHUFFLE\n        SYNC_WARPS;") != string::npos);
+        ASSERT(selected.find("#if !USE_GBSA_FORCE_SHUFFLE\n        SYNC_WARPS;") != string::npos);
         ASSERT(selected.find("metalGbsaRotateBorn(localData, (tgx+1)&31)") != string::npos);
         ASSERT(selected.find("metalGbsaRotateForce(localData, (tgx+1)&31)") != string::npos);
     }

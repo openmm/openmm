@@ -24,7 +24,7 @@ typedef struct ALIGN {
 #define GBSA_BORN_DATA(index) localData
 #define GBSA_BORN_DIAGONAL_DATA(index) broadcastData
 #define GBSA_BORN_ATOM_INDEX(index) atomIndices
-#define GBSA_BORN_SKIP_TILE(index) skipTiles[index]
+#define GBSA_BORN_SKIP_TILE(index) simdShuffle(skipTile, (unsigned int) ((index)-tbx))
 #else
 #define GBSA_BORN_DATA(index) localData[index]
 #define GBSA_BORN_DIAGONAL_DATA(index) localData[tbx+index]
@@ -213,8 +213,12 @@ KERNEL void computeBornSum(
 #if !USE_GBSA_BORN_SHUFFLE
     LOCAL int atomIndices[FORCE_WORK_GROUP_SIZE];
 #endif
+#if USE_GBSA_BORN_SHUFFLE
+    int skipTile = -1;
+#else
     LOCAL volatile int skipTiles[FORCE_WORK_GROUP_SIZE];
     skipTiles[LOCAL_ID] = -1;
+#endif
 
     while (pos < end) {
         real bornSum = 0;
@@ -240,18 +244,32 @@ KERNEL void computeBornSum(
 
         // Skip over tiles that have exclusions, since they were already processed.
 
+#if !USE_GBSA_BORN_SHUFFLE
         SYNC_WARPS;
+#endif
         while (GBSA_BORN_SKIP_TILE(tbx+TILE_SIZE-1) < pos) {
+#if !USE_GBSA_BORN_SHUFFLE
             SYNC_WARPS;
+#endif
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
+#if USE_GBSA_BORN_SHUFFLE
+                skipTile = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+#else
                 skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+#endif
             }
             else
+#if USE_GBSA_BORN_SHUFFLE
+                skipTile = end;
+#else
                 skipTiles[LOCAL_ID] = end;
+#endif
             skipBase += TILE_SIZE;            
             currentSkipIndex = tbx;
+#if !USE_GBSA_BORN_SHUFFLE
             SYNC_WARPS;
+#endif
         }
         while (GBSA_BORN_SKIP_TILE(currentSkipIndex) < pos)
             currentSkipIndex++;
@@ -429,7 +447,7 @@ typedef struct ALIGN {
 #define GBSA_FORCE_DATA(index) localData
 #define GBSA_FORCE_DIAGONAL_DATA(index) broadcastData
 #define GBSA_FORCE_ATOM_INDEX(index) atomIndices
-#define GBSA_FORCE_SKIP_TILE(index) skipTiles[index]
+#define GBSA_FORCE_SKIP_TILE(index) simdShuffle(skipTile, (unsigned int) ((index)-tbx))
 #else
 #define GBSA_FORCE_DATA(index) localData[index]
 #define GBSA_FORCE_DIAGONAL_DATA(index) localData[tbx+index]
@@ -643,8 +661,12 @@ KERNEL void computeGBSAForce1(
 #if !USE_GBSA_FORCE_SHUFFLE
     LOCAL int atomIndices[FORCE_WORK_GROUP_SIZE];
 #endif
+#if USE_GBSA_FORCE_SHUFFLE
+    int skipTile = -1;
+#else
     LOCAL volatile int skipTiles[FORCE_WORK_GROUP_SIZE];
     skipTiles[LOCAL_ID] = -1;
+#endif
 
     while (pos < end) {
         real4 force = make_real4(0);
@@ -670,18 +692,32 @@ KERNEL void computeGBSAForce1(
 
         // Skip over tiles that have exclusions, since they were already processed.
 
+#if !USE_GBSA_FORCE_SHUFFLE
         SYNC_WARPS;
+#endif
         while (GBSA_FORCE_SKIP_TILE(tbx+TILE_SIZE-1) < pos) {
+#if !USE_GBSA_FORCE_SHUFFLE
             SYNC_WARPS;
+#endif
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
+#if USE_GBSA_FORCE_SHUFFLE
+                skipTile = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+#else
                 skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+#endif
             }
             else
+#if USE_GBSA_FORCE_SHUFFLE
+                skipTile = end;
+#else
                 skipTiles[LOCAL_ID] = end;
+#endif
             skipBase += TILE_SIZE;            
             currentSkipIndex = tbx;
+#if !USE_GBSA_FORCE_SHUFFLE
             SYNC_WARPS;
+#endif
         }
         while (GBSA_FORCE_SKIP_TILE(currentSkipIndex) < pos)
             currentSkipIndex++;
