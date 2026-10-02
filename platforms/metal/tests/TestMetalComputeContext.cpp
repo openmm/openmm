@@ -99,6 +99,9 @@ void testContext(ComputeContext& context) {
     MetalContext& metal = dynamic_cast<MetalContext&>(context);
     ASSERT_EQUAL(metal.getNumComputeUnits() == 0 ? 128 : 12*metal.getNumComputeUnits(), context.getNumThreadBlocks());
     int forceBlocks = metal.getNumComputeUnits() == 0 ? 128 : 6*metal.getNumComputeUnits();
+#if OPENMM_METAL_TUNE_FORCE_GROUPS_PER_COMPUTE_UNIT
+    forceBlocks = OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT*metal.getNumComputeUnits();
+#endif
     ASSERT_EQUAL(forceBlocks, context.getNonbondedUtilities().getNumForceThreadBlocks());
     cout << "Metal compute units: " << metal.getNumComputeUnits()
          << "; general blocks: " << context.getNumThreadBlocks()

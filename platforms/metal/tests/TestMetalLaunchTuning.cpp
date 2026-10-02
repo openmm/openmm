@@ -28,6 +28,9 @@ void testLaunchGeometry(bool floating) {
 #if OPENMM_METAL_TUNE_FORCE_THREADGROUP_SIZE
     expectedThreads = OPENMM_METAL_FORCE_THREADGROUP_SIZE;
 #endif
+#if OPENMM_METAL_TUNE_FORCE_GROUPS_PER_COMPUTE_UNIT
+    expectedGroups = OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT*context.getNumComputeUnits();
+#endif
     ASSERT_EQUAL(expectedThreads, nb.getForceThreadBlockSize());
     ASSERT_EQUAL(expectedGroups, nb.getNumForceThreadBlocks());
     ASSERT(expectedGroups <= context.getNumThreadBlocks());

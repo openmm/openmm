@@ -77,16 +77,24 @@ option(OPENMM_METAL_EXPERIMENTAL_NONBONDED_HYBRID
     "Gather fixed-lane atom data while retaining OpenCL threadgroup force accumulation" OFF)
 option(OPENMM_METAL_TUNE_FORCE_THREADGROUP_SIZE
     "Override the shared Nonbonded/GBSA force threadgroup size" OFF)
+option(OPENMM_METAL_TUNE_FORCE_GROUPS_PER_COMPUTE_UNIT
+    "Override the shared Nonbonded/GBSA force groups per GPU compute unit" OFF)
 set(OPENMM_METAL_FORCE_THREADGROUP_SIZE "256" CACHE STRING "Force threads per group when tuning is enabled (64, 128, or 256)")
+set(OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT "6" CACHE STRING "Force groups per compute unit when tuning is enabled (1 through 12)")
 
 # Keep the grid within the existing context-wide launch cap.  Invalid values
 # must fail configuration, not be silently clamped into a different experiment.
 if(NOT OPENMM_METAL_FORCE_THREADGROUP_SIZE MATCHES "^(64|128|256)$")
     message(FATAL_ERROR "OPENMM_METAL_FORCE_THREADGROUP_SIZE must be 64, 128, or 256")
 endif()
+if(NOT OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT MATCHES "^([1-9]|1[0-2])$")
+    message(FATAL_ERROR "OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT must be an integer from 1 through 12")
+endif()
 set(METAL_LAUNCH_TUNING_DEFINITIONS
     OPENMM_METAL_TUNE_FORCE_THREADGROUP_SIZE=$<BOOL:${OPENMM_METAL_TUNE_FORCE_THREADGROUP_SIZE}>
+    OPENMM_METAL_TUNE_FORCE_GROUPS_PER_COMPUTE_UNIT=$<BOOL:${OPENMM_METAL_TUNE_FORCE_GROUPS_PER_COMPUTE_UNIT}>
     OPENMM_METAL_FORCE_THREADGROUP_SIZE=${OPENMM_METAL_FORCE_THREADGROUP_SIZE}
+    OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT=${OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT}
 )
 
 # Each optional algorithm can be compared independently with the OpenCL path.
