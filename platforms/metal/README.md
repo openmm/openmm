@@ -186,7 +186,7 @@ part of the backend, not optional optimizations.
 | `OPENMM_METAL_FAST_PME_FLOAT_SPREAD` | Fixed-point PME grid | Common floating-grid PME spreading, without the conversion dispatch |
 | `OPENMM_METAL_FAST_LJPME_FLOAT_SPREAD` | Fixed-point grids in LJPME systems | Floating electrostatic and dispersion grids in LJPME systems |
 | `OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD` | Fixed-point ConstantPotential PME grid | Common floating-grid spreading |
-| `OPENMM_METAL_FAST_BLOCK_BOUNDS` | Serial atom-block bounds | SIMD-cooperative bounds and radius reduction |
+| `OPENMM_METAL_FAST_BLOCK_BOUNDS` | Serial atom-block bounds | Cooperative nonperiodic bounds; ordered per-lane periodic bounds; SIMD size-range reduction |
 | `OPENMM_METAL_FAST_FP16_BOUNDS` | Float sorted/large bounding boxes | Conservatively rounded half4 storage; public Common bounds remain float |
 | `OPENMM_METAL_FAST_NEIGHBOR_BALLOT` | OpenCL local flags and atom prefix sums | SIMD ballot/popcount block iteration and atom compaction |
 | `OPENMM_METAL_FAST_SPARSE_PAIRS` | All interactions in tiles | Separate sparse pairs and the CUDA sparse-pair force loop |
@@ -213,9 +213,11 @@ the existing generated-parameter holes. They do not globally define CUDA/HIP
 macros. Independent switches preserve the baseline algorithm when OFF; sparse
 pairs do not require the shuffle or ballot options. Ballot masks use unsigned
 32-bit arithmetic, including the lane-31-only case. FP16 bounds round outward,
-including subnormal and overflow boundaries. Periodic block bounds retain
-OpenCL's ordered image selection before reducing radii. Register paths preserve
-the shared force formulas and Q32.32 global accumulation; their performance and
+including subnormal and overflow boundaries. Nonperiodic bounds assign one SIMD
+group per atom block. Periodic bounds retain OpenCL's ordered image selection
+and radius calculation, with one independent atom block per lane; all lanes
+contribute to the final SIMD size-range reduction. Register paths preserve the
+shared force formulas and Q32.32 global accumulation; their performance and
 register pressure must still be measured on each GPU family.
 
 When both short-list sort switches are enabled, register bitonic takes precedence

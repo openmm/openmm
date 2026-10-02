@@ -279,7 +279,16 @@ void MetalNonbondedUtilities::initialize(const System& system) {
         sortedBlocks.initialize<unsigned int>(context, numAtomBlocks, "sortedBlocks");
         sortedBlockCenter.initialize(context, numAtomBlocks+1, 4*elementSize, "sortedBlockCenter");
         sortedBlockBoundingBox.initialize(context, numAtomBlocks+1, 4*boundsElementSize, "sortedBlockBoundingBox");
-        numBlockSizes = min((context.getNumAtomBlocks()+63)/64, context.getNumThreadBlocks());
+        // The cooperative nonperiodic kernel processes two atom blocks per
+        // 64-thread group. Periodic bounds retain OpenCL's ordered per-lane
+        // expansion and process 64 blocks per group, even with the switch ON.
+        int boundsBlocksPerGroup = 64;
+#if OPENMM_METAL_FAST_BLOCK_BOUNDS
+        if (!usePeriodic)
+            boundsBlocksPerGroup = 2;
+#endif
+        numBlockSizes = min((context.getNumAtomBlocks()+boundsBlocksPerGroup-1)/boundsBlocksPerGroup,
+                           context.getNumThreadBlocks());
         blockSizeRange.initialize(context, numBlockSizes, 2*elementSize, "blockSizeRange");
         largeBlockCenter.initialize(context, numAtomBlocks, 4*elementSize, "largeBlockCenter");
         largeBlockBoundingBox.initialize(context, numAtomBlocks, 4*boundsElementSize, "largeBlockBoundingBox");

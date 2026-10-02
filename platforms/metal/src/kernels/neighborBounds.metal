@@ -14,11 +14,13 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * @brief Compute each block cooperatively, following HIP's warp bounds.
- * Periodic wrapping retains OpenCL's ordered bounding-box expansion because
- * each nearest-image choice depends on the preceding partial box. Uniform
- * SIMD loops include inactive tail lanes by broadcasting the last valid atom.
- * The final 64-thread reduction preserves the OpenCL blockSizeRange ABI.
+ * @brief Use SIMD bounds for nonperiodic blocks and ordered OpenCL periodic bounds.
+ * Periodic nearest-image choices depend on the preceding partial box, so keep
+ * one independent block per lane instead of repeating that serial expansion
+ * in every lane of a SIMD group. Nonperiodic blocks use one SIMD group each;
+ * tail lanes repeat the last valid atom and participate in every reduction.
+ * Both paths reduce size ranges with SIMD operations and one threadgroup
+ * barrier, preserving the OpenCL blockSizeRange ABI and 64-thread groups.
  */
 KERNEL void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
@@ -27,32 +29,46 @@ KERNEL void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeriod
         GLOBAL real2* blockSizeRange) {
     const int lane = LOCAL_ID%32;
     real minSize = 1e38f, maxSize = 0;
-    for (int index = GLOBAL_ID/32; index*32 < numAtoms; index += GLOBAL_SIZE/32) {
-        int base = index*32;
-        int count = min(32, numAtoms-base);
-        real4 position = posq[base+min(lane, count-1)];
-        real4 minPos, maxPos;
 #ifdef USE_PERIODIC
-        real4 pos = simdShuffle(position, 0);
+    // Match OpenCL's atom order, image convention, and radius expression.
+    for (int index = GLOBAL_ID; index*32 < numAtoms; index += GLOBAL_SIZE) {
+        int base = index*32;
+        int last = min(base+32, numAtoms);
+        real4 pos = posq[base];
         APPLY_PERIODIC_TO_POS(pos)
-        minPos = maxPos = pos;
-        for (int i = 1; i < count; i++) {
-            pos = simdShuffle(position, i);
-            real4 center = 0.5f*(minPos+maxPos);
+        real4 minPos = pos, maxPos = pos;
+        for (int i = base+1; i < last; i++) {
+            pos = posq[i];
+            real4 center = 0.5f*(maxPos+minPos);
             APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, center)
             minPos = min(minPos, pos);
             maxPos = max(maxPos, pos);
         }
+        real4 width = 0.5f*(maxPos-minPos);
+        real4 center = 0.5f*(maxPos+minPos);
+        center.w = 0;
+        for (int i = base; i < last; i++) {
+            real4 delta = posq[i]-center;
+            APPLY_PERIODIC_TO_DELTA(delta)
+            center.w = max(center.w, delta.x*delta.x+delta.y*delta.y+delta.z*delta.z);
+        }
+        center.w = sqrt(center.w);
+        blockCenter[index] = center;
+        blockBoundingBox[index] = width;
+        real size = width.x+width.y+width.z;
+        minSize = min(minSize, size);
+        maxSize = max(maxSize, size);
+    }
 #else
-        minPos = make_real4(simdReduceMin(position.x), simdReduceMin(position.y), simdReduceMin(position.z), simdReduceMin(position.w));
-        maxPos = make_real4(simdReduceMax(position.x), simdReduceMax(position.y), simdReduceMax(position.z), simdReduceMax(position.w));
-#endif
+    for (int index = GLOBAL_ID/32; index*32 < numAtoms; index += GLOBAL_SIZE/32) {
+        int base = index*32;
+        int count = min(32, numAtoms-base);
+        real4 position = posq[base+min(lane, count-1)];
+        real4 minPos = make_real4(simdReduceMin(position.x), simdReduceMin(position.y), simdReduceMin(position.z), simdReduceMin(position.w));
+        real4 maxPos = make_real4(simdReduceMax(position.x), simdReduceMax(position.y), simdReduceMax(position.z), simdReduceMax(position.w));
         real4 center = 0.5f*(minPos+maxPos);
         real4 width = 0.5f*(maxPos-minPos);
         real4 delta = position-center;
-#ifdef USE_PERIODIC
-        APPLY_PERIODIC_TO_DELTA(delta)
-#endif
         real radius = dot(delta.xyz, delta.xyz);
         center.w = sqrt(simdReduceMax(radius));
         if (lane == 0) {
@@ -63,6 +79,7 @@ KERNEL void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeriod
         minSize = min(minSize, size);
         maxSize = max(maxSize, size);
     }
+#endif
     minSize = simdReduceMin(minSize);
     maxSize = simdReduceMax(maxSize);
     LOCAL real2 ranges[2];
