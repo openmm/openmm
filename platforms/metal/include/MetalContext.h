@@ -94,13 +94,21 @@ public:
     MetalQueue& getCurrentMetalQueue();
     /** @return A borrowed native id<MTLDevice>; do not release it. */
     void* getDevice() const;
+    /** @return The runtime-selected MSL target: 300, 310, 320, 400, or 410. */
+    int getMetalLanguageVersion() const;
     MetalArray* createArray() override;
     /** @brief Unwrap a Metal array on this device, including linked-context arrays. */
     MetalArray& unwrap(ArrayInterface& array) const;
     ComputeEvent createEvent() override;
     ComputeSort createSort(ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform=true) override;
     /**
-     * @brief Compile Common/OpenCL compute sources or native MSL at target 3.0.
+     * @brief Compile Common/OpenCL compute sources or native MSL at the selected target.
+     *
+     * By default, the build SDK, running OS, and device select the highest
+     * supported target known to this backend, independently of optimization
+     * switches. An explicit language override can lower that target. Optional
+     * features require both their switch and language support; both accumulator
+     * ABIs use the same target.
      * @param source Runtime-generated or static kernel source.
      * @param defines Per-program macros, overriding the context defaults.
      *        Presence of OPENMM_METAL_REQUIRE_SAFE_MATH requests precise math

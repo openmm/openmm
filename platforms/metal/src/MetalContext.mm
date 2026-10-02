@@ -36,6 +36,7 @@
 #include "MetalIntegrationUtilities.h"
 #include "MetalKernel.h"
 #include "MetalKernelSources.h"
+#include "MetalLanguagePolicy.h"
 #include "MetalNonbondedUtilities.h"
 #include "MetalOpenCLKernelSources.h"
 #include "MetalProgram.h"
@@ -87,6 +88,7 @@ static int getComputeUnits(id<MTLDevice> device) {
 struct MetalContext::Impl {
     id<MTLDevice> device = nil;
     id<MTLBuffer> pinnedBuffer = nil;
+    int languageVersion = 300;
     ThreadPool threads;
     Impl() : threads(1) {
     }
@@ -112,6 +114,11 @@ MetalContext::MetalContext(const System& system, ContextImpl* simulation, MetalC
                 throw OpenMMException("No Metal device is available");
             if (![impl->device supportsFamily:MTLGPUFamilyApple7])
                 throw OpenMMException("The Metal Platform requires Apple silicon");
+            impl->languageVersion = MetalLanguagePolicy::selectVersion(MetalLanguagePolicy::requestedVersion(),
+                    MetalLanguagePolicy::sdkMaximum(), MetalLanguagePolicy::runtimeMaximum(),
+                    [impl->device supportsFamily:MTLGPUFamilyApple7]);
+            if (impl->languageVersion == 0)
+                throw OpenMMException("The Metal Platform requires MSL 3.0 or newer");
             numComputeUnits = linked == nullptr ? getComputeUnits(impl->device) : linked->getNumComputeUnits();
             // Inner CustomCV/ATM contexts share the parent's stream, just as in
             // OpenCL, so state copies and force evaluation stay device-ordered.
@@ -365,6 +372,10 @@ void* MetalContext::getDevice() const {
     return (__bridge void*) impl->device;
 }
 
+int MetalContext::getMetalLanguageVersion() const {
+    return impl->languageVersion;
+}
+
 ContextImpl* MetalContext::getContextImpl() {
     if (simulation == nullptr)
         throw OpenMMException("The Metal Platform is not attached to a simulation Context");
@@ -461,7 +472,7 @@ ComputeProgram MetalContext::compileProgram(const string source, const map<strin
         code += commonSource ? MetalKernelSources::common+MetalKernelSources::gbsaTransport+
                 MetalSourceAdapter::translate(source, floatingAccumulators) : source;
         MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
-        options.languageVersion = MTLLanguageVersion3_0;
+        options.languageVersion = MetalLanguagePolicy::languageVersion(getMetalLanguageVersion());
         // CG needs compensated low terms; FP16 bounds require conservative Inf
         // overflow behavior. Floating minimization needs finite-value checks.
         const bool strictMath = source == CommonKernelSources::constantPotentialCGSolver ||

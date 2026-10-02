@@ -33,6 +33,7 @@
 #include "MetalContext.h"
 #include "MetalKernel.h"
 #include "MetalKernelSources.h"
+#include "MetalLanguagePolicy.h"
 #include "MetalSourceAdapter.h"
 #import <Metal/Metal.h>
 #include <mutex>
@@ -69,7 +70,7 @@ struct MetalProgram::Impl {
                 code += "#define OPENMM_METAL_FLOAT_ACCUMULATORS 1\n";
             code += MetalKernelSources::common+MetalKernelSources::gbsaTransport+MetalSourceAdapter::translate(source, floating);
             MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
-            options.languageVersion = MTLLanguageVersion3_0;
+            options.languageVersion = MetalLanguagePolicy::languageVersion(context.getMetalLanguageVersion());
             const bool fastMath = OPENMM_METAL_FAST_MATH && !floating && !strictMath;
             if (@available(macOS 15.0, *)) {
                 options.mathMode = fastMath ? MTLMathModeFast : MTLMathModeSafe;

@@ -81,6 +81,15 @@ option(OPENMM_METAL_TUNE_FORCE_GROUPS_PER_COMPUTE_UNIT
     "Override the shared Nonbonded/GBSA force groups per GPU compute unit" OFF)
 option(OPENMM_METAL_TUNE_FORCE_PIPELINE_MAX_THREADS
     "Set a compiler maximum-threadgroup hint on the three tiled Nonbonded/GBSA pipelines" OFF)
+option(OPENMM_METAL_TUNE_LANGUAGE_VERSION
+    "Override automatic highest-supported MSL selection, capped by SDK, runtime and GPU support" OFF)
+set(OPENMM_METAL_LANGUAGE_VERSION "300" CACHE STRING "MSL target ceiling only when language tuning is enabled (300, 310, 320, 400, or 410)")
+if(NOT OPENMM_METAL_LANGUAGE_VERSION MATCHES "^(300|310|320|400|410)$")
+    message(FATAL_ERROR "OPENMM_METAL_LANGUAGE_VERSION must be 300, 310, 320, 400, or 410")
+endif()
+set(METAL_LANGUAGE_DEFINITIONS
+    OPENMM_METAL_TUNE_LANGUAGE_VERSION=$<BOOL:${OPENMM_METAL_TUNE_LANGUAGE_VERSION}>
+    OPENMM_METAL_LANGUAGE_VERSION=${OPENMM_METAL_LANGUAGE_VERSION})
 set(OPENMM_METAL_FORCE_THREADGROUP_SIZE "256" CACHE STRING "Force threads per group when tuning is enabled (64, 128, or 256)")
 set(OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT "6" CACHE STRING "Force groups per compute unit when tuning is enabled (1 through 12)")
 set(OPENMM_METAL_FORCE_PIPELINE_MAX_THREADS "256" CACHE STRING "Compiler maximum threads per group when tuning is enabled (32 through 1024, multiple of 32)")
@@ -233,6 +242,7 @@ target_compile_options(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
 target_compile_definitions(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
     OPENMM_COMMON_BUILDING_SHARED_LIBRARY
     ${METAL_LAUNCH_TUNING_DEFINITIONS}
+    ${METAL_LANGUAGE_DEFINITIONS}
     OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS=$<BOOL:${OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS}>
     OPENMM_METAL_NATIVE_FLOAT_ATOMICS=$<BOOL:${OPENMM_METAL_NATIVE_FLOAT_ATOMICS}>
     OPENMM_METAL_FAST_PME_FLOAT_SPREAD=$<BOOL:${OPENMM_METAL_FAST_PME_FLOAT_SPREAD}>
@@ -308,7 +318,7 @@ if(BUILD_TESTING)
     add_dependencies(TestMetalPlatform OpenMMMetal)
     add_test(NAME TestMetalPlatform COMMAND TestMetalPlatform)
     set_tests_properties(TestMetalPlatform PROPERTIES SKIP_RETURN_CODE 77 LABELS "Metal")
-    foreach(test IN ITEMS CommonSources SourceAdapter Sort FFT3D Primitives PairwiseOptimizations ReductionOptimizations NonbondedOptimizations LaunchTuning GBSATuning)
+    foreach(test IN ITEMS CommonSources SourceAdapter Sort FFT3D Primitives PairwiseOptimizations ReductionOptimizations NonbondedOptimizations LaunchTuning GBSATuning LanguagePolicy)
         add_executable(TestMetal${test} tests/TestMetal${test}.cpp)
         target_include_directories(TestMetal${test} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/../common/src"
             "${CMAKE_CURRENT_BINARY_DIR}/src")
@@ -317,6 +327,8 @@ if(BUILD_TESTING)
         set_tests_properties(TestMetal${test} PROPERTIES SKIP_RETURN_CODE 77)
     endforeach()
     target_compile_definitions(TestMetalLaunchTuning PRIVATE ${METAL_LAUNCH_TUNING_DEFINITIONS})
+    target_include_directories(TestMetalLanguagePolicy PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+    target_compile_definitions(TestMetalLanguagePolicy PRIVATE ${METAL_LANGUAGE_DEFINITIONS})
     target_compile_definitions(TestMetalGBSATuning PRIVATE
         OPENMM_METAL_FAST_GBSA_BORN_FORCE_FLOAT=$<BOOL:${OPENMM_METAL_FAST_GBSA_BORN_FORCE_FLOAT}>)
     target_include_directories(TestMetalNonbondedOptimizations PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
