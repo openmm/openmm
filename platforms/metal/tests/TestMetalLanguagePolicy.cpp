@@ -55,6 +55,8 @@ static void testSelection() {
 static void testShaderSource() {
     const string& common = MetalKernelSources::common;
     ASSERT(common.find("#if OPENMM_METAL_TUNE_FORCE_REQUIRED_THREADS && defined(FORCE_WORK_GROUP_SIZE) && __METAL_VERSION__ >= 400") != string::npos);
+    ASSERT(common.find("#if OPENMM_METAL_USE_TILED_ACQ_REL_BARRIERS && __METAL_VERSION__ >= 410") != string::npos);
+    ASSERT(common.find("#define SYNC_WARPS simdgroup_barrier(mem_flags::mem_threadgroup, memory_order_acq_rel, thread_scope_simdgroup);") != string::npos);
     ASSERT(common.find("#define SYNC_WARPS simdgroup_barrier(mem_flags::mem_threadgroup);") != string::npos);
     ASSERT(common.find("#define SYNC_THREADS threadgroup_barrier(mem_flags::mem_threadgroup | mem_flags::mem_device);") != string::npos);
     const string& halfBounds = MetalKernelSources::neighborHalfBounds;
@@ -80,6 +82,8 @@ static void testShaderTarget(bool marked) {
     map<string, string> defines;
     if (marked)
         defines["OPENMM_METAL_TILED_FORCE_PROGRAM"] = "1";
+    // A caller cannot force the private selection marker onto an unreviewed program.
+    defines["OPENMM_METAL_USE_TILED_ACQ_REL_BARRIERS"] = "1";
     const string source = R"(
         KERNEL void checkLanguageTarget(GLOBAL int* output) {
             LOCAL int values[64];
@@ -96,6 +100,9 @@ static void testShaderTarget(bool marked) {
     ComputeKernel kernel = context.compileProgram(source, defines)->createKernel("checkLanguageTarget");
     kernel->addArg(output);
     int enabled = 0;
+#if OPENMM_METAL_FAST_TILED_ACQ_REL_BARRIERS
+    enabled = marked && version >= 410;
+#endif
     for (bool floating : {false, true, false}) {
         context.setUseFloatingPointAccumulators(floating);
         kernel->execute(64, 64);

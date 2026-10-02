@@ -890,6 +890,12 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
         defines["INCLUDE_ENERGY"] = "1";
     defines["THREAD_BLOCK_SIZE"] = context.intToString(forceThreadBlockSize);
     defines["FORCE_WORK_GROUP_SIZE"] = context.intToString(forceThreadBlockSize);
+#if OPENMM_METAL_FAST_TILED_ACQ_REL_BARRIERS
+    // This marker opts only the audited standard tile layout into SIMD-local
+    // ordering. Caller-provided kernel templates keep the original barriers.
+    if (commonTemplate)
+        defines["OPENMM_METAL_TILED_FORCE_PROGRAM"] = "1";
+#endif
     double maxCutoff = 0.0;
     for (int i = 0; i < 32; i++) {
         if ((groups&(1u<<i)) != 0) {

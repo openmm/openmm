@@ -98,10 +98,22 @@ accumulator variants use the same target.
 VkFFT retains its own compilation policy. SDK availability alone never enables
 an optional fast path. A newer MSL target does not switch to the Metal 4 host API.
 
+Three independent experiments retain older-target fallbacks: MSL 3.1 `nextafter`
+for conservative FP16 bounding boxes; an MSL 4.0 exact threadgroup-shape
+attribute for the existing three tiled force kernels; and MSL 4.1
+acquire/release SIMD barriers for reviewed GBSA/nonbonded tile exchanges. The
+last option preserves execution rendezvous and threadgroup memory scope; it
+does not change full-threadgroup barriers or global atomic accumulation. None
+is an established performance improvement merely because the API is newer.
 For matched-language experiments, `OPENMM_METAL_TUNE_LANGUAGE_VERSION=ON` requests
 `OPENMM_METAL_LANGUAGE_VERSION` (300, 310, 320, 400, or 410). A deliberately lower
 override tests feature fallbacks; a higher request is still capability-capped.
 `MetalContext::getMetalLanguageVersion()` reports the effective selected target.
+Feature branches live in the MSL files and use `__METAL_VERSION__` directly:
+`neighborHalfBounds.metal` owns FP16 rounding; `common.metal` owns tile barriers
+and `[[required_threads_per_threadgroup]]`. The host selects a supported
+compilation target and checks the compiled pipeline's dispatch contract; it
+does not rewrite these shader implementations as C++ strings.
 
 Separately from broad fast math, the baseline follows OpenCL's startup accuracy
 probe for `sqrt`, `rsqrt`, reciprocal, `exp`, and `log`. Each function selects its
@@ -207,6 +219,7 @@ part of the backend, not optional optimizations.
 | `OPENMM_METAL_FAST_BLOCK_BOUNDS` | Serial atom-block bounds | Cooperative nonperiodic bounds; ordered per-lane periodic bounds; SIMD size-range reduction |
 | `OPENMM_METAL_FAST_FP16_BOUNDS` | Float sorted/large bounding boxes | Conservatively rounded half4 storage; public Common bounds remain float |
 | `OPENMM_METAL_FAST_FP16_BOUNDS_NEXTAFTER` | Existing half-bit increment for outward rounding | With FP16 bounds enabled, use MSL 3.1 `nextafter`; older targets retain the original helper |
+| `OPENMM_METAL_FAST_TILED_ACQ_REL_BARRIERS` | Existing tile-local SIMD barriers | MSL 4.1 acquire/release threadgroup-memory ordering for reviewed GBSA/nonbonded tile programs only; older targets unchanged |
 | `OPENMM_METAL_FAST_NEIGHBOR_BALLOT` | OpenCL local flags and atom prefix sums | SIMD ballot/popcount block iteration and atom compaction |
 | `OPENMM_METAL_FAST_SPARSE_PAIRS` | All interactions in tiles | Separate sparse pairs and the CUDA sparse-pair force loop |
 | `OPENMM_METAL_FAST_SPARSE_FORCE_AGGREGATION` | One Q32.32 write per sparse-pair component | Bounded SIMD aggregation of adjacent equal-target, already-quantized contributions; floating mode unchanged |

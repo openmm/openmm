@@ -86,7 +86,11 @@ struct MetalExecutionContext {
 #ifndef SYNC_WARPS
 // OpenCL's SYNC_WARPS orders only the local tile exchange. Keep the MSL
 // execution rendezvous; device-wide phase dependencies use later dispatches.
+#if OPENMM_METAL_USE_TILED_ACQ_REL_BARRIERS && __METAL_VERSION__ >= 410
+#define SYNC_WARPS simdgroup_barrier(mem_flags::mem_threadgroup, memory_order_acq_rel, thread_scope_simdgroup);
+#else
 #define SYNC_WARPS simdgroup_barrier(mem_flags::mem_threadgroup);
+#endif
 #endif
 // Common uses this after independent atomic reductions, never to publish a
 // payload. Consumers run in later dispatches. It is not a general OpenCL fence.
