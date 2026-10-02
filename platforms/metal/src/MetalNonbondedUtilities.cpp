@@ -626,9 +626,13 @@ void MetalNonbondedUtilities::createKernelsForGroups(int groups) {
 
 ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& source, vector<ComputeParameterInfo>& params, vector<ComputeParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups, bool includeForces, bool includeEnergy) {
     // Only the upstream template is adapted. Caller-provided kernels keep their ABI.
-    bool shuffle = OPENMM_METAL_FAST_NONBONDED_SHUFFLE && kernelSource == MetalOpenCLKernelSources::nonbonded;
+    bool commonTemplate = kernelSource == MetalOpenCLKernelSources::nonbonded;
+    bool hybrid = OPENMM_METAL_EXPERIMENTAL_NONBONDED_HYBRID && commonTemplate;
+    bool shuffle = OPENMM_METAL_FAST_NONBONDED_SHUFFLE && commonTemplate && !hybrid;
     bool sparsePairs = canUsePairList && useCutoff;
     string sourceTemplate = shuffle ? MetalNonbondedSources::cudaSource() : kernelSource;
+    if (hybrid)
+        sourceTemplate = MetalNonbondedSources::openclHybridSource(sourceTemplate);
     if (sparsePairs && !shuffle)
         MetalNonbondedSources::addOpenCLPairs(sourceTemplate);
     map<string, string> replacements;
@@ -767,6 +771,39 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
         replacements["LOAD_ATOM2_PARAMETERS"] = local.str();
         replacements["CLEAR_LOCAL_PARAMETERS"] = clear.str();
         replacements["SHUFFLE_WARP_DATA"] = rotate.str();
+    }
+    if (hybrid) {
+        // Keep each secondary atom's read-only tuple in its original lane.
+        // The OpenCL template still owns force accumulation and synchronization;
+        // only the tuple lookup is replaced by a fixed-source SIMD gather.
+        stringstream declare, loadLocal1, loadLocal2, clear, gather;
+        for (const ComputeParameterInfo& param : params) {
+            const string name = param.getName();
+            const string value = "hybrid_"+name;
+            const int components = param.getNumComponents();
+            const string zero = components == 1 ? "0" : "make_"+param.getType()+"(0)";
+            declare<<param.getType()<<" "<<value<<" = "<<zero<<";\n";
+            loadLocal1<<value<<" = "<<name<<"1;\n";
+            loadLocal2<<value<<" = "<<globalParameter(param, "j")<<";\n";
+            clear<<value<<" = "<<zero<<";\n";
+            gather<<param.getType()<<" "<<name<<"2 = ";
+            if (components != 1)
+                gather<<"make_"<<param.getType()<<"(";
+            for (int component = 0; component < components; component++) {
+                if (component != 0)
+                    gather<<", ";
+                gather<<"simdShuffle("<<value;
+                if (components != 1)
+                    gather<<"."<<suffixes[component];
+                gather<<", uint(atom2-tbx))";
+            }
+            gather<<(components == 1 ? ";\n" : ");\n");
+        }
+        replacements["DECLARE_LOCAL_PARAMETERS"] = declare.str();
+        replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
+        replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
+        replacements["CLEAR_LOCAL_PARAMETERS"] = clear.str();
+        replacements["LOAD_ATOM2_PARAMETERS"] = gather.str();
     }
     stringstream initDerivs;
     for (int i = 0; i < energyParameterDerivatives.size(); i++)

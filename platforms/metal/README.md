@@ -192,6 +192,7 @@ part of the backend, not optional optimizations.
 | `OPENMM_METAL_FAST_SPARSE_PAIRS` | All interactions in tiles | Separate sparse pairs and the CUDA sparse-pair force loop |
 | `OPENMM_METAL_FAST_SPARSE_FORCE_AGGREGATION` | One Q32.32 write per sparse-pair component | Bounded SIMD aggregation of adjacent equal-target, already-quantized contributions; floating mode unchanged |
 | `OPENMM_METAL_FAST_NONBONDED_SHUFFLE` | OpenCL local-memory force tiles | CUDA register/shuffle force template with Metal spelling adaptations |
+| `OPENMM_METAL_EXPERIMENTAL_NONBONDED_HYBRID` | Preserve the selected OpenCL/CUDA tiled path | Experimental fixed-lane gathers of read-only atom data, retaining OpenCL threadgroup force accumulation |
 | `OPENMM_METAL_FAST_CUSTOM_GB_VALUE_SHUFFLE` | Common CustomGB value local arrays | Register exchange for value, parameters, and secondary accumulators |
 | `OPENMM_METAL_FAST_CUSTOM_GB_ENERGY_SHUFFLE` | Common CustomGB energy local arrays | Register exchange for force and parameter-derivative state |
 | `OPENMM_METAL_FAST_GBSA_BORN_SHUFFLE` | Common Born-sum local structs | Register exchange of Born data and secondary sums |
@@ -220,6 +221,16 @@ contribute to the final SIMD size-range reduction. Register paths preserve the
 shared force formulas and Q32.32 global accumulation; their performance and
 register pressure must still be measured on each GPU family.
 
+The hybrid Nonbonded experiment defaults to `OFF` and is not part of the
+standard all-ON benchmark endpoint. When enabled, it takes
+precedence over `NONBONDED_SHUFFLE` for the standard OpenCL template only;
+caller-provided templates are unchanged. It preserves pair visitation,
+force-accumulation order, synchronization, and the Q32.32 representation.
+Read-only positions and parameters are gathered before any per-pair cutoff
+branch so every SIMD lane participates. Sparse-pair handling remains a
+separate option. Enabling hybrid does not imply a performance improvement;
+compare it with both existing tile paths while holding submission and math
+settings fixed.
 CustomGB and GBSA register paths also keep the no-cutoff exclusion skip list
 in lane-owned registers. GBSA selects its transport in `gbsaObc.cc` with
 independent Born-sum and Force1 macros; `gbsaTransport.metal` provides the
