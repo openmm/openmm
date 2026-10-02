@@ -81,14 +81,14 @@ also use precise math to preserve NaN classification and signed-zero payloads.
 VkFFT compilation follows
 the build-time fast-math setting independently of the force-buffer mode.
 API selection follows the running OS, not the SDK or deployment target:
-macOS 15+ uses `mathMode` and `mathFloatingPointFunctions`, while macOS 13/14
-uses the guarded legacy setter. OFF selects `Safe`/`Precise`, ON selects
-`Fast`/`Fast` on the modern API. Runtime version detection does not enable
-optimizations or change the build-time switches. Initial compilation, lazy
-accumulator variants, and VkFFT all follow this policy. The minimum deployment
-target remains macOS 13.
-
-Common/native runtime programs automatically
+on macOS 15+, `mathPolicy.metal` selects arithmetic assumptions with
+`#pragma METAL fp math_mode(safe|fast)`; host compilation independently selects
+precise/fast FP32 functions. macOS 13/14 uses the guarded legacy setter and
+skips the newer pragmas. OFF selects Safe/Precise, ON selects Fast/Fast, subject
+to the safety exceptions above. Initial and lazy accumulator variants share
+this policy. VkFFT retains the equivalent host compiler options. Runtime
+version detection does not enable optimizations or change switches. The minimum
+deployment target remains macOS 13. Common/native runtime programs automatically
 select the highest target known to the backend and supported by the build SDK,
 running OS (3.0: macOS 13; 3.1: macOS 14; 3.2: macOS 15; 4.0: macOS 26; 4.1: macOS 27),
 and Apple GPU. Optimization switches never request or raise this target. An

@@ -467,19 +467,25 @@ ComputeProgram MetalContext::compileProgram(const string source, const map<strin
             allDefines["OPENMM_METAL_REQUIRE_SAFE_MATH"] = "1";
         if (commonSource && floatingAccumulators)
             allDefines["OPENMM_METAL_FLOAT_ACCUMULATORS"] = "1";
+        // Shader arithmetic policy lives in mathPolicy.metal. Keep only the
+        // runtime capability and existing numerical-safety decisions here.
+        const bool strictMath = source == CommonKernelSources::constantPotentialCGSolver ||
+                allDefines.count("OPENMM_METAL_REQUIRE_SAFE_MATH") != 0;
+        const bool fastMath = OPENMM_METAL_FAST_MATH && !floatingAccumulators && !strictMath;
+        allDefines["OPENMM_METAL_USE_FAST_MATH"] = fastMath ? "1" : "0";
+        if (@available(macOS 15.0, *))
+            allDefines["OPENMM_METAL_HAS_MATH_PRAGMAS"] = "1";
+        else
+            allDefines["OPENMM_METAL_HAS_MATH_PRAGMAS"] = "0";
         for (auto& define : allDefines)
             code += "#define "+define.first+" "+define.second+"\n";
+        code += MetalKernelSources::mathPolicy;
         code += commonSource ? MetalKernelSources::common+MetalKernelSources::gbsaTransport+
                 MetalSourceAdapter::translate(source, floatingAccumulators) : source;
         MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
         options.languageVersion = MetalLanguagePolicy::languageVersion(getMetalLanguageVersion());
-        // CG needs compensated low terms; FP16 bounds require conservative Inf
-        // overflow behavior. Floating minimization needs finite-value checks.
-        const bool strictMath = source == CommonKernelSources::constantPotentialCGSolver ||
-                allDefines.count("OPENMM_METAL_REQUIRE_SAFE_MATH") != 0;
-        const bool fastMath = OPENMM_METAL_FAST_MATH && !floatingAccumulators && !strictMath;
         if (@available(macOS 15.0, *)) {
-            options.mathMode = fastMath ? MTLMathModeFast : MTLMathModeSafe;
+            // MSL's arithmetic pragma does not select library math functions.
             options.mathFloatingPointFunctions = fastMath ? MTLMathFloatingPointFunctionsFast : MTLMathFloatingPointFunctionsPrecise;
         }
         else {

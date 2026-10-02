@@ -11,7 +11,9 @@
 #include "MetalKernelSources.h"
 #include "../src/MetalLanguagePolicy.h"
 #include "openmm/internal/AssertionUtilities.h"
+#include <cmath>
 #include <iostream>
+#include <limits>
 
 using namespace OpenMM;
 using namespace std;
@@ -54,7 +56,11 @@ static void testShaderSource() {
     const string& common = MetalKernelSources::common;
     ASSERT(common.find("#define SYNC_WARPS simdgroup_barrier(mem_flags::mem_threadgroup);") != string::npos);
     ASSERT(common.find("#define SYNC_THREADS threadgroup_barrier(mem_flags::mem_threadgroup | mem_flags::mem_device);") != string::npos);
-
+    const string& mathPolicy = MetalKernelSources::mathPolicy;
+    ASSERT(mathPolicy.find("#if OPENMM_METAL_HAS_MATH_PRAGMAS") != string::npos);
+    ASSERT(mathPolicy.find("#if OPENMM_METAL_USE_FAST_MATH") != string::npos);
+    ASSERT(mathPolicy.find("#pragma METAL fp math_mode(fast)") != string::npos);
+    ASSERT(mathPolicy.find("#pragma METAL fp math_mode(safe)") != string::npos);
 }
 
 /** Verify target and tile-local synchronization in both initial and lazy accumulator libraries. */
@@ -96,6 +102,80 @@ static void testShaderTarget(bool marked) {
     cout << "MSL " << version << ", tiled barrier " << enabled << endl;
 }
 
+/** Verify source math pragmas preserve strict and floating-accumulator safety. */
+static void testMathPolicy(bool common, bool strict) {
+    System system;
+    system.addParticle(1);
+    MetalContext context(system);
+    const vector<float> inputValues = {0.0f, -0.0f, 1.0f, -1.0f,
+            numeric_limits<float>::infinity(), -numeric_limits<float>::infinity(),
+            numeric_limits<float>::quiet_NaN()};
+    ComputeArray input, output;
+    input.initialize<float>(context, inputValues.size(), "mathPolicyInput");
+    output.initialize<int>(context, inputValues.size(), "mathPolicyOutput");
+    input.upload(inputValues);
+
+    // Native programs do not use the Common source adapter or alternate ABI.
+    const string source = common ? R"(
+        #if OPENMM_METAL_HAS_MATH_PRAGMAS != 0 && OPENMM_METAL_HAS_MATH_PRAGMAS != 1
+        #error The host must replace caller-provided pragma capability macros.
+        #endif
+        KERNEL void checkMathPolicy(GLOBAL const float* input, GLOBAL int* output) {
+            const int index = GLOBAL_ID;
+            if (index >= 7) return;
+            int classification = 0;
+        #if !OPENMM_METAL_USE_FAST_MATH
+            float value = input[index];
+            classification = 2*int(isinf(value))+4*int(isnan(value))+8*int(isfinite(value));
+        #endif
+            output[index] = OPENMM_METAL_USE_FAST_MATH+classification;
+        }
+    )" : R"(
+        #if OPENMM_METAL_HAS_MATH_PRAGMAS != 0 && OPENMM_METAL_HAS_MATH_PRAGMAS != 1
+        #error The host must replace caller-provided pragma capability macros.
+        #endif
+        #include <metal_stdlib>
+        using namespace metal;
+        kernel void checkMathPolicy(device const float* input [[buffer(0)]],
+                device int* output [[buffer(1)]], uint index [[thread_position_in_grid]]) {
+            if (index >= 7) return;
+            int classification = 0;
+        #if !OPENMM_METAL_USE_FAST_MATH
+            float value = input[index];
+            classification = 2*int(isinf(value))+4*int(isnan(value))+8*int(isfinite(value));
+        #endif
+            output[index] = OPENMM_METAL_USE_FAST_MATH+classification;
+        }
+    )";
+    map<string, string> defines;
+    if (strict)
+        defines["OPENMM_METAL_REQUIRE_SAFE_MATH"] = "1";
+    // Callers cannot override the host's runtime capability or safety decision.
+    defines["OPENMM_METAL_HAS_MATH_PRAGMAS"] = "2";
+    defines["OPENMM_METAL_USE_FAST_MATH"] = "2";
+    ComputeKernel kernel;
+    for (bool floating : {false, true, false}) {
+        context.setUseFloatingPointAccumulators(floating);
+        if (!common || !kernel) {
+            kernel = context.compileProgram(source, defines)->createKernel("checkMathPolicy");
+            kernel->addArg(input);
+            kernel->addArg(output);
+        }
+        kernel->execute(32, 32);
+        vector<int> values;
+        output.download(values);
+        const bool fast = OPENMM_METAL_FAST_MATH && !floating && !strict;
+        for (int i = 0; i < inputValues.size(); i++) {
+            // Fast mode makes no promise about nonfinite arithmetic. Only the
+            // safe branch classifies these runtime inputs; no constant folding
+            // of an embedded Inf/NaN can hide an incorrectly selected math mode.
+            const int classification = fast ? 0 :
+                    2*int(isinf(inputValues[i]))+4*int(isnan(inputValues[i]))+8*int(isfinite(inputValues[i]));
+            ASSERT_EQUAL(int(fast)+classification, values[i]);
+        }
+    }
+}
+
 int main(int argc, char** argv) {
     try {
         testSelection();
@@ -103,6 +183,9 @@ int main(int argc, char** argv) {
         if (argc == 1 || string(argv[1]) != "--selection-only") {
             testShaderTarget(false);
             testShaderTarget(true);
+            for (bool common : {false, true})
+                for (bool strict : {false, true})
+                    testMathPolicy(common, strict);
         }
     }
     catch (const exception& error) {

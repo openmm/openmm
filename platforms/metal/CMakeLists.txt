@@ -328,7 +328,11 @@ if(BUILD_TESTING)
     endforeach()
     target_compile_definitions(TestMetalLaunchTuning PRIVATE ${METAL_LAUNCH_TUNING_DEFINITIONS})
     target_include_directories(TestMetalLanguagePolicy PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
-    target_compile_definitions(TestMetalLanguagePolicy PRIVATE ${METAL_LANGUAGE_DEFINITIONS})
+    target_compile_definitions(TestMetalLanguagePolicy PRIVATE ${METAL_LANGUAGE_DEFINITIONS} ${METAL_LAUNCH_TUNING_DEFINITIONS}
+        OPENMM_METAL_FAST_MATH=$<BOOL:${OPENMM_METAL_FAST_MATH}>
+        OPENMM_METAL_FAST_FP16_BOUNDS=$<BOOL:${OPENMM_METAL_FAST_FP16_BOUNDS}>
+        OPENMM_METAL_FAST_FP16_BOUNDS_NEXTAFTER=$<BOOL:${OPENMM_METAL_FAST_FP16_BOUNDS_NEXTAFTER}>
+        OPENMM_METAL_FAST_TILED_ACQ_REL_BARRIERS=$<BOOL:${OPENMM_METAL_FAST_TILED_ACQ_REL_BARRIERS}>)
     target_compile_definitions(TestMetalGBSATuning PRIVATE
         OPENMM_METAL_FAST_GBSA_BORN_FORCE_FLOAT=$<BOOL:${OPENMM_METAL_FAST_GBSA_BORN_FORCE_FLOAT}>)
     target_include_directories(TestMetalNonbondedOptimizations PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
