@@ -76,17 +76,16 @@ KERNEL void clearSixBuffers(GLOBAL int* RESTRICT buffer1, int size1, GLOBAL int*
  */
 KERNEL void reduceEnergy(GLOBAL const mixed* RESTRICT energyBuffer, GLOBAL mixed* RESTRICT result, int bufferSize, int workGroupSize) {
     LOCAL mixed tempBuffer[512];
-    const unsigned int thread = LOCAL_ID;
     mixed sum = 0;
     for (unsigned int index = GLOBAL_ID; index < bufferSize; index += GLOBAL_SIZE)
         sum += energyBuffer[index];
-    tempBuffer[thread] = sum;
+    tempBuffer[LOCAL_ID] = sum;
     for (int i = 1; i < workGroupSize; i *= 2) {
         SYNC_THREADS;
-        if (thread%(i*2) == 0 && thread+i < workGroupSize)
-            tempBuffer[thread] += tempBuffer[thread+i];
+        if (LOCAL_ID%(i*2) == 0 && LOCAL_ID+i < workGroupSize)
+            tempBuffer[LOCAL_ID] += tempBuffer[LOCAL_ID+i];
     }
-    if (thread == 0)
+    if (LOCAL_ID == 0)
         result[GROUP_ID] = tempBuffer[0];
 }
 

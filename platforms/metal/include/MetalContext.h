@@ -182,16 +182,6 @@ public:
         return getPlatformData().threads;
     }
     /**
-     * Execute a kernel.
-     *
-     * @param kernel       the kernel to execute
-     * @param arguments    an array of pointers to the kernel arguments
-     * @param threads      the maximum number of threads that should be used
-     * @param blockSize    the size of each thread block to use
-     * @param sharedSize   the amount of dynamic shared memory to allocated for the kernel, in bytes
-     */
-//    void executeKernel(CUfunction kernel, void** arguments, int workUnits, int blockSize = -1, unsigned int sharedSize = 0);
-    /**
      * Compute the largest thread block size that can be used for a kernel that requires a particular amount of
      * shared memory per thread.
      * 

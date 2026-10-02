@@ -104,6 +104,7 @@ private:
     MTL::ComputePipelineState* pipeline;
     std::string name;
     std::vector<mm_double4> primitiveArgs;
+    std::vector<int> primitiveArgSizes;
     std::vector<MetalArray*> arrayArgs;
     std::vector<void*> argPointers;
 };

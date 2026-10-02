@@ -38,6 +38,19 @@ inline float ATOMIC_ADD(device float* dest, float value) {
     return atomic_fetch_add_explicit((device atomic_float*) dest, value, memory_order_relaxed);
 }
 
+inline unsigned long ATOMIC_ADD(device unsigned long* dest, unsigned long value) {
+    device unsigned int* word = (device unsigned int*) dest;
+    int lowIndex = 0;
+    unsigned int lower = value;
+    unsigned int upper = value >> 32;
+    unsigned int result = ATOMIC_ADD(&word[lowIndex], lower);
+    int carry = (lower + (unsigned long) result >= 0x100000000 ? 1 : 0);
+    upper += carry;
+    if (upper != 0)
+        ATOMIC_ADD(&word[1-lowIndex], upper);
+    return 0;
+}
+
 typedef long mm_long;
 typedef unsigned long mm_ulong;
 
@@ -67,6 +80,10 @@ typedef unsigned long mm_ulong;
 #define asinf(x) asin(x)
 #define atanf(x) atan(x)
 #define atan2f(x, y) atan2(x, y)
+
+inline float4 cross(float4 a, float4 b) {
+    return float4(cross(a.xyz, b.xyz), 0.0);
+}
 
 inline long realToFixedPoint(real x) {
     return static_cast<long>(x * 0x100000000);

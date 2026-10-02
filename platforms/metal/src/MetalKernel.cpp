@@ -23,6 +23,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "MetalKernel.h"
+#include "MetalQueue.h"
 #include "openmm/common/ComputeArray.h"
 #include "openmm/internal/AssertionUtilities.h"
 #include <cstring>
@@ -47,15 +48,21 @@ int MetalKernel::getMaxBlockSize() const {
 }
 
 void MetalKernel::execute(int threads, int blockSize) {
-/*    int numArgs = arrayArgs.size();
+    MetalQueue* queue = dynamic_cast<MetalQueue*>(context.getCurrentQueue().get());
+    MTL::ComputeCommandEncoder& encoder = queue->getEncoder();
+    encoder.setComputePipelineState(pipeline);
+    int numArgs = arrayArgs.size();
     argPointers.resize(numArgs);
     for (int i = 0; i < numArgs; i++) {
         if (arrayArgs[i] != NULL)
-            argPointers[i] = &arrayArgs[i]->getDevicePointer();
+            encoder.setBuffer(arrayArgs[i]->getBuffer(), 0, i);
         else
-            argPointers[i] = &primitiveArgs[i];
+            encoder.setBytes(&primitiveArgs[i], primitiveArgSizes[i], i);
     }
-    context.executeKernel(kernel, argPointers.data(), threads, blockSize);*/
+    if (blockSize == -1)
+        blockSize = MetalContext::ThreadBlockSize;
+    int gridSize = min((threads+blockSize-1)/blockSize, context.getNumThreadBlocks());
+    encoder.dispatchThreadgroups(MTL::Size(gridSize, 1, 1), MTL::Size(blockSize, 1, 1));
 }
 
 void MetalKernel::addArrayArg(ArrayInterface& value) {
@@ -72,6 +79,7 @@ void MetalKernel::addPrimitiveArg(const void* value, int size) {
 
 void MetalKernel::addEmptyArg() {
     primitiveArgs.push_back(mm_double4(0, 0, 0, 0));
+    primitiveArgSizes.push_back(0);
     arrayArgs.push_back(NULL);
 }
 
@@ -85,5 +93,6 @@ void MetalKernel::setPrimitiveArg(int index, const void* value, int size) {
     if (size > sizeof(mm_double4))
         throw OpenMMException("Unsupported value type for kernel argument");
     memcpy(&primitiveArgs[index], value, size);
+    primitiveArgSizes[index] = size;
     arrayArgs[index] = NULL;
 }

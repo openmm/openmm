@@ -29,8 +29,8 @@
 
 #include "MetalContext.h"
 #include "MetalPlatform.h"
-//#include "MetalKernelFactory.h"
-//#include "MetalKernels.h"
+#include "MetalKernelFactory.h"
+#include "MetalKernels.h"
 #include "openmm/Context.h"
 #include "openmm/System.h"
 #include "openmm/internal/ContextImpl.h"
@@ -54,7 +54,7 @@ extern "C" void registerPlatforms() {
 #endif
 
 MetalPlatform::MetalPlatform() {
-/*    MetalKernelFactory* factory = new MetalKernelFactory();
+    MetalKernelFactory* factory = new MetalKernelFactory();
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
     registerKernelFactory(UpdateStateDataKernel::Name(), factory);
     registerKernelFactory(ApplyConstraintsKernel::Name(), factory);
@@ -98,7 +98,7 @@ MetalPlatform::MetalPlatform() {
     registerKernelFactory(IntegrateQTBStepKernel::Name(), factory);
     registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
     registerKernelFactory(ApplyMonteCarloBarostatKernel::Name(), factory);
-    registerKernelFactory(RemoveCMMotionKernel::Name(), factory);*/
+    registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
     platformProperties.push_back(MetalPrecision());
     platformProperties.push_back(MetalUseCpuPme());
     platformProperties.push_back(MetalDisablePmeStream());

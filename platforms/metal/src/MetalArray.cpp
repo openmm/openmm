@@ -24,6 +24,7 @@
 
 #include "MetalArray.h"
 #include "MetalContext.h"
+#include "MetalQueue.h"
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -81,7 +82,8 @@ void MetalArray::uploadSubArray(const void* data, int offset, int elements, bool
 void MetalArray::download(void* data, bool blocking) const {
     if (buffer == nullptr)
         throw OpenMMException("MetalArray has not been initialized");
-    context->flushQueue();
+    MetalQueue* queue = dynamic_cast<MetalQueue*>(context->getCurrentQueue().get());
+    queue->flush(true);
     memcpy(data, buffer->contents(), size*elementSize);
 }
 
@@ -90,7 +92,8 @@ void MetalArray::copyTo(ArrayInterface& dest) const {
         throw OpenMMException("MetalArray has not been initialized");
     if (dest.getSize() != size || dest.getElementSize() != elementSize)
         throw OpenMMException("Error copying array "+name+" to "+dest.getName()+": The destination array does not match the size of the array");
-    context->flushQueue();
+    MetalQueue* queue = dynamic_cast<MetalQueue*>(context->getCurrentQueue().get());
+    queue->flush(true);
     MetalArray& metalDest = context->unwrap(dest);
     memcpy(metalDest.buffer->contents(), buffer->contents(), size*elementSize);
 }

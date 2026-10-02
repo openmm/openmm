@@ -26,7 +26,7 @@
 #include "MetalContext.h"
 //#include "MetalEvent.h"
 //#include "MetalFFT3D.h"
-//#include "MetalQueue.h"
+#include "MetalQueue.h"
 //#include "MetalKernels.h"
 #include "MetalKernelSources.h"
 #include "MetalProgram.h"
@@ -84,7 +84,7 @@ MetalContext::MetalContext(const System& system, const string& precision, MetalP
         isLinkedContext = true;
     }
 
-//    defaultQueue = shared_ptr<ComputeQueueImpl>(new MetalQueue(0));
+    defaultQueue = shared_ptr<ComputeQueueImpl>(new MetalQueue(*device));
     currentQueue = defaultQueue;
     numAtoms = system.getNumParticles();
     paddedNumAtoms = TileSize*((numAtoms+TileSize-1)/TileSize);
@@ -122,7 +122,7 @@ MetalContext::MetalContext(const System& system, const string& precision, MetalP
     }
     compilationDefines["SQRT"] = (maxSqrtError < 1e-6) ? "fast::sqrt" : "sqrt";
     compilationDefines["RSQRT"] = (maxRsqrtError < 1e-6) ? "fast::rsqrt" : "rsqrt";
-    compilationDefines["RECIP"] = (maxRecipError < 1e-6) ? "fast::recip" : "1.0/";
+    compilationDefines["RECIP(v)"] = (maxRecipError < 1e-6) ? "fast::divide(1.0, v)" : "(1.0/v)";
     compilationDefines["EXP"] = (maxExpError < 1e-6) ? "fast::exp" : "exp";
     compilationDefines["LOG"] = (maxLogError < 1e-6) ? "fast::log" : "log";
 
@@ -139,6 +139,12 @@ MetalContext::MetalContext(const System& system, const string& precision, MetalP
     compilationDefines["ERFC"] = "erfc";
     compilationDefines["FMA"] = "fma";
     compilationDefines["FABS"] = "fabs";
+    compilationDefines["make_real2"] = "make_float2";
+    compilationDefines["make_real3"] = "make_float3";
+    compilationDefines["make_real4"] = "make_float4";
+    compilationDefines["make_mixed2"] = "make_float2";
+    compilationDefines["make_mixed3"] = "make_float3";
+    compilationDefines["make_mixed4"] = "make_float4";
 
     // Set defines for applying periodic boundary conditions.
 
@@ -271,8 +277,7 @@ double& MetalContext::getEnergyWorkspace() {
 }
 
 ComputeQueue MetalContext::createQueue() {
-    throw OpenMMException("not implemented");
-//    return shared_ptr<ComputeQueueImpl>(new MetalQueue());
+    return shared_ptr<ComputeQueueImpl>(new MetalQueue(*device));
 }
 
 MetalArray* MetalContext::createArray() {
@@ -291,7 +296,7 @@ ComputeSort MetalContext::createSort(ComputeSortImpl::SortTrait* trait, unsigned
 
 static string rewriteKernelArgs(const string& source) {
     static regex kernelMatcher("KERNEL void[\\s\\S]*?\\(([\\s\\S]*?)\\)");
-    static regex argMatcher("[^,\\s][^\\,]*[^,\\s]*");
+    static regex argMatcher("\\#.*|[^,\\s#][^\\,#]*[^,\\s#]*");
     static regex wordMatcher("[^\\s]+");
     stringstream result;
     int pos = 0;
@@ -311,17 +316,23 @@ static string rewriteKernelArgs(const string& source) {
         sregex_iterator nextArg(argList.begin(), argList.end(), argMatcher);
         bool addComma = false;
         while (nextArg != end) {
-            if (addComma)
-                result << ", ";
-            addComma = true;
             smatch argMatch = *nextArg;
             string arg = argMatch.str();
             if (arg.rfind("GLOBAL", 0) == 0) {
+                if (addComma)
+                    result << ", ";
+                addComma = true;
                 result << arg;
+            }
+            else if (arg[0] == '#') {
+                result << "\n" << arg << "\n";
             }
             else {
                 // This is a primitive value.  We need to transform it into reference to constant memory.
 
+                if (addComma)
+                    result << ", ";
+                addComma = true;
                 result << "constant";
                 sregex_iterator nextWord(arg.begin(), arg.end(), wordMatcher);
                 bool addAmpersand = true;
@@ -397,7 +408,6 @@ ComputeProgram MetalContext::compileProgram(const string source, const map<strin
 }
 
 MetalArray& MetalContext::unwrap(ArrayInterface& array) const {
-    throw OpenMMException("not implemented");
     MetalArray* metalArray;
     ComputeArray* wrapper = dynamic_cast<ComputeArray*>(&array);
     if (wrapper != NULL)
@@ -408,19 +418,6 @@ MetalArray& MetalContext::unwrap(ArrayInterface& array) const {
         throw OpenMMException("Array argument is not an MetalArray");
     return *metalArray;
 }
-
-/*
-void MetalContext::executeKernel(CUfunction kernel, void** arguments, int threads, int blockSize, unsigned int sharedSize) {
-    if (blockSize == -1)
-        blockSize = ThreadBlockSize;
-    int gridSize = std::min((threads+blockSize-1)/blockSize, numThreadBlocks);
-    CUresult result = cuLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, getCurrentStream(), arguments, NULL);
-    if (result != CUDA_SUCCESS) {
-        stringstream str;
-        str<<"Error invoking kernel: "<<getErrorString(result)<<" ("<<result<<")";
-        throw OpenMMException(str.str());
-    }
-}*/
 
 int MetalContext::computeThreadBlockSize(double memory) const {
     int maxShared = 32768;
@@ -454,6 +451,6 @@ double MetalContext::reduceEnergy() {
 }
 
 void MetalContext::flushQueue() {
-    throw OpenMMException("not implemented");
-//    cuStreamSynchronize(getCurrentStream());
+    MetalQueue* queue = dynamic_cast<MetalQueue*>(getCurrentQueue().get());
+    queue->flush();
 }
