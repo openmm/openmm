@@ -485,12 +485,64 @@ void testFloatingInactiveATMState() {
     }
 }
 
+/** The selected per-function native policy must still meet OpenCL's tolerance. */
+void testNativeMathPolicy(MetalContext& context) {
+    const string source = R"(
+KERNEL void evaluateMath(GLOBAL const float* input, GLOBAL float* output) {
+    int i = GLOBAL_ID;
+    if (i >= NUM_VALUES) return;
+    float v = input[i];
+    output[5*i] = SQRT(v);
+    output[5*i+1] = RSQRT(v);
+    output[5*i+2] = RECIP(v);
+    output[5*i+3] = EXP(v);
+    output[5*i+4] = LOG(v);
+}
+)";
+    const int count = 40;
+    ComputeArray input, output;
+    input.initialize<float>(context, count, "mathInput");
+    output.initialize<float>(context, 5*count, "mathOutput");
+    vector<float> values(count), result;
+    float nextValue = 1e-4f;
+    for (int i = 0; i < count/2; i++) {
+        values[i] = 0.01f+0.1f*i;
+        values[count/2+i] = nextValue;
+        nextValue *= (float) M_PI;
+    }
+    input.upload(values);
+    for (int strict = 0; strict < 2; strict++) {
+        map<string, string> defines{{"NUM_VALUES", to_string(count)}};
+        if (strict)
+            defines["OPENMM_METAL_REQUIRE_SAFE_MATH"] = "1";
+        ComputeKernel kernel = context.compileProgram(source, defines)->createKernel("evaluateMath");
+        kernel->addArg(input);
+        kernel->addArg(output);
+        kernel->execute(count);
+        output.download(result);
+        for (int i = 0; i < count; i++) {
+            double v = values[i];
+            double expected[] = {sqrt(v), 1/sqrt(v), 1/v, exp(v), log(v)};
+            for (int j = 0; j < 5; j++) {
+                if (expected[j] > numeric_limits<float>::max()) {
+                    ASSERT_EQUAL(numeric_limits<float>::infinity(), result[5*i+j]);
+                }
+                else {
+                    ASSERT(isfinite(result[5*i+j]));
+                    ASSERT(fabs((result[5*i+j]-expected[j])/expected[j]) < 1e-6);
+                }
+            }
+        }
+    }
+}
+
 int main() {
     try {
         System system;
         system.addParticle(1);
         MetalContext context(system);
         testCoordinates(context);
+        testNativeMathPolicy(context);
         testArgumentBuffer(context);
         testArgumentSnapshots(context);
         testHelpersAndLocalMemory(context);

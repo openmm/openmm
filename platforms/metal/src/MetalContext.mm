@@ -205,6 +205,7 @@ MetalContext::MetalContext(const System& system, ContextImpl* simulation, MetalC
                     "pos.z -= floor((pos.z-center.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;}";
             }
         }
+        initializeNativeMath();
         accumulatorState->contexts.push_back(this);
     }
     catch (...) {
@@ -212,6 +213,41 @@ MetalContext::MetalContext(const System& system, ContextImpl* simulation, MetalC
         workThread = nullptr;
         throw;
     }
+}
+
+void MetalContext::initializeNativeMath() {
+    // Port OpenCL's determineNativeAccuracy probe. Two float4 records replace
+    // its float8, which MSL does not expose. The probe always uses safe math.
+    MetalArray data(*this, 40, sizeof(mm_float4), "nativeMathAccuracy");
+    vector<mm_float4> values(40, mm_float4(0, 0, 0, 0));
+    float nextValue = 1e-4f;
+    for (int i = 0; i < 20; i++) {
+        values[2*i].x = nextValue;
+        nextValue *= (float) M_PI;
+    }
+    data.upload(values);
+    ComputeProgram program = compileProgram(MetalKernelSources::nativeMath, {{"OPENMM_METAL_REQUIRE_SAFE_MATH", "1"}});
+    ComputeKernel kernel = program->createKernel("determineNativeAccuracy");
+    kernel->addArg(data);
+    kernel->execute(20);
+    data.download(values);
+    double errors[5] = {};
+    for (int i = 0; i < 20; i++) {
+        double v = values[2*i].x;
+        double references[] = {sqrt(v), 1.0/sqrt(v), 1.0/v, exp(v), log(v)};
+        double actual[] = {values[2*i].y, values[2*i].z, values[2*i].w, values[2*i+1].x, values[2*i+1].y};
+        for (int j = 0; j < 5; j++) {
+            // OpenCL ignores overflowing exp() samples through a NaN error.
+            // Explicitly exclude references outside FP32's range instead;
+            // unexpected non-finite results within that range still fail.
+            if (isfinite(references[j]) && fabs(references[j]) <= numeric_limits<float>::max())
+                errors[j] = !isfinite(actual[j]) ? numeric_limits<double>::infinity() :
+                    max(errors[j], fabs(actual[j]-references[j])/fabs(references[j]));
+        }
+    }
+    const char* functions[] = {"SQRT", "RSQRT", "RECIP", "EXP", "LOG"};
+    for (int i = 0; i < 5; i++)
+        compilationDefines[string("OPENMM_METAL_USE_NATIVE_")+functions[i]] = errors[i] < 1e-6 ? "1" : "0";
 }
 
 MetalContext::~MetalContext() {
@@ -414,6 +450,8 @@ ComputeProgram MetalContext::compileProgram(const string source, const map<strin
 #endif
         for (auto& define : defines)
             allDefines[define.first] = define.second;
+        if (source == CommonKernelSources::constantPotentialCGSolver)
+            allDefines["OPENMM_METAL_REQUIRE_SAFE_MATH"] = "1";
         if (commonSource && floatingAccumulators)
             allDefines["OPENMM_METAL_FLOAT_ACCUMULATORS"] = "1";
         for (auto& define : allDefines)
@@ -667,8 +705,8 @@ void MetalContext::initialize() {
 void MetalContext::initializeUtilityKernels() {
     if (reduceEnergyKernel)
         return;
-    // Reuse only the required OpenCL utilities. Native accuracy calibration and
-    // the kernel-to-kernel clear calls are not needed by the Metal blit path.
+    // Reuse the required OpenCL utilities. Native accuracy calibration uses a
+    // standalone MSL kernel, and buffer clearing uses the Metal blit path.
     const string& utilities = MetalOpenCLKernelSources::utilities;
     size_t begin = utilities.find("__kernel void reduceEnergy(");
     size_t end = utilities.find("/**", begin);

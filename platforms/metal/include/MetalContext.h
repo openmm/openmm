@@ -185,6 +185,8 @@ private:
     void resizePinnedBuffer(size_t bytes);
     /** @brief Compile context-owned charge and energy kernels on first use. */
     void initializeUtilityKernels();
+    /** @brief Select fast math functions independently using OpenCL's accuracy probe. */
+    void initializeNativeMath();
     struct Impl;
     struct AccumulatorState;
     std::unique_ptr<Impl> impl;

@@ -317,6 +317,25 @@ inline float metal_erf(float value) {
 #define erff metal_erf
 #define erfcf metal_erfc
 
+// Match OpenCL's independently accuracy-tested native functions, not broad
+// fast-math assumptions. Robust minimization and strict solvers stay precise.
+#if !defined(OPENMM_METAL_FLOAT_ACCUMULATORS) && !defined(OPENMM_METAL_REQUIRE_SAFE_MATH)
+#if OPENMM_METAL_USE_NATIVE_SQRT && !defined(SQRT)
+#define SQRT metal::fast::sqrt
+#endif
+#if OPENMM_METAL_USE_NATIVE_RSQRT && !defined(RSQRT)
+#define RSQRT metal::fast::rsqrt
+#endif
+#if OPENMM_METAL_USE_NATIVE_RECIP && !defined(RECIP)
+#define RECIP(x) metal::fast::divide(1.0f, (x))
+#endif
+#if OPENMM_METAL_USE_NATIVE_EXP && !defined(EXP)
+#define EXP metal::fast::exp
+#endif
+#if OPENMM_METAL_USE_NATIVE_LOG && !defined(LOG)
+#define LOG metal::fast::log
+#endif
+#endif
 #ifndef SQRT
 #define SQRT sqrt
 #endif
