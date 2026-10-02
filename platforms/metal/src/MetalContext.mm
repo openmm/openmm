@@ -158,6 +158,7 @@ MetalContext::MetalContext(const System& system, ContextImpl* simulation, MetalC
             getCurrentMetalQueue().finish();
             compilationDefines["OPENMM_METAL_NATIVE_FLOAT_ATOMICS"] = to_string(OPENMM_METAL_NATIVE_FLOAT_ATOMICS);
             compilationDefines["USE_GBSA_CHAIN_RULE_GUARD"] = to_string(OPENMM_METAL_FAST_GBSA_CHAIN_RULE_GUARD);
+            compilationDefines["USE_GBSA_RECIPROCAL_REUSE"] = to_string(OPENMM_METAL_FAST_GBSA_RECIPROCAL_REUSE);
             compilationDefines["OPENMM_METAL_FAST_SPARSE_FORCE_AGGREGATION"] = to_string(OPENMM_METAL_FAST_SPARSE_FORCE_AGGREGATION);
             // MSL 3.0 exposes only uint64 min/max, not uint64 add/CAS/load.
             // These operations additionally require Apple8 or newer on macOS.

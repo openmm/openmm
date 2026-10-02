@@ -79,6 +79,9 @@ void testGBSAChainRuleParameters() {
 void testGBSAChainRuleSource() {
     const string& source = CommonKernelSources::gbsaObc2;
     ASSERT(source.find("USE_GBSA_CHAIN_RULE_GUARD") != string::npos);
+    ASSERT(source.find("USE_GBSA_RECIPROCAL_REUSE") != string::npos);
+    ASSERT(source.find("OPENMM_METAL_FLOAT_ACCUMULATORS") != string::npos);
+    ASSERT(source.find("OPENMM_METAL_REQUIRE_SAFE_MATH") != string::npos);
     ASSERT(source.find("LOG(u_ijJ*RECIP(l_ijJ))") != string::npos);
     ASSERT(source.find("LOG(u_ijI*RECIP(l_ijI))") != string::npos);
     ASSERT(source.find("BORN_FORCE1*term1/0x100000000") != string::npos);
