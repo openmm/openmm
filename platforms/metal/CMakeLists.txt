@@ -75,6 +75,19 @@ option(OPENMM_METAL_EXPERIMENTAL_MATRIX_SCREEN
     "Build the isolated SIMD-matrix neighbor-screening experiment (not used by MD kernels)" OFF)
 option(OPENMM_METAL_EXPERIMENTAL_NONBONDED_HYBRID
     "Gather fixed-lane atom data while retaining OpenCL threadgroup force accumulation" OFF)
+option(OPENMM_METAL_TUNE_FORCE_THREADGROUP_SIZE
+    "Override the shared Nonbonded/GBSA force threadgroup size" OFF)
+set(OPENMM_METAL_FORCE_THREADGROUP_SIZE "256" CACHE STRING "Force threads per group when tuning is enabled (64, 128, or 256)")
+
+# Keep the grid within the existing context-wide launch cap.  Invalid values
+# must fail configuration, not be silently clamped into a different experiment.
+if(NOT OPENMM_METAL_FORCE_THREADGROUP_SIZE MATCHES "^(64|128|256)$")
+    message(FATAL_ERROR "OPENMM_METAL_FORCE_THREADGROUP_SIZE must be 64, 128, or 256")
+endif()
+set(METAL_LAUNCH_TUNING_DEFINITIONS
+    OPENMM_METAL_TUNE_FORCE_THREADGROUP_SIZE=$<BOOL:${OPENMM_METAL_TUNE_FORCE_THREADGROUP_SIZE}>
+    OPENMM_METAL_FORCE_THREADGROUP_SIZE=${OPENMM_METAL_FORCE_THREADGROUP_SIZE}
+)
 
 # Each optional algorithm can be compared independently with the OpenCL path.
 set(METAL_OPTIMIZATION_SWITCHES
@@ -193,6 +206,7 @@ target_compile_options(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
     "$<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>")
 target_compile_definitions(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
     OPENMM_COMMON_BUILDING_SHARED_LIBRARY
+    ${METAL_LAUNCH_TUNING_DEFINITIONS}
     OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS=$<BOOL:${OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS}>
     OPENMM_METAL_NATIVE_FLOAT_ATOMICS=$<BOOL:${OPENMM_METAL_NATIVE_FLOAT_ATOMICS}>
     OPENMM_METAL_FAST_PME_FLOAT_SPREAD=$<BOOL:${OPENMM_METAL_FAST_PME_FLOAT_SPREAD}>
@@ -243,6 +257,12 @@ if(BUILD_TESTING)
             else()
                 string(APPEND METAL_BUILD_CONFIGURATION "\"${variable}\":false")
             endif()
+        elseif(variable MATCHES "^OPENMM_METAL_FORCE_(THREADGROUP_SIZE|GROUPS_PER_COMPUTE_UNIT|PIPELINE_MAX_THREADS)$" OR
+                variable STREQUAL "OPENMM_METAL_LANGUAGE_VERSION")
+            if(METAL_BUILD_CONFIGURATION)
+                string(APPEND METAL_BUILD_CONFIGURATION ",")
+            endif()
+            string(APPEND METAL_BUILD_CONFIGURATION "\"${variable}\":${${variable}}")
         endif()
     endforeach()
     configure_file(cmake/MetalBuildConfiguration.h.in src/MetalBuildConfiguration.h @ONLY)
@@ -262,7 +282,7 @@ if(BUILD_TESTING)
     add_dependencies(TestMetalPlatform OpenMMMetal)
     add_test(NAME TestMetalPlatform COMMAND TestMetalPlatform)
     set_tests_properties(TestMetalPlatform PROPERTIES SKIP_RETURN_CODE 77 LABELS "Metal")
-    foreach(test IN ITEMS CommonSources SourceAdapter Sort FFT3D Primitives PairwiseOptimizations ReductionOptimizations NonbondedOptimizations GBSATuning)
+    foreach(test IN ITEMS CommonSources SourceAdapter Sort FFT3D Primitives PairwiseOptimizations ReductionOptimizations NonbondedOptimizations LaunchTuning GBSATuning)
         add_executable(TestMetal${test} tests/TestMetal${test}.cpp)
         target_include_directories(TestMetal${test} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/../common/src"
             "${CMAKE_CURRENT_BINARY_DIR}/src")
@@ -270,6 +290,7 @@ if(BUILD_TESTING)
         add_test(NAME TestMetal${test} COMMAND TestMetal${test})
         set_tests_properties(TestMetal${test} PROPERTIES SKIP_RETURN_CODE 77)
     endforeach()
+    target_compile_definitions(TestMetalLaunchTuning PRIVATE ${METAL_LAUNCH_TUNING_DEFINITIONS})
     target_compile_definitions(TestMetalGBSATuning PRIVATE
         OPENMM_METAL_FAST_GBSA_BORN_FORCE_FLOAT=$<BOOL:${OPENMM_METAL_FAST_GBSA_BORN_FORCE_FLOAT}>)
     target_include_directories(TestMetalNonbondedOptimizations PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
@@ -346,6 +367,7 @@ if(BUILD_TESTING)
     add_executable(TestMetalComputeContext tests/TestMetalComputeContext.cpp)
     target_link_libraries(TestMetalComputeContext PRIVATE ${OPENMMMETAL_LIBRARY_NAME})
     target_compile_definitions(TestMetalComputeContext PRIVATE
+        ${METAL_LAUNCH_TUNING_DEFINITIONS}
         METAL_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/kernels")
     set_target_properties(TestMetalComputeContext PROPERTIES
         COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}"

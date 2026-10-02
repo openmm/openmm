@@ -66,6 +66,11 @@ MetalNonbondedUtilities::MetalNonbondedUtilities(MetalContext& context) : contex
         forceRebuildNeighborList(true), canUsePairList(OPENMM_METAL_FAST_SPARSE_PAIRS), groupFlags(0), tilesAfterReorder(0) {
     numForceThreadBlocks = context.getNumComputeUnits() == 0 ? context.getNumThreadBlocks() : 6*context.getNumComputeUnits();
     forceThreadBlockSize = min(256, context.getMaxThreadBlockSize());
+#if OPENMM_METAL_TUNE_FORCE_THREADGROUP_SIZE
+    if (OPENMM_METAL_FORCE_THREADGROUP_SIZE > context.getMaxThreadBlockSize())
+        throw OpenMMException("The requested Metal force threadgroup size exceeds the device limit");
+    forceThreadBlockSize = OPENMM_METAL_FORCE_THREADGROUP_SIZE;
+#endif
     forceThreadBlockSize -= forceThreadBlockSize%MetalContext::TileSize;
     if (forceThreadBlockSize < MetalContext::TileSize)
         throw OpenMMException("The Metal device cannot execute a nonbonded tile");
