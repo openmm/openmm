@@ -31,6 +31,7 @@ public:
         map<string, string> selected = defines;
         if (reference) {
             selected["USE_GBSA_CHAIN_RULE_GUARD"] = "0";
+            selected["USE_GBSA_RECIPROCAL_REUSE"] = "0";
         }
         return MetalContext::compileProgram(source, selected);
     }
