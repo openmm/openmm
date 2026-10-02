@@ -56,6 +56,33 @@ void testSelection() {
     ASSERT(MetalSourceAdapter::translate(unrelated).find("metalAtomicAdd(target, value)") == string::npos);
 }
 
+/** Keep the version-gated shape attribute on tiled entry points, not helpers. */
+void testTiledForceAttributes() {
+    const string source = R"(
+DEVICE void computeBornSumHelper() {}
+KERNEL void computeNonbonded(GLOBAL int* output) { output[0] = 1; }
+KERNEL void computeBornSum(GLOBAL int* output) { output[0] = 2; }
+KERNEL void computeGBSAForce1(GLOBAL int* output) { output[0] = 3; }
+KERNEL void probe(GLOBAL int* output) { output[0] = 4; }
+)";
+    for (bool floating : {false, true}) {
+        string translated = MetalSourceAdapter::translate(source, floating);
+        for (const string& name : {"computeNonbonded", "computeBornSum", "computeGBSAForce1"})
+            ASSERT(translated.find("OPENMM_METAL_TILED_FORCE_THREADS\nkernel void "+name+"(") != string::npos);
+        ASSERT(translated.find("OPENMM_METAL_TILED_FORCE_THREADS\nkernel void probe(") == string::npos);
+        int attributes = 0;
+        size_t position = 0;
+        while ((position = translated.find("OPENMM_METAL_TILED_FORCE_THREADS", position)) != string::npos) {
+            attributes++;
+            position++;
+        }
+        ASSERT_EQUAL(3, attributes);
+        // No host-side version or feature choice belongs in this adapter.
+        ASSERT(translated.find("required_threads_per_threadgroup") == string::npos);
+        ASSERT(translated.find("__METAL_VERSION__") == string::npos);
+    }
+}
+
 /** Stress both float atomic primitives and their fetch-add return contract. */
 void testFloatAtomics() {
     System system;
@@ -219,6 +246,7 @@ kernel void voteAndShuffle(device uint4* output [[buffer(0)]], constant uint& se
 int main() {
     try {
         testSelection();
+        testTiledForceAttributes();
         testFloatAtomics();
         testFixedPointRangeDiagnostic();
         testVoteAndShuffle();

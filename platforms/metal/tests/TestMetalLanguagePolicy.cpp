@@ -54,6 +54,7 @@ static void testSelection() {
 /** Verify version-specific shader choices and their fallbacks live in MSL source. */
 static void testShaderSource() {
     const string& common = MetalKernelSources::common;
+    ASSERT(common.find("#if OPENMM_METAL_TUNE_FORCE_REQUIRED_THREADS && defined(FORCE_WORK_GROUP_SIZE) && __METAL_VERSION__ >= 400") != string::npos);
     ASSERT(common.find("#define SYNC_WARPS simdgroup_barrier(mem_flags::mem_threadgroup);") != string::npos);
     ASSERT(common.find("#define SYNC_THREADS threadgroup_barrier(mem_flags::mem_threadgroup | mem_flags::mem_device);") != string::npos);
     const string& halfBounds = MetalKernelSources::neighborHalfBounds;

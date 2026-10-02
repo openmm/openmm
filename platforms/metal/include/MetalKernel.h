@@ -85,6 +85,7 @@ public:
      * @param threads The nonnegative logical thread count; zero enqueues no work.
      * @param blockSize Threads per group, or -1 for ComputeContext::ThreadBlockSize.
      * @throws OpenMMException If the thread count or block size is invalid,
+     *         the block size differs from an active exact-size requirement,
      *         arguments do not match the binding ABI, total threadgroup storage
      *         exceeds device limits, or submission fails. Native MSL is limited
      *         to 31 direct buffer arguments; adapted Common kernels are not.

@@ -387,7 +387,11 @@ string kernelPrefix(const Function& function, const vector<Argument>& arguments)
     }
     ids += prefix+"_count = __COUNTER__-"+prefix+"_base-1\n};\n";
     if (fields.empty()) fields = "uint _metal_unused [[id(0)]];\n";
-    return ids+"struct "+prefix+"_arguments {\n"+fields+"};\n"
+    // The MSL prelude owns feature and language-version selection. Annotate
+    // only the three entry points that use the shared tiled-force geometry.
+    const string attributes = (function.name == "computeNonbonded" || function.name == "computeBornSum" ||
+        function.name == "computeGBSAForce1") ? "OPENMM_METAL_TILED_FORCE_THREADS\n" : "";
+    return ids+"struct "+prefix+"_arguments {\n"+fields+"};\n"+attributes+
         "kernel void "+function.name+"(constant "+prefix+"_arguments& _metal_args [[buffer(0)]],\n"
         "uint _metal_gid [[thread_position_in_grid]], uint _metal_lid [[thread_position_in_threadgroup]],\n"
         "uint _metal_group [[threadgroup_position_in_grid]], uint _metal_size [[threads_per_threadgroup]],\n"

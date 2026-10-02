@@ -215,6 +215,7 @@ part of the backend, not optional optimizations.
 | `OPENMM_METAL_TUNE_FORCE_THREADGROUP_SIZE` | Existing device-limited 256-thread force groups | Use `OPENMM_METAL_FORCE_THREADGROUP_SIZE` (64, 128, or 256; default 256) |
 | `OPENMM_METAL_TUNE_FORCE_GROUPS_PER_COMPUTE_UNIT` | Existing six force groups per known GPU compute unit | Use `OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT` (1 through 12; default 6) |
 | `OPENMM_METAL_TUNE_FORCE_PIPELINE_MAX_THREADS` | Existing function-based pipeline construction | Supply `OPENMM_METAL_FORCE_PIPELINE_MAX_THREADS` to the compiler for the three tiled Nonbonded/GBSA entry points (default 256) |
+| `OPENMM_METAL_TUNE_FORCE_REQUIRED_THREADS` | No exact-shape pipeline contract | MSL 4.0+ source declares the existing threadgroup size for those three tiled entry points; the host rejects mismatched dispatches |
 | `OPENMM_METAL_TUNE_LANGUAGE_VERSION` | Select the highest supported target independently of optimization switches | Limit the target to `OPENMM_METAL_LANGUAGE_VERSION`, still capped by SDK, runtime and GPU support |
 | `OPENMM_METAL_FAST_CUSTOM_GB_VALUE_SHUFFLE` | Common CustomGB value local arrays | Register exchange for value, parameters, and secondary accumulators |
 | `OPENMM_METAL_FAST_CUSTOM_GB_ENERGY_SHUFFLE` | Common CustomGB energy local arrays | Register exchange for force and parameter-derivative state |
