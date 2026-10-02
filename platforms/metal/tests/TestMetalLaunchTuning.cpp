@@ -53,6 +53,9 @@ void testLaunchGeometry(bool floating) {
         // Reuse one kernel across both lazily created accumulator pipelines.
         for (bool mode : {floating, !floating, floating}) {
             context.setUseFloatingPointAccumulators(mode);
+#if OPENMM_METAL_TUNE_FORCE_PIPELINE_MAX_THREADS
+            ASSERT(kernel->getMaxBlockSize() <= OPENMM_METAL_FORCE_PIPELINE_MAX_THREADS);
+#endif
             ASSERT(kernel->getMaxBlockSize() >= expectedThreads);
             output.upload(vector<int>(count+1, -1));
             kernel->execute(count, expectedThreads);
@@ -95,6 +98,20 @@ void testLaunchGeometry(bool floating) {
             ASSERT_EQUAL(-1, values[32]);
         }
     }
+#if OPENMM_METAL_TUNE_FORCE_PIPELINE_MAX_THREADS
+    // A mismatched source contract must be rejected before an unsafe dispatch.
+    if (OPENMM_METAL_FORCE_PIPELINE_MAX_THREADS < 256) {
+        defines["FORCE_WORK_GROUP_SIZE"] = "256";
+        bool rejected = false;
+        try {
+            context.compileProgram("KERNEL void computeBornSum"+body, defines)->createKernel("computeBornSum");
+        }
+        catch (const OpenMMException&) {
+            rejected = true;
+        }
+        ASSERT(rejected);
+    }
+#endif
 }
 
 int main() {

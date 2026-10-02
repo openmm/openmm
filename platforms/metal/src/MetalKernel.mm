@@ -42,6 +42,7 @@ using namespace std;
 
 struct MetalKernel::Impl {
     id<MTLComputePipelineState> pipeline;
+    int maxBlockSize;
     id<MTLArgumentEncoder> arguments;
     struct Binding {
         bool array, local;
@@ -77,7 +78,8 @@ static size_t primitiveSize(MTLDataType type) {
 }
 
 MetalKernel::MetalKernel(MetalContext& context, const string& name, bool commonSource,
-        const function<void*(bool)>& libraryLookup) : context(context), name(name), commonSource(commonSource), libraryLookup(libraryLookup) {
+        const function<void*(bool)>& libraryLookup, int pipelineMaximum) : context(context), name(name), commonSource(commonSource),
+        pipelineMaximum(pipelineMaximum), libraryLookup(libraryLookup) {
     getActiveImpl();
 }
 
@@ -94,10 +96,28 @@ MetalKernel::Impl& MetalKernel::getActiveImpl() const {
             throw OpenMMException("Unknown Metal kernel: "+name);
         id<MTLDevice> device = (__bridge id<MTLDevice>) context.getDevice();
         NSError* error = nil;
-        impl->pipeline = [device newComputePipelineStateWithFunction:function error:&error];
+        if (pipelineMaximum != 0) {
+            if (pipelineMaximum < 0 || pipelineMaximum%context.getSIMDWidth() != 0 ||
+                    pipelineMaximum > context.getMaxThreadBlockSize())
+                throw OpenMMException("Configured Metal force pipeline maximum exceeds the device limit");
+        }
+        if (pipelineMaximum != 0) {
+            MTLComputePipelineDescriptor* descriptor = [[MTLComputePipelineDescriptor alloc] init];
+            descriptor.computeFunction = function;
+            descriptor.maxTotalThreadsPerThreadgroup = pipelineMaximum;
+            impl->pipeline = [device newComputePipelineStateWithDescriptor:descriptor
+                    options:MTLPipelineOptionNone reflection:nil error:&error];
+        }
+        else
+            impl->pipeline = [device newComputePipelineStateWithFunction:function error:&error];
         if (impl->pipeline == nil)
             throw OpenMMException("Error creating Metal pipeline "+name+": "+
                     (error == nil ? string("unknown error") : string(error.localizedDescription.UTF8String)));
+        // Enforce the compiler contract even if a driver reports a larger
+        // pipeline limit.  execute() rejects oversized launches; it never clamps.
+        impl->maxBlockSize = (int) impl->pipeline.maxTotalThreadsPerThreadgroup;
+        if (pipelineMaximum != 0)
+            impl->maxBlockSize = min(impl->maxBlockSize, pipelineMaximum);
         if (commonSource) {
             if (impl->pipeline.threadExecutionWidth != context.getSIMDWidth())
                 throw OpenMMException("Metal Common kernels require a 32-lane SIMD group: "+name);
@@ -133,14 +153,14 @@ MetalKernel::~MetalKernel() {
 }
 
 int MetalKernel::getMaxBlockSize() const {
-    return getActiveImpl().pipeline.maxTotalThreadsPerThreadgroup;
+    return getActiveImpl().maxBlockSize;
 }
 
 void MetalKernel::execute(int threads, int blockSize) {
     Impl* impl = &getActiveImpl();
     if (blockSize == -1)
         blockSize = ComputeContext::ThreadBlockSize;
-    if (threads < 0 || blockSize <= 0 || blockSize > impl->pipeline.maxTotalThreadsPerThreadgroup)
+    if (threads < 0 || blockSize <= 0 || blockSize > impl->maxBlockSize)
         throw OpenMMException("Invalid thread block size or thread count for Metal kernel "+name);
     if (threads == 0)
         return;
