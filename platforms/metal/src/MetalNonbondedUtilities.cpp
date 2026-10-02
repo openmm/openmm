@@ -71,6 +71,13 @@ MetalNonbondedUtilities::MetalNonbondedUtilities(MetalContext& context) : contex
         throw OpenMMException("The requested Metal force threadgroup size exceeds the device limit");
     forceThreadBlockSize = OPENMM_METAL_FORCE_THREADGROUP_SIZE;
 #endif
+#if OPENMM_METAL_TUNE_FORCE_GROUPS_PER_COMPUTE_UNIT
+    if (context.getNumComputeUnits() == 0)
+        throw OpenMMException("Metal force group tuning requires a known GPU core count");
+    if (OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT > context.getNumThreadBlocks()/context.getNumComputeUnits())
+        throw OpenMMException("The requested Metal force grid exceeds the Common dispatch limit");
+    numForceThreadBlocks = OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT*context.getNumComputeUnits();
+#endif
     forceThreadBlockSize -= forceThreadBlockSize%MetalContext::TileSize;
     if (forceThreadBlockSize < MetalContext::TileSize)
         throw OpenMMException("The Metal device cannot execute a nonbonded tile");
