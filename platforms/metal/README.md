@@ -206,6 +206,7 @@ part of the backend, not optional optimizations.
 | `OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD` | Fixed-point ConstantPotential PME grid | Common floating-grid spreading |
 | `OPENMM_METAL_FAST_BLOCK_BOUNDS` | Serial atom-block bounds | Cooperative nonperiodic bounds; ordered per-lane periodic bounds; SIMD size-range reduction |
 | `OPENMM_METAL_FAST_FP16_BOUNDS` | Float sorted/large bounding boxes | Conservatively rounded half4 storage; public Common bounds remain float |
+| `OPENMM_METAL_FAST_FP16_BOUNDS_NEXTAFTER` | Existing half-bit increment for outward rounding | With FP16 bounds enabled, use MSL 3.1 `nextafter`; older targets retain the original helper |
 | `OPENMM_METAL_FAST_NEIGHBOR_BALLOT` | OpenCL local flags and atom prefix sums | SIMD ballot/popcount block iteration and atom compaction |
 | `OPENMM_METAL_FAST_SPARSE_PAIRS` | All interactions in tiles | Separate sparse pairs and the CUDA sparse-pair force loop |
 | `OPENMM_METAL_FAST_SPARSE_FORCE_AGGREGATION` | One Q32.32 write per sparse-pair component | Bounded SIMD aggregation of adjacent equal-target, already-quantized contributions; floating mode unchanged |

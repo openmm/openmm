@@ -16,6 +16,7 @@
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <sstream>
 
 using namespace OpenMM;
@@ -148,21 +149,37 @@ void testBlockBounds(int periodicMode) {
     }
 }
 
-/** @brief Conservative rounding includes values next to half spacing and overflow. */
+/** @brief Check all finite positive half boundaries and exact 3.0/new-path bits. */
 void testHalfBounds(bool initialFloating) {
     System system;
     system.addParticle(1);
     MetalContext context(system, nullptr, nullptr, initialFloating);
-    vector<float> input{0, 1.0e-8f, 0.00006099f, 0.10001f, 1.0001f, 100.01f, 65504, 65505, 1.0e10f};
-    ComputeArray in, out, infinite;
+    vector<float> input{0, -0.0f, 1.0e-8f, 0.00006099f, 0.10001f, 1.0001f, 100.01f,
+        65504, 65505, 1.0e10f, numeric_limits<float>::infinity()};
+    for (int bits = 0; bits < 0x7c00; bits++) {
+        const int exponent = bits>>10, significand = bits&1023;
+        const float value = exponent == 0 ? ldexp(float(significand), -24) :
+                ldexp(float(1024+significand), exponent-25);
+        input.push_back(value);
+        input.push_back(nextafter(value, numeric_limits<float>::infinity()));
+        if (value != 0) input.push_back(nextafter(value, 0.0f));
+    }
+    ComputeArray in, out, infinite, bitPatterns;
     in.initialize<float>(context, input.size(), "halfBoundsInput");
     out.initialize<float>(context, input.size(), "halfBoundsOutput");
     infinite.initialize<int>(context, input.size(), "halfBoundsInfinite");
+    bitPatterns.initialize<mm_int2>(context, input.size(), "halfBoundsBits");
     in.upload(input);
     string source = MetalNonbondedSources::halfBoundsSource()+R"(
-KERNEL void roundBounds(GLOBAL const float* input, GLOBAL float* output, GLOBAL int* infinite, int count) {
+KERNEL void roundBounds(GLOBAL const float* input, GLOBAL float* output, GLOBAL int* infinite,
+        GLOBAL int2* bits, int count) {
     for (int i = GLOBAL_ID; i < count; i += GLOBAL_SIZE) {
-        output[i] = float(metalBoundsHalf(make_real4(input[i], 0, 0, 0)).x);
+        half original = half(input[i]);
+        ushort oldBits = as_type<ushort>(original);
+        if (float(original) < input[i]) original = as_type<half>(ushort(oldBits+1));
+        half selected = metalBoundsHalf(make_real4(input[i], 0, 0, 0)).x;
+        output[i] = float(selected);
+        bits[i] = make_int2(int(as_type<ushort>(original)), int(as_type<ushort>(selected)));
         infinite[i] = isinf(output[i]) ? 1 : 0;
     }
 })";
@@ -172,6 +189,7 @@ KERNEL void roundBounds(GLOBAL const float* input, GLOBAL float* output, GLOBAL 
     kernel->addArg(in);
     kernel->addArg(out);
     kernel->addArg(infinite);
+    kernel->addArg(bitPatterns);
     kernel->addArg((int) input.size());
     // Reuse the same kernel across lazy pipeline variants and then return to
     // the initial ABI. REQUIRE_SAFE_MATH must survive both compilation orders.
@@ -180,10 +198,16 @@ KERNEL void roundBounds(GLOBAL const float* input, GLOBAL float* output, GLOBAL 
         kernel->execute(input.size());
         vector<float> result;
         vector<int> flags;
+        vector<mm_int2> exact;
         out.download(result);
         infinite.download(flags);
+        bitPatterns.download(exact);
         for (int i = 0; i < input.size(); i++) {
-            ASSERT(result[i] >= input[i]);
+            ASSERT_EQUAL(exact[i].x, exact[i].y);
+            // MSL may flush FP32 subnormal inputs. Half subnormals are FP32
+            // normal and still require strict outward rounding below.
+            if (input[i] == 0 || input[i] >= numeric_limits<float>::min())
+                ASSERT(result[i] >= input[i]);
             ASSERT_EQUAL(input[i] > 65504 ? 1 : 0, flags[i]);
             if (input[i] <= 65504) {
                 ASSERT(result[i]-input[i] <= max(6.0e-8f, input[i]*0.001f));
