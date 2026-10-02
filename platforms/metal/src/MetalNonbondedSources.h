@@ -151,18 +151,7 @@ inline void addOpenCLPairs(std::string& source) {
 
 /** @brief Shared by the production compression and its boundary-value regression. */
 inline std::string halfBoundsSource() {
-    return R"(
-/** Round nonnegative bounds upward, preserving CUDA/HIP's conservative rule. */
-DEVICE half metalBoundHalf(real value) {
-    half result = half(value);
-    ushort bits = as_type<ushort>(result);
-    if (float(result) < value) result = as_type<half>(ushort(bits+1));
-    return result;
-}
-DEVICE half4 metalBoundsHalf(real4 value) {
-    return half4(metalBoundHalf(value.x), metalBoundHalf(value.y), metalBoundHalf(value.z), half(0));
-}
-)";
+    return MetalKernelSources::neighborHalfBounds;
 }
 
 /** @brief Apply independent bounds, ballot/compaction, and sparse-pair options to OpenCL. */

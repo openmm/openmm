@@ -56,6 +56,10 @@ static void testShaderSource() {
     const string& common = MetalKernelSources::common;
     ASSERT(common.find("#define SYNC_WARPS simdgroup_barrier(mem_flags::mem_threadgroup);") != string::npos);
     ASSERT(common.find("#define SYNC_THREADS threadgroup_barrier(mem_flags::mem_threadgroup | mem_flags::mem_device);") != string::npos);
+    const string& halfBounds = MetalKernelSources::neighborHalfBounds;
+    ASSERT(halfBounds.find("#if OPENMM_METAL_FAST_FP16_BOUNDS_NEXTAFTER && __METAL_VERSION__ >= 310") != string::npos);
+    ASSERT(halfBounds.find("nextafter(result, half(INFINITY))") != string::npos);
+    ASSERT(halfBounds.find("as_type<half>(ushort(bits+1))") != string::npos);
     const string& mathPolicy = MetalKernelSources::mathPolicy;
     ASSERT(mathPolicy.find("#if OPENMM_METAL_HAS_MATH_PRAGMAS") != string::npos);
     ASSERT(mathPolicy.find("#if OPENMM_METAL_USE_FAST_MATH") != string::npos);
