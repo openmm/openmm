@@ -20,6 +20,7 @@
 
 #include "MetalContext.h"
 #include "MetalKernel.h"
+#include "MetalQueue.h"
 #include "CommonKernelSources.h"
 #include "openmm/System.h"
 #include "openmm/common/ComputeArray.h"
@@ -80,23 +81,87 @@ void testArgumentBuffer(MetalContext& context) {
     }
 }
 
-/** Every queued dispatch must retain its own immutable scalar argument bytes. */
+/** Reused argument storage must preserve each queued scalar and array binding. */
 void testArgumentSnapshots(MetalContext& context) {
     const string source = "KERNEL void snapshot(GLOBAL int* output, int index, int value) { if (GLOBAL_ID == 0) output[index] = value; }";
-    ComputeArray output;
-    output.initialize<int>(context, 130, "argumentSnapshots");
+    const int count = 130;
+    ComputeArray first, second;
+    first.initialize<int>(context, count, "firstArgumentSnapshots");
+    second.initialize<int>(context, count, "secondArgumentSnapshots");
     ComputeKernel kernel = context.compileProgram(source)->createKernel("snapshot");
-    kernel->addArg(output);
+    kernel->addArg(first);
     kernel->addArg(0);
     kernel->addArg(0);
-    for (int i = 0; i < 130; i++) {
-        kernel->setArg(1, i);
-        kernel->setArg(2, i*7-19);
+    for (int wave = 0; wave < 3; wave++) {
+        for (int i = 0; i < count; i++) {
+            kernel->setArg(1, i);
+            kernel->setArg(0, first);
+            kernel->setArg(2, i*7-19+wave);
+            kernel->execute(1);
+            kernel->setArg(0, second);
+            kernel->setArg(2, 31-i*5-wave);
+            kernel->execute(1);
+        }
+        vector<int> result;
+        first.download(result);
+        for (int i = 0; i < count; i++) ASSERT_EQUAL(i*7-19+wave, result[i]);
+        second.download(result);
+        for (int i = 0; i < count; i++) ASSERT_EQUAL(31-i*5-wave, result[i]);
+    }
+
+    // A rejected binding must not strand or corrupt a reusable snapshot.
+    kernel->setArg(2, int64_t(5));
+    bool rejected = false;
+    try {
         kernel->execute(1);
     }
+    catch (const OpenMMException& error) {
+        rejected = string(error.what()).find("Wrong primitive size") != string::npos;
+    }
+    ASSERT(rejected);
+    kernel->setArg(1, 0);
+    kernel->setArg(2, 73);
+    kernel->execute(1);
+    // The submitted command must retain its argument buffer after kernel destruction.
+    kernel.reset();
     vector<int> result;
-    output.download(result);
-    for (int i = 0; i < 130; i++) ASSERT_EQUAL(i*7-19, result[i]);
+    second.download(result);
+    ASSERT_EQUAL(73, result[0]);
+}
+
+/** Completion on one queue cannot release argument snapshots used by another. */
+void testArgumentSnapshotsAcrossQueues(MetalContext& context) {
+    const string source = "KERNEL void queueSnapshot(GLOBAL int* output, int index, int value) { if (GLOBAL_ID == 0) output[index] = value; }";
+    ComputeArray first, second;
+    first.initialize<int>(context, 130, "firstQueueSnapshots");
+    second.initialize<int>(context, 130, "secondQueueSnapshots");
+    ComputeQueue original = context.getCurrentQueue(), secondary = context.createQueue();
+    ComputeKernel kernel = context.compileProgram(source)->createKernel("queueSnapshot");
+    kernel->addArg(first);
+    kernel->addArg(0);
+    kernel->addArg(0);
+    for (int wave = 0; wave < 3; wave++) {
+        for (int i = 0; i < 130; i++) {
+            context.setCurrentQueue(original);
+            kernel->setArg(0, first);
+            kernel->setArg(1, i);
+            kernel->setArg(2, i+wave*17);
+            kernel->execute(1);
+            context.setCurrentQueue(secondary);
+            kernel->setArg(0, second);
+            kernel->setArg(2, 23-i-wave);
+            kernel->execute(1);
+        }
+        vector<int> result;
+        second.download(result);
+        for (int i = 0; i < 130; i++) ASSERT_EQUAL(23-i-wave, result[i]);
+        context.setCurrentQueue(original);
+        first.download(result);
+        for (int i = 0; i < 130; i++) ASSERT_EQUAL(i+wave*17, result[i]);
+    }
+    // Finish both queues before the output arrays leave scope.
+    static_cast<MetalQueue&>(*secondary).finish();
+    context.setCurrentQueue(original);
 }
 
 /** Exercise helper built-ins, private pointers, vector constructors and LOCAL_ARG. */
@@ -545,6 +610,7 @@ int main() {
         testNativeMathPolicy(context);
         testArgumentBuffer(context);
         testArgumentSnapshots(context);
+        testArgumentSnapshotsAcrossQueues(context);
         testHelpersAndLocalMemory(context);
         testLocalMemoryLimit(context);
         testConditionalSource(context);
