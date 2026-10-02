@@ -165,6 +165,7 @@ MetalContext::MetalContext(const System& system, ContextImpl* simulation, MetalC
             getCurrentMetalQueue().finish();
             compilationDefines["OPENMM_METAL_NATIVE_FLOAT_ATOMICS"] = to_string(OPENMM_METAL_NATIVE_FLOAT_ATOMICS);
             compilationDefines["OPENMM_METAL_FAST_FP16_BOUNDS_NEXTAFTER"] = to_string(OPENMM_METAL_FAST_FP16_BOUNDS_NEXTAFTER);
+            compilationDefines["OPENMM_METAL_TUNE_FORCE_REQUIRED_THREADS"] = to_string(OPENMM_METAL_TUNE_FORCE_REQUIRED_THREADS);
             compilationDefines["USE_GBSA_CHAIN_RULE_GUARD"] = to_string(OPENMM_METAL_FAST_GBSA_CHAIN_RULE_GUARD);
             compilationDefines["USE_GBSA_RECIPROCAL_REUSE"] = to_string(OPENMM_METAL_FAST_GBSA_RECIPROCAL_REUSE);
             compilationDefines["OPENMM_METAL_FAST_SPARSE_FORCE_AGGREGATION"] = to_string(OPENMM_METAL_FAST_SPARSE_FORCE_AGGREGATION);

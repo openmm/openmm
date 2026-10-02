@@ -46,6 +46,18 @@ struct MetalExecutionContext {
 };
 
 #define DEVICE
+/** The Common adapter attaches this only to the three tiled force entry points. */
+#if OPENMM_METAL_TUNE_FORCE_REQUIRED_THREADS && defined(FORCE_WORK_GROUP_SIZE) && __METAL_VERSION__ >= 400
+#define OPENMM_METAL_STRINGIFY_IMPL(value) #value
+#define OPENMM_METAL_STRINGIFY(value) OPENMM_METAL_STRINGIFY_IMPL(value)
+// Runtime-library reflection preserves this annotation even when the pipeline
+// property does not report a required shape declared in shader source.
+#define OPENMM_METAL_TILED_FORCE_THREADS \
+    [[required_threads_per_threadgroup(FORCE_WORK_GROUP_SIZE, 1, 1)]] \
+    [[user_annotation("openmm_required_threads=" OPENMM_METAL_STRINGIFY(FORCE_WORK_GROUP_SIZE))]]
+#else
+#define OPENMM_METAL_TILED_FORCE_THREADS
+#endif
 #define GLOBAL device
 #define LOCAL threadgroup
 #define LOCAL_ARG threadgroup

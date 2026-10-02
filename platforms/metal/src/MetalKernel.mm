@@ -35,6 +35,7 @@
 #include "openmm/internal/AssertionUtilities.h"
 #import <Metal/Metal.h>
 #include <algorithm>
+#include <cstdint>
 #include <cstring>
 
 using namespace OpenMM;
@@ -43,6 +44,8 @@ using namespace std;
 struct MetalKernel::Impl {
     id<MTLComputePipelineState> pipeline;
     int maxBlockSize;
+    /** Zero leaves dispatch geometry unrestricted by an exact-size hint. */
+    int requiredBlockSize = 0;
     id<MTLArgumentEncoder> arguments;
     struct Binding {
         bool array, local;
@@ -118,6 +121,37 @@ MetalKernel::Impl& MetalKernel::getActiveImpl() const {
         impl->maxBlockSize = (int) impl->pipeline.maxTotalThreadsPerThreadgroup;
         if (pipelineMaximum != 0)
             impl->maxBlockSize = min(impl->maxBlockSize, pipelineMaximum);
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 260000
+        if (@available(macOS 26.0, *)) {
+            // The shader declares its required shape. Only read it back here
+            // so dispatch validation follows the compiled pipeline's contract.
+            MTLSize required = impl->pipeline.requiredThreadsPerThreadgroup;
+            if (required.width != 0) {
+                if (required.height != 1 || required.depth != 1 || required.width > impl->maxBlockSize)
+                    throw OpenMMException("Unsupported required Metal threadgroup shape: "+name);
+                impl->requiredBlockSize = (int) required.width;
+            }
+            // A source-level required-size attribute can leave the pipeline
+            // property at zero. The same MSL guard emits this runtime-library
+            // annotation so host validation follows the shader's own choice.
+            NSString* annotation = [library reflectionForFunctionWithName:function.name].userAnnotation;
+            NSString* prefix = @"openmm_required_threads=";
+            if ([annotation hasPrefix:prefix]) {
+                string value([annotation substringFromIndex:prefix.length].UTF8String);
+                uint64_t count = 0;
+                for (char digit : value) {
+                    if (digit < '0' || digit > '9')
+                        throw OpenMMException("Invalid required-thread annotation for Metal kernel "+name);
+                    count = 10*count+(digit-'0');
+                    if (count > impl->maxBlockSize)
+                        throw OpenMMException("Required-thread annotation exceeds the Metal pipeline limit: "+name);
+                }
+                if (count == 0 || (impl->requiredBlockSize != 0 && count != impl->requiredBlockSize))
+                    throw OpenMMException("Invalid or inconsistent required-thread annotation for Metal kernel "+name);
+                impl->requiredBlockSize = (int) count;
+            }
+        }
+#endif
         if (commonSource) {
             if (impl->pipeline.threadExecutionWidth != context.getSIMDWidth())
                 throw OpenMMException("Metal Common kernels require a 32-lane SIMD group: "+name);
@@ -162,6 +196,8 @@ void MetalKernel::execute(int threads, int blockSize) {
         blockSize = ComputeContext::ThreadBlockSize;
     if (threads < 0 || blockSize <= 0 || blockSize > impl->maxBlockSize)
         throw OpenMMException("Invalid thread block size or thread count for Metal kernel "+name);
+    if (impl->requiredBlockSize != 0 && blockSize != impl->requiredBlockSize)
+        throw OpenMMException("Thread block size does not match the required Metal threadgroup size for "+name);
     if (threads == 0)
         return;
     if (impl->arguments == nil && arrayArgs.size() > 31)
