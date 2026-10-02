@@ -16,7 +16,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-"""Record benchmark.py results for OpenCL and two independently built Metal variants.
+"""Record benchmark.py results for selected independently built platform variants.
 
 This driver uses only the standard library; workers require OpenMM Python bindings
 built from this checkout. No packages are installed by the driver. Run --dry-run
@@ -42,6 +42,7 @@ import time
 ROOT = Path(__file__).resolve().parents[2]
 BENCHMARK = ROOT / "examples/benchmarks/benchmark.py"
 TESTS = ("gbsa", "rf", "pme", "apoa1rf", "apoa1pme", "apoa1ljpme")
+VARIANTS = ("opencl", "metal_off", "metal_on")
 
 
 def digest(path):
@@ -74,6 +75,8 @@ def configurations(args):
             ("opencl", "OpenCL", args.opencl_build),
             ("metal_off", "Metal", args.metal_off_build),
             ("metal_on", "Metal", args.metal_on_build)):
+        if label not in args.variants:
+            continue
         build = Path(directory).expanduser().resolve()
         cache = cache_values(build)
         if cache.get("CMAKE_BUILD_TYPE") != "Release":
@@ -96,17 +99,24 @@ def configurations(args):
             commit = "OFF" if label == "metal_on" else "ON"
             if flags.get("OPENMM_METAL_RECORD_AND_COMMIT") != commit:
                 bad.append("OPENMM_METAL_RECORD_AND_COMMIT")
-            if flags.get("OPENMM_METAL_EXPERIMENTAL_MATRIX_SCREEN", "OFF") != "OFF":
-                bad.append("OPENMM_METAL_EXPERIMENTAL_MATRIX_SCREEN")
+            for experimental in ("OPENMM_METAL_EXPERIMENTAL_MATRIX_SCREEN", "OPENMM_METAL_EXPERIMENTAL_NONBONDED_HYBRID"):
+                if flags.get(experimental, "OFF") != "OFF":
+                    bad.append(experimental)
+            # Launch-geometry and language-target experiments need their own labels, even when all
+            # ordinary fast paths match the standard ON/OFF endpoint.
+            bad.extend(key for key, value in flags.items()
+                       if (key.startswith("OPENMM_METAL_TUNE_FORCE_") or
+                           key == "OPENMM_METAL_TUNE_LANGUAGE_VERSION") and value != "OFF")
             if bad:
                 raise ValueError(f"{label}: wrong settings: {', '.join(bad)}")
         configs.append(dict(label=label, platform=platform, build=str(build),
             library=str(build / f"libOpenMM{platform}.dylib"), core=str(build / "libOpenMM.dylib"),
             flags=flags, cmake=cache))
-    off, on = configs[1:]
-    if {key for key in off["flags"] if key.startswith("OPENMM_METAL_FAST_")} != {
-            key for key in on["flags"] if key.startswith("OPENMM_METAL_FAST_")}:
-        raise ValueError("Metal builds expose different fast-path switches; reconfigure both")
+    selected = {config["label"]: config for config in configs}
+    if "metal_off" in selected and "metal_on" in selected:
+        if {key for key in selected["metal_off"]["flags"] if key.startswith("OPENMM_METAL_FAST_")} != {
+                key for key in selected["metal_on"]["flags"] if key.startswith("OPENMM_METAL_FAST_")}:
+            raise ValueError("Metal builds expose different fast-path switches; reconfigure both")
     return configs
 
 
@@ -241,11 +251,11 @@ def validate_result(path, job):
     return row
 
 
-def write_summary(output, records, tests, repeats):
+def write_summary(output, records, tests, repeats, variants=VARIANTS):
     """Keep partial results useful after failures or an interrupted long run."""
     groups = []
     for test in tests:
-        for label in ("opencl", "metal_off", "metal_on"):
+        for label in variants:
             successful = [record["result"] for record in records if record["test"] == test
                           and record["label"] == label and record["status"] == "passed"]
             groups.append(dict(test=test, label=label, completed=len(successful), expected=repeats,
@@ -264,15 +274,18 @@ def write_summary(output, records, tests, repeats):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
+        allow_abbrev=False,
         epilog="300 seconds is benchmark.py's adaptive target (final interval >=150 seconds), not a timeout.\n"
-               "6 cases x 3 variants x 3 repeats = 54 runs, nominally 4.5 hours plus preparation/calibration.\n"
-               "Metal ON includes native float atomics and batching; matrix experiments are excluded.\n"
+               "By default: 6 cases x 3 variants x 3 repeats = 54 runs.\n"
+               "--variants metal_on selects 18 runs, nominally 1.5 hours plus preparation/calibration.\n"
+               "Metal ON includes native float atomics and batching; matrix, hybrid, launch-tuning, and language-target experiments are excluded.\n"
                "Large-force minimization is not exercised by these cases. Equal seeds do not imply\n"
                "identical random streams across platforms. Bindings must be built from this checkout.")
     parser.add_argument("--python", default=sys.executable, help="Python with matching-checkout OpenMM bindings")
     parser.add_argument("--opencl-build", default=str(ROOT / "build/opencl-common-regression"))
     parser.add_argument("--metal-off-build", default=str(ROOT / "build/metal-submission-immediate"))
     parser.add_argument("--metal-on-build", default=str(ROOT / "build/metal-neighbor-optimizations"))
+    parser.add_argument("--variants", default=",".join(VARIANTS), help="Comma-separated subset of opencl,metal_off,metal_on")
     parser.add_argument("--tests", default=",".join(TESTS), help="Comma-separated bundled non-plugin cases")
     parser.add_argument("--seconds", type=float, default=300, help="Original benchmark.py target per case (default:300)")
     parser.add_argument("--repeats", type=int, default=3)
@@ -284,6 +297,9 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Read configuration and print plan; no writes/build/OpenMM import")
     parser.add_argument("--check-only", action="store_true", help="Check bindings/library loading, without benchmark integration")
     args = parser.parse_args()
+    args.variants = args.variants.split(",")
+    if not args.variants or len(set(args.variants)) != len(args.variants) or any(label not in VARIANTS for label in args.variants):
+        parser.error(f"Choose distinct variants from {','.join(VARIANTS)}")
     tests = args.tests.split(",")
     if not tests or len(set(tests)) != len(tests) or any(test not in TESTS for test in tests):
         parser.error(f"Choose distinct tests from {','.join(TESTS)}")
@@ -296,9 +312,12 @@ def main():
         if not path.is_file():
             parser.error(f"Missing benchmark input: {path}")
     configs = configurations(args)
-    print(f"Plan: {len(tests)} cases × 3 variants × {args.repeats} repeats; {args.seconds:g}s target each")
-    print("Metal OFF: fast paths/native float atomics OFF, per-operation submission.")
-    print("Metal ON: fast paths/native float atomics ON, batched submission.")
+    labels = [config["label"] for config in configs]
+    print(f"Plan: {len(tests)} cases × {len(configs)} variants × {args.repeats} repeats; {args.seconds:g}s target each")
+    if "metal_off" in labels:
+        print("Metal OFF: fast paths/native float atomics OFF, per-operation submission.")
+    if "metal_on" in labels:
+        print("Metal ON: fast paths/native float atomics ON, batched submission.")
     for config in configs:
         print(f"  {config['label']}: {config['library']}")
     if args.dry_run:
@@ -380,7 +399,7 @@ def main():
         save(case / "status.json", record)
         return record
 
-    # Fail before the long run if bindings or either Metal library is unsuitable.
+    # Fail before the long run if bindings or a selected library is unsuitable.
     for config in configs:
         record = execute(config, None, 0)
         if record["status"] != "passed":
@@ -388,17 +407,18 @@ def main():
     if args.check_only:
         print("All library-loading preflights passed; no integration was run.")
         return 0
-    write_summary(output, records, tests, args.repeats)
+    write_summary(output, records, tests, args.repeats, labels)
     try:
         for repeat in range(args.repeats):
-            order = configs[repeat % 3:]+configs[:repeat % 3]
+            offset = repeat % len(configs)
+            order = configs[offset:]+configs[:offset]
             for test in tests:
                 for config in order:
                     print(f"\n[{repeat+1}/{args.repeats}] {test} / {config['label']}", flush=True)
                     records.append(execute(config, test, repeat+1))
-                    write_summary(output, records, tests, args.repeats)
+                    write_summary(output, records, tests, args.repeats, labels)
     finally:
-        write_summary(output, records, tests, args.repeats)
+        write_summary(output, records, tests, args.repeats, labels)
     print((output / "summary.txt").read_text())
     print(f"Raw data and settings: {output}")
     return int(any(record["status"] != "passed" for record in records))
