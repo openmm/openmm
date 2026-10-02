@@ -39,11 +39,12 @@ public:
 };
 
 /**
- * @brief Compare guarded pair arithmetic on tail tiles and both buffer ABIs.
- * The reference explicitly disables the shader-side guard.
+ * @brief Exercise production payload generation, tail tiles and both buffer ABIs.
+ * The reference disables source-level switches explicitly and uses a harmless
+ * comment to opt out of exact-template Born-force payload recognition.
  * Global fixed-point input is unchanged, including signed conversion boundaries.
  */
-vector<double> evaluateChainRule(bool reference, bool floating, int atoms) {
+vector<double> evaluateChainRule(bool reference, bool floating, int atoms, int conflictingUse) {
     System system;
     for (int i = 0; i < atoms; i++) system.addParticle(1);
     RecordingContext context(system, floating, reference);
@@ -55,7 +56,16 @@ vector<double> evaluateChainRule(bool reference, bool floating, int atoms) {
     map<string, string> names = {{"OBC_PARAMS1", "obc0_obcParams1"}, {"OBC_PARAMS2", "obc0_obcParams2"},
         {"BORN_FORCE1", "obc0_bornForce1"}, {"BORN_FORCE2", "obc0_bornForce2"}};
     string source = context.replaceStrings(CommonKernelSources::gbsaObc2, names);
+    if (reference) source += "// Unmodified expression: control for template-only rewrites.\n";
     nb.addInteraction(false, false, false, 1.0, vector<vector<int> >(), source, 0);
+    if (conflictingUse == 1)
+        nb.addInteraction(false, false, false, 1.0, vector<vector<int> >(),
+                "// Another interaction owns a full-width obc0_bornForce parameter.\n", 0);
+    else if (conflictingUse == 2)
+        nb.addInteraction(false, false, false, 1.0, vector<vector<int> >(),
+                "#define METAL_TEST_JOIN(a, b) a ## b\n"
+                "if (METAL_TEST_JOIN(obc0_, bornForce1) == 0) dEdR += 0;\n"
+                "#undef METAL_TEST_JOIN\n", 0);
     nb.addParameter(ComputeParameterInfo(params, "obc0_obcParams", "float", 2));
     nb.addParameter(ComputeParameterInfo(born, "obc0_bornForce", "mm_long", 1));
     context.initialize();
@@ -83,6 +93,12 @@ vector<double> evaluateChainRule(bool reference, bool floating, int atoms) {
     const string& generated = context.nonbondedSource;
     ASSERT(!generated.empty());
     ASSERT(generated.find("mm_long* restrict global_obc0_bornForce") != string::npos);
+    const bool narrow = OPENMM_METAL_FAST_GBSA_BORN_FORCE_FLOAT && !reference && !conflictingUse;
+    ASSERT_EQUAL(narrow, generated.find("MetalGBSABornForce obc0_bornForce1 = metalGBSABornForce(global_obc0_bornForce[atom1])") != string::npos);
+    if (narrow) {
+        ASSERT(generated.find("mm_long obc0_bornForce;") == string::npos);
+        ASSERT(generated.find("mm_long shflobc0_bornForce;") == string::npos);
+    }
     vector<double> forces;
     context.downloadFixedPointBuffer(context.getLongForceBuffer(), forces);
     for (double value : forces) ASSERT(isfinite(value));
@@ -94,6 +110,44 @@ vector<double> evaluateChainRule(bool reference, bool floating, int atoms) {
         for (int i = 0; i < padded; i++) ASSERT_EQUAL(raw[i], after[i]);
     }
     return forces;
+}
+
+/** @brief Same conversion before/after SIMD exchange, with both signed extremes. */
+void testConversion() {
+    System system;
+    system.addParticle(1);
+    MetalContext context(system);
+    ComputeArray input, before, after;
+    input.initialize<int64_t>(context, 64, "conversionInput");
+    before.initialize<float>(context, 64, "conversionBefore");
+    after.initialize<float>(context, 64, "conversionAfter");
+    vector<int64_t> data(64);
+    const int64_t cases[] = {numeric_limits<int64_t>::min(), numeric_limits<int64_t>::max(),
+        0, -1, 1, (int64_t(1)<<24)+1, -(int64_t(1)<<24)-1, (int64_t(1)<<53)+511};
+    for (int i = 0; i < 64; i++) data[i] = cases[i%8];
+    input.upload(data);
+    ComputeProgram program = context.compileProgram(R"(
+KERNEL void testConversion(GLOBAL const mm_long* input, GLOBAL float* before, GLOBAL float* after) {
+    int lane = LOCAL_ID&31;
+    mm_long raw = input[GLOBAL_ID];
+    float converted = (float) raw;
+    int other = (lane*13+7)&31;
+    before[GLOBAL_ID] = simdShuffle(converted, other);
+    after[GLOBAL_ID] = (float) simdShuffle(raw, other);
+}
+)");
+    ComputeKernel kernel = program->createKernel("testConversion");
+    kernel->addArg(input);
+    kernel->addArg(before);
+    kernel->addArg(after);
+    kernel->execute(64, 64);
+    vector<float> a, b;
+    before.download(a);
+    after.download(b);
+    for (int i = 0; i < 64; i++) {
+        ASSERT_EQUAL(a[i], b[i]);
+        ASSERT_EQUAL(float(data[(i&~31)+(((i&31)*13+7)&31)]), a[i]);
+    }
 }
 
 /**
@@ -122,11 +176,14 @@ void compareForces(const vector<double>& reference, const vector<double>& actual
 
 int main() {
     try {
+        testConversion();
         for (bool floating : {false, true}) {
             for (int atoms : {31, 97}) {
-                vector<double> reference = evaluateChainRule(true, floating, atoms);
-                vector<double> actual = evaluateChainRule(false, floating, atoms);
-                compareForces(reference, actual, floating, atoms);
+                vector<double> reference = evaluateChainRule(true, floating, atoms, false);
+                for (int conflicting : {0, 1, 2}) {
+                    vector<double> actual = evaluateChainRule(false, floating, atoms, conflicting);
+                    compareForces(reference, actual, floating, atoms);
+                }
             }
         }
     }
@@ -134,6 +191,6 @@ int main() {
         cerr << error.what() << endl;
         return 1;
     }
-    cout << "Metal GBSA chain-rule guard tests passed" << endl;
+    cout << "Metal GBSA payload and numerical tuning tests passed" << endl;
     return 0;
 }

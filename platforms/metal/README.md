@@ -199,6 +199,7 @@ part of the backend, not optional optimizations.
 | `OPENMM_METAL_FAST_GBSA_BORN_SHUFFLE` | Common Born-sum local structs | Register exchange of Born data and secondary sums |
 | `OPENMM_METAL_FAST_GBSA_FORCE_SHUFFLE` | Common GBSA force local structs | Register exchange of force/Born state |
 | `OPENMM_METAL_FAST_GBSA_CHAIN_RULE_GUARD` | Evaluate Common chain-rule math before rejecting inactive pairs | Check the unchanged particle/self/cutoff predicate before reciprocal/logarithm work; tile communication stays outside the guard |
+| `OPENMM_METAL_FAST_GBSA_BORN_FORCE_FLOAT` | Exchange the finalized 64-bit Born-force input in pair tiles | Convert the read-only Born-force value to FP32 once at tile load; retain global Q32.32 accumulation and the original pairwise scaling order |
 | `OPENMM_METAL_FAST_DPD_PARTICLE_SHUFFLE` | Common DPD local particle arrays | Register broadcasts preserving original pair/RNG visitation order |
 | `OPENMM_METAL_FAST_DPD_TILE_BROADCAST` | Local-memory tile-counter broadcast | SIMD lane-zero broadcast |
 | `OPENMM_METAL_FAST_CUSTOM_HBOND_SHUFFLE` | Common local acceptor structs | Register rotation of acceptor positions and forces |

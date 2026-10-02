@@ -26,6 +26,7 @@
 #include "CommonKernelSources.h"
 #include "openmm/OpenMMException.h"
 #include <cctype>
+#include <map>
 #include <regex>
 #include <set>
 #include <vector>
@@ -63,6 +64,45 @@ bool matchesTemplate(const string& source, const string& pattern, const set<stri
     }
     return cursor == source.size();
 }
+
+/** Match identifier-only holes, requiring repeated occurrences to agree. */
+bool matchesIdentifierTemplate(const string& source, const string& pattern, const set<string>& holes,
+        map<string, string>* substitutions = nullptr) {
+    map<string, string> identifiers;
+    size_t cursor = 0;
+    for (size_t i = 0; i < pattern.size();) {
+        if (isalpha(static_cast<unsigned char>(pattern[i])) || pattern[i] == '_') {
+            size_t end = i+1;
+            while (end < pattern.size() && (isalnum(static_cast<unsigned char>(pattern[end])) || pattern[end] == '_')) end++;
+            const string token = pattern.substr(i, end-i);
+            if (holes.count(token)) {
+                if (cursor == source.size() || (!isalpha(static_cast<unsigned char>(source[cursor])) && source[cursor] != '_'))
+                    return false;
+                size_t next = cursor+1;
+                while (next < source.size() && (isalnum(static_cast<unsigned char>(source[next])) || source[next] == '_')) next++;
+                const string value = source.substr(cursor, next-cursor);
+                if (identifiers.count(token) && identifiers[token] != value) return false;
+                identifiers[token] = value;
+                cursor = next;
+            }
+            else {
+                if (source.compare(cursor, token.size(), token) != 0) return false;
+                cursor += token.size();
+            }
+            i = end;
+        }
+        else {
+            if (cursor == source.size() || source[cursor] != pattern[i]) return false;
+            cursor++;
+            i++;
+        }
+    }
+    if (cursor != source.size()) return false;
+    if (substitutions != nullptr) *substitutions = identifiers;
+    return true;
+}
+
+const set<string> gbsaChainRuleHoles = {"OBC_PARAMS1", "OBC_PARAMS2", "BORN_FORCE1", "BORN_FORCE2"};
 
 /** Replace a reviewed literal and optionally check its template occurrence count. */
 void replace(string& source, const string& oldText, const string& newText, int expected = -1) {
@@ -273,6 +313,13 @@ MetalPairwiseOptimizations::Settings MetalPairwiseOptimizations::getBuildSetting
 
 string MetalPairwiseOptimizations::apply(const string& source) {
     return apply(source, getBuildSettings());
+}
+
+set<string> MetalPairwiseOptimizations::getGBSAChainRuleBornForceParameters(const string& source) {
+    map<string, string> identifiers;
+    if (!matchesIdentifierTemplate(source, CommonKernelSources::gbsaObc2, gbsaChainRuleHoles, &identifiers))
+        return {};
+    return {identifiers.at("BORN_FORCE1"), identifiers.at("BORN_FORCE2")};
 }
 
 string MetalPairwiseOptimizations::apply(const string& source, const Settings& settings) {
