@@ -33,6 +33,46 @@ inline void replace(std::string& source, const std::string& before, const std::s
     } while (offset != std::string::npos);
 }
 
+/**
+ * @brief Gather read-only tile data from fixed SIMD lanes in the OpenCL algorithm.
+ *
+ * The caller supplies private parameter registers through DECLARE_LOCAL_PARAMETERS
+ * and the existing load/clear substitution points. LOAD_ATOM2_PARAMETERS gathers
+ * those registers from uint(atom2-tbx), before atom2 becomes a global atom index.
+ * These gathers must precede cutoff pruning so every source lane participates.
+ * Threadgroup force accumulation, barriers, pair order, and Q32.32 writes remain
+ * unchanged. Apply this only to the upstream template, before adding sparse pairs
+ * or substituting caller-provided interaction code.
+ */
+inline std::string openclHybridSource(std::string source) {
+    // Only the writable force tuple stays in threadgroup memory. This internal
+    // structure has no host-visible layout or resource binding.
+    replace(source, "    real x, y, z;\n    real q;\n", "");
+    replace(source, "    ATOM_PARAMETER_DATA\n#ifndef PARAMETER_SIZE_IS_EVEN\n    real padding;\n#endif\n", "");
+    const std::string localData = "    __local AtomData localData[FORCE_WORK_GROUP_SIZE];";
+    replace(source, localData, localData+"\n    real4 hybridPosq = make_real4(0);\n    DECLARE_LOCAL_PARAMETERS");
+
+    // Keep the lane's own tuple fixed for the entire tile. The loop's atom2-tbx
+    // selects j on diagonal tiles and tj on the original off-diagonal ring.
+    replace(source, "LOAD_ATOM2_PARAMETERS", "");
+    replace(source,
+        "real4 posq2 = (real4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);",
+        "real4 posq2 = make_real4(simdShuffle(hybridPosq.x, uint(atom2-tbx)),\n"
+        "                    simdShuffle(hybridPosq.y, uint(atom2-tbx)),\n"
+        "                    simdShuffle(hybridPosq.z, uint(atom2-tbx)),\n"
+        "                    simdShuffle(hybridPosq.w, uint(atom2-tbx)));\n"
+        "                LOAD_ATOM2_PARAMETERS");
+    for (const std::string component : {"x", "y", "z"})
+        replace(source, "localData[localAtomIndex]."+component, "hybridPosq."+component);
+    replace(source, "localData[localAtomIndex].q", "hybridPosq.w");
+    // Invalid neighbor lanes still participate in every gather. Initialize all
+    // four components, including the charge that upstream never uses for them.
+    replace(source, "hybridPosq.z = 0;", "hybridPosq.z = 0;\n                hybridPosq.w = 0;");
+    replace(source, "APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[localAtomIndex], blockCenterX)",
+        "APPLY_PERIODIC_TO_POS_WITH_CENTER(hybridPosq, blockCenterX)");
+    return source;
+}
+
 /** @brief Retain CUDA's register-shuffle algorithm, replacing only its platform spelling. */
 inline std::string cudaSource() {
     // Single precision does not need CUDA's PTX double/64-bit shuffle overloads.

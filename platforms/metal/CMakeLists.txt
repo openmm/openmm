@@ -73,6 +73,8 @@ option(OPENMM_METAL_FAST_SPARSE_FORCE_AGGREGATION
     "Experimentally combine equal-target Q32.32 sparse-pair contributions within a SIMD group" OFF)
 option(OPENMM_METAL_EXPERIMENTAL_MATRIX_SCREEN
     "Build the isolated SIMD-matrix neighbor-screening experiment (not used by MD kernels)" OFF)
+option(OPENMM_METAL_EXPERIMENTAL_NONBONDED_HYBRID
+    "Gather fixed-lane atom data while retaining OpenCL threadgroup force accumulation" OFF)
 
 # Each optional algorithm can be compared independently with the OpenCL path.
 set(METAL_OPTIMIZATION_SWITCHES
@@ -196,6 +198,7 @@ target_compile_definitions(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
     OPENMM_METAL_FAST_LJPME_FLOAT_SPREAD=$<BOOL:${OPENMM_METAL_FAST_LJPME_FLOAT_SPREAD}>
     OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD=$<BOOL:${OPENMM_METAL_FAST_CONSTANT_POTENTIAL_FLOAT_SPREAD}>
     OPENMM_METAL_FAST_SPARSE_FORCE_AGGREGATION=$<BOOL:${OPENMM_METAL_FAST_SPARSE_FORCE_AGGREGATION}>
+    OPENMM_METAL_EXPERIMENTAL_NONBONDED_HYBRID=$<BOOL:${OPENMM_METAL_EXPERIMENTAL_NONBONDED_HYBRID}>
     OPENMM_METAL_FAST_MATH=$<BOOL:${OPENMM_METAL_FAST_MATH}>
     OPENMM_METAL_FAST_MINIMIZE_SHUFFLE=$<BOOL:${OPENMM_METAL_FAST_MINIMIZE_SHUFFLE}>
     OPENMM_METAL_FAST_SHORT_LIST_SORT=$<BOOL:${OPENMM_METAL_FAST_SHORT_LIST_SORT}>
@@ -271,6 +274,8 @@ if(BUILD_TESTING)
         target_compile_definitions(TestMetalNonbondedOptimizations PRIVATE
             OPENMM_METAL_FAST_${feature}=$<BOOL:${OPENMM_METAL_FAST_${feature}}>)
     endforeach()
+    target_compile_definitions(TestMetalNonbondedOptimizations PRIVATE
+        OPENMM_METAL_EXPERIMENTAL_NONBONDED_HYBRID=$<BOOL:${OPENMM_METAL_EXPERIMENTAL_NONBONDED_HYBRID}>)
     foreach(option IN ITEMS CUSTOM_NONBONDED_GROUPS_SHUFFLE CUSTOM_MANY_PARTICLE_BALLOT LCPO_BALLOT)
         target_compile_definitions(TestMetalSourceAdapter PRIVATE
             OPENMM_METAL_FAST_${option}=$<BOOL:${OPENMM_METAL_FAST_${option}}>)
