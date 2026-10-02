@@ -131,7 +131,9 @@ KERNEL void computeBornSum(
             GBSA_BORN_DATA(LOCAL_ID).radius = tempParams.x;
             GBSA_BORN_DATA(LOCAL_ID).scaledRadius = tempParams.y;
             GBSA_BORN_DATA(LOCAL_ID).bornSum = 0.0f;
+#if !USE_GBSA_BORN_SHUFFLE
             SYNC_WARPS;
+#endif
 
             // Compute the full set of interactions in this tile.
 
@@ -300,7 +302,9 @@ KERNEL void computeBornSum(
                 GBSA_BORN_DATA(LOCAL_ID).scaledRadius = tempParams.y;
                 GBSA_BORN_DATA(LOCAL_ID).bornSum = 0.0f;
             }
+#if !USE_GBSA_BORN_SHUFFLE
             SYNC_WARPS;
+#endif
 #ifdef USE_PERIODIC
             if (singlePeriodicCopy) {
                 // The box is small enough that we can just translate all the atoms into a single periodic
@@ -309,7 +313,9 @@ KERNEL void computeBornSum(
                 real4 blockCenterX = blockCenter[x];
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(GBSA_BORN_DATA(LOCAL_ID), blockCenterX)
+#if !USE_GBSA_BORN_SHUFFLE
                 SYNC_WARPS;
+#endif
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
                     real3 delta = make_real3(GBSA_BORN_DATA(tbx+tj).x-posq1.x, GBSA_BORN_DATA(tbx+tj).y-posq1.y, GBSA_BORN_DATA(tbx+tj).z-posq1.z);
@@ -571,7 +577,9 @@ KERNEL void computeGBSAForce1(
             GBSA_FORCE_DATA(LOCAL_ID).fy = 0.0f;
             GBSA_FORCE_DATA(LOCAL_ID).fz = 0.0f;
             GBSA_FORCE_DATA(LOCAL_ID).fw = 0.0f;
+#if !USE_GBSA_FORCE_SHUFFLE
             SYNC_WARPS;
+#endif
             unsigned int tj = tgx;
             for (j = 0; j < TILE_SIZE; j++) {
                 if (atom1 < NUM_ATOMS && y*TILE_SIZE+tj < NUM_ATOMS) {
@@ -749,7 +757,9 @@ KERNEL void computeGBSAForce1(
                 GBSA_FORCE_DATA(LOCAL_ID).fz = 0.0f;
                 GBSA_FORCE_DATA(LOCAL_ID).fw = 0.0f;
             }
+#if !USE_GBSA_FORCE_SHUFFLE
             SYNC_WARPS;
+#endif
 #ifdef USE_PERIODIC
             if (singlePeriodicCopy) {
                 // The box is small enough that we can just translate all the atoms into a single periodic
@@ -758,7 +768,9 @@ KERNEL void computeGBSAForce1(
                 real4 blockCenterX = blockCenter[x];
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(GBSA_FORCE_DATA(LOCAL_ID), blockCenterX)
+#if !USE_GBSA_FORCE_SHUFFLE
                 SYNC_WARPS;
+#endif
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = GBSA_FORCE_ATOM_INDEX(tbx+tj);

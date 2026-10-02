@@ -220,15 +220,15 @@ contribute to the final SIMD size-range reduction. Register paths preserve the
 shared force formulas and Q32.32 global accumulation; their performance and
 register pressure must still be measured on each GPU family.
 
-GBSA selects its transport in `gbsaObc.cc` with independent Born-sum and Force1
-macros; `gbsaTransport.metal` provides register broadcast/rotation helpers.
-The Common force formulas stay in one place, and disabled branches preserve
-the original OpenCL/CUDA/HIP source. C++ selects switches instead of rewriting
-GBSA kernel bodies. CustomGB still uses checked template replacements.
-CustomGB and GBSA register paths keep the no-cutoff exclusion skip list in
-lane-owned registers, removing only that list's local-memory rendezvous.
-This skip-list change does not affect cutoff workloads. GBSA still retains its
-earlier tile-preload barriers; CustomGB retains its existing preload cleanup.
+CustomGB and GBSA register paths also keep the no-cutoff exclusion skip list
+in lane-owned registers. GBSA selects its transport in `gbsaObc.cc` with
+independent Born-sum and Force1 macros; `gbsaTransport.metal` provides the
+register broadcast/rotation helpers. The Common force formulas stay in one
+place, and disabled branches preserve the original OpenCL/CUDA/HIP source.
+C++ selects switches and parameter bindings instead of rewriting GBSA kernel
+bodies. CustomGB still uses checked template replacements. Both paths remove
+only the audited register-local barriers. The skip-list change does not affect
+cutoff workloads; the tile-load cleanup does.
 When both short-list sort switches are enabled, register bitonic takes precedence
 for supported records with at most 32 elements; the CUDA-style scan selection
 still applies to eligible larger lists. Register bitonic places NaN keys after

@@ -115,9 +115,6 @@ void testExclusionSkipListSelection() {
         checkGBSASelection(selected, settings);
         // Source visibly retains both transports.  Shader preprocessing makes
         // each kernel's independent choice; the host never removes its body.
-        // Preload rendezvous are retained until the independent barrier cleanup.
-        ASSERT(selected.find("GBSA_BORN_DATA(LOCAL_ID).bornSum = 0.0f;\n            SYNC_WARPS;") != string::npos);
-        ASSERT(selected.find("GBSA_FORCE_DATA(LOCAL_ID).fw = 0.0f;\n            SYNC_WARPS;") != string::npos);
         ASSERT(selected.find("#define GBSA_BORN_SKIP_TILE(index) skipTiles[index]") != string::npos);
         ASSERT(selected.find("#define GBSA_FORCE_SKIP_TILE(index) skipTiles[index]") != string::npos);
         ASSERT(selected.find("GBSA_BORN_SKIP_TILE(tbx+TILE_SIZE-1)") != string::npos);
