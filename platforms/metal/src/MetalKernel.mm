@@ -49,6 +49,12 @@ struct MetalKernel::Impl {
         MTLResourceUsage usage;
     };
     vector<Binding> bindings;
+    /** A cached snapshot stays immutable until its last dispatch has completed. */
+    struct ArgumentBuffer {
+        id<MTLBuffer> buffer = nil;
+        id<MTLCommandBuffer> lastCommand = nil;
+    };
+    vector<ArgumentBuffer> argumentBuffers;
 };
 
 /** Return primitive ABI size; pointers and dynamic local storage are separate. */
@@ -153,6 +159,7 @@ void MetalKernel::execute(int threads, int blockSize) {
     }
     @autoreleasepool {
         id<MTLBuffer> argumentBuffer = nil;
+        int argumentBufferIndex = -1;
         if (impl->arguments != nil) {
             id<MTLDevice> device = (__bridge id<MTLDevice>) context.getDevice();
             size_t localMemory = impl->pipeline.staticThreadgroupMemoryLength;
@@ -166,7 +173,25 @@ void MetalKernel::execute(int threads, int blockSize) {
                     throw OpenMMException("Total threadgroup memory exceeds the device limit for Metal kernel "+name);
                 localMemory += alignedSize;
             }
-            argumentBuffer = [device newBufferWithLength:impl->arguments.encodedLength options:MTLResourceStorageModeShared];
+            for (int i = 0; i < impl->argumentBuffers.size(); i++) {
+                Impl::ArgumentBuffer& slot = impl->argumentBuffers[i];
+                if (slot.lastCommand == nil || slot.lastCommand.status >= MTLCommandBufferStatusCompleted) {
+                    argumentBuffer = slot.buffer;
+                    argumentBufferIndex = i;
+                    slot.lastCommand = nil;
+                    break;
+                }
+            }
+            if (argumentBuffer == nil) {
+                argumentBuffer = [device newBufferWithLength:impl->arguments.encodedLength options:MTLResourceStorageModeShared];
+                // Cache only a small number of snapshots. If all are in flight,
+                // allocate an uncached one instead of blocking GPU submission.
+                if (argumentBuffer != nil && impl->argumentBuffers.size() < 8) {
+                    argumentBufferIndex = impl->argumentBuffers.size();
+                    impl->argumentBuffers.emplace_back();
+                    impl->argumentBuffers.back().buffer = argumentBuffer;
+                }
+            }
             if (argumentBuffer == nil)
                 throw OpenMMException("Error allocating arguments for Metal kernel "+name);
             [impl->arguments setArgumentBuffer:argumentBuffer offset:0];
@@ -231,6 +256,11 @@ void MetalKernel::execute(int threads, int blockSize) {
         [encoder dispatchThreadgroups:MTLSizeMake(gridSize, 1, 1)
                 threadsPerThreadgroup:MTLSizeMake(blockSize, 1, 1)];
         [encoder endEncoding];
+        // Recording is not completion: later launches in this same batch, or
+        // on another queue, must not overwrite the argument bytes it references.
+        // Record ownership before submit(), which can report an earlier error.
+        if (argumentBufferIndex >= 0)
+            impl->argumentBuffers[argumentBufferIndex].lastCommand = command;
         queue.submit((__bridge void*) command);
     }
 }

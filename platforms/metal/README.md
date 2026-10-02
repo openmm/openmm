@@ -117,8 +117,9 @@ The OFF host path mirrors OpenCL's Apple-device scheduling where possible:
   dispatches. The later host check waits only for that copy, not the force work.
 - Autoclears submit groups of up to six buffers, like OpenCL's fused clears.
   Energy reduction uses one partial per reported core and reuses pinned storage.
-- SIMD tile barriers retain Metal's required execution rendezvous with
-  threadgroup-only memory ordering.
+- Completed argument snapshots can be reused, but in-flight snapshots stay
+  immutable, including across queues. SIMD tile barriers retain Metal's required
+  execution rendezvous with threadgroup-only memory ordering.
 
 These baseline changes do not enable optional algorithm switches or general
 command batching. Metal submission costs, VkFFT, and shader compilation still
