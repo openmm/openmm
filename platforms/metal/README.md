@@ -358,6 +358,22 @@ separate porting work, not an enabled capability of these switches.
 
 ### Reproducible timing
 
+For the bundled protein cases in `examples/benchmarks/benchmark.py`, the
+prepared benchmark environment can run only the existing Metal ON build:
+
+```sh
+python3 examples/benchmarks/run_benchmark_metal_on.py
+```
+
+This runs six cases with three repeats and a 300-second adaptive target per
+case (18 runs). It does not build, install packages, or load/test OpenCL or
+Metal OFF. Results, settings, and binary hashes are saved in a new timestamped
+`build/benchmarks` directory without overwriting earlier runs. Use `--dry-run`
+to inspect the plan or `--check-only` to validate the prepared Python bindings
+and library loading without integration. Rebuild Metal ON before running if
+its sources have changed. The general `benchmark_platforms.py` driver still
+compares all three variants by default; `--variants metal_on` selects only ON.
+
 `BenchmarkMetal` is an opt-in build target, not a correctness test. It saves a
 checkpoint before warmup, warms up compilation, restores the original checkpoint
 for each repeat, and reports synchronized wall time plus device/OS/build-switch
