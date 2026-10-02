@@ -2547,8 +2547,17 @@ class PeriodicTorsionGenerator(object):
                         force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], match.periodicity[i], match.phase[i], match.k[i])
         impr_cache = {}
         for torsion in data.impropers:
-            t1, t2, t3, t4 = [data.atomType[data.atoms[torsion[i]]] for i in range(4)]
-            sig = (t1, t2, t3, t4)
+            # The output of _matchImproper will depend on the atom types, but
+            # may also depend on the relative ordering of the residue indices of
+            # the peripheral atoms, as well as that of their atom indices within
+            # their templates, so build an appropriate cache key for this.
+            atom1 = data.atoms[torsion[0]]
+            atom2 = data.atoms[torsion[1]]
+            atom3 = data.atoms[torsion[2]]
+            atom4 = data.atoms[torsion[3]]
+            sig = (data.atomType[atom1], data.atomType[atom2], data.atomType[atom3], data.atomType[atom4]) \
+                + PeriodicTorsionGenerator._getOrderSignature(atom2.residue.index, atom3.residue.index, atom4.residue.index) \
+                + PeriodicTorsionGenerator._getOrderSignature(data.atomTemplateIndexes[atom2], data.atomTemplateIndexes[atom3], data.atomTemplateIndexes[atom4])
             match = impr_cache.get(sig, None)
             if match == -1:
                 # Previously checked, and doesn't appear in the database
@@ -2576,6 +2585,12 @@ class PeriodicTorsionGenerator(object):
                             force.addTorsion(a1, a4, a2, a3, tordef.periodicity[i], tordef.phase[i], tordef.k[i])
                         else:
                             force.addTorsion(a1, a2, a3, a4, tordef.periodicity[i], tordef.phase[i], tordef.k[i])
+    @staticmethod
+    def _getOrderSignature(*values):
+        # Build a "fingerprint" of the relative ordering of the given values.
+        uniqueValues = sorted(set(values))
+        return tuple(uniqueValues.index(value) for value in values)
+
 parsers["PeriodicTorsionForce"] = PeriodicTorsionGenerator.parseElement
 
 ## @private
