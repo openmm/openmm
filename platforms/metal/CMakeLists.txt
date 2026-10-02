@@ -88,6 +88,7 @@ endforeach()
 
 find_library(METAL_FRAMEWORK Metal)
 find_library(FOUNDATION_FRAMEWORK Foundation)
+find_library(IOKIT_FRAMEWORK IOKit REQUIRED)
 find_library(QUARTZCORE_FRAMEWORK QuartzCore)
 if(NOT METAL_FRAMEWORK OR NOT FOUNDATION_FRAMEWORK)
     message(FATAL_ERROR "The Metal Platform requires the Metal and Foundation frameworks")
@@ -184,7 +185,7 @@ target_include_directories(${OPENMMMETAL_LIBRARY_NAME}
             "${CMAKE_CURRENT_BINARY_DIR}/../common/src")
 target_link_libraries(${OPENMMMETAL_LIBRARY_NAME}
     PUBLIC ${OPENMM_LIBRARY_NAME}
-    PRIVATE ${METAL_FRAMEWORK} ${FOUNDATION_FRAMEWORK} ${QUARTZCORE_FRAMEWORK})
+    PRIVATE ${METAL_FRAMEWORK} ${FOUNDATION_FRAMEWORK} ${QUARTZCORE_FRAMEWORK} ${IOKIT_FRAMEWORK})
 target_compile_options(${OPENMMMETAL_LIBRARY_NAME} PRIVATE
     "$<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>")
 target_compile_definitions(${OPENMMMETAL_LIBRARY_NAME} PRIVATE

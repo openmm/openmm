@@ -86,6 +86,14 @@ optimizations or change the build-time switches. Initial compilation, lazy
 accumulator variants, and VkFFT all follow this policy. MSL remains 3.0 and
 the minimum deployment target remains macOS 13.
 
+Separately from broad fast math, the baseline follows OpenCL's startup accuracy
+probe for `sqrt`, `rsqrt`, reciprocal, `exp`, and `log`. Each function selects its
+MSL `fast` overload only if the sampled relative error is below `1e-6`.
+Expected FP32 overflow samples do not disable the entire function; unexpected
+nonfinite results in the representable range do. This is an accuracy-based
+selection, not a whole-domain error guarantee. Strict programs and Common's
+floating-accumulator programs retain the precise wrappers.
+
 The runtime uses private Objective-C++ and C++11 public headers. Only the
 private VkFFT translation unit requires C++17/metal-cpp. Backend-5-only fixes
 in the bundled VkFFT address ownership, per-dispatch push constants,
@@ -98,6 +106,23 @@ same-device contexts and independent queues require explicit synchronization
 when sharing arrays. Encoding operations are serialized to accommodate Common
 worker-thread uploads. Nonblocking transfers use `getPinnedBuffer()`; do not
 read or reuse a pending range until its queue/event completes.
+
+The OFF host path mirrors OpenCL's Apple-device scheduling where possible:
+
+- General launches use 12 blocks per reported GPU core; nonbonded uses six
+  256-thread blocks per core. Core count comes from best-effort I/O Registry
+  driver data, not a Metal guarantee; unavailable data retains the 128-block
+  fallback without a device-name heuristic or OpenCL runtime dependency.
+- Neighbor counts are copied into dedicated reusable host storage before force
+  dispatches. The later host check waits only for that copy, not the force work.
+- Autoclears submit groups of up to six buffers, like OpenCL's fused clears.
+  Energy reduction uses one partial per reported core and reuses pinned storage.
+- SIMD tile barriers retain Metal's required execution rendezvous with
+  threadgroup-only memory ordering.
+
+These baseline changes do not enable optional algorithm switches or general
+command batching. Metal submission costs, VkFFT, and shader compilation still
+differ from OpenCL; matching the orchestration does not establish equal speed.
 
 ## Build and test
 
@@ -148,7 +173,7 @@ part of the backend, not optional optimizations.
 | `OPENMM_METAL_RECORD_AND_COMMIT` | Batch up to 64 operations or a synchronization boundary | Commit each operation (default) |
 | `OPENMM_METAL_MINIMIZE_FLOAT_ACCUMULATORS` | Q32.32 minimization with limited range diagnostics; no CPU fallback | Scoped GPU floating accumulators for large-force minimization (default) |
 | `OPENMM_METAL_NATIVE_FLOAT_ATOMICS` | OpenCL-style float-add CAS loop | Native Metal float atomic add, independently of accumulator representation |
-| `OPENMM_METAL_FAST_MATH` | Strict Metal compilation | Broad fast math where compatible with numerical safety requirements |
+| `OPENMM_METAL_FAST_MATH` | Safe compilation with independently accuracy-tested native functions | Broad fast math where compatible with numerical safety requirements |
 | `OPENMM_METAL_FAST_SHORT_LIST_SORT` | OpenCL sorting selection | CUDA short-list selection using the shared alternative kernel |
 | `OPENMM_METAL_FAST_MINIMIZE_SHUFFLE` | Common local-memory reduction | Common CUDA/HIP shuffle reduction in the minimizer only |
 | `OPENMM_METAL_FAST_CONSTANT_POTENTIAL_REDUCTION` | Base ConstantPotential local-memory reduction | Common shuffle reduction in the base ConstantPotential kernels only |
@@ -192,6 +217,7 @@ including subnormal and overflow boundaries. Periodic block bounds retain
 OpenCL's ordered image selection before reducing radii. Register paths preserve
 the shared force formulas and Q32.32 global accumulation; their performance and
 register pressure must still be measured on each GPU family.
+
 When both short-list sort switches are enabled, register bitonic takes precedence
 for supported records with at most 32 elements; the CUDA-style scan selection
 still applies to eligible larger lists. Register bitonic places NaN keys after

@@ -43,6 +43,10 @@ using namespace std;
 
 struct MetalArray::Impl {
     id<MTLBuffer> buffer = nil;
+    id<MTLBuffer> downloadBuffer = nil;
+    id<MTLCommandBuffer> downloadCommand = nil;
+    ComputeQueue downloadQueue;
+    bool downloadPending = false;
 };
 
 static size_t getPinnedOffset(id<MTLBuffer> buffer, const void* data, size_t bytes) {
@@ -87,6 +91,8 @@ void MetalArray::initialize(ComputeContext& context, size_t size, int elementSiz
 void MetalArray::resize(size_t size) {
     if (!isInitialized())
         throw OpenMMException("MetalArray has not been initialized");
+    if (impl->downloadPending)
+        throw OpenMMException("Finish the pending Metal readback before resizing "+name);
     MetalArray replacement(*context, size, elementSize, name);
     impl.swap(replacement.impl);
     this->size = size;
@@ -179,6 +185,51 @@ void MetalArray::download(void* data, bool blocking) const {
             memcpy(data, staging.contents, bytes);
         }
     }
+}
+
+void MetalArray::beginDownload() {
+    if (!isInitialized())
+        throw OpenMMException("MetalArray has not been initialized");
+    if (impl->downloadPending)
+        throw OpenMMException("Finish the previous Metal readback before downloading "+name);
+    if (size == 0) {
+        impl->downloadPending = true;
+        return;
+    }
+    @autoreleasepool {
+        MetalQueue& queue = context->getCurrentMetalQueue();
+        auto queueLock = queue.lock();
+        id<MTLDevice> device = (__bridge id<MTLDevice>) context->getDevice();
+        size_t bytes = size*elementSize;
+        if (impl->downloadBuffer == nil)
+            impl->downloadBuffer = [device newBufferWithLength:bytes options:MTLResourceStorageModeShared];
+        if (impl->downloadBuffer == nil)
+            throw OpenMMException("Error creating readback buffer for "+name);
+        id<MTLCommandBuffer> command = (__bridge id<MTLCommandBuffer>) queue.getCommandBuffer();
+        id<MTLBlitCommandEncoder> encoder = [command blitCommandEncoder];
+        if (encoder == nil)
+            throw OpenMMException("Error creating Metal readback command");
+        [encoder copyFromBuffer:impl->buffer sourceOffset:0 toBuffer:impl->downloadBuffer
+                destinationOffset:0 size:bytes];
+        [encoder endEncoding];
+        impl->downloadCommand = command;
+        impl->downloadQueue = context->getCurrentQueue();
+        impl->downloadPending = true;
+        queue.submit((__bridge void*) command);
+        // Preserve OpenCL's read-before-force boundary even when batching is on.
+        queue.flush();
+    }
+}
+
+const void* MetalArray::finishDownload() {
+    if (!impl->downloadPending)
+        throw OpenMMException("No Metal readback is pending for "+name);
+    if (impl->downloadCommand != nil)
+        static_cast<MetalQueue&>(*impl->downloadQueue).wait((__bridge void*) impl->downloadCommand);
+    impl->downloadPending = false;
+    impl->downloadCommand = nil;
+    impl->downloadQueue.reset();
+    return size == 0 ? nullptr : impl->downloadBuffer.contents;
 }
 
 void MetalArray::copyTo(ArrayInterface& dest) const {

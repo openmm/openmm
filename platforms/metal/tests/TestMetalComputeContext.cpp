@@ -23,6 +23,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "MetalContext.h"
+#include "MetalNonbondedUtilities.h"
 #include "MetalQueue.h"
 #include "openmm/System.h"
 #include "openmm/common/ComputeArray.h"
@@ -95,6 +96,13 @@ void testContext(ComputeContext& context) {
     ASSERT(!context.getUseDoublePrecision());
     ASSERT(!context.getUseMixedPrecision());
     ASSERT(!context.getSupports64BitGlobalAtomics());
+    MetalContext& metal = dynamic_cast<MetalContext&>(context);
+    ASSERT_EQUAL(metal.getNumComputeUnits() == 0 ? 128 : 12*metal.getNumComputeUnits(), context.getNumThreadBlocks());
+    int forceBlocks = metal.getNumComputeUnits() == 0 ? 128 : 6*metal.getNumComputeUnits();
+    ASSERT_EQUAL(forceBlocks, context.getNonbondedUtilities().getNumForceThreadBlocks());
+    cout << "Metal compute units: " << metal.getNumComputeUnits()
+         << "; general blocks: " << context.getNumThreadBlocks()
+         << "; nonbonded blocks: " << forceBlocks << endl;
     ASSERT_EQUAL(paddedAtoms, context.getPosq().getSize());
     ASSERT_EQUAL(sizeof(mm_float4), context.getPosq().getElementSize());
     ASSERT_EQUAL(paddedAtoms, context.getVelm().getSize());
@@ -158,6 +166,43 @@ void testArrays(ComputeContext& context) {
     ASSERT_EQUAL(9, result[0]);
     empty.resize(0);
     context.clearBuffer(empty);
+}
+
+/** A neighbor-count snapshot must survive later force work and other transfers. */
+void testDedicatedReadback(MetalContext& context) {
+    MetalArray values(context, 2, sizeof(unsigned int), "countReadback");
+    MetalArray scratch(context, 2, sizeof(unsigned int), "scratchReadback");
+    expectException("readback without begin", [&] { values.finishDownload(); });
+    for (unsigned int wave = 0; wave < 3; wave++) {
+        vector<unsigned int> expected{wave+1, wave+7}, other{99, 101};
+        values.upload(expected);
+        scratch.upload(other);
+        values.beginDownload();
+        expectException("overlapping readback", [&] { values.beginDownload(); });
+        expectException("resize during readback", [&] { values.resize(3); });
+        // Force-like work submitted later must not change the earlier snapshot.
+        context.clearBuffer(values);
+        scratch.download(context.getPinnedBuffer(), false);
+        void* later = context.getCurrentMetalQueue().getCommandBuffer();
+        const unsigned int* result = static_cast<const unsigned int*>(values.finishDownload());
+        ASSERT_EQUAL(expected[0], result[0]);
+        ASSERT_EQUAL(expected[1], result[1]);
+        // Waiting for the earlier copy must not flush a later recording.
+        ASSERT(later == context.getCurrentMetalQueue().getCommandBuffer());
+        context.getCurrentMetalQueue().finish();
+    }
+    ComputeQueue original = context.getCurrentQueue();
+    ComputeQueue secondary = context.createQueue();
+    context.setCurrentQueue(secondary);
+    values.upload(vector<unsigned int>{17, 23});
+    values.beginDownload();
+    context.setCurrentQueue(original);
+    const unsigned int* result = static_cast<const unsigned int*>(values.finishDownload());
+    ASSERT_EQUAL(17, result[0]);
+    ASSERT_EQUAL(23, result[1]);
+    values.resize(0);
+    values.beginDownload();
+    ASSERT(values.finishDownload() == nullptr);
 }
 
 void testLaunches(ComputeContext& context, ComputeProgram program) {
@@ -265,6 +310,50 @@ void testClearing(MetalContext& metal) {
         for (float value : energyResult)
             ASSERT_EQUAL(0.0f, value);
     }
+}
+
+/** Exercise more than one OpenCL-sized clear group, including empty/resized arrays. */
+void testAutoclearGroups() {
+    System system;
+    system.addParticle(1.0);
+    MetalContext context(system);
+    vector<ComputeArray> arrays(13);
+    for (int i = 0; i < arrays.size(); i++) {
+        arrays[i].initialize<int>(context, i*17, "autoclearGroup"+to_string(i));
+        context.addAutoclearBuffer(arrays[i]);
+    }
+    for (int wave = 0; wave < 3; wave++) {
+        arrays[6].resize(wave*31);
+        for (auto& array : arrays) {
+            if (array.getSize() != 0)
+                array.upload(vector<int>(array.getSize(), wave+5));
+        }
+        context.clearAutoclearBuffers();
+        for (auto& array : arrays) {
+            if (array.getSize() == 0)
+                continue;
+            vector<int> result;
+            array.download(result);
+            for (int value : result)
+                ASSERT_EQUAL(0, value);
+        }
+    }
+}
+
+/** Check that the OpenCL-sized reduction covers every energy slot. */
+void testEnergyReduction(MetalContext& context) {
+    ArrayInterface& energy = context.getEnergyBuffer();
+    vector<float> values(energy.getSize());
+    for (int wave = 0; wave < 3; wave++) {
+        double expected = 0;
+        for (int i = 0; i < values.size(); i++) {
+            values[i] = (i%11-5)*(wave+1)*0.125f;
+            expected += values[i];
+        }
+        energy.upload(values);
+        ASSERT_EQUAL(expected, context.reduceEnergy());
+    }
+    context.clearBuffer(energy);
 }
 
 void testQueues(MetalContext& metal, ComputeProgram program) {
@@ -424,10 +513,13 @@ int main() {
         testLaunches(context, program);
         testArguments(context, program);
         testClearing(*metal);
+        testAutoclearGroups();
+        testEnergyReduction(*metal);
         testQueues(*metal, program);
         testSubmissionOrdering(context);
         testErrors(context, program);
         testCrossContextArrays(context, program);
+        testDedicatedReadback(*metal);
         metal->getCurrentMetalQueue().finish();
     }
     catch (const exception& error) {

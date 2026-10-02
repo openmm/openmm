@@ -123,7 +123,10 @@ public:
     bool getUseDoublePrecision() const override { return false; }
     bool getUseMixedPrecision() const override { return false; }
     int getNumAtomBlocks() const override { return paddedNumAtoms/TileSize; }
-    int getNumThreadBlocks() const override { return 128; }
+    /** @return OpenCL's Apple launch budget, or the existing fallback if unknown. */
+    int getNumThreadBlocks() const override { return numComputeUnits == 0 ? 128 : 12*numComputeUnits; }
+    /** @return Best-effort GPU core count; zero means the registry did not report it. */
+    int getNumComputeUnits() const { return numComputeUnits; }
     int getMaxThreadBlockSize() const override;
     /** @return The hardware threadgroup-memory capacity in bytes. */
     size_t getMaxThreadgroupMemory() const;
@@ -182,6 +185,8 @@ private:
     void resizePinnedBuffer(size_t bytes);
     /** @brief Compile context-owned charge and energy kernels on first use. */
     void initializeUtilityKernels();
+    /** @brief Select fast math functions independently using OpenCL's accuracy probe. */
+    void initializeNativeMath();
     struct Impl;
     struct AccumulatorState;
     std::unique_ptr<Impl> impl;
@@ -197,6 +202,7 @@ private:
     std::vector<ArrayInterface*> autoclearBuffers;
     Vec3 periodicBoxVectors[3];
     bool initialized, hasAssignedPosqCharges, flexibleBox;
+    int numComputeUnits;
     double energyWorkspace;
     std::vector<std::string> energyParamDerivNames;
     std::map<std::string, double> energyParamDerivWorkspace;

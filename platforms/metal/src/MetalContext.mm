@@ -49,6 +49,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/ThreadPool.h"
 #import <Metal/Metal.h>
+#include <IOKit/IOKitLib.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -58,6 +59,30 @@
 
 using namespace OpenMM;
 using namespace std;
+
+/**
+ * @brief Match the selected Metal device to its public I/O Registry entry.
+ *
+ * Metal has no core-count property. gpu-core-count is best-effort driver data,
+ * not a Metal API contract: missing, malformed, or implausible values retain
+ * the previous launch budget. Never infer a count from a product name.
+ */
+static int getComputeUnits(id<MTLDevice> device) {
+    io_service_t service = IOServiceGetMatchingService(kIOMainPortDefault,
+            IORegistryEntryIDMatching(device.registryID));
+    if (service == IO_OBJECT_NULL)
+        return 0;
+    CFTypeRef property = IORegistryEntryCreateCFProperty(service, CFSTR("gpu-core-count"), kCFAllocatorDefault, 0);
+    IOObjectRelease(service);
+    int count = 0;
+    if (property != nullptr) {
+        if (CFGetTypeID(property) == CFNumberGetTypeID() &&
+                !CFNumberGetValue((CFNumberRef) property, kCFNumberIntType, &count))
+            count = 0;
+        CFRelease(property);
+    }
+    return count > 0 && count <= 1024 ? count : 0;
+}
 
 struct MetalContext::Impl {
     id<MTLDevice> device = nil;
@@ -78,7 +103,7 @@ struct MetalContext::AccumulatorState {
 MetalContext::MetalContext(const System& system, ContextImpl* simulation, MetalContext* linked, bool floatingAccumulators) : ComputeContext(system),
         simulation(simulation), accumulatorState(linked == nullptr ?
                 make_shared<AccumulatorState>(floatingAccumulators) : linked->accumulatorState),
-        initialized(false), hasAssignedPosqCharges(false), flexibleBox(false), energyWorkspace(0.0) {
+        initialized(false), hasAssignedPosqCharges(false), flexibleBox(false), numComputeUnits(0), energyWorkspace(0.0) {
     try {
         impl.reset(new Impl());
         @autoreleasepool {
@@ -87,6 +112,7 @@ MetalContext::MetalContext(const System& system, ContextImpl* simulation, MetalC
                 throw OpenMMException("No Metal device is available");
             if (![impl->device supportsFamily:MTLGPUFamilyApple7])
                 throw OpenMMException("The Metal Platform requires Apple silicon");
+            numComputeUnits = linked == nullptr ? getComputeUnits(impl->device) : linked->getNumComputeUnits();
             // Inner CustomCV/ATM contexts share the parent's stream, just as in
             // OpenCL, so state copies and force evaluation stay device-ordered.
             defaultQueue = (linked == nullptr ? createQueue() : linked->getCurrentQueue());
@@ -179,6 +205,7 @@ MetalContext::MetalContext(const System& system, ContextImpl* simulation, MetalC
                     "pos.z -= floor((pos.z-center.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;}";
             }
         }
+        initializeNativeMath();
         accumulatorState->contexts.push_back(this);
     }
     catch (...) {
@@ -186,6 +213,41 @@ MetalContext::MetalContext(const System& system, ContextImpl* simulation, MetalC
         workThread = nullptr;
         throw;
     }
+}
+
+void MetalContext::initializeNativeMath() {
+    // Port OpenCL's determineNativeAccuracy probe. Two float4 records replace
+    // its float8, which MSL does not expose. The probe always uses safe math.
+    MetalArray data(*this, 40, sizeof(mm_float4), "nativeMathAccuracy");
+    vector<mm_float4> values(40, mm_float4(0, 0, 0, 0));
+    float nextValue = 1e-4f;
+    for (int i = 0; i < 20; i++) {
+        values[2*i].x = nextValue;
+        nextValue *= (float) M_PI;
+    }
+    data.upload(values);
+    ComputeProgram program = compileProgram(MetalKernelSources::nativeMath, {{"OPENMM_METAL_REQUIRE_SAFE_MATH", "1"}});
+    ComputeKernel kernel = program->createKernel("determineNativeAccuracy");
+    kernel->addArg(data);
+    kernel->execute(20);
+    data.download(values);
+    double errors[5] = {};
+    for (int i = 0; i < 20; i++) {
+        double v = values[2*i].x;
+        double references[] = {sqrt(v), 1.0/sqrt(v), 1.0/v, exp(v), log(v)};
+        double actual[] = {values[2*i].y, values[2*i].z, values[2*i].w, values[2*i+1].x, values[2*i+1].y};
+        for (int j = 0; j < 5; j++) {
+            // OpenCL ignores overflowing exp() samples through a NaN error.
+            // Explicitly exclude references outside FP32's range instead;
+            // unexpected non-finite results within that range still fail.
+            if (isfinite(references[j]) && fabs(references[j]) <= numeric_limits<float>::max())
+                errors[j] = !isfinite(actual[j]) ? numeric_limits<double>::infinity() :
+                    max(errors[j], fabs(actual[j]-references[j])/fabs(references[j]));
+        }
+    }
+    const char* functions[] = {"SQRT", "RSQRT", "RECIP", "EXP", "LOG"};
+    for (int i = 0; i < 5; i++)
+        compilationDefines[string("OPENMM_METAL_USE_NATIVE_")+functions[i]] = errors[i] < 1e-6 ? "1" : "0";
 }
 
 MetalContext::~MetalContext() {
@@ -388,6 +450,8 @@ ComputeProgram MetalContext::compileProgram(const string source, const map<strin
 #endif
         for (auto& define : defines)
             allDefines[define.first] = define.second;
+        if (source == CommonKernelSources::constantPotentialCGSolver)
+            allDefines["OPENMM_METAL_REQUIRE_SAFE_MATH"] = "1";
         if (commonSource && floatingAccumulators)
             allDefines["OPENMM_METAL_FLOAT_ACCUMULATORS"] = "1";
         for (auto& define : allDefines)
@@ -462,8 +526,32 @@ void MetalContext::addAutoclearBuffer(ArrayInterface& array) {
 }
 
 void MetalContext::clearAutoclearBuffers() {
-    for (auto* array : autoclearBuffers)
-        clearBuffer(*array);
+    // OpenCL clears up to six buffers per dispatch. Preserve that submission
+    // granularity in immediate mode too, without general command batching.
+    for (size_t base = 0; base < autoclearBuffers.size(); base += 6) {
+        MetalArray* arrays[6];
+        int count = 0;
+        for (size_t i = base; i < min(base+6, autoclearBuffers.size()); i++) {
+            MetalArray& array = unwrap(*autoclearBuffers[i]);
+            if (array.getSize() != 0)
+                arrays[count++] = &array;
+        }
+        if (count == 0)
+            continue;
+        @autoreleasepool {
+            MetalQueue& queue = getCurrentMetalQueue();
+            auto queueLock = queue.lock();
+            id<MTLCommandBuffer> command = (__bridge id<MTLCommandBuffer>) queue.getCommandBuffer();
+            id<MTLBlitCommandEncoder> encoder = [command blitCommandEncoder];
+            if (encoder == nil)
+                throw OpenMMException("Error creating Metal autoclear command");
+            for (int i = 0; i < count; i++)
+                [encoder fillBuffer:(__bridge id<MTLBuffer>) arrays[i]->getBuffer()
+                        range:NSMakeRange(0, arrays[i]->getSize()*arrays[i]->getElementSize()) value:0];
+            [encoder endEncoding];
+            queue.submit((__bridge void*) command);
+        }
+    }
 }
 
 void* MetalContext::getPinnedBuffer() {
@@ -617,8 +705,8 @@ void MetalContext::initialize() {
 void MetalContext::initializeUtilityKernels() {
     if (reduceEnergyKernel)
         return;
-    // Reuse only the required OpenCL utilities. Native accuracy calibration and
-    // the kernel-to-kernel clear calls are not needed by the Metal blit path.
+    // Reuse the required OpenCL utilities. Native accuracy calibration uses a
+    // standalone MSL kernel, and buffer clearing uses the Metal blit path.
     const string& utilities = MetalOpenCLKernelSources::utilities;
     size_t begin = utilities.find("__kernel void reduceEnergy(");
     size_t end = utilities.find("/**", begin);
@@ -632,7 +720,7 @@ void MetalContext::initializeUtilityKernels() {
     setChargesKernel = program->createKernel("setCharges");
     for (int i = 0; i < 4; i++)
         setChargesKernel->addArg();
-    energySum.initialize<float>(*this, getNumThreadBlocks(), "energySum");
+    energySum.initialize<float>(*this, numComputeUnits == 0 ? getNumThreadBlocks() : numComputeUnits, "energySum");
 }
 
 double MetalContext::reduceEnergy() {
@@ -644,9 +732,11 @@ double MetalContext::reduceEnergy() {
     reduceEnergyKernel->setArg(3, blockSize);
     static_cast<MetalKernel&>(*reduceEnergyKernel).setLocalArg(4, blockSize*sizeof(float));
     reduceEnergyKernel->execute(blockSize*energySum.getSize(), blockSize);
-    vector<float> partials;
-    energySum.download(partials);
-    return accumulate(partials.begin(), partials.end(), 0.0);
+    // Reuse the same pinned workspace as OpenCL's blocking energy readback.
+    float* partials = static_cast<float*>(getPinnedBuffer());
+    energySum.download(partials, false);
+    getCurrentMetalQueue().finish();
+    return accumulate(partials, partials+energySum.getSize(), 0.0);
 }
 
 mm_float4 MetalContext::getPeriodicBoxSize() const {

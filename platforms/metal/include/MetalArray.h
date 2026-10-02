@@ -160,6 +160,23 @@ public:
      */
     void download(void* data, bool blocking=true) const override;
     /**
+     * @brief Submit a readback into this array's reusable, dedicated host buffer.
+     *
+     * The copy is submitted on the current queue without waiting. Unlike the
+     * Common pinned workspace, this buffer cannot be overwritten by another
+     * array's transfers while later force kernels are being submitted.
+     * @throws OpenMMException If a previous beginDownload() has not been finished.
+     * @see finishDownload()
+     */
+    void beginDownload();
+    /**
+     * @brief Wait for the readback, not for work submitted after it.
+     * @return Borrowed host bytes, valid until the next beginDownload(), resize(),
+     *         or destruction. Returns nullptr for an empty array.
+     * @throws OpenMMException If no readback is pending or GPU execution failed.
+     */
+    const void* finishDownload();
+    /**
      * @brief Enqueues a device-to-device copy on the current queue without waiting.
      * @param dest An initialized MetalArray, or ComputeArray wrapping one, from
      *             the same context with matching element count and size.
