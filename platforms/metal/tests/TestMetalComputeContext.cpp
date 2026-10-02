@@ -267,6 +267,34 @@ void testClearing(MetalContext& metal) {
     }
 }
 
+/** Exercise more than one OpenCL-sized clear group, including empty/resized arrays. */
+void testAutoclearGroups() {
+    System system;
+    system.addParticle(1.0);
+    MetalContext context(system);
+    vector<ComputeArray> arrays(13);
+    for (int i = 0; i < arrays.size(); i++) {
+        arrays[i].initialize<int>(context, i*17, "autoclearGroup"+to_string(i));
+        context.addAutoclearBuffer(arrays[i]);
+    }
+    for (int wave = 0; wave < 3; wave++) {
+        arrays[6].resize(wave*31);
+        for (auto& array : arrays) {
+            if (array.getSize() != 0)
+                array.upload(vector<int>(array.getSize(), wave+5));
+        }
+        context.clearAutoclearBuffers();
+        for (auto& array : arrays) {
+            if (array.getSize() == 0)
+                continue;
+            vector<int> result;
+            array.download(result);
+            for (int value : result)
+                ASSERT_EQUAL(0, value);
+        }
+    }
+}
+
 void testQueues(MetalContext& metal, ComputeProgram program) {
     ComputeContext& context = metal;
     ComputeQueue original = context.getCurrentQueue(), secondary = context.createQueue();
@@ -424,6 +452,7 @@ int main() {
         testLaunches(context, program);
         testArguments(context, program);
         testClearing(*metal);
+        testAutoclearGroups();
         testQueues(*metal, program);
         testSubmissionOrdering(context);
         testErrors(context, program);

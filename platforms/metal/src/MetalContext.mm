@@ -462,8 +462,32 @@ void MetalContext::addAutoclearBuffer(ArrayInterface& array) {
 }
 
 void MetalContext::clearAutoclearBuffers() {
-    for (auto* array : autoclearBuffers)
-        clearBuffer(*array);
+    // OpenCL clears up to six buffers per dispatch. Preserve that submission
+    // granularity in immediate mode too, without general command batching.
+    for (size_t base = 0; base < autoclearBuffers.size(); base += 6) {
+        MetalArray* arrays[6];
+        int count = 0;
+        for (size_t i = base; i < min(base+6, autoclearBuffers.size()); i++) {
+            MetalArray& array = unwrap(*autoclearBuffers[i]);
+            if (array.getSize() != 0)
+                arrays[count++] = &array;
+        }
+        if (count == 0)
+            continue;
+        @autoreleasepool {
+            MetalQueue& queue = getCurrentMetalQueue();
+            auto queueLock = queue.lock();
+            id<MTLCommandBuffer> command = (__bridge id<MTLCommandBuffer>) queue.getCommandBuffer();
+            id<MTLBlitCommandEncoder> encoder = [command blitCommandEncoder];
+            if (encoder == nil)
+                throw OpenMMException("Error creating Metal autoclear command");
+            for (int i = 0; i < count; i++)
+                [encoder fillBuffer:(__bridge id<MTLBuffer>) arrays[i]->getBuffer()
+                        range:NSMakeRange(0, arrays[i]->getSize()*arrays[i]->getElementSize()) value:0];
+            [encoder endEncoding];
+            queue.submit((__bridge void*) command);
+        }
+    }
 }
 
 void* MetalContext::getPinnedBuffer() {

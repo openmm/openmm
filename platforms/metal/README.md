@@ -99,6 +99,14 @@ when sharing arrays. Encoding operations are serialized to accommodate Common
 worker-thread uploads. Nonblocking transfers use `getPinnedBuffer()`; do not
 read or reuse a pending range until its queue/event completes.
 
+The OFF host path mirrors OpenCL's Apple-device scheduling where possible:
+
+- Autoclears submit groups of up to six buffers, like OpenCL's fused clears.
+
+These baseline changes do not enable optional algorithm switches or general
+command batching. Metal submission costs, VkFFT, and shader compilation still
+differ from OpenCL; matching the orchestration does not establish equal speed.
+
 ## Build and test
 
 Requires macOS 13+, an arm64 shared build, a macOS 15+ SDK (Xcode 16 or newer),
