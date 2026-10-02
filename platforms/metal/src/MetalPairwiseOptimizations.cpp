@@ -188,44 +188,6 @@ string customGB(string source) {
     return source;
 }
 
-/** Scalarize the fixed GBSA structs, rotating every field with its accumulator. */
-string gbsa(string source, bool born) {
-    const string type = born ? "AtomData1" : "AtomData2";
-    const string declaration = born ?
-            "typedef struct ALIGN {\n    real x, y, z;\n    real q;\n    float radius, scaledRadius;\n    real bornSum;\n} AtomData1;" :
-            "typedef struct ALIGN {\n    real x, y, z;\n    real q;\n    real fx, fy, fz, fw;\n    real bornRadius;\n} AtomData2;";
-    if (source.find(declaration) == string::npos)
-        throw OpenMMException("Common GBSA particle fields changed: review Metal register transport");
-    const vector<string> fields = born ? vector<string>{"x", "y", "z", "q", "radius", "scaledRadius", "bornSum"} :
-            vector<string>{"x", "y", "z", "q", "fx", "fy", "fz", "fw", "bornRadius"};
-    const vector<string> readOnly = born ? vector<string>{"x", "y", "z", "radius", "scaledRadius"} :
-            vector<string>{"x", "y", "z", "q", "bornRadius"};
-    replace(source, "LOCAL "+type+" localData[FORCE_WORK_GROUP_SIZE];", type+" localData = {};\nint atomIndices = 0;", 1);
-    string broadcast = type+" _metal_broadcast = {};\n";
-    for (const string& field : readOnly)
-        broadcast += shuffleAssignment("_metal_broadcast."+field, "localData."+field, "j");
-    const string diagonalLoop = "for (unsigned int j = 0; j < TILE_SIZE; j++) {";
-    replace(source, diagonalLoop, diagonalLoop+"\n"+broadcast, 1);
-    const size_t diagonalEnd = source.find("\n        else {\n            // This is an off-diagonal tile.");
-    if (diagonalEnd == string::npos) throw OpenMMException("Missing Common GBSA diagonal tile");
-    string diagonal = source.substr(0, diagonalEnd);
-    replace(diagonal, "SYNC_WARPS;", "");
-    source = diagonal+source.substr(diagonalEnd);
-    replace(source, "localData[tbx+j]", "_metal_broadcast");
-    scalarize(source, "localData");
-    replace(source, "LOCAL int atomIndices[FORCE_WORK_GROUP_SIZE];", "", 1);
-    scalarize(source, "atomIndices");
-    string rotate;
-    for (const string& field : fields)
-        rotate += shuffleAssignment("localData."+field, "localData."+field, "(tgx+1)&31");
-    rotate += shuffleAssignment("atomIndices", "atomIndices", "(tgx+1)&31");
-    const regex next("tj = \\(tj \\+ 1\\) & \\(TILE_SIZE - 1\\);\\s*SYNC_WARPS;");
-    if (distance(sregex_iterator(source.begin(), source.end(), next), sregex_iterator()) != 3)
-        throw OpenMMException("Missing Common GBSA ring steps");
-    source = regex_replace(source, next, "tj = (tj + 1) & (TILE_SIZE - 1);\n"+rotate);
-    return source;
-}
-
 /** DPD preserves i=0..31 visitation, hence the original per-lane RNG consumption. */
 string dpd(string source, bool particles, bool tile) {
     if (tile) {
@@ -318,13 +280,11 @@ string MetalPairwiseOptimizations::apply(const string& source, const Settings& s
         return checkedSource(customGB(source));
     if (settings.customGBEnergy && matchesTemplate(source, CommonKernelSources::customGBEnergyN2, customGBHoles))
         return checkedSource(customGB(source));
-    if ((settings.gbsaBorn || settings.gbsaForce) && source == CommonKernelSources::gbsaObc) {
-        const size_t second = source.find("typedef struct ALIGN {", source.find("typedef struct ALIGN {")+1);
-        if (second == string::npos) throw OpenMMException("Missing second Common GBSA template");
-        string first = source.substr(0, second), last = source.substr(second);
-        if (settings.gbsaBorn) first = gbsa(first, true);
-        if (settings.gbsaForce) last = gbsa(last, false);
-        return checkedSource(first+last);
+    if (source == CommonKernelSources::gbsaObc) {
+        // Source owns both transport implementations.  Explicit zeros also
+        // keep a test's requested baseline independent of the build switches.
+        return string("#define USE_GBSA_BORN_SHUFFLE ")+(settings.gbsaBorn ? "1\n" : "0\n")+
+                "#define USE_GBSA_FORCE_SHUFFLE "+(settings.gbsaForce ? "1\n" : "0\n")+source;
     }
     if ((settings.dpdParticles || settings.dpdTile) && source == CommonKernelSources::dpd)
         return checkedSource(dpd(source, settings.dpdParticles, settings.dpdTile));

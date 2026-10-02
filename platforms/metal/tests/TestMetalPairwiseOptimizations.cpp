@@ -39,12 +39,24 @@ using namespace std;
 
 typedef MetalPairwiseOptimizations::Settings Settings;
 
+/** The selected source differs only by two defines, including explicit OFF. */
+void checkGBSASelection(const string& source, const Settings& settings) {
+    const string prefix = string("#define USE_GBSA_BORN_SHUFFLE ")+(settings.gbsaBorn ? "1\n" : "0\n")+
+            "#define USE_GBSA_FORCE_SHUFFLE "+(settings.gbsaForce ? "1\n" : "0\n");
+    ASSERT_EQUAL(prefix+CommonKernelSources::gbsaObc, source);
+}
+
 /** Build switches are independent and do not recognize a kernel by name alone. */
 void testSelection() {
     const vector<string> templates = {CommonKernelSources::customGBValueN2, CommonKernelSources::customGBEnergyN2,
         CommonKernelSources::gbsaObc, CommonKernelSources::dpd, CommonKernelSources::customHbondForce};
-    for (const string& source : templates)
-        ASSERT_EQUAL(source, MetalPairwiseOptimizations::apply(source, Settings()));
+    for (const string& source : templates) {
+        const string selected = MetalPairwiseOptimizations::apply(source, Settings());
+        if (source == CommonKernelSources::gbsaObc)
+            checkGBSASelection(selected, Settings());
+        else
+            ASSERT_EQUAL(source, selected);
+    }
     vector<Settings> options(7);
     options[0].customGBValue = true;
     options[1].customGBEnergy = true;
@@ -57,9 +69,12 @@ void testSelection() {
     for (int i = 0; i < options.size(); i++) {
         for (int j = 0; j < templates.size(); j++) {
             string source = MetalPairwiseOptimizations::apply(templates[j], options[i]);
-            ASSERT_EQUAL(j == selected[i], source != templates[j]);
+            if (j == 2)
+                checkGBSASelection(source, options[i]);
+            else
+                ASSERT_EQUAL(j == selected[i], source != templates[j]);
             if (source != templates[j]) {
-                ASSERT(source.find("simdShuffle(") != string::npos);
+                if (j != 2) ASSERT(source.find("simdShuffle(") != string::npos);
                 ASSERT(source.find("#define USE_HIP") == string::npos);
                 ASSERT(source.find("#define __CUDA_ARCH__") == string::npos);
             }
@@ -73,7 +88,7 @@ void testSelection() {
     // The two GBSA programs and the two DPD strategies can also be combined.
     Settings both;
     both.gbsaBorn = both.gbsaForce = both.dpdParticles = both.dpdTile = true;
-    ASSERT(MetalPairwiseOptimizations::apply(CommonKernelSources::gbsaObc, both).find("LOCAL AtomData") == string::npos);
+    checkGBSASelection(MetalPairwiseOptimizations::apply(CommonKernelSources::gbsaObc, both), both);
     ASSERT(MetalPairwiseOptimizations::apply(CommonKernelSources::dpd, both).find("LOCAL mixed3 localPos") == string::npos);
 }
 
@@ -90,6 +105,24 @@ void testExclusionSkipListSelection() {
         ASSERT(fast.find("SYNC_WARPS;") == string::npos);
         ASSERT(fast.find("simdShuffle(skipTile, uint(TILE_SIZE-1))") != string::npos);
         ASSERT(fast.find("simdShuffle(skipTile, uint(currentSkipIndex-tbx))") != string::npos);
+    }
+    const string& baseline = CommonKernelSources::gbsaObc;
+    for (int mode = 0; mode <= 3; mode++) {
+        Settings settings;
+        settings.gbsaBorn = (mode&1) != 0;
+        settings.gbsaForce = (mode&2) != 0;
+        const string selected = MetalPairwiseOptimizations::apply(baseline, settings);
+        checkGBSASelection(selected, settings);
+        // Source visibly retains both transports.  Shader preprocessing makes
+        // each kernel's independent choice; the host never removes its body.
+        ASSERT(selected.find("#define GBSA_BORN_SKIP_TILE(index) skipTiles[index]") != string::npos);
+        ASSERT(selected.find("#define GBSA_FORCE_SKIP_TILE(index) skipTiles[index]") != string::npos);
+        ASSERT(selected.find("GBSA_BORN_SKIP_TILE(tbx+TILE_SIZE-1)") != string::npos);
+        ASSERT(selected.find("GBSA_FORCE_SKIP_TILE(currentSkipIndex)") != string::npos);
+        ASSERT(selected.find("#if !USE_GBSA_BORN_SHUFFLE\n        SYNC_WARPS;") != string::npos);
+        ASSERT(selected.find("#if !USE_GBSA_FORCE_SHUFFLE\n        SYNC_WARPS;") != string::npos);
+        ASSERT(selected.find("metalGbsaRotateBorn(localData, (tgx+1)&31)") != string::npos);
+        ASSERT(selected.find("metalGbsaRotateForce(localData, (tgx+1)&31)") != string::npos);
     }
 }
 
