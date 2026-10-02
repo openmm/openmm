@@ -23,6 +23,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "MetalContext.h"
+#include "MetalNonbondedUtilities.h"
 #include "MetalQueue.h"
 #include "openmm/System.h"
 #include "openmm/common/ComputeArray.h"
@@ -95,6 +96,13 @@ void testContext(ComputeContext& context) {
     ASSERT(!context.getUseDoublePrecision());
     ASSERT(!context.getUseMixedPrecision());
     ASSERT(!context.getSupports64BitGlobalAtomics());
+    MetalContext& metal = dynamic_cast<MetalContext&>(context);
+    ASSERT_EQUAL(metal.getNumComputeUnits() == 0 ? 128 : 12*metal.getNumComputeUnits(), context.getNumThreadBlocks());
+    int forceBlocks = metal.getNumComputeUnits() == 0 ? 128 : 6*metal.getNumComputeUnits();
+    ASSERT_EQUAL(forceBlocks, context.getNonbondedUtilities().getNumForceThreadBlocks());
+    cout << "Metal compute units: " << metal.getNumComputeUnits()
+         << "; general blocks: " << context.getNumThreadBlocks()
+         << "; nonbonded blocks: " << forceBlocks << endl;
     ASSERT_EQUAL(paddedAtoms, context.getPosq().getSize());
     ASSERT_EQUAL(sizeof(mm_float4), context.getPosq().getElementSize());
     ASSERT_EQUAL(paddedAtoms, context.getVelm().getSize());

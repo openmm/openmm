@@ -101,10 +101,14 @@ read or reuse a pending range until its queue/event completes.
 
 The OFF host path mirrors OpenCL's Apple-device scheduling where possible:
 
+- General launches use 12 blocks per reported GPU core; nonbonded uses six
+  256-thread blocks per core. Core count comes from best-effort I/O Registry
+  driver data, not a Metal guarantee; unavailable data retains the 128-block
+  fallback without a device-name heuristic or OpenCL runtime dependency.
 - Neighbor counts are copied into dedicated reusable host storage before force
   dispatches. The later host check waits only for that copy, not the force work.
 - Autoclears submit groups of up to six buffers, like OpenCL's fused clears.
-  Energy reduction reuses pinned storage.
+  Energy reduction uses one partial per reported core and reuses pinned storage.
 
 These baseline changes do not enable optional algorithm switches or general
 command batching. Metal submission costs, VkFFT, and shader compilation still

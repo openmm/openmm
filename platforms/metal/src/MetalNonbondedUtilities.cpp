@@ -63,7 +63,7 @@ public:
 MetalNonbondedUtilities::MetalNonbondedUtilities(MetalContext& context) : context(context), downloadedCount(0), countReadbackPending(false),
         useCutoff(false), usePeriodic(false), anyExclusions(false), usePadding(true), useNeighborList(false),
         forceRebuildNeighborList(true), canUsePairList(OPENMM_METAL_FAST_SPARSE_PAIRS), groupFlags(0), tilesAfterReorder(0) {
-    numForceThreadBlocks = context.getNumThreadBlocks();
+    numForceThreadBlocks = context.getNumComputeUnits() == 0 ? context.getNumThreadBlocks() : 6*context.getNumComputeUnits();
     forceThreadBlockSize = min(256, context.getMaxThreadBlockSize());
     forceThreadBlockSize -= forceThreadBlockSize%MetalContext::TileSize;
     if (forceThreadBlockSize < MetalContext::TileSize)
