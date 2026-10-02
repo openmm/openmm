@@ -160,6 +160,43 @@ void testArrays(ComputeContext& context) {
     context.clearBuffer(empty);
 }
 
+/** A neighbor-count snapshot must survive later force work and other transfers. */
+void testDedicatedReadback(MetalContext& context) {
+    MetalArray values(context, 2, sizeof(unsigned int), "countReadback");
+    MetalArray scratch(context, 2, sizeof(unsigned int), "scratchReadback");
+    expectException("readback without begin", [&] { values.finishDownload(); });
+    for (unsigned int wave = 0; wave < 3; wave++) {
+        vector<unsigned int> expected{wave+1, wave+7}, other{99, 101};
+        values.upload(expected);
+        scratch.upload(other);
+        values.beginDownload();
+        expectException("overlapping readback", [&] { values.beginDownload(); });
+        expectException("resize during readback", [&] { values.resize(3); });
+        // Force-like work submitted later must not change the earlier snapshot.
+        context.clearBuffer(values);
+        scratch.download(context.getPinnedBuffer(), false);
+        void* later = context.getCurrentMetalQueue().getCommandBuffer();
+        const unsigned int* result = static_cast<const unsigned int*>(values.finishDownload());
+        ASSERT_EQUAL(expected[0], result[0]);
+        ASSERT_EQUAL(expected[1], result[1]);
+        // Waiting for the earlier copy must not flush a later recording.
+        ASSERT(later == context.getCurrentMetalQueue().getCommandBuffer());
+        context.getCurrentMetalQueue().finish();
+    }
+    ComputeQueue original = context.getCurrentQueue();
+    ComputeQueue secondary = context.createQueue();
+    context.setCurrentQueue(secondary);
+    values.upload(vector<unsigned int>{17, 23});
+    values.beginDownload();
+    context.setCurrentQueue(original);
+    const unsigned int* result = static_cast<const unsigned int*>(values.finishDownload());
+    ASSERT_EQUAL(17, result[0]);
+    ASSERT_EQUAL(23, result[1]);
+    values.resize(0);
+    values.beginDownload();
+    ASSERT(values.finishDownload() == nullptr);
+}
+
 void testLaunches(ComputeContext& context, ComputeProgram program) {
     const int sizes[] = {1, 63, 64, 65, 129, context.getNumThreadBlocks()*64+129};
     for (int count : sizes) {
@@ -457,6 +494,7 @@ int main() {
         testSubmissionOrdering(context);
         testErrors(context, program);
         testCrossContextArrays(context, program);
+        testDedicatedReadback(*metal);
         metal->getCurrentMetalQueue().finish();
     }
     catch (const exception& error) {

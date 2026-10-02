@@ -34,6 +34,7 @@
 #include "MetalNonbondedUtilities.h"
 #include "openmm/common/ComputeArray.h"
 #include "MetalContext.h"
+#include "MetalQueue.h"
 #include "MetalOpenCLKernelSources.h"
 #include "MetalNonbondedSources.h"
 #include <cstdint>
@@ -59,7 +60,7 @@ public:
     const char* getSortKey() const {return "value";}
 };
 
-MetalNonbondedUtilities::MetalNonbondedUtilities(MetalContext& context) : context(context), downloadedCount(0),
+MetalNonbondedUtilities::MetalNonbondedUtilities(MetalContext& context) : context(context), downloadedCount(0), countReadbackPending(false),
         useCutoff(false), usePeriodic(false), anyExclusions(false), usePadding(true), useNeighborList(false),
         forceRebuildNeighborList(true), canUsePairList(OPENMM_METAL_FAST_SPARSE_PAIRS), groupFlags(0), tilesAfterReorder(0) {
     numForceThreadBlocks = context.getNumThreadBlocks();
@@ -342,6 +343,13 @@ void MetalNonbondedUtilities::prepareInteractions(int forceGroups) {
     if (numTiles == 0)
         return;
 
+    // Recover a pending count if a force evaluation was interrupted before
+    // computeInteractions(). Never overwrite its dedicated readback storage.
+    if (countReadbackPending) {
+        context.unwrap(interactionCount).finishDownload();
+        countReadbackPending = false;
+    }
+
     // Compute the neighbor list.
 
     setPeriodicBoxArgs(context, kernels.findBlockBoundsKernel, 1);
@@ -359,6 +367,10 @@ void MetalNonbondedUtilities::prepareInteractions(int forceGroups) {
     setPeriodicBoxArgs(context, kernels.findInteractingBlocksKernel, 0);
     kernels.findInteractingBlocksKernel->execute(context.getNumAtoms(), interactingBlocksThreadBlockSize);
     forceRebuildNeighborList = false;
+    // Match OpenCL: read counts before standalone and fused force kernels, and
+    // let the GPU start this phase while the host prepares the remaining work.
+    context.unwrap(interactionCount).beginDownload();
+    countReadbackPending = true;
 }
 
 void MetalNonbondedUtilities::computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) {
@@ -374,6 +386,8 @@ void MetalNonbondedUtilities::computeInteractions(int forceGroups, bool includeF
         kernel->execute(numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     if (useNeighborList && numTiles > 0) {
+        // Keep force work running while waiting only for the earlier count copy.
+        context.getCurrentMetalQueue().flush();
         updateNeighborListSize();
     }
 }
@@ -381,9 +395,18 @@ void MetalNonbondedUtilities::computeInteractions(int forceGroups, bool includeF
 bool MetalNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return false;
-    // Only GPU-generated counts are read on the host; interactions stay on the GPU.
     unsigned int counts[2] = {0, 0};
-    interactionCount.download(counts);
+    if (countReadbackPending) {
+        const unsigned int* data = static_cast<const unsigned int*>(context.unwrap(interactionCount).finishDownload());
+        counts[0] = data[0];
+        if (canUsePairList)
+            counts[1] = data[1];
+        countReadbackPending = false;
+    }
+    else {
+        // Explicit size checks outside the normal force-evaluation sequence.
+        interactionCount.download(counts);
+    }
     downloadedCount = counts[0];
     if (context.getStepsSinceReorder() == 0 || tilesAfterReorder == 0)
         tilesAfterReorder = downloadedCount;

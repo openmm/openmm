@@ -101,6 +101,8 @@ read or reuse a pending range until its queue/event completes.
 
 The OFF host path mirrors OpenCL's Apple-device scheduling where possible:
 
+- Neighbor counts are copied into dedicated reusable host storage before force
+  dispatches. The later host check waits only for that copy, not the force work.
 - Autoclears submit groups of up to six buffers, like OpenCL's fused clears.
 
 These baseline changes do not enable optional algorithm switches or general

@@ -328,6 +328,8 @@ private:
     ComputeArray rebuildNeighborList;
     ComputeSort blockSorter;
     unsigned int downloadedCount;
+    /** @brief Whether the pre-force count readback still needs to be consumed. */
+    bool countReadbackPending;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ComputeParameterInfo> parameters;
     std::vector<ComputeParameterInfo> arguments;
