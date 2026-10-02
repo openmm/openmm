@@ -36,6 +36,7 @@
 #include "MetalIntegrationUtilities.h"
 #include "MetalKernel.h"
 #include "MetalKernelSources.h"
+#include "MetalLanguagePolicy.h"
 #include "MetalNonbondedUtilities.h"
 #include "MetalOpenCLKernelSources.h"
 #include "MetalProgram.h"
@@ -87,6 +88,7 @@ static int getComputeUnits(id<MTLDevice> device) {
 struct MetalContext::Impl {
     id<MTLDevice> device = nil;
     id<MTLBuffer> pinnedBuffer = nil;
+    int languageVersion = 300;
     ThreadPool threads;
     Impl() : threads(1) {
     }
@@ -112,6 +114,11 @@ MetalContext::MetalContext(const System& system, ContextImpl* simulation, MetalC
                 throw OpenMMException("No Metal device is available");
             if (![impl->device supportsFamily:MTLGPUFamilyApple7])
                 throw OpenMMException("The Metal Platform requires Apple silicon");
+            impl->languageVersion = MetalLanguagePolicy::selectVersion(MetalLanguagePolicy::requestedVersion(),
+                    MetalLanguagePolicy::sdkMaximum(), MetalLanguagePolicy::runtimeMaximum(),
+                    [impl->device supportsFamily:MTLGPUFamilyApple7]);
+            if (impl->languageVersion == 0)
+                throw OpenMMException("The Metal Platform requires MSL 3.0 or newer");
             numComputeUnits = linked == nullptr ? getComputeUnits(impl->device) : linked->getNumComputeUnits();
             // Inner CustomCV/ATM contexts share the parent's stream, just as in
             // OpenCL, so state copies and force evaluation stay device-ordered.
@@ -365,6 +372,10 @@ void* MetalContext::getDevice() const {
     return (__bridge void*) impl->device;
 }
 
+int MetalContext::getMetalLanguageVersion() const {
+    return impl->languageVersion;
+}
+
 ContextImpl* MetalContext::getContextImpl() {
     if (simulation == nullptr)
         throw OpenMMException("The Metal Platform is not attached to a simulation Context");
@@ -456,19 +467,25 @@ ComputeProgram MetalContext::compileProgram(const string source, const map<strin
             allDefines["OPENMM_METAL_REQUIRE_SAFE_MATH"] = "1";
         if (commonSource && floatingAccumulators)
             allDefines["OPENMM_METAL_FLOAT_ACCUMULATORS"] = "1";
-        for (auto& define : allDefines)
-            code += "#define "+define.first+" "+define.second+"\n";
-        code += commonSource ? MetalKernelSources::common+MetalKernelSources::gbsaTransport+
-                MetalSourceAdapter::translate(source, floatingAccumulators) : source;
-        MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
-        options.languageVersion = MTLLanguageVersion3_0;
-        // CG needs compensated low terms; FP16 bounds require conservative Inf
-        // overflow behavior. Floating minimization needs finite-value checks.
+        // Shader arithmetic policy lives in mathPolicy.metal. Keep only the
+        // runtime capability and existing numerical-safety decisions here.
         const bool strictMath = source == CommonKernelSources::constantPotentialCGSolver ||
                 allDefines.count("OPENMM_METAL_REQUIRE_SAFE_MATH") != 0;
         const bool fastMath = OPENMM_METAL_FAST_MATH && !floatingAccumulators && !strictMath;
+        allDefines["OPENMM_METAL_USE_FAST_MATH"] = fastMath ? "1" : "0";
+        if (@available(macOS 15.0, *))
+            allDefines["OPENMM_METAL_HAS_MATH_PRAGMAS"] = "1";
+        else
+            allDefines["OPENMM_METAL_HAS_MATH_PRAGMAS"] = "0";
+        for (auto& define : allDefines)
+            code += "#define "+define.first+" "+define.second+"\n";
+        code += MetalKernelSources::mathPolicy;
+        code += commonSource ? MetalKernelSources::common+MetalKernelSources::gbsaTransport+
+                MetalSourceAdapter::translate(source, floatingAccumulators) : source;
+        MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
+        options.languageVersion = MetalLanguagePolicy::languageVersion(getMetalLanguageVersion());
         if (@available(macOS 15.0, *)) {
-            options.mathMode = fastMath ? MTLMathModeFast : MTLMathModeSafe;
+            // MSL's arithmetic pragma does not select library math functions.
             options.mathFloatingPointFunctions = fastMath ? MTLMathFloatingPointFunctionsFast : MTLMathFloatingPointFunctionsPrecise;
         }
         else {

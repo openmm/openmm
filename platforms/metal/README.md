@@ -1,6 +1,8 @@
 # Experimental Metal Platform
 
-- Metal 3 host API and runtime-compiled MSL 3.0.
+- Metal 3 host API and runtime-compiled MSL, with a 3.0 minimum. The SDK, running
+  OS, and GPU select the highest supported target known to the backend,
+  independently of optimization switches.
 - One Apple-silicon GPU; single precision only.
 - Existing Common Compute host classes and kernel algorithms.
 - OpenCL-derived neighbor-list, sorting, and constraint orchestration.
@@ -79,12 +81,27 @@ also use precise math to preserve NaN classification and signed-zero payloads.
 VkFFT compilation follows
 the build-time fast-math setting independently of the force-buffer mode.
 API selection follows the running OS, not the SDK or deployment target:
-macOS 15+ uses `mathMode` and `mathFloatingPointFunctions`, while macOS 13/14
-uses the guarded legacy setter. OFF selects `Safe`/`Precise`, ON selects
-`Fast`/`Fast` on the modern API. Runtime version detection does not enable
-optimizations or change the build-time switches. Initial compilation, lazy
-accumulator variants, and VkFFT all follow this policy. MSL remains 3.0 and
-the minimum deployment target remains macOS 13.
+on macOS 15+, `mathPolicy.metal` selects arithmetic assumptions with
+`#pragma METAL fp math_mode(safe|fast)`; host compilation independently selects
+precise/fast FP32 functions. macOS 13/14 uses the guarded legacy setter and
+skips the newer pragmas. OFF selects Safe/Precise, ON selects Fast/Fast, subject
+to the safety exceptions above. Initial and lazy accumulator variants share
+this policy. VkFFT retains the equivalent host compiler options. Runtime
+version detection does not enable optimizations or change switches. The minimum
+deployment target remains macOS 13. Common/native runtime programs automatically
+select the highest target known to the backend and supported by the build SDK,
+running OS (3.0: macOS 13; 3.1: macOS 14; 3.2: macOS 15; 4.0: macOS 26; 4.1: macOS 27),
+and Apple GPU. Optimization switches never request or raise this target. An
+optional path is enabled only when its switch is ON and the selected language
+supports it; otherwise its compatible path remains in use. Initial and lazy
+accumulator variants use the same target.
+VkFFT retains its own compilation policy. SDK availability alone never enables
+an optional fast path. A newer MSL target does not switch to the Metal 4 host API.
+
+For matched-language experiments, `OPENMM_METAL_TUNE_LANGUAGE_VERSION=ON` requests
+`OPENMM_METAL_LANGUAGE_VERSION` (300, 310, 320, 400, or 410). A deliberately lower
+override tests feature fallbacks; a higher request is still capability-capped.
+`MetalContext::getMetalLanguageVersion()` reports the effective selected target.
 
 Separately from broad fast math, the baseline follows OpenCL's startup accuracy
 probe for `sqrt`, `rsqrt`, reciprocal, `exp`, and `log`. Each function selects its
@@ -197,6 +214,7 @@ part of the backend, not optional optimizations.
 | `OPENMM_METAL_TUNE_FORCE_THREADGROUP_SIZE` | Existing device-limited 256-thread force groups | Use `OPENMM_METAL_FORCE_THREADGROUP_SIZE` (64, 128, or 256; default 256) |
 | `OPENMM_METAL_TUNE_FORCE_GROUPS_PER_COMPUTE_UNIT` | Existing six force groups per known GPU compute unit | Use `OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT` (1 through 12; default 6) |
 | `OPENMM_METAL_TUNE_FORCE_PIPELINE_MAX_THREADS` | Existing function-based pipeline construction | Supply `OPENMM_METAL_FORCE_PIPELINE_MAX_THREADS` to the compiler for the three tiled Nonbonded/GBSA entry points (default 256) |
+| `OPENMM_METAL_TUNE_LANGUAGE_VERSION` | Select the highest supported target independently of optimization switches | Limit the target to `OPENMM_METAL_LANGUAGE_VERSION`, still capped by SDK, runtime and GPU support |
 | `OPENMM_METAL_FAST_CUSTOM_GB_VALUE_SHUFFLE` | Common CustomGB value local arrays | Register exchange for value, parameters, and secondary accumulators |
 | `OPENMM_METAL_FAST_CUSTOM_GB_ENERGY_SHUFFLE` | Common CustomGB energy local arrays | Register exchange for force and parameter-derivative state |
 | `OPENMM_METAL_FAST_GBSA_BORN_SHUFFLE` | Common Born-sum local structs | Register exchange of Born data and secondary sums |
@@ -247,7 +265,7 @@ must be a multiple of 32 from 32 through 1024, and no smaller than the selected
 force threadgroup size. Launches exceeding either the hint or the actual
 pipeline/device limit are rejected. No extra SIMD-width promise or fast-math
 option is enabled by this setting. The API is available below the backend's
-macOS 13 runtime floor, so the explicit MSL 3.0 target is unchanged.
+macOS 13 runtime floor, so this hint does not constrain the selected MSL target.
 
 Measure size, group count, and compiler hint independently before combining
 them; lower limits may change register allocation, occupancy, and numerical

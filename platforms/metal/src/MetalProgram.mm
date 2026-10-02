@@ -33,6 +33,7 @@
 #include "MetalContext.h"
 #include "MetalKernel.h"
 #include "MetalKernelSources.h"
+#include "MetalLanguagePolicy.h"
 #include "MetalSourceAdapter.h"
 #import <Metal/Metal.h>
 #include <mutex>
@@ -62,17 +63,19 @@ struct MetalProgram::Impl {
         if (libraries[index] == nil) {
             if (!commonSource || source.empty())
                 throw OpenMMException("Metal program has no Common source for an alternate accumulator ABI");
+            const bool fastMath = OPENMM_METAL_FAST_MATH && !floating && !strictMath;
+            map<string, string> variantDefines = defines;
+            variantDefines["OPENMM_METAL_USE_FAST_MATH"] = fastMath ? "1" : "0";
             string code;
-            for (const auto& define : defines)
+            for (const auto& define : variantDefines)
                 code += "#define "+define.first+" "+define.second+"\n";
             if (floating)
                 code += "#define OPENMM_METAL_FLOAT_ACCUMULATORS 1\n";
+            code += MetalKernelSources::mathPolicy;
             code += MetalKernelSources::common+MetalKernelSources::gbsaTransport+MetalSourceAdapter::translate(source, floating);
             MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
-            options.languageVersion = MTLLanguageVersion3_0;
-            const bool fastMath = OPENMM_METAL_FAST_MATH && !floating && !strictMath;
+            options.languageVersion = MetalLanguagePolicy::languageVersion(context.getMetalLanguageVersion());
             if (@available(macOS 15.0, *)) {
-                options.mathMode = fastMath ? MTLMathModeFast : MTLMathModeSafe;
                 options.mathFloatingPointFunctions = fastMath ? MTLMathFloatingPointFunctionsFast : MTLMathFloatingPointFunctionsPrecise;
             }
             else {

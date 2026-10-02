@@ -43,9 +43,10 @@ class MetalContext;
 /**
  * @brief Wraps a compiled Metal library through the Common program interface.
  *
- * MetalContext::compileProgram() creates this object from native Metal 3.0
+ * MetalContext::compileProgram() creates this object from native Metal
  * source or Common source adapted to Metal's argument-buffer interface.
  * Common programs lazily retain fixed-point and floating-accumulator libraries.
+ * Both libraries use the context's same runtime-selected language target.
  * Kernels share their library cache and may outlive this program; the context
  * must outlive both the program and every kernel created from it.
  */
