@@ -32,11 +32,11 @@ namespace OpenMM {
 /**
  * @brief Optional register communication for audited Common pairwise templates.
  *
- * These transformations change lane communication, not the pair expressions,
- * fixed-point representation, exclusions, or pair enumeration. Each SIMD group
- * must contain 32 active lanes, including the padded lanes of the last tile.
- * A full template-skeleton match limits generated-expression substitutions to
- * the holes already provided by Common. Unrecognized source is left unchanged.
+ * These transformations change lane communication, not pair expressions,
+ * fixed-point representation, exclusions, or pair enumeration. GBSA selects
+ * readable shader-side paths with defines; other pairwise kernels retain
+ * audited template adaptation. Each SIMD group must contain 32 active lanes,
+ * including padded lanes of the last tile. Unrecognized source is unchanged.
  */
 class MetalPairwiseOptimizations {
 public:

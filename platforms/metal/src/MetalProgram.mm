@@ -67,7 +67,7 @@ struct MetalProgram::Impl {
                 code += "#define "+define.first+" "+define.second+"\n";
             if (floating)
                 code += "#define OPENMM_METAL_FLOAT_ACCUMULATORS 1\n";
-            code += MetalKernelSources::common+MetalSourceAdapter::translate(source, floating);
+            code += MetalKernelSources::common+MetalKernelSources::gbsaTransport+MetalSourceAdapter::translate(source, floating);
             MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
             options.languageVersion = MTLLanguageVersion3_0;
             const bool fastMath = OPENMM_METAL_FAST_MATH && !floating && !strictMath;

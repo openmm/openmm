@@ -456,7 +456,8 @@ ComputeProgram MetalContext::compileProgram(const string source, const map<strin
             allDefines["OPENMM_METAL_FLOAT_ACCUMULATORS"] = "1";
         for (auto& define : allDefines)
             code += "#define "+define.first+" "+define.second+"\n";
-        code += commonSource ? MetalKernelSources::common+MetalSourceAdapter::translate(source, floatingAccumulators) : source;
+        code += commonSource ? MetalKernelSources::common+MetalKernelSources::gbsaTransport+
+                MetalSourceAdapter::translate(source, floatingAccumulators) : source;
         MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
         options.languageVersion = MTLLanguageVersion3_0;
         // CG needs compensated low terms; FP16 bounds require conservative Inf
