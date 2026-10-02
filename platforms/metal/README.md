@@ -220,6 +220,8 @@ contribute to the final SIMD size-range reduction. Register paths preserve the
 shared force formulas and Q32.32 global accumulation; their performance and
 register pressure must still be measured on each GPU family.
 
+CustomGB register paths keep the no-cutoff exclusion skip list in lane-owned
+registers and remove only audited register-local preload barriers.
 When both short-list sort switches are enabled, register bitonic takes precedence
 for supported records with at most 32 elements; the CUDA-style scan selection
 still applies to eligible larger lists. Register bitonic places NaN keys after
