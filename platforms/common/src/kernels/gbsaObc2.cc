@@ -1,4 +1,13 @@
 {
+#if USE_GBSA_CHAIN_RULE_GUARD
+#ifdef USE_CUTOFF
+    unsigned int includeInteraction = (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2 && r2 < CUTOFF_SQUARED);
+#else
+    unsigned int includeInteraction = (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2);
+#endif
+    // Only pair arithmetic is conditional; enclosing SIMD communication stays uniform.
+    if (includeInteraction) {
+#endif
     real invRSquaredOver4 = 0.25f*invR*invR;
     real rScaledRadiusJ = r+OBC_PARAMS2.y;
     real rScaledRadiusI = r+OBC_PARAMS1.y;
@@ -18,10 +27,15 @@
     real term2 = (0.5f*(0.25f+OBC_PARAMS1.y*OBC_PARAMS1.y*invRSquaredOver4)*t2I + t1I*invRSquaredOver4)*invR;
     real tempdEdR = (OBC_PARAMS1.x < rScaledRadiusJ ? BORN_FORCE1*term1/0x100000000 : 0);
     tempdEdR += (OBC_PARAMS2.x < rScaledRadiusI ? BORN_FORCE2*term2/0x100000000 : 0);
+#if !USE_GBSA_CHAIN_RULE_GUARD
 #ifdef USE_CUTOFF
     unsigned int includeInteraction = (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2 && r2 < CUTOFF_SQUARED);
 #else
     unsigned int includeInteraction = (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2);
 #endif
+#endif
     dEdR += (includeInteraction ? tempdEdR : (real) 0);
+#if USE_GBSA_CHAIN_RULE_GUARD
+    }
+#endif
 }

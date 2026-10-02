@@ -39,6 +39,17 @@ using namespace std;
 
 typedef MetalPairwiseOptimizations::Settings Settings;
 
+/** Math choices are visible in shader source, not reconstructed by the host. */
+void testGBSAChainRuleSource() {
+    const string& source = CommonKernelSources::gbsaObc2;
+    ASSERT(source.find("USE_GBSA_CHAIN_RULE_GUARD") != string::npos);
+    ASSERT(source.find("LOG(u_ijJ*RECIP(l_ijJ))") != string::npos);
+    ASSERT(source.find("LOG(u_ijI*RECIP(l_ijI))") != string::npos);
+    ASSERT(source.find("BORN_FORCE1*term1/0x100000000") != string::npos);
+    ASSERT(source.find("BORN_FORCE2*term2/0x100000000") != string::npos);
+    ASSERT(source.find("simdShuffle") == string::npos && source.find("SYNC_WARPS") == string::npos);
+}
+
 /** The selected source differs only by two defines, including explicit OFF. */
 void checkGBSASelection(const string& source, const Settings& settings) {
     const string prefix = string("#define USE_GBSA_BORN_SHUFFLE ")+(settings.gbsaBorn ? "1\n" : "0\n")+
@@ -440,6 +451,7 @@ int main(int argc, char** argv) {
     try {
         testSelection();
         testExclusionSkipListSelection();
+        testGBSAChainRuleSource();
         if (argc == 2 && string(argv[1]) == "--selection-only") {
             cout << "Metal pairwise template selection tests passed" << endl;
             return 0;

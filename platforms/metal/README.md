@@ -198,6 +198,7 @@ part of the backend, not optional optimizations.
 | `OPENMM_METAL_FAST_CUSTOM_GB_ENERGY_SHUFFLE` | Common CustomGB energy local arrays | Register exchange for force and parameter-derivative state |
 | `OPENMM_METAL_FAST_GBSA_BORN_SHUFFLE` | Common Born-sum local structs | Register exchange of Born data and secondary sums |
 | `OPENMM_METAL_FAST_GBSA_FORCE_SHUFFLE` | Common GBSA force local structs | Register exchange of force/Born state |
+| `OPENMM_METAL_FAST_GBSA_CHAIN_RULE_GUARD` | Evaluate Common chain-rule math before rejecting inactive pairs | Check the unchanged particle/self/cutoff predicate before reciprocal/logarithm work; tile communication stays outside the guard |
 | `OPENMM_METAL_FAST_DPD_PARTICLE_SHUFFLE` | Common DPD local particle arrays | Register broadcasts preserving original pair/RNG visitation order |
 | `OPENMM_METAL_FAST_DPD_TILE_BROADCAST` | Local-memory tile-counter broadcast | SIMD lane-zero broadcast |
 | `OPENMM_METAL_FAST_CUSTOM_HBOND_SHUFFLE` | Common local acceptor structs | Register rotation of acceptor positions and forces |
@@ -235,7 +236,8 @@ settings fixed.
 CustomGB and GBSA register paths also keep the no-cutoff exclusion skip list
 in lane-owned registers. GBSA selects its transport in `gbsaObc.cc` with
 independent Born-sum and Force1 macros; `gbsaTransport.metal` provides the
-register broadcast/rotation helpers. The Common force formulas stay in one
+register broadcast/rotation helpers. Chain-rule guarding is an explicit
+branch in `gbsaObc2.cc`. The Common force formulas stay in one
 place, and disabled branches preserve the original OpenCL/CUDA/HIP source.
 C++ selects switches and parameter bindings instead of rewriting GBSA kernel
 bodies. CustomGB still uses checked template replacements. Both paths remove
