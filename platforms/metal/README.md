@@ -190,7 +190,7 @@ part of the backend, not optional optimizations.
 | `OPENMM_METAL_FAST_FP16_BOUNDS` | Float sorted/large bounding boxes | Conservatively rounded half4 storage; public Common bounds remain float |
 | `OPENMM_METAL_FAST_NEIGHBOR_BALLOT` | OpenCL local flags and atom prefix sums | SIMD ballot/popcount block iteration and atom compaction |
 | `OPENMM_METAL_FAST_SPARSE_PAIRS` | All interactions in tiles | Separate sparse pairs and the CUDA sparse-pair force loop |
-| `OPENMM_METAL_FAST_SPARSE_FORCE_AGGREGATION` | One Q32.32 write per sparse-pair component | Experimental SIMD aggregation of equal-target, already-quantized contributions; floating mode unchanged |
+| `OPENMM_METAL_FAST_SPARSE_FORCE_AGGREGATION` | One Q32.32 write per sparse-pair component | Bounded SIMD aggregation of adjacent equal-target, already-quantized contributions; floating mode unchanged |
 | `OPENMM_METAL_FAST_NONBONDED_SHUFFLE` | OpenCL local-memory force tiles | CUDA register/shuffle force template with Metal spelling adaptations |
 | `OPENMM_METAL_FAST_CUSTOM_GB_VALUE_SHUFFLE` | Common CustomGB value local arrays | Register exchange for value, parameters, and secondary accumulators |
 | `OPENMM_METAL_FAST_CUSTOM_GB_ENERGY_SHUFFLE` | Common CustomGB energy local arrays | Register exchange for force and parameter-derivative state |
@@ -241,9 +241,13 @@ return no previous value. `atomicAddUInt64()` is explicitly unsupported. The
 two-word fixed-point accumulation helper is a reduction, not a native fetch-add.
 No general HAL API was added to Common Compute or the other backends.
 The sparse-force aggregation experiment preserves unsigned modulo-2^64 sums
-and has exact-bit carry/sign/wrap tests. It does not enable sparse pairs itself,
-change Q32.32 conversion, or redesign the buffer ABI. Unique targets may make it
-slower, and it does not supply a general threadgroup force-staging architecture.
+and has exact-bit carry/sign/wrap tests. It combines contiguous equal-target
+runs with at most five shuffle rounds, not one reduction per distinct target.
+Unique or interleaved targets skip the scan and retain individual writes;
+inactive lanes split runs, and disconnected runs remain separate writes.
+It does not enable sparse pairs itself, change Q32.32 conversion, or redesign
+the buffer ABI. Run detection still has overhead, so a benefit requires
+measurement; this is not a general threadgroup force-staging architecture.
 
 Standalone OpenCL stream compaction has no Metal caller; the active neighbor
 compaction is covered by the neighbor switches. FFT remains VkFFT, so no

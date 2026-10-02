@@ -148,14 +148,14 @@ KERNEL void atomics(GLOBAL int* integers, GLOBAL float* floats, GLOBAL mm_ulong*
     ASSERT(rejected);
 }
 
-/** @brief Grouped Q32.32 writes preserve exact unsigned sums across carries, signs, and inactive lanes. */
+/** @brief Check exact Q32.32 sums for unique, equal, contiguous, and interleaved targets. */
 void testGroupedFixedPoint(MetalContext& context) {
     const string source = R"(
-KERNEL void grouped(GLOBAL const mm_ulong* input, GLOBAL mm_ulong* output,
-        unsigned int count, unsigned int bins, unsigned int mask) {
+KERNEL void grouped(GLOBAL const mm_ulong* input, GLOBAL const uint* targets,
+        GLOBAL mm_ulong* output, unsigned int count, unsigned int mask) {
     for (unsigned int i = GLOBAL_ID; i < count; i += GLOBAL_SIZE) {
         if ((mask>>(LOCAL_ID&31))&1u)
-            METAL_ACCUMULATE_SPARSE_FORCE(output, (i*7+i/32)%bins, input[i]);
+            METAL_ACCUMULATE_SPARSE_FORCE(output, targets[i], input[i]);
     }
 }
 
@@ -166,8 +166,9 @@ KERNEL void grouped(GLOBAL const mm_ulong* input, GLOBAL mm_ulong* output,
     const int count = 4099;
     vector<uint64_t> input(count);
     for (int i = 0; i < count; i++) input[i] = patterns[i%9];
-    ComputeArray values;
+    ComputeArray values, indices;
     values.initialize<uint64_t>(context, count, "groupedFixedPointValues");
+    indices.initialize<unsigned int>(context, count, "groupedFixedPointTargets");
     values.upload(input);
     for (int enabled = 0; enabled < 2; enabled++) {
         map<string, string> defines;
@@ -177,21 +178,48 @@ KERNEL void grouped(GLOBAL const mm_ulong* input, GLOBAL mm_ulong* output,
         for (int bins : {1, 3, 17, 32, 67}) {
             ComputeArray output;
             output.initialize<uint64_t>(context, bins, "groupedFixedPointOutput");
-            for (unsigned int mask : {0u, 1u, 0x80000000u, 0xaaaaaaaau, 0x55555555u, 0xffffffffu}) {
-                context.clearBuffer(output);
-                kernel->setArg(0, values);
-                kernel->setArg(1, output);
-                kernel->setArg(2, (unsigned int) count);
-                kernel->setArg(3, (unsigned int) bins);
-                kernel->setArg(4, mask);
-                kernel->execute(count, 64);
-                vector<uint64_t> actual, expected(bins, 0);
-                output.download(actual);
+            // Layout 0 includes all-equal, all-unique, and interleaved repeats.
+            // Layouts 1/2 have adjacent runs, including non-power-of-two lengths.
+            for (int layout = 0; layout < 3; layout++) {
+                vector<unsigned int> targets(count);
                 for (int i = 0; i < count; i++)
-                    if ((mask>>(i&31))&1u) expected[(i*7+i/32)%bins] += input[i];
-                ASSERT_EQUAL_CONTAINERS(expected, actual);
+                    targets[i] = (layout == 0 ? i*7+i/32 : i/(layout == 1 ? 4 : 3))%bins;
+                indices.upload(targets);
+                for (unsigned int mask : {0u, 1u, 0x80000000u, 0xaaaaaaaau, 0x55555555u,
+                        0x1fffu, 0xfff80000u, 0xf0ff00ffu, 0xffffffffu}) {
+                    vector<uint64_t> actual, expected(bins);
+                    for (int bin = 0; bin < bins; bin++)
+                        expected[bin] = patterns[bin%9];
+                    output.upload(expected);
+                    kernel->setArg(0, values);
+                    kernel->setArg(1, indices);
+                    kernel->setArg(2, output);
+                    kernel->setArg(3, (unsigned int) count);
+                    kernel->setArg(4, mask);
+                    kernel->execute(count, 64);
+                    output.download(actual);
+                    for (int i = 0; i < count; i++)
+                        if ((mask>>(i&31))&1u) expected[targets[i]] += input[i];
+                    ASSERT_EQUAL_CONTAINERS(expected, actual);
+                }
             }
         }
+        // Zero-valued full runs must leave an existing nonzero result untouched.
+        values.upload(vector<uint64_t>(count, 0));
+        indices.upload(vector<unsigned int>(count, 0));
+        ComputeArray output;
+        output.initialize<uint64_t>(context, 1, "groupedFixedPointZeroOutput");
+        output.upload(vector<uint64_t>{~uint64_t(0)});
+        kernel->setArg(0, values);
+        kernel->setArg(1, indices);
+        kernel->setArg(2, output);
+        kernel->setArg(3, (unsigned int) count);
+        kernel->setArg(4, 0xffffffffu);
+        kernel->execute(count, 64);
+        vector<uint64_t> actual;
+        output.download(actual);
+        ASSERT_EQUAL(~uint64_t(0), actual[0]);
+        values.upload(input);
     }
 }
 
