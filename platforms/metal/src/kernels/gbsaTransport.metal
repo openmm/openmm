@@ -13,6 +13,18 @@
  * -------------------------------------------------------------------------- */
 
 /**
+ * @brief Read-only lane payload for the optional GBSA Born-force optimization.
+ * The global buffer remains Q32.32.  Convert only the value transported between
+ * lanes, retaining the original pair expression's later 2^-32 scaling.
+ */
+typedef float MetalGBSABornForce;
+
+template <class T>
+inline MetalGBSABornForce metalGBSABornForce(T value) {
+    return float(value);
+}
+
+/**
  * @brief Broadcast the Born-sum inputs of one lane for a diagonal tile.
  * Call before particle-validity/cutoff branches so every source lane is active.
  * The Common kernel owns AtomData1; this template changes only its transport.

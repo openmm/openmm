@@ -37,6 +37,7 @@
 #include "MetalQueue.h"
 #include "MetalOpenCLKernelSources.h"
 #include "MetalNonbondedSources.h"
+#include "MetalPairwiseOptimizations.h"
 #include <cstdint>
 #include <limits>
 #include <algorithm>
@@ -99,6 +100,26 @@ void MetalNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic,
         map<string, string> replacements;
         replacements["CUTOFF"] = "CUTOFF_"+context.intToString(forceGroup);
         replacements["CUTOFF_SQUARED"] = "CUTOFF_"+context.intToString(forceGroup)+"_SQUARED";
+#if OPENMM_METAL_FAST_GBSA_BORN_FORCE_FLOAT
+        // Only recognize the complete Common expression before name substitution.
+        // Any unrelated use of a parameter name keeps its full-width payload.
+        const set<string> bornNames = MetalPairwiseOptimizations::getGBSAChainRuleBornForceParameters(kernel);
+        bool recognized = bornNames.size() == 2;
+        string parameter;
+        for (const string& name : bornNames) {
+            if (name.size() < 2 || (name.back() != '1' && name.back() != '2')) {
+                recognized = false;
+                break;
+            }
+            const string base = name.substr(0, name.size()-1);
+            if (!parameter.empty() && base != parameter) recognized = false;
+            parameter = base;
+        }
+        if (recognized)
+            floatBornForceParameters.insert(parameter);
+        else
+            otherInteractionSource += kernel+"\n";
+#endif
         groupKernelSource[forceGroup] += context.replaceStrings(kernel, replacements)+"\n";
     }
 }
@@ -635,6 +656,31 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
         sourceTemplate = MetalNonbondedSources::openclHybridSource(sourceTemplate);
     if (sparsePairs && !shuffle)
         MetalNonbondedSources::addOpenCLPairs(sourceTemplate);
+    // Only the internally registered Common interaction may narrow its local
+    // read-only payload. Global pointers and the Q32.32 accumulator stay intact.
+    // The float cast is the same promotion used by the original pair multiply;
+    // do not move its later 2^-32 scaling or change the accumulation algorithm.
+    set<string> floatParameters;
+#if OPENMM_METAL_FAST_GBSA_BORN_FORCE_FLOAT
+    // Unknown macros can synthesize parameter names that a literal-name check
+    // cannot detect. Keep their full-width payload rather than guessing.
+    if (commonTemplate && &params == &parameters && otherInteractionSource.find("##") == string::npos) {
+        for (const ComputeParameterInfo& param : params)
+            if (param.getType() == "mm_long" && param.getNumComponents() == 1 && param.isConstant() &&
+                    floatBornForceParameters.count(param.getName()) && otherInteractionSource.find(param.getName()) == string::npos)
+                floatParameters.insert(param.getName());
+    }
+#endif
+    auto localType = [&floatParameters](const ComputeParameterInfo& param) -> string {
+        return floatParameters.count(param.getName()) ? "MetalGBSABornForce" : param.getType();
+    };
+    auto globalParameter = [&floatParameters](const ComputeParameterInfo& param, const string& atom) -> string {
+        const string base = "global_"+param.getName();
+        if (param.getNumComponents() == 3)
+            return "make_"+param.getType()+"("+base+"[3*"+atom+"], "+base+"[3*"+atom+"+1], "+base+"[3*"+atom+"+2])";
+        const string value = base+"["+atom+"]";
+        return floatParameters.count(param.getName()) ? "metalGBSABornForce("+value+")" : value;
+    };
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
     const string suffixes[] = {"x", "y", "z", "w"};
@@ -642,12 +688,12 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
     int localDataSize = 0;
     for (const ComputeParameterInfo& param : params) {
         if (param.getNumComponents() == 1)
-            localData<<param.getType()<<" "<<param.getName()<<";\n";
+            localData<<localType(param)<<" "<<param.getName()<<";\n";
         else {
             for (int j = 0; j < param.getNumComponents(); ++j)
                 localData<<param.getComponentType()<<" "<<param.getName()<<"_"<<suffixes[j]<<";\n";
         }
-        localDataSize += param.getSize();
+        localDataSize += floatParameters.count(param.getName()) ? sizeof(float) : param.getSize();
     }
     replacements["ATOM_PARAMETER_DATA"] = localData.str();
     stringstream args;
@@ -686,7 +732,7 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
     stringstream loadLocal2;
     for (const ComputeParameterInfo& param : params) {
         if (param.getNumComponents() == 1) {
-            loadLocal2<<"localData[localAtomIndex]."<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
+            loadLocal2<<"localData[localAtomIndex]."<<param.getName()<<" = "<<globalParameter(param, "j")<<";\n";
         }
         else {
             if (param.getNumComponents() == 3)
@@ -700,17 +746,17 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
     replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
     stringstream load1;
     for (const ComputeParameterInfo& param : params) {
-        load1<<param.getType()<<" "<<param.getName()<<"1 = ";
+        load1<<localType(param)<<" "<<param.getName()<<"1 = ";
         if (param.getNumComponents() == 3)
             load1<<"make_"<<param.getType()<<"(global_"<<param.getName()<<"[3*atom1], global_"<<param.getName()<<"[3*atom1+1], global_"<<param.getName()<<"[3*atom1+2]);\n";
         else
-            load1<<"global_"<<param.getName()<<"[atom1];\n";
+            load1<<globalParameter(param, "atom1")<<";\n";
     }
     replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
     stringstream load2j;
     for (const ComputeParameterInfo& param : params) {
         if (param.getNumComponents() == 1) {
-            load2j<<param.getType()<<" "<<param.getName()<<"2 = localData[atom2]."<<param.getName()<<";\n";
+            load2j<<localType(param)<<" "<<param.getName()<<"2 = localData[atom2]."<<param.getName()<<";\n";
         }
         else {
             load2j<<param.getType()<<" "<<param.getName()<<"2 = make_"<<param.getType()<<"(";
@@ -734,15 +780,9 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
     replacements["CLEAR_LOCAL_PARAMETERS"] = clearLocal.str();
     // Sparse pairs reuse CUDA's direct atom loads even when the tiled algorithm
     // remains OpenCL. Packed three-component parameters retain their 12-byte ABI.
-    auto globalParameter = [](const ComputeParameterInfo& param, const string& atom) {
-        string base = "global_"+param.getName();
-        if (param.getNumComponents() == 3)
-            return "make_"+param.getType()+"("+base+"[3*"+atom+"], "+base+"[3*"+atom+"+1], "+base+"[3*"+atom+"+2])";
-        return base+"["+atom+"]";
-    };
     stringstream load2Global;
     for (const ComputeParameterInfo& param : params)
-        load2Global<<param.getType()<<" "<<param.getName()<<"2 = "<<globalParameter(param, "atom2")<<";\n";
+        load2Global<<localType(param)<<" "<<param.getName()<<"2 = "<<globalParameter(param, "atom2")<<";\n";
     replacements["LOAD_ATOM2_PARAMETERS_FROM_GLOBAL"] = load2Global.str();
     if (shuffle) {
         stringstream broadcast, declare, load, local, clear, rotate;
@@ -754,10 +794,10 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
         }
         for (const ComputeParameterInfo& param : params) {
             string name = param.getName();
-            broadcast<<param.getType()<<" shfl"<<name<<";\n";
-            declare<<param.getType()<<" shfl"<<name<<";\n";
+            broadcast<<localType(param)<<" shfl"<<name<<";\n";
+            declare<<localType(param)<<" shfl"<<name<<";\n";
             load<<"shfl"<<name<<" = "<<globalParameter(param, "j")<<";\n";
-            local<<param.getType()<<" "<<name<<"2 = shfl"<<name<<";\n";
+            local<<localType(param)<<" "<<name<<"2 = shfl"<<name<<";\n";
             clear<<"shfl"<<name<<" = "<<(param.getNumComponents() == 1 ? "0" : "make_"+param.getType()+"(0)")<<";\n";
             for (int j = 0; j < param.getNumComponents(); j++) {
                 string component = param.getNumComponents() == 1 ? "" : "."+suffixes[j];
@@ -782,11 +822,11 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
             const string value = "hybrid_"+name;
             const int components = param.getNumComponents();
             const string zero = components == 1 ? "0" : "make_"+param.getType()+"(0)";
-            declare<<param.getType()<<" "<<value<<" = "<<zero<<";\n";
+            declare<<localType(param)<<" "<<value<<" = "<<zero<<";\n";
             loadLocal1<<value<<" = "<<name<<"1;\n";
             loadLocal2<<value<<" = "<<globalParameter(param, "j")<<";\n";
             clear<<value<<" = "<<zero<<";\n";
-            gather<<param.getType()<<" "<<name<<"2 = ";
+            gather<<localType(param)<<" "<<name<<"2 = ";
             if (components != 1)
                 gather<<"make_"<<param.getType()<<"(";
             for (int component = 0; component < components; component++) {

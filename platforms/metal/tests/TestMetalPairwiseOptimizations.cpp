@@ -39,6 +39,42 @@ using namespace std;
 
 typedef MetalPairwiseOptimizations::Settings Settings;
 
+/** Only a complete identifier-substituted Common snippet owns Born-force values. */
+void testGBSAChainRuleParameters() {
+    const string& baseline = CommonKernelSources::gbsaObc2;
+    for (const string& prefix : {string(""), string("gbsa17_"), string("_gbsa_3_")}) {
+        string source = baseline;
+        const string force = prefix.empty() ? "BORN_FORCE" : prefix+"bornForce";
+        if (!prefix.empty()) {
+            for (const string& name : {string("OBC_PARAMS"), string("BORN_FORCE")}) {
+                size_t pos = 0;
+                const string replacement = prefix+(name == "OBC_PARAMS" ? "obcParams" : "bornForce");
+                while ((pos = source.find(name, pos)) != string::npos) {
+                    source.replace(pos, name.size(), replacement);
+                    pos += replacement.size();
+                }
+            }
+        }
+        ASSERT((MetalPairwiseOptimizations::getGBSAChainRuleBornForceParameters(source) ==
+                set<string>{force+"1", force+"2"}));
+    }
+    for (const string& source : {string(""), CommonKernelSources::gbsaObc, baseline+"// custom extension\n",
+            string("{ dEdR += RECIP(r); }\n")})
+        ASSERT(MetalPairwiseOptimizations::getGBSAChainRuleBornForceParameters(source).empty());
+    for (const pair<string, string>& edit : vector<pair<string, string>>{
+            {"0.25f*invR*invR", "0.5f*invR*invR"},
+            {"OBC_PARAMS1.x", "differentParams1.x"},
+            {"BORN_FORCE1", "(BORN_FORCE1+1)"},
+            {"BORN_FORCE2", "bornForce[2]"},
+            {"USE_CUTOFF", "USE_CUTOFF_2"}}) {
+        string changed = baseline;
+        const size_t pos = changed.find(edit.first);
+        ASSERT(pos != string::npos);
+        changed.replace(pos, edit.first.size(), edit.second);
+        ASSERT(MetalPairwiseOptimizations::getGBSAChainRuleBornForceParameters(changed).empty());
+    }
+}
+
 /** Math choices are visible in shader source, not reconstructed by the host. */
 void testGBSAChainRuleSource() {
     const string& source = CommonKernelSources::gbsaObc2;
@@ -451,6 +487,7 @@ int main(int argc, char** argv) {
     try {
         testSelection();
         testExclusionSkipListSelection();
+        testGBSAChainRuleParameters();
         testGBSAChainRuleSource();
         if (argc == 2 && string(argv[1]) == "--selection-only") {
             cout << "Metal pairwise template selection tests passed" << endl;

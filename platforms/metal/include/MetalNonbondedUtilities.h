@@ -40,6 +40,7 @@
 #include "openmm/common/ComputeSort.h"
 #include "openmm/common/NonbondedUtilities.h"
 #include <map>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -336,6 +337,10 @@ private:
     std::vector<std::string> energyParameterDerivatives;
     std::map<int, double> groupCutoff;
     std::map<int, std::string> groupKernelSource;
+    /** @brief Read-only Born parameters from complete, recognized Common GBSA snippets. */
+    std::set<std::string> floatBornForceParameters;
+    /** @brief Other interactions conservatively exclude shared names from narrowing. */
+    std::string otherInteractionSource;
     double maxCutoff;
     bool useCutoff, usePeriodic, anyExclusions, usePadding, useNeighborList, forceRebuildNeighborList, useLargeBlocks;
     bool canUsePairList;

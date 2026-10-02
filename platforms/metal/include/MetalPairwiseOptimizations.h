@@ -25,18 +25,20 @@
 #ifndef OPENMM_METALPAIRWISEOPTIMIZATIONS_H_
 #define OPENMM_METALPAIRWISEOPTIMIZATIONS_H_
 
+#include <set>
 #include <string>
 
 namespace OpenMM {
 
 /**
- * @brief Optional register communication for audited Common pairwise templates.
+ * @brief Optional transformations for audited Common pairwise templates.
  *
- * These transformations change lane communication, not pair expressions,
- * fixed-point representation, exclusions, or pair enumeration. GBSA selects
- * readable shader-side paths with defines; other pairwise kernels retain
- * audited template adaptation. Each SIMD group must contain 32 active lanes,
- * including padded lanes of the last tile. Unrecognized source is unchanged.
+ * Register paths change lane communication, not fixed-point representation,
+ * exclusions, or pair enumeration. GBSA selects readable shader-side paths
+ * with defines; other pairwise kernels retain audited template adaptation.
+ * Register paths require 32 active lanes per SIMD group, including padded
+ * lanes of the last tile. A complete identifier-template match identifies
+ * read-only GBSA Born-force parameters without changing the expression.
  */
 class MetalPairwiseOptimizations {
 public:
@@ -57,6 +59,15 @@ public:
     static std::string apply(const std::string& source);
     /** @brief Explicit settings support focused tests of individual paths. */
     static std::string apply(const std::string& source, const Settings& settings);
+    /**
+     * @brief Identify read-only Born-force parameters in the original GBSA snippet.
+     *
+     * Only a complete Common gbsaObc2 template with consistent identifier-only
+     * substitutions is recognized. Call before cutoff replacement. Unknown or modified snippets return an empty set.
+     * The returned names include the particle suffix (for example, bornForce1).
+     */
+    static std::set<std::string> getGBSAChainRuleBornForceParameters(const std::string& source);
+
 };
 
 } // namespace OpenMM
