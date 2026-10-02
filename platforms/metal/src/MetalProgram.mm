@@ -109,6 +109,22 @@ ComputeKernel MetalProgram::createKernel(const string& name) {
         auto lookup = [libraries](bool floating) -> void* {
             return (__bridge void*) libraries->getLibrary(floating);
         };
-        return ComputeKernel(new MetalKernel(context, name, commonSource, lookup));
+        int pipelineMaximum = 0;
+#if OPENMM_METAL_TUNE_FORCE_PIPELINE_MAX_THREADS
+        // Names alone are not enough: synthetic kernels may reuse an entry
+        // point with unrelated launch geometry.  The tiled production programs
+        // declare their shared force geometry with this numeric source define.
+        auto workgroup = impl->defines.find("FORCE_WORK_GROUP_SIZE");
+        if (commonSource && workgroup != impl->defines.end() &&
+                (name == "computeNonbonded" || name == "computeBornSum" || name == "computeGBSAForce1")) {
+            const string& value = workgroup->second;
+            if (value != "64" && value != "128" && value != "256")
+                throw OpenMMException("Unsupported Metal tiled force workgroup size for pipeline tuning");
+            pipelineMaximum = OPENMM_METAL_FORCE_PIPELINE_MAX_THREADS;
+            if (pipelineMaximum < stoi(value))
+                throw OpenMMException("Metal force pipeline maximum is smaller than the shader's force workgroup size");
+        }
+#endif
+        return ComputeKernel(new MetalKernel(context, name, commonSource, lookup, pipelineMaximum));
     }
 }

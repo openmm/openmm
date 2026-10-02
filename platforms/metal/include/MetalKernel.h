@@ -64,14 +64,21 @@ public:
      * @param commonSource Whether to use reflected Common argument bindings.
      * @param libraryLookup Returns a borrowed MTLLibrary for the requested ABI.
      *        The retained callback must keep each returned library alive.
+     * @param pipelineMaximum Optional compiler threadgroup maximum, or zero to
+     *        retain the default pipeline. MetalProgram supplies this only for
+     *        opt-in tiled force kernels with a declared workgroup size.
      */
     MetalKernel(MetalContext& context, const std::string& name, bool commonSource,
-            const std::function<void*(bool)>& libraryLookup);
+            const std::function<void*(bool)>& libraryLookup, int pipelineMaximum=0);
     /** @brief Releases the retained pipeline and argument storage without waiting. */
     ~MetalKernel();
     /** @return The shader entry-point name. */
     std::string getName() const override { return name; }
-    /** @return The active ABI pipeline's maximum threads per threadgroup. */
+    /**
+     * @return The active ABI pipeline's maximum threads per threadgroup, capped
+     *         by an enabled force-pipeline compiler hint for the three tiled
+     *         Nonbonded/GBSA entry points.  Other pipelines retain their limit.
+     */
     int getMaxBlockSize() const override;
     /**
      * @brief Enqueues a one-dimensional launch on the context's current queue.
@@ -150,6 +157,7 @@ private:
     MetalContext& context;
     std::string name;
     bool commonSource;
+    int pipelineMaximum;
     std::function<void*(bool)> libraryLookup;
     std::vector<mm_double4> primitiveArgs;
     std::vector<int> primitiveArgSizes;

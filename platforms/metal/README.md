@@ -196,6 +196,7 @@ part of the backend, not optional optimizations.
 | `OPENMM_METAL_EXPERIMENTAL_NONBONDED_HYBRID` | Preserve the selected OpenCL/CUDA tiled path | Experimental fixed-lane gathers of read-only atom data, retaining OpenCL threadgroup force accumulation |
 | `OPENMM_METAL_TUNE_FORCE_THREADGROUP_SIZE` | Existing device-limited 256-thread force groups | Use `OPENMM_METAL_FORCE_THREADGROUP_SIZE` (64, 128, or 256; default 256) |
 | `OPENMM_METAL_TUNE_FORCE_GROUPS_PER_COMPUTE_UNIT` | Existing six force groups per known GPU compute unit | Use `OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT` (1 through 12; default 6) |
+| `OPENMM_METAL_TUNE_FORCE_PIPELINE_MAX_THREADS` | Existing function-based pipeline construction | Supply `OPENMM_METAL_FORCE_PIPELINE_MAX_THREADS` to the compiler for the three tiled Nonbonded/GBSA entry points (default 256) |
 | `OPENMM_METAL_FAST_CUSTOM_GB_VALUE_SHUFFLE` | Common CustomGB value local arrays | Register exchange for value, parameters, and secondary accumulators |
 | `OPENMM_METAL_FAST_CUSTOM_GB_ENERGY_SHUFFLE` | Common CustomGB energy local arrays | Register exchange for force and parameter-derivative state |
 | `OPENMM_METAL_FAST_GBSA_BORN_SHUFFLE` | Common Born-sum local structs | Register exchange of Born data and secondary sums |
@@ -226,6 +227,32 @@ and radius calculation, with one independent atom block per lane; all lanes
 contribute to the final SIMD size-range reduction. Register paths preserve the
 shared force formulas and Q32.32 global accumulation; their performance and
 register pressure must still be measured on each GPU family.
+
+### Independent launch and compiler tuning
+
+The three `TUNE_FORCE_*` switches default to `OFF`; changing a numeric setting
+alone has no effect. Threadgroup size and group count are the shared Nonbonded
+utility geometry, so other Common kernels that query those values also inherit
+them. Common source constants, tile scratch storage, and the existing energy
+buffer sizing use the same geometry. These settings do not change the generic
+context launch cap or neighbor-list workgroup size. A groups-per-unit override
+requires a known GPU compute-unit count, and is limited to 12 to stay within
+the context launch cap. Unsupported device sizes are rejected, not clamped.
+
+The compiler hint is separate from dispatch geometry: it only changes Common
+`computeNonbonded`, `computeBornSum`, and `computeGBSAForce1` pipelines that
+declare their numeric `FORCE_WORK_GROUP_SIZE`. Native MSL, unmarked synthetic
+kernels, and other Common entry points retain their original construction. The hint
+must be a multiple of 32 from 32 through 1024, and no smaller than the selected
+force threadgroup size. Launches exceeding either the hint or the actual
+pipeline/device limit are rejected. No extra SIMD-width promise or fast-math
+option is enabled by this setting. The API is available below the backend's
+macOS 13 runtime floor, so the explicit MSL 3.0 target is unchanged.
+
+Measure size, group count, and compiler hint independently before combining
+them; lower limits may change register allocation, occupancy, and numerical
+accumulation order without producing a speedup. The benchmark configuration
+records both the enable switches and their numeric settings.
 
 The hybrid Nonbonded experiment defaults to `OFF` and is not part of the
 standard all-ON benchmark endpoint. When enabled, it takes

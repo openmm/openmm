@@ -79,8 +79,11 @@ option(OPENMM_METAL_TUNE_FORCE_THREADGROUP_SIZE
     "Override the shared Nonbonded/GBSA force threadgroup size" OFF)
 option(OPENMM_METAL_TUNE_FORCE_GROUPS_PER_COMPUTE_UNIT
     "Override the shared Nonbonded/GBSA force groups per GPU compute unit" OFF)
+option(OPENMM_METAL_TUNE_FORCE_PIPELINE_MAX_THREADS
+    "Set a compiler maximum-threadgroup hint on the three tiled Nonbonded/GBSA pipelines" OFF)
 set(OPENMM_METAL_FORCE_THREADGROUP_SIZE "256" CACHE STRING "Force threads per group when tuning is enabled (64, 128, or 256)")
 set(OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT "6" CACHE STRING "Force groups per compute unit when tuning is enabled (1 through 12)")
+set(OPENMM_METAL_FORCE_PIPELINE_MAX_THREADS "256" CACHE STRING "Compiler maximum threads per group when tuning is enabled (32 through 1024, multiple of 32)")
 
 # Keep the grid within the existing context-wide launch cap.  Invalid values
 # must fail configuration, not be silently clamped into a different experiment.
@@ -90,12 +93,27 @@ endif()
 if(NOT OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT MATCHES "^([1-9]|1[0-2])$")
     message(FATAL_ERROR "OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT must be an integer from 1 through 12")
 endif()
+if(NOT OPENMM_METAL_FORCE_PIPELINE_MAX_THREADS MATCHES "^[1-9][0-9]?[0-9]?[0-9]?$")
+    message(FATAL_ERROR "OPENMM_METAL_FORCE_PIPELINE_MAX_THREADS must be a positive integer no larger than 1024")
+endif()
+math(EXPR metalPipelineRemainder "${OPENMM_METAL_FORCE_PIPELINE_MAX_THREADS} % 32")
+if(OPENMM_METAL_FORCE_PIPELINE_MAX_THREADS GREATER 1024 OR NOT metalPipelineRemainder EQUAL 0)
+    message(FATAL_ERROR "OPENMM_METAL_FORCE_PIPELINE_MAX_THREADS must be a multiple of 32 from 32 through 1024")
+endif()
+set(metalForceThreads 256)
+if(OPENMM_METAL_TUNE_FORCE_THREADGROUP_SIZE)
+    set(metalForceThreads ${OPENMM_METAL_FORCE_THREADGROUP_SIZE})
+endif()
+if(OPENMM_METAL_TUNE_FORCE_PIPELINE_MAX_THREADS AND OPENMM_METAL_FORCE_PIPELINE_MAX_THREADS LESS metalForceThreads)
+    message(FATAL_ERROR "The force pipeline maximum must cover the selected force threadgroup size")
+endif()
 set(METAL_LAUNCH_TUNING_DEFINITIONS
     OPENMM_METAL_TUNE_FORCE_THREADGROUP_SIZE=$<BOOL:${OPENMM_METAL_TUNE_FORCE_THREADGROUP_SIZE}>
     OPENMM_METAL_TUNE_FORCE_GROUPS_PER_COMPUTE_UNIT=$<BOOL:${OPENMM_METAL_TUNE_FORCE_GROUPS_PER_COMPUTE_UNIT}>
+    OPENMM_METAL_TUNE_FORCE_PIPELINE_MAX_THREADS=$<BOOL:${OPENMM_METAL_TUNE_FORCE_PIPELINE_MAX_THREADS}>
     OPENMM_METAL_FORCE_THREADGROUP_SIZE=${OPENMM_METAL_FORCE_THREADGROUP_SIZE}
     OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT=${OPENMM_METAL_FORCE_GROUPS_PER_COMPUTE_UNIT}
-)
+    OPENMM_METAL_FORCE_PIPELINE_MAX_THREADS=${OPENMM_METAL_FORCE_PIPELINE_MAX_THREADS})
 
 # Each optional algorithm can be compared independently with the OpenCL path.
 set(METAL_OPTIMIZATION_SWITCHES
