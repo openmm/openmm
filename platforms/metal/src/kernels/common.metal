@@ -72,7 +72,9 @@ struct MetalExecutionContext {
 #define barrier(flags) threadgroup_barrier(flags)
 #define SYNC_THREADS threadgroup_barrier(mem_flags::mem_threadgroup | mem_flags::mem_device);
 #ifndef SYNC_WARPS
-#define SYNC_WARPS simdgroup_barrier(mem_flags::mem_threadgroup | mem_flags::mem_device);
+// OpenCL's SYNC_WARPS orders only the local tile exchange. Keep the MSL
+// execution rendezvous; device-wide phase dependencies use later dispatches.
+#define SYNC_WARPS simdgroup_barrier(mem_flags::mem_threadgroup);
 #endif
 // Common uses this after independent atomic reductions, never to publish a
 // payload. Consumers run in later dispatches. It is not a general OpenCL fence.
