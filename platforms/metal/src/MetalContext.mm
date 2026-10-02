@@ -465,6 +465,17 @@ ComputeProgram MetalContext::compileProgram(const string source, const map<strin
 #endif
         for (auto& define : defines)
             allDefines[define.first] = define.second;
+        // This is an internal selection result, not a caller-provided override.
+        allDefines.erase("OPENMM_METAL_USE_TILED_ACQ_REL_BARRIERS");
+#if OPENMM_METAL_FAST_TILED_ACQ_REL_BARRIERS
+        // Only the reviewed Common GBSA and generated tiled-force programs
+        // exchange tile data within one SIMD-group at SYNC_WARPS sites.
+        auto tiledProgram = defines.find("OPENMM_METAL_TILED_FORCE_PROGRAM");
+        if (commonSource &&
+                (source == CommonKernelSources::gbsaObc ||
+                 (tiledProgram != defines.end() && tiledProgram->second == "1")))
+            allDefines["OPENMM_METAL_USE_TILED_ACQ_REL_BARRIERS"] = "1";
+#endif
         if (source == CommonKernelSources::constantPotentialCGSolver)
             allDefines["OPENMM_METAL_REQUIRE_SAFE_MATH"] = "1";
         if (commonSource && floatingAccumulators)
