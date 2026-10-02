@@ -79,7 +79,7 @@ option(OPENMM_METAL_EXPERIMENTAL_NONBONDED_HYBRID
 # Each optional algorithm can be compared independently with the OpenCL path.
 set(METAL_OPTIMIZATION_SWITCHES
     BLOCK_BOUNDS FP16_BOUNDS NEIGHBOR_BALLOT SPARSE_PAIRS NONBONDED_SHUFFLE
-    CUSTOM_GB_VALUE_SHUFFLE CUSTOM_GB_ENERGY_SHUFFLE GBSA_BORN_SHUFFLE GBSA_FORCE_SHUFFLE
+    CUSTOM_GB_VALUE_SHUFFLE CUSTOM_GB_ENERGY_SHUFFLE GBSA_BORN_SHUFFLE GBSA_FORCE_SHUFFLE GBSA_CHAIN_RULE_GUARD
     DPD_PARTICLE_SHUFFLE DPD_TILE_BROADCAST CUSTOM_HBOND_SHUFFLE
     CENTROID_REDUCTION RG_REDUCTION RMSD_REDUCTION ORIENTATION_REDUCTION
     LCPO_NEIGHBOR_SCAN CUSTOM_MANY_PARTICLE_NEIGHBOR_SCAN
@@ -261,7 +261,7 @@ if(BUILD_TESTING)
     add_dependencies(TestMetalPlatform OpenMMMetal)
     add_test(NAME TestMetalPlatform COMMAND TestMetalPlatform)
     set_tests_properties(TestMetalPlatform PROPERTIES SKIP_RETURN_CODE 77 LABELS "Metal")
-    foreach(test IN ITEMS CommonSources SourceAdapter Sort FFT3D Primitives PairwiseOptimizations ReductionOptimizations NonbondedOptimizations)
+    foreach(test IN ITEMS CommonSources SourceAdapter Sort FFT3D Primitives PairwiseOptimizations ReductionOptimizations NonbondedOptimizations GBSATuning)
         add_executable(TestMetal${test} tests/TestMetal${test}.cpp)
         target_include_directories(TestMetal${test} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/../common/src"
             "${CMAKE_CURRENT_BINARY_DIR}/src")
