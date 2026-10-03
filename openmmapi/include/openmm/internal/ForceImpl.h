@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -115,6 +115,10 @@ public:
      * this one.  The default implementation returns an empty vector.
      */
     virtual std::vector<const Force*> getContainedForces() const;
+    /**
+     * Get whether this force causes the periodic box to be flexible, such that the angles may change with time.
+     */
+    virtual bool getPeriodicBoxIsFlexible() const;
 protected:
     /**
      * Get the ContextImpl corresponding to a Context.
