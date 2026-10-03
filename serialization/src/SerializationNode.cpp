@@ -206,7 +206,7 @@ SerializationNode& SerializationNode::setDoubleProperty(const string& name, doub
 }
 
 SerializationNode& SerializationNode::createChildNode(const std::string& name) {
-    children.push_back(SerializationNode());
+    children.emplace_back();
     children.back().setName(name);
     return children.back();
 }
