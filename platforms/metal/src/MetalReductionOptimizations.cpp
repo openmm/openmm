@@ -1,0 +1,266 @@
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * This is part of the OpenMM molecular simulation toolkit.                   *
+ * See https://openmm.org/development.                                        *
+ *                                                                            *
+ * Adapted from Common reduction kernels and OpenCL sort kernels.             *
+ * Original OpenMM code:                                                      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.       *
+ * Authors: Peter Eastman, Evan Pretti                                         *
+ * Metal Platform code:                                                       *
+ * Portions copyright (c) 2026 Chun-Chi Hung.                                 *
+ * Authors: Chun-Chi Hung                                                     *
+ *                                                                            *
+ * Permission is hereby granted, free of charge, to any person obtaining a    *
+ * copy of this software and associated documentation files (the "Software"), *
+ * to deal in the Software without restriction, including without limitation  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
+ * and/or sell copies of the Software, and to permit persons to whom the      *
+ * Software is furnished to do so, subject to the following conditions:       *
+ * The above copyright notice and this permission notice shall be included in *
+ * all copies or substantial portions of the Software.                        *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER *
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING    *
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OF THE SOFTWARE.*
+ * -------------------------------------------------------------------------- */
+
+#include "MetalReductionOptimizations.h"
+#include "CommonKernelSources.h"
+#include "MetalOpenCLKernelSources.h"
+#include "openmm/OpenMMException.h"
+
+using namespace OpenMM;
+using namespace std;
+
+namespace {
+
+/** @brief Extract a known template function; these audited templates contain no conditional braces. */
+string functionText(const string& source, const string& signature) {
+    size_t begin = source.find(signature);
+    if (begin == string::npos)
+        throw OpenMMException("Missing Metal optimization template: "+signature);
+    size_t body = source.find('{', begin);
+    int depth = 1;
+    size_t end = body+1;
+    for (; end < source.size() && depth != 0; end++) {
+        if (source[end] == '{') depth++;
+        if (source[end] == '}') depth--;
+    }
+    if (depth != 0)
+        throw OpenMMException("Unbalanced Metal optimization template: "+signature);
+    return source.substr(begin, end-begin);
+}
+
+/** @brief Replace only a complete, unchanged function fingerprint. */
+bool replaceFunction(string& source, const string& original, const string& replacement) {
+    size_t begin = source.find(original);
+    if (begin == string::npos)
+        return false;
+    source.replace(begin, original.size(), replacement);
+    return true;
+}
+
+/** @brief Reduce within SIMD groups, then their totals, with shared scratch reuse protected. */
+string reductionFunction(const string& name) {
+    return "DEVICE real "+name+R"((real value, LOCAL_ARG volatile real* temp) {
+    const int lane = LOCAL_ID%32;
+    const int warp = LOCAL_ID/32;
+    const int active = min(32, (int) LOCAL_SIZE-32*warp);
+    const int warps = ((int) LOCAL_SIZE+31)/32;
+    for (int offset = 16; offset > 0; offset /= 2) {
+        real other = simd_shuffle_down(value, offset);
+        if (lane+offset < active)
+            value += other;
+    }
+    SYNC_THREADS;
+    if (lane == 0)
+        temp[warp] = value;
+    SYNC_THREADS;
+    value = (LOCAL_ID < warps ? temp[LOCAL_ID] : (real) 0);
+    if (warp == 0) {
+        for (int offset = 16; offset > 0; offset /= 2) {
+            real other = simd_shuffle_down(value, offset);
+            if (lane+offset < min(32, (int) LOCAL_SIZE))
+                value += other;
+        }
+        if (lane == 0)
+            temp[0] = value;
+    }
+    SYNC_THREADS;
+    real result = temp[0];
+    SYNC_THREADS;
+    return result;
+}
+)";
+}
+
+/** @brief Inclusive uint scan over at most 1024 threads; all shuffle calls are converged. */
+const string scanFunction = R"(
+DEVICE unsigned int metalBlockInclusiveScan(unsigned int value, LOCAL_ARG unsigned int* scratch) {
+    const int lane = LOCAL_ID%32;
+    const int warp = LOCAL_ID/32;
+    const int warps = ((int) LOCAL_SIZE+31)/32;
+    // The argument may have been loaded from scratch: every thread must read it
+    // before a warp total overwrites the original shared array.
+    SYNC_THREADS;
+    for (int offset = 1; offset < 32; offset *= 2) {
+        unsigned int other = simd_shuffle_up(value, offset);
+        if (lane >= offset)
+            value += other;
+    }
+    if (lane == 31 || LOCAL_ID == LOCAL_SIZE-1)
+        scratch[warp] = value;
+    SYNC_THREADS;
+    unsigned int total = (LOCAL_ID < warps ? scratch[LOCAL_ID] : 0u);
+    if (warp == 0) {
+        for (int offset = 1; offset < 32; offset *= 2) {
+            unsigned int other = simd_shuffle_up(total, offset);
+            if (lane >= offset)
+                total += other;
+        }
+        if (lane < warps)
+            scratch[lane] = total;
+    }
+    SYNC_THREADS;
+    unsigned int result = value+(warp == 0 ? 0u : scratch[warp-1]);
+    SYNC_THREADS;
+    return result;
+}
+)";
+
+/** @brief Replace the shared-memory scan loop while retaining the surrounding algorithm. */
+string scannedFunction(const string& original, const string& loop, const string& buffer) {
+    const string oldLoop = functionText(original, loop);
+    string transformed = original;
+    replaceFunction(transformed, oldLoop, buffer+"[LOCAL_ID] = metalBlockInclusiveScan("+buffer+
+            "[LOCAL_ID], "+buffer+");\n        SYNC_THREADS;");
+    return scanFunction+transformed;
+}
+
+/** @brief Sort a single full SIMD group; invalid lanes sort after all real records. */
+const string registerSort = R"(
+    if (length <= 32 && get_local_size(0) == 32) {
+        const uint lane = get_local_id(0);
+        DATA_TYPE value = (lane < length ? data[lane] : (DATA_TYPE) (MAX_VALUE));
+        uint valid = (lane < length ? 1u : 0u);
+        uint originalIndex = lane;
+        for (uint width = 2; width <= 32; width *= 2) {
+            for (uint stride = width/2; stride > 0; stride /= 2) {
+                DATA_TYPE other = simd_shuffle_xor(value, stride);
+                uint otherValid = simd_shuffle_xor(valid, stride);
+                uint otherIndex = simd_shuffle_xor(originalIndex, stride);
+                KEY_TYPE key = getValue(value);
+                KEY_TYPE otherKey = getValue(other);
+                // A strict order is required because partner lanes select their
+                // records independently. NaNs compare neither less nor equal;
+                // without explicit classification both lanes can keep one record.
+                bool keyNaN = (key != key);
+                bool otherNaN = (otherKey != otherKey);
+                bool keyBefore = ((!keyNaN && otherNaN) ||
+                    (!keyNaN && !otherNaN && key < otherKey));
+                bool tied = ((keyNaN && otherNaN) || key == otherKey);
+                bool before = (valid > otherValid || (valid == otherValid &&
+                    (keyBefore || (tied && originalIndex < otherIndex))));
+                bool keepLower = ((lane&width) == 0) == ((lane&stride) == 0);
+                if (keepLower != before) {
+                    value = other;
+                    valid = otherValid;
+                    originalIndex = otherIndex;
+                }
+            }
+        }
+        if (lane < length)
+            data[lane] = value;
+        return;
+    }
+)";
+
+} // namespace
+
+MetalReductionOptimizations::Settings MetalReductionOptimizations::getBuildSettings() {
+    Settings settings;
+#if OPENMM_METAL_FAST_CENTROID_REDUCTION
+    settings.centroid = true;
+#endif
+#if OPENMM_METAL_FAST_RG_REDUCTION
+    settings.rg = true;
+#endif
+#if OPENMM_METAL_FAST_RMSD_REDUCTION
+    settings.rmsd = true;
+#endif
+#if OPENMM_METAL_FAST_ORIENTATION_REDUCTION
+    settings.orientation = true;
+#endif
+#if OPENMM_METAL_FAST_LCPO_NEIGHBOR_SCAN
+    settings.lcpoScan = true;
+#endif
+#if OPENMM_METAL_FAST_CUSTOM_MANY_PARTICLE_NEIGHBOR_SCAN
+    settings.manyParticleScan = true;
+#endif
+#if OPENMM_METAL_FAST_SORT_BUCKET_SCAN
+    settings.sortBucketScan = true;
+#endif
+#if OPENMM_METAL_FAST_SORT_REGISTER_BITONIC
+    settings.sortRegisterBitonic = true;
+#endif
+    return settings;
+}
+
+string MetalReductionOptimizations::apply(const string& source) {
+    return apply(source, getBuildSettings());
+}
+
+string MetalReductionOptimizations::apply(const string& source, const Settings& settings) {
+    string result = source;
+    // These sources share a reduceValue helper; require a distinctive kernel
+    // fingerprint as well so one force's switch never enables another's helper.
+    const string* reductionSource = nullptr;
+    if (settings.rg && result.find(functionText(CommonKernelSources::rg, "KERNEL void computeCenterPosition(")) != string::npos)
+        reductionSource = &CommonKernelSources::rg;
+    if (settings.rmsd && result.find(functionText(CommonKernelSources::rmsd, "KERNEL void computeRMSDPart1(")) != string::npos)
+        reductionSource = &CommonKernelSources::rmsd;
+    if (settings.orientation && result.find(functionText(CommonKernelSources::orientationRestraintForce, "KERNEL void computeCorrelationMatrix(")) != string::npos)
+        reductionSource = &CommonKernelSources::orientationRestraintForce;
+    if (reductionSource != nullptr)
+        replaceFunction(result, functionText(*reductionSource, "DEVICE real reduceValue("), reductionFunction("reduceValue"));
+    if (settings.centroid) {
+        string original = functionText(CommonKernelSources::customCentroidBond, "KERNEL void computeGroupCenters(");
+        string replacement = original.substr(0, original.find("        // Sum the values."));
+        size_t temp = replacement.find("LOCAL volatile real3 temp[64]");
+        replacement.replace(temp, string("LOCAL volatile real3 temp[64]").size(), "LOCAL volatile real temp[64]");
+        replacement += R"(
+        center.x = metalReduceGroupValue(center.x, temp);
+        center.y = metalReduceGroupValue(center.y, temp);
+        center.z = metalReduceGroupValue(center.z, temp);
+        if (LOCAL_ID == 0)
+            centerPositions[group] = make_real4(center.x, center.y, center.z, 0);
+    }
+})";
+        replaceFunction(result, original, reductionFunction("metalReduceGroupValue")+replacement);
+    }
+    if (settings.lcpoScan) {
+        string original = functionText(CommonKernelSources::lcpo, "KERNEL void computeNeighborStartIndices(");
+        replaceFunction(result, original, scannedFunction(original,
+                "for (unsigned int step = 1; step < LOCAL_SIZE; step *= 2)", "posBuffer"));
+    }
+    if (settings.manyParticleScan) {
+        string original = functionText(CommonKernelSources::customManyParticle, "KERNEL void computeNeighborStartIndices(");
+        replaceFunction(result, original, scannedFunction(original,
+                "for (unsigned int step = 1; step < LOCAL_SIZE; step *= 2)", "posBuffer"));
+    }
+    if (settings.sortBucketScan) {
+        string original = functionText(MetalOpenCLKernelSources::sort, "__kernel void computeBucketPositions(");
+        replaceFunction(result, original, scannedFunction(original,
+                "for (uint step = 1; step < get_local_size(0); step *= 2)", "buffer"));
+    }
+    if (settings.sortRegisterBitonic) {
+        string original = functionText(MetalOpenCLKernelSources::sort, "__kernel void sortShortList(");
+        string replacement = original;
+        replacement.insert(replacement.find('{')+1, registerSort);
+        replaceFunction(result, original, replacement);
+    }
+    return result;
+}

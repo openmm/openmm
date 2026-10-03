@@ -41,7 +41,15 @@ namespace OpenMM {
  */
 class CommonMinimizeKernel : public MinimizeKernel {
 public:
-    CommonMinimizeKernel(std::string name, const Platform& platform, ComputeContext& cc) : MinimizeKernel(name, platform), cc(cc), isSetup(false), cpuContext(NULL), cpuIntegrator(1) {
+    /**
+     * @param allowCpuFallback Whether overflow may be retried on CPU/Reference.
+     *                         GPU-only platforms can disable that recovery path.
+     * @param robustReductions Whether to always use the scaled reductions for
+     *                         gradients whose squared magnitude may overflow.
+     */
+    CommonMinimizeKernel(std::string name, const Platform& platform, ComputeContext& cc,
+            bool allowCpuFallback=true, bool robustReductions=false) : MinimizeKernel(name, platform), cc(cc),
+            allowCpuFallback(allowCpuFallback), robustReductions(robustReductions), isSetup(false), cpuContext(NULL), cpuIntegrator(1) {
     }
     ~CommonMinimizeKernel();
     /**
@@ -78,6 +86,8 @@ private:
     void runLineSearchKernels();
 
     ComputeContext& cc;
+    bool allowCpuFallback;
+    bool robustReductions;
 
     int numParticles, numVariables, numConstraints;
 

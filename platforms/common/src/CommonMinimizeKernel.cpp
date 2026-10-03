@@ -536,7 +536,7 @@ void CommonMinimizeKernel::lbfgs(ContextImpl& context) {
 }
 
 void CommonMinimizeKernel::evaluateGpu(ContextImpl& context) {
-    largeGrad = false;
+    largeGrad = robustReductions;
 
     // Put the current positions in posq and compute virtual site positions.
 
@@ -570,6 +570,8 @@ void CommonMinimizeKernel::evaluateGpu(ContextImpl& context) {
 }
 
 double CommonMinimizeKernel::evaluateCpu(ContextImpl& context) {
+    if (!allowCpuFallback)
+        throw OpenMMException("Minimization exceeded the GPU force or energy range; CPU fallback is disabled for this platform");
     largeGrad = true;
 
     // Create a CPU context if one has not already been created.

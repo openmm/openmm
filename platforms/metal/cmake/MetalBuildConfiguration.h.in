@@ -1,0 +1,4 @@
+// Metal Platform code: copyright (c) 2026 Chun-Chi Hung.
+// Distributed under the GNU Lesser General Public License, version 3 or later.
+// Generated benchmark metadata; contains no runtime optimization selection.
+#define METAL_BUILD_CONFIGURATION R"config({@METAL_BUILD_CONFIGURATION@})config"
