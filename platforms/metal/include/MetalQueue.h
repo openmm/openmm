@@ -46,6 +46,10 @@ public:
      */
     MTL::ComputeCommandEncoder& getEncoder();
     /**
+     * Get a command buffer that can be used for launching kernels on this queue.
+     */
+    MTL::CommandBuffer& getCommandBuffer();
+    /**
      * Flush the queue, ensuring that all work that has been queued has been submitted to the device, and optionally
      * unit it has completed.
      *
@@ -54,6 +58,7 @@ public:
      */
     void flush(bool sync=false);
 private:
+    void ensureEncoderExists();
     MTL::CommandQueue* queue;
     MTL::CommandBuffer* commandBuffer;
     MTL::ComputeCommandEncoder* encoder;

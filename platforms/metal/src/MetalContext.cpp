@@ -24,13 +24,13 @@
 
 #include <cmath>
 #include "MetalContext.h"
-//#include "MetalEvent.h"
+#include "MetalEvent.h"
 //#include "MetalFFT3D.h"
 #include "MetalQueue.h"
-//#include "MetalKernels.h"
+#include "MetalKernels.h"
 #include "MetalKernelSources.h"
 #include "MetalProgram.h"
-//#include "MetalSort.h"
+#include "MetalSort.h"
 #include "openmm/common/ComputeArray.h"
 #include "openmm/common/ContextSelector.h"
 #include "SHA1.h"
@@ -57,9 +57,19 @@ using namespace std;
 const int MetalContext::ThreadBlockSize = 64;
 const int MetalContext::TileSize = sizeof(tileflags)*8;
 
+// Uncomment the following line to enable printf() calls inside kernels.  This affects performance, so it should only
+// be done for debugging.
+//#define ENABLE_PRINTF
+
 MetalContext::MetalContext(const System& system, const string& precision, MetalPlatform::PlatformData& platformData,
         MetalContext* originalContext) : ComputeContext(system), platformData(platformData), integration(NULL),
         expression(NULL), bonded(NULL), nonbonded(NULL) {
+#ifdef ENABLE_PRINTF
+    setenv("MTL_LOG_LEVEL", "MTLLogLevelDebug", 0);
+    setenv("MTL_LOG_TO_STDERR", "1", 0);
+    setenv("MTL_LOG_BUFFER_SIZE", "100000", 0);
+    compilationDefines["ENABLE_PRINTF"] = "";
+#endif
     if (precision == "single") {
         useDoublePrecision = false;
         useMixedPrecision = false;
@@ -285,13 +295,11 @@ MetalArray* MetalContext::createArray() {
 }
 
 ComputeEvent MetalContext::createEvent() {
-    throw OpenMMException("not implemented");
-//    return shared_ptr<ComputeEventImpl>(new MetalEvent(*this));
+    return shared_ptr<ComputeEventImpl>(new MetalEvent(*this));
 }
 
 ComputeSort MetalContext::createSort(ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform) {
-    throw OpenMMException("not implemented");
-//    return shared_ptr<ComputeSortImpl>(new MetalSort(*this, trait, length, uniform));
+    return shared_ptr<ComputeSortImpl>(new MetalSort(*this, trait, length, uniform));
 }
 
 static string rewriteKernelArgs(const string& source) {
@@ -318,7 +326,7 @@ static string rewriteKernelArgs(const string& source) {
         while (nextArg != end) {
             smatch argMatch = *nextArg;
             string arg = argMatch.str();
-            if (arg.rfind("GLOBAL", 0) == 0) {
+            if (arg.rfind("GLOBAL", 0) == 0 || arg.rfind("LOCAL", 0) == 0) {
                 if (addComma)
                     result << ", ";
                 addComma = true;
@@ -339,12 +347,12 @@ static string rewriteKernelArgs(const string& source) {
                 while (nextWord != end) {
                     smatch wordMatch = *nextWord;
                     string word = wordMatch.str();
-                    if (word == "const")
-                        continue;
-                    result << " " << word;
-                    if (addAmpersand && word != "unsigned") {
-                        result << "&";
-                        addAmpersand = false;
+                    if (word != "const") {
+                        result << " " << word;
+                        if (addAmpersand && word != "unsigned") {
+                            result << "&";
+                            addAmpersand = false;
+                        }
                     }
                     ++nextWord;
                 }
@@ -394,9 +402,12 @@ ComputeProgram MetalContext::compileProgram(const string source, const map<strin
 
     NS::AutoreleasePool* pool = NS::AutoreleasePool::alloc()->init();
     MTL::CompileOptions* options = MTL::CompileOptions::alloc()->init();
-    options->setLanguageVersion(MTL::LanguageVersion3_1);
+    options->setLanguageVersion(MTL::LanguageVersion3_2);
     options->setMathMode(MTL::MathModeSafe);
     options->setMathFloatingPointFunctions(MTL::MathFloatingPointFunctionsPrecise);
+#ifdef ENABLE_PRINTF
+    options->setEnableLogging(true);
+#endif
     NS::Error* error = nullptr;
     MTL::Library* library = device->newLibrary(NS::String::string(src.str().c_str(), NS::UTF8StringEncoding), options, &error);
     options->release();

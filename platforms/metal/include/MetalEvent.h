@@ -1,10 +1,13 @@
+#ifndef OPENMM_METALEVENT_H_
+#define OPENMM_METALEVENT_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2026 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -22,50 +25,39 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "MetalQueue.h"
 #include "MetalContext.h"
-#include "openmm/OpenMMException.h"
+#include "openmm/common/ComputeEvent.h"
 
-using namespace OpenMM;
+namespace OpenMM {
 
-MetalQueue::MetalQueue(MTL::Device& device) : queue(nullptr), commandBuffer(nullptr), encoder(nullptr) {
-    queue = device.newCommandQueue();
-}
+/**
+ * This is the Metal implementation of the ComputeEventImpl interface.
+ */
 
-MetalQueue::~MetalQueue() {
-    flush();
-    if (queue != nullptr)
-        queue->release();
-}
+class MetalEvent : public ComputeEventImpl {
+public:
+    MetalEvent(MetalContext& context);
+    ~MetalEvent();
+    /**
+     * Place the event into the device's execution queue.
+     */
+    void enqueue();
+    /**
+     * Block until all operations started before the call to enqueue() have completed.
+     */
+    void wait();
+    /**
+     * Enqueue a barrier that causes a specified ComputeQueue to block until all
+     * operations started before the call to enqueue() have completed.
+     */
+    void queueWait(ComputeQueue queue);
+private:
+    MetalContext& context;
+    MTL::SharedEvent* event;
+    MTL::CommandBuffer* currentBuffer;
+    unsigned long value;
+};
 
-void MetalQueue::ensureEncoderExists() {
-    if (encoder == nullptr) {
-        NS::AutoreleasePool* pool = NS::AutoreleasePool::alloc()->init();
-        commandBuffer = queue->commandBuffer()->retain();
-        encoder = commandBuffer->computeCommandEncoder()->retain();
-        pool->release();
-    }
-}
+} // namespace OpenMM
 
-MTL::ComputeCommandEncoder& MetalQueue::getEncoder() {
-    ensureEncoderExists();
-    return *encoder;
-}
-
-MTL::CommandBuffer& MetalQueue::getCommandBuffer() {
-    ensureEncoderExists();
-    return *commandBuffer;
-}
-
-void MetalQueue::flush(bool sync) {
-    if (encoder != nullptr) {
-        encoder->endEncoding();
-        commandBuffer->commit();
-        if (sync)
-            commandBuffer->waitUntilCompleted();
-        encoder->release();
-        commandBuffer->release();
-        encoder = nullptr;
-        commandBuffer = nullptr;
-    }
-}
+#endif /*OPENMM_METALEVENT_H_*/

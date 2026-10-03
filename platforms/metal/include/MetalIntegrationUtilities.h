@@ -48,9 +48,7 @@ public:
     void distributeForcesFromVirtualSites();
 private:
     void applyConstraintsImpl(bool constrainVelocities, double tol);
-    int* ccmaConvergedMemory;
-//    CUdeviceptr ccmaConvergedDeviceMemory;
-//    CUevent ccmaEvent;
+    MetalArray ccmaConvergedBuffer;
 };
 
 } // namespace OpenMM

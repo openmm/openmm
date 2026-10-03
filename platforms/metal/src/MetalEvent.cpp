@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2026 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -22,50 +22,41 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include "MetalEvent.h"
 #include "MetalQueue.h"
-#include "MetalContext.h"
 #include "openmm/OpenMMException.h"
 
 using namespace OpenMM;
 
-MetalQueue::MetalQueue(MTL::Device& device) : queue(nullptr), commandBuffer(nullptr), encoder(nullptr) {
-    queue = device.newCommandQueue();
+MetalEvent::MetalEvent(MetalContext& context) : context(context), event(nullptr), currentBuffer(nullptr), value(0) {
+    event = context.getDevice().newSharedEvent();
+    if (event == nullptr)
+        throw OpenMMException("Error creating Metal event");
 }
 
-MetalQueue::~MetalQueue() {
-    flush();
-    if (queue != nullptr)
-        queue->release();
+MetalEvent::~MetalEvent() {
+    if (event != nullptr)
+        event->release();
+    if (currentBuffer != nullptr)
+        currentBuffer->release();
 }
 
-void MetalQueue::ensureEncoderExists() {
-    if (encoder == nullptr) {
-        NS::AutoreleasePool* pool = NS::AutoreleasePool::alloc()->init();
-        commandBuffer = queue->commandBuffer()->retain();
-        encoder = commandBuffer->computeCommandEncoder()->retain();
-        pool->release();
-    }
+void MetalEvent::enqueue() {
+    MetalQueue* queue = dynamic_cast<MetalQueue*>(context.getCurrentQueue().get());
+    currentBuffer = &queue->getCommandBuffer();
+    currentBuffer->retain();
+    currentBuffer->encodeSignalEvent(event, ++value);
+    queue->flush();
 }
 
-MTL::ComputeCommandEncoder& MetalQueue::getEncoder() {
-    ensureEncoderExists();
-    return *encoder;
+void MetalEvent::wait() {
+    currentBuffer->waitUntilCompleted();
+    currentBuffer->release();
+    currentBuffer = nullptr;
 }
 
-MTL::CommandBuffer& MetalQueue::getCommandBuffer() {
-    ensureEncoderExists();
-    return *commandBuffer;
-}
-
-void MetalQueue::flush(bool sync) {
-    if (encoder != nullptr) {
-        encoder->endEncoding();
-        commandBuffer->commit();
-        if (sync)
-            commandBuffer->waitUntilCompleted();
-        encoder->release();
-        commandBuffer->release();
-        encoder = nullptr;
-        commandBuffer = nullptr;
-    }
+void MetalEvent::queueWait(ComputeQueue queue) {
+    currentBuffer->encodeWait(event, value);
+    currentBuffer->release();
+    currentBuffer = nullptr;
 }

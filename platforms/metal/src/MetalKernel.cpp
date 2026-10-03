@@ -32,7 +32,8 @@
 using namespace OpenMM;
 using namespace std;
 
-MetalKernel::MetalKernel(MetalContext& context, MTL::ComputePipelineState* pipeline, const string& name) : context(context), pipeline(pipeline), name(name) {
+MetalKernel::MetalKernel(MetalContext& context, MTL::ComputePipelineState* pipeline, const string& name) :
+        context(context), pipeline(pipeline), name(name), dynamicLocal(0) {
 }
 
 MetalKernel::~MetalKernel() {
@@ -59,10 +60,16 @@ void MetalKernel::execute(int threads, int blockSize) {
         else
             encoder.setBytes(&primitiveArgs[i], primitiveArgSizes[i], i);
     }
+    if (dynamicLocal > 0)
+        encoder.setThreadgroupMemoryLength(dynamicLocal, 0);
     if (blockSize == -1)
         blockSize = MetalContext::ThreadBlockSize;
     int gridSize = min((threads+blockSize-1)/blockSize, context.getNumThreadBlocks());
     encoder.dispatchThreadgroups(MTL::Size(gridSize, 1, 1), MTL::Size(blockSize, 1, 1));
+}
+
+void MetalKernel::setDynamicLocalMemory(int bytes) {
+    dynamicLocal = bytes;
 }
 
 void MetalKernel::addArrayArg(ArrayInterface& value) {

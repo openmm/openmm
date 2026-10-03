@@ -64,6 +64,13 @@ public:
      *                     default size that is appropriate for the computing device is used.
      */
     void execute(int threads, int blockSize=-1);
+    /**
+     * Set the amount of local (i.e. threadgroup) memory that should be dynamically allocated to each group when this
+     * kernel is invoked.
+     *
+     * @param bytes    the amount of memory in bytes to allocate
+     */
+    void setDynamicLocalMemory(int bytes);
 protected:
     /**
      * Add an argument to pass the kernel when it is invoked, where the value is a
@@ -107,6 +114,7 @@ private:
     std::vector<int> primitiveArgSizes;
     std::vector<MetalArray*> arrayArgs;
     std::vector<void*> argPointers;
+    int dynamicLocal;
 };
 
 } // namespace OpenMM

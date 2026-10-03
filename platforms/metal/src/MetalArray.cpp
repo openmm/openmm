@@ -75,7 +75,8 @@ void MetalArray::uploadSubArray(const void* data, int offset, int elements, bool
         throw OpenMMException("MetalArray has not been initialized");
     if (offset < 0 || offset+elements > getSize())
         throw OpenMMException("uploadSubArray: data exceeds range of array");
-    context->flushQueue();
+    MetalQueue* queue = dynamic_cast<MetalQueue*>(context->getCurrentQueue().get());
+    queue->flush(true);
     memcpy((char*) buffer->contents()+offset*elementSize, data, elements*elementSize);
 }
 
