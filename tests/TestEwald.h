@@ -375,6 +375,48 @@ void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
     }
 }
 
+void testPMEParametersBeforeEvaluation() {
+    // Query the PME parameters before any force or energy evaluation.  On the
+    // CPU platform this previously crashed with std::bad_cast because the flag
+    // selecting the optimized PME kernel was not initialized until execute().
+
+    const int numParticles = 10;
+    const double boxWidth = 4.0;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxWidth, 0, 0), Vec3(0, boxWidth, 0), Vec3(0, 0, boxWidth));
+    NonbondedForce* force = new NonbondedForce();
+    system.addForce(force);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        force->addParticle(i%2 == 0 ? 1.0 : -1.0, 1.0, 0.0);
+    }
+    force->setNonbondedMethod(NonbondedForce::PME);
+
+    double expectedAlpha, actualAlpha;
+    int expectedSize[3], actualSize[3];
+    NonbondedForceImpl::calcPMEParameters(system, *force, expectedAlpha, expectedSize[0], expectedSize[1], expectedSize[2], false);
+
+    // Evaluating a Context and deleting it before creating the second one
+    // makes this more likely to expose an uninitialized optimizedPme flag,
+    // since the new kernel may reuse the freed memory.
+
+    vector<Vec3> positions(numParticles);
+    {
+        VerletIntegrator integrator(0.01);
+        Context context(system, integrator, platform);
+        context.setPositions(positions);
+        context.getState(State::Energy);
+    }
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    force->getPMEParametersInContext(context, actualAlpha, actualSize[0], actualSize[1], actualSize[2]);
+    ASSERT_EQUAL_TOL(expectedAlpha, actualAlpha, 1e-5);
+    for (int i = 0; i < 3; i++) {
+        ASSERT(actualSize[i] >= expectedSize[i]);
+        ASSERT(actualSize[i] < expectedSize[i]+10);
+    }
+}
+
 void testPMEParameters() {
     // Create a cloud of random point charges.
 
@@ -480,6 +522,7 @@ int main(int argc, char* argv[]) {
         testTriclinic2();
         testErrorTolerance(NonbondedForce::Ewald);
         testErrorTolerance(NonbondedForce::PME);
+        testPMEParametersBeforeEvaluation();
         testPMEParameters();
         for (bool offset : {false, true}) {
             testNeutralizingPlasmaCorrection(NonbondedForce::Ewald, offset);
