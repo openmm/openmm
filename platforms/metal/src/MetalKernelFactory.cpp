@@ -69,10 +69,10 @@ KernelImpl* MetalKernelFactory::createKernelImpl(std::string name, const Platfor
         return new CommonCalcCMAPTorsionForceKernel(name, platform, mc, context.getSystem());
     if (name == CalcCustomTorsionForceKernel::Name())
         return new CommonCalcCustomTorsionForceKernel(name, platform, mc, context.getSystem());
-//    if (name == CalcNonbondedForceKernel::Name())
-//        return new MetalCalcNonbondedForceKernel(name, platform, mc, context.getSystem());
-//    if (name == CalcConstantPotentialForceKernel::Name())
-//        return new MetalCalcConstantPotentialForceKernel(name, platform, mc, context.getSystem());
+    if (name == CalcNonbondedForceKernel::Name())
+        return new MetalCalcNonbondedForceKernel(name, platform, mc, context.getSystem());
+    if (name == CalcConstantPotentialForceKernel::Name())
+        return new MetalCalcConstantPotentialForceKernel(name, platform, mc, context.getSystem());
     if (name == CalcCustomNonbondedForceKernel::Name())
         return new CommonCalcCustomNonbondedForceKernel(name, platform, mc, context.getSystem());
     if (name == CalcGBSAOBCForceKernel::Name())
@@ -87,10 +87,10 @@ KernelImpl* MetalKernelFactory::createKernelImpl(std::string name, const Platfor
         return new CommonCalcCustomCentroidBondForceKernel(name, platform, mc, context.getSystem());
     if (name == CalcCustomCompoundBondForceKernel::Name())
         return new CommonCalcCustomCompoundBondForceKernel(name, platform, mc, context.getSystem());
-//    if (name == CalcCustomCVForceKernel::Name())
-//        return new MetalCalcCustomCVForceKernel(name, platform, mc);
-//    if (name == CalcATMForceKernel::Name())
-//        return new MetalCalcATMForceKernel(name, platform, mc);
+    if (name == CalcCustomCVForceKernel::Name())
+        return new MetalCalcCustomCVForceKernel(name, platform, mc);
+    if (name == CalcATMForceKernel::Name())
+        return new MetalCalcATMForceKernel(name, platform, mc);
     if (name == CalcCustomCPPForceKernel::Name())
         return new CommonCalcCustomCPPForceKernel(name, platform, context, mc);
     if (name == CalcOrientationRestraintForceKernel::Name())

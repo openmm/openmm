@@ -22,11 +22,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/OpenMMException.h"
 #include "MetalNonbondedUtilities.h"
 #include "MetalArray.h"
 #include "MetalContext.h"
 #include "MetalKernelSources.h"
+#include "openmm/OpenMMException.h"
+#include "openmm/common/CommonKernelUtilities.h"
 #include <algorithm>
 #include <map>
 #include <set>
@@ -62,7 +63,7 @@ MetalNonbondedUtilities::MetalNonbondedUtilities(MetalContext& context) : contex
     // list.  We guess based on system size which will be faster.
 
     useLargeBlocks = (context.getNumAtoms() > 90000);
-//    setKernelSource(MetalKernelSources::nonbonded);
+    setKernelSource(MetalKernelSources::nonbonded);
 }
 
 MetalNonbondedUtilities::~MetalNonbondedUtilities() {
@@ -258,99 +259,8 @@ void MetalNonbondedUtilities::initialize(const System& system) {
         vector<unsigned int> count(2, 0);
         interactionCount.upload(count);
         rebuildNeighborList.upload(&count[0]);
+        event = context.createEvent();
     }
-
-    // Record arguments for kernels.
-/*
-    forceArgs.push_back(&context.unwrap(context.getLongForceBuffer()).getDevicePointer());
-    forceArgs.push_back(&context.unwrap(context.getEnergyBuffer()).getDevicePointer());
-    forceArgs.push_back(&context.unwrap(context.getPosq()).getDevicePointer());
-    forceArgs.push_back(&exclusions.getDevicePointer());
-    forceArgs.push_back(&exclusionTiles.getDevicePointer());
-    forceArgs.push_back(&startTileIndex);
-    forceArgs.push_back(&numTiles);
-    if (useCutoff) {
-        forceArgs.push_back(&interactingTiles.getDevicePointer());
-        forceArgs.push_back(&interactionCount.getDevicePointer());
-        forceArgs.push_back(context.getPeriodicBoxSizePointer());
-        forceArgs.push_back(context.getInvPeriodicBoxSizePointer());
-        forceArgs.push_back(context.getPeriodicBoxVecXPointer());
-        forceArgs.push_back(context.getPeriodicBoxVecYPointer());
-        forceArgs.push_back(context.getPeriodicBoxVecZPointer());
-        forceArgs.push_back(&maxTiles);
-        forceArgs.push_back(&blockCenter.getDevicePointer());
-        forceArgs.push_back(&blockBoundingBox.getDevicePointer());
-        forceArgs.push_back(&interactingAtoms.getDevicePointer());
-        forceArgs.push_back(&maxSinglePairs);
-        forceArgs.push_back(&singlePairs.getDevicePointer());
-    }
-    hasInitializedParams = false;
-    paramStartIndex = forceArgs.size();
-    for (int i = 0; i < parameters.size()+arguments.size(); i++)
-        forceArgs.push_back(NULL);
-    if (energyParameterDerivatives.size() > 0)
-        forceArgs.push_back(&context.unwrap(context.getEnergyParamDerivBuffer()).getDevicePointer());
-    if (useCutoff) {
-        findBlockBoundsArgs.push_back(&numAtoms);
-        findBlockBoundsArgs.push_back(context.getPeriodicBoxSizePointer());
-        findBlockBoundsArgs.push_back(context.getInvPeriodicBoxSizePointer());
-        findBlockBoundsArgs.push_back(context.getPeriodicBoxVecXPointer());
-        findBlockBoundsArgs.push_back(context.getPeriodicBoxVecYPointer());
-        findBlockBoundsArgs.push_back(context.getPeriodicBoxVecZPointer());
-        findBlockBoundsArgs.push_back(&context.unwrap(context.getPosq()).getDevicePointer());
-        findBlockBoundsArgs.push_back(&blockCenter.getDevicePointer());
-        findBlockBoundsArgs.push_back(&blockBoundingBox.getDevicePointer());
-        findBlockBoundsArgs.push_back(&rebuildNeighborList.getDevicePointer());
-        findBlockBoundsArgs.push_back(&blockSizeRange.getDevicePointer());
-        computeSortKeysArgs.push_back(&blockBoundingBox.getDevicePointer());
-        computeSortKeysArgs.push_back(&sortedBlocks.getDevicePointer());
-        computeSortKeysArgs.push_back(&blockSizeRange.getDevicePointer());
-        computeSortKeysArgs.push_back(&numBlockSizes);
-        sortBoxDataArgs.push_back(&sortedBlocks.getDevicePointer());
-        sortBoxDataArgs.push_back(&blockCenter.getDevicePointer());
-        sortBoxDataArgs.push_back(&blockBoundingBox.getDevicePointer());
-        sortBoxDataArgs.push_back(&sortedBlockCenter.getDevicePointer());
-        sortBoxDataArgs.push_back(&sortedBlockBoundingBox.getDevicePointer());
-        if (useLargeBlocks) {
-            sortBoxDataArgs.push_back(&largeBlockCenter.getDevicePointer());
-            sortBoxDataArgs.push_back(&largeBlockBoundingBox.getDevicePointer());
-            sortBoxDataArgs.push_back(context.getPeriodicBoxSizePointer());
-            sortBoxDataArgs.push_back(context.getInvPeriodicBoxSizePointer());
-            sortBoxDataArgs.push_back(context.getPeriodicBoxVecXPointer());
-            sortBoxDataArgs.push_back(context.getPeriodicBoxVecYPointer());
-            sortBoxDataArgs.push_back(context.getPeriodicBoxVecZPointer());
-        }
-        sortBoxDataArgs.push_back(&context.unwrap(context.getPosq()).getDevicePointer());
-        sortBoxDataArgs.push_back(&oldPositions.getDevicePointer());
-        sortBoxDataArgs.push_back(&interactionCount.getDevicePointer());
-        sortBoxDataArgs.push_back(&rebuildNeighborList.getDevicePointer());
-        sortBoxDataArgs.push_back(&forceRebuildNeighborList);
-        findInteractingBlocksArgs.push_back(context.getPeriodicBoxSizePointer());
-        findInteractingBlocksArgs.push_back(context.getInvPeriodicBoxSizePointer());
-        findInteractingBlocksArgs.push_back(context.getPeriodicBoxVecXPointer());
-        findInteractingBlocksArgs.push_back(context.getPeriodicBoxVecYPointer());
-        findInteractingBlocksArgs.push_back(context.getPeriodicBoxVecZPointer());
-        findInteractingBlocksArgs.push_back(&interactionCount.getDevicePointer());
-        findInteractingBlocksArgs.push_back(&interactingTiles.getDevicePointer());
-        findInteractingBlocksArgs.push_back(&interactingAtoms.getDevicePointer());
-        findInteractingBlocksArgs.push_back(&singlePairs.getDevicePointer());
-        findInteractingBlocksArgs.push_back(&context.unwrap(context.getPosq()).getDevicePointer());
-        findInteractingBlocksArgs.push_back(&maxTiles);
-        findInteractingBlocksArgs.push_back(&maxSinglePairs);
-        findInteractingBlocksArgs.push_back(&startBlockIndex);
-        findInteractingBlocksArgs.push_back(&numBlocks);
-        findInteractingBlocksArgs.push_back(&sortedBlocks.getDevicePointer());
-        findInteractingBlocksArgs.push_back(&sortedBlockCenter.getDevicePointer());
-        findInteractingBlocksArgs.push_back(&sortedBlockBoundingBox.getDevicePointer());
-        if (useLargeBlocks) {
-            findInteractingBlocksArgs.push_back(&largeBlockCenter.getDevicePointer());
-            findInteractingBlocksArgs.push_back(&largeBlockBoundingBox.getDevicePointer());
-        }
-        findInteractingBlocksArgs.push_back(&exclusionIndices.getDevicePointer());
-        findInteractingBlocksArgs.push_back(&exclusionRowIndices.getDevicePointer());
-        findInteractingBlocksArgs.push_back(&oldPositions.getDevicePointer());
-        findInteractingBlocksArgs.push_back(&rebuildNeighborList.getDevicePointer());
-    }*/
 }
 
 double MetalNonbondedUtilities::getMaxCutoffDistance() {
@@ -384,77 +294,67 @@ void MetalNonbondedUtilities::prepareInteractions(int forceGroups) {
 
     // Compute the neighbor list.
 
-/*    context.executeKernel(kernels.findBlockBoundsKernel, &findBlockBoundsArgs[0], context.getNumAtomBlocks());
-    context.executeKernel(kernels.computeSortKeysKernel, &computeSortKeysArgs[0], context.getNumAtomBlocks());
+    setPeriodicBoxArgs(context, kernels.findBlockBoundsKernel, 1);
+    kernels.findBlockBoundsKernel->execute(context.getNumAtomBlocks());
+    kernels.computeSortKeysKernel->execute(context.getNumAtomBlocks());
+    if (useLargeBlocks)
+        setPeriodicBoxArgs(context, kernels.sortBoxDataKernel, 7);
     blockSorter->sort(sortedBlocks);
-    context.executeKernel(kernels.sortBoxDataKernel, &sortBoxDataArgs[0], context.getNumAtoms());
-    context.executeKernel(kernels.findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtoms(), 256);
+    kernels.sortBoxDataKernel->execute(context.getNumAtoms());
+    setPeriodicBoxArgs(context, kernels.findInteractingBlocksKernel, 0);
+    kernels.findInteractingBlocksKernel->execute(context.getNumAtoms(), 256);
     forceRebuildNeighborList = false;
-    interactionCount.download(pinnedCountBuffer, false);*/
-}
-
-void MetalNonbondedUtilities::initParamArgs() {
-/*    int index = paramStartIndex;
-    for (ComputeParameterInfo& param : parameters)
-        forceArgs[index++] = &context.unwrap(param.getArray()).getDevicePointer();
-    for (ComputeParameterInfo& arg : arguments)
-        forceArgs[index++] = &context.unwrap(arg.getArray()).getDevicePointer();*/
-    hasInitializedParams = true;
+    if (useNeighborList && numTiles > 0)
+        event->enqueue();
 }
 
 void MetalNonbondedUtilities::computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) {
     if ((forceGroups&groupFlags) == 0)
         return;
     KernelSet& kernels = groupKernels[forceGroups];
-/*    if (kernels.hasForces && (includeForces || includeEnergy)) {
-        CUfunction& kernel = (includeForces ? (includeEnergy ? kernels.forceEnergyKernel : kernels.forceKernel) : kernels.energyKernel);
-        if (kernel == NULL)
+    if (kernels.hasForces && (includeForces || includeEnergy)) {
+        ComputeKernel& kernel = (includeForces ? (includeEnergy ? kernels.forceEnergyKernel : kernels.forceKernel) : kernels.energyKernel);
+        if (kernel.use_count() == 0)
             kernel = createInteractionKernel(kernels.source, parameters, arguments, true, true, forceGroups, includeForces, includeEnergy);
-        if (!hasInitializedParams)
-            initParamArgs();
-        context.executeKernel(kernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+        if (useCutoff)
+            setPeriodicBoxArgs(context, kernel, 9);
+        kernel->execute(numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
-    if (useNeighborList && numTiles > 0)
-        updateNeighborListSize();*/
+    if (useNeighborList && numTiles > 0) {
+        event->wait();
+        updateNeighborListSize();
+    }
 }
 
 bool MetalNonbondedUtilities::updateNeighborListSize() {
-/*    if (!useCutoff)
+    if (!useCutoff)
         return false;
+    unsigned int* countBuffer = (unsigned int*) interactionCount.getBuffer()->contents();
     if (context.getStepsSinceReorder() == 0 || tilesAfterReorder == 0)
-        tilesAfterReorder = pinnedCountBuffer[0];
-    else if (context.getStepsSinceReorder() > 25 && pinnedCountBuffer[0] > 1.1*tilesAfterReorder)
+        tilesAfterReorder = countBuffer[0];
+    else if (context.getStepsSinceReorder() > 25 && countBuffer[0] > 1.1*tilesAfterReorder)
         context.forceReorder();
-    if (pinnedCountBuffer[0] <= maxTiles && pinnedCountBuffer[1] <= maxSinglePairs)
+    if (countBuffer[0] <= maxTiles && countBuffer[1] <= maxSinglePairs)
         return false;
 
     // The most recent timestep had too many interactions to fit in the arrays.  Make the arrays bigger to prevent
     // this from happening in the future.
 
-    if (pinnedCountBuffer[0] > maxTiles) {
-        maxTiles = (unsigned int) (1.2*pinnedCountBuffer[0]);
+    if (countBuffer[0] > maxTiles) {
+        maxTiles = (unsigned int) (1.2*countBuffer[0]);
         unsigned int numBlocks = context.getNumAtomBlocks();
         int totalTiles = numBlocks*(numBlocks+1)/2;
         if (maxTiles > totalTiles)
             maxTiles = totalTiles;
         interactingTiles.resize(maxTiles);
         interactingAtoms.resize(MetalContext::TileSize*(size_t) maxTiles);
-        if (forceArgs.size() > 0)
-            forceArgs[7] = &interactingTiles.getDevicePointer();
-        findInteractingBlocksArgs[6] = &interactingTiles.getDevicePointer();
-        if (forceArgs.size() > 0)
-            forceArgs[17] = &interactingAtoms.getDevicePointer();
-        findInteractingBlocksArgs[7] = &interactingAtoms.getDevicePointer();
     }
-    if (pinnedCountBuffer[1] > maxSinglePairs) {
-        maxSinglePairs = (unsigned int) (1.2*pinnedCountBuffer[1]);
+    if (countBuffer[1] > maxSinglePairs) {
+        maxSinglePairs = (unsigned int) (1.2*countBuffer[1]);
         singlePairs.resize(maxSinglePairs);
-        if (forceArgs.size() > 0)
-            forceArgs[19] = &singlePairs.getDevicePointer();
-        findInteractingBlocksArgs[8] = &singlePairs.getDevicePointer();
     }
     forceRebuildNeighborList = true;
-    context.setForcesValid(false);*/
+    context.setForcesValid(false);
     return true;
 }
 
@@ -506,16 +406,72 @@ void MetalNonbondedUtilities::createKernelsForGroups(int groups) {
             binShift++;
         defines["BIN_SHIFT"] = context.intToString(binShift);
         defines["BLOCK_INDEX_MASK"] = context.intToString((1<<binShift)-1);
-//        ComputeProgram interactingBlocksProgram = context.compileProgram(MetalKernelSources::findInteractingBlocks, defines);
-//        kernels.findBlockBoundsKernel = interactingBlocksProgram->createKernel("findBlockBounds");
-//        kernels.computeSortKeysKernel = interactingBlocksProgram->createKernel("computeSortKeys");
-//        kernels.sortBoxDataKernel = interactingBlocksProgram->createKernel("sortBoxData");
-//        kernels.findInteractingBlocksKernel = interactingBlocksProgram->createKernel("findBlocksWithInteractions");
+
+        // Create the kernels.
+
+        ComputeProgram interactingBlocksProgram = context.compileProgram(MetalKernelSources::findInteractingBlocks, defines);
+        kernels.findBlockBoundsKernel = interactingBlocksProgram->createKernel("findBlockBounds");
+        kernels.computeSortKeysKernel = interactingBlocksProgram->createKernel("computeSortKeys");
+        kernels.sortBoxDataKernel = interactingBlocksProgram->createKernel("sortBoxData");
+        kernels.findInteractingBlocksKernel = interactingBlocksProgram->createKernel("findBlocksWithInteractions");
+
+        // Set arguments for kernels.
+
+        kernels.findBlockBoundsKernel->addArg(numAtoms);
+        for (int i = 0; i < 5; i++)
+            kernels.findBlockBoundsKernel->addArg();
+        kernels.findBlockBoundsKernel->addArg(context.getPosq());
+        kernels.findBlockBoundsKernel->addArg(blockCenter);
+        kernels.findBlockBoundsKernel->addArg(blockBoundingBox);
+        kernels.findBlockBoundsKernel->addArg(rebuildNeighborList);
+        kernels.findBlockBoundsKernel->addArg(blockSizeRange);
+        kernels.computeSortKeysKernel->addArg(blockBoundingBox);
+        kernels.computeSortKeysKernel->addArg(sortedBlocks);
+        kernels.computeSortKeysKernel->addArg(blockSizeRange);
+        kernels.computeSortKeysKernel->addArg(numBlockSizes);
+        kernels.sortBoxDataKernel->addArg(sortedBlocks);
+        kernels.sortBoxDataKernel->addArg(blockCenter);
+        kernels.sortBoxDataKernel->addArg(blockBoundingBox);
+        kernels.sortBoxDataKernel->addArg(sortedBlockCenter);
+        kernels.sortBoxDataKernel->addArg(sortedBlockBoundingBox);
+        if (useLargeBlocks) {
+            kernels.sortBoxDataKernel->addArg(largeBlockCenter);
+            kernels.sortBoxDataKernel->addArg(largeBlockBoundingBox);
+            for (int i = 0; i < 5; i++)
+                kernels.sortBoxDataKernel->addArg();
+        }
+        kernels.sortBoxDataKernel->addArg(context.getPosq());
+        kernels.sortBoxDataKernel->addArg(oldPositions);
+        kernels.sortBoxDataKernel->addArg(interactionCount);
+        kernels.sortBoxDataKernel->addArg(rebuildNeighborList);
+        kernels.sortBoxDataKernel->addArg(forceRebuildNeighborList);
+        for (int i = 0; i < 5; i++)
+            kernels.findInteractingBlocksKernel->addArg();
+        kernels.findInteractingBlocksKernel->addArg(interactionCount);
+        kernels.findInteractingBlocksKernel->addArg(interactingTiles);
+        kernels.findInteractingBlocksKernel->addArg(interactingAtoms);
+        kernels.findInteractingBlocksKernel->addArg(singlePairs);
+        kernels.findInteractingBlocksKernel->addArg(context.getPosq());
+        kernels.findInteractingBlocksKernel->addArg(maxTiles);
+        kernels.findInteractingBlocksKernel->addArg(maxSinglePairs);
+        kernels.findInteractingBlocksKernel->addArg(startBlockIndex);
+        kernels.findInteractingBlocksKernel->addArg(numBlocks);
+        kernels.findInteractingBlocksKernel->addArg(sortedBlocks);
+        kernels.findInteractingBlocksKernel->addArg(sortedBlockCenter);
+        kernels.findInteractingBlocksKernel->addArg(sortedBlockBoundingBox);
+        if (useLargeBlocks) {
+            kernels.findInteractingBlocksKernel->addArg(largeBlockCenter);
+            kernels.findInteractingBlocksKernel->addArg(largeBlockBoundingBox);
+        }
+        kernels.findInteractingBlocksKernel->addArg(exclusionIndices);
+        kernels.findInteractingBlocksKernel->addArg(exclusionRowIndices);
+        kernels.findInteractingBlocksKernel->addArg(oldPositions);
+        kernels.findInteractingBlocksKernel->addArg(rebuildNeighborList);
     }
     groupKernels[groups] = kernels;
 }
-/*
-CUfunction MetalNonbondedUtilities::createInteractionKernel(const string& source, vector<ComputeParameterInfo>& params, vector<ComputeParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups, bool includeForces, bool includeEnergy) {
+
+ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& source, vector<ComputeParameterInfo>& params, vector<ComputeParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups, bool includeForces, bool includeEnergy) {
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
     const string suffixes[] = {"x", "y", "z", "w"};
@@ -535,21 +491,21 @@ CUfunction MetalNonbondedUtilities::createInteractionKernel(const string& source
     for (const ComputeParameterInfo& param : params) {
         args << ", ";
         if (param.isConstant())
-            args << "const ";
+            args << "GLOBAL const ";
         args << param.getType();
-        args << "* __restrict__ global_";
+        args << "* RESTRICT global_";
         args << param.getName();
     }
     for (const ComputeParameterInfo& arg : arguments) {
         args << ", ";
         if (arg.isConstant())
-            args << "const ";
+            args << "GLOBAL const ";
         args << arg.getType();
-        args << "* __restrict__ ";
+        args << "* RESTRICT ";
         args << arg.getName();
     }
     if (energyParameterDerivatives.size() > 0)
-        args << ", mixed* __restrict__ energyParamDerivs";
+        args << ", GLOBAL mixed* RESTRICT energyParamDerivs";
     replacements["PARAMETER_ARGUMENTS"] = args.str();
 
     stringstream load1;
@@ -566,17 +522,17 @@ CUfunction MetalNonbondedUtilities::createInteractionKernel(const string& source
     // Part 1. Defines for on diagonal exclusion tiles
 
     stringstream broadcastWarpData;
-    broadcastWarpData << "posq2.x = real_shfl(shflPosq.x, j);\n";
-    broadcastWarpData << "posq2.y = real_shfl(shflPosq.y, j);\n";
-    broadcastWarpData << "posq2.z = real_shfl(shflPosq.z, j);\n";
-    broadcastWarpData << "posq2.w = real_shfl(shflPosq.w, j);\n";
+    broadcastWarpData << "posq2.x = SHFL(shflPosq.x, j);\n";
+    broadcastWarpData << "posq2.y = SHFL(shflPosq.y, j);\n";
+    broadcastWarpData << "posq2.z = SHFL(shflPosq.z, j);\n";
+    broadcastWarpData << "posq2.w = SHFL(shflPosq.w, j);\n";
     for (const ComputeParameterInfo& param : params) {
         broadcastWarpData << param.getType() << " shfl" << param.getName() << ";\n";
         for (int j = 0; j < param.getNumComponents(); j++) {
             if (param.getNumComponents() == 1)
-                broadcastWarpData << "shfl" << param.getName() << "=real_shfl(" << param.getName() <<"1,j);\n";
+                broadcastWarpData << "shfl" << param.getName() << "= SHFL(" << param.getName() <<"1,j);\n";
             else
-                broadcastWarpData << "shfl" << param.getName()+"."+suffixes[j] << "=real_shfl(" << param.getName()+"1."+suffixes[j] <<",j);\n";
+                broadcastWarpData << "shfl" << param.getName()+"."+suffixes[j] << "= SHFL(" << param.getName()+"1."+suffixes[j] <<",j);\n";
         }
     }
     replacements["BROADCAST_WARP_DATA"] = broadcastWarpData.str();
@@ -626,21 +582,21 @@ CUfunction MetalNonbondedUtilities::createInteractionKernel(const string& source
     replacements["SAVE_DERIVATIVES"] = saveDerivs.str();
 
     stringstream shuffleWarpData;
-    shuffleWarpData << "shflPosq.x = real_shfl(shflPosq.x, tgx+1);\n";
-    shuffleWarpData << "shflPosq.y = real_shfl(shflPosq.y, tgx+1);\n";
-    shuffleWarpData << "shflPosq.z = real_shfl(shflPosq.z, tgx+1);\n";
-    shuffleWarpData << "shflPosq.w = real_shfl(shflPosq.w, tgx+1);\n";
-    shuffleWarpData << "shflForce.x = real_shfl(shflForce.x, tgx+1);\n";
-    shuffleWarpData << "shflForce.y = real_shfl(shflForce.y, tgx+1);\n";
-    shuffleWarpData << "shflForce.z = real_shfl(shflForce.z, tgx+1);\n";
+    shuffleWarpData << "shflPosq.x = SHFL(shflPosq.x, tgx+1);\n";
+    shuffleWarpData << "shflPosq.y = SHFL(shflPosq.y, tgx+1);\n";
+    shuffleWarpData << "shflPosq.z = SHFL(shflPosq.z, tgx+1);\n";
+    shuffleWarpData << "shflPosq.w = SHFL(shflPosq.w, tgx+1);\n";
+    shuffleWarpData << "shflForce.x = SHFL(shflForce.x, tgx+1);\n";
+    shuffleWarpData << "shflForce.y = SHFL(shflForce.y, tgx+1);\n";
+    shuffleWarpData << "shflForce.z = SHFL(shflForce.z, tgx+1);\n";
     for (const ComputeParameterInfo& param : params) {
         if (param.getNumComponents() == 1)
-            shuffleWarpData<<"shfl"<<param.getName()<<"=real_shfl(shfl"<<param.getName()<<", tgx+1);\n";
+            shuffleWarpData<<"shfl"<<param.getName()<<"= SHFL(shfl"<<param.getName()<<", tgx+1);\n";
         else {
             for (int j = 0; j < param.getNumComponents(); j++) {
-                // looks something like shflsigmaEpsilon.x = real_shfl(shflsigmaEpsilon.x,tgx+1);
+                // looks something like shflsigmaEpsilon.x = SHFL(shflsigmaEpsilon.x,tgx+1);
                 shuffleWarpData<<"shfl"<<param.getName()
-                    <<"."<<suffixes[j]<<"=real_shfl(shfl"
+                    <<"."<<suffixes[j]<<"= SHFL(shfl"
                     <<param.getName()<<"."<<suffixes[j]
                     <<", tgx+1);\n";
             }
@@ -688,11 +644,39 @@ CUfunction MetalNonbondedUtilities::createInteractionKernel(const string& source
     defines["LAST_EXCLUSION_TILE"] = context.intToString(endExclusionIndex);
     if ((localDataSize/4)%2 == 0 && !context.getUseDoublePrecision())
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
-    CUmodule program = context.createModule(MetalKernelSources::vectorOps+context.replaceStrings(kernelSource, replacements), defines);
-    CUfunction kernel = context.getKernel(program, "computeNonbonded");
+    ComputeProgram program = context.compileProgram(context.replaceStrings(kernelSource, replacements), defines);
+    ComputeKernel kernel = program->createKernel("computeNonbonded");
+
+    // Set arguments to the Kernel.
+
+    kernel->addArg(context.getLongForceBuffer());
+    kernel->addArg(context.getEnergyBuffer());
+    kernel->addArg(context.getPosq());
+    kernel->addArg(exclusions);
+    kernel->addArg(exclusionTiles);
+    kernel->addArg(startTileIndex);
+    kernel->addArg(numTiles);
+    if (useCutoff) {
+        kernel->addArg(interactingTiles);
+        kernel->addArg(interactionCount);
+        for (int i = 0; i < 5; i++)
+            kernel->addArg();
+        kernel->addArg(maxTiles);
+        kernel->addArg(blockCenter);
+        kernel->addArg(blockBoundingBox);
+        kernel->addArg(interactingAtoms);
+        kernel->addArg(maxSinglePairs);
+        kernel->addArg(singlePairs);
+    }
+    for (ComputeParameterInfo& param : parameters)
+        kernel->addArg(param.getArray());
+    for (ComputeParameterInfo& arg : arguments)
+        kernel->addArg(arg.getArray());
+    if (energyParameterDerivatives.size() > 0)
+        kernel->addArg(context.getEnergyParamDerivBuffer());
     return kernel;
 }
-*/
+
 void MetalNonbondedUtilities::setKernelSource(const string& source) {
     kernelSource = source;
 }

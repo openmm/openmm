@@ -27,6 +27,7 @@
 
 #include "openmm/System.h"
 #include "MetalArray.h"
+#include "openmm/common/ComputeEvent.h"
 #include "openmm/common/ComputeKernel.h"
 #include "openmm/common/ComputeSort.h"
 #include "openmm/common/ExpressionUtilities.h"
@@ -281,7 +282,7 @@ public:
      * @param includeForces whether this kernel should compute forces
      * @param includeEnergy whether this kernel should compute potential energy
      */
-//    CUfunction createInteractionKernel(const std::string& source, std::vector<ComputeParameterInfo>& params, std::vector<ComputeParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups, bool includeForces, bool includeEnergy);
+    ComputeKernel createInteractionKernel(const std::string& source, std::vector<ComputeParameterInfo>& params, std::vector<ComputeParameterInfo>& arguments, bool useExclusions, bool isSymmetric, int groups, bool includeForces, bool includeEnergy);
     /**
      * Create the set of kernels that will be needed for a particular combination of force groups.
      * 
@@ -296,7 +297,6 @@ public:
 private:
     class KernelSet;
     class BlockSortTrait;
-    void initParamArgs();
     MetalContext& context;
     std::map<int, KernelSet> groupKernels;
     MetalArray exclusionTiles;
@@ -319,6 +319,7 @@ private:
     MetalArray oldPositions;
     MetalArray rebuildNeighborList;
     ComputeSort blockSorter;
+    ComputeEvent event;
     std::vector<void*> forceArgs, findBlockBoundsArgs, computeSortKeysArgs, sortBoxDataArgs, findInteractingBlocksArgs;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ComputeParameterInfo> parameters;

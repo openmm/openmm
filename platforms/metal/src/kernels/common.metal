@@ -88,7 +88,3 @@ inline float4 cross(float4 a, float4 b) {
 inline long realToFixedPoint(real x) {
     return static_cast<long>(x * 0x100000000);
 }
-
-#ifdef ENABLE_PRINTF
-#define printf os_log_default.log
-#endif

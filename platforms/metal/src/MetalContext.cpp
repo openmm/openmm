@@ -68,7 +68,7 @@ MetalContext::MetalContext(const System& system, const string& precision, MetalP
     setenv("MTL_LOG_LEVEL", "MTLLogLevelDebug", 0);
     setenv("MTL_LOG_TO_STDERR", "1", 0);
     setenv("MTL_LOG_BUFFER_SIZE", "100000", 0);
-    compilationDefines["ENABLE_PRINTF"] = "";
+    compilationDefines["printf"] = "os_log_default.log";
 #endif
     if (precision == "single") {
         useDoublePrecision = false;
