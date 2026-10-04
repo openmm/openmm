@@ -274,15 +274,15 @@ class TestUnits(QuantityTestCase):
         """ Tests Quantity * Quantity and Quantity / Quantity on dimensionless
             compound ratio units, which must fold both units into the product
             before any dimensionless collapse drops self's unit """
-        a = 3.0 * (u.nanometer / u.angstrom)
-        b = 2.0 * (u.angstrom / u.nanometer)
+        a = u.Quantity(3.0, u.nanometer / u.angstrom)
+        b = u.Quantity(2.0, u.angstrom / u.nanometer)
         # a == 30 dimensionless, b == 0.2 dimensionless
         self.assertAlmostEqual(a * a, 900.0)
         self.assertAlmostEqual(a * a, (a ** 2).reduce_unit())
         self.assertAlmostEqual(a / a, 1.0)
         self.assertAlmostEqual(a / b, 150.0)
         self.assertAlmostEqual(a * b, 6.0)
-        c = 4.0 * (u.meter / u.kilometer)
+        c = u.Quantity(4.0, u.meter / u.kilometer)
         self.assertAlmostEqual(a * c, 0.12)
         # non-dimensionless products are unaffected
         v = 3.0 * u.nanometer
