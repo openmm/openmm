@@ -247,7 +247,11 @@ class Topology(object):
     def setPeriodicBoxVectors(self, vectors):
         """Set the vectors defining the periodic box."""
         if vectors is not None:
-            if not is_quantity(vectors[0][0]):
+            if not is_quantity(vectors):
+                if is_quantity(vectors[0][0]):
+                    # A nested sequence of Quantities: collapse the per-element
+                    # units into one Quantity holding a plain numeric matrix.
+                    vectors = [[component.value_in_unit(nanometers) for component in vector] for vector in vectors]
                 vectors = vectors*nanometers
             if vectors[0][1] != 0*nanometers or vectors[0][2] != 0*nanometers:
                 raise ValueError("First periodic box vector must be parallel to x.");
