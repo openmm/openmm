@@ -370,7 +370,12 @@ class Quantity(object):
             # to (Quantity * scalar) * unit can collapse self's unit to
             # dimensionless first and return a bare value, dropping self's
             # unit from the product entirely.
-            return Quantity(self._value * other._value,
+            try:
+                value = self._value * other._value
+            except TypeError:
+                value = self._scale_sequence(copy.deepcopy(self._value),
+                                             other._value, True)
+            return Quantity(value,
                             self.unit * other.unit).reduce_unit(self.unit)
         else:
             # print "quantity * scalar"
@@ -411,7 +416,12 @@ class Quantity(object):
             # reduction, for the same reason as __mul__: a scalar operation on
             # self can collapse a dimensionless unit to a bare value first and
             # drop self's unit from the result entirely.
-            return Quantity(self._value / other._value,
+            try:
+                value = self._value / other._value
+            except TypeError:
+                value = self._scale_sequence(copy.deepcopy(self._value),
+                                             pow(other._value, -1.0), True)
+            return Quantity(value,
                             self.unit / other.unit).reduce_unit(self.unit)
         else:
             # print "quantity / scalar"
