@@ -270,6 +270,26 @@ class TestUnits(QuantityTestCase):
         self.assertEqual(str(q), '2.0 nm**2/(A**2)')
         self.assertEqual(q.reduce_unit(), 200)
 
+    def testCompoundRatioMultiplyDivide(self):
+        """ Tests Quantity * Quantity and Quantity / Quantity on dimensionless
+            compound ratio units, which must fold both units into the product
+            before any dimensionless collapse drops self's unit """
+        a = u.Quantity(3.0, u.nanometer / u.angstrom)
+        b = u.Quantity(2.0, u.angstrom / u.nanometer)
+        # a == 30 dimensionless, b == 0.2 dimensionless
+        self.assertAlmostEqual(a * a, 900.0)
+        self.assertAlmostEqual(a * a, (a ** 2).reduce_unit())
+        self.assertAlmostEqual(a / a, 1.0)
+        self.assertAlmostEqual(a / b, 150.0)
+        self.assertAlmostEqual(a * b, 6.0)
+        c = u.Quantity(4.0, u.meter / u.kilometer)
+        self.assertAlmostEqual(a * c, 0.12)
+        # non-dimensionless products are unaffected
+        v = 3.0 * u.nanometer
+        w = 2.0 * u.nanometer
+        self.assertAlmostEqualQuantities(v * w, 6.0 * u.nanometer**2)
+        self.assertAlmostEqualQuantities(v / w * u.nanometer, 1.5 * u.nanometer)
+
     def testCollectionQuantityOperations(self):
         """ Tests that Quantity collections behave correctly """
         # Tests that __getitem__ returns a unit
