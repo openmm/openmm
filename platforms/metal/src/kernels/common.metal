@@ -24,7 +24,7 @@ uint NUM_GROUPS [[threadgroups_per_grid]];
 #define SYNC_WARPS simdgroup_barrier(mem_flags::mem_threadgroup);
 #define MEM_FENCE
 #define SHFL(var, srcLane) simd_shuffle(var, srcLane)
-#define BALLOT(var) simd_ballot(var)
+#define BALLOT(var) ((int) (uint64_t) simd_ballot(var))
 
 inline int ATOMIC_ADD(device int* dest, int value) {
     return atomic_fetch_add_explicit((device atomic_int*) dest, value, memory_order_relaxed);
@@ -87,4 +87,17 @@ inline float4 cross(float4 a, float4 b) {
 
 inline long realToFixedPoint(real x) {
     return static_cast<long>(x * 0x100000000);
+}
+
+inline float erfc(float x) {
+    // This approximation for erfc is from Abramowitz and Stegun (1964) p. 299.  They cite the following as
+    // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
+    // error of 1.5e-7.
+
+    float t = 1.0f/(1.0f+0.3275911f*x);
+    return (0.254829592f+(-0.284496736f+(1.421413741f+(-1.453152027f+1.061405429f*t)*t)*t)*t)*t*exp(-x*x);
+}
+
+inline float erf(float x) {
+    return 1.0-erfc(x);
 }

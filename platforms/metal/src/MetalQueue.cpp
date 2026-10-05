@@ -38,22 +38,27 @@ MetalQueue::~MetalQueue() {
         queue->release();
 }
 
-void MetalQueue::ensureEncoderExists() {
-    if (encoder == nullptr) {
-        NS::AutoreleasePool* pool = NS::AutoreleasePool::alloc()->init();
-        commandBuffer = queue->commandBuffer()->retain();
-        encoder = commandBuffer->computeCommandEncoder()->retain();
-        pool->release();
-    }
+MTL::CommandQueue& MetalQueue::getQueue() {
+    return *queue;
 }
 
 MTL::ComputeCommandEncoder& MetalQueue::getEncoder() {
-    ensureEncoderExists();
+    if (encoder == nullptr) {
+        NS::AutoreleasePool* pool = NS::AutoreleasePool::alloc()->init();
+        if (commandBuffer == nullptr)
+            commandBuffer = queue->commandBuffer()->retain();
+        encoder = commandBuffer->computeCommandEncoder()->retain();
+        pool->release();
+    }
     return *encoder;
 }
 
 MTL::CommandBuffer& MetalQueue::getCommandBuffer() {
-    ensureEncoderExists();
+    if (commandBuffer == nullptr) {
+        NS::AutoreleasePool* pool = NS::AutoreleasePool::alloc()->init();
+        commandBuffer = queue->commandBuffer()->retain();
+        pool->release();
+    }
     return *commandBuffer;
 }
 

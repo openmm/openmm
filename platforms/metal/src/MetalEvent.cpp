@@ -42,11 +42,11 @@ MetalEvent::~MetalEvent() {
 }
 
 void MetalEvent::enqueue() {
-    MetalQueue* queue = dynamic_cast<MetalQueue*>(context.getCurrentQueue().get());
-    currentBuffer = &queue->getCommandBuffer();
+    MetalQueue& queue = dynamic_cast<MetalQueue&>(*context.getCurrentQueue());
+    currentBuffer = &queue.getCommandBuffer();
     currentBuffer->retain();
+    queue.flush();
     currentBuffer->encodeSignalEvent(event, ++value);
-    queue->flush();
 }
 
 void MetalEvent::wait() {
@@ -56,7 +56,9 @@ void MetalEvent::wait() {
 }
 
 void MetalEvent::queueWait(ComputeQueue queue) {
-    currentBuffer->encodeWait(event, value);
+    MetalQueue& metalQueue = dynamic_cast<MetalQueue&>(*queue);
+    metalQueue.flush();
+    metalQueue.getCommandBuffer().encodeWait(event, value);
     currentBuffer->release();
     currentBuffer = nullptr;
 }

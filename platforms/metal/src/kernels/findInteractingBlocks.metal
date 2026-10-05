@@ -157,7 +157,6 @@ DEVICE int saveSinglePairs(int x, LOCAL int* atoms, LOCAL int* flags, int length
 
     const int indexInWarp = LOCAL_ID%32;
     int sum = 0;
-    #pragma unroll 8 // (GROUP_SIZE / TILE_SIZE)
     for (int i = indexInWarp; i < length; i += 32) {
         int count = popcount(flags[i]);
         sum += (count <= MAX_BITS_FOR_PAIRS ? count : 0);
@@ -177,7 +176,7 @@ DEVICE int saveSinglePairs(int x, LOCAL int* atoms, LOCAL int* flags, int length
         if (count <= MAX_BITS_FOR_PAIRS && pairIndex+count <= maxSinglePairs) {
             int f = flags[i];
             while (f != 0) {
-                singlePairs[pairIndex] = make_int2(atoms[i], x*TILE_SIZE+ctz(f)-1);
+                singlePairs[pairIndex] = make_int2(atoms[i], x*TILE_SIZE+ctz(f));
                 f &= f-1;
                 pairIndex++;
             }
@@ -313,7 +312,6 @@ KERNEL void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicB
         const int exclusionStart = exclusionRowIndices[x];
         const int exclusionEnd = exclusionRowIndices[x+1];
         const int numExclusions = exclusionEnd-exclusionStart;
-        #pragma unroll 4 // (MAX_EXCLUSIONS)
         for (int j = indexInWarp; j < numExclusions; j += 32)
             exclusionsForX[j] = exclusionIndices[exclusionStart+j];
         if (MAX_EXCLUSIONS > 32)
@@ -388,7 +386,6 @@ KERNEL void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicB
 #endif
                 if (includeBlock2) {
                     int y = sortedBlocks[block2] & BLOCK_INDEX_MASK;
-                    #pragma unroll 4 // (MAX_EXCLUSIONS)
                     for (int k = 0; k < numExclusions; k++)
                         includeBlock2 &= (exclusionsForX[k] != y);
                 }
@@ -396,10 +393,10 @@ KERNEL void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicB
 
             // Loop over any blocks we identified as potentially containing neighbors.
 
-            int includeBlockFlags = (uint64_t) BALLOT(includeBlock2);
-            int forceIncludeFlags = (uint64_t) BALLOT(forceInclude);
+            int includeBlockFlags = BALLOT(includeBlock2);
+            int forceIncludeFlags = BALLOT(forceInclude);
             while (includeBlockFlags != 0) {
-                int i = ctz(includeBlockFlags)-1;
+                int i = ctz(includeBlockFlags);
                 includeBlockFlags &= includeBlockFlags-1;
                 forceInclude = (forceIncludeFlags>>i) & 1;
                 int y = sortedBlocks[block2Base+i] & BLOCK_INDEX_MASK;
@@ -425,7 +422,7 @@ KERNEL void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicB
                 if (atom2 < NUM_ATOMS && atomFlags != 0) {
 #ifdef USE_PERIODIC
                     if (!singlePeriodicCopy) {
-                        int first = ctz(atomFlags)-1;
+                        int first = ctz(atomFlags);
                         int last = 32-clz(atomFlags);
                         for (int j = first; j < last; j++) {
                             real3 delta = trimTo3(pos2)-trimTo3(posBuffer[warpStart+j]);
@@ -435,7 +432,6 @@ KERNEL void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicB
                     }
                     else {
 #endif
-                        #pragma unroll
                         for (int j = 0; j < 32; j++) {
                             real4 posj = posBuffer[warpStart+j];
                             real halfDist2 = posj.w + pos2.w - posj.x*pos2.x - posj.y*pos2.y - posj.z*pos2.z;
@@ -469,7 +465,6 @@ KERNEL void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicB
                         if (newTileStartIndex+tilesToStore <= maxTiles) {
                             if (indexInWarp < tilesToStore)
                                 interactingTiles[newTileStartIndex+indexInWarp] = x;
-                            #pragma unroll 8 // (GROUP_SIZE / TILE_SIZE)
                             for (int j = 0; j < tilesToStore; j++)
                                 interactingAtoms[(newTileStartIndex+j)*TILE_SIZE+indexInWarp] = buffer[indexInWarp+j*TILE_SIZE];
                         }
@@ -495,7 +490,6 @@ KERNEL void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicB
             if (newTileStartIndex+tilesToStore <= maxTiles) {
                 if (indexInWarp < tilesToStore)
                     interactingTiles[newTileStartIndex+indexInWarp] = x;
-                #pragma unroll 8 // (GROUP_SIZE / TILE_SIZE)
                 for (int j = 0; j < tilesToStore; j++)
                     interactingAtoms[(newTileStartIndex+j)*TILE_SIZE+indexInWarp] = (indexInWarp+j*TILE_SIZE < neighborsInBuffer ? buffer[indexInWarp+j*TILE_SIZE] : NUM_ATOMS);
             }

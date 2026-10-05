@@ -59,12 +59,13 @@
 #elif(VKFFT_BACKEND==4)
 #include <ze_api.h>
 #elif(VKFFT_BACKEND==5)
-#define NS_PRIVATE_IMPLEMENTATION
-#define CA_PRIVATE_IMPLEMENTATION
-#define MTL_PRIVATE_IMPLEMENTATION
-#include "Foundation/Foundation.hpp"
-#include "QuartzCore/QuartzCore.hpp"
-#include "Metal/Metal.hpp"
+//#define NS_PRIVATE_IMPLEMENTATION
+//#define CA_PRIVATE_IMPLEMENTATION
+//#define MTL_PRIVATE_IMPLEMENTATION
+//#include "Foundation/Foundation.hpp"
+//#include "QuartzCore/QuartzCore.hpp"
+//#include "Metal/Metal.hpp"
+#include "Metal.hpp"
 #endif
 #ifdef VkFFT_use_FP128_Bluestein_RaderFFT
 #include "fftw3.h"

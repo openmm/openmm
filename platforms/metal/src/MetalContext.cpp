@@ -25,7 +25,7 @@
 #include <cmath>
 #include "MetalContext.h"
 #include "MetalEvent.h"
-//#include "MetalFFT3D.h"
+#include "MetalFFT3D.h"
 #include "MetalQueue.h"
 #include "MetalKernels.h"
 #include "MetalKernelSources.h"
@@ -271,8 +271,7 @@ void MetalContext::initializeContexts() {
 }
 
 FFT3D MetalContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
-    throw OpenMMException("not implemented");
-//    return FFT3D(new MetalFFT3D(*this, xsize, ysize, zsize, realToComplex));
+    return FFT3D(new MetalFFT3D(*this, xsize, ysize, zsize, realToComplex));
 }
 
 vector<ComputeContext*> MetalContext::getAllContexts() {

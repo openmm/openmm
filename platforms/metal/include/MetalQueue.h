@@ -42,6 +42,10 @@ public:
     MetalQueue(MTL::Device& device);
     ~MetalQueue();
     /**
+     * Get the queue wrapped by this object.
+     */
+    MTL::CommandQueue& getQueue();
+    /**
      * Get an encoder that can be used for launching kernels on this queue.
      */
     MTL::ComputeCommandEncoder& getEncoder();
@@ -58,7 +62,6 @@ public:
      */
     void flush(bool sync=false);
 private:
-    void ensureEncoderExists();
     MTL::CommandQueue* queue;
     MTL::CommandBuffer* commandBuffer;
     MTL::ComputeCommandEncoder* encoder;
