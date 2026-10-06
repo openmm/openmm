@@ -23,12 +23,11 @@ typedef struct {
 // Sum value from each thread (using temp).  Use real type variables (float on
 // single and mixed precision modes, double on double precision mode).
 DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
-    const int thread = LOCAL_ID;
     SYNC_THREADS;
 #ifdef WARP_SHUFFLE_DOWN
     const int warpCount = LOCAL_SIZE / WARP_SIZE;
-    const int warp = thread / WARP_SIZE;
-    const int lane = thread % WARP_SIZE;
+    const int warp = LOCAL_ID / WARP_SIZE;
+    const int lane = LOCAL_ID % WARP_SIZE;
     for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
         value += WARP_SHUFFLE_DOWN(value, step);
     }
@@ -47,17 +46,17 @@ DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
     }
     SYNC_THREADS;
 #else
-    temp[thread] = value;
+    temp[LOCAL_ID] = value;
     SYNC_THREADS;
     for (int step = 1; step < WARP_SIZE / 2; step <<= 1) {
-        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread] += temp[thread + step];
+        if(LOCAL_ID + step < LOCAL_SIZE && LOCAL_ID % (2 * step) == 0) {
+            temp[LOCAL_ID] += temp[LOCAL_ID + step];
         }
         SYNC_WARPS;
     }
     for (int step = WARP_SIZE / 2; step < LOCAL_SIZE; step <<= 1) {
-        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread] += temp[thread + step];
+        if(LOCAL_ID + step < LOCAL_SIZE && LOCAL_ID % (2 * step) == 0) {
+            temp[LOCAL_ID] += temp[LOCAL_ID + step];
         }
         SYNC_THREADS;
     }
@@ -67,12 +66,11 @@ DEVICE real reduceReal(real value, LOCAL_ARG volatile real* temp) {
 
 // Performs the equivalent of reduceReal() on 5 values simultaneously.
 DEVICE BlockSums1 reduceBlockSums1(BlockSums1 value, LOCAL_ARG BlockSums1* temp) {
-    const int thread = LOCAL_ID;
     SYNC_THREADS;
 #ifdef WARP_SHUFFLE_DOWN
     const int warpCount = LOCAL_SIZE / WARP_SIZE;
-    const int warp = thread / WARP_SIZE;
-    const int lane = thread % WARP_SIZE;
+    const int warp = LOCAL_ID / WARP_SIZE;
+    const int lane = LOCAL_ID % WARP_SIZE;
     for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
         value.gradStepSq += WARP_SHUFFLE_DOWN(value.gradStepSq, step);
         value.qStepGradStep += WARP_SHUFFLE_DOWN(value.qStepGradStep, step);
@@ -102,25 +100,25 @@ DEVICE BlockSums1 reduceBlockSums1(BlockSums1 value, LOCAL_ARG BlockSums1* temp)
     }
     SYNC_THREADS;
 #else
-    temp[thread] = value;
+    temp[LOCAL_ID] = value;
     SYNC_THREADS;
     for (int step = 1; step < WARP_SIZE / 2; step <<= 1) {
-        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread].gradStepSq += temp[thread + step].gradStepSq;
-            temp[thread].qStepGradStep += temp[thread + step].qStepGradStep;
-            temp[thread].qStepGrad += temp[thread + step].qStepGrad;
-            temp[thread].q += temp[thread + step].q;
-            temp[thread].qStep += temp[thread + step].qStep;
+        if(LOCAL_ID + step < LOCAL_SIZE && LOCAL_ID % (2 * step) == 0) {
+            temp[LOCAL_ID].gradStepSq += temp[LOCAL_ID + step].gradStepSq;
+            temp[LOCAL_ID].qStepGradStep += temp[LOCAL_ID + step].qStepGradStep;
+            temp[LOCAL_ID].qStepGrad += temp[LOCAL_ID + step].qStepGrad;
+            temp[LOCAL_ID].q += temp[LOCAL_ID + step].q;
+            temp[LOCAL_ID].qStep += temp[LOCAL_ID + step].qStep;
         }
         SYNC_WARPS;
     }
     for (int step = WARP_SIZE / 2; step < LOCAL_SIZE; step <<= 1) {
-        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread].gradStepSq += temp[thread + step].gradStepSq;
-            temp[thread].qStepGradStep += temp[thread + step].qStepGradStep;
-            temp[thread].qStepGrad += temp[thread + step].qStepGrad;
-            temp[thread].q += temp[thread + step].q;
-            temp[thread].qStep += temp[thread + step].qStep;
+        if(LOCAL_ID + step < LOCAL_SIZE && LOCAL_ID % (2 * step) == 0) {
+            temp[LOCAL_ID].gradStepSq += temp[LOCAL_ID + step].gradStepSq;
+            temp[LOCAL_ID].qStepGradStep += temp[LOCAL_ID + step].qStepGradStep;
+            temp[LOCAL_ID].qStepGrad += temp[LOCAL_ID + step].qStepGrad;
+            temp[LOCAL_ID].q += temp[LOCAL_ID + step].q;
+            temp[LOCAL_ID].qStep += temp[LOCAL_ID + step].qStep;
         }
         SYNC_THREADS;
     }
@@ -130,12 +128,11 @@ DEVICE BlockSums1 reduceBlockSums1(BlockSums1 value, LOCAL_ARG BlockSums1* temp)
 
 // Performs the equivalent of reduceReal() on 3 values simultaneously.
 DEVICE BlockSums2 reduceBlockSums2(BlockSums2 value, LOCAL_ARG BlockSums2* temp) {
-    const int thread = LOCAL_ID;
     SYNC_THREADS;
 #ifdef WARP_SHUFFLE_DOWN
     const int warpCount = LOCAL_SIZE / WARP_SIZE;
-    const int warp = thread / WARP_SIZE;
-    const int lane = thread % WARP_SIZE;
+    const int warp = LOCAL_ID / WARP_SIZE;
+    const int lane = LOCAL_ID % WARP_SIZE;
     for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
         value.projGradSq += WARP_SHUFFLE_DOWN(value.projGradSq, step);
         value.precGradStep += WARP_SHUFFLE_DOWN(value.precGradStep, step);
@@ -161,21 +158,21 @@ DEVICE BlockSums2 reduceBlockSums2(BlockSums2 value, LOCAL_ARG BlockSums2* temp)
     }
     SYNC_THREADS;
 #else
-    temp[thread] = value;
+    temp[LOCAL_ID] = value;
     SYNC_THREADS;
     for (int step = 1; step < WARP_SIZE / 2; step <<= 1) {
-        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread].projGradSq += temp[thread + step].projGradSq;
-            temp[thread].precGradStep += temp[thread + step].precGradStep;
-            temp[thread].precGrad += temp[thread + step].precGrad;
+        if(LOCAL_ID + step < LOCAL_SIZE && LOCAL_ID % (2 * step) == 0) {
+            temp[LOCAL_ID].projGradSq += temp[LOCAL_ID + step].projGradSq;
+            temp[LOCAL_ID].precGradStep += temp[LOCAL_ID + step].precGradStep;
+            temp[LOCAL_ID].precGrad += temp[LOCAL_ID + step].precGrad;
         }
         SYNC_WARPS;
     }
     for (int step = WARP_SIZE / 2; step < LOCAL_SIZE; step <<= 1) {
-        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread].projGradSq += temp[thread + step].projGradSq;
-            temp[thread].precGradStep += temp[thread + step].precGradStep;
-            temp[thread].precGrad += temp[thread + step].precGrad;
+        if(LOCAL_ID + step < LOCAL_SIZE && LOCAL_ID % (2 * step) == 0) {
+            temp[LOCAL_ID].projGradSq += temp[LOCAL_ID + step].projGradSq;
+            temp[LOCAL_ID].precGradStep += temp[LOCAL_ID + step].precGradStep;
+            temp[LOCAL_ID].precGrad += temp[LOCAL_ID + step].precGrad;
         }
         SYNC_THREADS;
     }
@@ -205,12 +202,11 @@ DEVICE BlockSums2 reduceBlockSums2(BlockSums2 value, LOCAL_ARG BlockSums2* temp)
 
 // Sum value from each thread (using temp) and return (sum + offset) * scale.
 DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offset, real scale) {
-    const int thread = LOCAL_ID;
     SYNC_THREADS;
 #ifdef WARP_SHUFFLE_DOWN
     const int warpCount = LOCAL_SIZE / WARP_SIZE;
-    const int warp = thread / WARP_SIZE;
-    const int lane = thread % WARP_SIZE;
+    const int warp = LOCAL_ID / WARP_SIZE;
+    const int lane = LOCAL_ID % WARP_SIZE;
     for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
         value += WARP_SHUFFLE_DOWN(value, step);
     }
@@ -229,17 +225,17 @@ DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offse
     }
     SYNC_THREADS;
 #else
-    temp[thread] = value;
+    temp[LOCAL_ID] = value;
     SYNC_THREADS;
     for (int step = 1; step < WARP_SIZE / 2; step <<= 1) {
-        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread] += temp[thread + step];
+        if(LOCAL_ID + step < LOCAL_SIZE && LOCAL_ID % (2 * step) == 0) {
+            temp[LOCAL_ID] += temp[LOCAL_ID + step];
         }
         SYNC_WARPS;
     }
     for (int step = WARP_SIZE / 2; step < LOCAL_SIZE; step <<= 1) {
-        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread] += temp[thread + step];
+        if(LOCAL_ID + step < LOCAL_SIZE && LOCAL_ID % (2 * step) == 0) {
+            temp[LOCAL_ID] += temp[LOCAL_ID + step];
         }
         SYNC_THREADS;
     }
@@ -327,12 +323,11 @@ DEVICE inline float compensatedMultiply3(float2 x, float2 y) {
 
 // Sum value from each thread (using temp) and return (sum + offset) * scale.
 DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offset, real scale) {
-    const int thread = LOCAL_ID;
     SYNC_THREADS;
 #ifdef WARP_SHUFFLE_DOWN
     const int warpCount = LOCAL_SIZE / WARP_SIZE;
-    const int warp = thread / WARP_SIZE;
-    const int lane = thread % WARP_SIZE;
+    const int warp = LOCAL_ID / WARP_SIZE;
+    const int lane = LOCAL_ID % WARP_SIZE;
     for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
         value = compensatedAdd3(value, WARP_SHUFFLE_DOWN(value, step));
     }
@@ -351,17 +346,17 @@ DEVICE ACCUM reduceAccum(ACCUM value, LOCAL_ARG volatile ACCUM* temp, real offse
     }
     SYNC_THREADS;
 #else
-    temp[thread] = value;
+    temp[LOCAL_ID] = value;
     SYNC_THREADS;
     for (int step = 1; step < WARP_SIZE / 2; step <<= 1) {
-        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread] = compensatedAdd3(temp[thread], temp[thread + step]);
+        if(LOCAL_ID + step < LOCAL_SIZE && LOCAL_ID % (2 * step) == 0) {
+            temp[LOCAL_ID] = compensatedAdd3(temp[LOCAL_ID], temp[LOCAL_ID + step]);
         }
         SYNC_WARPS;
     }
     for (int step = WARP_SIZE / 2; step < LOCAL_SIZE; step <<= 1) {
-        if(thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread] = compensatedAdd3(temp[thread], temp[thread + step]);
+        if(LOCAL_ID + step < LOCAL_SIZE && LOCAL_ID % (2 * step) == 0) {
+            temp[LOCAL_ID] = compensatedAdd3(temp[LOCAL_ID], temp[LOCAL_ID + step]);
         }
         SYNC_THREADS;
     }

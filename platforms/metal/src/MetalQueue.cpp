@@ -63,12 +63,14 @@ MTL::CommandBuffer& MetalQueue::getCommandBuffer() {
 }
 
 void MetalQueue::flush(bool sync) {
-    if (encoder != nullptr) {
-        encoder->endEncoding();
+    if (commandBuffer != nullptr) {
+        if (encoder != nullptr)
+            encoder->endEncoding();
         commandBuffer->commit();
         if (sync)
             commandBuffer->waitUntilCompleted();
-        encoder->release();
+        if (encoder != nullptr)
+            encoder->release();
         commandBuffer->release();
         encoder = nullptr;
         commandBuffer = nullptr;

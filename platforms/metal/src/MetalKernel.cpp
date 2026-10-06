@@ -49,8 +49,8 @@ int MetalKernel::getMaxBlockSize() const {
 }
 
 void MetalKernel::execute(int threads, int blockSize) {
-    MetalQueue* queue = dynamic_cast<MetalQueue*>(context.getCurrentQueue().get());
-    MTL::ComputeCommandEncoder& encoder = queue->getEncoder();
+    MetalQueue& queue = dynamic_cast<MetalQueue&>(*context.getCurrentQueue());
+    MTL::ComputeCommandEncoder& encoder = queue.getEncoder();
     encoder.setComputePipelineState(pipeline);
     int numArgs = arrayArgs.size();
     argPointers.resize(numArgs);

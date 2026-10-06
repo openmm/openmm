@@ -63,7 +63,8 @@ double MetalCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, b
         sum += mc.reduceEnergy();
     if (!mc.getForcesValid())
         valid = false;
-    mc.flushQueue();
+    MetalQueue& queue = dynamic_cast<MetalQueue&>(*mc.getCurrentQueue());
+    queue.flush(true);
     return sum;
 }
 

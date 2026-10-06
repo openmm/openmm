@@ -43,10 +43,11 @@ MetalEvent::~MetalEvent() {
 
 void MetalEvent::enqueue() {
     MetalQueue& queue = dynamic_cast<MetalQueue&>(*context.getCurrentQueue());
+    queue.flush();
     currentBuffer = &queue.getCommandBuffer();
     currentBuffer->retain();
-    queue.flush();
     currentBuffer->encodeSignalEvent(event, ++value);
+    queue.flush();
 }
 
 void MetalEvent::wait() {
