@@ -23,6 +23,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "MetalKernels.h"
+#include "MetalQueue.h"
 #include "openmm/internal/ContextImpl.h"
 
 using namespace OpenMM;
@@ -64,6 +65,18 @@ double MetalCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, b
         valid = false;
     mc.flushQueue();
     return sum;
+}
+
+void MetalUpdateStateDataKernel::setPositions(ContextImpl& context, const std::vector<Vec3>& positions) {
+    CommonUpdateStateDataKernel::setPositions(context, positions);
+    MetalQueue& queue = dynamic_cast<MetalQueue&>(*cc.getCurrentQueue());
+    queue.flush(true);
+}
+
+void MetalUpdateStateDataKernel::setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities) {
+    CommonUpdateStateDataKernel::setVelocities(context, velocities);
+    MetalQueue& queue = dynamic_cast<MetalQueue&>(*cc.getCurrentQueue());
+    queue.flush(true);
 }
 
 void MetalCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {

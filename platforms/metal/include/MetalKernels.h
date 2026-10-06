@@ -83,6 +83,28 @@ private:
 };
 
 /**
+ * This kernel provides methods for setting and retrieving various state data: time, positions,
+ * velocities, and forces.
+ */
+class MetalUpdateStateDataKernel : public CommonUpdateStateDataKernel {
+public:
+    MetalUpdateStateDataKernel(std::string name, const Platform& platform, ComputeContext& cc) : CommonUpdateStateDataKernel(name, platform, cc) {
+    }
+    /**
+     * Set the positions of all particles.
+     *
+     * @param positions  a vector containg the particle positions
+     */
+    void setPositions(ContextImpl& context, const std::vector<Vec3>& positions);
+    /**
+     * Set the velocities of all particles.
+     *
+     * @param velocities  a vector containg the particle velocities
+     */
+    void setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities);
+};
+
+/**
  * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
  */
 class MetalCalcNonbondedForceKernel : public CommonCalcNonbondedForceKernel {

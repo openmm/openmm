@@ -118,7 +118,7 @@ IF(APPLE)
     IF (X86)
       SET(EXTRA_COMPILE_FLAGS "-msse2")
     ENDIF()
-    SET(EXTRA_COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -stdlib=libc++")
+    SET(EXTRA_COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -stdlib=libc++ -Wno-deprecated-declarations")
 ELSEIF(MSVC)
     SET(EXTRA_COMPILE_FLAGS)
     # Use warning level 2, not whatever warning level CMake picked.

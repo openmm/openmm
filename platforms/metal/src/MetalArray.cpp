@@ -75,16 +75,16 @@ void MetalArray::uploadSubArray(const void* data, int offset, int elements, bool
         throw OpenMMException("MetalArray has not been initialized");
     if (offset < 0 || offset+elements > getSize())
         throw OpenMMException("uploadSubArray: data exceeds range of array");
-    MetalQueue* queue = dynamic_cast<MetalQueue*>(context->getCurrentQueue().get());
-    queue->flush(true);
+    MetalQueue& queue = dynamic_cast<MetalQueue&>(*context->getCurrentQueue());
+    queue.flush(true);
     memcpy((char*) buffer->contents()+offset*elementSize, data, elements*elementSize);
 }
 
 void MetalArray::download(void* data, bool blocking) const {
     if (buffer == nullptr)
         throw OpenMMException("MetalArray has not been initialized");
-    MetalQueue* queue = dynamic_cast<MetalQueue*>(context->getCurrentQueue().get());
-    queue->flush(true);
+    MetalQueue& queue = dynamic_cast<MetalQueue&>(*context->getCurrentQueue());
+    queue.flush(true);
     memcpy(data, buffer->contents(), size*elementSize);
 }
 
@@ -93,8 +93,8 @@ void MetalArray::copyTo(ArrayInterface& dest) const {
         throw OpenMMException("MetalArray has not been initialized");
     if (dest.getSize() != size || dest.getElementSize() != elementSize)
         throw OpenMMException("Error copying array "+name+" to "+dest.getName()+": The destination array does not match the size of the array");
-    MetalQueue* queue = dynamic_cast<MetalQueue*>(context->getCurrentQueue().get());
-    queue->flush(true);
+    MetalQueue& queue = dynamic_cast<MetalQueue&>(*context->getCurrentQueue());
+    queue.flush(true);
     MetalArray& metalDest = context->unwrap(dest);
     memcpy(metalDest.buffer->contents(), buffer->contents(), size*elementSize);
 }
