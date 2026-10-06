@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -57,6 +57,7 @@ public:
     std::vector<std::string> getKernelNames();
     void computeCurrentPressure(ContextImpl& context, std::vector<double>& pressure);
     void computeStressTensor(ContextImpl& context, std::vector<double>& stress, bool includeKinetic);
+    bool getPeriodicBoxIsFlexible() const;
 private:
     double computePressureComponent(ContextImpl& context, double delta, int component);
     double computeStressComponent(ContextImpl& context, double delta, int component);
