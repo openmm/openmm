@@ -48,6 +48,7 @@ import xml.etree.ElementTree as etree
 from copy import deepcopy
 from math import ceil, floor, sqrt
 from collections import defaultdict, namedtuple
+import numpy as np
 
 class Modeller(object):
     """Modeller provides tools for editing molecular models, such as adding water or missing hydrogens.
@@ -1606,22 +1607,13 @@ class Modeller(object):
             context = Context(system, integrator, platform)
         context.setPositions(mergedPositions)
         LocalEnergyMinimizer.minimize(context, 10.0, 30)
-        try:
-            import numpy as np
-            hasNumpy = True
-            proteinPosArray = np.array(proteinPos)
-            scaledProteinPosArray = np.array(scaledProteinPos)
-        except:
-            hasNumpy = False
+        proteinPosArray = np.array(proteinPos)
+        scaledProteinPosArray = np.array(scaledProteinPos)
         for i in range(steps):
             weight1 = i/(steps-1)
             weight2 = 1.0-weight1
-            mergedPositions = context.getState(positions=True).getPositions(asNumpy=hasNumpy).value_in_unit(nanometer)
-            if hasNumpy:
-                mergedPositions[numMembraneParticles:] = weight1*proteinPosArray + weight2*scaledProteinPosArray
-            else:
-                for j in range(len(proteinPos)):
-                    mergedPositions[j+numMembraneParticles] = (weight1*proteinPos[j] + weight2*scaledProteinPos[j])
+            mergedPositions = context.getState(positions=True).getPositions(asNumpy=True).value_in_unit(nanometer)
+            mergedPositions[numMembraneParticles:] = weight1*proteinPosArray + weight2*scaledProteinPosArray
             context.setPositions(mergedPositions)
             integrator.step(20)
 

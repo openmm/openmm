@@ -42,7 +42,7 @@ Two possible enhancements that have not been implemented are
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2012 Stanford University and the Authors.
+Portions copyright (c) 2012-2026 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
@@ -145,14 +145,10 @@ class Quantity(object):
                     for item in value:
                         new_container.append(Quantity(item)) # Strips off units into list new_container._value
                     # __class__ trick does not work for numpy.arrays
-                    try:
-                        import numpy
-                        if isinstance(value, numpy.ndarray):
-                            value = numpy.array(new_container._value)
-                        else:
-                            # delegate construction to container class from list
-                            value = value.__class__(new_container._value)
-                    except ImportError:
+                    import numpy
+                    if isinstance(value, numpy.ndarray):
+                        value = numpy.array(new_container._value)
+                    else:
                         # delegate construction to container class from list
                         value = value.__class__(new_container._value)
                 else:

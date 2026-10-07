@@ -4,7 +4,7 @@ A recreation of the various GB variants implemented via CustomGBForce
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2012-2022 University of Virginia and the Authors.
+Portions copyright (c) 2012-2026 University of Virginia and the Authors.
 Authors: Christoph Klein, Michael R. Shirts
 Contributors: Jason M. Swails, Peter Eastman, Justin L. MacCallum
 
@@ -36,13 +36,7 @@ from openmm.app import element as E
 from openmm import CustomGBForce, Discrete2DFunction
 import openmm.unit as u
 from math import floor
-
-_have_numpy = False
-try:
-    import numpy
-    _have_numpy = True
-except ImportError:
-    pass
+import numpy
 
 
 def strip_unit(value, unit):
@@ -251,10 +245,7 @@ def _bondi_radii(topology):
         E.chlorine:     1.7,
     }
 
-    if _have_numpy:
-        radii = numpy.empty(topology.getNumAtoms(), numpy.double)
-    else:
-        radii = [0]*topology.getNumAtoms()
+    radii = numpy.empty(topology.getNumAtoms(), numpy.double)
     for i, atom in enumerate(topology.atoms()):
         radii[i] = element_to_radius.get(atom.element, default_radius)
     return radii  # converted to nanometers above
@@ -272,10 +263,7 @@ def _mbondi_radii(topology, all_bonds = None):
         E.sulfur:       1.8,
         E.chlorine:     1.7,
     }
-    if _have_numpy:
-        radii = numpy.empty(topology.getNumAtoms(), numpy.double)
-    else:
-        radii = [0]*topology.getNumAtoms()
+    radii = numpy.empty(topology.getNumAtoms(), numpy.double)
     if all_bonds is None:
         all_bonds = _get_bonded_atom_list(topology)
     for i, atom in enumerate(topology.atoms()):
@@ -310,10 +298,7 @@ def _mbondi2_radii(topology, all_bonds = None):
         E.sulfur:       1.8,
         E.chlorine:     1.7,
     }
-    if _have_numpy:
-        radii = numpy.empty(topology.getNumAtoms(), numpy.double)
-    else:
-        radii = [0]*topology.getNumAtoms()
+    radii = numpy.empty(topology.getNumAtoms(), numpy.double)
     if all_bonds is None:
         all_bonds = _get_bonded_atom_list(topology)
     for i, atom in enumerate(topology.atoms()):
@@ -468,20 +453,14 @@ class CustomAmberGBForceBase(CustomGBForce):
         -------
         None
         """
-        if isinstance(params, list) and _have_numpy:
+        if isinstance(params, list):
             params = numpy.array(params)
         else:
             params = copy.deepcopy(params)
 
-        if _have_numpy:
-            params[:,self.RADIUS_ARG_POSITION] -= self.OFFSET
-            params[:,self.SCREEN_POSITION] *= params[:,self.RADIUS_ARG_POSITION]
-            self.parameters.extend(params.tolist())
-        else:
-            for p in params:
-                p[self.RADIUS_ARG_POSITION] -= self.OFFSET
-                p[self.SCREEN_POSITION] *= p[self.RADIUS_ARG_POSITION]
-            self.parameters.extend(params)
+        params[:,self.RADIUS_ARG_POSITION] -= self.OFFSET
+        params[:,self.SCREEN_POSITION] *= params[:,self.RADIUS_ARG_POSITION]
+        self.parameters.extend(params.tolist())
 
     @staticmethod
     def getStandardParameters(topology):
@@ -572,11 +551,8 @@ class GBSAHCTForce(CustomAmberGBForceBase):
             at the beginning of the list
 
         """
-        if _have_numpy:
-            radii = numpy.empty((topology.getNumAtoms(), 2), numpy.double)
-            radii[:,0] = _mbondi_radii(topology)/10
-        else:
-            radii = [[r/10, 0] for r in _mbondi_radii(topology)]
+        radii = numpy.empty((topology.getNumAtoms(), 2), numpy.double)
+        radii[:,0] = _mbondi_radii(topology)/10
         for rad, atom in zip(radii, topology.atoms()):
             rad[1] = _screen_parameter(atom)[0]
         return radii
@@ -638,11 +614,8 @@ class GBSAOBC1Force(CustomAmberGBForceBase):
             at the beginning of the list
 
         """
-        if _have_numpy:
-            radii = numpy.empty((topology.getNumAtoms(), 2), numpy.double)
-            radii[:,0] = _mbondi2_radii(topology)/10
-        else:
-            radii = [[r/10, 0] for r in _mbondi2_radii(topology)]
+        radii = numpy.empty((topology.getNumAtoms(), 2), numpy.double)
+        radii[:,0] = _mbondi2_radii(topology)/10
         for rad, atom in zip(radii, topology.atoms()):
             rad[1] = _screen_parameter(atom)[0]
         return radii
@@ -731,17 +704,10 @@ class GBSAGBnForce(CustomAmberGBForceBase):
             raise ValueError('Radii must be between 1 and 2 Angstroms for neck lookup')
 
     def addParticles(self, parameters):
-        bad_radius = False
-        if _have_numpy:
-            if isinstance(parameters, list):
-                parameters = numpy.array(parameters)
-            radii = parameters[:,1]
-            if numpy.any(numpy.logical_or(radii<0.1, radii>0.2)):
-                bad_radius = True
-        else:
-            if any(p[1]<0.1 or p[1]>0.2 for p in parameters):
-                bad_radius = True
-        if bad_radius:
+        if isinstance(parameters, list):
+            parameters = numpy.array(parameters)
+        radii = parameters[:,1]
+        if numpy.any(numpy.logical_or(radii<0.1, radii>0.2)):
             raise ValueError('Radii must be between 1 and 2 Angstroms for neck lookup')
         CustomAmberGBForceBase.addParticles(self, parameters)
 
@@ -768,11 +734,8 @@ class GBSAGBnForce(CustomAmberGBForceBase):
             at the beginning of the list
 
         """
-        if _have_numpy:
-            radii = numpy.empty((topology.getNumAtoms(), 2), numpy.double)
-            radii[:,0] = _bondi_radii(topology)/10
-        else:
-            radii = [[r/10, 0] for r in _bondi_radii(topology)]
+        radii = numpy.empty((topology.getNumAtoms(), 2), numpy.double)
+        radii[:,0] = _bondi_radii(topology)/10
         for rad, atom in zip(radii, topology.atoms()):
             rad[1] = _screen_parameter(atom)[1]
         return radii
@@ -907,27 +870,15 @@ class GBSAGBn2Force(GBSAGBnForce):
 
         """
         natoms = topology.getNumAtoms()
-        if _have_numpy:
-            radii = numpy.empty([natoms,5], numpy.double)
-            radii[:,0] = _mbondi3_radii(topology)/10
-            for atom, rad in zip(topology.atoms(), radii):
-                if atom.residue.name in _NUCLEIC_ACID_RESIDUES:
-                    rad[1] = _screen_parameter(atom)[3]
-                    rad[2:] = cls._atom_params_nucleic.get(atom.element, cls._default_atom_params)
-                else:
-                    rad[1] = _screen_parameter(atom)[2]
-                    rad[2:] = cls._atom_params.get(atom.element, cls._default_atom_params)
-        else:
-            radii = [[r/10, 0, 0, 0, 0] for r in _mbondi3_radii(topology)]
-            for atom, rad in zip(topology.atoms(), radii):
-                if atom.residue.name in _NUCLEIC_ACID_RESIDUES:
-                    rad[1] = _screen_parameter(atom)[3]
-                    for i, p in enumerate(cls._atom_params_nucleic.get(atom.element, cls._default_atom_params)):
-                        rad[2+i] = p
-                else:
-                    rad[1] = _screen_parameter(atom)[2]
-                    for i, p in enumerate(cls._atom_params.get(atom.element, cls._default_atom_params)):
-                        rad[2+i] = p
+        radii = numpy.empty([natoms,5], numpy.double)
+        radii[:,0] = _mbondi3_radii(topology)/10
+        for atom, rad in zip(topology.atoms(), radii):
+            if atom.residue.name in _NUCLEIC_ACID_RESIDUES:
+                rad[1] = _screen_parameter(atom)[3]
+                rad[2:] = cls._atom_params_nucleic.get(atom.element, cls._default_atom_params)
+            else:
+                rad[1] = _screen_parameter(atom)[2]
+                rad[2:] = cls._atom_params.get(atom.element, cls._default_atom_params)
         return radii
 
     def _addEnergyTerms(self):

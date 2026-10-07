@@ -9,7 +9,7 @@ Tools for constructing systems from AMBER prmtop/crd files.
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2012-2023 Stanford University and the Authors.
+Portions copyright (c) 2012-2026 Stanford University and the Authors.
 Authors: Randall J. Radmer, John D. Chodera, Peter Eastman
 Contributors: Christoph Klein, Michael R. Shirts, Jason Swails, Kye Won Wang
 
@@ -42,10 +42,7 @@ import re
 from math import ceil, cos, sin, asin, sqrt, pi
 import warnings
 
-try:
-    import numpy as np
-except:
-    np = None
+import numpy as np
 
 import openmm.unit as units
 import openmm
@@ -1247,7 +1244,6 @@ class AmberAsciiRestart(object):
         `ValueError' if not all fields are numbers (for example, if a field is
                      filled with ****'s)
         `IndexError' if the file is empty
-        `ImportError' if numpy is requested but could not be imported
     Example
     -------
     >>> f = AmberAsciiRestart('alanine-dipeptide.inpcrd')
@@ -1255,9 +1251,6 @@ class AmberAsciiRestart(object):
     """
 
     def __init__(self, filename, asNumpy=False):
-        # Make sure numpy is available if requested
-        if asNumpy and np is None:
-            raise ImportError('asNumpy=True: numpy is not available')
         self._asNumpy = asNumpy
         self.filename = filename
         with open(filename, 'r') as f:
@@ -1544,8 +1537,6 @@ def readAmberCoordinates(filename, asNumpy=False):
         except (IndexError, ValueError):
             raise TypeError('Could not parse Amber ASCII restart file %s' %
                             filename)
-        except ImportError:
-            raise ImportError('Could not find numpy; cannot use asNumpy=True')
     except TypeError:
         # We had scipy, but this is not a NetCDF v3 file. Try as ASCII now
         try:
@@ -1557,9 +1548,6 @@ def readAmberCoordinates(filename, asNumpy=False):
         except (IndexError, ValueError):
             raise TypeError('Could not parse Amber ASCII restart file %s' %
                             filename)
-        # Import error cannot happen, since we had scipy which has numpy as a
-        # prereq. Do not catch that exception (only catch what you intend to
-        # catch...)
 
     # We got here... one of the file types worked. Return the coordinates,
     # velocities, and boxVectors

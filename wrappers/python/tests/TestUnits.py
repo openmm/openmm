@@ -7,14 +7,7 @@ from openmm import unit as u
 import copy
 import math
 import unittest
-try:
-    import numpy as np
-except ImportError:
-    np = None
-try:
-    from itertools import izip as zip
-except ImportError:
-    pass # Python 3... zip _is_ izip
+import numpy as np
 
 class QuantityTestCase(unittest.TestCase):
 
@@ -662,7 +655,6 @@ class TestUnits(QuantityTestCase):
         self.assertEqual(str(u.meters*u.meters), 'meter**2')
         self.assertEqual(str(u.meter*u.meter), 'meter**2')
 
-@unittest.skipIf(np is None, 'Skipping numpy units tests')
 class TestNumpyUnits(QuantityTestCase):
 
     def testNumpyQuantity(self):
