@@ -300,6 +300,7 @@ void MetalNonbondedUtilities::prepareInteractions(int forceGroups) {
     if (useLargeBlocks)
         setPeriodicBoxArgs(context, kernels.sortBoxDataKernel, 7);
     blockSorter->sort(sortedBlocks);
+    kernels.sortBoxDataKernel->setArg(useLargeBlocks ? 16 : 9, forceRebuildNeighborList);
     kernels.sortBoxDataKernel->execute(context.getNumAtoms());
     setPeriodicBoxArgs(context, kernels.findInteractingBlocksKernel, 0);
     kernels.findInteractingBlocksKernel->execute(context.getNumAtoms(), 256);
@@ -353,6 +354,16 @@ bool MetalNonbondedUtilities::updateNeighborListSize() {
         maxSinglePairs = (unsigned int) (1.2*countBuffer[1]);
         singlePairs.resize(maxSinglePairs);
     }
+    for (auto& entry : groupKernels) {
+        KernelSet& kernels = entry.second;
+        kernels.findInteractingBlocksKernel->setArg(10, maxTiles);
+        kernels.findInteractingBlocksKernel->setArg(11, maxSinglePairs);
+        for (const ComputeKernel& kernel : {kernels.forceKernel, kernels.energyKernel, kernels.forceEnergyKernel})
+            if (kernel != nullptr) {
+                kernel->setArg(14, maxTiles);
+                kernel->setArg(18, maxSinglePairs);
+            }
+    }
     forceRebuildNeighborList = true;
     context.setForcesValid(false);
     return true;
@@ -400,7 +411,7 @@ void MetalNonbondedUtilities::createKernelsForGroups(int groups) {
         if (useLargeBlocks)
             defines["USE_LARGE_BLOCKS"] = "1";
         defines["MAX_EXCLUSIONS"] = context.intToString(maxExclusions);
-        defines["MAX_BITS_FOR_PAIRS"] = "3";
+        defines["MAX_BITS_FOR_PAIRS"] = (canUsePairList ? "3" : "0");
         int binShift = 1;
         while (1<<binShift <= context.getNumAtomBlocks())
             binShift++;
@@ -444,7 +455,7 @@ void MetalNonbondedUtilities::createKernelsForGroups(int groups) {
         kernels.sortBoxDataKernel->addArg(oldPositions);
         kernels.sortBoxDataKernel->addArg(interactionCount);
         kernels.sortBoxDataKernel->addArg(rebuildNeighborList);
-        kernels.sortBoxDataKernel->addArg(forceRebuildNeighborList);
+        kernels.sortBoxDataKernel->addArg();
         for (int i = 0; i < 5; i++)
             kernels.findInteractingBlocksKernel->addArg();
         kernels.findInteractingBlocksKernel->addArg(interactionCount);

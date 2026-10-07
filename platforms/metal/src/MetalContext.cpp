@@ -88,14 +88,15 @@ MetalContext::MetalContext(const System& system, const string& precision, MetalP
     contextIndex = platformData.contexts.size();
     if (originalContext == NULL) {
         device = MTL::CreateSystemDefaultDevice();
+        defaultQueue = shared_ptr<ComputeQueueImpl>(new MetalQueue(*device));
         isLinkedContext = false;
     }
     else {
-        originalContext->getDevice().retain();
+        device = originalContext->getDevice().retain();
+        defaultQueue = originalContext->defaultQueue;
         isLinkedContext = true;
     }
 
-    defaultQueue = shared_ptr<ComputeQueueImpl>(new MetalQueue(*device));
     currentQueue = defaultQueue;
     numAtoms = system.getNumParticles();
     paddedNumAtoms = TileSize*((numAtoms+TileSize-1)/TileSize);
