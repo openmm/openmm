@@ -50,6 +50,7 @@
 #include <typeinfo>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <IOKit/IOKitLib.h>
 
 using namespace OpenMM;
 using namespace std;
@@ -99,8 +100,26 @@ MetalContext::MetalContext(const System& system, const string& precision, MetalP
     numAtoms = system.getNumParticles();
     paddedNumAtoms = TileSize*((numAtoms+TileSize-1)/TileSize);
     numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
-    // TODO: query this correctly
-    numGpuCores = 40;
+
+    // Determine the number of cores in the GPU.  Why does Apple make this so hard?
+
+    numGpuCores = -1;
+    io_iterator_t iterator;
+    if (IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("AGXAccelerator"), &iterator) == KERN_SUCCESS) {
+        io_object_t entry;
+        while ((entry = IOIteratorNext(iterator)) != 0) {
+            CFTypeRef value = IORegistryEntryCreateCFProperty(entry, CFSTR("gpu-core-count"), kCFAllocatorDefault, 0);
+            if (value != NULL) {
+                if (CFGetTypeID(value) == CFNumberGetTypeID())
+                    CFNumberGetValue((CFNumberRef) value, kCFNumberIntType, &numGpuCores);
+                CFRelease(value);
+            }
+            IOObjectRelease(entry);
+        }
+        IOObjectRelease(iterator);
+    }
+    if (numGpuCores == -1)
+        throw OpenMMException("Unable to determine number of GPU cores");
     numThreadBlocks = 12*numGpuCores;
 
     // Decide whether the fast versions of math routines are sufficiently accurate to use.
@@ -132,7 +151,7 @@ MetalContext::MetalContext(const System& system, const string& precision, MetalP
     }
     compilationDefines["SQRT"] = (maxSqrtError < 1e-6) ? "fast::sqrt" : "sqrt";
     compilationDefines["RSQRT"] = (maxRsqrtError < 1e-6) ? "fast::rsqrt" : "rsqrt";
-    compilationDefines["RECIP(v)"] = (maxRecipError < 1e-6) ? "fast::divide(1.0, v)" : "(1.0/v)";
+    compilationDefines["RECIP(v)"] = (maxRecipError < 1e-6) ? "fast::divide(1.0, v)" : "(1.0/(v))";
     compilationDefines["EXP"] = (maxExpError < 1e-6) ? "fast::exp" : "exp";
     compilationDefines["LOG"] = (maxLogError < 1e-6) ? "fast::log" : "log";
 

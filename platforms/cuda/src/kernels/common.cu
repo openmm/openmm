@@ -8,6 +8,7 @@
 #define LOCAL __shared__
 #define LOCAL_ARG
 #define GLOBAL
+#define PRIVATE
 #define RESTRICT __restrict__
 #define LOCAL_ID threadIdx.x
 #define LOCAL_SIZE blockDim.x

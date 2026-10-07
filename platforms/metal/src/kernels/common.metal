@@ -19,12 +19,24 @@ uint NUM_GROUPS [[threadgroups_per_grid]];
 #define LOCAL threadgroup
 #define LOCAL_ARG threadgroup
 #define GLOBAL device
+#define PRIVATE thread
 #define RESTRICT
 #define SYNC_THREADS threadgroup_barrier(mem_flags::mem_device | mem_flags::mem_threadgroup);
 #define SYNC_WARPS simdgroup_barrier(mem_flags::mem_threadgroup);
 #define MEM_FENCE
-#define SHFL(var, srcLane) simd_shuffle(var, srcLane)
 #define BALLOT(var) ((int) (uint64_t) simd_ballot(var))
+
+template <class T>
+inline T SHFL(T var, ushort srcLane) {
+    return simd_shuffle(var, srcLane);
+}
+
+template <>
+inline long SHFL(long var, ushort srcLane) {
+    uint low = SHFL((uint) (var & 0xFFFFFFFF), srcLane);
+    int high = SHFL((int) (var >> 32), srcLane);
+    return (((long) high) << 32) + (long) low;
+}
 
 inline int ATOMIC_ADD(device int* dest, int value) {
     return atomic_fetch_add_explicit((device atomic_int*) dest, value, memory_order_relaxed);
@@ -86,7 +98,7 @@ inline float4 cross(float4 a, float4 b) {
 }
 
 inline long realToFixedPoint(real x) {
-    return static_cast<long>(x * 0x100000000);
+    return static_cast<long>(clamp((real) -0x8FFFFFFF, (real) 0x8FFFFFFF, x)*0x100000000);
 }
 
 inline float erfc(float x) {

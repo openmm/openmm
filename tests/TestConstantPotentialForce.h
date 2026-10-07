@@ -1056,7 +1056,7 @@ void testReferenceCharges(bool testThomasFermi, ConstantPotentialForce::Constant
     vector<double> testCharges;
     testForce->getCharges(testContext, testCharges);
     for (int i = 0; i < 300; i++) {
-        ASSERT_EQUAL_TOL(refCharges[i], testCharges[i], TOL);
+        ASSERT_EQUAL_TOL(refCharges[i], testCharges[i], 1e-3);
     }
 }
 

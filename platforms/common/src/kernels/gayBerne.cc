@@ -99,7 +99,7 @@ KERNEL void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeriod
 /**
  * This is called by findNeighbors() to write a block to the neighbor list.
  */
-DEVICE void storeNeighbors(int atom1, int* neighborBuffer, int numAtomsInBuffer, int maxNeighborBlocks, GLOBAL int* RESTRICT neighbors,
+DEVICE void storeNeighbors(int atom1, PRIVATE int* neighborBuffer, int numAtomsInBuffer, int maxNeighborBlocks, GLOBAL int* RESTRICT neighbors,
         GLOBAL int* RESTRICT neighborIndex, GLOBAL int* RESTRICT neighborBlockCount) {
     int blockIndex = ATOMIC_ADD(neighborBlockCount, 1);
     if (blockIndex >= maxNeighborBlocks)
@@ -178,7 +178,7 @@ typedef struct {
     real a[3][3], b[3][3], g[3][3];
 } AtomData;
 
-DEVICE void loadAtomData(AtomData* data, int sortedIndex, int originalIndex, GLOBAL const real4* RESTRICT pos, GLOBAL const float4* RESTRICT sigParams,
+DEVICE void loadAtomData(PRIVATE AtomData* data, int sortedIndex, int originalIndex, GLOBAL const real4* RESTRICT pos, GLOBAL const float4* RESTRICT sigParams,
         GLOBAL const float2* RESTRICT epsParams, GLOBAL const real* RESTRICT aMatrix, GLOBAL const real* RESTRICT bMatrix, GLOBAL const real* RESTRICT gMatrix) {
     data->sig = sigParams[originalIndex];
     data->eps = epsParams[originalIndex];
@@ -192,19 +192,19 @@ DEVICE void loadAtomData(AtomData* data, int sortedIndex, int originalIndex, GLO
         }
 }
 
-inline DEVICE real3 matrixVectorProduct(real (*m)[3], real3 v) {
+inline DEVICE real3 matrixVectorProduct(PRIVATE real (*m)[3], real3 v) {
     return make_real3(m[0][0]*v.x + m[0][1]*v.y + m[0][2]*v.z,
                       m[1][0]*v.x + m[1][1]*v.y + m[1][2]*v.z,
                       m[2][0]*v.x + m[2][1]*v.y + m[2][2]*v.z);
 }
 
-inline DEVICE real3 vectorMatrixProduct(real3 v, real (*m)[3]) {
+inline DEVICE real3 vectorMatrixProduct(real3 v, PRIVATE real (*m)[3]) {
     return make_real3(m[0][0]*v.x + m[1][0]*v.y + m[2][0]*v.z,
                       m[0][1]*v.x + m[1][1]*v.y + m[2][1]*v.z,
                       m[0][2]*v.x + m[1][2]*v.y + m[2][2]*v.z);
 }
 
-inline DEVICE void matrixSum(real (*result)[3], real (*a)[3], real (*b)[3]) {
+inline DEVICE void matrixSum(PRIVATE real (*result)[3], PRIVATE real (*a)[3], PRIVATE real (*b)[3]) {
     result[0][0] = a[0][0]+b[0][0];
     result[0][1] = a[0][1]+b[0][1];
     result[0][2] = a[0][2]+b[0][2];
@@ -216,12 +216,12 @@ inline DEVICE void matrixSum(real (*result)[3], real (*a)[3], real (*b)[3]) {
     result[2][2] = a[2][2]+b[2][2];
 }
 
-inline DEVICE real determinant(real (*m)[3]) {
+inline DEVICE real determinant(PRIVATE real (*m)[3]) {
     return (m[0][0]*m[1][1]*m[2][2] + m[0][1]*m[1][2]*m[2][0] + m[0][2]*m[1][0]*m[2][1] -
             m[0][0]*m[1][2]*m[2][1] - m[0][1]*m[1][0]*m[2][2] - m[0][2]*m[1][1]*m[2][0]);
 }
 
-inline DEVICE void matrixInverse(real (*result)[3], real (*m)[3]) {
+inline DEVICE void matrixInverse(PRIVATE real (*result)[3], PRIVATE real (*m)[3]) {
     real invDet = RECIP(determinant(m));
     result[0][0] = invDet*(m[1][1]*m[2][2] - m[1][2]*m[2][1]);
     result[1][0] = -invDet*(m[1][0]*m[2][2] - m[1][2]*m[2][0]);
@@ -234,7 +234,8 @@ inline DEVICE void matrixInverse(real (*result)[3], real (*m)[3]) {
     result[2][2] = invDet*(m[0][0]*m[1][1] - m[0][1]*m[1][0]);
 }
 
-DEVICE void computeOneInteraction(AtomData* data1, AtomData* data2, real sigma, real epsilon, real3 dr, real r2, real3* force1, real3* force2, real3* torque1, real3* torque2, mixed *totalEnergy) {
+DEVICE void computeOneInteraction(PRIVATE AtomData* data1, PRIVATE AtomData* data2, real sigma, real epsilon, real3 dr, real r2,
+        PRIVATE real3* force1, PRIVATE real3* force2, PRIVATE real3* torque1, PRIVATE real3* torque2, PRIVATE mixed *totalEnergy) {
     real rInv = RSQRT(r2);
     real r = r2*rInv;
     real3 drUnit = dr*rInv;
@@ -288,9 +289,9 @@ DEVICE void computeOneInteraction(AtomData* data1, AtomData* data2, real sigma, 
     // Compute the terms needed for the torque.
 
     for (int j = 0; j < 2; j++) {
-        real (*a)[3] = (j == 0 ? data1->a : data2->a);
-        real (*b)[3] = (j == 0 ? data1->b : data2->b);
-        real (*g)[3] = (j == 0 ? data1->g : data2->g);
+        PRIVATE real (*a)[3] = (j == 0 ? data1->a : data2->a);
+        PRIVATE real (*b)[3] = (j == 0 ? data1->b : data2->b);
+        PRIVATE real (*g)[3] = (j == 0 ? data1->g : data2->g);
         float4 sig = (j == 0 ? data1->sig : data2->sig);
         real3 dudq = cross(vectorMatrixProduct(kappa, g), kappa*(temp*dUSLJdr));
         real3 dchidq = cross(vectorMatrixProduct(iota, b), iota)*(-4*rInv2);
@@ -347,7 +348,6 @@ KERNEL void computeForce(
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
 #endif
         ) {
-    const unsigned int warp = GLOBAL_ID/TILE_SIZE;
     mixed energy = 0;
 #ifdef USE_CUTOFF
     const int numBlocks = *neighborBlockCount;
@@ -492,7 +492,6 @@ KERNEL void applyTorques(
         GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL const mm_long* RESTRICT torqueBuffers,
         int numParticles, GLOBAL const real4* RESTRICT posq, GLOBAL int2* const RESTRICT axisParticleIndices,
         GLOBAL const int* sortedParticles) {
-    const unsigned int warp = GLOBAL_ID/TILE_SIZE;
     for (int sortedIndex = GLOBAL_ID; sortedIndex < numParticles; sortedIndex += GLOBAL_SIZE) {
         int originalIndex = sortedParticles[sortedIndex];
         real3 pos = trimTo3(posq[originalIndex]);
