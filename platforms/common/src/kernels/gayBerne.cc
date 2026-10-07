@@ -293,7 +293,7 @@ DEVICE void computeOneInteraction(AtomData* data1, AtomData* data2, real sigma, 
         real (*g)[3] = (j == 0 ? data1->g : data2->g);
         float4 sig = (j == 0 ? data1->sig : data2->sig);
         real3 dudq = cross(vectorMatrixProduct(kappa, g), kappa*(temp*dUSLJdr));
-        real3 dchidq = cross(vectorMatrixProduct(iota, b), iota)*(-4*rInv2);
+        real3 dchidq = cross(vectorMatrixProduct(iota, b), iota)*(-8*rInv2*SQRT(chi));
         real3 scale = make_real3(sig.y, sig.z, sig.w)*(-0.5f*eta/detG12);
         real d[3][3];
         d[0][0] = scale.x*(2*a[0][0]*(G12[1][1]*G12[2][2] - G12[1][2]*G12[2][1]) +
