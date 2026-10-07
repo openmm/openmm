@@ -9,7 +9,7 @@ Tools for constructing systems from AMBER prmtop/crd files.
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2012-2023 Stanford University and the Authors.
+Portions copyright (c) 2012-2026 Stanford University and the Authors.
 Authors: Randall J. Radmer, John D. Chodera, Peter Eastman
 Contributors: Christoph Klein, Michael R. Shirts, Jason Swails, Kye Won Wang
 

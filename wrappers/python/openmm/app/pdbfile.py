@@ -4,7 +4,7 @@ pdbfile.py: Used for loading PDB files.
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2012-2023 Stanford University and the Authors.
+Portions copyright (c) 2012-2026 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 

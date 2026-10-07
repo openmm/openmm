@@ -4,7 +4,7 @@ A recreation of the various GB variants implemented via CustomGBForce
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2012-2022 University of Virginia and the Authors.
+Portions copyright (c) 2012-2026 University of Virginia and the Authors.
 Authors: Christoph Klein, Michael R. Shirts
 Contributors: Jason M. Swails, Peter Eastman, Justin L. MacCallum
 

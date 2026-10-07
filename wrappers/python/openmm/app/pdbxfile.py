@@ -4,7 +4,7 @@ pdbxfile.py: Used for loading PDBx/mmCIF files.
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2015-2025 Stanford University and the Authors.
+Portions copyright (c) 2015-2026 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
