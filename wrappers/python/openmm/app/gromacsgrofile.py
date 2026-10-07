@@ -4,7 +4,7 @@ grofile.py: Used for loading Gromacs GRO files.
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2012-2016 Stanford University and the Authors.
+Portions copyright (c) 2012-2026 Stanford University and the Authors.
 Authors: Lee-Ping Wang, Peter Eastman
 Contributors:
 
@@ -35,10 +35,7 @@ from openmm.app.internal.unitcell import reducePeriodicBoxVectors
 from re import sub, match
 from openmm.unit import nanometers, Quantity
 from . import element as elem
-try:
-    import numpy
-except:
-    pass
+import numpy
 
 def _isint(word):
     """ONLY matches integers! If you have a decimal point? None shall pass!

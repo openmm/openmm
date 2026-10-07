@@ -145,14 +145,10 @@ class Quantity(object):
                     for item in value:
                         new_container.append(Quantity(item)) # Strips off units into list new_container._value
                     # __class__ trick does not work for numpy.arrays
-                    try:
-                        import numpy
-                        if isinstance(value, numpy.ndarray):
-                            value = numpy.array(new_container._value)
-                        else:
-                            # delegate construction to container class from list
-                            value = value.__class__(new_container._value)
-                    except ImportError:
+                    import numpy
+                    if isinstance(value, numpy.ndarray):
+                        value = numpy.array(new_container._value)
+                    else:
                         # delegate construction to container class from list
                         value = value.__class__(new_container._value)
                 else:

@@ -1,10 +1,6 @@
 %pythoncode %{
 
-try:
-    import numpy
-except ImportError:
-    numpy = None
-
+import numpy
 import copy
 import sys
 import math
