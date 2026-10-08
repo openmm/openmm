@@ -49,7 +49,6 @@ void MetalCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool
     map<string, double>& derivs = mc.getEnergyParamDerivWorkspace();
     for (auto& param : context.getParameters())
         derivs[param.first] = 0;
-    mc.flushQueue();
 }
 
 double MetalCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
@@ -63,8 +62,7 @@ double MetalCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, b
         sum += mc.reduceEnergy();
     if (!mc.getForcesValid())
         valid = false;
-    MetalQueue& queue = dynamic_cast<MetalQueue&>(*mc.getCurrentQueue());
-    queue.flush(true);
+    mc.flushQueue();
     return sum;
 }
 

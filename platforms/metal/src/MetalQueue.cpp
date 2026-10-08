@@ -63,6 +63,11 @@ MTL::CommandBuffer& MetalQueue::getCommandBuffer() {
 }
 
 void MetalQueue::flush(bool sync) {
+    if (sync) {
+        // Make sure we have a command buffer to use for synchronization.
+
+        getCommandBuffer();
+    }
     if (commandBuffer != nullptr) {
         if (encoder != nullptr)
             encoder->endEncoding();
