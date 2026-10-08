@@ -537,47 +537,14 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
     broadcastWarpData << "posq2.y = SHFL(shflPosq.y, j);\n";
     broadcastWarpData << "posq2.z = SHFL(shflPosq.z, j);\n";
     broadcastWarpData << "posq2.w = SHFL(shflPosq.w, j);\n";
-    for (const ComputeParameterInfo& param : params) {
-        broadcastWarpData << param.getType() << " shfl" << param.getName() << ";\n";
-        for (int j = 0; j < param.getNumComponents(); j++) {
-            if (param.getNumComponents() == 1)
-                broadcastWarpData << "shfl" << param.getName() << "= SHFL(" << param.getName() <<"1,j);\n";
-            else
-                broadcastWarpData << "shfl" << param.getName()+"."+suffixes[j] << "= SHFL(" << param.getName()+"1."+suffixes[j] <<",j);\n";
-        }
-    }
     replacements["BROADCAST_WARP_DATA"] = broadcastWarpData.str();
 
     // Part 2. Defines for off-diagonal exclusions, and neighborlist tiles.
-    stringstream declareLocal2;
-    for (const ComputeParameterInfo& param : params)
-        declareLocal2<<param.getType()<<" shfl"<<param.getName()<<";\n";
-    replacements["DECLARE_LOCAL_PARAMETERS"] = declareLocal2.str();
-
-    stringstream loadLocal2;
-    for (const ComputeParameterInfo& param : params)
-        loadLocal2<<"shfl"<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
-    replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
-
-    stringstream load2j;
-    for (const ComputeParameterInfo& param : params)
-        load2j<<param.getType()<<" "<<param.getName()<<"2 = shfl"<<param.getName()<<";\n";
-    replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
 
     stringstream load2g;
     for (const ComputeParameterInfo& param : params)
         load2g<<param.getType()<<" "<<param.getName()<<"2 = global_"<<param.getName()<<"[atom2];\n";
     replacements["LOAD_ATOM2_PARAMETERS_FROM_GLOBAL"] = load2g.str();
-
-    stringstream clearLocal;
-    for (const ComputeParameterInfo& param : params) {
-        clearLocal<<"shfl"<<param.getName()<<" = ";
-        if (param.getNumComponents() == 1)
-            clearLocal<<"0;\n";
-        else
-            clearLocal<<"make_"<<param.getType()<<"(0);\n";
-    }
-    replacements["CLEAR_LOCAL_PARAMETERS"] = clearLocal.str();
 
     stringstream initDerivs;
     for (int i = 0; i < energyParameterDerivatives.size(); i++)
@@ -600,19 +567,6 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
     shuffleWarpData << "shflForce.x = SHFL(shflForce.x, tgx+1);\n";
     shuffleWarpData << "shflForce.y = SHFL(shflForce.y, tgx+1);\n";
     shuffleWarpData << "shflForce.z = SHFL(shflForce.z, tgx+1);\n";
-    for (const ComputeParameterInfo& param : params) {
-        if (param.getNumComponents() == 1)
-            shuffleWarpData<<"shfl"<<param.getName()<<"= SHFL(shfl"<<param.getName()<<", tgx+1);\n";
-        else {
-            for (int j = 0; j < param.getNumComponents(); j++) {
-                // looks something like shflsigmaEpsilon.x = SHFL(shflsigmaEpsilon.x,tgx+1);
-                shuffleWarpData<<"shfl"<<param.getName()
-                    <<"."<<suffixes[j]<<"= SHFL(shfl"
-                    <<param.getName()<<"."<<suffixes[j]
-                    <<", tgx+1);\n";
-            }
-        }
-    }
     replacements["SHUFFLE_WARP_DATA"] = shuffleWarpData.str();
 
     map<string, string> defines;

@@ -124,8 +124,8 @@ KERNEL void computeNonbonded(
                 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                 real invR = RSQRT(r2);
                 real r = r2*invR;
-                LOAD_ATOM2_PARAMETERS
                 atom2 = y*TILE_SIZE+j;
+                LOAD_ATOM2_PARAMETERS_FROM_GLOBAL
 #ifdef USE_SYMMETRIC
                 real dEdR = 0.0f;
 #else
@@ -163,8 +163,6 @@ KERNEL void computeNonbonded(
             shflForce.x = 0.0f;
             shflForce.y = 0.0f;
             shflForce.z = 0.0f;
-            DECLARE_LOCAL_PARAMETERS
-            LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
 #ifdef USE_EXCLUSIONS
             excl = (excl >> tgx) | (excl << (TILE_SIZE - tgx));
 #endif
@@ -179,8 +177,8 @@ KERNEL void computeNonbonded(
                 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                 real invR = RSQRT(r2);
                 real r = r2*invR;
-                LOAD_ATOM2_PARAMETERS
                 atom2 = y*TILE_SIZE+tj;
+                LOAD_ATOM2_PARAMETERS_FROM_GLOBAL
 #ifdef USE_SYMMETRIC
                 real dEdR = 0.0f;
 #else
@@ -307,20 +305,17 @@ KERNEL void computeNonbonded(
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
             atomIndices[LOCAL_ID] = j;
-            DECLARE_LOCAL_PARAMETERS
             real4 shflPosq;
             real3 shflForce;
             shflForce.x = 0.0f;
             shflForce.y = 0.0f;
             shflForce.z = 0.0f;
             if (j < PADDED_NUM_ATOMS) {
-                // Load position of atom j from from global memory
+                // Load position of atom j from global memory
                 shflPosq = posq[j];
-                LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
             else {
                 shflPosq = make_real4(0, 0, 0, 0);
-                CLEAR_LOCAL_PARAMETERS
             }
 #ifdef USE_PERIODIC
             if (singlePeriodicCopy) {
@@ -337,8 +332,8 @@ KERNEL void computeNonbonded(
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     real invR = RSQRT(r2);
                     real r = r2*invR;
-                    LOAD_ATOM2_PARAMETERS
                     atom2 = atomIndices[tbx+tj];
+                    LOAD_ATOM2_PARAMETERS_FROM_GLOBAL
 #ifdef USE_SYMMETRIC
                     real dEdR = 0.0f;
 #else
@@ -389,8 +384,8 @@ KERNEL void computeNonbonded(
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     real invR = RSQRT(r2);
                     real r = r2*invR;
-                    LOAD_ATOM2_PARAMETERS
                     atom2 = atomIndices[tbx+tj];
+                    LOAD_ATOM2_PARAMETERS_FROM_GLOBAL
 #ifdef USE_SYMMETRIC
                     real dEdR = 0.0f;
 #else

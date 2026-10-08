@@ -98,7 +98,7 @@ inline float4 cross(float4 a, float4 b) {
 }
 
 inline long realToFixedPoint(real x) {
-    return static_cast<long>(clamp((real) -0x8FFFFFFF, (real) 0x8FFFFFFF, x)*0x100000000);
+    return static_cast<long>(clamp((real) -0x80000000, (real) 0x7FFFFFFF, x)*0x100000000);
 }
 
 inline float erfc(float x) {

@@ -51,6 +51,8 @@ void MetalEvent::enqueue() {
 }
 
 void MetalEvent::wait() {
+    MetalQueue& queue = dynamic_cast<MetalQueue&>(*context.getCurrentQueue());
+    queue.flush();
     currentBuffer->waitUntilCompleted();
     currentBuffer->release();
     currentBuffer = nullptr;
