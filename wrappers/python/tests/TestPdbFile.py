@@ -94,7 +94,8 @@ class TestPdbFile(unittest.TestCase):
         output = StringIO()
         PDBFile.writeFile(topology, [[0, 0, 0]]*nanometer, output)
         cryst1 = [l for l in output.getvalue().splitlines() if l.startswith("CRYST1")][0]
-        self.assertVecAlmostEqual([float(x) for x in cryst1[6:33].split()], [70.0, 70.0, 70.0], 1e-4)
+        for actual, expected in zip([float(x) for x in cryst1[6:33].split()], [70.0, 70.0, 70.0]):
+            self.assertAlmostEqual(actual, expected, places=4)
 
     def test_BinaryStream(self):
         """Test reading a stream that was opened in binary mode."""
