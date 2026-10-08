@@ -724,6 +724,67 @@ void testChangingParameters() {
     ASSERT_EQUAL_TOL(state.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
 }
 
+void testManyUpdatesOfOneMolecule() {
+    // Repeatedly change a single molecule's parameters, including making it different from
+    // the identical molecules it was grouped with, and then identical to them again.  The
+    // energy must match a freshly built context every time, which checks both that molecule
+    // reordering is triggered when it must be and that the incrementally updated Ewald self
+    // energy does not drift.
+
+    const int numMolecules = 400;
+    const int numParticles = numMolecules*3;
+    const double cutoff = 1.0;
+    const double boxSize = 5.0;
+    ReferencePlatform reference;
+    System system;
+    NonbondedForce* nonbonded = new NonbondedForce();
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numMolecules; i++) {
+        for (int j = 0; j < 3; j++)
+            system.addParticle(j == 0 ? 16.0 : 1.0);
+        nonbonded->addParticle(-0.8, 0.3, 0.6);
+        nonbonded->addParticle(0.4, 0.1, 0.0);
+        nonbonded->addParticle(0.4, 0.1, 0.0);
+        Vec3 center(0.6*(i%8)+0.2*genrand_real2(sfmt), 0.6*((i/8)%8)+0.2*genrand_real2(sfmt), 0.6*(i/64)+0.2*genrand_real2(sfmt));
+        positions[3*i] = center;
+        positions[3*i+1] = center+Vec3(0.1, 0, 0);
+        positions[3*i+2] = center+Vec3(0, 0.1, 0);
+        system.addConstraint(3*i, 3*i+1, 0.1);
+        system.addConstraint(3*i, 3*i+2, 0.1);
+        nonbonded->addException(3*i, 3*i+1, 0, 1, 0);
+        nonbonded->addException(3*i, 3*i+2, 0, 1, 0);
+        nonbonded->addException(3*i+1, 3*i+2, 0, 1, 0);
+    }
+    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    nonbonded->setCutoffDistance(cutoff);
+    system.addForce(nonbonded);
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    VerletIntegrator integrator1(0.01);
+    VerletIntegrator integrator2(0.01);
+    Context context(system, integrator1, platform);
+    Context referenceContext(system, integrator2, reference);
+    context.setPositions(positions);
+    referenceContext.setPositions(positions);
+    int molecule = numMolecules/2;
+    for (int step = 0; step < 200; step++) {
+        // Cycle through: perturbed, back to identical, perturbed differently, back again.
+
+        double scale = (step%2 == 0 ? 1.0+0.01*(1+step%7) : 1.0);
+        nonbonded->setParticleParameters(3*molecule, -0.8*scale, 0.3, 0.6);
+        nonbonded->setParticleParameters(3*molecule+1, 0.4*scale, 0.1, 0.0);
+        nonbonded->setParticleParameters(3*molecule+2, 0.4*scale, 0.1, 0.0);
+        nonbonded->updateParametersInContext(context);
+        nonbonded->updateParametersInContext(referenceContext);
+        if (step%20 >= 18) {
+            double energy = context.getState(State::Energy).getPotentialEnergy();
+            double referenceEnergy = referenceContext.getState(State::Energy).getPotentialEnergy();
+            ASSERT_EQUAL_TOL(referenceEnergy, energy, 1e-4);
+        }
+    }
+}
+
 void testChangingSubsetOfParameters() {
     const int numMolecules = 600;
     const int numParticles = numMolecules*2;
@@ -1259,6 +1320,7 @@ int main(int argc, char* argv[]) {
         testDispersionCorrection();
         testChangingParameters();
         testChangingSubsetOfParameters();
+        testManyUpdatesOfOneMolecule();
         testChangingParametersWithoutLJ();
         testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
         testSwitchingFunction(NonbondedForce::PME);
