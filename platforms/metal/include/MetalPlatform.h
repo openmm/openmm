@@ -67,13 +67,6 @@ public:
         return key;
     }
     /**
-     * This is the name of the parameter for selecting whether to disable use of a separate stream for PME.
-     */
-    static const std::string& MetalDisablePmeStream() {
-        static const std::string key = "DisablePmeStream";
-        return key;
-    }
-    /**
      * This is the name of the parameter for requesting that force computations be fully deterministic.
      */
     static const std::string& MetalDeterministicForces() {
@@ -85,15 +78,15 @@ public:
 class MetalPlatform::PlatformData {
 public:
     PlatformData(ContextImpl* context, const System& system, const std::string& precisionProperty,
-            const std::string& cpuPmeProperty, const std::string& pmeStreamProperty,
-            const std::string& deterministicForcesProperty, int numThreads, ContextImpl* originalContext);
+            const std::string& cpuPmeProperty, const std::string& deterministicForcesProperty, int numThreads,
+            ContextImpl* originalContext);
     ~PlatformData();
     void initializeContexts(const System& system);
     void syncContexts();
     ContextImpl* context;
     std::vector<MetalContext*> contexts;
     std::vector<double> contextEnergy;
-    bool hasInitializedContexts, removeCM, useCpuPme, disablePmeStream, deterministicForces;
+    bool hasInitializedContexts, removeCM, useCpuPme, deterministicForces;
     int cmMotionFrequency, computeForceCount;
     long long stepCount;
     double time;

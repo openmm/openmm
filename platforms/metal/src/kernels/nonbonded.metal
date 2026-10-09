@@ -42,15 +42,11 @@ DEVICE void saveSingleForce(int atom, real3 force, GLOBAL mm_ulong* forceBuffers
  * t  o 3 4 5 6 7 8 1 2
  * a  p 2 3 4 5 6 7 8 1
  *
- * Tiles without exclusions read off directly from the neighbourlist interactingAtoms
+ * Tiles without exclusions read off directly from the neighbor list interactingAtoms
  * and follows the same force accumulation method. If more there are more interactingTiles
- * than the size of the neighbourlist initially allocated, the neighbourlist is rebuilt
+ * than the size of the neighbor list initially allocated, the neighbor list is rebuilt
  * and the full tileset is computed. This should happen on the first step, and very rarely
  * afterwards.
- *
- * On Metal devices that support the shuffle intrinsic, on diagonal exclusion tiles use
- * SHFL to broadcast. For all other types of tiles SHFL is used to pass around the
- * forces, positions, and parameters when computing the forces.
  *
  * [out]forceBuffers    - forces on each atom to eventually be accumulated
  * [out]energyBuffer    - energyBuffer to eventually be accumulated
@@ -90,6 +86,8 @@ KERNEL void computeNonbonded(
     const unsigned int tbx = LOCAL_ID - tgx;           // block warpIndex
     mixed energy = 0;
     INIT_DERIVATIVES
+    LOCAL real4 localPosq[THREAD_BLOCK_SIZE];
+    LOCAL real3 localForce[THREAD_BLOCK_SIZE];
 
     // First loop: process tiles that contain exclusions.
 
@@ -109,14 +107,13 @@ KERNEL void computeNonbonded(
         const bool hasExclusions = true;
         if (x == y) {
             // This tile is on the diagonal.
-            real4 shflPosq = posq1;
+            localPosq[LOCAL_ID] = posq1;
 
             // we do not need to fetch parameters from global since this is a symmetric tile
             // instead we can broadcast the values using shuffle
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 int atom2 = tbx+j;
-                real4 posq2;
-                BROADCAST_WARP_DATA
+                real4 posq2 = localPosq[atom2];
                 real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
 #ifdef USE_PERIODIC
                 APPLY_PERIODIC_TO_DELTA(delta)
@@ -158,18 +155,15 @@ KERNEL void computeNonbonded(
         else {
             // This is an off-diagonal tile.
             unsigned int j = y*TILE_SIZE + tgx;
-            real4 shflPosq = posq[j];
-            real3 shflForce;
-            shflForce.x = 0.0f;
-            shflForce.y = 0.0f;
-            shflForce.z = 0.0f;
+            localPosq[LOCAL_ID] = posq[j];
+            localForce[LOCAL_ID] = 0.0f;
 #ifdef USE_EXCLUSIONS
             excl = (excl >> tgx) | (excl << (TILE_SIZE - tgx));
 #endif
             unsigned int tj = tgx;
             for (j = 0; j < TILE_SIZE; j++) {
                 int atom2 = tbx+tj;
-                real4 posq2 = shflPosq;
+                real4 posq2 = localPosq[atom2];
                 real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
 #ifdef USE_PERIODIC
                 APPLY_PERIODIC_TO_DELTA(delta)
@@ -195,22 +189,13 @@ KERNEL void computeNonbonded(
 #ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
                 delta *= dEdR;
-                force.x -= delta.x;
-                force.y -= delta.y;
-                force.z -= delta.z;
-                shflForce.x += delta.x;
-                shflForce.y += delta.y;
-                shflForce.z += delta.z;
+                force -= delta.xyz;
+                localForce[tbx+tj] += delta.xyz;
 #else // !USE_SYMMETRIC
-                force.x -= dEdR1.x;
-                force.y -= dEdR1.y;
-                force.z -= dEdR1.z;
-                shflForce.x += dEdR2.x;
-                shflForce.y += dEdR2.y;
-                shflForce.z += dEdR2.z;
+                force -= dEdR1;
+                localForce[tbx+tj] += dEdR2;
 #endif // end USE_SYMMETRIC
 #endif
-                SHUFFLE_WARP_DATA
 #ifdef USE_EXCLUSIONS
                 excl >>= 1;
 #endif
@@ -221,9 +206,9 @@ KERNEL void computeNonbonded(
             const unsigned int offset = y*TILE_SIZE + tgx;
             // write results for off diagonal tiles
 #ifdef INCLUDE_FORCES
-            ATOMIC_ADD(&forceBuffers[offset], static_cast<mm_ulong>(realToFixedPoint(shflForce.x)));
-            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<mm_ulong>(realToFixedPoint(shflForce.y)));
-            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<mm_ulong>(realToFixedPoint(shflForce.z)));
+            ATOMIC_ADD(&forceBuffers[offset], static_cast<mm_ulong>(realToFixedPoint(localForce[LOCAL_ID].x)));
+            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<mm_ulong>(realToFixedPoint(localForce[LOCAL_ID].y)));
+            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<mm_ulong>(realToFixedPoint(localForce[LOCAL_ID].z)));
 #endif
         }
         // Write results for on and off diagonal tiles
@@ -305,17 +290,13 @@ KERNEL void computeNonbonded(
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
             atomIndices[LOCAL_ID] = j;
-            real4 shflPosq;
-            real3 shflForce;
-            shflForce.x = 0.0f;
-            shflForce.y = 0.0f;
-            shflForce.z = 0.0f;
+            localForce[LOCAL_ID] = 0.0f;
             if (j < PADDED_NUM_ATOMS) {
                 // Load position of atom j from global memory
-                shflPosq = posq[j];
+                localPosq[LOCAL_ID] = posq[j];
             }
             else {
-                shflPosq = make_real4(0, 0, 0, 0);
+                localPosq[LOCAL_ID] = make_real4(0, 0, 0, 0);
             }
 #ifdef USE_PERIODIC
             if (singlePeriodicCopy) {
@@ -323,11 +304,11 @@ KERNEL void computeNonbonded(
                 // box, then skip having to apply periodic boundary conditions later.
                 real4 blockCenterX = blockCenter[x];
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
-                APPLY_PERIODIC_TO_POS_WITH_CENTER(shflPosq, blockCenterX)
+                APPLY_PERIODIC_TO_POS_WITH_CENTER(localPosq[LOCAL_ID], blockCenterX)
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = tbx+tj;
-                    real4 posq2 = shflPosq;
+                    real4 posq2 = localPosq[atom2];
                     real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     real invR = RSQRT(r2);
@@ -350,22 +331,13 @@ KERNEL void computeNonbonded(
 #ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
                     delta *= dEdR;
-                    force.x -= delta.x;
-                    force.y -= delta.y;
-                    force.z -= delta.z;
-                    shflForce.x += delta.x;
-                    shflForce.y += delta.y;
-                    shflForce.z += delta.z;
+                    force -= delta.xyz;
+                    localForce[tbx+tj] += delta.xyz;
 #else // !USE_SYMMETRIC
-                    force.x -= dEdR1.x;
-                    force.y -= dEdR1.y;
-                    force.z -= dEdR1.z;
-                    shflForce.x += dEdR2.x;
-                    shflForce.y += dEdR2.y;
-                    shflForce.z += dEdR2.z;
+                    force -= dEdR1;
+                    localForce[tbx+tj] += dEdR2;
 #endif // end USE_SYMMETRIC
 #endif
-                    SHUFFLE_WARP_DATA
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
             }
@@ -376,7 +348,7 @@ KERNEL void computeNonbonded(
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = tbx+tj;
-                    real4 posq2 = shflPosq;
+                    real4 posq2 = localPosq[atom2];
                     real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
 #ifdef USE_PERIODIC
                     APPLY_PERIODIC_TO_DELTA(delta)
@@ -402,22 +374,13 @@ KERNEL void computeNonbonded(
 #ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
                     delta *= dEdR;
-                    force.x -= delta.x;
-                    force.y -= delta.y;
-                    force.z -= delta.z;
-                    shflForce.x += delta.x;
-                    shflForce.y += delta.y;
-                    shflForce.z += delta.z;
+                    force -= delta.xyz;
+                    localForce[tbx+tj] += delta.xyz;
 #else // !USE_SYMMETRIC
-                    force.x -= dEdR1.x;
-                    force.y -= dEdR1.y;
-                    force.z -= dEdR1.z;
-                    shflForce.x += dEdR2.x;
-                    shflForce.y += dEdR2.y;
-                    shflForce.z += dEdR2.z;
+                    force -= dEdR1;
+                    localForce[tbx+tj] += dEdR2;
 #endif // end USE_SYMMETRIC
 #endif
-                    SHUFFLE_WARP_DATA
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
             }
@@ -433,9 +396,9 @@ KERNEL void computeNonbonded(
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
             if (atom2 < PADDED_NUM_ATOMS) {
-                ATOMIC_ADD(&forceBuffers[atom2], static_cast<mm_ulong>(realToFixedPoint(shflForce.x)));
-                ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<mm_ulong>(realToFixedPoint(shflForce.y)));
-                ATOMIC_ADD(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<mm_ulong>(realToFixedPoint(shflForce.z)));
+                ATOMIC_ADD(&forceBuffers[atom2], static_cast<mm_ulong>(realToFixedPoint(localForce[LOCAL_ID].x)));
+                ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<mm_ulong>(realToFixedPoint(localForce[LOCAL_ID].y)));
+                ATOMIC_ADD(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<mm_ulong>(realToFixedPoint(localForce[LOCAL_ID].z)));
             }
 #endif
         }

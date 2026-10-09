@@ -50,7 +50,7 @@ void testGaussian() {
     System system;
     for (int i = 0; i < numAtoms; i++)
         system.addParticle(1.0);
-    MetalPlatform::PlatformData platformData(NULL, system, platform.getPropertyDefaultValue("Precision"), "false", "false", "false", 1, NULL);
+    MetalPlatform::PlatformData platformData(NULL, system, platform.getPropertyDefaultValue("Precision"), "false", "false", 1, NULL);
     MetalContext& context = *platformData.contexts[0];
     context.initialize();
     context.getIntegrationUtilities().initRandomNumberGenerator(0);

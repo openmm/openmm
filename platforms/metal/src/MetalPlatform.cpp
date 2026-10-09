@@ -101,11 +101,9 @@ MetalPlatform::MetalPlatform() {
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
     platformProperties.push_back(MetalPrecision());
     platformProperties.push_back(MetalUseCpuPme());
-    platformProperties.push_back(MetalDisablePmeStream());
     platformProperties.push_back(MetalDeterministicForces());
     setPropertyDefaultValue(MetalPrecision(), "single");
     setPropertyDefaultValue(MetalUseCpuPme(), "false");
-    setPropertyDefaultValue(MetalDisablePmeStream(), "false");
     setPropertyDefaultValue(MetalDeterministicForces(), "false");
 }
 
@@ -137,13 +135,10 @@ void MetalPlatform::contextCreated(ContextImpl& context, const map<string, strin
             getPropertyDefaultValue(MetalPrecision()) : properties.find(MetalPrecision())->second);
     string cpuPmePropValue = (properties.find(MetalUseCpuPme()) == properties.end() ?
             getPropertyDefaultValue(MetalUseCpuPme()) : properties.find(MetalUseCpuPme())->second);
-    string pmeStreamPropValue = (properties.find(MetalDisablePmeStream()) == properties.end() ?
-            getPropertyDefaultValue(MetalDisablePmeStream()) : properties.find(MetalDisablePmeStream())->second);
     string deterministicForcesValue = (properties.find(MetalDeterministicForces()) == properties.end() ?
             getPropertyDefaultValue(MetalDeterministicForces()) : properties.find(MetalDeterministicForces())->second);
     transform(precisionPropValue.begin(), precisionPropValue.end(), precisionPropValue.begin(), ::tolower);
     transform(cpuPmePropValue.begin(), cpuPmePropValue.end(), cpuPmePropValue.begin(), ::tolower);
-    transform(pmeStreamPropValue.begin(), pmeStreamPropValue.end(), pmeStreamPropValue.begin(), ::tolower);
     transform(deterministicForcesValue.begin(), deterministicForcesValue.end(), deterministicForcesValue.begin(), ::tolower);
     vector<string> pmeKernelName;
 //    pmeKernelName.push_back(CalcPmeReciprocalForceKernel::Name());
@@ -154,18 +149,17 @@ void MetalPlatform::contextCreated(ContextImpl& context, const map<string, strin
     if (threadsEnv != NULL)
         stringstream(threadsEnv) >> threads;
     context.setPlatformData(new PlatformData(&context, context.getSystem(), precisionPropValue, cpuPmePropValue,
-            pmeStreamPropValue, deterministicForcesValue, threads, NULL));
+            deterministicForcesValue, threads, NULL));
 }
 
 void MetalPlatform::linkedContextCreated(ContextImpl& context, ContextImpl& originalContext) const {
     Platform& platform = originalContext.getPlatform();
     string precisionPropValue = platform.getPropertyValue(originalContext.getOwner(), MetalPrecision());
     string cpuPmePropValue = platform.getPropertyValue(originalContext.getOwner(), MetalUseCpuPme());
-    string pmeStreamPropValue = platform.getPropertyValue(originalContext.getOwner(), MetalDisablePmeStream());
     string deterministicForcesValue = platform.getPropertyValue(originalContext.getOwner(), MetalDeterministicForces());
     int threads = reinterpret_cast<PlatformData*>(originalContext.getPlatformData())->threads.getNumThreads();
     context.setPlatformData(new PlatformData(&context, context.getSystem(), precisionPropValue, cpuPmePropValue,
-            pmeStreamPropValue, deterministicForcesValue, threads, &originalContext));
+            deterministicForcesValue, threads, &originalContext));
 }
 
 void MetalPlatform::contextDestroyed(ContextImpl& context) const {
@@ -174,7 +168,7 @@ void MetalPlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 MetalPlatform::PlatformData::PlatformData(ContextImpl* context, const System& system, const string& precisionProperty,
-            const string& cpuPmeProperty, const string& pmeStreamProperty, const string& deterministicForcesProperty,
+            const string& cpuPmeProperty, const string& deterministicForcesProperty,
             int numThreads, ContextImpl* originalContext) : context(context), removeCM(false), stepCount(0),
             computeForceCount(0), time(0.0), hasInitializedContexts(false), threads(numThreads) {
     PlatformData* originalData = NULL;
@@ -191,11 +185,9 @@ MetalPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sy
         throw;
     }
     useCpuPme = (cpuPmeProperty == "true");
-    disablePmeStream = (pmeStreamProperty == "true");
     deterministicForces = (deterministicForcesProperty == "true");
     propertyValues[MetalPlatform::MetalPrecision()] = precisionProperty;
     propertyValues[MetalPlatform::MetalUseCpuPme()] = useCpuPme ? "true" : "false";
-    propertyValues[MetalPlatform::MetalDisablePmeStream()] = disablePmeStream ? "true" : "false";
     propertyValues[MetalPlatform::MetalDeterministicForces()] = deterministicForces ? "true" : "false";
     contextEnergy.resize(contexts.size());
 }

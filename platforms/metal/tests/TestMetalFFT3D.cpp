@@ -56,7 +56,7 @@ template <class Real2>
 void testTransform(bool realToComplex, int xsize, int ysize, int zsize) {
     System system;
     system.addParticle(0.0);
-    MetalPlatform::PlatformData platformData(NULL, system, platform.getPropertyDefaultValue("Precision"), "false", "false", "false", 1, NULL);
+    MetalPlatform::PlatformData platformData(NULL, system, platform.getPropertyDefaultValue("Precision"), "false", "false", 1, NULL);
     MetalContext& context = *platformData.contexts[0];
     context.initialize();
     OpenMM_SFMT::SFMT sfmt;

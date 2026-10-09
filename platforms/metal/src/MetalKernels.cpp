@@ -29,11 +29,6 @@
 using namespace OpenMM;
 using namespace std;
 
-static void getMetalPmeParameters(MetalContext& mc, bool& usePmeQueue, bool& useFixedPointChargeSpreading) {
-    usePmeQueue = (!mc.getPlatformData().disablePmeStream && !mc.getPlatformData().useCpuPme);
-    useFixedPointChargeSpreading = mc.getPlatformData().deterministicForces;
-}
-
 void MetalCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
@@ -79,13 +74,9 @@ void MetalUpdateStateDataKernel::setVelocities(ContextImpl& context, const std::
 }
 
 void MetalCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
-    bool usePmeQueue, useFixedPointChargeSpreading;
-    getMetalPmeParameters(mc, usePmeQueue, useFixedPointChargeSpreading);
-    commonInitialize(system, force, usePmeQueue, false, useFixedPointChargeSpreading, mc.getPlatformData().useCpuPme);
+    commonInitialize(system, force, false, false, mc.getPlatformData().deterministicForces, mc.getPlatformData().useCpuPme);
 }
 
 void MetalCalcConstantPotentialForceKernel::initialize(const System& system, const ConstantPotentialForce& force) {
-    bool usePmeQueue, useFixedPointChargeSpreading;
-    getMetalPmeParameters(mc, usePmeQueue, useFixedPointChargeSpreading);
-    commonInitialize(system, force, false, useFixedPointChargeSpreading);
+    commonInitialize(system, force, false, mc.getPlatformData().deterministicForces);
 }

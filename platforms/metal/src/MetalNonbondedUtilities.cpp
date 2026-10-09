@@ -530,17 +530,6 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
     }
     replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
 
-    // Part 1. Defines for on diagonal exclusion tiles
-
-    stringstream broadcastWarpData;
-    broadcastWarpData << "posq2.x = SHFL(shflPosq.x, j);\n";
-    broadcastWarpData << "posq2.y = SHFL(shflPosq.y, j);\n";
-    broadcastWarpData << "posq2.z = SHFL(shflPosq.z, j);\n";
-    broadcastWarpData << "posq2.w = SHFL(shflPosq.w, j);\n";
-    replacements["BROADCAST_WARP_DATA"] = broadcastWarpData.str();
-
-    // Part 2. Defines for off-diagonal exclusions, and neighborlist tiles.
-
     stringstream load2g;
     for (const ComputeParameterInfo& param : params)
         load2g<<param.getType()<<" "<<param.getName()<<"2 = global_"<<param.getName()<<"[atom2];\n";
@@ -559,16 +548,6 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
                 saveDerivs<<"energyParamDerivs[GLOBAL_ID*"<<numDerivs<<"+"<<index<<"] += energyParamDeriv"<<i<<";\n";
     replacements["SAVE_DERIVATIVES"] = saveDerivs.str();
 
-    stringstream shuffleWarpData;
-    shuffleWarpData << "shflPosq.x = SHFL(shflPosq.x, tgx+1);\n";
-    shuffleWarpData << "shflPosq.y = SHFL(shflPosq.y, tgx+1);\n";
-    shuffleWarpData << "shflPosq.z = SHFL(shflPosq.z, tgx+1);\n";
-    shuffleWarpData << "shflPosq.w = SHFL(shflPosq.w, tgx+1);\n";
-    shuffleWarpData << "shflForce.x = SHFL(shflForce.x, tgx+1);\n";
-    shuffleWarpData << "shflForce.y = SHFL(shflForce.y, tgx+1);\n";
-    shuffleWarpData << "shflForce.z = SHFL(shflForce.z, tgx+1);\n";
-    replacements["SHUFFLE_WARP_DATA"] = shuffleWarpData.str();
-
     map<string, string> defines;
     if (useCutoff)
         defines["USE_CUTOFF"] = "1";
@@ -580,7 +559,6 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
         defines["USE_SYMMETRIC"] = "1";
     if (useNeighborList)
         defines["USE_NEIGHBOR_LIST"] = "1";
-    defines["ENABLE_SHUFFLE"] = "1";
     if (includeForces)
         defines["INCLUDE_FORCES"] = "1";
     if (includeEnergy)
