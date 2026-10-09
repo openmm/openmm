@@ -2,6 +2,11 @@
  * This file contains the device function for using cross-lane operations (ballot and shuffle)
  */
 
+#ifdef USE_SLM_SHFL
+// One scratch array for all warpShuffle<T> instantiations, sized for the largest HIP block.
+static __device__ __shared__ int slm_shfl_scratch[1024];
+#endif
+
 template<class T>
 static __inline__ __device__
 T warpShuffle(const T& input, const int src_lane) {
@@ -15,6 +20,11 @@ T warpShuffle(const T& input, const int src_lane) {
         __builtin_memcpy(&word, reinterpret_cast<const char*>(&input) + i * sizeof(int), sizeof(int));
 #ifdef __AMDGCN__
         word = __builtin_amdgcn_ds_bpermute(src_lane << 2, word);
+#elif defined(USE_SLM_SHFL)
+        slm_shfl_scratch[threadIdx.x] = word;
+        __syncwarp();
+        word = slm_shfl_scratch[(threadIdx.x & ~(warpSize - 1)) + (src_lane & (warpSize - 1))];
+        __syncwarp();
 #else
         word = __shfl(word, src_lane);
 #endif
