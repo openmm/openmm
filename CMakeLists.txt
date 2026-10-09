@@ -12,8 +12,9 @@
 #   libOpenMM_static.a
 #----------------------------------------------------
 
-find_package(PythonInterp)
-mark_as_advanced(CLEAR PYTHON_EXECUTABLE)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.17)
+find_package(Python3 COMPONENTS Interpreter)
+mark_as_advanced(CLEAR Python3_EXECUTABLE)
 
 # Don't create a new project name if this is part of a mega-build from the
 # parent directory
@@ -21,7 +22,6 @@ IF( NOT PROJECT_NAME )
     PROJECT (OpenMM)
 ENDIF( NOT PROJECT_NAME )
 
-CMAKE_MINIMUM_REQUIRED(VERSION 3.17)
 CMAKE_POLICY(SET CMP0042 NEW)
 CMAKE_POLICY(SET CMP0003 NEW)
 CMAKE_POLICY(SET CMP0005 NEW)
