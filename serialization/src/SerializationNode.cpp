@@ -141,9 +141,7 @@ int SerializationNode::getIntProperty(const string& name, int defaultValue) cons
 }
 
 SerializationNode& SerializationNode::setIntProperty(const string& name, int value) {
-    stringstream s;
-    s << value;
-    return setStringProperty(name, s.str());
+    return setStringProperty(name, std::to_string(value));
 }
 
 long long SerializationNode::getLongProperty(const string& name) const {
@@ -162,9 +160,7 @@ long long SerializationNode::getLongProperty(const string& name, long long defau
 }
 
 SerializationNode& SerializationNode::setLongProperty(const string& name, long long value) {
-    stringstream s;
-    s << value;
-    return setStringProperty(name, s.str());
+    return setStringProperty(name, std::to_string(value));
 }
 
 bool SerializationNode::getBoolProperty(const string& name) const {
@@ -206,7 +202,7 @@ SerializationNode& SerializationNode::setDoubleProperty(const string& name, doub
 }
 
 SerializationNode& SerializationNode::createChildNode(const std::string& name) {
-    children.push_back(SerializationNode());
+    children.emplace_back();
     children.back().setName(name);
     return children.back();
 }

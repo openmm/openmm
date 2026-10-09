@@ -4,7 +4,7 @@ metadynamics.py: Well-tempered metadynamics
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2018-2019 Stanford University and the Authors.
+Portions copyright (c) 2018-2026 Stanford University and the Authors.
 Authors: Peter Eastman
 
 Permission is hereby granted, free of charge, to any person obtaining a
@@ -31,10 +31,7 @@ from collections import namedtuple
 from functools import reduce
 import os
 import re
-try:
-    import numpy as np
-except:
-    pass
+import numpy as np
 
 
 class Metadynamics(object):

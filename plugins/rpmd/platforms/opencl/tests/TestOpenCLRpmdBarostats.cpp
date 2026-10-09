@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2017-2026 Stanford University and the Authors.      *
+ * Portions copyright (c) 2026 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,26 +27,21 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/internal/ForceImpl.h"
+#include "OpenCLTests.h"
+#include "TestRpmdBarostats.h"
+
+extern "C" void registerRPMDOpenCLKernelFactories();
 
 using namespace OpenMM;
-using namespace std;
 
-void ForceImpl::updateContextState(ContextImpl& context, bool& forcesInvalid) {
-    // Usually subclasses will override this.  If they don't, call the old
-    // (single argument) version instead, and just assume they invalidate forces.
-
-    updateContextState(context);
-    forcesInvalid = true;
+void runPlatformTests() {
+    testWater();
+    testAnisotropicWater();
+    testFlexibleWater();
 }
 
-void ForceImpl::updateContextState(ContextImpl& context) {
-}
-
-vector<const Force*> ForceImpl::getContainedForces() const {
-    return {};
-}
-
-bool ForceImpl::getPeriodicBoxIsFlexible() const {
-    return false;
+void setupKernels (int argc, char* argv[]) {
+    registerRPMDOpenCLKernelFactories();
+    platform = dynamic_cast<OpenCLPlatform&>(Platform::getPlatformByName("OpenCL"));
+    initializeTests(argc, argv);
 }

@@ -4,7 +4,7 @@ pdbfile.py: Used for loading PDB files.
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2012-2023 Stanford University and the Authors.
+Portions copyright (c) 2012-2026 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -42,10 +42,7 @@ from openmm.app.internal.unitcell import computeLengthsAndAngles
 from openmm.app import Topology
 from openmm.unit import nanometers, angstroms, is_quantity, norm, Quantity
 from . import element as elem
-try:
-    import numpy
-except ImportError:
-    pass
+import numpy as np
 
 class PDBFile(object):
     """PDBFile parses a Protein Data Bank (PDB) file and constructs a Topology and a set of atom positions from it.
@@ -219,7 +216,7 @@ class PDBFile(object):
             if self._numpyPositions is None:
                 self._numpyPositions = [None]*len(self._positions)
             if self._numpyPositions[frame] is None:
-                self._numpyPositions[frame] = Quantity(numpy.array(self._positions[frame].value_in_unit(nanometers)), nanometers)
+                self._numpyPositions[frame] = Quantity(np.array(self._positions[frame].value_in_unit(nanometers)), nanometers)
             return self._numpyPositions[frame]
         return self._positions[frame]
 
@@ -341,7 +338,6 @@ class PDBFile(object):
             raise ValueError('The number of positions must match the number of atoms')
         if is_quantity(positions):
             positions = positions.value_in_unit(angstroms)
-        import numpy as np
         positions = np.asarray(positions)
         if np.isnan(positions).any():
             raise ValueError('Particle position is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan')

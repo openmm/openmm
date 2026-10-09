@@ -4,7 +4,7 @@ armberinpcrdfile.py: Used for loading AMBER inpcrd files.
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2012-2014 Stanford University and the Authors.
+Portions copyright (c) 2012-2026 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -34,23 +34,7 @@ from functools import wraps
 from openmm.app.internal import amber_file_parser
 from openmm.unit import Quantity, nanometers, picoseconds
 import warnings
-try:
-    import numpy as np
-except:
-    np = None
-
-def numpy_protector(func):
-    """
-    Decorator to emit useful error messages if users try to request numpy
-    processing if numpy is not available. Raises ImportError if numpy could not
-    be found
-    """
-    @wraps(func)
-    def wrapper(self, asNumpy=False):
-        if asNumpy and np is None:
-            raise ImportError('Could not import numpy. Cannot set asNumpy=True')
-        return func(self, asNumpy=asNumpy)
-    return wrapper
+import numpy as np
 
 class AmberInpcrdFile(object):
     """AmberInpcrdFile parses an AMBER inpcrd file and loads the data stored in it."""
@@ -83,7 +67,6 @@ class AmberInpcrdFile(object):
         self._numpyVelocities = None
         self._numpyBoxVectors = None
 
-    @numpy_protector
     def getPositions(self, asNumpy=False):
         """Get the atomic positions.
 
@@ -99,7 +82,6 @@ class AmberInpcrdFile(object):
             return self._numpyPositions
         return self.positions
 
-    @numpy_protector
     def getVelocities(self, asNumpy=False):
         """Get the atomic velocities.
 
@@ -116,7 +98,6 @@ class AmberInpcrdFile(object):
             return self._numpyVelocities
         return self.velocities
 
-    @numpy_protector
     def getBoxVectors(self, asNumpy=False):
         """Get the periodic box vectors.
 

@@ -2,14 +2,9 @@ import unittest
 from openmm import app
 import openmm as mm
 from openmm import unit
-try:
-    import numpy as np
-    NUMPY_IMPORT_FAILED = False
-except ImportError:
-    NUMPY_IMPORT_FAILED = True
+import numpy as np
 
 
-@unittest.skipIf(NUMPY_IMPORT_FAILED, 'Numpy is not installed')
 class TestNumpyCompatibility(unittest.TestCase):
 
     def setUp(self):
@@ -96,9 +91,8 @@ class TestNumpyCompatibility(unittest.TestCase):
         sys = mm.System()
         sys.addParticle(2.0)
         assert sys.getParticleMass(indices[0]) == 2.0*unit.amu
-        
 
-@unittest.skipIf(NUMPY_IMPORT_FAILED, 'Numpy is not installed')
+
 class TestNumpyUnits(unittest.TestCase):
 
     def setUp(self):

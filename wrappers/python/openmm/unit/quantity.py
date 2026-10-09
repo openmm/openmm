@@ -42,7 +42,7 @@ Two possible enhancements that have not been implemented are
 This is part of the OpenMM molecular simulation toolkit.
 See https://openmm.org/development.
 
-Portions copyright (c) 2012 Stanford University and the Authors.
+Portions copyright (c) 2012-2026 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
@@ -145,14 +145,10 @@ class Quantity(object):
                     for item in value:
                         new_container.append(Quantity(item)) # Strips off units into list new_container._value
                     # __class__ trick does not work for numpy.arrays
-                    try:
-                        import numpy
-                        if isinstance(value, numpy.ndarray):
-                            value = numpy.array(new_container._value)
-                        else:
-                            # delegate construction to container class from list
-                            value = value.__class__(new_container._value)
-                    except ImportError:
+                    import numpy
+                    if isinstance(value, numpy.ndarray):
+                        value = numpy.array(new_container._value)
+                    else:
                         # delegate construction to container class from list
                         value = value.__class__(new_container._value)
                 else:
@@ -366,8 +362,17 @@ class Quantity(object):
         elif is_quantity(other):
             # print "quantity * quantity"
             # Situations where the units cancel can result in scale factors from the unit cancellation.
-            # To simplify things, delegate Quantity * Quantity to (Quantity * scalar) * unit
-            return (self * other._value) * other.unit
+            # Operate on the raw values and combined unit directly: delegating
+            # to (Quantity * scalar) * unit can collapse self's unit to
+            # dimensionless first and return a bare value, dropping self's
+            # unit from the product entirely.
+            try:
+                value = self._value * other._value
+            except TypeError:
+                value = self._scale_sequence(copy.deepcopy(self._value),
+                                             other._value, True)
+            return Quantity(value,
+                            self.unit * other.unit).reduce_unit(self.unit)
         else:
             # print "quantity * scalar"
             return self._change_units_with_factor(self.unit, other, post_multiply=False)
@@ -403,8 +408,17 @@ class Quantity(object):
             # return Quantity(self._value, unit).reduce_unit(self.unit)
         elif is_quantity(other):
             # print "quantity / quantity"
-            # Delegate quantity/quantity to (quantity/scalar)/unit
-            return (self/other._value) / other.unit
+            # Delegate quantity/quantity to raw-value division plus unit
+            # reduction, for the same reason as __mul__: a scalar operation on
+            # self can collapse a dimensionless unit to a bare value first and
+            # drop self's unit from the result entirely.
+            try:
+                value = self._value / other._value
+            except TypeError:
+                value = self._scale_sequence(copy.deepcopy(self._value),
+                                             pow(other._value, -1.0), True)
+            return Quantity(value,
+                            self.unit / other.unit).reduce_unit(self.unit)
         else:
             # print "quantity / scalar"
             return self * pow(other, -1.0)
