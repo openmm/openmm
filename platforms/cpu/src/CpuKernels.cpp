@@ -489,7 +489,7 @@ private:
 CpuNonbondedForce* createCpuNonbondedForceVec(const CpuNeighborList& neighbors);
 
 CpuCalcNonbondedForceKernel::CpuCalcNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcNonbondedForceKernel(name, platform),
-        data(data), hasInitializedPme(false), hasInitializedDispersionPme(false), nonbonded(NULL) {
+        data(data), hasInitializedPme(false), hasInitializedDispersionPme(false), useOptimizedPme(false), nonbonded(NULL) {
 }
 
 CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
