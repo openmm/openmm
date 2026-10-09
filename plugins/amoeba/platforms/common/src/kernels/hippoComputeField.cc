@@ -31,7 +31,8 @@ DEVICE void computeMutualFieldDampingFactors(real alphaI, real alphaJ, real r, r
         real aI2 = alphaI*alphaI;
         real aJ2 = alphaJ*alphaJ;
         real A = aJ2/(aJ2-aI2);
-        real B = aI2/(aI2-aJ2);
+        // B = 1-A keeps A+B exactly 1; a separate denominator can round differently under FMA contraction.
+        real B = 1-A;
         real A2expARI = A*A*expARI;
         real B2expARJ = B*B*expARJ;
         *fdamp3 = 1 - (1 + arI + arI2*(one/2))*A2expARI -

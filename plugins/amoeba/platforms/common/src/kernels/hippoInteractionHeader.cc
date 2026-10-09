@@ -95,7 +95,7 @@ DEVICE void computeOverlapDampingFactors(real alphaI, real alphaJ, real r,
         real aI2 = alphaI*alphaI;
         real aJ2 = alphaJ*alphaJ;
         real A = aJ2/(aJ2-aI2);
-        real B = aI2/(aI2-aJ2);
+        real B = 1-A;
         real A2expARI = A*A*expARI;
         real B2expARJ = B*B*expARJ;
         *fdampJ1 = 1 - (1 + arJ*(one/2))*expARJ;
@@ -151,7 +151,7 @@ DEVICE void computeDispersionDampingFactors(real alphaI, real alphaJ, real r, re
         real aI2 = alphaI*alphaI;
         real aJ2 = alphaJ*alphaJ;
         real A = aJ2/(aJ2-aI2);
-        real B = aI2/(aI2-aJ2);
+        real B = 1-A;
         real A2expARI = A*A*expARI;
         real B2expARJ = B*B*expARJ;
         fdamp3 = 1 - (1 + arI + arI2*(one/2))*A2expARI -
