@@ -17,26 +17,25 @@ KERNEL void calcCenterOfMassMomentum(int numAtoms, GLOBAL const mixed4* RESTRICT
 
     // Sum the threads in this group.
 
-    int thread = LOCAL_ID;
-    temp[thread] = cm;
+    temp[LOCAL_ID] = cm;
     SYNC_THREADS;
-    if (thread < 32)
-        temp[thread] += temp[thread+32];
+    if (LOCAL_ID < 32)
+        temp[LOCAL_ID] += temp[LOCAL_ID+32];
     SYNC_THREADS;
-    if (thread < 16)
-        temp[thread] += temp[thread+16];
+    if (LOCAL_ID < 16)
+        temp[LOCAL_ID] += temp[LOCAL_ID+16];
     SYNC_THREADS;
-    if (thread < 8)
-        temp[thread] += temp[thread+8];
+    if (LOCAL_ID < 8)
+        temp[LOCAL_ID] += temp[LOCAL_ID+8];
     SYNC_THREADS;
-    if (thread < 4)
-        temp[thread] += temp[thread+4];
+    if (LOCAL_ID < 4)
+        temp[LOCAL_ID] += temp[LOCAL_ID+4];
     SYNC_THREADS;
-    if (thread < 2)
-        temp[thread] += temp[thread+2];
+    if (LOCAL_ID < 2)
+        temp[LOCAL_ID] += temp[LOCAL_ID+2];
     SYNC_THREADS;
-    if (thread == 0)
-        cmMomentum[GROUP_ID] = temp[thread]+temp[thread+1];
+    if (LOCAL_ID == 0)
+        cmMomentum[GROUP_ID] = temp[LOCAL_ID]+temp[LOCAL_ID+1];
 }
 
 /**
@@ -50,23 +49,22 @@ KERNEL void removeCenterOfMassMomentum(int numAtoms, GLOBAL mixed4* RESTRICT vel
     float4 cm = make_float4(0);
     for (int index = LOCAL_ID; index < NUM_GROUPS; index += LOCAL_SIZE)
         cm += cmMomentum[index];
-    int thread = LOCAL_ID;
-    temp[thread] = cm;
+    temp[LOCAL_ID] = cm;
     SYNC_THREADS;
-    if (thread < 32)
-        temp[thread] += temp[thread+32];
+    if (LOCAL_ID < 32)
+        temp[LOCAL_ID] += temp[LOCAL_ID+32];
     SYNC_THREADS;
-    if (thread < 16)
-        temp[thread] += temp[thread+16];
+    if (LOCAL_ID < 16)
+        temp[LOCAL_ID] += temp[LOCAL_ID+16];
     SYNC_THREADS;
-    if (thread < 8)
-        temp[thread] += temp[thread+8];
+    if (LOCAL_ID < 8)
+        temp[LOCAL_ID] += temp[LOCAL_ID+8];
     SYNC_THREADS;
-    if (thread < 4)
-        temp[thread] += temp[thread+4];
+    if (LOCAL_ID < 4)
+        temp[LOCAL_ID] += temp[LOCAL_ID+4];
     SYNC_THREADS;
-    if (thread < 2)
-        temp[thread] += temp[thread+2];
+    if (LOCAL_ID < 2)
+        temp[LOCAL_ID] += temp[LOCAL_ID+2];
     SYNC_THREADS;
     cm = make_float4(INVERSE_TOTAL_MASS*(temp[0].x+temp[1].x), INVERSE_TOTAL_MASS*(temp[0].y+temp[1].y), INVERSE_TOTAL_MASS*(temp[0].z+temp[1].z), 0);
 

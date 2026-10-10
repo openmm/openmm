@@ -21,42 +21,41 @@ KERNEL void computeGroupCenters(int numParticleGroups, GLOBAL const real4* RESTR
 
         // Sum the values.
 
-        int thread = LOCAL_ID;
-        temp[thread].x = center.x;
-        temp[thread].y = center.y;
-        temp[thread].z = center.z;
+        temp[LOCAL_ID].x = center.x;
+        temp[LOCAL_ID].y = center.y;
+        temp[LOCAL_ID].z = center.z;
         SYNC_THREADS;
-        if (thread < 32) {
-            temp[thread].x += temp[thread+32].x;
-            temp[thread].y += temp[thread+32].y;
-            temp[thread].z += temp[thread+32].z;
+        if (LOCAL_ID < 32) {
+            temp[LOCAL_ID].x += temp[LOCAL_ID+32].x;
+            temp[LOCAL_ID].y += temp[LOCAL_ID+32].y;
+            temp[LOCAL_ID].z += temp[LOCAL_ID+32].z;
         }
         SYNC_WARPS;
-        if (thread < 16) {
-            temp[thread].x += temp[thread+16].x;
-            temp[thread].y += temp[thread+16].y;
-            temp[thread].z += temp[thread+16].z;
+        if (LOCAL_ID < 16) {
+            temp[LOCAL_ID].x += temp[LOCAL_ID+16].x;
+            temp[LOCAL_ID].y += temp[LOCAL_ID+16].y;
+            temp[LOCAL_ID].z += temp[LOCAL_ID+16].z;
         }
         SYNC_WARPS;
-        if (thread < 8) {
-            temp[thread].x += temp[thread+8].x;
-            temp[thread].y += temp[thread+8].y;
-            temp[thread].z += temp[thread+8].z;
+        if (LOCAL_ID < 8) {
+            temp[LOCAL_ID].x += temp[LOCAL_ID+8].x;
+            temp[LOCAL_ID].y += temp[LOCAL_ID+8].y;
+            temp[LOCAL_ID].z += temp[LOCAL_ID+8].z;
         }
         SYNC_WARPS;
-        if (thread < 4) {
-            temp[thread].x += temp[thread+4].x;
-            temp[thread].y += temp[thread+4].y;
-            temp[thread].z += temp[thread+4].z;
+        if (LOCAL_ID < 4) {
+            temp[LOCAL_ID].x += temp[LOCAL_ID+4].x;
+            temp[LOCAL_ID].y += temp[LOCAL_ID+4].y;
+            temp[LOCAL_ID].z += temp[LOCAL_ID+4].z;
         }
         SYNC_WARPS;
-        if (thread < 2) {
-            temp[thread].x += temp[thread+2].x;
-            temp[thread].y += temp[thread+2].y;
-            temp[thread].z += temp[thread+2].z;
+        if (LOCAL_ID < 2) {
+            temp[LOCAL_ID].x += temp[LOCAL_ID+2].x;
+            temp[LOCAL_ID].y += temp[LOCAL_ID+2].y;
+            temp[LOCAL_ID].z += temp[LOCAL_ID+2].z;
         }
         SYNC_WARPS;
-        if (thread == 0)
+        if (LOCAL_ID == 0)
             centerPositions[group] = make_real4(temp[0].x+temp[1].x, temp[0].y+temp[1].y, temp[0].z+temp[1].z, 0);
     }
 }

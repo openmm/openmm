@@ -51,18 +51,24 @@ public:
      * which the position of each atom will change in the current step.  The actual
      * positions should not be modified until after constraints have been applied.
      */
-    virtual ArrayInterface& getPosDelta() = 0;
+    virtual ArrayInterface& getPosDelta() {
+        return posDelta;
+    }
     /**
      * Get the array which contains random values.  Each element is a float4 whose components
      * are independent, normally distributed random numbers with mean 0 and variance 1.
      * Be sure to call initRandomNumberGenerator() and prepareRandomNumbers() before
      * accessing this array.
      */
-    virtual ArrayInterface& getRandom() = 0;
+    virtual ArrayInterface& getRandom() {
+        return random;
+    }
     /**
      * Get the array which contains the current step size.
      */
-    virtual ArrayInterface& getStepSize() = 0;
+    virtual ArrayInterface& getStepSize() {
+        return stepSize;
+    }
     /**
      * Set the size to use for the next step.
      */

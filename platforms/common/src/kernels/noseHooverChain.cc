@@ -153,21 +153,20 @@ KERNEL void scalePairsVelocities(GLOBAL mixed2 * RESTRICT scaleFactor, int numPa
  */
 KERNEL void reduceEnergyPair(GLOBAL const mixed2* RESTRICT sumBuffer, GLOBAL mixed2* result, int bufferSize) {
     LOCAL mixed2 tempBuffer[WORK_GROUP_SIZE];
-    const unsigned int thread = LOCAL_ID;
     mixed2 sum = make_mixed2(0,0);
-    for (unsigned int index = thread; index < bufferSize; index += LOCAL_SIZE) {
+    for (unsigned int index = LOCAL_ID; index < bufferSize; index += LOCAL_SIZE) {
         sum.x += sumBuffer[index].x;
         sum.y += sumBuffer[index].y;
     }
-    tempBuffer[thread].x = sum.x;
-    tempBuffer[thread].y = sum.y;
+    tempBuffer[LOCAL_ID].x = sum.x;
+    tempBuffer[LOCAL_ID].y = sum.y;
     for (int i = 1; i < WORK_GROUP_SIZE; i *= 2) {
         SYNC_THREADS;
-        if (thread%(i*2) == 0 && thread+i < WORK_GROUP_SIZE) {
-            tempBuffer[thread].x += tempBuffer[thread+i].x;
-            tempBuffer[thread].y += tempBuffer[thread+i].y;
+        if (LOCAL_ID%(i*2) == 0 && LOCAL_ID+i < WORK_GROUP_SIZE) {
+            tempBuffer[LOCAL_ID].x += tempBuffer[LOCAL_ID+i].x;
+            tempBuffer[LOCAL_ID].y += tempBuffer[LOCAL_ID+i].y;
         }
     }
-    if (thread == 0)
+    if (LOCAL_ID == 0)
         *result = tempBuffer[0];
 }
