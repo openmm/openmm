@@ -152,7 +152,7 @@ KERNEL void sortBoxData(GLOBAL const unsigned int* RESTRICT sortedBlocks, GLOBAL
 }
 
 DEVICE int saveSinglePairs(int x, LOCAL int* atoms, LOCAL int* flags, int length, unsigned int maxSinglePairs,
-        GLOBAL unsigned int* singlePairCount, GLOBAL int2* singlePairs, LOCAL int* sumBuffer, LOCAL volatile unsigned int& pairStartIndex) {
+        GLOBAL unsigned int* singlePairCount, GLOBAL int2* singlePairs, LOCAL volatile unsigned int& pairStartIndex) {
     // Record interactions that should be computed as single pairs rather than in blocks.
 
     const int indexInWarp = LOCAL_ID%32;
@@ -161,15 +161,10 @@ DEVICE int saveSinglePairs(int x, LOCAL int* atoms, LOCAL int* flags, int length
         int count = popcount(flags[i]);
         sum += (count <= MAX_BITS_FOR_PAIRS ? count : 0);
     }
-    for (int i = 1; i < 32; i *= 2) {
-        int n = simd_shuffle_up(sum, i);
-        if (indexInWarp >= i)
-            sum += n;
-    }
+    int prevSum = simd_prefix_exclusive_sum(sum);
     if (indexInWarp == 31)
-        pairStartIndex = ATOMIC_ADD(singlePairCount,(unsigned int) sum);
+        pairStartIndex = ATOMIC_ADD(singlePairCount,(unsigned int) (prevSum+sum));
     SYNC_WARPS
-    int prevSum = simd_shuffle_up(sum, 1);
     unsigned int pairIndex = pairStartIndex + (indexInWarp > 0 ? prevSum : 0);
     for (int i = indexInWarp; i < length; i += 32) {
         int count = popcount(flags[i]);
@@ -192,7 +187,7 @@ DEVICE int saveSinglePairs(int x, LOCAL int* atoms, LOCAL int* flags, int length
         int atom = atoms[i];
         int flag = flags[i];
         bool include = (i < length && popcount(flags[i]) > MAX_BITS_FOR_PAIRS);
-        int includeFlags = (uint64_t) BALLOT(include);
+        int includeFlags = BALLOT(include);
         if (include) {
             int index = numCompacted+popcount(includeFlags&warpMask);
             atoms[index] = atom;
@@ -276,7 +271,6 @@ KERNEL void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicB
     LOCAL real4 posBuffer[GROUP_SIZE];
     LOCAL volatile unsigned int workgroupTileIndex[GROUP_SIZE/32];
     LOCAL unsigned int workgroupPairStartIndex[GROUP_SIZE/32];
-    LOCAL int* sumBuffer = (LOCAL int*) posBuffer; // Reuse the same buffer to save memory
     LOCAL int* buffer = workgroupBuffer+BUFFER_SIZE*(warpStart/32);
     LOCAL int* flagsBuffer = workgroupFlagsBuffer+BUFFER_SIZE*(warpStart/32);
     LOCAL int* exclusionsForX = warpExclusions+MAX_EXCLUSIONS*(warpStart/32);
@@ -350,7 +344,7 @@ KERNEL void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicB
                         includeLargeBlock = true;
 #endif
                 }
-                largeBlockFlags = (uint64_t) BALLOT(includeLargeBlock);
+                largeBlockFlags = BALLOT(includeLargeBlock);
                 loadedLargeBlocks = 32;
             }
             loadedLargeBlocks--;
@@ -417,7 +411,7 @@ KERNEL void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicB
 #ifdef USE_PERIODIC
                 APPLY_PERIODIC_TO_DELTA(atomDelta)
 #endif
-                int atomFlags = (uint64_t) BALLOT(forceInclude || atomDelta.x*atomDelta.x+atomDelta.y*atomDelta.y+atomDelta.z*atomDelta.z < (PADDED_CUTOFF+blockCenterY.w)*(PADDED_CUTOFF+blockCenterY.w));
+                int atomFlags = BALLOT(forceInclude || atomDelta.x*atomDelta.x+atomDelta.y*atomDelta.y+atomDelta.z*atomDelta.z < (PADDED_CUTOFF+blockCenterY.w)*(PADDED_CUTOFF+blockCenterY.w));
                 int interacts = 0;
                 if (atom2 < NUM_ATOMS && atomFlags != 0) {
 #ifdef USE_PERIODIC
@@ -444,7 +438,7 @@ KERNEL void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicB
 
                 // Add any interacting atoms to the buffer.
 
-                int includeAtomFlags = (uint64_t) BALLOT(interacts);
+                int includeAtomFlags = BALLOT(interacts);
                 if (interacts) {
                     int index = neighborsInBuffer+popcount(includeAtomFlags&warpMask);
                     buffer[index] = atom2;
@@ -455,7 +449,7 @@ KERNEL void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicB
                     // Store the new tiles to memory.
 
 #if MAX_BITS_FOR_PAIRS > 0
-                    neighborsInBuffer = saveSinglePairs(x, buffer, flagsBuffer, neighborsInBuffer, maxSinglePairs, &interactionCount[1], singlePairs, sumBuffer+warpStart, pairStartIndex);
+                    neighborsInBuffer = saveSinglePairs(x, buffer, flagsBuffer, neighborsInBuffer, maxSinglePairs, &interactionCount[1], singlePairs, pairStartIndex);
 #endif
                     unsigned int tilesToStore = neighborsInBuffer/TILE_SIZE;
                     if (tilesToStore > 0) {
@@ -480,7 +474,7 @@ KERNEL void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicB
 
 #if MAX_BITS_FOR_PAIRS > 0
         if (neighborsInBuffer > 32)
-            neighborsInBuffer = saveSinglePairs(x, buffer, flagsBuffer, neighborsInBuffer, maxSinglePairs, &interactionCount[1], singlePairs, sumBuffer+warpStart, pairStartIndex);
+            neighborsInBuffer = saveSinglePairs(x, buffer, flagsBuffer, neighborsInBuffer, maxSinglePairs, &interactionCount[1], singlePairs, pairStartIndex);
 #endif
         if (neighborsInBuffer > 0) {
             unsigned int tilesToStore = (neighborsInBuffer+TILE_SIZE-1)/TILE_SIZE;

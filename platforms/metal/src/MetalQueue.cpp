@@ -27,6 +27,7 @@
 #include "openmm/OpenMMException.h"
 
 using namespace OpenMM;
+using namespace std;
 
 MetalQueue::MetalQueue(MTL::Device& device) : queue(nullptr), commandBuffer(nullptr), encoder(nullptr) {
     queue = device.newCommandQueue();
@@ -43,6 +44,7 @@ MTL::CommandQueue& MetalQueue::getQueue() {
 }
 
 MTL::ComputeCommandEncoder& MetalQueue::getEncoder() {
+    lock_guard guard(lock);
     if (encoder == nullptr) {
         NS::AutoreleasePool* pool = NS::AutoreleasePool::alloc()->init();
         if (commandBuffer == nullptr)
@@ -54,6 +56,7 @@ MTL::ComputeCommandEncoder& MetalQueue::getEncoder() {
 }
 
 MTL::CommandBuffer& MetalQueue::getCommandBuffer() {
+    lock_guard guard(lock);
     if (commandBuffer == nullptr) {
         NS::AutoreleasePool* pool = NS::AutoreleasePool::alloc()->init();
         commandBuffer = queue->commandBuffer()->retain();
@@ -63,6 +66,7 @@ MTL::CommandBuffer& MetalQueue::getCommandBuffer() {
 }
 
 void MetalQueue::flush(bool sync) {
+    lock_guard guard(lock);
     if (sync) {
         // Make sure we have a command buffer to use for synchronization.
 

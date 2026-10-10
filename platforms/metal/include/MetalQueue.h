@@ -27,6 +27,7 @@
 
 #include "openmm/common/ComputeQueue.h"
 #include "Metal.hpp"
+#include <mutex>
 
 namespace OpenMM {
 
@@ -65,6 +66,7 @@ private:
     MTL::CommandQueue* queue;
     MTL::CommandBuffer* commandBuffer;
     MTL::ComputeCommandEncoder* encoder;
+    std::recursive_mutex lock;
 };
 
 } // namespace OpenMM
