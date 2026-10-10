@@ -183,9 +183,10 @@ MetalContext::MetalContext(const System& system, const string& precision, MetalP
     boxIsTriclinic = (boxVectors[0][1] != 0.0 || boxVectors[0][2] != 0.0 ||
                       boxVectors[1][0] != 0.0 || boxVectors[1][2] != 0.0 ||
                       boxVectors[2][0] != 0.0 || boxVectors[2][1] != 0.0);
-    for (int i = 0; i < system.getNumForces(); i++)
-        if (dynamic_cast<const MonteCarloFlexibleBarostat*>(&system.getForce(i)) != NULL)
-            boxIsTriclinic = true;
+    if (platformData.context != NULL)
+        for (const ForceImpl* force : platformData.context->getForceImpls())
+            if (force->getPeriodicBoxIsFlexible())
+                boxIsTriclinic = true;
     if (boxIsTriclinic) {
         compilationDefines["APPLY_PERIODIC_TO_DELTA(delta)"] =
             "{"

@@ -108,9 +108,7 @@ KERNEL void computeNonbonded(
         if (x == y) {
             // This tile is on the diagonal.
             localPosq[LOCAL_ID] = posq1;
-
-            // we do not need to fetch parameters from global since this is a symmetric tile
-            // instead we can broadcast the values using shuffle
+            SYNC_WARPS;
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 int atom2 = tbx+j;
                 real4 posq2 = localPosq[atom2];
@@ -150,6 +148,7 @@ KERNEL void computeNonbonded(
 #ifdef USE_EXCLUSIONS
                 excl >>= 1;
 #endif
+                SYNC_WARPS;
             }
         }
         else {
@@ -157,6 +156,7 @@ KERNEL void computeNonbonded(
             unsigned int j = y*TILE_SIZE + tgx;
             localPosq[LOCAL_ID] = posq[j];
             localForce[LOCAL_ID] = 0.0f;
+            SYNC_WARPS;
 #ifdef USE_EXCLUSIONS
             excl = (excl >> tgx) | (excl << (TILE_SIZE - tgx));
 #endif
@@ -202,6 +202,7 @@ KERNEL void computeNonbonded(
                 // cycles the indices
                 // 0 1 2 3 4 5 6 7 -> 1 2 3 4 5 6 7 0
                 tj = (tj + 1) & (TILE_SIZE - 1);
+                SYNC_WARPS;
             }
             const unsigned int offset = y*TILE_SIZE + tgx;
             // write results for off diagonal tiles
@@ -265,7 +266,9 @@ KERNEL void computeNonbonded(
 
         // Skip over tiles that have exclusions, since they were already processed.
 
+        SYNC_WARPS;
         while (skipTiles[tbx+TILE_SIZE-1] < pos) {
+            SYNC_WARPS;
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
                 skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
@@ -274,6 +277,7 @@ KERNEL void computeNonbonded(
                 skipTiles[LOCAL_ID] = end;
             skipBase += TILE_SIZE;
             currentSkipIndex = tbx;
+            SYNC_WARPS;
         }
         while (skipTiles[currentSkipIndex] < pos)
             currentSkipIndex++;
@@ -298,6 +302,7 @@ KERNEL void computeNonbonded(
             else {
                 localPosq[LOCAL_ID] = make_real4(0, 0, 0, 0);
             }
+            SYNC_WARPS;
 #ifdef USE_PERIODIC
             if (singlePeriodicCopy) {
                 // The box is small enough that we can just translate all the atoms into a single periodic
@@ -305,6 +310,7 @@ KERNEL void computeNonbonded(
                 real4 blockCenterX = blockCenter[x];
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(localPosq[LOCAL_ID], blockCenterX)
+                SYNC_WARPS;
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = tbx+tj;
@@ -339,6 +345,7 @@ KERNEL void computeNonbonded(
 #endif // end USE_SYMMETRIC
 #endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
             }
             else
@@ -382,6 +389,7 @@ KERNEL void computeNonbonded(
 #endif // end USE_SYMMETRIC
 #endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
             }
 
