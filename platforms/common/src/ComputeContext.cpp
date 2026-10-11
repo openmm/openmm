@@ -186,6 +186,15 @@ string ComputeContext::intToString(int value) const {
     return s.str();
 }
 
+void ComputeContext::getWrappingBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
+    getPeriodicBoxVectors(a, b, c);
+    if (!getUseDoublePrecision()) {
+        a = Vec3((float) a[0], (float) a[1], (float) a[2]);
+        b = Vec3((float) b[0], (float) b[1], (float) b[2]);
+        c = Vec3((float) c[0], (float) c[1], (float) c[2]);
+    }
+}
+
 void ComputeContext::computeReciprocalBoxVectors(mm_double4 recipBoxVectors[3]) {
     Vec3 boxVectors[3];
     getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
@@ -686,7 +695,7 @@ void ComputeContext::reorderAtomsImpl() {
     // Find the range of positions and the number of bins along each axis.
 
     vector<Real4> oldPosq(paddedNumAtoms);
-    vector<Real4> oldPosqCorrection(paddedNumAtoms);
+    vector<Real4> oldPosqCorrection(paddedNumAtoms, Real4(0, 0, 0, 0));
     vector<Mixed4> oldVelm(paddedNumAtoms);
     getPosq().download(oldPosq);
     getVelm().download(oldVelm);
@@ -696,7 +705,7 @@ void ComputeContext::reorderAtomsImpl() {
     Real miny = oldPosq[0].y, maxy = oldPosq[0].y;
     Real minz = oldPosq[0].z, maxz = oldPosq[0].z;
     Vec3 periodicBoxX, periodicBoxY, periodicBoxZ;
-    getPeriodicBoxVectors(periodicBoxX, periodicBoxY, periodicBoxZ);
+    getWrappingBoxVectors(periodicBoxX, periodicBoxY, periodicBoxZ);
     Vec3 invPeriodicBoxSize(1.0/periodicBoxX[0], 1.0/periodicBoxY[1], 1.0/periodicBoxZ[2]);
     if (getNonbondedUtilities().getUsePeriodic()) {
         minx = miny = minz = 0.0;
@@ -763,17 +772,15 @@ void ComputeContext::reorderAtomsImpl() {
                 int xcell = (int) floor(center.x*invPeriodicBoxSize[0]);
                 center.x -= xcell*periodicBoxX[0];
                 if (xcell != 0 || ycell != 0 || zcell != 0) {
-                    Real dx = molPos[i].x-center.x;
-                    Real dy = molPos[i].y-center.y;
-                    Real dz = molPos[i].z-center.z;
+                    Vec3 shift = periodicBoxX*xcell + periodicBoxY*ycell + periodicBoxZ*zcell;
                     molPos[i] = center;
                     for (int j = 0; j < (int) atoms.size(); j++) {
                         int atom = atoms[j]+mol.offsets[i];
-                        Real4 p = oldPosq[atom];
-                        p.x -= dx;
-                        p.y -= dy;
-                        p.z -= dz;
-                        oldPosq[atom] = p;
+                        Real4& p = oldPosq[atom];
+                        Real4& c = oldPosqCorrection[atom];
+                        Vec3 pos = Vec3(p.x+(double) c.x, p.y+(double) c.y, p.z+(double) c.z)-shift;
+                        p = Real4((Real) pos[0], (Real) pos[1], (Real) pos[2], p.w);
+                        c = Real4((Real) (pos[0]-p.x), (Real) (pos[1]-p.y), (Real) (pos[2]-p.z), c.w);
                         posCellOffsets[atom].x -= xcell;
                         posCellOffsets[atom].y -= ycell;
                         posCellOffsets[atom].z -= zcell;

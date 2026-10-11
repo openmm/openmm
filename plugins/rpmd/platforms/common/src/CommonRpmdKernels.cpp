@@ -361,7 +361,7 @@ void CommonIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& p
     
     const vector<int>& order = cc.getAtomIndex();
     Vec3 a, b, c;
-    cc.getPeriodicBoxVectors(a, b, c);
+    cc.getWrappingBoxVectors(a, b, c);
     vector<Vec3> offsetPos(numParticles);
     for (int i = 0; i < numParticles; ++i) {
         mm_int4 offset = cc.getPosCellOffsets()[i];
