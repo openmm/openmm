@@ -308,6 +308,10 @@ public:
      */
     FFT3D createFFT(int xsize, int ysize, int zsize, bool realToComplex=false);
     /**
+     * Get the smallest legal size for a dimension of the grid.
+     */
+    int findLegalFFTDimension(int minimum);
+    /**
      * This should be called by the Integrator from its own initialize() method.
      * It ensures all contexts are fully initialized.
      */

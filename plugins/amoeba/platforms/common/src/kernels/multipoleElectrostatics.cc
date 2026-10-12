@@ -60,7 +60,7 @@ DEVICE float computePScaleFactor(uint2 covalent, unsigned int polarizationGroup,
     return (x && y ? 0.0f : (x && p ? 0.5f : 1.0f));
 }
 
-DEVICE void computeOneInteraction(AtomData* atom1, LOCAL_ARG AtomData* atom2, bool hasExclusions, float dScale, float pScale, float mScale, float forceFactor, mixed* energy) {
+DEVICE void computeOneInteraction(PRIVATE AtomData* atom1, LOCAL_ARG AtomData* atom2, bool hasExclusions, float dScale, float pScale, float mScale, float forceFactor, PRIVATE mixed* energy) {
     // Compute the displacement.
     
     real3 delta;

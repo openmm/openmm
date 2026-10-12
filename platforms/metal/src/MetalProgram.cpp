@@ -40,13 +40,14 @@ ComputeKernel MetalProgram::createKernel(const string& name) {
     }
     NS::Error* error = nullptr;
     MTL::ComputePipelineState* pipeline = context.getDevice().newComputePipelineState(function, &error);
-    pool->release();
     if (pipeline == nullptr) {
         string message = "Error creating pipeline state for kernel "+name;
         if (error != nullptr)
-            message += error->localizedDescription()->utf8String();
+            message += string(": ")+error->localizedDescription()->utf8String();
+        pool->release();
         function->release();
         throw OpenMMException(message);
     }
+    pool->release();
     return shared_ptr<ComputeKernelImpl>(new MetalKernel(context, pipeline, name));
 }

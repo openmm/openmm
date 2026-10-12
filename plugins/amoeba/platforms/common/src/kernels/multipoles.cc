@@ -316,7 +316,7 @@ KERNEL void recordInducedDipoles(GLOBAL const mm_long* RESTRICT fieldBuffers, GL
 /**
  * Normalize a vector and return what its magnitude was.
  */
-inline DEVICE real normVector(real3* v) {
+inline DEVICE real normVector(PRIVATE real3* v) {
     real n = SQRT(dot(*v, *v));
     *v *= (n > 0 ? RECIP(n) : 0);
     return n;

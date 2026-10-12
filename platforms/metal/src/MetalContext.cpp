@@ -295,6 +295,10 @@ FFT3D MetalContext::createFFT(int xsize, int ysize, int zsize, bool realToComple
     return FFT3D(new MetalFFT3D(*this, xsize, ysize, zsize, realToComplex));
 }
 
+int MetalContext::findLegalFFTDimension(int minimum) {
+    return MetalFFT3D::findLegalDimension(minimum);
+}
+
 vector<ComputeContext*> MetalContext::getAllContexts() {
     vector<ComputeContext*> result;
     for (MetalContext* c : platformData.contexts)
@@ -324,6 +328,7 @@ ComputeSort MetalContext::createSort(ComputeSortImpl::SortTrait* trait, unsigned
 
 static string rewriteKernelArgs(const string& source) {
     static regex kernelMatcher("KERNEL void[\\s\\S]*?\\(([\\s\\S]*?)\\)");
+    static regex lineMatcher("[^\\s].*[^\\s]");
     static regex argMatcher("\\#.*|[^,\\s#][^\\,#]*[^,\\s#]*");
     static regex wordMatcher("[^\\s]+");
     stringstream result;
@@ -336,48 +341,58 @@ static string rewriteKernelArgs(const string& source) {
     while (nextKernel != end) {
         smatch kernelMatch = *nextKernel;
         result << source.substr(pos, kernelMatch.position(1)-pos);
-
-        // Loop over arguments to the kernel.
-
         string argList = kernelMatch[1].str();
         pos = kernelMatch.position(1)+argList.size();
-        sregex_iterator nextArg(argList.begin(), argList.end(), argMatcher);
-        bool addComma = false;
-        while (nextArg != end) {
-            smatch argMatch = *nextArg;
-            string arg = argMatch.str();
-            if (arg.rfind("GLOBAL", 0) == 0 || arg.rfind("LOCAL", 0) == 0) {
-                if (addComma)
-                    result << ", ";
-                addComma = true;
-                result << arg;
-            }
-            else if (arg[0] == '#') {
-                result << "\n" << arg << "\n";
-            }
-            else {
-                // This is a primitive value.  We need to transform it into reference to constant memory.
 
-                if (addComma)
-                    result << ", ";
-                addComma = true;
-                result << "constant";
-                sregex_iterator nextWord(arg.begin(), arg.end(), wordMatcher);
-                bool addAmpersand = true;
-                while (nextWord != end) {
-                    smatch wordMatch = *nextWord;
-                    string word = wordMatch.str();
-                    if (word != "const") {
-                        result << " " << word;
-                        if (addAmpersand && word != "unsigned") {
-                            result << "&";
-                            addAmpersand = false;
+        // Loop over lines in the argument list.
+
+        sregex_iterator nextLine(argList.begin(), argList.end(), lineMatcher);
+        while (nextLine != end) {
+            smatch lineMatch = *nextLine;
+            string line = lineMatch.str();
+            result << "\n";
+            if (line[0] == ',')
+                result << ",";
+            if (line[0] == '#')
+                result << line << "\n";
+            else {
+                // Loop over arguments in the line.
+
+                sregex_iterator nextArg(line.begin(), line.end(), argMatcher);
+                bool addComma = false;
+                while (nextArg != end) {
+                    smatch argMatch = *nextArg;
+                    string arg = argMatch.str();
+                    if (addComma)
+                        result << ", ";
+                    addComma = true;
+                    if (arg.rfind("GLOBAL", 0) == 0 || arg.rfind("LOCAL", 0) == 0)
+                        result << arg;
+                    else {
+                        // This is a primitive value.  We need to transform it into reference to constant memory.
+
+                        result << "constant";
+                        sregex_iterator nextWord(arg.begin(), arg.end(), wordMatcher);
+                        bool addAmpersand = true;
+                        while (nextWord != end) {
+                            smatch wordMatch = *nextWord;
+                            string word = wordMatch.str();
+                            if (word != "const") {
+                                result << " " << word;
+                                if (addAmpersand && word != "unsigned") {
+                                    result << "&";
+                                    addAmpersand = false;
+                                }
+                            }
+                            ++nextWord;
                         }
                     }
-                    ++nextWord;
+                    ++nextArg;
                 }
             }
-            ++nextArg;
+            if (line.back() == ',')
+                result << ",";
+            ++nextLine;
         }
         ++nextKernel;
     }
@@ -452,7 +467,7 @@ MetalArray& MetalContext::unwrap(ArrayInterface& array) const {
 
 int MetalContext::computeThreadBlockSize(double memory) const {
     int maxShared = 32768;
-    int max = (int) (maxShared/memory);
+    int max = (int) (0.9*maxShared/memory);
     if (max < 64)
         return 32;
     int threads = 64;

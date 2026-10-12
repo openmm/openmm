@@ -98,7 +98,9 @@ KERNEL void computeNonbonded(
             localData[LOCAL_ID].y = posq1.y;
             localData[LOCAL_ID].z = posq1.z;
             localData[LOCAL_ID].q = posq1.w;
+#ifndef __METAL_VERSION__
             LOAD_LOCAL_PARAMETERS_FROM_1
+#endif
             SYNC_WARPS;
 #endif
 
@@ -119,8 +121,13 @@ KERNEL void computeNonbonded(
                 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                 real rInv = RSQRT(r2);
                 real r = r2*rInv;
+#ifndef __METAL_VERSION__
                 LOAD_ATOM2_PARAMETERS
+#endif
                 atom2 = y*TILE_SIZE+j;
+#ifdef __METAL_VERSION__
+                LOAD_ATOM2_PARAMETERS_FROM_GLOBAL
+#endif
                 real3 tempForce = make_real3(0);
                 real3 tempTorque1 = make_real3(0);
                 real3 tempTorque2 = make_real3(0);
@@ -154,8 +161,10 @@ KERNEL void computeNonbonded(
             localData[LOCAL_ID].ty = 0.0f;
             localData[LOCAL_ID].tz = 0.0f;
 #endif
+#ifndef __METAL_VERSION__
             DECLARE_LOCAL_PARAMETERS
             LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
+#endif
             SYNC_WARPS;
             excl = (excl >> tgx) | (excl << (TILE_SIZE - tgx));
             unsigned int tj = tgx;
@@ -173,8 +182,13 @@ KERNEL void computeNonbonded(
                 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                 real rInv = RSQRT(r2);
                 real r = r2*rInv;
+#ifndef __METAL_VERSION__
                 LOAD_ATOM2_PARAMETERS
+#endif
                 atom2 = y*TILE_SIZE+tj;
+#ifdef __METAL_VERSION__
+                LOAD_ATOM2_PARAMETERS_FROM_GLOBAL
+#endif
                 real3 tempForce = make_real3(0);
                 real3 tempTorque1 = make_real3(0);
                 real3 tempTorque2 = make_real3(0);
@@ -331,8 +345,10 @@ KERNEL void computeNonbonded(
                 localData[LOCAL_ID].tx = 0.0f;
                 localData[LOCAL_ID].ty = 0.0f;
                 localData[LOCAL_ID].tz = 0.0f;
-#endif                
+#endif
+#ifndef __METAL_VERSION__
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
+#endif
             }
             else {
 #ifdef ENABLE_SHUFFLE
@@ -368,8 +384,13 @@ KERNEL void computeNonbonded(
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     real rInv = RSQRT(r2);
                     real r = r2*rInv;
+#ifndef __METAL_VERSION__
                     LOAD_ATOM2_PARAMETERS
+#endif
                     atom2 = atomIndices[tbx+tj];
+#ifdef __METAL_VERSION__
+                    LOAD_ATOM2_PARAMETERS_FROM_GLOBAL
+#endif
                     real3 tempForce = make_real3(0);
                     real3 tempTorque1 = make_real3(0);
                     real3 tempTorque2 = make_real3(0);
@@ -418,8 +439,13 @@ KERNEL void computeNonbonded(
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     real rInv = RSQRT(r2);
                     real r = r2*rInv;
+#ifndef __METAL_VERSION__
                     LOAD_ATOM2_PARAMETERS
+#endif
                     atom2 = atomIndices[tbx+tj];
+#ifdef __METAL_VERSION__
+                    LOAD_ATOM2_PARAMETERS_FROM_GLOBAL
+#endif
                     real3 tempForce = make_real3(0);
                     real3 tempTorque1 = make_real3(0);
                     real3 tempTorque2 = make_real3(0);

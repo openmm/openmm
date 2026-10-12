@@ -500,17 +500,17 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
     replacements["ATOM_PARAMETER_DATA"] = localData.str();
     stringstream args;
     for (const ComputeParameterInfo& param : params) {
-        args << ", ";
+        args << ", GLOBAL ";
         if (param.isConstant())
-            args << "GLOBAL const ";
+            args << "const ";
         args << param.getType();
         args << "* RESTRICT global_";
         args << param.getName();
     }
     for (const ComputeParameterInfo& arg : arguments) {
-        args << ", ";
+        args << ", GLOBAL ";
         if (arg.isConstant())
-            args << "GLOBAL const ";
+            args << "const ";
         args << arg.getType();
         args << "* RESTRICT ";
         args << arg.getName();
