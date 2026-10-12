@@ -664,7 +664,8 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             hasInitializedLongRangeCorrection = false;
     }
     if (computedValues != NULL) {
-        computedValuesKernel->setArg(computedValues->getParameterInfos().size(), cc.getGlobalParamValues());
+        if (needGlobalParams)
+            computedValuesKernel->setArg(computedValues->getParameterInfos().size(), cc.getGlobalParamValues());
         computedValuesKernel->execute(cc.getNumAtoms());
     }
     if (interactionGroupData.isInitialized()) {
