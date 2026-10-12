@@ -51,7 +51,6 @@ extern "C" void registerKernelFactories() {
         platform.registerKernelFactory(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaVdwForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaWcaDispersionForceKernel::Name(), factory);
-        platform.registerKernelFactory(CalcHippoNonbondedForceKernel::Name(), factory);
     }
     catch (...) {
         // Ignore.  The Metal platform isn't available.
@@ -86,9 +85,6 @@ KernelImpl* AmoebaMetalKernelFactory::createKernelImpl(std::string name, const P
 
     if (name == CalcAmoebaWcaDispersionForceKernel::Name())
         return new CommonCalcAmoebaWcaDispersionForceKernel(name, platform, mc, context.getSystem());
-
-    if (name == CalcHippoNonbondedForceKernel::Name())
-        return new MetalCalcHippoNonbondedForceKernel(name, platform, mc, context.getSystem());
 
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

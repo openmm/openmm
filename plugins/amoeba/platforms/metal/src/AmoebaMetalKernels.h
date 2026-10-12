@@ -51,45 +51,6 @@ public:
     }
 };
 
-/**
- * This kernel is invoked by HippoNonbondedForce to calculate the forces acting on the system and the energy of the system.
- */
-class MetalCalcHippoNonbondedForceKernel : public CommonCalcHippoNonbondedForceKernel {
-public:
-    MetalCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, MetalContext& mc, const System& system) :
-            CommonCalcHippoNonbondedForceKernel(name, platform, mc, system) {
-    }
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param force      the HippoNonbondedForce this kernel will be used for
-     */
-    void initialize(const System& system, const HippoNonbondedForce& force);
-    /**
-     * Get whether charge spreading should be done in fixed point.
-     */
-    bool useFixedPointChargeSpreading() const {
-        return cc.getUseDoublePrecision();
-    }
-    /**
-     * Sort the atom grid indices.
-     */
-    void sortGridIndex();
-private:
-    class SortTrait : public ComputeSortImpl::SortTrait {
-        int getDataSize() const {return 8;}
-        int getKeySize() const {return 4;}
-        const char* getDataType() const {return "int2";}
-        const char* getKeyType() const {return "int";}
-        const char* getMinKey() const {return "(-2147483647-1)";}
-        const char* getMaxKey() const {return "2147483647";}
-        const char* getMaxValue() const {return "make_int2(2147483647, 2147483647)";}
-        const char* getSortKey() const {return "value.y";}
-    };
-    ComputeSort sort;
-};
-
 } // namespace OpenMM
 
 #endif /*AMOEBA_OPENMM_METALKERNELS_H_*/

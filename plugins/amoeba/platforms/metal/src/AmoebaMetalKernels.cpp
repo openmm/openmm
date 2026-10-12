@@ -51,19 +51,3 @@ static void setPeriodicBoxArgs(ComputeContext& cc, ComputeKernel kernel, int ind
         kernel->setArg(index, mm_float4((float) c[0], (float) c[1], (float) c[2], 0.0f));
     }
 }
-
-/* -------------------------------------------------------------------------- *
- *                           HippoNonbondedForce                              *
- * -------------------------------------------------------------------------- */
-
-void MetalCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
-    CommonCalcHippoNonbondedForceKernel::initialize(system, force);
-    if (usePME) {
-        ContextSelector selector(cc);
-        sort = cc.createSort(new SortTrait(), cc.getNumAtoms());
-    }
-}
-
-void MetalCalcHippoNonbondedForceKernel::sortGridIndex() {
-    sort->sort(dynamic_cast<MetalContext&>(cc).unwrap(pmeAtomGridIndex));
-}

@@ -3364,9 +3364,10 @@ double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool i
 
     // Add the polarization energy.
 
-    if (includeEnergy)
+    if (includeEnergy) {
         polarizationEnergyKernel->setArg(0, cc.getEnergyBuffer());
         polarizationEnergyKernel->execute(cc.getNumAtoms());
+    }
 
     // Compute the forces due to the reciprocal space PME calculation for induced dipoles.
 

@@ -106,11 +106,18 @@ inline float erfc(float x) {
     // the original source: C. Hastings, Jr., Approximations for Digital Computers (1955).  It has a maximum
     // error of 1.5e-7.
 
-    float t = 1.0f/(1.0f+0.3275911f*x);
-    return (0.254829592f+(-0.284496736f+(1.421413741f+(-1.453152027f+1.061405429f*t)*t)*t)*t)*t*exp(-x*x);
+    float t = 1.0f/(1.0f+0.3275911f*abs(x));
+    float y = (0.254829592f+(-0.284496736f+(1.421413741f+(-1.453152027f+1.061405429f*t)*t)*t)*t)*t*exp(-x*x);
+    return (x > 0.0f ? y : 2.0f-y);
 }
 
 inline float erf(float x) {
+    if (abs(x) < 0.5f) {
+        // For small x, the Taylor series is more accurate than subtracting two numbers both close to 1.
+
+        float x2 = x*x;
+        return M_2_SQRTPI_F*x*(1.0f+x2*(-1.0f/3.0f+x2*(1.0f/10.0f+x2*(-1.0f/42.0f+x2*(1.0f/216.0f+x2*(-1.0f/1320.0f+x2*(1.0f/9360.0f)))))));
+    }
     return 1.0-erfc(x);
 }
 
