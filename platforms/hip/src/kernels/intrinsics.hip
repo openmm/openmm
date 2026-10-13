@@ -13,7 +13,11 @@ T warpShuffle(const T& input, const int src_lane) {
     for (int i = 0; i < words_no; i++) {
         int word;
         __builtin_memcpy(&word, reinterpret_cast<const char*>(&input) + i * sizeof(int), sizeof(int));
+#ifdef __AMDGCN__
         word = __builtin_amdgcn_ds_bpermute(src_lane << 2, word);
+#else
+        word = __shfl(word, src_lane);
+#endif
         __builtin_memcpy(reinterpret_cast<char*>(&output) + i * sizeof(int), &word, sizeof(int));
     }
 

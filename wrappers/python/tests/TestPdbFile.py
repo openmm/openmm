@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+import numpy as np
 from openmm.app import *
 from openmm import *
 from openmm.unit import *
@@ -75,6 +76,26 @@ class TestPdbFile(unittest.TestCase):
             PDBFile.writeFile(pdb1.topology, pdb1.positions, filename)
             pdb2 = PDBFile(filename)
             compareFiles(pdb1, pdb2)
+
+    def test_BoxVectorsArrayOfQuantities(self):
+        """Periodic box vectors given as a nested array of Quantities must be
+           normalized so writeFile produces a correct CRYST1 record."""
+        topology = Topology()
+        chain = topology.addChain()
+        residue = topology.addResidue("He", chain)
+        topology.addAtom("He", elem.helium, residue)
+        d = 7.0*nanometer
+        vectors = np.array([
+            [d, 0*nanometer, 0*nanometer],
+            [0*nanometer, d, 0*nanometer],
+            [d/2, d/2, d/np.sqrt(2)]
+        ])
+        topology.setPeriodicBoxVectors(vectors)
+        output = StringIO()
+        PDBFile.writeFile(topology, [[0, 0, 0]]*nanometer, output)
+        cryst1 = [l for l in output.getvalue().splitlines() if l.startswith("CRYST1")][0]
+        for actual, expected in zip([float(x) for x in cryst1[6:33].split()], [70.0, 70.0, 70.0]):
+            self.assertAlmostEqual(actual, expected, places=4)
 
     def test_BinaryStream(self):
         """Test reading a stream that was opened in binary mode."""

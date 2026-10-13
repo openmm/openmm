@@ -16,7 +16,11 @@
 #define GROUP_ID blockIdx.x
 #define NUM_GROUPS gridDim.x
 #define SYNC_THREADS __syncthreads();
+#ifdef __AMDGCN__
 #define SYNC_WARPS {__builtin_amdgcn_wave_barrier(); __builtin_amdgcn_fence(__ATOMIC_ACQ_REL, "wavefront");}
+#else
+#define SYNC_WARPS __syncwarp();
+#endif
 #define MEM_FENCE __threadfence_block();
 #define ATOMIC_ADD(dest, value) atomicAdd(dest, value)
 #define FLT_MAX 3.40282347e+38f
