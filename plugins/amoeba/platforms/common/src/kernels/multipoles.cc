@@ -541,7 +541,7 @@ KERNEL void computePotentialAtPoints(GLOBAL const real4* RESTRICT posq, GLOBAL c
     LOCAL real localQuadrupole[5*GROUP_SIZE];
     for (int basePoint = GROUP_ID*LOCAL_SIZE; basePoint < numPoints; basePoint += GLOBAL_SIZE) {
         int point = basePoint+LOCAL_ID;
-        real4 pointPos = (point < numPoints ? points[point] : (real4) 0);
+        real4 pointPos = (point < numPoints ? points[point] : make_real4(0));
         real p = 0;
         for (int baseAtom = 0; baseAtom < NUM_ATOMS; baseAtom += LOCAL_SIZE) {
             int atom = baseAtom+LOCAL_ID;
