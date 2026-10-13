@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/AssertionUtilities.h"
+#include "openmm/CMMotionRemover.h"
 #include "openmm/Context.h"
 #include "openmm/CustomExternalForce.h"
 #include "openmm/HarmonicBondForce.h"
@@ -584,6 +585,19 @@ void testForceGroups() {
     ASSERT(pos[2] == 0);
 }
 
+void testNoThermostatsWithCMMotionRemover() {
+    // A NoseHooverIntegrator with no thermostats should work with a CMMotionRemover.
+
+    System system;
+    for (int i = 0; i < 3; i++)
+        system.addParticle(1.0);
+    system.addForce(new CMMotionRemover());
+    NoseHooverIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(vector<Vec3>(3));
+    integrator.step(1);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -604,6 +618,7 @@ int main(int argc, char* argv[]) {
         testCheckpoints();
         testSaveParameters();
         testForceGroups();
+        testNoThermostatsWithCMMotionRemover();
         runPlatformTests();
     }
     catch(const exception& e) {
