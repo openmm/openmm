@@ -71,8 +71,7 @@ ExpressionTreeNode::ExpressionTreeNode() : operation(NULL) {
 
 ExpressionTreeNode::~ExpressionTreeNode()
 {
-    if (operation)
-    {
+    if (operation != NULL) {
         delete operation;
         operation = NULL;
     }
