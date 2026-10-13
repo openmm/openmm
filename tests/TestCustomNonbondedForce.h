@@ -1531,6 +1531,22 @@ void testComputedValues(int mode) {
     }
 }
 
+void testComputedValuesWithoutGlobals() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* force = new CustomNonbondedForce("s1*s2/r");
+    force->addPerParticleParameter("q");
+    force->addComputedValue("s", "2*q");
+    force->addParticle({1.0});
+    force->addParticle({2.0});
+    system.addForce(force);
+    Context context(system, integrator, platform);
+    context.setPositions({Vec3(0, 0, 0), Vec3(0.5, 0, 0)});
+    ASSERT_EQUAL_TOL(2*4/0.5, context.getState(State::Energy).getPotentialEnergy(), TOL);
+}
+
 void testParallelComputation() {
     System system;
     const int numParticles = 200;
@@ -1619,6 +1635,7 @@ int main(int argc, char* argv[]) {
         testComputedValues(0); // No cutoff
         testComputedValues(1); // Cutoff, periodic
         testComputedValues(2); // Interaction groups
+        testComputedValuesWithoutGlobals();
         runPlatformTests();
     }
     catch(const exception& e) {
