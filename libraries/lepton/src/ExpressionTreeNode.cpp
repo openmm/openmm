@@ -97,8 +97,8 @@ bool ExpressionTreeNode::operator==(const ExpressionTreeNode& node) const {
 ExpressionTreeNode& ExpressionTreeNode::operator=(const ExpressionTreeNode& node) {
     if (operation != NULL)
         delete operation;
-    operation = node.getOperation().clone();
-    children = node.getChildren();
+    operation = node.operation == NULL ? NULL : node.operation->clone();
+    children = node.children;
     return *this;
 }
 
@@ -113,6 +113,8 @@ ExpressionTreeNode& ExpressionTreeNode::operator=(ExpressionTreeNode&& node) {
 }
 
 const Operation& ExpressionTreeNode::getOperation() const {
+    if (operation == NULL)
+        throw Exception("Called getOperation() on an uninitialized ExpressionTreeNode");
     return *operation;
 }
 
