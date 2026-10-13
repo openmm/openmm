@@ -69,7 +69,8 @@ void MetalKernel::execute(int threads, int blockSize) {
 }
 
 void MetalKernel::setDynamicLocalMemory(int bytes) {
-    dynamicLocal = bytes;
+    // Round up to the next multiple of 16.
+    dynamicLocal = 16*((bytes+15)/16);
 }
 
 void MetalKernel::addArrayArg(ArrayInterface& value) {

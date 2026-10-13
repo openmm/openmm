@@ -532,7 +532,7 @@ ComputeKernel MetalNonbondedUtilities::createInteractionKernel(const string& sou
 
     stringstream load2g;
     for (const ComputeParameterInfo& param : params)
-        load2g<<param.getType()<<" "<<param.getName()<<"2 = global_"<<param.getName()<<"[atom2];\n";
+        load2g<<param.getType()<<" "<<param.getName()<<"2 = (atom2 < PADDED_NUM_ATOMS ? global_"<<param.getName()<<"[atom2] : ("<<param.getType()<<") 0);\n";
     replacements["LOAD_ATOM2_PARAMETERS_FROM_GLOBAL"] = load2g.str();
 
     stringstream initDerivs;
