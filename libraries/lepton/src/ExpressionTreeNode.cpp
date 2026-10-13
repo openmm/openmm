@@ -69,9 +69,13 @@ ExpressionTreeNode::ExpressionTreeNode(ExpressionTreeNode&& node) : operation(no
 ExpressionTreeNode::ExpressionTreeNode() : operation(NULL) {
 }
 
-ExpressionTreeNode::~ExpressionTreeNode() {
-    if (operation != NULL)
+ExpressionTreeNode::~ExpressionTreeNode()
+{
+    if (operation)
+    {
         delete operation;
+        operation = NULL;
+    }
 }
 
 bool ExpressionTreeNode::operator!=(const ExpressionTreeNode& node) const {
@@ -95,10 +99,12 @@ bool ExpressionTreeNode::operator==(const ExpressionTreeNode& node) const {
 }
 
 ExpressionTreeNode& ExpressionTreeNode::operator=(const ExpressionTreeNode& node) {
-    if (operation != NULL)
-        delete operation;
-    operation = node.getOperation().clone();
-    children = node.getChildren();
+    if (this == &node)
+        return *this;
+    Operation* newOperation = node.operation == NULL ? NULL : node.operation->clone();
+    delete operation;
+    operation = newOperation;
+    children = node.children;
     return *this;
 }
 
@@ -113,6 +119,9 @@ ExpressionTreeNode& ExpressionTreeNode::operator=(ExpressionTreeNode&& node) {
 }
 
 const Operation& ExpressionTreeNode::getOperation() const {
+    if (operation == NULL) {
+        throw Exception("expression tree node has no operation");
+    }
     return *operation;
 }
 
