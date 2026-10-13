@@ -69,12 +69,9 @@ ExpressionTreeNode::ExpressionTreeNode(ExpressionTreeNode&& node) : operation(no
 ExpressionTreeNode::ExpressionTreeNode() : operation(NULL) {
 }
 
-ExpressionTreeNode::~ExpressionTreeNode()
-{
-    if (operation != NULL) {
+ExpressionTreeNode::~ExpressionTreeNode() {
+    if (operation != NULL)
         delete operation;
-        operation = NULL;
-    }
 }
 
 bool ExpressionTreeNode::operator!=(const ExpressionTreeNode& node) const {
@@ -98,11 +95,9 @@ bool ExpressionTreeNode::operator==(const ExpressionTreeNode& node) const {
 }
 
 ExpressionTreeNode& ExpressionTreeNode::operator=(const ExpressionTreeNode& node) {
-    Operation* newOperation = node.operation == NULL ? NULL : node.operation->clone();
-    if (operation != NULL) {
+    if (operation != NULL)
         delete operation;
-    }
-    operation = newOperation;
+    operation = node.operation == NULL ? NULL : node.operation->clone();
     children = node.children;
     return *this;
 }
@@ -118,9 +113,8 @@ ExpressionTreeNode& ExpressionTreeNode::operator=(ExpressionTreeNode&& node) {
 }
 
 const Operation& ExpressionTreeNode::getOperation() const {
-    if (operation == NULL) {
+    if (operation == NULL)
         throw Exception("Called getOperation() on an uninitialized ExpressionTreeNode");
-    }
     return *operation;
 }
 
