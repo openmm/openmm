@@ -36,8 +36,8 @@ from openmm.app import Topology, PDBFile, ForceField
 from openmm.app.forcefield import AllBonds, CutoffNonPeriodic, CutoffPeriodic, DrudeGenerator, _getDataDirectories
 from openmm.app.internal import compiled
 from openmm.vec3 import Vec3
-from openmm import System, Context, NonbondedForce, AmoebaVdwForce, AmoebaMultipoleForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LangevinIntegrator, LocalEnergyMinimizer
-from openmm.unit import nanometer, molar, elementary_charge, degree, acos, is_quantity, dot, norm, kilojoules_per_mole
+from openmm import System, Context, NonbondedForce, AmoebaVdwForce, AmoebaMultipoleForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LangevinIntegrator, LocalEnergyMinimizer, TwoParticleAverageSite, OutOfPlaneSite
+from openmm.unit import nanometer, molar, elementary_charge, degree, acos, is_quantity, dot, norm, kilojoules_per_mole, dalton
 import openmm.unit as unit
 from . import element as elem
 import gc
@@ -61,6 +61,23 @@ class Modeller(object):
 
     _residueHydrogens = {}
     _hasLoadedStandardHydrogens = False
+
+    # From Alvarez, Dalton Trans. 42, 8617 (2023).  All values are in nm.  Unknown elements (which will get mapped to
+    # index 0 by addMixture), and elements for which no data are available, are given a default radius of 0.2 nm here.
+    _PACKING_RADII = np.array([
+        0.2  , 0.12 , 0.143, 0.212, 0.198, 0.191, 0.177, 0.166, 0.15 , 0.146,
+        0.158, 0.25 , 0.251, 0.225, 0.219, 0.19 , 0.189, 0.182, 0.183, 0.273,
+        0.262, 0.258, 0.246, 0.242, 0.245, 0.245, 0.244, 0.24 , 0.24 , 0.238,
+        0.239, 0.232, 0.229, 0.188, 0.182, 0.186, 0.225, 0.321, 0.284, 0.275,
+        0.252, 0.256, 0.245, 0.244, 0.246, 0.244, 0.215, 0.253, 0.249, 0.243,
+        0.242, 0.247, 0.199, 0.204, 0.206, 0.348, 0.303, 0.298, 0.288, 0.292,
+        0.295, 0.2  , 0.29 , 0.287, 0.283, 0.279, 0.287, 0.281, 0.283, 0.279,
+        0.28 , 0.274, 0.263, 0.253, 0.257, 0.249, 0.248, 0.241, 0.229, 0.232,
+        0.245, 0.247, 0.26 , 0.254, 0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.28 ,
+        0.293, 0.288, 0.271, 0.282, 0.281, 0.283, 0.305, 0.34 , 0.305, 0.27 ,
+        0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.2  ,
+        0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.2  ,
+    ])
 
     def __init__(self, topology, positions):
         """Create a new Modeller object
@@ -501,17 +518,7 @@ class Modeller(object):
             box = Vec3(boxSize[0], boxSize[1], boxSize[2])
             vectors = (Vec3(boxSize[0], 0, 0), Vec3(0, boxSize[1], 0), Vec3(0, 0, boxSize[2]))
         elif padding is not None:
-            if is_quantity(padding):
-                padding = padding.value_in_unit(nanometer)
-            if len(self.positions) == 0:
-                radius = 0
-            else:
-                positions = self.positions.value_in_unit(nanometer)
-                minRange = Vec3(*(min((pos[i] for pos in positions)) for i in range(3)))
-                maxRange = Vec3(*(max((pos[i] for pos in positions)) for i in range(3)))
-                center = 0.5*(minRange+maxRange)
-                radius = max(unit.norm(center-pos) for pos in positions)
-            width = max(2*radius+padding, 2*padding)
+            width = self._computeBoxWidth(padding)
             vectors = self._computeBoxVectors(width, boxShape)
             box = Vec3(vectors[0][0], vectors[1][1], vectors[2][2])
         else:
@@ -669,6 +676,347 @@ class Modeller(object):
 
         # Add ions to neutralize the system.
         self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize, residueTemplates=newResidueTemplates)
+
+    class _ComponentData:
+        """Inner class used to encapsulate data about a mixture component."""
+        def __init__(self, topology, positions, count, radii):
+            self.topology = topology
+            self.positions = positions
+            self.count = count
+            self.radii = radii
+
+    def addMixture(self, components, boxSize=None, boxVectors=None, padding=None, boxShape='cube', platform=None, tolerance=0.01, seed=None):
+        """Adds copies of one or more components to the model to fill a periodic box.  The requested number of copies of
+        each component will be added to the box.  Next, positions and orientations of each copy (treated as a rigid
+        body) will be optimized to reduce overlaps between all of the existing and newly added atoms.  The method used
+        is similar to that described in Martínez and Martínez, J. Comput. Chem. 24, 819 (2003), and Martínez et al.,
+        J. Comput. Chem. 30, 2157 (2009).
+
+        The box size can be specified in any of several ways:
+
+        1. You can explicitly give the vectors defining the periodic box to use.
+        2. Alternatively, for a rectangular box you can simply give the dimensions of the unit cell.
+        3. You can give a padding distance.  A bounding sphere containing the solute is determined, and the box size is
+           set to (sphere diameter)+(padding).  This guarantees no atom in the solute will come closer than the padding
+           distance to any atom of another periodic copy.  If the sphere diameter is less than the padding distance,
+           the box size is set to 2*(padding) to ensure no atom is closer than the padding distance to two periodic
+           copies of any other atom.
+        4. Finally, if none of the above options is specified, the existing Topology's box vectors are used.
+
+        When specifying a padding distance, you can specify a shape for the periodic box:
+        cubic, rhombic dodecahedron, or truncated octahedron.  Using a non-rectangular box allows the same distance
+        between periodic copies to be achieved with a smaller box.  The most compact option is a rhombic dodecahedron,
+        for which the box volume is 70.7% the volume of a cubic box with the same amount of padding.
+
+        This method can also be used to pack boxes of mixtures and pure components without a solute.  Simply start from
+        a Modeller with an empty Topology and no positions.
+
+        Parameters
+        ----------
+        components : list
+            the components to add.  Each component must be provided as a dictionary, with the required keys 'topology'
+            holding a Topology for the component, 'positions' holding positions to use for instances of the component,
+            and 'count' specifying the number of copies of the component to add.
+        boxSize : Vec3=None
+            the size of the box to fill
+        boxVectors : tuple of Vec3=None
+            the vectors defining the periodic box to fill
+        padding : distance=None
+            the padding distance to use
+        boxShape : str='cube'
+            the box shape to use.  Allowed values are 'cube', 'dodecahedron', and 'octahedron'.  If padding is None,
+            this is ignored.
+        platform : Platform=None
+            the Platform to use for solving the packing problem.  If this is None, the default Platform will be used.
+        tolerance : float=0.01
+            relative tolerance for packing optimization (lower values will require more optimization time but may reduce
+            the number of close contacts in the packing solution)
+        seed : int=None
+            seed for the random number generator used in making an initial guess for the solution to the packing
+            problem.  If this is None, a random seed will be used.
+        """
+        if len([x for x in (boxSize, boxVectors, padding) if x is not None]) > 1:
+            raise ValueError('At most one of the following arguments may be specified: boxSize, boxVectors, padding')
+
+        # Process components.
+
+        componentList = []
+        for component in components:
+            component = dict(component)
+            componentTopology = component.pop('topology')
+            componentPositions = component.pop('positions')
+            componentCount = component.pop('count')
+            if component:
+                raise ValueError(f'Unsupported keys in component dictionary: {list(component.keys())}')
+
+            if not (componentTopology.getNumAtoms() and componentCount):
+                continue
+            if is_quantity(componentPositions[0]):
+                componentPositions = [position.value_in_unit(nanometer) for position in componentPositions]
+            componentList.append(Modeller._ComponentData(componentTopology, np.array(componentPositions), componentCount, self._getPackingRadii(componentTopology)))
+
+        # Determine what box vectors to use for packing.
+
+        if boxVectors is not None:
+            if is_quantity(boxVectors[0]):
+                boxVectors = (boxVectors[0].value_in_unit(nanometer), boxVectors[1].value_in_unit(nanometer), boxVectors[2].value_in_unit(nanometer))
+            vectors = np.array(boxVectors)
+        elif boxSize is not None:
+            if is_quantity(boxSize):
+                boxSize = boxSize.value_in_unit(nanometer)
+            vectors = np.diag(boxSize)
+        elif padding is not None:
+            width = self._computeBoxWidth(padding)
+            vectors = np.array(self._computeBoxVectors(width, boxShape))
+        else:
+            vectors = self.topology.getPeriodicBoxVectors()
+            if vectors is None:
+                raise ValueError('Neither the box size, box vectors, nor padding was specified, and the Topology does not define unit cell dimensions')
+            vectors = np.array(vectors.value_in_unit(nanometer))
+
+        # Set up a Topology, positions, and System for solving the packing problem.
+
+        topology = Topology()
+        positions = []
+        system = System()
+
+        force = CustomNonbondedForce("max(1-r/(radius1+radius2),0)^2")
+        force.setNonbondedMethod(CustomNonbondedForce.CutoffPeriodic)
+        force.addPerParticleParameter("radius")
+        system.addForce(force)
+
+        topology.setPeriodicBoxVectors(vectors)
+        system.setDefaultPeriodicBoxVectors(*vectors)
+
+        # Add the existing model.  Prepare a cell list to make sure new components are not added inside it.
+
+        if self.topology.getNumAtoms():
+            self._addCopyToTopology(topology, self.topology)
+
+            basePositions = self.positions
+            if is_quantity(basePositions[0]):
+                basePositions = [position.value_in_unit(nanometer) for position in basePositions]
+            basePositions = np.array(basePositions)
+            positions.append(basePositions)
+
+            baseRadii = self._getPackingRadii(self.topology)
+            for radius in baseRadii:
+                system.addParticle(0)
+                force.addParticle([radius])
+
+            cells = _CellList(basePositions, np.amax(baseRadii), vectors, True)
+            periodicDistance = compiled.periodicDistance(vectors)
+        else:
+            baseRadii = None
+            cells = None
+            periodicDistance = None
+
+        # Add new components.
+
+        rng = np.random.default_rng(seed)
+
+        for component in componentList:
+            dstChain = topology.addChain()
+            for _ in range(component.count):
+                self._addCopyToChain(dstChain, component.topology)
+
+            # Get the component positions, and indices of the particles that should be real (not virtual sites).
+
+            refPositions, refIndices = self._processPositions(component.topology, component.positions)
+
+            # Place copies of the component randomly in the box.
+
+            for _ in range(component.count):
+                positions.append(self._placeRandomly(refPositions, vectors, rng, baseRadii, cells, periodicDistance))
+
+            if refIndices.size == 1:
+                for _ in range(component.count):
+                    system.addParticle(1)
+
+                    force.addParticle([component.radii[0]])
+
+            elif refIndices.size == 2:
+                # The component is linear; constrain two atoms and use virtual sites for all other atoms.
+
+                refPos1, refPos2 = refPositions[refIndices]
+                refVec = refPos2 - refPos1
+                refDist = np.linalg.norm(refVec)
+
+                refWeights = (refPositions - refPos1) @ refVec / (refDist * refDist)
+
+                for _ in range(component.count):
+                    offset = system.getNumParticles()
+                    index1, index2 = offset + refIndices
+
+                    for index, weight in enumerate(refWeights):
+                        if index in refIndices:
+                            system.addParticle(1)
+                        else:
+                            system.setVirtualSite(system.addParticle(0), TwoParticleAverageSite(index1, index2, 1 - weight, weight))
+
+                        force.addParticle([component.radii[index]])
+
+                    system.addConstraint(index1, index2, refDist)
+
+            else:
+                # The component has three or more atoms that are not all collinear; constrain a triangle and use virtual
+                # sites for all other atoms.
+
+                refPos1, refPos2, refPos3 = refPositions[refIndices]
+                refVec1 = refPos2 - refPos1
+                refVec2 = refPos3 - refPos1
+
+                refWeights = np.linalg.solve(np.stack([refVec1, refVec2, np.cross(refVec1, refVec2)]).T, (refPositions - refPos1).T).T
+
+                for _ in range(component.count):
+                    offset = system.getNumParticles()
+                    index1, index2, index3 = offset + refIndices
+
+                    for index, (weight12, weight13, weightCross) in enumerate(refWeights):
+                        if index in refIndices:
+                            system.addParticle(1)
+                        else:
+                            system.setVirtualSite(system.addParticle(0), OutOfPlaneSite(index1, index2, index3, weight12, weight13, weightCross))
+
+                        force.addParticle([component.radii[index]])
+
+                    system.addConstraint(index1, index2, np.linalg.norm(refVec1))
+                    system.addConstraint(index1, index3, np.linalg.norm(refVec2))
+                    system.addConstraint(index2, index3, np.linalg.norm(refPos3 - refPos2))
+
+        # Solve the packing problem and update the Modeller with the output.
+
+        if not system.getNumParticles():
+            return
+        force.setCutoffDistance(2 * max(force.getParticleParameters(index)[0] for index in range(force.getNumParticles())))
+        if platform is None:
+            context = Context(system, VerletIntegrator(0.0))
+        else:
+            context = Context(system, VerletIntegrator(0.0), platform)
+        context.setPositions(np.concatenate(positions))
+
+        LocalEnergyMinimizer.minimize(context, tolerance=tolerance)
+
+        self.topology = topology
+        self.positions = context.getState(positions=True).getPositions()
+
+    def _addCopyToTopology(self, dstTopology, srcTopology):
+        """Add a copy of the given source topology to a given destination topology."""
+        dstAtoms = []
+        for srcChain in srcTopology.chains():
+            dstChain = dstTopology.addChain()
+            for srcResidue in srcChain.residues():
+                dstResidue = dstTopology.addResidue(srcResidue.name, dstChain)
+                for srcAtom in srcResidue.atoms():
+                    dstAtoms.append(dstTopology.addAtom(srcAtom.name, srcAtom.element, dstResidue))
+        for srcBond in srcTopology.bonds():
+            dstTopology.addBond(dstAtoms[srcBond.atom1.index], dstAtoms[srcBond.atom2.index])
+
+    def _addCopyToChain(self, dstChain, srcTopology):
+        """Add a copy of all residues in the given source topology to a given destination chain."""
+        dstTopology = dstChain.topology
+        dstAtoms = []
+        for srcResidue in srcTopology.residues():
+            dstResidue = dstTopology.addResidue(srcResidue.name, dstChain)
+            for srcAtom in srcResidue.atoms():
+                dstAtoms.append(dstTopology.addAtom(srcAtom.name, srcAtom.element, dstResidue))
+        for srcBond in srcTopology.bonds():
+            dstTopology.addBond(dstAtoms[srcBond.atom1.index], dstAtoms[srcBond.atom2.index])
+
+    def _processPositions(self, topology, positions):
+        """Finds suitable reference atoms in a set of positions to constrain."""
+        numAtoms = topology.getNumAtoms()
+
+        # Center the component.
+
+        positions = positions - np.mean(positions, axis=0)
+
+        if numAtoms < 3:
+            # There are no choices for the reference atoms.
+
+            return positions, np.arange(numAtoms)
+
+        # Choose the first reference atom as the one furthest from the center.
+
+        index1 = np.argmax(np.sum(positions * positions, axis=1))
+
+        # Choose the second reference atom as the one furthest from the first.
+
+        delta1x = positions - positions[index1]
+        objective2 = np.linalg.norm(delta1x, axis=1)
+        objective2[index1] = np.nan
+        index2 = np.nanargmax(objective2)
+
+        # Choose the third reference atom as the one furthest from the line passing through the first two.
+
+        dir12 = positions[index2] - positions[index1]
+        dir12 /= np.linalg.norm(dir12)
+        objective3 = np.linalg.norm(delta1x - dir12 * np.sum(dir12 * delta1x, axis=1, keepdims=True), axis=1)
+        objective3[[index1, index2]] = np.nan
+        index3 = np.nanargmax(objective3)
+
+        # If the molecule is linear or very close to linear, don't return the third reference atom since it will create
+        # a degenerate triangle.  This tolerance is fairly loose to keep the constraint solver from failing, so slightly
+        # non-linear molecules will be inaccurately treated as linear, but this should be good enough for packing.
+
+        if objective3[index3] < 0.01 * objective2[index2]:
+            indices = np.array([index1, index2])
+        else:
+            indices = np.array([index1, index2, index3])
+        return positions, indices
+
+    def _placeRandomly(self, positions, vectors, rng, baseRadii, cells, periodicDistance):
+        """Place positions representing a copy of a component randomly in a periodic box."""
+
+        # Search for a placement such that none of the atoms of the new copy are inside the Modeller's existing atoms.
+        # This does not need to prevent overlaps completely, since we will optimize later, but keeps new atoms from
+        # getting stuck inside existing atoms.  We also do not attempt to avoid overlaps between new copies.
+
+        for _ in range(100):
+            # Try to find a reasonable position for the center of the new copy (away from existing atoms).
+
+            centerPos = rng.uniform(size=3) @ vectors
+            if cells is not None and cells.cellForPosition(centerPos) in cells.cells:
+                continue
+
+            # Generate a random rotation matrix: see scipy.stats.ortho_group.rv() and scipy.stats.special_ortho_group.rv().
+
+            q, r = np.linalg.qr(rng.normal(size=(3, 3)))
+            d = np.diag(r)
+            q *= d / np.abs(d)
+            q[0] /= np.linalg.det(q)
+
+            # Rotate the copy and place it in the box, then check its distances to existing atoms.
+
+            newPositions = centerPos + positions @ q
+            if cells is not None and any(
+                periodicDistance(newPosition, cells.positions[neighbor]) < baseRadii[neighbor]
+                for newPosition in newPositions
+                for neighbor in cells.neighbors(newPosition)
+            ):
+                continue
+
+            return newPositions
+
+        raise ValueError("No space found for component; use a larger box size or padding distance")
+
+    def _getPackingRadii(self, topology):
+        """Return van der Waals radii for each atom in a Topology."""
+        return Modeller._PACKING_RADII[[0 if atom.element is None else atom.element.atomic_number for atom in topology.atoms()]]
+
+    def _computeBoxWidth(self, padding):
+        """Compute the necessary periodic box width for a given padding distance."""
+        if is_quantity(padding):
+            padding = padding.value_in_unit(nanometer)
+        if len(self.positions) == 0:
+            radius = 0
+        else:
+            positions = self.positions.value_in_unit(nanometer)
+            minRange = Vec3(*(min((pos[i] for pos in positions)) for i in range(3)))
+            maxRange = Vec3(*(max((pos[i] for pos in positions)) for i in range(3)))
+            center = 0.5*(minRange+maxRange)
+            radius = max(unit.norm(center-pos) for pos in positions)
+        return max(2*radius+padding, 2*padding)
 
     def _computeBoxVectors(self, width, boxShape):
         """Compute the periodic box vectors given a box width and shape."""
