@@ -326,7 +326,7 @@ ComputeSort MetalContext::createSort(ComputeSortImpl::SortTrait* trait, unsigned
     return shared_ptr<ComputeSortImpl>(new MetalSort(*this, trait, length, uniform));
 }
 
-static string rewriteKernelArgs(const string& source) {
+static string rewriteKernelArgs(const string& source, bool packArgs) {
     static regex kernelMatcher("KERNEL void[\\s\\S]*?\\(([\\s\\S]*?)\\)");
     static regex lineMatcher("[^\\s].*[^\\s]");
     static regex argMatcher("\\#.*|[^,\\s#][^\\,#]*[^,\\s#]*");
@@ -336,65 +336,87 @@ static string rewriteKernelArgs(const string& source) {
 
     // Loop over all kernels declared in the file.
 
-    sregex_iterator nextKernel(source.begin(), source.end(), kernelMatcher);
     sregex_iterator end;
-    while (nextKernel != end) {
+    for (sregex_iterator nextKernel(source.begin(), source.end(), kernelMatcher); nextKernel != end; ++nextKernel) {
         smatch kernelMatch = *nextKernel;
         result << source.substr(pos, kernelMatch.position(1)-pos);
         string argList = kernelMatch[1].str();
         pos = kernelMatch.position(1)+argList.size();
+        stringstream unpackArgs;
+        if (packArgs)
+            result << "constant uchar* _packedArgs";
 
         // Loop over lines in the argument list.
 
-        sregex_iterator nextLine(argList.begin(), argList.end(), lineMatcher);
-        while (nextLine != end) {
+        for (sregex_iterator nextLine(argList.begin(), argList.end(), lineMatcher); nextLine != end; ++nextLine) {
             smatch lineMatch = *nextLine;
             string line = lineMatch.str();
-            result << "\n";
-            if (line[0] == ',')
-                result << ",";
-            if (line[0] == '#')
-                result << line << "\n";
-            else {
-                // Loop over arguments in the line.
+            if (packArgs) {
+                if (line[0] == '#') {
+                    result << "\n" << line << "\n";
+                    unpackArgs << line << "\n";
+                }
+                else {
+                    // Loop over arguments in the line, packing all of them into a single argument.
 
-                sregex_iterator nextArg(line.begin(), line.end(), argMatcher);
-                bool addComma = false;
-                while (nextArg != end) {
-                    smatch argMatch = *nextArg;
-                    string arg = argMatch.str();
-                    if (addComma)
-                        result << ", ";
-                    addComma = true;
-                    if (arg.rfind("GLOBAL", 0) == 0 || arg.rfind("LOCAL", 0) == 0)
-                        result << arg;
-                    else {
-                        // This is a primitive value.  We need to transform it into reference to constant memory.
-
-                        result << "constant";
-                        sregex_iterator nextWord(arg.begin(), arg.end(), wordMatcher);
-                        bool addAmpersand = true;
-                        while (nextWord != end) {
-                            smatch wordMatch = *nextWord;
-                            string word = wordMatch.str();
-                            if (word != "const") {
-                                result << " " << word;
-                                if (addAmpersand && word != "unsigned") {
-                                    result << "&";
-                                    addAmpersand = false;
-                                }
-                            }
-                            ++nextWord;
+                    for (sregex_iterator nextArg(line.begin(), line.end(), argMatcher); nextArg != end; ++nextArg) {
+                        string arg = nextArg->str();
+                        if (arg.rfind("LOCAL", 0) == 0)
+                            result << ", " << arg;
+                        else {
+                            string type = arg.substr(0, arg.find_last_of(" *&")+1);
+                            unpackArgs << arg << " = *(" << type << " constant*) _packedArgs;\n";
+                            unpackArgs << "_packedArgs += " << sizeof(mm_double4) << ";\n";
                         }
                     }
-                    ++nextArg;
                 }
             }
-            if (line.back() == ',')
-                result << ",";
-            ++nextLine;
+            else {
+                result << "\n";
+                if (line[0] == ',')
+                    result << ",";
+                if (line[0] == '#')
+                    result << line << "\n";
+                else {
+                    // Loop over arguments in the line.
+
+                    bool addComma = false;
+                    for (sregex_iterator nextArg(line.begin(), line.end(), argMatcher); nextArg != end; ++nextArg) {
+                        smatch argMatch = *nextArg;
+                        string arg = argMatch.str();
+                        if (addComma)
+                            result << ", ";
+                        addComma = true;
+                        if (arg.rfind("GLOBAL", 0) == 0 || arg.rfind("LOCAL", 0) == 0)
+                            result << arg;
+                        else {
+                            // This is a primitive value.  We need to transform it into reference to constant memory.
+
+                            result << "constant";
+                            bool addAmpersand = true;
+                            for (sregex_iterator nextWord(arg.begin(), arg.end(), wordMatcher); nextWord != end; ++nextWord) {
+                                smatch wordMatch = *nextWord;
+                                string word = wordMatch.str();
+                                if (word != "const") {
+                                    result << " " << word;
+                                    if (addAmpersand && word != "unsigned") {
+                                        result << "&";
+                                        addAmpersand = false;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (line.back() == ',')
+                    result << ",";
+            }
         }
-        ++nextKernel;
+        if (packArgs) {
+            size_t brace = source.find('{', pos);
+            result << source.substr(pos, brace+1-pos) << "\n" << unpackArgs.str();
+            pos = brace+1;
+        }
     }
     result << source.substr(pos, source.size()-pos);
     return result.str();
@@ -431,7 +453,6 @@ ComputeProgram MetalContext::compileProgram(const string source, const map<strin
     }
     if (!defines.empty())
         src << endl;
-    src << rewriteKernelArgs(source) << endl;
 
     // Compile the program.
 
@@ -443,14 +464,20 @@ ComputeProgram MetalContext::compileProgram(const string source, const map<strin
 #ifdef ENABLE_PRINTF
     options->setEnableLogging(true);
 #endif
-    NS::Error* error = nullptr;
-    MTL::Library* library = device->newLibrary(NS::String::string(src.str().c_str(), NS::UTF8StringEncoding), options, &error);
-    options->release();
-    string errorString = (error == nullptr ? "" : error->localizedDescription()->utf8String());
-    pool->release();
-    if (library == nullptr)
-        throw OpenMMException("Error compiling program: "+errorString);
-    return shared_ptr<ComputeProgramImpl>(new MetalProgram(*this, library));
+    for (bool packArgs : {false, true}) {
+        NS::Error* error = nullptr;
+        MTL::Library* library = device->newLibrary(NS::String::string((src.str()+rewriteKernelArgs(source, packArgs)).c_str(), NS::UTF8StringEncoding), options, &error);
+        string errorString = (error == nullptr ? "" : error->localizedDescription()->utf8String());
+        if (!packArgs && library == nullptr && errorString.find("resource location available") != string::npos) {
+            // Try compiling again, this time packing all arguments into a single argument.
+            continue;
+        }
+        options->release();
+        pool->release();
+        if (library == nullptr)
+            throw OpenMMException("Error compiling program: "+errorString);
+        return shared_ptr<ComputeProgramImpl>(new MetalProgram(*this, library, packArgs));
+    }
 }
 
 MetalArray& MetalContext::unwrap(ArrayInterface& array) const {

@@ -32,8 +32,8 @@
 using namespace OpenMM;
 using namespace std;
 
-MetalKernel::MetalKernel(MetalContext& context, MTL::ComputePipelineState* pipeline, const string& name) :
-        context(context), pipeline(pipeline), name(name), dynamicLocal(0) {
+MetalKernel::MetalKernel(MetalContext& context, MTL::ComputePipelineState* pipeline, const string& name, bool packArgs) :
+        context(context), pipeline(pipeline), name(name), dynamicLocal(0), packArgs(packArgs) {
 }
 
 MetalKernel::~MetalKernel() {
@@ -53,12 +53,26 @@ void MetalKernel::execute(int threads, int blockSize) {
     MTL::ComputeCommandEncoder& encoder = queue.getEncoder();
     encoder.setComputePipelineState(pipeline);
     int numArgs = arrayArgs.size();
-    argPointers.resize(numArgs);
-    for (int i = 0; i < numArgs; i++) {
-        if (arrayArgs[i] != NULL)
-            encoder.setBuffer(arrayArgs[i]->getBuffer(), 0, i);
-        else
-            encoder.setBytes(&primitiveArgs[i], primitiveArgSizes[i], i);
+    if (packArgs) {
+        // There are too many arguments to pass individually, so we need to pack all of them into a single argument.
+
+        vector<mm_double4> args = primitiveArgs;
+        for (int i = 0; i < numArgs; i++) {
+            if (arrayArgs[i] != NULL) {
+                MTL::GPUAddress address = arrayArgs[i]->getBuffer()->gpuAddress();
+                memcpy(&args[i], &address, sizeof(address));
+                encoder.useResource(arrayArgs[i]->getBuffer(), MTL::ResourceUsageRead | MTL::ResourceUsageWrite);
+            }
+        }
+        encoder.setBytes(args.data(), numArgs*sizeof(mm_double4), 0);
+    }
+    else {
+        for (int i = 0; i < numArgs; i++) {
+            if (arrayArgs[i] != NULL)
+                encoder.setBuffer(arrayArgs[i]->getBuffer(), 0, i);
+            else
+                encoder.setBytes(&primitiveArgs[i], primitiveArgSizes[i], i);
+        }
     }
     if (dynamicLocal > 0)
         encoder.setThreadgroupMemoryLength(dynamicLocal, 0);
