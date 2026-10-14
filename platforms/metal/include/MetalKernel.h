@@ -44,8 +44,9 @@ public:
      * @param context      the context this kernel belongs to
      * @param pipeline     the pipeline state wrapping the kernel to be invoked
      * @param name         the name of the kernel function
+     * @param packArgs     whether this kernel needs to have all its arguments packed into a single argument
      */
-    MetalKernel(MetalContext& context, MTL::ComputePipelineState* pipeline, const std::string& name);
+    MetalKernel(MetalContext& context, MTL::ComputePipelineState* pipeline, const std::string& name, bool packArgs);
     ~MetalKernel();
     /**
      * Get the name of this kernel.
@@ -113,8 +114,8 @@ private:
     std::vector<mm_double4> primitiveArgs;
     std::vector<int> primitiveArgSizes;
     std::vector<MetalArray*> arrayArgs;
-    std::vector<void*> argPointers;
     int dynamicLocal;
+    bool packArgs;
 };
 
 } // namespace OpenMM

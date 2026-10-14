@@ -41,8 +41,9 @@ public:
      * 
      * @param context      the context this program belongs to
      * @param library      the compiled library
+     * @param packArgs     whether kernels in this program need to have all their arguments packed into a single argument
      */
-    MetalProgram(MetalContext& context, MTL::Library* library);
+    MetalProgram(MetalContext& context, MTL::Library* library, bool packArgs);
     /**
      * Create a ComputeKernel for one of the kernels in this program.
      * 
@@ -52,6 +53,7 @@ public:
 private:
     MetalContext& context;
     MTL::Library* library;
+    bool packArgs;
 };
 
 } // namespace OpenMM
