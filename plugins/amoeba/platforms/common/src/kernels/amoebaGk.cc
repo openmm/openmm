@@ -87,7 +87,7 @@ DEVICE real interpolate2D(real x1, real x2, real y1, real y2, real x, real y,
     return (y2 - y) / (y2 - y1) * fxy1 + (y - y1) / (y2 - y1) * fxy2;
 }
 
-DEVICE void getBounds(real rho, int* below, int* above) {
+DEVICE void getBounds(real rho, PRIVATE int* below, PRIVATE int* above) {
     // Note this function is in Angstroms.
     real MINIMUM_RADIUS = 0.8f;
     real SPACING = 0.05f;
@@ -108,7 +108,7 @@ DEVICE void getBounds(real rho, int* below, int* above) {
     }
 }
 
-DEVICE void getNeckConstants(real rhoDescreened, real rhoDescreening, real* aij, real *bij,
+DEVICE void getNeckConstants(real rhoDescreened, real rhoDescreening, PRIVATE real* aij, PRIVATE real *bij,
     GLOBAL const float* RESTRICT neckRadii,
     GLOBAL const float* RESTRICT neckA,
     GLOBAL const float* RESTRICT neckB) {
@@ -351,11 +351,11 @@ typedef struct {
 #define ATOM2_ARG_SPEC volatile
 #endif
 
-DEVICE void computeOneInteractionF1(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, real* outputEnergy, real3* force);
-DEVICE void computeOneInteractionF2(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, real* outputEnergy, real3* force);
-DEVICE void computeOneInteractionT1(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, real3* torque);
-DEVICE void computeOneInteractionT2(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, real3* torque);
-DEVICE void computeOneInteractionB1B2(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, real* bornForce1, real* bornForce2);
+DEVICE void computeOneInteractionF1(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, PRIVATE real* outputEnergy, PRIVATE real3* force);
+DEVICE void computeOneInteractionF2(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, PRIVATE real* outputEnergy, PRIVATE real3* force);
+DEVICE void computeOneInteractionT1(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, PRIVATE real3* torque);
+DEVICE void computeOneInteractionT2(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, PRIVATE real3* torque);
+DEVICE void computeOneInteractionB1B2(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, PRIVATE real* bornForce1, PRIVATE real* bornForce2);
 
 inline DEVICE AtomData2 loadAtomData2(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labFrameDipole,
         GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT inducedDipolePolar, GLOBAL const real* RESTRICT bornRadius) {
@@ -690,7 +690,7 @@ DEVICE real neckDescreenDerivative(real r, real radius, real radiusK, real sneck
     return 4 * PI4_3 * (sneck * Aij * rMinusBij3 * radiiMinusr4 - sneck * Aij * rMinusBij4 * radiiMinusr3);
 }
 
-DEVICE void computeBornChainRuleInteraction(AtomData3 atom1, AtomData3 atom2, real3* force,
+DEVICE void computeBornChainRuleInteraction(AtomData3 atom1, AtomData3 atom2, PRIVATE real3* force,
                                             GLOBAL const float* RESTRICT neckRadii,
                                             GLOBAL const float* RESTRICT neckA,
                                             GLOBAL const float* RESTRICT neckB) {
@@ -872,9 +872,9 @@ typedef struct ALIGN {
 #define ATOM2_PTR_ARG_SPEC volatile
 #endif
 
-DEVICE void computeOneEDiffInteractionF1(const AtomData4* atom1, LOCAL_ARG ATOM2_PTR_ARG_SPEC AtomData4* atom2, float dScale, float pScale, real* outputEnergy, real3* outputForce);
-DEVICE void computeOneEDiffInteractionT1(const AtomData4* atom1, LOCAL_ARG ATOM2_PTR_ARG_SPEC AtomData4* atom2, float dScale, float pScale, real3* outputForce);
-DEVICE void computeOneEDiffInteractionT3(const AtomData4* atom1, LOCAL_ARG ATOM2_PTR_ARG_SPEC AtomData4* atom2, float dScale, float pScale, real3* outputForce);
+DEVICE void computeOneEDiffInteractionF1(PRIVATE const AtomData4* atom1, LOCAL_ARG ATOM2_PTR_ARG_SPEC AtomData4* atom2, float dScale, float pScale, PRIVATE real* outputEnergy, PRIVATE real3* outputForce);
+DEVICE void computeOneEDiffInteractionT1(PRIVATE const AtomData4* atom1, LOCAL_ARG ATOM2_PTR_ARG_SPEC AtomData4* atom2, float dScale, float pScale, PRIVATE real3* outputForce);
+DEVICE void computeOneEDiffInteractionT3(PRIVATE const AtomData4* atom1, LOCAL_ARG ATOM2_PTR_ARG_SPEC AtomData4* atom2, float dScale, float pScale, PRIVATE real3* outputForce);
 
 inline DEVICE AtomData4 loadAtomData4(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labFrameDipole,
         GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT inducedDipolePolar,

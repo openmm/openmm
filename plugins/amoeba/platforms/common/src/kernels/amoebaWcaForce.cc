@@ -16,7 +16,7 @@ inline DEVICE AtomData loadAtomData(int atom, GLOBAL const real4* RESTRICT posq,
     return data;
 }
 
-DEVICE void initParticleParameters(float radius, float epsilon, real* rmixo, real* rmixh, real* emixo, real* emixh) {
+DEVICE void initParticleParameters(float radius, float epsilon, PRIVATE real* rmixo, PRIVATE real* rmixh, PRIVATE real* emixo, PRIVATE real* emixh) {
     real sqrtEps = SQRT(epsilon);
     real denominator = SQRT(EPSO) + sqrtEps;
     *emixo = 4*EPSO*epsilon / (denominator*denominator);
@@ -95,7 +95,7 @@ DEVICE real integralAfterRminDerivative(real ri, real eps, real rmin, real rmin7
 }
 
 DEVICE real interact(real factor, real ri, real sk, real rmix, real emix,
-                     real r, real r2, real r3, real3 *force) {
+                     real r, real r2, real r3, PRIVATE real3 *force) {
     real sum = 0;
     // Nothing to do if the integral begins beyond r + sk (i.e. atom k does not exclude solvent)
     if (ri < r + sk) {
@@ -160,7 +160,7 @@ DEVICE real interact(real factor, real ri, real sk, real rmix, real emix,
 }
 
 
-DEVICE void computeOneInteraction(AtomData atom1, AtomData atom2, real rmixo, real rmixh, real emixo, real emixh, real3* force, real* energy) {
+DEVICE void computeOneInteraction(AtomData atom1, AtomData atom2, real rmixo, real rmixh, real emixo, real emixh, PRIVATE real3* force, PRIVATE real* energy) {
     // get deltaR and r between 2 atoms
 
     *force = atom1.pos - atom2.pos;

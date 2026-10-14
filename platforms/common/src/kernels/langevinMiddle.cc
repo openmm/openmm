@@ -24,13 +24,13 @@ KERNEL void integrateLangevinMiddlePart1(int numAtoms, int paddedNumAtoms, GLOBA
  */
 
 KERNEL void integrateLangevinMiddlePart2(int numAtoms, GLOBAL mixed4* RESTRICT velm, GLOBAL mixed4* RESTRICT posDelta,
-        GLOBAL mixed4* RESTRICT oldDelta, GLOBAL const mixed* RESTRICT paramBuffer, GLOBAL const mixed2* RESTRICT dt, GLOBAL const float4* RESTRICT random, unsigned int randomIndex
+        GLOBAL mixed4* RESTRICT oldDelta, GLOBAL const mixed* RESTRICT paramBuffer, GLOBAL const mixed2* RESTRICT dt, GLOBAL const float4* RESTRICT random, unsigned int startRandomIndex
         ) {
     mixed vscale = paramBuffer[VelScale];
     mixed noisescale = paramBuffer[NoiseScale];
     mixed halfdt = 0.5f*dt[0].y;
     int index = GLOBAL_ID;
-    randomIndex += index;
+    unsigned int randomIndex = startRandomIndex+index;
     while (index < numAtoms) {
         mixed4 velocity = velm[index];
         if (velocity.w != 0.0) {

@@ -3968,7 +3968,7 @@ void CommonCalcRGForceKernel::initialize(const System& system, const RGForce& fo
     forceKernel->addArg(centerBuffer);
     forceKernel->addArg(rgBuffer);
     forceKernel->addArg(cc.getLongForceBuffer());
-    forceKernel->addArg(cc.getEnergyBuffer());
+    forceKernel->addArg();
 
     // Create the listener for updating the list of particles.
 
@@ -3989,6 +3989,7 @@ double CommonCalcRGForceKernel::execute(ContextImpl& context, bool includeForces
     ContextSelector selector(cc);
     centerKernel->execute(particles.getSize(), blockSize);
     rgKernel->execute(particles.getSize(), blockSize);
+    forceKernel->setArg(6, cc.getEnergyBuffer());
     forceKernel->execute(particles.getSize(), blockSize);
     return 0.0;
 }

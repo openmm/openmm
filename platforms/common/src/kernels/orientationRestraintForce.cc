@@ -2,19 +2,18 @@
  * Sum a value over all threads.
  */
 DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) {
-    const int thread = LOCAL_ID;
     SYNC_THREADS;
-    temp[thread] = value;
+    temp[LOCAL_ID] = value;
     SYNC_THREADS;
     for (int step = 1; step < 32; step *= 2) {
-        if (thread+step < LOCAL_SIZE && thread%(2*step) == 0)
-            temp[thread] = temp[thread] + temp[thread+step];
+        if (LOCAL_ID+step < LOCAL_SIZE && LOCAL_ID%(2*step) == 0)
+            temp[LOCAL_ID] = temp[LOCAL_ID] + temp[LOCAL_ID+step];
         SYNC_WARPS;
     }
     SYNC_THREADS;
     for (int step = 32; step < LOCAL_SIZE; step *= 2) {
-        if (thread+step < LOCAL_SIZE && thread%(2*step) == 0)
-            temp[thread] = temp[thread] + temp[thread+step];
+        if (LOCAL_ID+step < LOCAL_SIZE && LOCAL_ID%(2*step) == 0)
+            temp[LOCAL_ID] = temp[LOCAL_ID] + temp[LOCAL_ID+step];
         SYNC_THREADS;
     }
     return temp[0];

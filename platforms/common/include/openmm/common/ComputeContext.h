@@ -427,7 +427,9 @@ public:
     /**
      * Get the array which contains the buffer in which energy is computed.
      */
-    virtual ArrayInterface& getEnergyBuffer() = 0;
+    ArrayInterface& getEnergyBuffer() {
+        return energyBuffer;
+    }
     /**
      * Get the array which contains the buffer in which derivatives of the energy with respect to parameters are computed.
      */
@@ -669,7 +671,7 @@ protected:
     ComputeKernel reduceEnergyKernel, setChargesKernel;
     ComputeArray posq, posqCorrection, velm;
     ComputeArray longForceBuffer, atomIndexDevice;
-    ComputeArray energySum, energyParamDerivBuffer;
+    ComputeArray energySum, energyBuffer, energyParamDerivBuffer;
     ComputeArray chargeBuffer, globalParamValues;
     std::vector<ArrayInterface*> autoclearBuffers;
     std::vector<ComputeForceInfo*> forces;

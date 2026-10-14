@@ -3,7 +3,7 @@
 /**
  * Calculate the spline coefficients for a single atom along a single axis.
  */
-DEVICE void computeBSplinePoint(real4* thetai, real w, real* array) {
+DEVICE void computeBSplinePoint(PRIVATE real4* thetai, real w, PRIVATE real* array) {
     // initialization to get to 2nd order recursion
 
     ARRAY(2,2) = w;
@@ -185,10 +185,8 @@ KERNEL void gridSpreadFixedMultipoles(GLOBAL const real4* RESTRICT posq, GLOBAL 
         GLOBAL const real* RESTRICT fracQuadrupole,
 #ifdef USE_FIXED_POINT_CHARGE_SPREADING
         GLOBAL mm_ulong* RESTRICT pmeGrid,
-#elif defined(HIPPO)
-        GLOBAL real* RESTRICT pmeGrid,
 #else
-        GLOBAL real2* RESTRICT pmeGrid,
+        GLOBAL real* RESTRICT pmeGrid,
 #endif
 #ifdef HIPPO
         GLOBAL const real* RESTRICT coreCharge, GLOBAL const real* RESTRICT valenceCharge,
@@ -283,7 +281,7 @@ KERNEL void gridSpreadFixedMultipoles(GLOBAL const real4* RESTRICT posq, GLOBAL 
     #ifdef USE_FIXED_POINT_CHARGE_SPREADING
                     ATOMIC_ADD(&pmeGrid[2*index], (mm_ulong) realToFixedPoint(add));
     #else
-                    ATOMIC_ADD(&pmeGrid[index].x, add);
+                    ATOMIC_ADD(&pmeGrid[2*index], add);
     #endif
 #endif
                 }
@@ -298,10 +296,8 @@ KERNEL void gridSpreadInducedDipoles(GLOBAL const real4* RESTRICT posq, GLOBAL c
 #endif
 #ifdef USE_FIXED_POINT_CHARGE_SPREADING
         GLOBAL mm_ulong* RESTRICT pmeGrid,
-#elif defined(HIPPO)
-        GLOBAL real* RESTRICT pmeGrid,
 #else
-        GLOBAL real2* RESTRICT pmeGrid,
+        GLOBAL real* RESTRICT pmeGrid,
 #endif
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
 #if __CUDA_ARCH__ < 500
@@ -407,8 +403,8 @@ KERNEL void gridSpreadInducedDipoles(GLOBAL const real4* RESTRICT posq, GLOBAL c
                     ATOMIC_ADD(&pmeGrid[2*index], (mm_ulong) realToFixedPoint(add1));
                     ATOMIC_ADD(&pmeGrid[2*index+1], (mm_ulong) realToFixedPoint(add2));
     #else
-                    ATOMIC_ADD(&pmeGrid[index].x, add1);
-                    ATOMIC_ADD(&pmeGrid[index].y, add2);
+                    ATOMIC_ADD(&pmeGrid[2*index], add1);
+                    ATOMIC_ADD(&pmeGrid[2*index+1], add2);
     #endif
 #endif
                 }

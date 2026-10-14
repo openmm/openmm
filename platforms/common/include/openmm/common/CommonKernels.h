@@ -153,8 +153,9 @@ public:
      * @param stream    an input stream the checkpoint data should be read from
      */
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
-private:
+protected:
     ComputeContext& cc;
+private:
     ComputeArray floatBuffer, doubleBuffer;
     ComputeKernel copyFloatKernel, copyDoubleKernel;
 };

@@ -91,8 +91,8 @@ KERNEL void integrateQTBPart3(int numAtoms, mixed dt, GLOBAL real4* RESTRICT pos
 /**
  * Update the buffer of white noise.
  */
-KERNEL void generateNoise(int numAtoms, int segmentLength, GLOBAL float* RESTRICT noise, GLOBAL const float* RESTRICT random, unsigned int randomIndex) {
-    randomIndex = 4*randomIndex; // Interpret it as float instead of float4
+KERNEL void generateNoise(int numAtoms, int segmentLength, GLOBAL float* RESTRICT noise, GLOBAL const float* RESTRICT random, unsigned int startRandomIndex) {
+    unsigned int randomIndex = 4*startRandomIndex; // Interpret it as float instead of float4
     int fftLength = 3*segmentLength;
     for (int i = GROUP_ID; i < 3*numAtoms; i += NUM_GROUPS) {
         // Copy segment 2 over to segment 1

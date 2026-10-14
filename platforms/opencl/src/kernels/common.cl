@@ -30,6 +30,7 @@ __attribute__((overloadable)) unsigned long atom_add(volatile __global unsigned 
 #define LOCAL __local
 #define LOCAL_ARG __local
 #define GLOBAL __global
+#define PRIVATE
 #define RESTRICT restrict
 #define LOCAL_ID get_local_id(0)
 #define LOCAL_SIZE get_local_size(0)

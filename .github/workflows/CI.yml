@@ -167,6 +167,7 @@ jobs:
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_OPENCL_LIB=ON \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+              -DOPENMM_BUILD_METAL_TESTS=OFF
 
           - name: MacOS ARM Python 3.13
             python-version: "3.13"
@@ -177,6 +178,7 @@ jobs:
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_OPENCL_LIB=ON \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+              -DOPENMM_BUILD_METAL_TESTS=OFF
 
 
     steps:
