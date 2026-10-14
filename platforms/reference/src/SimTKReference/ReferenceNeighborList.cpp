@@ -129,6 +129,13 @@ public:
         int x = int(floor(r[0]/voxelSizeX));
         int y = int(floor(r[1]/voxelSizeY));
         int z = int(floor(r[2]/voxelSizeZ));
+        if (usePeriodic) {
+            // A coordinate a hair below zero wraps to exactly the box size, which
+            // would put it one voxel past the end where no search looks.
+            x = min(x, nx-1);
+            y = min(y, ny-1);
+            z = min(z, nz-1);
+        }
 
         return VoxelIndex(x, y, z);
     }
