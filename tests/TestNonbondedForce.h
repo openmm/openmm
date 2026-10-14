@@ -1237,8 +1237,9 @@ void testReordering() {
     context.setPositions(positions);
     integrator.step(1);
     State state = context.getState(State::Positions | State::Velocities);
+    double tol = (platform.getPropertyValue(context, "Precision") == "single" ? 1e-6 : 1e-12);
     for (int i = 0; i < numParticles; i++) {
-        ASSERT_EQUAL_VEC(positions[i], state.getPositions()[i], 1e-6);
+        ASSERT_EQUAL_VEC(positions[i], state.getPositions()[i], tol);
     }
 }
 
