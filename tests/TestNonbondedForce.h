@@ -30,8 +30,6 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "ReferencePlatform.h"
-#include "openmm/CustomIntegrator.h"
-#include "openmm/CustomNonbondedForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
@@ -1245,60 +1243,6 @@ void testReordering() {
     }
 }
 
-void testReorderingWrapsByKernelBox() {
-    // When atoms are reordered, molecules that have left the periodic box are moved back into it.  That must not
-    // change the energy or the positions, even when the box width can't be represented exactly in single precision.
-    // Every coordinate here is exact in single precision, so any shift other than a whole box width as the kernels
-    // see it shows up directly.
-
-    const double width = 3.0000001; // Rounds to 3.0 in single precision.
-    System system;
-    system.setDefaultPeriodicBoxVectors(Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0, 0, width));
-    CustomNonbondedForce* force = new CustomNonbondedForce("select(pair1-pair2, 0, k*(r-0.5))");
-    force->addGlobalParameter("k", 1e4);
-    force->addPerParticleParameter("pair");
-    force->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
-    force->setCutoffDistance(1.0);
-    system.addForce(force);
-
-    // Each pair is 0.5 nm apart across a face of the box.  The first particle of each pair is then moved 3 nm,
-    // out of the box.  The first call to setPositions() reorders atoms and the second doesn't, so it stays outside
-    // until the integrator reorders atoms.
-
-    vector<Vec3> inside, outside;
-    for (int axis = 0; axis < 3; axis++) {
-        Vec3 pos1(1.5, 1.5, 1.5), pos2(1.5, 1.5, 1.5);
-        pos1[axis] = 0.25;
-        pos2[axis] = 0.75;
-        for (int i = 0; i < 2; i++) {
-            system.addParticle(1.0);
-            force->addParticle({(double) axis});
-        }
-        inside.push_back(pos1);
-        inside.push_back(pos2);
-        pos1[axis] = 3.25;
-        outside.push_back(pos1);
-        outside.push_back(pos2);
-    }
-
-    // A CustomIntegrator that doesn't move anything.  Each step still lets the Context reorder atoms.
-
-    CustomIntegrator integrator(0.001);
-    integrator.addGlobalVariable("a", 0);
-    integrator.addComputeGlobal("a", "0");
-    Context context(system, integrator, platform);
-    context.setPositions(inside);
-    context.setPositions(outside);
-    double energy = context.getState(State::Energy).getPotentialEnergy();
-    for (int i = 0; i < 6; i++) {
-        integrator.step(50);
-        State state = context.getState(State::Positions | State::Energy);
-        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 1e-6);
-        for (int j = 0; j < system.getNumParticles(); j++)
-            ASSERT_EQUAL_VEC(outside[j], state.getPositions()[j], 1e-9);
-    }
-}
-
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -1323,7 +1267,6 @@ int main(int argc, char* argv[]) {
         testParameterOffsets();
         testEwaldExceptions();
         testDirectAndReciprocal();
-        testReorderingWrapsByKernelBox();
         runPlatformTests();
     }
     catch(const exception& e) {

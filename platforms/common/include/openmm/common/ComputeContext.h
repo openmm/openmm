@@ -513,12 +513,6 @@ public:
      */
     virtual void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) = 0; 
     /**
-     * Get the vectors by which reorderAtoms() wraps molecules into the periodic box, and which the cell offsets
-     * count.  These are the box vectors as the kernels see them, rounded to single precision unless the context
-     * uses double precision, so wrapping a molecule leaves every distance a kernel computes unchanged.
-     */
-    void getWrappingBoxVectors(Vec3& a, Vec3& b, Vec3& c) const;
-    /**
      * Compute the reciprocal space box vectors.
      */
     void computeReciprocalBoxVectors(mm_double4 recipBoxVectors[3]);

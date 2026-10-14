@@ -186,15 +186,6 @@ string ComputeContext::intToString(int value) const {
     return s.str();
 }
 
-void ComputeContext::getWrappingBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
-    getPeriodicBoxVectors(a, b, c);
-    if (!getUseDoublePrecision()) {
-        a = Vec3((float) a[0], (float) a[1], (float) a[2]);
-        b = Vec3((float) b[0], (float) b[1], (float) b[2]);
-        c = Vec3((float) c[0], (float) c[1], (float) c[2]);
-    }
-}
-
 void ComputeContext::computeReciprocalBoxVectors(mm_double4 recipBoxVectors[3]) {
     Vec3 boxVectors[3];
     getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
@@ -705,7 +696,7 @@ void ComputeContext::reorderAtomsImpl() {
     Real miny = oldPosq[0].y, maxy = oldPosq[0].y;
     Real minz = oldPosq[0].z, maxz = oldPosq[0].z;
     Vec3 periodicBoxX, periodicBoxY, periodicBoxZ;
-    getWrappingBoxVectors(periodicBoxX, periodicBoxY, periodicBoxZ);
+    getPeriodicBoxVectors(periodicBoxX, periodicBoxY, periodicBoxZ);
     Vec3 invPeriodicBoxSize(1.0/periodicBoxX[0], 1.0/periodicBoxY[1], 1.0/periodicBoxZ[2]);
     if (getNonbondedUtilities().getUsePeriodic()) {
         minx = miny = minz = 0.0;

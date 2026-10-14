@@ -120,7 +120,7 @@ void CommonUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3
         const vector<int>& order = cc.getAtomIndex();
         int numParticles = cc.getNumAtoms();
         Vec3 boxVectors[3];
-        cc.getWrappingBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        cc.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         int numThreads = threads.getNumThreads();
         int start = threadIndex*numParticles/numThreads;
         int end = (threadIndex+1)*numParticles/numThreads;
@@ -4928,7 +4928,7 @@ void CommonCalcPythonForceKernel::getPositions() {
         }
         if (!allowPeriodic) {
             Vec3 boxVectors[3];
-            cc.getWrappingBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+            cc.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
             const vector<int>& order = cc.getAtomIndex();
             vector<int> inverseOrder(order.size());
             for (int i = 0; i < cc.getNumAtoms(); i++)
