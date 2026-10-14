@@ -35,18 +35,6 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         ccmaUseDirectBuffer = (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.");
 }
 
-OpenCLArray& OpenCLIntegrationUtilities::getPosDelta() {
-    return dynamic_cast<OpenCLContext&>(context).unwrap(posDelta);
-}
-
-OpenCLArray& OpenCLIntegrationUtilities::getRandom() {
-    return dynamic_cast<OpenCLContext&>(context).unwrap(random);
-}
-
-OpenCLArray& OpenCLIntegrationUtilities::getStepSize() {
-    return dynamic_cast<OpenCLContext&>(context).unwrap(stepSize);
-}
-
 void OpenCLIntegrationUtilities::applyConstraintsImpl(bool constrainVelocities, double tol) {
     ComputeKernel settleKernel, shakeKernel, ccmaForceKernel;
     if (constrainVelocities) {

@@ -53,18 +53,6 @@ HipIntegrationUtilities::~HipIntegrationUtilities() {
     }
 }
 
-HipArray& HipIntegrationUtilities::getPosDelta() {
-    return dynamic_cast<HipContext&>(context).unwrap(posDelta);
-}
-
-HipArray& HipIntegrationUtilities::getRandom() {
-    return dynamic_cast<HipContext&>(context).unwrap(random);
-}
-
-HipArray& HipIntegrationUtilities::getStepSize() {
-    return dynamic_cast<HipContext&>(context).unwrap(stepSize);
-}
-
 void HipIntegrationUtilities::applyConstraintsImpl(bool constrainVelocities, double tol) {
     ContextSelector selector(context);
     ComputeKernel settleKernel, shakeKernel, ccmaForceKernel;

@@ -46,19 +46,6 @@ public:
     CudaIntegrationUtilities(CudaContext& context, const System& system);
     ~CudaIntegrationUtilities();
     /**
-     * Get the array which contains position deltas.
-     */
-    CudaArray& getPosDelta();
-    /**
-     * Get the array which contains random values.  Each element is a float4, whose components
-     * are independent, normally distributed random numbers with mean 0 and variance 1.
-     */
-    CudaArray& getRandom();
-    /**
-     * Get the array which contains the current step size.
-     */
-    CudaArray& getStepSize();
-    /**
      * Distribute forces from virtual sites to the atoms they are based on.
      */
     void distributeForcesFromVirtualSites();
