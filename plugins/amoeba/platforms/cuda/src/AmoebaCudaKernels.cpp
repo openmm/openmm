@@ -22,20 +22,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#ifdef WIN32
-  #define _USE_MATH_DEFINES // Needed to get M_PI
-#endif
 #include "AmoebaCudaKernels.h"
-#include "CudaAmoebaKernelSources.h"
-#include "openmm/common/CommonKernelUtilities.h"
 #include "openmm/common/ContextSelector.h"
-#include "openmm/internal/ContextImpl.h"
-
-#include <algorithm>
-#include <cmath>
-#ifdef _MSC_VER
-#include <windows.h>
-#endif
 
 using namespace OpenMM;
 using namespace std;
