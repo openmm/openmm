@@ -24,25 +24,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "HipKernels.h"
-#include "HipForceInfo.h"
-#include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
-#include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/common/ContextSelector.h"
-#include "CommonKernelSources.h"
-#include "HipBondedUtilities.h"
-#include "HipExpressionUtilities.h"
-#include "HipIntegrationUtilities.h"
-#include "HipNonbondedUtilities.h"
-#include "HipKernelSources.h"
-#include "HipQueue.h"
-#include "SimTKOpenMMRealType.h"
-#include "SimTKOpenMMUtilities.h"
-#include <algorithm>
-#include <cmath>
-#include <iterator>
-#include <set>
-#include <assert.h>
 
 using namespace OpenMM;
 using namespace std;

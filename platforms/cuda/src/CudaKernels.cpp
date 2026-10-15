@@ -23,24 +23,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "CudaKernels.h"
-#include "CudaForceInfo.h"
-#include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
-#include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/common/ContextSelector.h"
-#include "CommonKernelSources.h"
-#include "CudaBondedUtilities.h"
-#include "CudaExpressionUtilities.h"
-#include "CudaIntegrationUtilities.h"
-#include "CudaNonbondedUtilities.h"
-#include "CudaKernelSources.h"
-#include "SimTKOpenMMRealType.h"
-#include "SimTKOpenMMUtilities.h"
-#include <algorithm>
-#include <cmath>
-#include <iterator>
-#include <set>
-#include <assert.h>
 
 using namespace OpenMM;
 using namespace std;

@@ -46,19 +46,6 @@ public:
     HipIntegrationUtilities(HipContext& context, const System& system);
     ~HipIntegrationUtilities();
     /**
-     * Get the array which contains position deltas.
-     */
-    HipArray& getPosDelta();
-    /**
-     * Get the array which contains random values.  Each element is a float4, whose components
-     * are independent, normally distributed random numbers with mean 0 and variance 1.
-     */
-    HipArray& getRandom();
-    /**
-     * Get the array which contains the current step size.
-     */
-    HipArray& getStepSize();
-    /**
      * Distribute forces from virtual sites to the atoms they are based on.
      */
     void distributeForcesFromVirtualSites();

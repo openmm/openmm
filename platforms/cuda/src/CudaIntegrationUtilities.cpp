@@ -52,18 +52,6 @@ CudaIntegrationUtilities::~CudaIntegrationUtilities() {
     }
 }
 
-CudaArray& CudaIntegrationUtilities::getPosDelta() {
-    return dynamic_cast<CudaContext&>(context).unwrap(posDelta);
-}
-
-CudaArray& CudaIntegrationUtilities::getRandom() {
-    return dynamic_cast<CudaContext&>(context).unwrap(random);
-}
-
-CudaArray& CudaIntegrationUtilities::getStepSize() {
-    return dynamic_cast<CudaContext&>(context).unwrap(stepSize);
-}
-
 void CudaIntegrationUtilities::applyConstraintsImpl(bool constrainVelocities, double tol) {
     ContextSelector selector(context);
     ComputeKernel settleKernel, shakeKernel, ccmaForceKernel;

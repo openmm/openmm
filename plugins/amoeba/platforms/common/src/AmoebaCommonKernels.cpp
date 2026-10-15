@@ -27,6 +27,7 @@
 #endif
 #include "AmoebaCommonKernels.h"
 #include "CommonAmoebaKernelSources.h"
+#include "openmm/common/CommonKernelUtilities.h"
 #include "openmm/common/ContextSelector.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/AmoebaGeneralizedKirkwoodForceImpl.h"
@@ -47,25 +48,6 @@
 
 using namespace OpenMM;
 using namespace std;
-
-static void setPeriodicBoxArgs(ComputeContext& cc, ComputeKernel kernel, int index) {
-    Vec3 a, b, c;
-    cc.getPeriodicBoxVectors(a, b, c);
-    if (cc.getUseDoublePrecision()) {
-        kernel->setArg(index++, mm_double4(a[0], b[1], c[2], 0.0));
-        kernel->setArg(index++, mm_double4(1.0/a[0], 1.0/b[1], 1.0/c[2], 0.0));
-        kernel->setArg(index++, mm_double4(a[0], a[1], a[2], 0.0));
-        kernel->setArg(index++, mm_double4(b[0], b[1], b[2], 0.0));
-        kernel->setArg(index, mm_double4(c[0], c[1], c[2], 0.0));
-    }
-    else {
-        kernel->setArg(index++, mm_float4((float) a[0], (float) b[1], (float) c[2], 0.0f));
-        kernel->setArg(index++, mm_float4(1.0f/(float) a[0], 1.0f/(float) b[1], 1.0f/(float) c[2], 0.0f));
-        kernel->setArg(index++, mm_float4((float) a[0], (float) a[1], (float) a[2], 0.0f));
-        kernel->setArg(index++, mm_float4((float) b[0], (float) b[1], (float) b[2], 0.0f));
-        kernel->setArg(index, mm_float4((float) c[0], (float) c[1], (float) c[2], 0.0f));
-    }
-}
 
 /* -------------------------------------------------------------------------- *
  *                           AmoebaTorsionTorsion                             *

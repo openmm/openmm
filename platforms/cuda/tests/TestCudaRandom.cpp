@@ -32,7 +32,6 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "CudaArray.h"
 #include "CudaContext.h"
 #include "CudaIntegrationUtilities.h"
 #include "openmm/System.h"
@@ -59,7 +58,7 @@ void testGaussian() {
     context.initialize();
     context.setAsCurrent();
     context.getIntegrationUtilities().initRandomNumberGenerator(0);
-    CudaArray& random = context.getIntegrationUtilities().getRandom();
+    ArrayInterface& random = context.getIntegrationUtilities().getRandom();
     context.getIntegrationUtilities().prepareRandomNumbers(random.getSize());
     const int numValues = random.getSize()*4;
     vector<float4> values(numValues);
