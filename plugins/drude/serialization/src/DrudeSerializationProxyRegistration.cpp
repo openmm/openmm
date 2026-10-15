@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <sstream>
 #else
@@ -49,7 +50,6 @@
 #include "openmm/serialization/DrudeNoseHooverIntegratorProxy.h"
 
 #if defined(WIN32)
-    #include <windows.h>
     extern "C" OPENMM_EXPORT_DRUDE void registerDrudeSerializationProxies();
     BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
         if (ul_reason_for_call == DLL_PROCESS_ATTACH)
