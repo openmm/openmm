@@ -43,7 +43,13 @@ __attribute__((overloadable)) unsigned long atom_add(volatile __global unsigned 
 #define ATOMIC_ADD(dest, value) atom_add(dest, value)
 
 typedef long mm_long;
+typedef long2 mm_long2;
+typedef long3 mm_long3;
+typedef long4 mm_long4;
 typedef unsigned long mm_ulong;
+typedef ulong2 mm_ulong2;
+typedef ulong3 mm_ulong3;
+typedef ulong4 mm_ulong4;
 
 #define make_short2(x...) ((short2) (x))
 #define make_short3(x...) ((short3) (x))

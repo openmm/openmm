@@ -71,18 +71,11 @@ MetalContext::MetalContext(const System& system, const string& precision, MetalP
     setenv("MTL_LOG_BUFFER_SIZE", "100000", 0);
     compilationDefines["printf"] = "os_log_default.log";
 #endif
-    if (precision == "single") {
-        useDoublePrecision = false;
+    useDoublePrecision = false;
+    if (precision == "single")
         useMixedPrecision = false;
-    }
-    else if (precision == "mixed") {
-        useDoublePrecision = false;
+    else if (precision == "mixed")
         useMixedPrecision = true;
-    }
-    else if (precision == "double") {
-        useDoublePrecision = true;
-        useMixedPrecision = false;
-    }
     else
         throw OpenMMException("Illegal value for Precision: "+precision);
     contextIndex = platformData.contexts.size();
@@ -172,9 +165,17 @@ MetalContext::MetalContext(const System& system, const string& precision, MetalP
     compilationDefines["make_real2"] = "make_float2";
     compilationDefines["make_real3"] = "make_float3";
     compilationDefines["make_real4"] = "make_float4";
-    compilationDefines["make_mixed2"] = "make_float2";
-    compilationDefines["make_mixed3"] = "make_float3";
-    compilationDefines["make_mixed4"] = "make_float4";
+    if (useMixedPrecision) {
+        compilationDefines["USE_MIXED_PRECISION"] = "1";
+        compilationDefines["make_mixed2"] = "df642";
+        compilationDefines["make_mixed3"] = "df643";
+        compilationDefines["make_mixed4"] = "df644";
+    }
+    else {
+        compilationDefines["make_mixed2"] = "make_float2";
+        compilationDefines["make_mixed3"] = "make_float3";
+        compilationDefines["make_mixed4"] = "make_float4";
+    }
 
     // Set defines for applying periodic boundary conditions.
 
@@ -435,14 +436,24 @@ ComputeProgram MetalContext::compileProgram(const string source, const map<strin
     }
     if (!compilationDefines.empty())
         src << endl;
+    if (useMixedPrecision)
+        src << MetalKernelSources::df64 << endl;
     src << "typedef float real;\n";
     src << "typedef float2 real2;\n";
     src << "typedef float3 real3;\n";
     src << "typedef float4 real4;\n";
-    src << "typedef float mixed;\n";
-    src << "typedef float2 mixed2;\n";
-    src << "typedef float3 mixed3;\n";
-    src << "typedef float4 mixed4;\n";
+    if (useMixedPrecision) {
+        src << "typedef df64 mixed;\n";
+        src << "typedef df642 mixed2;\n";
+        src << "typedef df643 mixed3;\n";
+        src << "typedef df644 mixed4;\n";
+    }
+    else {
+        src << "typedef float mixed;\n";
+        src << "typedef float2 mixed2;\n";
+        src << "typedef float3 mixed3;\n";
+        src << "typedef float4 mixed4;\n";
+    }
     src << "typedef unsigned int tileflags;\n";
     src << MetalKernelSources::common << endl;
     for (auto& pair : defines) {

@@ -75,7 +75,7 @@ inline DEVICE mixed4 loadPos(GLOBAL const real4* RESTRICT posq, GLOBAL const rea
 #ifdef USE_MIXED_PRECISION
     real4 pos1 = posq[index];
     real4 pos2 = posqCorrection[index];
-    return make_mixed4(pos1.x+(mixed)pos2.x, pos1.y+(mixed)pos2.y, pos1.z+(mixed)pos2.z, pos1.w);
+    return make_mixed4(pos1.x+(mixed)pos2.x, pos1.y+(mixed)pos2.y, pos1.z+(mixed)pos2.z, (mixed)pos1.w);
 #else
     return posq[index];
 #endif
@@ -622,7 +622,7 @@ DEVICE void computeCCMAPositionConstraintForce(GLOBAL const int2* RESTRICT const
         mixed rp2 = rp_ij.x*rp_ij.x + rp_ij.y*rp_ij.y + rp_ij.z*rp_ij.z;
         mixed dist2 = dir.w*dir.w;
         mixed diff = dist2 - rp2;
-        delta1[index] = (rrpr > d_ij2*1e-6f ? reducedMass[index]*diff/rrpr : 0.0f);
+        delta1[index] = (rrpr > d_ij2*1e-6f ? reducedMass[index]*diff/rrpr : 0);
         threadConverged &= (rp2 > lowerTol*dist2 && rp2 < upperTol*dist2);
     }
     if (*groupConverged && !threadConverged)

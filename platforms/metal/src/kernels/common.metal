@@ -64,7 +64,13 @@ inline unsigned long ATOMIC_ADD(device unsigned long* dest, unsigned long value)
 }
 
 typedef long mm_long;
+typedef long2 mm_long2;
+typedef long3 mm_long3;
+typedef long4 mm_long4;
 typedef unsigned long mm_ulong;
+typedef ulong2 mm_ulong2;
+typedef ulong3 mm_ulong3;
+typedef ulong4 mm_ulong4;
 
 #define make_short2(x...) short2(x)
 #define make_short3(x...) short3(x)
@@ -76,7 +82,17 @@ typedef unsigned long mm_ulong;
 #define make_float3(x...) float3(x)
 #define make_float4(x...) float4(x)
 
-#define trimTo3(v) (v).xyz
+inline short3 trimTo3(short4 v) {
+    return make_short3(v.x, v.y, v.z);
+}
+
+inline int3 trimTo3(int4 v) {
+    return make_int3(v.x, v.y, v.z);
+}
+
+inline float3 trimTo3(float4 v) {
+    return make_float3(v.x, v.y, v.z);
+}
 
 // Metal does not support the standard names for single precision math functions.
 

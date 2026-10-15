@@ -71,7 +71,7 @@ KERNEL void integrateQTBPart3(int numAtoms, mixed dt, GLOBAL real4* RESTRICT pos
 #ifdef USE_MIXED_PRECISION
             real4 pos1 = posq[index];
             real4 pos2 = posqCorrection[index];
-            mixed4 pos = make_mixed4(pos1.x+(mixed)pos2.x, pos1.y+(mixed)pos2.y, pos1.z+(mixed)pos2.z, pos1.w);
+            mixed4 pos = make_mixed4(pos1.x+(mixed)pos2.x, pos1.y+(mixed)pos2.y, pos1.z+(mixed)pos2.z, (mixed)pos1.w);
 #else
             real4 pos = posq[index];
 #endif
