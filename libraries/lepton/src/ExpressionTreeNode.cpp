@@ -94,7 +94,7 @@ bool ExpressionTreeNode::operator==(const ExpressionTreeNode& node) const {
     return !(*this != node);
 }
 
-ExpressionTreeNode& ExpressionTreeNode::operator=(const ExpressionTreeNode& node){
+ExpressionTreeNode& ExpressionTreeNode::operator=(const ExpressionTreeNode& node) {
     if (&node != this) {
         if (operation != NULL)
             delete operation;
