@@ -34,6 +34,7 @@
 #include "openmm/KernelFactory.h"
 #include "openmm/internal/ContextImpl.h"
 #ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #else
 #ifndef __PNACL__

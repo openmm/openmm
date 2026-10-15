@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <sstream>
 #else
@@ -55,7 +56,6 @@
 #include "openmm/serialization/HippoNonbondedForceProxy.h"
 
 #if defined(WIN32)
-    #include <windows.h>
     extern "C" OPENMM_EXPORT_AMOEBA void registerAmoebaSerializationProxies();
     BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
         if (ul_reason_for_call == DLL_PROCESS_ATTACH)
