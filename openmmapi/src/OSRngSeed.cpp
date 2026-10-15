@@ -28,7 +28,6 @@
  * -------------------------------------------------------------------------- */
 
 #if defined(_WIN32) || defined(__CYGWIN__)
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 static HCRYPTPROV hCryptProv = 0;
 #pragma comment(lib, "advapi32.lib")
