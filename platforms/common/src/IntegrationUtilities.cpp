@@ -765,6 +765,7 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         ccmaUpdateKernel->addArg(ccmaDelta2);
         ccmaUpdateKernel->addArg(ccmaConverged);
         ccmaUpdateKernel->addArg();
+        ccmaUpdateKernel->addArg();
         ccmaFullKernel->addArg();
         ccmaFullKernel->addArg(ccmaAtoms);
         ccmaFullKernel->addArg(ccmaNumAtomConstraints);

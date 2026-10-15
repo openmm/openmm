@@ -34,6 +34,7 @@
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
 #include "sfmt/SFMT.h"
+#include <cmath>
 #include <iostream>
 #include <vector>
 
@@ -95,12 +96,56 @@ void testConstraints() {
     }
 }
 
+// Regression for https://github.com/openmm/openmm/issues/3603.
+void testIssue3603FourParticleCCMAConvergence() {
+    const double tolerance = 1e-4;
+    const vector<double> masses = {50.0, 50.0, 50.0, 50.0};
+    const vector<pair<int, int> > constraintParticles = {
+        make_pair(0, 1), make_pair(0, 2), make_pair(1, 2), make_pair(3, 1), make_pair(3, 2)
+    };
+    const vector<double> constraintDistances = {0.4904, 0.6019, 0.2719, 0.7237, 0.5376};
+    const vector<Vec3> positions = {
+        Vec3(5.566, 7.728, 3.213),
+        Vec3(5.494, 7.973, 3.631),
+        Vec3(5.354, 7.788, 3.773),
+        Vec3(5.295, 7.811, 4.307)
+    };
+    System system;
+    for (double mass : masses)
+        system.addParticle(mass);
+    for (int i = 0; i < (int) constraintParticles.size(); i++)
+        system.addConstraint(constraintParticles[i].first, constraintParticles[i].second, constraintDistances[i]);
+    LangevinIntegrator integrator(300.0, 1.0, 0.002);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.applyConstraints(tolerance);
+
+    State state = context.getState(State::Positions);
+    const vector<Vec3>& constrainedPositions = state.getPositions();
+    for (const Vec3& position : constrainedPositions)
+        for (int i = 0; i < 3; i++)
+            ASSERT(std::isfinite(position[i]));
+    const double lowerTol = 1-2*tolerance+tolerance*tolerance;
+    const double upperTol = 1+2*tolerance+tolerance*tolerance;
+    for (int i = 0; i < system.getNumConstraints(); i++) {
+        int particle1, particle2;
+        double distance;
+        system.getConstraintParameters(i, particle1, particle2, distance);
+        Vec3 delta = constrainedPositions[particle1]-constrainedPositions[particle2];
+        double distanceSquared = delta.dot(delta);
+        double targetSquared = distance*distance;
+        ASSERT(distanceSquared >= lowerTol*targetSquared);
+        ASSERT(distanceSquared <= upperTol*targetSquared);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
         testConstraints();
+        testIssue3603FourParticleCCMAConvergence();
         runPlatformTests();
     }
     catch(const exception& e) {
