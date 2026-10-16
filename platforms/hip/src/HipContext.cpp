@@ -222,6 +222,9 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
     numThreadBlocks = numThreadBlocksPerComputeUnit*multiprocessors;
 
     compilationDefines["USE_HIP"] = "1";
+    // On Intel GPUs, shuffling through shared memory is faster than subgroup shuffles.
+    if (string(props.name).find("Intel") != string::npos)
+        compilationDefines["USE_SLM_SHFL"] = "1";
     if (simdWidth == 32)
         compilationDefines["AMD_RDNA"] = "1";
     if (useDoublePrecision) {
