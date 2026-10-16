@@ -85,8 +85,9 @@ protected:
      * 
      * @param value    a pointer to the argument value
      * @param size     the size of the value in bytes
+     * @param type     the type of the value
      */
-    void addPrimitiveArg(const void* value, int size);
+    void addPrimitiveArg(const void* value, int size, const std::type_info& type);
     /**
      * Add a placeholder for an argument without specifying its value.
      */
@@ -105,8 +106,9 @@ protected:
      * @param index     the index of the argument to set
      * @param value    a pointer to the argument value
      * @param size     the size of the value in bytes
+     * @param type     the type of the value
      */
-    void setPrimitiveArg(int index, const void* value, int size);
+    void setPrimitiveArg(int index, const void* value, int size, const std::type_info& type);
 private:
     MetalContext& context;
     MTL::ComputePipelineState* pipeline;

@@ -93,10 +93,10 @@ void MetalKernel::addArrayArg(ArrayInterface& value) {
     setArrayArg(index, value);
 }
 
-void MetalKernel::addPrimitiveArg(const void* value, int size) {
+void MetalKernel::addPrimitiveArg(const void* value, int size, const type_info& type) {
     int index = arrayArgs.size();
     addEmptyArg();
-    setPrimitiveArg(index, value, size);
+    setPrimitiveArg(index, value, size, type);
 }
 
 void MetalKernel::addEmptyArg() {
@@ -110,11 +110,25 @@ void MetalKernel::setArrayArg(int index, ArrayInterface& value) {
     arrayArgs[index] = &context.unwrap(value);
 }
 
-void MetalKernel::setPrimitiveArg(int index, const void* value, int size) {
+void MetalKernel::setPrimitiveArg(int index, const void* value, int size, const type_info& type) {
     ASSERT_VALID_INDEX(index, primitiveArgs);
     if (size > sizeof(mm_double4))
         throw OpenMMException("Unsupported value type for kernel argument");
-    memcpy(&primitiveArgs[index], value, size);
+    if (type == typeid(double) || type == typeid(mm_double2) || type == typeid(mm_double4)) {
+        // Convert double to df64.
+
+        const double* src = (const double*) value;
+        float* dest = (float*) &primitiveArgs[index];
+        int elements = size/sizeof(double);
+        for (int i = 0; i < elements; i++) {
+            float f = (float) src[i];
+            dest[2*i] = f;
+            dest[2*i+1] = (float) (src[i]-f);
+        }
+    }
+    else {
+        memcpy(&primitiveArgs[index], value, size);
+    }
     primitiveArgSizes[index] = size;
     arrayArgs[index] = NULL;
 }

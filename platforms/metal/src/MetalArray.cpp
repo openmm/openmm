@@ -31,10 +31,10 @@
 
 using namespace OpenMM;
 
-MetalArray::MetalArray() : buffer(nullptr), ownsMemory(false) {
+MetalArray::MetalArray() : buffer(nullptr), ownsMemory(false), isDF64(false) {
 }
 
-MetalArray::MetalArray(MetalContext& context, size_t size, int elementSize, const std::string& name) : buffer(nullptr) {
+MetalArray::MetalArray(MetalContext& context, size_t size, int elementSize, const std::string& name) : buffer(nullptr), isDF64(false) {
     initialize(context, size, elementSize, name);
 }
 
@@ -43,7 +43,7 @@ MetalArray::~MetalArray() {
         buffer->release();
 }
 
-void MetalArray::initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name) {
+void MetalArray::initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name, const std::type_info* type) {
     if (this->buffer != nullptr)
         throw OpenMMException("MetalArray has already been initialized");
     this->context = &dynamic_cast<MetalContext&>(context);
@@ -51,6 +51,7 @@ void MetalArray::initialize(ComputeContext& context, size_t size, int elementSiz
     this->elementSize = elementSize;
     this->name = name;
     ownsMemory = true;
+    isDF64 = (type != nullptr && (*type == typeid(double) || *type == typeid(mm_double2) || *type == typeid(mm_double4)));
     buffer = this->context->getDevice().newBuffer(size*elementSize, MTL::ResourceStorageModeShared);
     if (buffer == nullptr)
         throw OpenMMException("Error creating array "+name);

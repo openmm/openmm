@@ -265,14 +265,21 @@ void MetalContext::initialize() {
     energySum.initialize<float>(*this, numGpuCores, "energySum");
     int pinnedBufferSize = max(paddedNumAtoms*6, numEnergyBuffers);
     pinnedBuffer.resize(pinnedBufferSize*sizeof(float));
-    for (int i = 0; i < numAtoms; i++) {
-        double mass = system.getParticleMass(i);
-        if (useMixedPrecision)
-            ((mm_double4*) pinnedBuffer.data())[i] = mm_double4(0.0, 0.0, 0.0, mass == 0.0 ? 0.0 : 1.0/mass);
-        else
-            ((mm_float4*) pinnedBuffer.data())[i] = mm_float4(0.0f, 0.0f, 0.0f, mass == 0.0 ? 0.0f : (float) (1.0/mass));
+    if (useMixedPrecision) {
+        vector<mm_double4> v(velm.getSize());
+        for (int i = 0; i < numAtoms; i++) {
+            double mass = system.getParticleMass(i);
+            v[i] = mm_double4(0.0, 0.0, 0.0, mass == 0.0 ? 0.0 : 1.0/mass);
+        }
+        velm.upload(pinnedBuffer.data(), true);
     }
-    velm.upload(pinnedBuffer.data());
+    else {
+        for (int i = 0; i < numAtoms; i++) {
+            double mass = system.getParticleMass(i);
+            ((mm_float4*) pinnedBuffer.data())[i] = mm_float4(0.0f, 0.0f, 0.0f, mass == 0.0 ? 0.0f : (float) (1.0/mass));
+        }
+        velm.upload(pinnedBuffer.data());
+    }
     bonded->initialize(system);
     addAutoclearBuffer(longForceBuffer);
     addAutoclearBuffer(energyBuffer);
@@ -521,13 +528,15 @@ double MetalContext::reduceEnergy() {
     reduceEnergyKernel->setArg(2, energyBuffer.getSize());
     reduceEnergyKernel->setArg(3, workGroupSize);
     reduceEnergyKernel->execute(workGroupSize*energySum.getSize(), workGroupSize);
-    energySum.download(pinnedBuffer.data());
     double result = 0;
     if (getUseMixedPrecision()) {
-        for (int i = 0; i < energySum.getSize(); i++)
-            result += ((double*) pinnedBuffer.data())[i];
+        vector<double> energy;
+        energySum.download(energy, true);
+        for (int i = 0; i < energy.size(); i++)
+            result += energy[i];
     }
     else {
+        energySum.download(pinnedBuffer.data());
         for (int i = 0; i < energySum.getSize(); i++)
             result += ((float*) pinnedBuffer.data())[i];
     }

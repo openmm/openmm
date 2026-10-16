@@ -41,11 +41,11 @@ ArrayInterface& ComputeArray::getArray() {
     return *impl;
 }
 
-void ComputeArray::initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name) {
+void ComputeArray::initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name, const std::type_info* type) {
     if (impl != NULL)
         throw OpenMMException("The array "+getName()+" has already been initialized");
     impl = context.createArray();
-    impl->initialize(context, size, elementSize, name);
+    impl->initialize(context, size, elementSize, name, type);
 }
 
 void ComputeArray::resize(size_t size) {

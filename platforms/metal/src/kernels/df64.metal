@@ -251,11 +251,9 @@ DEFINE_MIXED_COMPARISONS(>=)
  */
 struct df642 {
     df64 x, y;
-    template <class T>
-    df642(T a, T b) : x(a), y(b) {
+    df642(df64 a, df64 b) : x(a), y(b) {
     }
-    template <class T>
-    explicit df642(T a) : x(a), y(a) {
+    explicit df642(df64 a) : x(a), y(a) {
     }
 #define DEFINE_OPERATORS2(AS) \
     template <class T> \
@@ -321,11 +319,9 @@ struct df642 {
  */
 struct df643 {
     df64 x, y, z;
-    template <class T>
-    df643(T a, T b, T c) : x(a), y(b), z(c) {
+    df643(df64 a, df64 b, df64 c) : x(a), y(b), z(c) {
     }
-    template <class T>
-    explicit df643(T a) : x(a), y(a), z(a) {
+    explicit df643(df64 a) : x(a), y(a), z(a) {
     }
 #define DEFINE_OPERATORS3(AS) \
     template <class T> \
@@ -399,11 +395,9 @@ struct df643 {
  */
 struct df644 {
     df64 x, y, z, w;
-    template <class T>
-    df644(T a, T b, T c, T d) : x(a), y(b), z(c), w(d) {
+    df644(df64 a, df64 b, df64 c, df64 d) : x(a), y(b), z(c), w(d) {
     }
-    template <class T>
-    explicit df644(T a) : x(a), y(a), z(a), w(a) {
+    explicit df644(df64 a) : x(a), y(a), z(a), w(a) {
     }
 #define DEFINE_OPERATORS4(AS) \
     template <class T> \
@@ -569,6 +563,9 @@ DEFINE_BINARY_OPERATORS(df644, long)
 inline df64 sqrt(df64 a) {
     return df64(DoubleFloat::df64sqrt(a.v));
 }
+inline df64 rsqrt(df64 a) {
+    return df64(1.0f)/df64(DoubleFloat::df64sqrt(a.v));
+}
 inline df64 log(df64 a) {
     return df64(DoubleFloat::df64log(a.v));
 }
@@ -597,4 +594,27 @@ inline df644 cross(df644 a, df644 b) {
 }
 inline df643 trimTo3(df644 v) {
     return df643(v.x, v.y, v.z);
+}
+
+/**
+ * If we're using the fast:: versions of math functions, make sure the df64 versions will still be found.
+ */
+namespace metal {
+    namespace fast {
+        inline df64 sqrt(df64 a) {
+            return ::sqrt(a);
+        }
+        inline df64 rsqrt(df64 a) {
+            return ::rsqrt(a);
+        }
+        inline df64 divide(float a, df64 b) {
+            return a/b;
+        }
+        inline df64 exp(df64 a) {
+            return ::exp(a);
+        }
+        inline df64 log(df64 a) {
+            return ::log(a);
+        }
+    }
 }

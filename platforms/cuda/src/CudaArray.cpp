@@ -50,7 +50,7 @@ CudaArray::~CudaArray() {
     }
 }
 
-void CudaArray::initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name) {
+void CudaArray::initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name, const std::type_info* type) {
     if (this->pointer != 0)
         throw OpenMMException("CudaArray has already been initialized");
     this->context = &dynamic_cast<CudaContext&>(context);

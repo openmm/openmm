@@ -59,7 +59,7 @@ public:
      */
     template <class T>
     typename std::enable_if<std::is_trivially_copyable<T>::value, void>::type addArg(const T& value) {
-        addPrimitiveArg(&value, sizeof(value));
+        addPrimitiveArg(&value, sizeof(value), typeid(value));
     }
     /**
      * Add an argument to pass the kernel when it is invoked.
@@ -84,7 +84,7 @@ public:
      */
     template <class T>
     typename std::enable_if<std::is_trivially_copyable<T>::value, void>::type setArg(int index, const T& value) {
-        setPrimitiveArg(index, &value, sizeof(value));
+        setPrimitiveArg(index, &value, sizeof(value), typeid(value));
     }
     /**
      * Set the value of an argument to pass the kernel when it is invoked.
@@ -121,8 +121,9 @@ protected:
      * 
      * @param value    a pointer to the argument value
      * @param size     the size of the value in bytes
+     * @param type     the type of the value
      */
-    virtual void addPrimitiveArg(const void* value, int size) = 0;
+    virtual void addPrimitiveArg(const void* value, int size, const std::type_info& type) = 0;
     /**
      * Add a placeholder for an argument without specifying its value.
      */
@@ -138,11 +139,12 @@ protected:
     /**
      * Add an argument to pass the kernel when it is invoked, where the value is a primitive type.
      * 
-     * @param index     the index of the argument to set
+     * @param index    the index of the argument to set
      * @param value    a pointer to the argument value
      * @param size     the size of the value in bytes
+     * @param type     the type of the value
      */
-    virtual void setPrimitiveArg(int index, const void* value, int size) = 0;
+    virtual void setPrimitiveArg(int index, const void* value, int size, const std::type_info& type) = 0;
 };
 
 typedef std::shared_ptr<ComputeKernelImpl> ComputeKernel;
