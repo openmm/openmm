@@ -30,8 +30,10 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "openmm/HarmonicBondForce.h"
+#include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
+#include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
 
@@ -147,6 +149,63 @@ void testParallelComputation() {
     ASSERT(fabs(state1.getPotentialEnergy()-state3.getPotentialEnergy()) > 0.1);
 }
 
+void testManyUpdatesOfOneMolecule() {
+    // Repeatedly change one molecule's bond so that the molecule stops being identical to
+    // the others and then matches them again, checking against a freshly built context each
+    // time.  A cutoff nonbonded force with zero parameters is included so that atoms are
+    // reordered by molecule, which is what an update may or may not have to redo.
+
+    const int numMolecules = 400;
+    const int numParticles = numMolecules*2;
+    const double boxSize = 5.0;
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numMolecules; i++) {
+        Vec3 center(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+        positions[2*i] = center;
+        positions[2*i+1] = center+Vec3(0.1+0.05*genrand_real2(sfmt), 0, 0);
+    }
+    auto build = [&] (System& system, double scale) {
+        HarmonicBondForce* bonds = new HarmonicBondForce();
+        NonbondedForce* nonbonded = new NonbondedForce();
+        for (int i = 0; i < numMolecules; i++) {
+            system.addParticle(1.0);
+            system.addParticle(1.0);
+            bonds->addBond(2*i, 2*i+1, 0.1, (i == numMolecules/2 ? scale : 1.0)*1000.0);
+            nonbonded->addParticle(0.0, 0.1, 0.0);
+            nonbonded->addParticle(0.0, 0.1, 0.0);
+        }
+        nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+        nonbonded->setCutoffDistance(1.0);
+        system.addForce(bonds);
+        system.addForce(nonbonded);
+        system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+        return bonds;
+    };
+    System system;
+    HarmonicBondForce* bonds = build(system, 1.0);
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    int bond = numMolecules/2;
+    for (int step = 0; step < 200; step++) {
+        double scale = (step%2 == 0 ? 1.0+0.1*(1+step%7) : 1.0);
+        bonds->setBondParameters(bond, 2*bond, 2*bond+1, 0.1, scale*1000.0);
+        bonds->updateParametersInContext(context);
+        if (step%20 >= 18) {
+            System freshSystem;
+            build(freshSystem, scale);
+            VerletIntegrator freshIntegrator(0.01);
+            Context freshContext(freshSystem, freshIntegrator, platform);
+            freshContext.setPositions(positions);
+            double energy = context.getState(State::Energy).getPotentialEnergy();
+            double freshEnergy = freshContext.getState(State::Energy).getPotentialEnergy();
+            ASSERT_EQUAL_TOL(freshEnergy, energy, 1e-4);
+        }
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -154,6 +213,7 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         testBonds();
         testPeriodic();
+        testManyUpdatesOfOneMolecule();
         runPlatformTests();
     }
     catch(const exception& e) {
