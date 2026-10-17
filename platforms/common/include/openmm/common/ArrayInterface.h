@@ -97,11 +97,11 @@ public:
     void upload(const std::vector<T>& data, bool convert=false) {
         if (convert) {
             if (containsDF64()) {
+                std::vector<float> v(getElementSize()*getSize()/sizeof(float));
+                int numValues = v.size()/2;
                 if (2*sizeof(T) == getElementSize()) {
                     // Convert values from float to df64.
                     const float* d = reinterpret_cast<const float*>(data.data());
-                    std::vector<float> v(getElementSize()*getSize()/sizeof(float));
-                    int numValues = v.size()/2;
                     for (int i = 0; i < numValues; i++) {
                         v[2*i] = d[i];
                         v[2*i+1] = 0.0f;
@@ -111,8 +111,6 @@ public:
                 else {
                     // Convert values from double to df64.
                     const double* d = reinterpret_cast<const double*>(data.data());
-                    std::vector<float> v(getElementSize()*getSize()/sizeof(float));
-                    int numValues = v.size()/2;
                     for (int i = 0; i < numValues; i++) {
                         float f = (float) d[i];
                         v[2*i] = f;
@@ -159,7 +157,7 @@ public:
         if (convert) {
             if (containsDF64()) {
                 // Convert values from df64.
-                std::vector<float> v(2*getElementSize()*getSize()/sizeof(float));
+                std::vector<float> v(getElementSize()*getSize()/sizeof(float));
                 download(v.data(), true);
                 if (data.size() != getSize())
                     data.resize(getSize());
@@ -167,13 +165,13 @@ public:
                 if (2*sizeof(T) == getElementSize()) {
                     // Convert to float.
                     float* d = reinterpret_cast<float*>(data.data());
-                    for (int i = 0; i < v.size(); i++)
+                    for (int i = 0; i < numValues; i++)
                         d[i] = (float) ((double) v[2*i] + (double) v[2*i+1]);
                 }
                 else {
                     // Convert to double.
                     double* d = reinterpret_cast<double*>(data.data());
-                    for (int i = 0; i < v.size(); i++)
+                    for (int i = 0; i < numValues; i++)
                         d[i] = (double) v[2*i] + (double) v[2*i+1];
                 }
                 return;
@@ -244,7 +242,6 @@ public:
      * @param dest     the destination array to copy to
      */
     virtual void copyTo(ArrayInterface& dest) const = 0;
-protected:
     /**
      * Get whether this array contains pseudo-double precision values in df64 format.
      */

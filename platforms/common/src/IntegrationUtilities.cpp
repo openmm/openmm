@@ -798,8 +798,10 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
 void IntegrationUtilities::setNextStepSize(double size) {
     if (size != lastStepSize.x || size != lastStepSize.y) {
         lastStepSize = mm_double2(size, size);
-        if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
-            stepSize.upload(&lastStepSize);
+        if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
+            vector<mm_double2> stepSizeVec = {lastStepSize};
+            stepSize.upload(stepSizeVec, true);
+        }
         else {
             mm_float2 lastStepSizeFloat = mm_float2((float) size, (float) size);
             stepSize.upload(&lastStepSizeFloat);
@@ -972,9 +974,9 @@ double IntegrationUtilities::computeKineticEnergy(double timeShift) {
     if (timeShift != 0)
         posDelta.copyTo(context.getVelm());
     if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
-        double energy;
-        kineticEnergy.download(&energy);
-        return energy;
+        vector<double> energy;
+        kineticEnergy.download(energy, true);
+        return energy[0];
     }
     else {
         float energy;

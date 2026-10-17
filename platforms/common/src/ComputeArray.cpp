@@ -99,3 +99,9 @@ void ComputeArray::copyTo(ArrayInterface& dest) const {
         throw OpenMMException("ComputeArray has not been initialized");
     impl->copyTo(dest);
 }
+
+bool ComputeArray::containsDF64() const {
+    if (impl == NULL)
+        return false;
+    return impl->containsDF64();
+}

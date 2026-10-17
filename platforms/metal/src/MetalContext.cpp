@@ -261,17 +261,24 @@ MetalContext::~MetalContext() {
 
 void MetalContext::initialize() {
     int numEnergyBuffers = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
-    energyBuffer.initialize<float>(*this, numEnergyBuffers, "energyBuffer");
-    energySum.initialize<float>(*this, numGpuCores, "energySum");
     int pinnedBufferSize = max(paddedNumAtoms*6, numEnergyBuffers);
-    pinnedBuffer.resize(pinnedBufferSize*sizeof(float));
+    if (useMixedPrecision) {
+        energyBuffer.initialize<double>(*this, numEnergyBuffers, "energyBuffer");
+        energySum.initialize<double>(*this, numGpuCores, "energySum");
+        pinnedBuffer.resize(pinnedBufferSize*sizeof(double));
+    }
+    else {
+        energyBuffer.initialize<float>(*this, numEnergyBuffers, "energyBuffer");
+        energySum.initialize<float>(*this, numGpuCores, "energySum");
+        pinnedBuffer.resize(pinnedBufferSize*sizeof(float));
+    }
     if (useMixedPrecision) {
         vector<mm_double4> v(velm.getSize());
         for (int i = 0; i < numAtoms; i++) {
             double mass = system.getParticleMass(i);
             v[i] = mm_double4(0.0, 0.0, 0.0, mass == 0.0 ? 0.0 : 1.0/mass);
         }
-        velm.upload(pinnedBuffer.data(), true);
+        velm.upload(v, true);
     }
     else {
         for (int i = 0; i < numAtoms; i++) {

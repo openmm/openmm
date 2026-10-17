@@ -146,6 +146,10 @@ public:
      * @param dest     the destination array to copy to
      */
     void copyTo(ArrayInterface& dest) const;
+    /**
+     * Get whether this array contains pseudo-double precision values in df64 format.
+     */
+    bool containsDF64() const;
 private:
     ArrayInterface* impl;
 };

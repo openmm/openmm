@@ -162,14 +162,14 @@ public:
     df64(float2 f) {
         v = f;
     }
-    template <typename T, typename = metal::enable_if_t<metal::is_same<T, float>::value>>
-    operator T() const {
-        return v.x;
-    }
     df64 operator-() const {
         return df64(float2(-v.x, -v.y));
     }
 #define DEFINE_OPERATORS(AS) \
+    template <typename T, typename = metal::enable_if_t<metal::is_same<T, float>::value>> \
+    operator T() const AS { \
+        return v.x; \
+    } \
     AS df64& operator+=(const df64 rhs) AS { \
         v = DoubleFloat::df64add(v, rhs.v); \
         return *this; \

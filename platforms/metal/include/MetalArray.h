@@ -177,7 +177,6 @@ public:
      * @param dest     the destination array to copy to
      */
     void copyTo(ArrayInterface& dest) const;
-protected:
     /**
      * Get whether this array contains pseudo-double precision values in df64 format.
      */
