@@ -383,12 +383,20 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         vector<int> atomConstraintsVec(ccmaAtomConstraints.getSize());
         vector<int> numAtomConstraintsVec(ccmaNumAtomConstraints.getSize());
         vector<int> constraintMatrixColumnVec(ccmaConstraintMatrixColumn.getSize());
-        int elementSize = (context.getUseDoublePrecision() || context.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
-        ccmaDistance.initialize(context, numCCMA, 4*elementSize, "CcmaDistance");
-        ccmaDelta1.initialize(context, numCCMA, elementSize, "CcmaDelta1");
-        ccmaDelta2.initialize(context, numCCMA, elementSize, "CcmaDelta2");
-        ccmaReducedMass.initialize(context, numCCMA, elementSize, "CcmaReducedMass");
-        ccmaConstraintMatrixValue.initialize(context, numCCMA*maxRowElements, elementSize, "ConstraintMatrixValue");
+        if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
+            ccmaDistance.initialize<mm_double4>(context, numCCMA, "CcmaDistance");
+            ccmaDelta1.initialize<double>(context, numCCMA, "CcmaDelta1");
+            ccmaDelta2.initialize<double>(context, numCCMA, "CcmaDelta2");
+            ccmaReducedMass.initialize<double>(context, numCCMA, "CcmaReducedMass");
+            ccmaConstraintMatrixValue.initialize<double>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
+        }
+        else {
+            ccmaDistance.initialize<mm_float4>(context, numCCMA, "CcmaDistance");
+            ccmaDelta1.initialize<float>(context, numCCMA, "CcmaDelta1");
+            ccmaDelta2.initialize<float>(context, numCCMA, "CcmaDelta2");
+            ccmaReducedMass.initialize<float>(context, numCCMA, "CcmaReducedMass");
+            ccmaConstraintMatrixValue.initialize<float>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
+        }
         vector<mm_double4> distanceVec(ccmaDistance.getSize());
         vector<double> reducedMassVec(ccmaReducedMass.getSize());
         vector<double> constraintMatrixValueVec(ccmaConstraintMatrixValue.getSize());

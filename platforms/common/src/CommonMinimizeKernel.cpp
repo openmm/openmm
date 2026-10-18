@@ -83,9 +83,6 @@ void CommonMinimizeKernel::execute(ContextImpl& context, double tolerance, int m
         // Load system and integrator information.
 
         mixedIsDouble = cc.getUseMixedPrecision() || cc.getUseDoublePrecision();
-        if (mixedIsDouble && !cc.getSupports64BitGlobalAtomics()) {
-            throw OpenMMException("Double precision is not supported on devices that do not support 64 bit atomic operations");
-        }
         elementSize = mixedIsDouble ? sizeof(double) : sizeof(float);
         threadBlockSize = cc.getMaxThreadBlockSize();
         pinnedMemory = cc.getPinnedBuffer();

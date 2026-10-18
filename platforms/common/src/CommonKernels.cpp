@@ -4258,8 +4258,12 @@ void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const
         // The CUDA platform doesn't have a floating point force buffer, so we don't need to copy it.
     }
     energyBuffers.resize(components);
-    for (int i = 0; i < components; i++)
-        energyBuffers[i].initialize(cc, cc.getNumThreadBlocks(), cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? sizeof(double) : sizeof(float), "energyBuffer");
+    for (int i = 0; i < components; i++) {
+        if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision())
+            energyBuffers[i].initialize<double>(cc, cc.getNumThreadBlocks(), "energyBuffer");
+        else
+            energyBuffers[i].initialize<float>(cc, cc.getNumThreadBlocks(), "energyBuffer");
+    }
     vector<float> zeros(energyBuffers[0].getSize(), 0.0f);
     for (int i = 0; i < components; i++)
         energyBuffers[i].upload(zeros, true);
@@ -4377,7 +4381,7 @@ void CommonApplyMonteCarloBarostatKernel::computeKineticEnergy(ContextImpl& cont
         }
         else {
             vector<double> buffer;
-            energyBuffers[j].download(buffer);
+            energyBuffers[j].download(buffer, true);
             for (int i = 0; i < buffer.size(); i++)
                 ke[j] += buffer[i];
         }

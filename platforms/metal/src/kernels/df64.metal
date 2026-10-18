@@ -159,16 +159,26 @@ public:
     df64(long i) {
         v = float2(i, 0.0f);
     }
-    df64(float2 f) {
+    explicit df64(float2 f) {
         v = f;
     }
-    df64 operator-() const {
+    df64 operator-() constant {
         return df64(float2(-v.x, -v.y));
     }
 #define DEFINE_OPERATORS(AS) \
     template <typename T, typename = metal::enable_if_t<metal::is_same<T, float>::value>> \
     operator T() const AS { \
         return v.x; \
+    } \
+    explicit operator long() const AS { \
+        return (long) v.x; \
+    } \
+    df64 operator-() const AS { \
+        return df64(float2(-v.x, -v.y)); \
+    } \
+    AS df64& operator=(const df64 rhs) AS { \
+        v = rhs.v; \
+        return *this; \
     } \
     AS df64& operator+=(const df64 rhs) AS { \
         v = DoubleFloat::df64add(v, rhs.v); \
@@ -188,6 +198,7 @@ public:
     }
     DEFINE_OPERATORS(thread)
     DEFINE_OPERATORS(threadgroup)
+    DEFINE_OPERATORS(volatile threadgroup)
     DEFINE_OPERATORS(device)
 #undef DEFINE_OPERATORS
 };
@@ -251,11 +262,18 @@ DEFINE_MIXED_COMPARISONS(>=)
  */
 struct df642 {
     df64 x, y;
+    df642() = default;
+    df642() threadgroup = default;
     df642(df64 a, df64 b) : x(a), y(b) {
+    }
+    df642(float2 v) : x(v.x), y(v.y) {
     }
     explicit df642(df64 a) : x(a), y(a) {
     }
 #define DEFINE_OPERATORS2(AS) \
+    operator float2() const AS { \
+        return float2(x, y); \
+    } \
     template <class T> \
     AS df642& operator+=(T rhs) AS { \
         df64 d(rhs); \
@@ -319,11 +337,18 @@ struct df642 {
  */
 struct df643 {
     df64 x, y, z;
+    df643() = default;
+    df643() threadgroup = default;
     df643(df64 a, df64 b, df64 c) : x(a), y(b), z(c) {
+    }
+    df643(float3 v) : x(v.x), y(v.y), z(v.z) {
     }
     explicit df643(df64 a) : x(a), y(a), z(a) {
     }
 #define DEFINE_OPERATORS3(AS) \
+    operator float3() const AS { \
+        return float3(x, y, z); \
+    } \
     template <class T> \
     AS df643& operator+=(T rhs) AS { \
         df64 d(rhs); \
@@ -395,11 +420,18 @@ struct df643 {
  */
 struct df644 {
     df64 x, y, z, w;
+    df644() = default;
+    df644() threadgroup = default;
     df644(df64 a, df64 b, df64 c, df64 d) : x(a), y(b), z(c), w(d) {
+    }
+    df644(float4 v) : x(v.x), y(v.y), z(v.z), w(v.w) {
     }
     explicit df644(df64 a) : x(a), y(a), z(a), w(a) {
     }
 #define DEFINE_OPERATORS4(AS) \
+    operator float4() const AS { \
+        return float4(x, y, z, w); \
+    } \
     template <class T> \
     AS df644& operator+=(T rhs) AS { \
         df64 d(rhs); \
