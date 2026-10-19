@@ -28,6 +28,7 @@
 #include "openmm/common/ArrayInterface.h"
 #include <memory>
 #include <string>
+#include <type_info>
 #include <type_traits>
 
 namespace OpenMM {
