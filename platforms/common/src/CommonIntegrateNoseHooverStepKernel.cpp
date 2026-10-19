@@ -412,7 +412,7 @@ double CommonIntegrateNoseHooverStepKernel::computeHeatBathEnergy(ContextImpl& c
         if (useDouble) {
             std::vector<double> one(1);
             heatBathEnergy.initialize<double>(cc, 1, "heatBathEnergy");
-            heatBathEnergy.upload(one);
+            heatBathEnergy.upload(one, true);
         }
         else {
             std::vector<float> one(1);
@@ -467,12 +467,16 @@ double CommonIntegrateNoseHooverStepKernel::computeHeatBathEnergy(ContextImpl& c
     }
 
 
-    void * pinnedBuffer = cc.getPinnedBuffer();
-    heatBathEnergy.download(pinnedBuffer);
-    if (useDouble)
-        return *((double*) pinnedBuffer);
-    else
+    if (useDouble) {
+        vector<double> energy;
+        heatBathEnergy.download(energy, true);
+        return energy[0];;
+    }
+    else {
+        void* pinnedBuffer = cc.getPinnedBuffer();
+        heatBathEnergy.download(pinnedBuffer);
         return *((float*) pinnedBuffer);
+    }
 }
 
 std::pair<double, double> CommonIntegrateNoseHooverStepKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &nhc, bool downloadValue) {
@@ -554,10 +558,10 @@ std::pair<double, double> CommonIntegrateNoseHooverStepKernel::computeMaskedKine
     std::pair<double, double> KEs = {0, 0};
     if (downloadValue) {
         if (useDouble) {
-            mm_double2 tmp;
-            kineticEnergyBuffer.download(&tmp);
-            KEs.first = tmp.x;
-            KEs.second = tmp.y;
+            vector<mm_double2> tmp;
+            kineticEnergyBuffer.download(tmp, true);
+            KEs.first = tmp[0].x;
+            KEs.second = tmp[0].y;
         }
         else {
             mm_float2 tmp;
@@ -612,7 +616,7 @@ void CommonIntegrateNoseHooverStepKernel::createCheckpoint(ContextImpl& context,
         stream.write((char*) &chainLength, sizeof(int));
         if (useDouble) {
             vector<mm_double2> stateVec;
-            state.second.download(stateVec);
+            state.second.download(stateVec, true);
             stream.write((char*) stateVec.data(), sizeof(mm_double2)*chainLength);
         }
         else {
@@ -638,7 +642,7 @@ void CommonIntegrateNoseHooverStepKernel::loadCheckpoint(ContextImpl& context, i
             chainState[chainID].initialize<mm_double2>(cc, chainLength, "chainState" + to_string(chainID));
             vector<mm_double2> stateVec(chainLength);
             stream.read((char*) &stateVec[0], sizeof(mm_double2)*chainLength);
-            chainState[chainID].upload(stateVec);
+            chainState[chainID].upload(stateVec, true);
         }
         else {
             chainState[chainID] = ComputeArray();
@@ -662,7 +666,7 @@ void CommonIntegrateNoseHooverStepKernel::getChainStates(ContextImpl& context, v
         const ComputeArray& state = chainState.at(i);
         if (useDouble) {
             vector<mm_double2> stateVec;
-            state.download(stateVec);
+            state.download(stateVec, true);
             for (int j = 0; j < stateVec.size(); j++) {
                 positions[i].push_back(stateVec[j].x);
                 velocities[i].push_back(stateVec[j].y);
@@ -692,7 +696,7 @@ void CommonIntegrateNoseHooverStepKernel::setChainStates(ContextImpl& context, c
             vector<mm_double2> stateVec;
             for (int j = 0; j < chainLength; j++)
                 stateVec.push_back(mm_double2(positions[i][j], velocities[i][j]));
-            chainState[i].upload(stateVec);
+            chainState[i].upload(stateVec, true);
         }
         else {
             chainState[i].initialize<mm_float2>(cc, chainLength, "chainState"+cc.intToString(i));

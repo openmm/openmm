@@ -70,24 +70,25 @@ void CommonIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
         throw OpenMMException("RPMDIntegrator: the number of copies must be a multiple of powers of 2, 3, and 5.");
     int paddedParticles = cc.getPaddedNumAtoms();
     bool useDoublePrecision = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision());
-    int elementSize = (useDoublePrecision ? sizeof(mm_double4) : sizeof(mm_float4));
     forces.initialize<long long>(cc, numCopies*paddedParticles*3, "rpmdForces");
-    positions.initialize(cc, numCopies*paddedParticles, elementSize, "rpmdPositions");
-    velocities.initialize(cc, numCopies*paddedParticles, elementSize, "rpmdVelocities");
     cc.getIntegrationUtilities().initRandomNumberGenerator((unsigned int) integrator.getRandomNumberSeed());
     
     // Fill in the posq and velm arrays with safe values to avoid a risk of nans.
     
     if (useDoublePrecision) {
+        positions.initialize<mm_double4>(cc, numCopies*paddedParticles, "rpmdPositions");
+        velocities.initialize<mm_double4>(cc, numCopies*paddedParticles, "rpmdVelocities");
         vector<mm_double4> temp(positions.getSize());
         for (int i = 0; i < positions.getSize(); i++)
             temp[i] = mm_double4(0, 0, 0, 0);
         positions.upload(temp);
         for (int i = 0; i < velocities.getSize(); i++)
             temp[i] = mm_double4(0, 0, 0, 1);
-        velocities.upload(temp);
+        velocities.upload(temp, true);
     }
     else {
+        positions.initialize<mm_float4>(cc, numCopies*paddedParticles, "rpmdPositions");
+        velocities.initialize<mm_float4>(cc, numCopies*paddedParticles, "rpmdVelocities");
         vector<mm_float4> temp(positions.getSize());
         for (int i = 0; i < positions.getSize(); i++)
             temp[i] = mm_float4(0, 0, 0, 0);
@@ -125,7 +126,10 @@ void CommonIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     groupsNotContracted &= integrator.getIntegrationForceGroups();
     if (maxContractedCopies > 0) {
         contractedForces.initialize<long long>(cc, maxContractedCopies*paddedParticles*3, "rpmdContractedForces");
-        contractedPositions.initialize(cc, maxContractedCopies*paddedParticles, elementSize, "rpmdContractedPositions");
+        if (useDoublePrecision)
+            contractedPositions.initialize<mm_double4>(cc, maxContractedCopies*paddedParticles, "rpmdContractedPositions");
+        else
+            contractedPositions.initialize<mm_float4>(cc, maxContractedCopies*paddedParticles, "rpmdContractedPositions");
     }
 
     // Create kernels.
@@ -403,7 +407,7 @@ void CommonIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& 
     ContextSelector selector(cc);
     if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
         vector<mm_double4> velm(cc.getPaddedNumAtoms());
-        cc.getVelm().download(velm);
+        cc.getVelm().download(velm, true);
         for (int i = 0; i < numParticles; i++)
             velm[i] = mm_double4(vel[i][0], vel[i][1], vel[i][2], velm[i].w);
         velocities.uploadSubArray(&velm[0], copy*cc.getPaddedNumAtoms(), numParticles);

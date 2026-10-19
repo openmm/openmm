@@ -151,7 +151,7 @@ public:
      *                 the source array  must be in page-locked memory.
      */
     void upload(const void* data, bool blocking=true) {
-        uploadSubArray(data, 0, getSize(), blocking);
+        uploadSubArray(data, 0, getSize(), blocking, false);
     }
     /**
      * Copy values from host memory to a subset of the array.
@@ -162,7 +162,9 @@ public:
      * @param blocking if true, this call will block until the transfer is complete.  If false,
      *                 the source array  must be in page-locked memory.
      */
-    void uploadSubArray(const void* data, int offset, int elements, bool blocking=true);
+    void uploadSubArray(const void* data, int offset, int elements, bool blocking=true) {
+        uploadSubArray(data, offset, elements, blocking, true);
+    }
     /**
      * Copy the values in the device memory to an array.
      * 
@@ -184,6 +186,7 @@ public:
         return isDF64;
     }
 private:
+    void uploadSubArray(const void* data, int offset, int elements, bool blocking, bool convert);
     MetalContext* context;
     MTL::Buffer* buffer;
     size_t size;

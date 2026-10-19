@@ -117,9 +117,7 @@ public:
      *                 have restrictions on non-blocking copies, such as that the source data must be
      *                 in page-locked memory.
      */
-    void upload(const void* data, bool blocking=true) {
-        uploadSubArray(data, 0, getSize(), blocking);
-    }
+    void upload(const void* data, bool blocking=true);
     /**
      * Copy values from host memory to a subset of the array.
      * 

@@ -71,14 +71,28 @@ ComputeContext& MetalArray::getContext() {
     return *context;
 }
 
-void MetalArray::uploadSubArray(const void* data, int offset, int elements, bool blocking) {
+void MetalArray::uploadSubArray(const void* data, int offset, int elements, bool blocking, bool convert) {
     if (buffer == nullptr)
         throw OpenMMException("MetalArray has not been initialized");
     if (offset < 0 || offset+elements > getSize())
         throw OpenMMException("uploadSubArray: data exceeds range of array");
     MetalQueue& queue = dynamic_cast<MetalQueue&>(*context->getCurrentQueue());
     queue.flush(true);
-    memcpy((char*) buffer->contents()+offset*elementSize, data, elements*elementSize);
+    if (convert && isDF64) {
+        // We need to convert the values to df64.
+        std::vector<float> v(elementSize*elements/sizeof(float));
+        int numValues = v.size()/2;
+        int width = elementSize/sizeof(double);
+        const double* d = reinterpret_cast<const double*>(data);
+        for (int i = 0; i < numValues; i++) {
+            float f = (float) d[i];
+            v[2*i] = f;
+            v[2*i+1] = (float) (d[i]-f);
+        }
+        memcpy((char*) buffer->contents()+offset*elementSize, v.data(), elements*elementSize);
+    }
+    else
+        memcpy((char*) buffer->contents()+offset*elementSize, data, elements*elementSize);
 }
 
 void MetalArray::download(void* data, bool blocking) const {

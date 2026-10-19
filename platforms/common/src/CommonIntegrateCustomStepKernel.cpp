@@ -60,13 +60,13 @@ public:
         for (int index = 0; index < perDofValues.size(); index++) {
             if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
                 if (deviceValuesAreCurrent[index])
-                    perDofValues[index].download(localPerDofValuesDouble[index]);
+                    perDofValues[index].download(localPerDofValuesDouble[index], true);
                 vector<mm_double4> swap(numAtoms);
                 for (int i = 0; i < numAtoms; i++)
                     swap[lastAtomOrder[i]] = localPerDofValuesDouble[index][i];
                 for (int i = 0; i < numAtoms; i++)
                     localPerDofValuesDouble[index][i] = swap[order[i]];
-                perDofValues[index].upload(localPerDofValuesDouble[index]);
+                perDofValues[index].upload(localPerDofValuesDouble[index], true);
             }
             else {
                 if (deviceValuesAreCurrent[index])
@@ -122,14 +122,21 @@ void CommonIntegrateCustomStepKernel::initialize(const System& system, const Cus
     ContextSelector selector(cc);
     cc.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
     numGlobalVariables = integrator.getNumGlobalVariables();
-    int elementSize = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
-    sumBuffer.initialize(cc, system.getNumParticles(), elementSize, "sumBuffer");
-    summedValue.initialize(cc, 1, elementSize, "summedValue");
     perDofValues.resize(integrator.getNumPerDofVariables());
     localPerDofValuesFloat.resize(perDofValues.size());
     localPerDofValuesDouble.resize(perDofValues.size());
-    for (int i = 0; i < perDofValues.size(); i++)
-        perDofValues[i].initialize(cc, system.getNumParticles(), 4*elementSize, "perDofVariables");
+    if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
+        sumBuffer.initialize<double>(cc, system.getNumParticles(), "sumBuffer");
+        summedValue.initialize<double>(cc, 1, "summedValue");
+        for (int i = 0; i < perDofValues.size(); i++)
+            perDofValues[i].initialize<mm_double4>(cc, system.getNumParticles(), "perDofVariables");
+    }
+    else {
+        sumBuffer.initialize<float>(cc, system.getNumParticles(), "sumBuffer");
+        summedValue.initialize<float>(cc, 1, "summedValue");
+        for (int i = 0; i < perDofValues.size(); i++)
+            perDofValues[i].initialize<mm_float4>(cc, system.getNumParticles(), "perDofVariables");
+    }
     localValuesAreCurrent.resize(integrator.getNumPerDofVariables(), false);
     deviceValuesAreCurrent.resize(integrator.getNumPerDofVariables(), false);
     cc.addReorderListener(new ReorderListener(cc, perDofValues, localPerDofValuesFloat, localPerDofValuesDouble, deviceValuesAreCurrent));
@@ -184,8 +191,8 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
     int numAtoms = cc.getNumAtoms();
     int numSteps = integrator.getNumComputations();
     bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
-    string tempType = (cc.getSupportsDoublePrecision() ? "double3" : "float3");
-    string perDofType = (useDouble ? "double4" : "float4");
+    string tempType = (cc.getSupportsDoublePrecision() ? "double3" : "mixed3");
+    string perDofType = (cc.getUseDoublePrecision() ? "double4" : (cc.getUseMixedPrecision() ? "mixed4" : "float4"));
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
 
@@ -210,6 +217,13 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         defines["NUM_ATOMS"] = cc.intToString(cc.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
         defines["WORK_GROUP_SIZE"] = cc.intToString(sumWorkGroupSize);
+        if (cc.getUseDoublePrecision())
+            defines["SUM_TYPE"] = "double";
+        else if (cc.getUseMixedPrecision())
+            defines["SUM_TYPE"] = "mixed";
+        else
+            defines["SUM_TYPE"] = "float";
+
 
         // Record the tabulated functions.
 
@@ -300,8 +314,10 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         // Allocate space for storing global values, both on the host and the device.
 
         localGlobalValues.resize(expressionSet.getNumVariables());
-        int elementSize = (cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
-        globalValues.initialize(cc, expressionSet.getNumVariables(), elementSize, "globalValues");
+        if (useDouble)
+            globalValues.initialize<double>(cc, expressionSet.getNumVariables(), "globalValues");
+        else
+            globalValues.initialize<float>(cc, expressionSet.getNumVariables(), "globalValues");
         for (int i = 0; i < integrator.getNumGlobalVariables(); i++) {
             localGlobalValues[globalVariableIndex[i]] = initialGlobalVariables[i];
             expressionSet.setVariable(globalVariableIndex[i], initialGlobalVariables[i]);
@@ -313,7 +329,10 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         }
         int numContextParams = context.getParameters().size();
         localPerDofEnergyParamDerivs.resize(numContextParams);
-        perDofEnergyParamDerivs.initialize(cc, max(1, numContextParams), elementSize, "perDofEnergyParamDerivs");
+        if (useDouble)
+            perDofEnergyParamDerivs.initialize<double>(cc, max(1, numContextParams), "perDofEnergyParamDerivs");
+        else
+            perDofEnergyParamDerivs.initialize<float>(cc, max(1, numContextParams), "perDofEnergyParamDerivs");
 
         // Record information about the targets of steps that will be stored in global variables.
 
@@ -471,7 +490,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                     // Create a second kernel for this step that sums the values.
 
                     program = cc.compileProgram(CommonKernelSources::customIntegrator, defines);
-                    kernel = program->createKernel(useDouble ? "computeDoubleSum" : "computeFloatSum");
+                    kernel = program->createKernel("computeSum");
                     kernels[step].push_back(kernel);
                     kernel->addArg(sumBuffer);
                     kernel->addArg(summedValue);
@@ -567,7 +586,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         // Create a second kernel to sum the values.
 
         program = cc.compileProgram(CommonKernelSources::customIntegrator, defines);
-        sumKineticEnergyKernel = program->createKernel(useDouble ? "computeDoubleSum" : "computeFloatSum");
+        sumKineticEnergyKernel = program->createKernel("computeSum");
         sumKineticEnergyKernel->addArg(sumBuffer);
         sumKineticEnergyKernel->addArg(summedValue);
         sumKineticEnergyKernel->addArg(numAtoms);
@@ -583,7 +602,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
     for (int i = 0; i < perDofValues.size(); i++) {
         if (!deviceValuesAreCurrent[i]) {
             if (useDouble)
-                perDofValues[i].upload(localPerDofValuesDouble[i]);
+                perDofValues[i].upload(localPerDofValuesDouble[i], true);
             else
                 perDofValues[i].upload(localPerDofValuesFloat[i]);
             deviceValuesAreCurrent[i] = true;
@@ -744,9 +763,9 @@ void CommonIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             kernels[step][0]->execute(numAtoms, 128);
             kernels[step][1]->execute(sumWorkGroupSize, sumWorkGroupSize);
             if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
-                double value;
-                summedValue.download(&value);
-                recordGlobalValue(value, stepTarget[step], integrator);
+                vector<double> value;
+                summedValue.download(value, true);
+                recordGlobalValue(value[0], stepTarget[step], integrator);
             }
             else {
                 float value;
@@ -835,9 +854,9 @@ double CommonIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& contex
     kineticEnergyKernel->execute(cc.getNumAtoms());
     sumKineticEnergyKernel->execute(sumWorkGroupSize, sumWorkGroupSize);
     if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
-        double ke;
-        summedValue.download(&ke);
-        return ke;
+        vector<double> ke;
+        summedValue.download(ke, true);
+        return ke[0];
     }
     else {
         float ke;
@@ -909,7 +928,7 @@ void CommonIntegrateCustomStepKernel::getPerDofVariable(ContextImpl& context, in
     const vector<int>& order = cc.getAtomIndex();
     if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
         if (!localValuesAreCurrent[variable]) {
-            perDofValues[variable].download(localPerDofValuesDouble[variable]);
+            perDofValues[variable].download(localPerDofValuesDouble[variable], true);
             localValuesAreCurrent[variable] = true;
         }
         for (int i = 0; i < (int) values.size(); i++) {

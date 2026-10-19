@@ -818,8 +818,11 @@ void IntegrationUtilities::setNextStepSize(double size) {
 }
 
 double IntegrationUtilities::getLastStepSize() {
-    if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
-        stepSize.download(&lastStepSize);
+    if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
+        vector<mm_double2> size;
+        stepSize.download(size, true);
+        lastStepSize = size[0];
+    }
     else {
         mm_float2 lastStepSizeFloat;
         stepSize.download(&lastStepSizeFloat);
@@ -1017,8 +1020,8 @@ void IntegrationUtilities::computeShiftedVelocities(double timeShift, vector<Vec
     
     velocities.resize(numParticles);
     if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
-        auto velm = (mm_double4*)context.getPinnedBuffer();
-        context.getVelm().download(velm);
+        vector<mm_double4> velm;
+        context.getVelm().download(velm, true);
         for (int i = 0; i < numParticles; i++) {
             mm_double4 v = velm[i];
             velocities[i] = Vec3(v.x, v.y, v.z);

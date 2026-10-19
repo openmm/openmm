@@ -64,6 +64,7 @@ private:
     static const double fTol, wolfeParam, stepScaleDown, stepScaleUp, minStep, maxStep;
     static const int numVectors, maxLineSearchIterations;
 
+    template <class ELEMENT_TYPE>
     void setup(ContextImpl& context);
     void lbfgs(ContextImpl& context);
     void evaluateGpu(ContextImpl& context);
@@ -88,7 +89,7 @@ private:
     std::vector<double> hostConstraintDistances;
 
     bool isSetup, mixedIsDouble;
-    int elementSize, threadBlockSize;
+    int threadBlockSize;
     void* pinnedMemory;
 
     int forceGroups;

@@ -274,6 +274,9 @@ struct df642 {
     operator float2() const AS { \
         return float2(x, y); \
     } \
+    df642 operator-() const AS { \
+        return df642(-x, -y); \
+    } \
     template <class T> \
     AS df642& operator+=(T rhs) AS { \
         df64 d(rhs); \
@@ -348,6 +351,9 @@ struct df643 {
 #define DEFINE_OPERATORS3(AS) \
     operator float3() const AS { \
         return float3(x, y, z); \
+    } \
+    df643 operator-() const AS { \
+        return df643(-x, -y, -z); \
     } \
     template <class T> \
     AS df643& operator+=(T rhs) AS { \
@@ -431,6 +437,9 @@ struct df644 {
 #define DEFINE_OPERATORS4(AS) \
     operator float4() const AS { \
         return float4(x, y, z, w); \
+    } \
+    df644 operator-() const AS { \
+        return df644(-x, -y, -z, -w); \
     } \
     template <class T> \
     AS df644& operator+=(T rhs) AS { \
@@ -581,19 +590,22 @@ DEFINE_BINARY_OPERATORS(df64, long)
 DEFINE_BINARY_OPERATORS(df642, float)
 DEFINE_BINARY_OPERATORS(df642, int)
 DEFINE_BINARY_OPERATORS(df642, long)
+DEFINE_BINARY_OPERATORS(df642, df64)
 DEFINE_BINARY_OPERATORS(df643, float)
 DEFINE_BINARY_OPERATORS(df643, int)
 DEFINE_BINARY_OPERATORS(df643, long)
+DEFINE_BINARY_OPERATORS(df643, df64)
 DEFINE_BINARY_OPERATORS(df644, float)
 DEFINE_BINARY_OPERATORS(df644, int)
 DEFINE_BINARY_OPERATORS(df644, long)
+DEFINE_BINARY_OPERATORS(df644, df64)
 #undef DEFINE_BINARY_OPERATORS
 
 /**
  * Math functions that act on df64 values.
  */
 inline df64 sqrt(df64 a) {
-    return df64(DoubleFloat::df64sqrt(a.v));
+    return (a.x == 0 ? df64(metal::sqrt(a.y)) : df64(DoubleFloat::df64sqrt(a.v)));
 }
 inline df64 rsqrt(df64 a) {
     return df64(1.0f)/df64(DoubleFloat::df64sqrt(a.v));
