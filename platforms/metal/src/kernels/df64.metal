@@ -154,10 +154,14 @@ public:
         v = float2(f, 0.0f);
     }
     df64(int i) {
-        v = float2(i, 0.0f);
+        float high = (float) i;
+        float low = (float) (i-(int)high);
+        v = float2(high, low);
     }
     df64(long i) {
-        v = float2(i, 0.0f);
+        float high = (float) i;
+        float low = (float) (i-(long)high);
+        v = float2(high, low);
     }
     explicit df64(float2 f) {
         v = f;
