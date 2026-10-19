@@ -27,7 +27,7 @@
 
 #include "openmm/OpenMMException.h"
 #include "openmm/common/windowsExportCommon.h"
-#include <type_info>
+#include <typeinfo>
 #include <vector>
 
 namespace OpenMM {
