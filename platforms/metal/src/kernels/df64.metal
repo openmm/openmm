@@ -605,7 +605,7 @@ DEFINE_BINARY_OPERATORS(df644, df64)
  * Math functions that act on df64 values.
  */
 inline df64 sqrt(df64 a) {
-    return (a.x == 0 ? df64(metal::sqrt(a.y)) : df64(DoubleFloat::df64sqrt(a.v)));
+    return (a.v.x == 0 ? df64(metal::sqrt(a.v.y)) : df64(DoubleFloat::df64sqrt(a.v)));
 }
 inline df64 rsqrt(df64 a) {
     return df64(1.0f)/df64(DoubleFloat::df64sqrt(a.v));

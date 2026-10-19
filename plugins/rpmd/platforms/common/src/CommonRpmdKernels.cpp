@@ -195,7 +195,7 @@ void CommonIntegrateRPMDStepKernel::initializeKernels(ContextImpl& context) {
     translateKernel->addArg();
     copyToContextKernel->addArg(velocities);
     copyToContextKernel->addArg(cc.getVelm());
-    copyToContextKernel->addArg();
+    copyToContextKernel->addArg(positions);
     copyToContextKernel->addArg(cc.getPosq());
     copyToContextKernel->addArg(cc.getAtomIndexArray());
     copyToContextKernel->addArg();
@@ -287,7 +287,6 @@ void CommonIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDInte
 void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
     // Compute forces from all groups that didn't have a specified contraction.
 
-    copyToContextKernel->setArg(2, positions);
     copyFromContextKernel->setArg(1, forces);
     copyFromContextKernel->setArg(5, positions);
     for (int i = 0; i < numCopies; i++) {
@@ -341,8 +340,7 @@ void CommonIntegrateRPMDStepKernel::computeForces(ContextImpl& context) {
 
             forceContractionKernels[copies]->execute(numParticles*numCopies, workgroupSize);
         }
-    }
-    if (groupsByCopies.size() > 0) {
+
         // Ensure the Context contains the positions from the last copy, since we'll assume that later.
         
         copyToContextKernel->setArg(2, positions);
@@ -425,7 +423,6 @@ void CommonIntegrateRPMDStepKernel::copyToContext(int copy, ContextImpl& context
     ContextSelector selector(cc);
     if (!hasInitializedKernels)
         initializeKernels(context);
-    copyToContextKernel->setArg(2, positions);
     copyToContextKernel->setArg(5, copy);
     copyToContextKernel->execute(cc.getNumAtoms());
 }
