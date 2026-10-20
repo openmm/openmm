@@ -303,25 +303,10 @@ void CommonUpdateStateDataKernel::getEnergyParameterDerivatives(ContextImpl& con
     if (numDerivs == 0)
         return;
     derivs = cc.getEnergyParamDerivWorkspace();
-    ArrayInterface& derivArray = cc.getEnergyParamDerivBuffer();
-    if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
-        vector<double> derivBuffers;
-        derivArray.download(derivBuffers);
-        for (int i = numDerivs; i < derivArray.getSize(); i += numDerivs)
-            for (int j = 0; j < numDerivs; j++)
-                derivBuffers[j] += derivBuffers[i+j];
-        for (int i = 0; i < numDerivs; i++)
-            derivs[paramDerivNames[i]] += derivBuffers[i];
-    }
-    else {
-        vector<float> derivBuffers;
-        derivArray.download(derivBuffers);
-        for (int i = numDerivs; i < derivArray.getSize(); i += numDerivs)
-            for (int j = 0; j < numDerivs; j++)
-                derivBuffers[j] += derivBuffers[i+j];
-        for (int i = 0; i < numDerivs; i++)
-            derivs[paramDerivNames[i]] += derivBuffers[i];
-    }
+    vector<double> derivValues;
+    cc.reduceEnergyParamDerivs(derivValues);
+    for (int i = 0; i < numDerivs; i++)
+        derivs[paramDerivNames[i]] += derivValues[i];
 }
 
 void CommonUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Vec3& a, Vec3& b, Vec3& c) const {

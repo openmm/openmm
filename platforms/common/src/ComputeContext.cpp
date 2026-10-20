@@ -95,6 +95,9 @@ void ComputeContext::initializeKernels() {
     reduceEnergyKernel = program->createKernel("reduceEnergy");
     for (int i = 0; i < 4; i++)
         reduceEnergyKernel->addArg();
+    reduceEnergyParamDerivsKernel = program->createKernel("reduceEnergyParamDerivs");
+    for (int i = 0; i < 5; i++)
+        reduceEnergyParamDerivsKernel->addArg();
     setChargesKernel = program->createKernel("setCharges");
     setChargesKernel->addArg();
     setChargesKernel->addArg(getPosq());
@@ -290,6 +293,27 @@ void ComputeContext::addEnergyParameterDerivative(const string& param) {
         if (param == energyParamDerivNames[i])
             return;
     energyParamDerivNames.push_back(param);
+}
+
+void ComputeContext::reduceEnergyParamDerivs(vector<double>& derivs) {
+    int numDerivs = energyParamDerivNames.size();
+    derivs.resize(numDerivs);
+    if (numDerivs == 0)
+        return;
+    if (!energyParamDerivSum.isInitialized()) {
+        if (useDoublePrecision || useMixedPrecision)
+            energyParamDerivSum.initialize<double>(*this, numDerivs, "energyParamDerivSum");
+        else
+            energyParamDerivSum.initialize<float>(*this, numDerivs, "energyParamDerivSum");
+    }
+    int workGroupSize = min(512, getMaxThreadBlockSize());
+    reduceEnergyParamDerivsKernel->setArg(0, energyParamDerivBuffer);
+    reduceEnergyParamDerivsKernel->setArg(1, energyParamDerivSum);
+    reduceEnergyParamDerivsKernel->setArg(2, (int) energyParamDerivBuffer.getSize());
+    reduceEnergyParamDerivsKernel->setArg(3, numDerivs);
+    reduceEnergyParamDerivsKernel->setArg(4, workGroupSize);
+    reduceEnergyParamDerivsKernel->execute(workGroupSize*numDerivs, workGroupSize);
+    energyParamDerivSum.download(derivs, true);
 }
 
 /**

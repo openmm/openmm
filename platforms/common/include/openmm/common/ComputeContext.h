@@ -437,6 +437,14 @@ public:
         return energyParamDerivBuffer;
     }
     /**
+     * Sum the buffer in which derivatives of the energy with respect to parameters are computed.
+     * The reduction is performed on the device, and only the totals are transferred to the host.
+     *
+     * @param derivs    on exit, the derivative with respect to each parameter, in the order
+     *                  returned by getEnergyParamDerivNames()
+     */
+    void reduceEnergyParamDerivs(std::vector<double>& derivs);
+    /**
      * Get a pointer to a block of pinned memory that can be used for asynchronous transfers between host and device.
      * This is guaranteed to be at least as large as any of the arrays returned by methods of this class.
      * 
@@ -668,10 +676,10 @@ protected:
     ComputeQueue defaultQueue, currentQueue;
     ComputeKernel clearBufferKernel, clearTwoBuffersKernel, clearThreeBuffersKernel;
     ComputeKernel clearFourBuffersKernel, clearFiveBuffersKernel, clearSixBuffersKernel;
-    ComputeKernel reduceEnergyKernel, setChargesKernel;
+    ComputeKernel reduceEnergyKernel, reduceEnergyParamDerivsKernel, setChargesKernel;
     ComputeArray posq, posqCorrection, velm;
     ComputeArray longForceBuffer, atomIndexDevice;
-    ComputeArray energySum, energyBuffer, energyParamDerivBuffer;
+    ComputeArray energySum, energyBuffer, energyParamDerivBuffer, energyParamDerivSum;
     ComputeArray chargeBuffer, globalParamValues;
     std::vector<ArrayInterface*> autoclearBuffers;
     std::vector<ComputeForceInfo*> forces;
