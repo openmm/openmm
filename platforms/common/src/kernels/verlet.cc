@@ -45,9 +45,9 @@ KERNEL void integrateVerletPart2(int numAtoms, GLOBAL mixed2* RESTRICT dt, GLOBA
 #endif
     ) {
     mixed2 stepSize = dt[0];
-#ifdef SUPPORTS_DOUBLE_PRECISION
+#if defined(SUPPORTS_DOUBLE_PRECISION)
     double oneOverDt = 1.0/stepSize.y;
-#elifdef USE_MIXED_PRECISION
+#elif defined(USE_MIXED_PRECISION)
     mixed oneOverDt = 1.0f/(mixed) stepSize.y;
 #else
     float oneOverDt = 1.0f/stepSize.y;
