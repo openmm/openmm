@@ -576,7 +576,7 @@ class Modeller(object):
             positions = []
         else:
             positions = deepcopy(self.positions.value_in_unit(nanometer))
-        cells = _CellList(positions, maxCutoff, vectors, True)
+        cells = compiled.CellList(positions, maxCutoff, vectors, True)
 
         # Create a function to compute the distance between two points, taking periodic boundary conditions into account.
 
@@ -635,7 +635,7 @@ class Modeller(object):
             filteredWaters = []
             cells.cells = {}
             for i in range(len(lowerSkinPositions)):
-                cell = cells.cellForPosition(lowerSkinPositions[i])
+                cell = cells.cellForPosition(*lowerSkinPositions[i])
                 if cell in cells.cells:
                     cells.cells[cell].append(i)
                 else:
@@ -804,7 +804,7 @@ class Modeller(object):
                 system.addParticle(0)
                 force.addParticle([radius])
 
-            cells = _CellList(basePositions, np.amax(baseRadii), vectors, True)
+            cells = compiled.CellList(basePositions, np.amax(baseRadii), vectors, True)
             periodicDistance = compiled.periodicDistance(vectors)
         else:
             baseRadii = None
@@ -976,7 +976,7 @@ class Modeller(object):
             # Try to find a reasonable position for the center of the new copy (away from existing atoms).
 
             centerPos = rng.uniform(size=3) @ vectors
-            if cells is not None and cells.cellForPosition(centerPos) in cells.cells:
+            if cells is not None and cells.cellForPosition(*centerPos) in cells.cells:
                 continue
 
             # Generate a random rotation matrix: see scipy.stats.ortho_group.rv() and scipy.stats.special_ortho_group.rv().
@@ -1230,7 +1230,7 @@ class Modeller(object):
         acceptors = [atom for atom in self.topology.atoms() if atom.element in (elem.oxygen, elem.nitrogen)]
         positions = self.positions.value_in_unit(nanometer)
         acceptorPositions = [positions[a.index] for a in acceptors]
-        cells = _CellList(acceptorPositions, 0.35, None, False)
+        cells = compiled.CellList(acceptorPositions, 0.35, None, False)
         for chain in self.topology.chains():
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
@@ -1831,8 +1831,8 @@ class Modeller(object):
         addedLipids = []
         removedFromLeaf = [0, 0]
         vectors = membraneTopology.getPeriodicBoxVectors().value_in_unit(nanometer)
-        proteinCells = _CellList(proteinPos, overlapCutoff, vectors, False)
-        scaledProteinCells = _CellList(scaledProteinPos, overlapCutoff, vectors, False)
+        proteinCells = compiled.CellList(proteinPos, overlapCutoff, vectors, False)
+        scaledProteinCells = compiled.CellList(scaledProteinPos, overlapCutoff, vectors, False)
         for x in range(nx):
             for y in range(ny):
                 offset = proteinCenterPos - patchCenterPos + Vec3((x-0.5*(nx-1))*patchSize[0], (y-0.5*(ny-1))*patchSize[1], 0)
@@ -2054,56 +2054,3 @@ class Modeller(object):
                 del waterPos[wRes]
 
         self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize, residueTemplates=newResidueTemplates)
-
-
-class _CellList(object):
-    """This class organizes atom positions into cells, so the neighbors of a point can be quickly retrieved"""
-
-    def __init__(self, positions, maxCutoff, vectors, periodic):
-        if vectors is None:
-            if len(positions) == 0:
-                vectors = (Vec3(maxCutoff, 0, 0), Vec3(0, maxCutoff, 0), Vec3(0, 0, maxCutoff))
-            else:
-                minPos = [min((pos[i] for pos in positions)) for i in range(3)]
-                maxPos = [max((pos[i] for pos in positions)) for i in range(3)]
-                width = [max(maxPos[i]-minPos[i], maxCutoff) for i in range(3)]
-                vectors = (Vec3(width[0], 0, 0), Vec3(0, width[1], 0), Vec3(0, 0, width[2]))
-        self.positions = deepcopy(positions)
-        self.cells = {}
-        self.numCells = tuple([max(1, int(floor(vectors[i][i]/maxCutoff))) for i in range(3)])
-        self.cellSize = tuple([vectors[i][i]/self.numCells[i] for i in range(3)])
-        self.vectors = vectors
-        self.periodic = periodic
-        invBox = Vec3(1.0/vectors[0][0], 1.0/vectors[1][1], 1.0/vectors[2][2])
-        for i in range(len(self.positions)):
-            pos = self.positions[i]
-            if periodic:
-                pos = pos - floor(pos[2]*invBox[2])*vectors[2]
-                pos -= floor(pos[1]*invBox[1])*vectors[1]
-                pos -= floor(pos[0]*invBox[0])*vectors[0]
-                self.positions[i] = pos
-            cell = self.cellForPosition(pos)
-            if cell in self.cells:
-                self.cells[cell].append(i)
-            else:
-                self.cells[cell] = [i]
-
-    def cellForPosition(self, pos):
-        if self.periodic:
-            invBox = Vec3(1.0/self.vectors[0][0], 1.0/self.vectors[1][1], 1.0/self.vectors[2][2])
-            pos = pos-floor(pos[2]*invBox[2])*self.vectors[2]
-            pos -= floor(pos[1]*invBox[1])*self.vectors[1]
-            pos -= floor(pos[0]*invBox[0])*self.vectors[0]
-        return tuple([int(floor(pos[j]/self.cellSize[j]))%self.numCells[j] for j in range(3)])
-
-    def neighbors(self, pos):
-        processedCells = set()
-        offsets = (-1, 0, 1)
-        for i in offsets:
-            for j in offsets:
-                for k in offsets:
-                    cell = self.cellForPosition(Vec3(pos[0]+i*self.cellSize[0], pos[1]+j*self.cellSize[1], pos[2]+k*self.cellSize[2]))
-                    if cell in self.cells and cell not in processedCells:
-                        processedCells.add(cell)
-                        for atom in self.cells[cell]:
-                            yield atom

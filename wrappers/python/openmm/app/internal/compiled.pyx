@@ -34,10 +34,13 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from heapq import heappush, heappop
+import numpy as np
 
 cdef extern from "math.h":
     double round(double x)
     double sqrt(double x)
+    double floor(double x)
+
 
 cdef class periodicDistance:
     """This is a callable object that computes the distance between two points, taking
@@ -45,7 +48,7 @@ cdef class periodicDistance:
     """
     cdef double vectors[3][3]
     cdef double invBoxSize[3]
-    
+
     def __init__(self, boxVectors):
         for i in range(3):
             for j in range(3):
@@ -67,6 +70,85 @@ cdef class periodicDistance:
         scale1 = round(dx*self.invBoxSize[0])
         dx -= scale1*self.vectors[0][0]
         return sqrt(dx*dx + dy*dy + dz*dz)
+
+
+cdef class CellList:
+    """This class organizes atom positions into cells, so the neighbors of a point can be quickly retrieved"""
+
+    cdef public double[:, :] positions
+    cdef public dict cells
+    cdef long numCells[3]
+    cdef double cellSize[3]
+    cdef double vectors[3][3]
+    cdef double invBox[3]
+    cdef bint periodic
+
+    def __init__(self, positions, maxCutoff, vectors, periodic):
+        cdef double x, y, z
+
+        if vectors is None:
+            if len(positions) == 0:
+                vectors = ((maxCutoff, 0, 0), (0, maxCutoff, 0), (0, 0, maxCutoff))
+            else:
+                minPos = [min((pos[i] for pos in positions)) for i in range(3)]
+                maxPos = [max((pos[i] for pos in positions)) for i in range(3)]
+                width = [max(maxPos[i]-minPos[i], maxCutoff) for i in range(3)]
+                vectors = ((width[0], 0, 0), (0, width[1], 0), (0, 0, width[2]))
+        self.positions = np.array(positions, dtype=float) if positions else np.empty((0, 3))
+        self.cells = {}
+        self.numCells = tuple([max(1, int(floor(vectors[i][i]/maxCutoff))) for i in range(3)])
+        self.cellSize = tuple([vectors[i][i]/self.numCells[i] for i in range(3)])
+        self.vectors = vectors
+        self.periodic = periodic
+        self.invBox = (1.0/self.vectors[0][0], 1.0/self.vectors[1][1], 1.0/self.vectors[2][2])
+        for i in range(self.positions.shape[0]):
+            x = self.positions[i, 0]
+            y = self.positions[i, 1]
+            z = self.positions[i, 2]
+            if periodic:
+                x, y, z = self.reduceCoordinates(x, y, z)
+                self.positions[i, 0] = x
+                self.positions[i, 1] = y
+                self.positions[i, 2] = z
+            cell = self.cellForPosition(x, y, z)
+            if cell in self.cells:
+                self.cells[cell].append(i)
+            else:
+                self.cells[cell] = [i]
+
+    cdef (double, double, double) reduceCoordinates(self, double x, double y, double z):
+        cdef double scale1, scale2, scale3
+        scale3 = floor(z*self.invBox[2])
+        x -= scale3*self.vectors[2][0]
+        y -= scale3*self.vectors[2][1]
+        z -= scale3*self.vectors[2][2]
+        scale2 = floor(y*self.invBox[1])
+        x -= scale2*self.vectors[1][0]
+        y -= scale2*self.vectors[1][1]
+        scale1 = floor(x*self.invBox[0])
+        x -= scale1*self.vectors[0][0]
+        return (x, y, z)
+
+    cpdef (long, long, long) cellForPosition(self, double x, double y, double z):
+        if self.periodic:
+            x, y, z = self.reduceCoordinates(x, y, z)
+        return (
+            <long>floor(x/self.cellSize[0])%self.numCells[0],
+            <long>floor(y/self.cellSize[1])%self.numCells[1],
+            <long>floor(z/self.cellSize[2])%self.numCells[2],
+        )
+
+    def neighbors(self, pos):
+        processedCells = set()
+        offsets = (-1, 0, 1)
+        for i in offsets:
+            for j in offsets:
+                for k in offsets:
+                    cell = self.cellForPosition(pos[0]+i*self.cellSize[0], pos[1]+j*self.cellSize[1], pos[2]+k*self.cellSize[2])
+                    if cell in self.cells and cell not in processedCells:
+                        processedCells.add(cell)
+                        for atom in self.cells[cell]:
+                            yield atom
 
 
 def matchResidueToTemplate(res, template, bondedToAtom, bint ignoreExternalBonds=False, bint ignoreExtraParticles=False):
