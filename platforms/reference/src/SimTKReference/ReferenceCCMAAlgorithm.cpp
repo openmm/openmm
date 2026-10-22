@@ -251,6 +251,9 @@ void ReferenceCCMAAlgorithm::applyConstraints(vector<Vec3>& atomCoordinates,
 
     // main loop
 
+    // Keep the fast undamped path, then use half steps for slow position solves
+    // to reduce oscillatory divergence.
+    const int positionDampingStart = 12;
     int iterations = 0;
     int numberConverged = 0;
     vector<double> constraintDelta(_numberOfConstraints);
@@ -280,6 +283,7 @@ void ReferenceCCMAAlgorithm::applyConstraints(vector<Vec3>& atomCoordinates,
         }
         if (numberConverged == _numberOfConstraints)
             break;
+        double damping = (!constrainingVelocities && iterations >= positionDampingStart ? 0.5 : 1.0);
         iterations++;
 
         if (_matrix.size() > 0) {
@@ -294,7 +298,7 @@ void ReferenceCCMAAlgorithm::applyConstraints(vector<Vec3>& atomCoordinates,
         for (int ii = 0; ii < _numberOfConstraints; ii++) {
             int atomI = _atomIndices[ii].first;
             int atomJ = _atomIndices[ii].second;
-            Vec3 dr = r_ij[ii]*constraintDelta[ii];
+            Vec3 dr = r_ij[ii]*(damping*constraintDelta[ii]);
             atomCoordinatesP[atomI] += dr*inverseMasses[atomI];
             atomCoordinatesP[atomJ] -= dr*inverseMasses[atomJ];
         }
