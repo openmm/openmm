@@ -54,6 +54,7 @@ public:
 
     CalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcAmoebaTorsionTorsionForceKernel();
 
     /**
      * Initialize the kernel.
@@ -87,6 +88,7 @@ public:
 
     CalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcAmoebaMultipoleForceKernel();
 
     /**
      * Initialize the kernel.
@@ -146,6 +148,7 @@ public:
 
     CalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcAmoebaGeneralizedKirkwoodForceKernel();
 
     /**
      * Initialize the kernel.
@@ -186,6 +189,7 @@ public:
 
     CalcAmoebaVdwForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcAmoebaVdwForceKernel();
 
     /**
      * Initialize the kernel.
@@ -226,6 +230,7 @@ public:
 
     CalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcAmoebaWcaDispersionForceKernel();
 
     /**
      * Initialize the kernel.
@@ -263,6 +268,7 @@ public:
     }
     CalcHippoNonbondedForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcHippoNonbondedForceKernel();
     /**
      * Initialize the kernel.
      *

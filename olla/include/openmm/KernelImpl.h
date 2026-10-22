@@ -52,9 +52,7 @@ public:
      * @param platform  the Platform that created this kernel
      */
     KernelImpl(std::string name, const Platform& platform);
-    virtual ~KernelImpl() {
-        assert(referenceCount == 0);
-    }
+    virtual ~KernelImpl();
     /**
      * Get the name of this kernel.
      */
