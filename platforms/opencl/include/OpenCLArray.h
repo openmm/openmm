@@ -103,8 +103,9 @@ public:
      * @param size              the number of elements in the array
      * @param elementSize       the size of each element in bytes
      * @param name              the name of the array
+     * @param type              the type of values the array contains
      */
-    void initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name);
+    void initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name, const std::type_info* type=nullptr);
     /**
      * Initialize this object.
      *

@@ -41,11 +41,11 @@ ArrayInterface& ComputeArray::getArray() {
     return *impl;
 }
 
-void ComputeArray::initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name) {
+void ComputeArray::initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name, const std::type_info* type) {
     if (impl != NULL)
         throw OpenMMException("The array "+getName()+" has already been initialized");
     impl = context.createArray();
-    impl->initialize(context, size, elementSize, name);
+    impl->initialize(context, size, elementSize, name, type);
 }
 
 void ComputeArray::resize(size_t size) {
@@ -82,6 +82,12 @@ ComputeContext& ComputeArray::getContext() {
     return impl->getContext();
 }
 
+void ComputeArray::upload(const void* data, bool blocking) {
+    if (impl == NULL)
+        throw OpenMMException("ComputeArray has not been initialized");
+    impl->upload(data, blocking);
+}
+
 void ComputeArray::uploadSubArray(const void* data, int offset, int elements, bool blocking) {
     if (impl == NULL)
         throw OpenMMException("ComputeArray has not been initialized");
@@ -98,4 +104,10 @@ void ComputeArray::copyTo(ArrayInterface& dest) const {
     if (impl == NULL)
         throw OpenMMException("ComputeArray has not been initialized");
     impl->copyTo(dest);
+}
+
+bool ComputeArray::containsDF64() const {
+    if (impl == NULL)
+        return false;
+    return impl->containsDF64();
 }

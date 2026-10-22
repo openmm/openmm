@@ -153,8 +153,20 @@ DEVICE void atomicAddMixed(GLOBAL mixed* RESTRICT target, const mixed value) {
 
     #endif
 #elif defined(__METAL_VERSION__)
-    // TODO Update this when we add support for mixed precision in the Metal platform.
+    #if defined(USE_MIXED_PRECISION) || defined(USE_DOUBLE_PRECISION)
+
+    // Metal doesn't have any of the atomic operations needed to compute this correctly.  Instead we just add the upper
+    // and lower parts of the df64 values directly.  This is less accurate than a true double precision add, but still
+    // more accurate than single precision.
+
+    ATOMIC_ADD((GLOBAL float*) target, value.v.x);
+    ATOMIC_ADD(((GLOBAL float*) target)+1, value.v.y);
+
+    #else
+
     ATOMIC_ADD(target, value);
+
+    #endif
 #else
     #error "Internal error: atomicAddMixed is missing an implementation for this platform"
 #endif

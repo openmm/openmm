@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -78,8 +78,9 @@ public:
      * @param size              the number of elements in the array
      * @param elementSize       the size of each element in bytes
      * @param name              the name of the array
+     * @param type              the type of values the array contains
      */
-    void initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name);
+    void initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name, const std::type_info* type=nullptr);
     /**
      * Initialize this object.  The template argument is the data type of each array element.
      *
@@ -89,7 +90,7 @@ public:
      */
     template <class T>
     void initialize(ComputeContext& context, size_t size, const std::string& name) {
-        initialize(context, size, sizeof(T), name);
+        initialize(context, size, sizeof(T), name, &typeid(T));
     }
     /**
      * Recreate the internal storage to have a different size.

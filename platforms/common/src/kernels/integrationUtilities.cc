@@ -622,7 +622,7 @@ DEVICE void computeCCMAPositionConstraintForce(GLOBAL const int2* RESTRICT const
         mixed rp2 = rp_ij.x*rp_ij.x + rp_ij.y*rp_ij.y + rp_ij.z*rp_ij.z;
         mixed dist2 = dir.w*dir.w;
         mixed diff = dist2 - rp2;
-        delta1[index] = (rrpr > d_ij2*1e-6f ? reducedMass[index]*diff/rrpr : 0.0f);
+        delta1[index] = (rrpr > d_ij2*1e-6f ? reducedMass[index]*diff/rrpr : 0);
         threadConverged &= (rp2 > lowerTol*dist2 && rp2 < upperTol*dist2);
     }
     if (*groupConverged && !threadConverged)

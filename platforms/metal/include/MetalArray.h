@@ -77,8 +77,9 @@ public:
      * @param size              the number of elements in the array
      * @param elementSize       the size of each element in bytes
      * @param name              the name of the array
+     * @param type              the type of values the array contains
      */
-    void initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name);
+    void initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name, const std::type_info* type=nullptr);
     /**
      * Initialize this object.  The template argument is the data type of each array element.
      *
@@ -88,7 +89,7 @@ public:
      */
     template <class T>
     void initialize(ComputeContext& context, size_t size, const std::string& name) {
-        initialize(context, size, sizeof(T), name);
+        initialize(context, size, sizeof(T), name, &typeid(T));
     }
     /**
      * Recreate the internal storage to have a different size.
@@ -150,7 +151,7 @@ public:
      *                 the source array  must be in page-locked memory.
      */
     void upload(const void* data, bool blocking=true) {
-        uploadSubArray(data, 0, getSize(), blocking);
+        uploadSubArray(data, 0, getSize(), blocking, false);
     }
     /**
      * Copy values from host memory to a subset of the array.
@@ -161,7 +162,9 @@ public:
      * @param blocking if true, this call will block until the transfer is complete.  If false,
      *                 the source array  must be in page-locked memory.
      */
-    void uploadSubArray(const void* data, int offset, int elements, bool blocking=true);
+    void uploadSubArray(const void* data, int offset, int elements, bool blocking=true) {
+        uploadSubArray(data, offset, elements, blocking, true);
+    }
     /**
      * Copy the values in the device memory to an array.
      * 
@@ -176,12 +179,19 @@ public:
      * @param dest     the destination array to copy to
      */
     void copyTo(ArrayInterface& dest) const;
+    /**
+     * Get whether this array contains pseudo-double precision values in df64 format.
+     */
+    bool containsDF64() const {
+        return isDF64;
+    }
 private:
+    void uploadSubArray(const void* data, int offset, int elements, bool blocking, bool convert);
     MetalContext* context;
     MTL::Buffer* buffer;
     size_t size;
     int elementSize;
-    bool ownsMemory;
+    bool ownsMemory, isDF64;
     std::string name;
 };
 

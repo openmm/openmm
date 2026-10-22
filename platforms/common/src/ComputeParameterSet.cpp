@@ -35,20 +35,25 @@ ComputeParameterSet::ComputeParameterSet(ComputeContext& context, int numParamet
     int params = numParameters;
     int bufferCount = 0;
     elementSize = (useDoublePrecision ? sizeof(double) : sizeof(float));
-    string elementType = (useDoublePrecision ? "double" : "float");
     if (!arrayPerParameter) {
         while (params > 2) {
             std::stringstream arrayName;
             arrayName << "param" << (++bufferCount);
             arrays.push_back(context.createArray());
-            arrays.back()->initialize(context, numObjects, elementSize*4, arrayName.str());
+            if (useDoublePrecision)
+                arrays.back()->initialize<mm_double4>(context, numObjects, arrayName.str());
+            else
+                arrays.back()->initialize<mm_float4>(context, numObjects, arrayName.str());
             params -= 4;
         }
         if (params > 1) {
             std::stringstream arrayName;
             arrayName << "param" << (++bufferCount);
             arrays.push_back(context.createArray());
-            arrays.back()->initialize(context, numObjects, elementSize*2, arrayName.str());
+            if (useDoublePrecision)
+                arrays.back()->initialize<mm_double2>(context, numObjects, arrayName.str());
+            else
+                arrays.back()->initialize<mm_float2>(context, numObjects, arrayName.str());
             params -= 2;
         }
     }
@@ -56,9 +61,13 @@ ComputeParameterSet::ComputeParameterSet(ComputeContext& context, int numParamet
         std::stringstream arrayName;
         arrayName << "param" << (++bufferCount);
             arrays.push_back(context.createArray());
-        arrays.back()->initialize(context, numObjects, elementSize, arrayName.str());
+        if (useDoublePrecision)
+            arrays.back()->initialize<double>(context, numObjects, arrayName.str());
+        else
+            arrays.back()->initialize<float>(context, numObjects, arrayName.str());
         params--;
     }
+    string elementType = (useDoublePrecision ? "double" : "float");
     for (ArrayInterface* array : arrays)
         parameters.push_back(ComputeParameterInfo(*array, array->getName(), elementType, array->getElementSize()/elementSize));
 }
@@ -79,7 +88,7 @@ void ComputeParameterSet::getParameterValues(vector<vector<T> >& values) {
     for (int i = 0; i < (int) arrays.size(); i++) {
         if (arrays[i]->getElementSize() == 4*elementSize) {
             vector<T> data(4*numObjects);
-            arrays[i]->download(data.data());
+            arrays[i]->download(data, true);
             for (int j = 0; j < numObjects; j++) {
                 values[j][base] = data[4*j];
                 if (base+1 < numParameters)
@@ -93,7 +102,7 @@ void ComputeParameterSet::getParameterValues(vector<vector<T> >& values) {
         }
         else if (arrays[i]->getElementSize() == 2*elementSize) {
             vector<T> data(2*numObjects);
-            arrays[i]->download(data.data());
+            arrays[i]->download(data, true);
             for (int j = 0; j < numObjects; j++) {
                 values[j][base] = data[2*j];
                 if (base+1 < numParameters)
@@ -103,7 +112,7 @@ void ComputeParameterSet::getParameterValues(vector<vector<T> >& values) {
         }
         else if (arrays[i]->getElementSize() == elementSize) {
             vector<T> data(numObjects);
-            arrays[i]->download(data.data());
+            arrays[i]->download(data, true);
             for (int j = 0; j < numObjects; j++)
                 values[j][base] = data[j];
             base++;

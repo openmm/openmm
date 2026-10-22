@@ -64,19 +64,80 @@ inline unsigned long ATOMIC_ADD(device unsigned long* dest, unsigned long value)
 }
 
 typedef long mm_long;
+typedef long2 mm_long2;
+typedef long3 mm_long3;
+typedef long4 mm_long4;
 typedef unsigned long mm_ulong;
+typedef ulong2 mm_ulong2;
+typedef ulong3 mm_ulong3;
+typedef ulong4 mm_ulong4;
 
-#define make_short2(x...) short2(x)
-#define make_short3(x...) short3(x)
-#define make_short4(x...) short4(x)
-#define make_int2(x...) int2(x)
-#define make_int3(x...) int3(x)
-#define make_int4(x...) int4(x)
-#define make_float2(x...) float2(x)
-#define make_float3(x...) float3(x)
-#define make_float4(x...) float4(x)
+short2 make_short2(short x, short y) {
+    return short2(x, y);
+}
+short2 make_short2(short x) {
+    return short2(x, x);
+}
+short3 make_short3(short x, short y, short z) {
+    return short3(x, y, z);
+}
+short3 make_short3(short x) {
+    return short3(x, x, x);
+}
+short4 make_short4(short x, short y, short z, short w) {
+    return short4(x, y, z, w);
+}
+short4 make_short4(short x) {
+    return short4(x, x, x, x);
+}
+int2 make_int2(int x, int y) {
+    return int2(x, y);
+}
+int2 make_int2(int x) {
+    return int2(x, x);
+}
+int3 make_int3(int x, int y, int z) {
+    return int3(x, y, z);
+}
+int3 make_int3(int x) {
+    return int3(x, x, x);
+}
+int4 make_int4(int x, int y, int z, int w) {
+    return int4(x, y, z, w);
+}
+int4 make_int4(int x) {
+    return int4(x, x, x, x);
+}
+float2 make_float2(float x, float y) {
+    return float2(x, y);
+}
+float2 make_float2(float x) {
+    return float2(x, x);
+}
+float3 make_float3(float x, float y, float z) {
+    return float3(x, y, z);
+}
+float3 make_float3(float x) {
+    return float3(x, x, x);
+}
+float4 make_float4(float x, float y, float z, float w) {
+    return float4(x, y, z, w);
+}
+float4 make_float4(float x) {
+    return float4(x, x, x, x);
+}
 
-#define trimTo3(v) (v).xyz
+inline short3 trimTo3(short4 v) {
+    return make_short3(v.x, v.y, v.z);
+}
+
+inline int3 trimTo3(int4 v) {
+    return make_int3(v.x, v.y, v.z);
+}
+
+inline float3 trimTo3(float4 v) {
+    return make_float3(v.x, v.y, v.z);
+}
 
 // Metal does not support the standard names for single precision math functions.
 

@@ -101,8 +101,7 @@ KERNEL void copyState(int numParticles,
                       GLOBAL int* RESTRICT inner0InvAtomOrder,
                       GLOBAL int* RESTRICT inner1InvAtomOrder
 #ifdef USE_MIXED_PRECISION
-                      ,
-                      GLOBAL real4* RESTRICT posqCorrection,
+                      , GLOBAL real4* RESTRICT posqCorrection,
                       GLOBAL real4* RESTRICT posq0Correction,
                       GLOBAL real4* RESTRICT posq1Correction
 #endif

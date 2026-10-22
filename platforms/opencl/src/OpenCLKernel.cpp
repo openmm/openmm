@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -57,10 +57,10 @@ void OpenCLKernel::addArrayArg(ArrayInterface& value) {
     setArrayArg(index, value);
 }
 
-void OpenCLKernel::addPrimitiveArg(const void* value, int size) {
+void OpenCLKernel::addPrimitiveArg(const void* value, int size, const type_info& type) {
     int index = arrayArgs.size();
     addEmptyArg();
-    setPrimitiveArg(index, value, size);
+    setPrimitiveArg(index, value, size, type);
 }
 
 void OpenCLKernel::addEmptyArg() {
@@ -72,7 +72,7 @@ void OpenCLKernel::setArrayArg(int index, ArrayInterface& value) {
     arrayArgs[index] = &context.unwrap(value);
 }
 
-void OpenCLKernel::setPrimitiveArg(int index, const void* value, int size) {
+void OpenCLKernel::setPrimitiveArg(int index, const void* value, int size, const type_info& type) {
     ASSERT_VALID_INDEX(index, arrayArgs);
     // The const_cast is needed because of a bug in the OpenCL C++ wrappers.  clSetKernelArg()
     // declares the value to be const, but the C++ wrapper doesn't.

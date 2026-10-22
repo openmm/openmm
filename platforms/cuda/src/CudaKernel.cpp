@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -64,10 +64,10 @@ void CudaKernel::addArrayArg(ArrayInterface& value) {
     setArrayArg(index, value);
 }
 
-void CudaKernel::addPrimitiveArg(const void* value, int size) {
+void CudaKernel::addPrimitiveArg(const void* value, int size, const type_info& type) {
     int index = arrayArgs.size();
     addEmptyArg();
-    setPrimitiveArg(index, value, size);
+    setPrimitiveArg(index, value, size, type);
 }
 
 void CudaKernel::addEmptyArg() {
@@ -80,7 +80,7 @@ void CudaKernel::setArrayArg(int index, ArrayInterface& value) {
     arrayArgs[index] = &context.unwrap(value);
 }
 
-void CudaKernel::setPrimitiveArg(int index, const void* value, int size) {
+void CudaKernel::setPrimitiveArg(int index, const void* value, int size, const type_info& type) {
     ASSERT_VALID_INDEX(index, primitiveArgs);
     if (size > sizeof(double4))
         throw OpenMMException("Unsupported value type for kernel argument");

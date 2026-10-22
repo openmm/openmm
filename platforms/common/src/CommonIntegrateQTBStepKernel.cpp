@@ -49,15 +49,24 @@ void CommonIntegrateQTBStepKernel::initialize(const System& system, const QTBInt
     for (int i = 0; i < noiseVec.size(); i++)
         noiseVec[i] = (float) SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
     noise.upload(noiseVec);
-    int elementSize = (cc.getUseMixedPrecision() || cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-    randomForce.initialize(cc, 3*segmentLength*numParticles, elementSize, "randomForce");
+    if (cc.getUseMixedPrecision() || cc.getUseDoublePrecision()) {
+        randomForce.initialize<double>(cc, 3*segmentLength*numParticles, "randomForce");
+        segmentVelocity.initialize<double>(cc, 3*segmentLength*numParticles, "segmentVelocity");
+        oldDelta.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
+        thetad.initialize<double>(cc, numFreq, "thetad");
+        workspace.initialize<double>(cc, 18*segmentLength*cc.getNumThreadBlocks(), "workspace");
+        cutoffFunction.initialize<double>(cc, numFreq, "cutoffFunction");
+    }
+    else {
+        randomForce.initialize<float>(cc, 3*segmentLength*numParticles, "randomForce");
+        segmentVelocity.initialize<float>(cc, 3*segmentLength*numParticles, "segmentVelocity");
+        oldDelta.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
+        thetad.initialize<float>(cc, numFreq, "thetad");
+        workspace.initialize<float>(cc, 18*segmentLength*cc.getNumThreadBlocks(), "workspace");
+        cutoffFunction.initialize<float>(cc, numFreq, "cutoffFunction");
+    }
     cc.clearBuffer(randomForce);
-    segmentVelocity.initialize(cc, 3*segmentLength*numParticles, elementSize, "segmentVelocity");
     cc.clearBuffer(segmentVelocity);
-    oldDelta.initialize(cc, cc.getPaddedNumAtoms(), 4*elementSize, "oldDelta");
-    thetad.initialize(cc, numFreq, elementSize, "thetad");
-    workspace.initialize(cc, 18*segmentLength*cc.getNumThreadBlocks(), elementSize, "workspace");
-    cutoffFunction.initialize(cc, numFreq, elementSize, "cutoffFunction");
     vector<double> cf(numFreq);
     double cutoff = integrator.getCutoffFrequency();
     double cutoffWidth = cutoff/100;
@@ -79,7 +88,10 @@ void CommonIntegrateQTBStepKernel::initialize(const System& system, const QTBInt
     typeParticleCount.initialize<int>(cc, typeParticleCountVec.size(), "typeParticleCount");
     typeParticleCount.upload(typeParticleCountVec);
     numTypes = typeParticles.size();
-    adaptedFriction.initialize(cc, numFreq*numTypes, elementSize, "adaptedFriction");
+    if (cc.getUseMixedPrecision() || cc.getUseDoublePrecision())
+        adaptedFriction.initialize<double>(cc, numFreq*numTypes, "adaptedFriction");
+    else
+        adaptedFriction.initialize<float>(cc, numFreq*numTypes, "adaptedFriction");
     vector<double> adaptedFrictionVec(adaptedFriction.getSize(), friction);
     adaptedFriction.upload(adaptedFrictionVec, true);
     dfdt.initialize(cc, adaptedFriction.getSize(), sizeof(long long), "dfdt");
@@ -249,7 +261,7 @@ void CommonIntegrateQTBStepKernel::getAdaptedFriction(ContextImpl& context, int 
     ContextSelector selector(cc);
     if (cc.getUseMixedPrecision() || cc.getUseDoublePrecision()) {
         vector<double> adaptedFrictionVec;
-        adaptedFriction.download(adaptedFrictionVec);
+        adaptedFriction.download(adaptedFrictionVec, true);
         for (int i = 0; i < numFreq; i++)
             friction[i] = adaptedFrictionVec[type*numFreq+i];
     }
@@ -267,10 +279,10 @@ void CommonIntegrateQTBStepKernel::setAdaptedFriction(ContextImpl& context, int 
     ContextSelector selector(cc);
     if (cc.getUseMixedPrecision() || cc.getUseDoublePrecision()) {
         vector<double> adaptedFrictionVec;
-        adaptedFriction.download(adaptedFrictionVec);
+        adaptedFriction.download(adaptedFrictionVec, true);
         for (int i = 0; i < numFreq; i++)
             adaptedFrictionVec[type*numFreq+i] = friction[i];
-        adaptedFriction.upload(adaptedFrictionVec);
+        adaptedFriction.upload(adaptedFrictionVec, true);
     }
     else {
         vector<float> adaptedFrictionVec;
@@ -289,11 +301,11 @@ void CommonIntegrateQTBStepKernel::createCheckpoint(ContextImpl& context, ostrea
     stream.write((char*) f.data(), sizeof(float)*f.size());
     if (cc.getUseMixedPrecision() || cc.getUseDoublePrecision()) {
         vector<double> d;
-        randomForce.download(d);
+        randomForce.download(d, true);
         stream.write((char*) d.data(), sizeof(double)*d.size());
-        segmentVelocity.download(d);
+        segmentVelocity.download(d, true);
         stream.write((char*) d.data(), sizeof(double)*d.size());
-        adaptedFriction.download(d);
+        adaptedFriction.download(d, true);
         stream.write((char*) d.data(), sizeof(double)*d.size());
     }
     else {
@@ -316,13 +328,13 @@ void CommonIntegrateQTBStepKernel::loadCheckpoint(ContextImpl& context, istream&
         vector<double> d;
         d.resize(randomForce.getSize());
         stream.read((char*) d.data(), sizeof(double)*d.size());
-        randomForce.upload(d);
+        randomForce.upload(d, true);
         d.resize(segmentVelocity.getSize());
         stream.read((char*) d.data(), sizeof(double)*d.size());
-        segmentVelocity.upload(d);
+        segmentVelocity.upload(d, true);
         d.resize(adaptedFriction.getSize());
         stream.read((char*) d.data(), sizeof(double)*d.size());
-        adaptedFriction.upload(d);
+        adaptedFriction.upload(d, true);
     }
     else {
         f.resize(randomForce.getSize());

@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2012-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2012-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -47,7 +47,7 @@ OpenCLArray::~OpenCLArray() {
         delete buffer;
 }
 
-void OpenCLArray::initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name) {
+void OpenCLArray::initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name, const std::type_info* type) {
     initialize(dynamic_cast<OpenCLContext&>(context), size, elementSize, name, CL_MEM_READ_WRITE);
 }
 
