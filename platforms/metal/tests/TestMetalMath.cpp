@@ -58,31 +58,36 @@ void testFunctions() {
     integrator.addPerDofVariable("tanx", 0);
     integrator.addPerDofVariable("expx", 0);
     integrator.addPerDofVariable("logx", 0);
+    integrator.addPerDofVariable("erfx", 0);
+    integrator.addPerDofVariable("erfcx", 0);
     integrator.addComputePerDof("sqrtx", "sqrt(abs(x))");
     integrator.addComputePerDof("cosx", "cos(x)");
     integrator.addComputePerDof("sinx", "sin(x)");
     integrator.addComputePerDof("tanx", "tan(x)");
     integrator.addComputePerDof("expx", "exp(x)");
     integrator.addComputePerDof("logx", "log(abs(x))");
+    integrator.addComputePerDof("erfx", "erf(x)");
+    integrator.addComputePerDof("erfcx", "erfc(x)");
     Context context(system, integrator, platform);
     context.setPositions(positions);
     integrator.step(1);
 
     // See if it computed the values correctly.
 
-    vector<Vec3> sqrtx, cosx, sinx, tanx, expx, logx;
+    vector<Vec3> sqrtx, cosx, sinx, tanx, expx, logx, erfx, erfcx;
     integrator.getPerDofVariable(0, sqrtx);
     integrator.getPerDofVariable(1, cosx);
     integrator.getPerDofVariable(2, sinx);
     integrator.getPerDofVariable(3, tanx);
     integrator.getPerDofVariable(4, expx);
     integrator.getPerDofVariable(5, logx);
+    integrator.getPerDofVariable(6, erfx);
+    integrator.getPerDofVariable(7, erfcx);
+    const vector<Vec3> positions2 = context.getState(State::Positions).getPositions();
     bool isSingle = (platform.getPropertyValue(context, "Precision") == "single");
     double tol = (isSingle ? 1e-6 : 1e-12);
     for (int i = 0; i < numParticles; i++) {
-        double x = positions[i][0];
-        if (isSingle)
-            x = (float) x;
+        double x = positions2[i][0];
         ASSERT_EQUAL_TOL(sqrt(abs(x)), sqrtx[i][0], tol);
         ASSERT_EQUAL_TOL(cos(x), cosx[i][0], tol);
         ASSERT_EQUAL_TOL(sin(x), sinx[i][0], tol);
@@ -90,6 +95,8 @@ void testFunctions() {
         if (exp(x) < FLT_MAX)
             ASSERT_EQUAL_TOL(exp(x), expx[i][0], tol);
         ASSERT_EQUAL_TOL(log(abs(x)), logx[i][0], tol);
+        ASSERT_EQUAL_TOL(erf(x), erfx[i][0], 1e-6);
+        ASSERT_EQUAL_TOL(erfc(x), erfcx[i][0], 1e-6);
     }
 }
 

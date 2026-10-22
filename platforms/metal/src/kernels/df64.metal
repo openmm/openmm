@@ -71,32 +71,55 @@ namespace DoubleFloat {
         return (a.x < b.x || (a.x == b.x && a.y < b.y));
     }
     inline float2 df64exp(float2 a) {
-        const float thresh = 1.0e-20f*metal::exp(a.x);
-        float2 s = df64add(float2(1.0f, 0.0f), a);
-        float2 p = df64sqr(a);
+        // Split the argument into a multiple of log(2) and a value between 0 and log(2).
+
+        const float2 log2(0x1.62E43p-1, -0x1.05C61p-29);
+        const float2 oneOverLog2(0x1.715476p0, 0x1.4AE0Cp-26);
+        int k = (int) metal::floor(df64mult(a, oneOverLog2).x);
+        float scale = metal::ldexp(1.0f, k);
+        float2 ar = df64diff(a, df64mult(log2, float2(k, 0.0f)));
+
+        // Compute exp(ar).
+
+        const float thresh = 1.0e-20f*metal::exp(ar.x);
+        float2 s = df64add(float2(1.0f, 0.0f), ar);
+        float2 p = df64sqr(ar);
         float m = 2.0f;
         float2 f = float2(2.0f, 0.0f);
         float2 t = p/2.0f;
         while (metal::abs(t.x) > thresh) {
             s = df64add(s, t);
-            p = df64mult(p, a);
+            p = df64mult(p, ar);
             m += 1.0f;
             f = df64mult(f, float2(m, 0.0f));
             t = df64div(p, f);
         }
-        return df64add(s, t);
+        return df64mult(float2(scale, 0.0f), df64add(s, t));
     }
     inline float2 df64log(float2 a) {
+        if (a.x <= 0.0f)
+            return float2(NAN, NAN);
+
+        // Split the argument into a power of 2 and a value between 0.5 and 1.
+
+        const float2 log2(0x1.62E43p-1, -0x1.05C61p-29);
+        int exponent;
+        metal::frexp(a.x, exponent);
+        float2 scale(metal::ldexp(1.0f, exponent), 0.0f);
+        float2 ar = df64div(a, scale);
+
+        // Compute log(ar).
+
         float2 xi = float2(0.0f, 0.0f);
-        if (!df64eq(a, float2(1.0f, 0.0f))) {
+        if (!df64eq(ar, float2(1.0f, 0.0f))) {
             if (a.x <= 0.0f)
-                xi = float2(metal::log(a.x));
+                xi = float2(metal::log(ar.x));
             else {
-                xi.x = metal::log(a.x);
-                xi = df64add(df64add(xi, df64mult(df64exp(-xi), a)), float2(-1.0f, 0.0f));
+                xi.x = metal::log(ar.x);
+                xi = df64add(df64add(xi, df64mult(df64exp(-xi), ar)), float2(-1.0f, 0.0f));
             }
         }
-        return xi;
+        return df64add(xi, df64mult(log2, float2(exponent, 0.0f)));
     }
     inline void df64sincos(float2 a, thread float2& s, thread float2& c, thread int& k) {
         // Use Cody-Waite range reduction to translate the argument into a value between -pi/4 and pi/4.
