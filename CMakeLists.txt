@@ -12,7 +12,7 @@
 #   libOpenMM_static.a
 #----------------------------------------------------
 
-find_package(PythonInterp)
+find_package(Python 3.5 COMPONENTS Interpreter)
 mark_as_advanced(CLEAR PYTHON_EXECUTABLE)
 
 # Don't create a new project name if this is part of a mega-build from the
