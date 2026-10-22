@@ -613,6 +613,7 @@ class GromacsTopFile(object):
                         if resName in PDBFile._residueNameReplacements:
                             resName = PDBFile._residueNameReplacements[resName]
                         r = top.addResidue(resName, c)
+                        r._original_name = fields[3]
                         if resName in PDBFile._atomNameReplacements:
                             atomReplacements = PDBFile._atomNameReplacements[resName]
                         else:
@@ -745,6 +746,7 @@ class GromacsTopFile(object):
         rb = None
         harmonicTorsion = None
         cmap = None
+        use_resname_cmap = None
         mapIndices = {}
         bondIndices = []
         topologyAtoms = list(self.topology.atoms())
@@ -974,18 +976,73 @@ class GromacsTopFile(object):
                                 rb.addTorsion(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], c[0], c[1], c[2], c[3], c[4], c[5])
 
                 # Add CMAP terms.
+                if use_resname_cmap is None:
+                    for t in self._cmapTypes:
+                        has_dash = ['-' in a for a in t]
+                        if use_resname_cmap is None:
+                            use_resname_cmap = all(has_dash)
+                        try:
+                            assert all(has_dash) == any(has_dash)
+                        except AssertionError:
+                            raise NotImplementedError("Cannot understand cmap with types {t}, residues are not specified for all atoms")
+                        try:
+                            assert use_resname_cmap == all(has_dash)
+                        except AssertionError:
+                            raise NotImplementedError("Cmaps definitions should be consistent: either all with or without resnames.")
+
+                    if use_resname_cmap is None:
+                        use_resname_cmap = False
+
+                    if use_resname_cmap:
+                        _atom2resname = [a.residue._original_name for a in self.topology.atoms()]
+
+                        def _compare_cmap_types(t1, t2):
+                            a1 = [s.split('-')[0] for s in t1]
+                            r1 = [s.split('-')[1] for s in t1]
+                            a2 = [s.split('-')[0] for s in t2]
+                            r2 = [s.split('-')[1] for s in t2]
+
+                            ok = len(t1) == len(t2)
+                            if not ok:
+                                return False
+
+                            ok = ok and a1 == a2
+                            if not ok:
+                                return False
+
+                            for _r1, _r2 in zip(r1, r2):
+                                ok = ok and (_r1 == _r2 or _r1 == '*' or _r2 == '*')
+                                if not ok:
+                                    return False
+                            return True
+                    else:
+                        def _compare_cmap_types(t1, t2):
+                            return t1 == t2
 
                 for fields in moleculeType.cmaps:
                     atoms = [int(x)-1 for x in fields[:5]]
                     types = tuple(bondedTypes[i] for i in atoms)
+
+                    if use_resname_cmap:
+                        resnames = [_atom2resname[i] for i in atoms]
+                        types = tuple(f'{a}-{r}' for a, r in zip(types, resnames))
+
                     if len(fields) >= 8 and len(fields) >= 8+int(fields[6])*int(fields[7]):
                         params = fields
-                    elif types in self._cmapTypes:
-                        params = self._cmapTypes[types]
-                    elif types[::-1] in self._cmapTypes:
-                        params = self._cmapTypes[types[::-1]]
                     else:
-                        raise ValueError('No parameters specified for cmap: '+fields[0]+', '+fields[1]+', '+fields[2]+', '+fields[3]+', '+fields[4])
+                        matching_prm = [self._cmapTypes[ref_p] for ref_p in self._cmapTypes if _compare_cmap_types(ref_p, types) or _compare_cmap_types(ref_p, types[::-1])]
+                        try:
+                            assert len(matching_prm) <= 1
+                        except:
+                            raise ValueError('More than one parameter specified for cmap: '+fields[0]+', '+fields[1]+', '+fields[2]+', '+fields[3]+', '+fields[4])
+
+                        try:
+                            assert len(matching_prm) > 0
+                        except:
+                            raise ValueError('No parameters specified for cmap: '+fields[0]+', '+fields[1]+', '+fields[2]+', '+fields[3]+', '+fields[4])
+
+                        params = matching_prm[0]
+
                     if cmap is None:
                         cmap = mm.CMAPTorsionForce()
                         sys.addForce(cmap)
