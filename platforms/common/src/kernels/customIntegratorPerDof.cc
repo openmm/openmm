@@ -12,14 +12,14 @@ inline DEVICE mixed4 convertFromDouble4(double4 a) {
     return make_mixed4(a.x, a.y, a.z, a.w);
 }
 #else
-typedef float TempType;
-typedef float3 TempType3;
-typedef float4 TempType4;
+typedef mixed TempType;
+typedef mixed3 TempType3;
+typedef mixed4 TempType4;
 
-#define make_TempType3 make_float3
-#define make_TempType4 make_float4
-#define convertToTempType3(a) make_float3((a).x, (a).y, (a).z)
-#define convertToTempType4(a) make_float4((a).x, (a).y, (a).z, (a).w)
+#define make_TempType3 make_mixed3
+#define make_TempType4 make_mixed4
+#define convertToTempType3(a) make_mixed3((a).x, (a).y, (a).z)
+#define convertToTempType4(a) make_mixed4((a).x, (a).y, (a).z, (a).w)
 #endif
 
 /**
@@ -54,7 +54,7 @@ KERNEL void computePerDof(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTRICT po
         PARAMETER_ARGUMENTS) {
     TempType3 stepSize = make_TempType3(dt[0].y);
     int index = GLOBAL_ID;
-    const TempType forceScale = ((TempType) 1)/0xFFFFFFFF;
+    const TempType forceScale = RECIP((TempType) 0x100000000);
     while (index < NUM_ATOMS) {
 #ifdef LOAD_POS_AS_DELTA
         TempType4 position = loadPos(posq, posqCorrection, index) + convertToTempType4(posDelta[index]);

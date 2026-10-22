@@ -145,7 +145,7 @@ void CommonIntegrateCustomStepKernel::initialize(const System& system, const Cus
 
 string CommonIntegrateCustomStepKernel::createPerDofComputation(const string& variable, const Lepton::ParsedExpression& expr, CustomIntegrator& integrator,
         const string& forceName, const string& energyName, vector<const TabulatedFunction*>& functions, vector<pair<string, string> >& functionNames) {
-    string tempType = (cc.getSupportsDoublePrecision() ? "double3" : "float3");
+    string tempType = (cc.getSupportsDoublePrecision() ? "double3" : "mixed3");
     map<string, Lepton::ParsedExpression> expressions;
     expressions[tempType+" tempResult = "] = expr;
     map<string, string> variables;
@@ -653,7 +653,7 @@ void CommonIntegrateCustomStepKernel::findExpressionsForDerivs(const ExpressionT
             ;
         if (index == perDofEnergyParamDerivNames.size())
             perDofEnergyParamDerivNames.push_back(param);
-        string tempType = (cc.getSupportsDoublePrecision() ? "double3" : "float3");
+        string tempType = (cc.getSupportsDoublePrecision() ? "double3" : "mixed3");
         variableNodes.push_back(make_pair(node, "make_"+tempType+"(energyParamDerivs["+cc.intToString(index)+"])"));
         needsEnergyParamDerivs = true;
     }

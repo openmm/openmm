@@ -56,10 +56,10 @@ namespace DoubleFloat {
     }
     inline float2 df64sqrt(float2 a) {
         float xn = metal::rsqrt(a.x);
-        float yn = a.x*xn;
-        float diff = (df64diff(a, float2(yn*yn, 0))).x;
+        float2 yn(a.x*xn, 0);
+        float diff = (df64diff(a, df64sqr(yn))).x;
         float2 prod = twoProd(xn, diff) / 2;
-        return df64add(float2(yn, 0), prod);
+        return df64add(yn, prod);
     }
     inline bool df64eq(float2 a, float2 b) {
         return a.x == b.x && a.y == b.y;
@@ -98,46 +98,44 @@ namespace DoubleFloat {
         }
         return xi;
     }
-    inline float2 df64sin(float2 a) {
-        const float thresh = 1.0e-20f*metal::abs(a.x);
-        if (a.x == 0.0f)
-            return float2(0.0f, 0.0f);
-        float2 x = -df64sqr(a);
-        float2 s = a;
-        float2 p = a;
-        float m = 1.0f;
-        float2 f = float2(1.0f, 0.0f);
-        while (true) {
-            p = df64mult(p, x);
-            m += 2.0f;
-            f = df64mult(f, float2(m*(m-1), 0.0f));
-            float2 t = df64div(p, f);
-            s = df64add(s, t);
-            if (metal::abs(t.x) < thresh)
-                break;
+    inline void df64sincos(float2 a, thread float2& s, thread float2& c, thread int& k) {
+        // Use Cody-Waite range reduction to translate the argument into a value between -pi/4 and pi/4.
+
+        const float2 c1(0x1.921fb6p0, 0.0f);
+        const float2 c2(-0x1.777a5cp-25, -0x1.ee59dap-50);
+        const float2 twoOverPi(0x1.45F306p-1, 0x1.B9391p-26);
+        k = (int) metal::round(df64mult(a, twoOverPi).x);
+        float2 kc1 = df64mult(c1, float2(k, 0.0f));
+        float2 kc2 = df64mult(c2, float2(k, 0.0f));
+        float2 ar = df64diff(df64diff(a, kc1), kc2);
+
+        // Compute sin(ar) with a Taylor series.
+
+        const float2 one(1.0f, 0.0f);
+        const float thresh = 1.0e-20f*metal::abs(ar.x);
+        if (ar.x == 0.0f) {
+            s = float2(0.0f, 0.0f);
+            c = one;
+            k = 0;
         }
-        return s;
-    }
-    inline float2 df64cos(float2 a) {
-        const float thresh = 1.0e-20f*metal::abs(a.x);
-        const float2 one = float2(1.0f, 0.0f);
-        if (a.x == 0.0f)
-            return one;
-        float2 x = -df64sqr(a);
-        float2 c = one;
-        float2 p = one;
-        float m = 0.0f;
-        float2 f = one;
-        while (true) {
-            p = df64mult(p, x);
-            m += 2.0f;
-            f = df64mult(f, float2(m*(m-1), 0.0f));
-            float2 t = df64div(p, f);
-            c = df64add(c, t);
-            if (metal::abs(t.x) < thresh)
-                break;
+        else {
+            float2 x = -df64sqr(ar);
+            s = ar;
+            float2 p = ar;
+            float m = 1.0f;
+            float2 f = one;
+            while (true) {
+                p = df64mult(p, x);
+                m += 2.0f;
+                f = df64mult(f, float2(m*(m-1), 0.0f));
+                float2 t = df64div(p, f);
+                s = df64add(s, t);
+                if (metal::abs(t.x) < thresh)
+                    break;
+            }
+            c = df64sqrt(df64diff(one, df64sqr(s)));
+            k = k&3;
         }
-        return c;
     }
 }
 
@@ -153,16 +151,17 @@ public:
     df64(float f) {
         v = float2(f, 0.0f);
     }
-    df64(int i) {
-        float high = (float) i;
-        float low = (float) (i-(int)high);
-        v = float2(high, low);
+#define DEFINE_CONVERSION(T) \
+    df64(T i) { \
+        float high = (float) i; \
+        float low = (float) (i-(T)high); \
+        v = float2(high, low); \
     }
-    df64(long i) {
-        float high = (float) i;
-        float low = (float) (i-(long)high);
-        v = float2(high, low);
-    }
+    DEFINE_CONVERSION(int)
+    DEFINE_CONVERSION(unsigned int)
+    DEFINE_CONVERSION(long)
+    DEFINE_CONVERSION(unsigned long)
+#undef DEFIN_CONVERSION
     explicit df64(float2 f) {
         v = f;
     }
@@ -560,7 +559,7 @@ inline df644 operator/(df644 a, df644 b) {
 }
 
 /**
- * Define operators that act on two values, one being a df64 scalar or vector and the other being a primitive type.
+ * Define operators that act on two values, one being a df64 scalar or vector.
  */
 #define DEFINE_BINARY_OPERATORS(T, U) \
 inline T operator+(T a, U b) { \
@@ -590,19 +589,26 @@ inline T operator/(U a, T b) { \
 
 DEFINE_BINARY_OPERATORS(df64, float)
 DEFINE_BINARY_OPERATORS(df64, int)
+DEFINE_BINARY_OPERATORS(df64, unsigned int)
 DEFINE_BINARY_OPERATORS(df64, long)
 DEFINE_BINARY_OPERATORS(df642, float)
 DEFINE_BINARY_OPERATORS(df642, int)
+DEFINE_BINARY_OPERATORS(df642, unsigned int)
 DEFINE_BINARY_OPERATORS(df642, long)
 DEFINE_BINARY_OPERATORS(df642, df64)
+DEFINE_BINARY_OPERATORS(df642, float2)
 DEFINE_BINARY_OPERATORS(df643, float)
 DEFINE_BINARY_OPERATORS(df643, int)
+DEFINE_BINARY_OPERATORS(df643, unsigned int)
 DEFINE_BINARY_OPERATORS(df643, long)
 DEFINE_BINARY_OPERATORS(df643, df64)
+DEFINE_BINARY_OPERATORS(df643, float3)
 DEFINE_BINARY_OPERATORS(df644, float)
 DEFINE_BINARY_OPERATORS(df644, int)
+DEFINE_BINARY_OPERATORS(df644, unsigned int)
 DEFINE_BINARY_OPERATORS(df644, long)
 DEFINE_BINARY_OPERATORS(df644, df64)
+DEFINE_BINARY_OPERATORS(df644, float4)
 #undef DEFINE_BINARY_OPERATORS
 
 /**
@@ -621,15 +627,22 @@ inline df64 exp(df64 a) {
     return df64(DoubleFloat::df64exp(a.v));
 }
 inline df64 sin(df64 a) {
-    return df64(DoubleFloat::df64sin(a.v));
+    float2 s, c;
+    int k;
+    DoubleFloat::df64sincos(a.v, s, c, k);
+    return df64(k == 0 ? s : (k == 1 ? c : (k == 2 ? -s : -c)));
 }
 inline df64 cos(df64 a) {
-    return df64(DoubleFloat::df64cos(a.v));
+    float2 s, c;
+    int k;
+    DoubleFloat::df64sincos(a.v, s, c, k);
+    return df64(k == 0 ? c : (k == 1 ? -s : (k == 2 ? -c : s)));
 }
 inline df64 tan(df64 a) {
-    float2 s = DoubleFloat::df64sin(a.v);
-    float2 c = DoubleFloat::df64cos(a.v);
-    return df64(s)/df64(c);
+    float2 s, c;
+    int k;
+    DoubleFloat::df64sincos(a.v, s, c, k);
+    return (k%2 == 0 ? df64(DoubleFloat::df64div(s,c)) : -df64(DoubleFloat::df64div(c,s)));
 }
 inline df64 fabs(df64 v) {
     return (v > df64(0.0f) ? v : -v);

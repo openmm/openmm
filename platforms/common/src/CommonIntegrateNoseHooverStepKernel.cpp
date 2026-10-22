@@ -470,7 +470,7 @@ double CommonIntegrateNoseHooverStepKernel::computeHeatBathEnergy(ContextImpl& c
     if (useDouble) {
         vector<double> energy;
         heatBathEnergy.download(energy, true);
-        return energy[0];;
+        return energy[0];
     }
     else {
         void* pinnedBuffer = cc.getPinnedBuffer();
