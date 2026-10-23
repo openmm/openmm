@@ -453,9 +453,9 @@ Platforms
 =========
 
 When creating a :class:`Simulation`, you can optionally tell it what :class:`Platform` to use.
-OpenMM includes five platforms: :class:`Reference`, :class:`CPU`, :class:`CUDA`, :class:`OpenCL`, and :class:`HIP`.  For a
-description of the differences between them, see Section :numref:`platforms`.  There are three ways in which
-the :class:`Platform` can be chosen:
+OpenMM includes six platforms: :class:`Reference`, :class:`CPU`, :class:`CUDA`, :class:`OpenCL`, :class:`HIP`, and
+:class:`Metal`.  For a description of the differences between them, see Section :numref:`platforms`.  There are three
+ways in which the :class:`Platform` can be chosen:
 
 1. By default, OpenMM will try to select the fastest available :class:`Platform`.  Usually its choice will
 be reasonable, but sometimes you may want to change it.
@@ -470,7 +470,7 @@ of the :class:`Platform` to use.  This overrides the default logic.
     platform = Platform.getPlatform('CUDA')
     simulation = Simulation(prmtop.topology, system, integrator, platform)
 
-The platform name should be one of :code:`OpenCL`, :code:`CUDA`, :code:`HIP`, :code:`CPU`, or
+The platform name should be one of :code:`CUDA`, :code:`HIP`, :cod:`Metal`, :code:`OpenCL`, :code:`CPU`, or
 :code:`Reference`.
 
 You also can specify platform-specific properties that customize how
