@@ -60,8 +60,8 @@ CUDA, OpenCL, or HIP Support
 ----------------------------
 
 If you want to compile OpenMM with support for running on GPUs, you will need
-CUDA, HIP, or OpenCL.  MacOS comes with OpenCL built in, so nothing else needs to
-be installed.  For Linux, you need an appropriate SDK.
+CUDA, HIP, Metal, or OpenCL.  MacOS comes with Metal and OpenCL built in, so
+nothing else needs to be installed.  For Linux, you need an appropriate SDK.
 
 The most recent CUDA Toolkit can be obtained from https://developer.nvidia.com/cuda-downloads.
 It includes the headers and libraries needed to compile both CUDA and OpenCL

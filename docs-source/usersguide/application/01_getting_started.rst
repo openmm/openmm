@@ -56,8 +56,7 @@ modern drivers from your vendor.
     version of the drivers from https://support.amd.com.  To use the HIP
     platform (recommended), you also need to install HIP/ROCm by following the
     instructions at https://rocm.docs.amd.com.
-  * On macOS, OpenCL is included with the operating system and is supported on
-    macOS 10.10.3 or later.
+  * On macOS, Metal and OpenCL are both included with the operating system.
 
 3.a. To install with conda, open a command line terminal and type the following command
 ::
@@ -102,6 +101,6 @@ or :code:`hip7` to install the HIP platform (compiled with HIP version 6 or 7):
     python -m openmm.testInstallation
 
 This command confirms that OpenMM is installed, checks whether GPU acceleration
-is available (via the CUDA, OpenCL, and/or HIP platforms), and verifies that all
+is available (via the CUDA, HIP, OpenCL, and/or Metal platforms), and verifies that all
 platforms produce consistent results.
 
