@@ -470,7 +470,7 @@ of the :class:`Platform` to use.  This overrides the default logic.
     platform = Platform.getPlatform('CUDA')
     simulation = Simulation(prmtop.topology, system, integrator, platform)
 
-The platform name should be one of :code:`CUDA`, :code:`HIP`, :cod:`Metal`, :code:`OpenCL`, :code:`CPU`, or
+The platform name should be one of :code:`CUDA`, :code:`HIP`, :code:`Metal`, :code:`OpenCL`, :code:`CPU`, or
 :code:`Reference`.
 
 You also can specify platform-specific properties that customize how
