@@ -71,7 +71,7 @@ MetalSort::MetalSort(MetalContext& context, ComputeSortImpl::SortTrait* trait, u
     int maxBlockSize = 1024;
     int maxSharedMem = 32768;
     int maxLocalBuffer = (maxSharedMem/trait->getDataSize())/2;
-    int maxShortList = min(3000, max(maxLocalBuffer, MetalContext::ThreadBlockSize*context.getNumThreadBlocks()));
+    int maxShortList = min(1500, max(maxLocalBuffer, MetalContext::ThreadBlockSize*context.getNumThreadBlocks()));
     isShortList = (length <= maxShortList);
     for (rangeKernelSize = 1; rangeKernelSize*2 <= maxBlockSize; rangeKernelSize *= 2)
         ;

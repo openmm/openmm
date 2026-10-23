@@ -29,7 +29,7 @@
 using namespace OpenMM;
 
 MetalEvent::MetalEvent(MetalContext& context) : context(context), event(nullptr), currentBuffer(nullptr), value(0) {
-    event = context.getDevice().newSharedEvent();
+    event = context.getDevice().newEvent();
     if (event == nullptr)
         throw OpenMMException("Error creating Metal event");
 }

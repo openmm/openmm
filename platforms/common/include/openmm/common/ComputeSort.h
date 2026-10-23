@@ -33,7 +33,7 @@ namespace OpenMM {
 
 /**
  * This abstract class represents an algorithm for sorting arrays.  It is created
- * by calling createEvent() on a ComputeContext, which returns an instance of a
+ * by calling createSort() on a ComputeContext, which returns an instance of a
  * platform-specific subclass.
  *
  * Instead of referring to this class directly, it is best to use a ComputeSort, which is

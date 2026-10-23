@@ -668,7 +668,7 @@ inline df64 tan(df64 a) {
     return (k%2 == 0 ? df64(DoubleFloat::df64div(s,c)) : -df64(DoubleFloat::df64div(c,s)));
 }
 inline df64 fabs(df64 v) {
-    return (v > df64(0.0f) ? v : -v);
+    return (v.v.x > 0.0f ? v : -v);
 }
 inline df643 cross(df643 a, df643 b) {
     return df643(a.y*b.z-a.z*b.y, a.z*b.x-a.x*b.z, a.x*b.y-a.y*b.x);

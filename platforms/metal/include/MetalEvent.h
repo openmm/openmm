@@ -53,7 +53,7 @@ public:
     void queueWait(ComputeQueue queue);
 private:
     MetalContext& context;
-    MTL::SharedEvent* event;
+    MTL::Event* event;
     MTL::CommandBuffer* currentBuffer;
     unsigned long value;
 };

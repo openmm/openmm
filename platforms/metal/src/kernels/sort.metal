@@ -90,10 +90,10 @@ KERNEL void computeRange(GLOBAL const DATA_TYPE* RESTRICT data, unsigned int len
 
     // Now reduce them.
 
-    minBuffer[LOCAL_ID] = minimum;
-    maxBuffer[LOCAL_ID] = maximum;
+    minBuffer[LOCAL_ID] = simd_min(minimum);
+    maxBuffer[LOCAL_ID] = simd_max(maximum);
     SYNC_THREADS
-    for (unsigned int step = 1; step < LOCAL_SIZE; step *= 2) {
+    for (unsigned int step = 32; step < LOCAL_SIZE; step *= 2) {
         if (LOCAL_ID+step < LOCAL_SIZE && LOCAL_ID%(2*step) == 0) {
             minBuffer[LOCAL_ID] = min(minBuffer[LOCAL_ID], minBuffer[LOCAL_ID+step]);
             maxBuffer[LOCAL_ID] = max(maxBuffer[LOCAL_ID], maxBuffer[LOCAL_ID+step]);
