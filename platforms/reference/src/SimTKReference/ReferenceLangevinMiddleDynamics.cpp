@@ -69,10 +69,12 @@ void ReferenceLangevinMiddleDynamics::updatePart2(int numberOfAtoms, vector<Vec3
     for (int i = 0; i < numberOfAtoms; i++) {
         if (inverseMasses[i] != 0.0) {
             xPrime[i] = atomCoordinates[i] + velocities[i]*halfdt;
-            velocities[i] = vscale*velocities[i] + noisescale*sqrt(kT*inverseMasses[i])*Vec3(
-                    SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
-                    SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
-                    SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+            // Explicit sequencing avoids compiler-dependent argument evaluation order.
+            // Draw z first to preserve the order used by existing GCC/Linux builds.
+            const double noiseZ = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+            const double noiseY = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+            const double noiseX = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+            velocities[i] = vscale*velocities[i] + noisescale*sqrt(kT*inverseMasses[i])*Vec3(noiseX, noiseY, noiseZ);
             xPrime[i] = xPrime[i] + velocities[i]*halfdt;
             oldx[i] = xPrime[i];
         }
