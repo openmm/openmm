@@ -262,9 +262,10 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
     // Update velocities of ordinary particles.
     
     const double vscale = exp(-integrator.getStepSize()*integrator.getFriction());
-    const double fscale = (1-vscale)/integrator.getFriction();
+    const double fscale = integrator.getFriction() == 0 ? integrator.getStepSize() :
+            -expm1(-integrator.getStepSize()*integrator.getFriction())/integrator.getFriction();
     const double kT = BOLTZ*integrator.getTemperature();
-    const double noisescale = sqrt(2*kT*integrator.getFriction())*sqrt(0.5*(1-vscale*vscale)/integrator.getFriction());
+    const double noisescale = sqrt(-kT*expm1(-2*integrator.getStepSize()*integrator.getFriction()));
     for (int index : normalParticles) {
         double invMass = particleInvMass[index];
         if (invMass != 0.0) {
@@ -277,9 +278,10 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
     // Update velocities of Drude particle pairs.
     
     const double vscaleDrude = exp(-integrator.getStepSize()*integrator.getDrudeFriction());
-    const double fscaleDrude = (1-vscaleDrude)/integrator.getDrudeFriction();
+    const double fscaleDrude = integrator.getDrudeFriction() == 0 ? integrator.getStepSize() :
+            -expm1(-integrator.getStepSize()*integrator.getDrudeFriction())/integrator.getDrudeFriction();
     const double kTDrude = BOLTZ*integrator.getDrudeTemperature();
-    const double noisescaleDrude = sqrt(2*kTDrude*integrator.getDrudeFriction())*sqrt(0.5*(1-vscaleDrude*vscaleDrude)/integrator.getDrudeFriction());
+    const double noisescaleDrude = sqrt(-kTDrude*expm1(-2*integrator.getStepSize()*integrator.getDrudeFriction()));
     for (int i = 0; i < (int) pairParticles.size(); i++) {
         int p1 = pairParticles[i].first;
         int p2 = pairParticles[i].second;
