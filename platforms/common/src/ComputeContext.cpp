@@ -504,6 +504,7 @@ void ComputeContext::findMoleculeGroups() {
         }
     }
     moleculeGroups.resize(moleculeInstances.size());
+    atomMoleculeGroup.resize(numAtoms);
     for (int i = 0; i < (int) moleculeInstances.size(); i++)
     {
         moleculeGroups[i].instances = moleculeInstances[i];
@@ -512,6 +513,9 @@ void ComputeContext::findMoleculeGroups() {
         moleculeGroups[i].atoms.resize(atoms.size());
         for (int j = 0; j < (int) atoms.size(); j++)
             moleculeGroups[i].atoms[j] = atoms[j]-atoms[0];
+        for (int instance : moleculeInstances[i])
+            for (int atom : molecules[instance].atoms)
+                atomMoleculeGroup[atom] = i;
     }
 }
 
@@ -522,7 +526,45 @@ void ComputeContext::invalidateMolecules() {
 }
 
 bool ComputeContext::invalidateMolecules(ComputeForceInfo* force, bool checkAtoms, bool checkGroups) {
+    vector<bool> groupsToCheck;
+    return invalidateMolecules(force, checkAtoms, checkGroups, groupsToCheck);
+}
+
+bool ComputeContext::invalidateMolecules(ComputeForceInfo* force, int firstParticle, int lastParticle, int firstGroup, int lastGroup) {
     if (numAtoms == 0 || !getNonbondedUtilities().getUseCutoff())
+        return false;
+    bool checkAtoms = (firstParticle <= lastParticle);
+    bool checkGroups = (firstGroup <= lastGroup);
+    if (!checkAtoms && !checkGroups)
+        return false;
+
+    // Only molecule groups containing a changed particle, or a particle of a changed group,
+    // can have stopped being identical.
+
+    vector<bool> groupsToCheck(moleculeGroups.size(), false);
+    for (int i = max(0, firstParticle); i <= min(numAtoms-1, lastParticle); i++)
+        groupsToCheck[atomMoleculeGroup[i]] = true;
+    vector<int> particles;
+    for (int i = firstGroup; i <= lastGroup; i++) {
+        force->getParticlesInGroup(i, particles);
+        for (int p : particles)
+            groupsToCheck[atomMoleculeGroup[p]] = true;
+    }
+    return invalidateMolecules(force, checkAtoms, checkGroups, groupsToCheck);
+}
+
+bool ComputeContext::invalidateMolecules(ComputeForceInfo* force, bool checkAtoms, bool checkGroups, const vector<bool>& groupsToCheck) {
+    if (numAtoms == 0 || !getNonbondedUtilities().getUseCutoff())
+        return false;
+
+    // A group with a single instance has nothing to compare against, so skip it, and if no
+    // group needs checking there is no reason to wake the thread pool at all.
+
+    bool anyToCheck = false;
+    for (int group = 0; group < (int) moleculeGroups.size() && !anyToCheck; group++)
+        if ((groupsToCheck.empty() || groupsToCheck[group]) && moleculeGroups[group].instances.size() > 1)
+            anyToCheck = true;
+    if (!anyToCheck)
         return false;
     bool valid = true;
     int forceIndex = -1;
@@ -531,6 +573,8 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force, bool checkAtom
             forceIndex = i;
     getThreadPool().execute([&] (ThreadPool& threads, int threadIndex) {
         for (int group = 0; valid && group < (int) moleculeGroups.size(); group++) {
+            if (!groupsToCheck.empty() && !groupsToCheck[group])
+                continue;
             MoleculeGroup& mol = moleculeGroups[group];
             vector<int>& instances = mol.instances;
             vector<int>& offsets = mol.offsets;
