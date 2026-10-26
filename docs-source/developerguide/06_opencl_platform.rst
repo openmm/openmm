@@ -11,6 +11,13 @@
 The OpenCL Platform
 ###################
 
+This chapter describes the OpenCL platform, but most of it applies equally well
+to the CUDA, HIP, and Metal platforms.  In fact, all four platforms share much
+of the same code.  This is therefore the starting point for understanding all the
+platforms that run on GPUs.  The following chapters describe the few ways in which
+the other platforms differ from OpenCL, and how you can implement a feature for
+all four platforms at once with a single piece of code.
+
 The OpenCL Platform is much more complicated than the reference Platform.  It
 also provides many more tools to simplify your work, but those tools themselves
 can be complicated to use correctly.  This chapter will attempt to explain how
@@ -33,7 +40,7 @@ positions, velocities, forces, an OpenCL CommandQueue used for executing
 kernels, workspace buffers of various sorts, etc.  It provides many useful
 methods for compiling and executing kernels, clearing and reducing buffers, and
 so on.  It also provides access to three other important objects: the
-OpenCLIntegrationUtilities, OpenCLNonbondedUtilities, and OpenCLBondedUtilities.
+IntegrationUtilities, NonbondedUtilities, and BondedUtilities.
 These are discussed below.
 
 Allocation of device memory is generally done through the OpenCLArray class.  It
@@ -49,8 +56,9 @@ particular aspects of the system being simulated.
 :code:`OpenCLContext::createProgram()` makes it easy to specify a list of
 preprocessor definitions to use when compiling a kernel.
 
-The normal way to execute a kernel is by calling :code:`executeKernel()` on
-the OpenCLContext.  It allows you to specify the total number of work-items to
+The normal way to execute a kernel is to create an OpenCLKernel by calling
+:code:`createKernel()` on the OpenCLProgram returned by :code:`createProgram()`,
+then call its :code:`execute()` method.  It allows you to specify the total number of work-items to
 execute, and optionally the size of each work-group.  (If you do not specify a
 work-group size, it uses 64 as a default.)  The number of work-groups to launch
 is selected automatically based on the work-group size, the total number of
@@ -263,13 +271,13 @@ Bonded Forces
 *************
 
 Just as OpenCLNonbondedUtilities simplifies the task of creating nonbonded
-interactions, OpenCLBondedUtilities simplifies the process for many types of
+interactions, BondedUtilities simplifies the process for many types of
 bonded interactions.  A “bonded interaction” means one that is applied to small,
 fixed groups of particles.  This includes bonds, angles, torsions, etc.  The
 important point is that the list of particles forming a “bond” is known in
 advance and does not change with time.
 
-Using OpenCLBondedUtilities is very similar to the process described above.  You
+Using BondedUtilities is very similar to the process described above.  You
 provide a block of OpenCL code for evaluating a single interaction.  This block
 of code will be inserted into the middle of a kernel that loops over all
 interactions and evaluates each one.  At the point where it is inserted, the
@@ -298,9 +306,8 @@ of the form *E*\ =\ *r*\ :sup:`2`\ :
     real4 force1 = 2.0f*delta;
     real4 force2 = -2.0f*delta;
 
-To use it, call :code:`addInteraction()` on the Context’s
-OpenCLBondedUtilities object.  You also provide a list of the particles involved
-in every bonded interaction.
+To use it, call :code:`addInteraction()` on the Context’s BondedUtilities object.
+You also provide a list of the particles involved in every bonded interaction.
 
 Exactly as with nonbonded interactions, you can call :code:`addArgument()`
 to specify arbitrary memory objects that should be passed as arguments to the
@@ -358,7 +365,7 @@ information:
 Integration Utilities
 *********************
 
-The OpenCLContext’s OpenCLIntegrationUtilities provides features that are used
+The OpenCLContext’s IntegrationUtilities provides features that are used
 by many integrators.  The two most important are random number generation and
 constraint enforcement.
 
@@ -384,7 +391,7 @@ but rather on the *displacements* taken by the most recent integration step.
 These displacements must be stored in an array which you can get by calling
 :code:`getPosDelta()`\ .  That is, the constraint algorithms assume the actual
 (unconstrained) position of each particle equals the position stored in the
-OpenCLContext plus the delta stored in the OpenCLIntegrationUtilities.  It then
+OpenCLContext plus the delta stored in the IntegrationUtilities.  It then
 modifies the deltas so that all distance constraints are satisfied.  The
 integrator must then finish the time step by adding the deltas to the positions
 and storing them into the main position array.
