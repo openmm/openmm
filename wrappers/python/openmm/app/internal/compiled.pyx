@@ -94,7 +94,7 @@ cdef class CellList:
                 maxPos = [max((pos[i] for pos in positions)) for i in range(3)]
                 width = [max(maxPos[i]-minPos[i], maxCutoff) for i in range(3)]
                 vectors = ((width[0], 0, 0), (0, width[1], 0), (0, 0, width[2]))
-        self.positions = np.array(positions, dtype=float) if positions else np.empty((0, 3))
+        self.positions = np.array(positions, dtype=float) if len(positions) else np.empty((0, 3))
         self.cells = {}
         self.numCells = tuple([max(1, int(floor(vectors[i][i]/maxCutoff))) for i in range(3)])
         self.cellSize = tuple([vectors[i][i]/self.numCells[i] for i in range(3)])
