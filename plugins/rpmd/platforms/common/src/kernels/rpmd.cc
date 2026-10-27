@@ -225,11 +225,15 @@ KERNEL void copyDataFromContext(GLOBAL mm_long* srcForce, GLOBAL mm_long* dstFor
         dstVel[base+index] = srcVel[particle];
         real4 posq = srcPos[particle];
 #ifdef USE_MIXED_PRECISION
-        posq += (mixed4) posqCorrection[particle];
-#endif
+        real4 correction = posqCorrection[particle];
+        dstPos[base+index].x = posq.x + (mixed) correction.x;
+        dstPos[base+index].y = posq.y + (mixed) correction.y;
+        dstPos[base+index].z = posq.z + (mixed) correction.z;
+#else
         dstPos[base+index].x = posq.x;
         dstPos[base+index].y = posq.y;
         dstPos[base+index].z = posq.z;
+#endif
     }
 }
 
