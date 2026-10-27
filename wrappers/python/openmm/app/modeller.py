@@ -63,10 +63,11 @@ class Modeller(object):
     _residueHydrogens = {}
     _hasLoadedStandardHydrogens = False
 
-    # From Alvarez, Dalton Trans. 42, 8617 (2023).  All values are in nm.  Unknown elements (which will get mapped to
-    # index 0 by addMixture), and elements for which no data are available, are given a default radius of 0.2 nm here.
+    # From Alvarez, Dalton Trans. 42, 8617 (2023).  All values are in nm.  Elements for which no data are available are
+    # given a default radius of 0.2 nm.  When no element is specified for an atom, index 0 will be accessed; this is
+    # given a radius of 0.05 nm so virtual sites don't take up much volume.
     _PACKING_RADII = np.array([
-        0.2  , 0.12 , 0.143, 0.212, 0.198, 0.191, 0.177, 0.166, 0.15 , 0.146,
+        0.05 , 0.12 , 0.143, 0.212, 0.198, 0.191, 0.177, 0.166, 0.15 , 0.146,
         0.158, 0.25 , 0.251, 0.225, 0.219, 0.19 , 0.189, 0.182, 0.183, 0.273,
         0.262, 0.258, 0.246, 0.242, 0.245, 0.245, 0.244, 0.24 , 0.24 , 0.238,
         0.239, 0.232, 0.229, 0.188, 0.182, 0.186, 0.225, 0.321, 0.284, 0.275,
@@ -691,7 +692,7 @@ class Modeller(object):
         each component will be added to the box.  Next, positions and orientations of each copy (treated as a rigid
         body) will be optimized to reduce overlaps between all of the existing and newly added atoms.  The method used
         is similar to that described in Martínez and Martínez, J. Comput. Chem. 24, 819 (2003), and Martínez et al.,
-        J. Comput. Chem. 30, 2157 (2009).
+        J. Comput. Chem. 30, 2157 (2009), along with some heuristics for choosing a box size if none is specified.
 
         The box size can be specified in any of several ways:
 
@@ -782,7 +783,7 @@ class Modeller(object):
 
             # This constant is chosen to make the density of pure water come to 1 g/cm^3 exactly.
 
-            vectors *= np.cbrt(4.37932210654291 * guessVol) / np.linalg.det(vectors)
+            vectors *= np.cbrt(4.37932210654291 * guessVol / np.linalg.det(vectors))
             vectorsGuessed = True
 
         # Set up a Topology, positions, and System for solving the packing problem.
@@ -835,7 +836,7 @@ class Modeller(object):
             # Place copies of the component randomly in the box.
 
             for _ in range(component.count):
-                positions.append(self._placeRandomly(refPositions, vectors, baseRadii, cells, periodicDistance))
+                positions.append(self._placeRandomly(refPositions, vectors, baseRadii, component.radii, cells, periodicDistance))
 
             if refIndices.size == 1:
                 for _ in range(component.count):
@@ -1024,12 +1025,11 @@ class Modeller(object):
             indices = np.array([index1, index2, index3])
         return positions, indices
 
-    def _placeRandomly(self, positions, vectors, baseRadii, cells, periodicDistance):
+    def _placeRandomly(self, positions, vectors, baseRadii, radii, cells, periodicDistance):
         """Place positions representing a copy of a component randomly in a periodic box."""
 
-        # Search for a placement such that none of the atoms of the new copy are inside the Modeller's existing atoms.
-        # This does not need to prevent overlaps completely, since we will optimize later, but keeps new atoms from
-        # getting stuck inside existing atoms.  We also do not attempt to avoid overlaps between new copies.
+        # Search for a placement such that none of the atoms of the new copy overlap with the Modeller's existing atoms.
+        # We also do not attempt to avoid overlaps between new copies since they will move during the optimization.
 
         for _ in range(100):
             # Try to find a reasonable position for the center of the new copy (away from existing atoms).
@@ -1049,8 +1049,8 @@ class Modeller(object):
 
             newPositions = centerPos + positions @ q
             if cells is not None and any(
-                periodicDistance(newPosition, cells.positions[neighbor]) < baseRadii[neighbor]
-                for newPosition in newPositions
+                periodicDistance(newPosition, cells.positions[neighbor]) < baseRadii[neighbor] + radius
+                for newPosition, radius in zip(newPositions, radii)
                 for neighbor in cells.neighbors(newPosition)
             ):
                 continue
