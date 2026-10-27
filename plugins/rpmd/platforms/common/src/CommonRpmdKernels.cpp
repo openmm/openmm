@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2011-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -105,6 +105,8 @@ void CommonIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     int maxContractedCopies = 0;
     for (auto& c : contractions) {
         int group = c.first;
+        if (((1<<group) & integrator.getIntegrationForceGroups()) == 0)
+            continue;
         int copies = c.second;
         if (group < 0 || group > 31)
             throw OpenMMException("RPMDIntegrator: Force group must be between 0 and 31");
@@ -199,6 +201,8 @@ void CommonIntegrateRPMDStepKernel::initializeKernels(ContextImpl& context) {
     copyToContextKernel->addArg(cc.getPosq());
     copyToContextKernel->addArg(cc.getAtomIndexArray());
     copyToContextKernel->addArg();
+    if (cc.getUseMixedPrecision())
+        copyToContextKernel->addArg(cc.getPosqCorrection());
     copyFromContextKernel->addArg(cc.getLongForceBuffer());
     copyFromContextKernel->addArg();
     copyFromContextKernel->addArg(cc.getVelm());
@@ -207,6 +211,8 @@ void CommonIntegrateRPMDStepKernel::initializeKernels(ContextImpl& context) {
     copyFromContextKernel->addArg();
     copyFromContextKernel->addArg(cc.getAtomIndexArray());
     copyFromContextKernel->addArg();
+    if (cc.getUseMixedPrecision())
+        copyFromContextKernel->addArg(cc.getPosqCorrection());
     for (auto& g : groupsByCopies) {
         int copies = g.first;
         positionContractionKernels[copies]->addArg(positions);
