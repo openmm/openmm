@@ -36,7 +36,7 @@ from openmm.app import Topology, PDBFile, ForceField
 from openmm.app.forcefield import AllBonds, CutoffNonPeriodic, CutoffPeriodic, DrudeGenerator, _getDataDirectories
 from openmm.app.internal import compiled
 from openmm.vec3 import Vec3
-from openmm import System, Context, NonbondedForce, AmoebaVdwForce, AmoebaMultipoleForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, \
+from openmm import System, Context, NonbondedForce, AmoebaVdwForce, AmoebaMultipoleForce, CustomNonbondedForce, HarmonicBondForce, CustomBondForce, HarmonicAngleForce, \
     VerletIntegrator, LangevinIntegrator, CustomIntegrator, MonteCarloBarostat, LocalEnergyMinimizer, TwoParticleAverageSite, OutOfPlaneSite
 from openmm.unit import nanometer, molar, elementary_charge, degree, acos, is_quantity, dot, norm, kilojoules_per_mole
 import openmm.unit as unit
@@ -774,7 +774,7 @@ class Modeller(object):
         elif self.topology.getPeriodicBoxVectors() is not None:
             vectors = np.array(self.topology.getPeriodicBoxVectors().value_in_unit(nanometer))
         else:
-            # Make a very rough estimate of the initial density to be refined later.
+            # Make a rough estimate of the initial density to be refined later.
 
             guessVol = sum(component.count * np.sum(component.radii ** 3) for component in componentList)
             if baseRadii is not None:
@@ -923,10 +923,10 @@ class Modeller(object):
             # Add a dummy force to make the barostat treat any fixed atoms as a molecule so they won't be rescaled.
 
             if self.topology.getNumAtoms() > 1:
-                bond = HarmonicBondForce()
+                bondForce = CustomBondForce("0")
                 for index in range(1, self.topology.getNumAtoms()):
-                    bond.addBond(0, index, 0, 0)
-                system.addForce(bond)
+                    bondForce.addBond(0, index)
+                system.addForce(bondForce)
 
         else:
             integrator = VerletIntegrator(0)
@@ -946,11 +946,11 @@ class Modeller(object):
         LocalEnergyMinimizer.minimize(context, tolerance=minimizeTol)
 
         if vectorsGuessed:
-            currentVol = np.linalg.det(context.getState().getPeriodicBoxVectors(asNumpy=True).value_in_unit(nanometer))
+            currentVol = context.getState().getPeriodicBoxVolume().value_in_unit(nanometer**3)
             for _ in range(100):
                 integrator.step(100)
                 LocalEnergyMinimizer.minimize(context, tolerance=minimizeTol)
-                newVol = np.linalg.det(context.getState().getPeriodicBoxVectors(asNumpy=True).value_in_unit(nanometer))
+                newVol = context.getState().getPeriodicBoxVolume().value_in_unit(nanometer**3)
                 if abs(newVol - currentVol) <= 0.001 * currentVol:
                     break
                 currentVol = newVol
@@ -1004,8 +1004,7 @@ class Modeller(object):
 
         delta1x = positions - positions[index1]
         objective2 = np.linalg.norm(delta1x, axis=1)
-        objective2[index1] = np.nan
-        index2 = np.nanargmax(objective2)
+        index2 = np.argmax(objective2)
 
         # Choose the third reference atom as the one furthest from the line passing through the first two.
 

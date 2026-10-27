@@ -580,11 +580,11 @@ class TestModeller(unittest.TestCase):
         ff = ForceField('amber19-all.xml', 'tip5p.xml')
         system = ff.createSystem(modeller.topology, nonbondedMethod=PME, constraints=HBonds)
         system.addForce(MonteCarloBarostat(1, 300))
-        context = Context(system, LangevinIntegrator(300, 1, 0.002))
-        context.setPositions(modeller.positions)
-        context.setVelocitiesToTemperature(300)
-        LocalEnergyMinimizer.minimize(context)
-        context.getIntegrator().step(1000)
+        simulation = Simulation(modeller.topology, system, LangevinIntegrator(300, 1, 0.002))
+        simulation.context.setPositions(modeller.positions)
+        simulation.context.setVelocitiesToTemperature(300)
+        simulation.minimizeEnergy()
+        simulation.step(1000)
 
     def test_addMixture(self):
         """ Tests addMixture packing a mixture. """
@@ -666,7 +666,7 @@ class TestModeller(unittest.TestCase):
         modeller.addMixture([
             {'topology': component1.topology, 'positions': component1.positions, 'count': 10000},
             {'topology': component2.topology, 'positions': component2.positions, 'count': 100},
-        ], boxSize=(70, 70, 70) * angstrom)
+        ], boxSize=(70, 70, 70)*angstrom)
 
         cell = modeller.topology.getPeriodicBoxVectors().value_in_unit(nanometer)
         self.assertVecAlmostEqual(cell[0], [7, 0, 0])
@@ -685,7 +685,7 @@ class TestModeller(unittest.TestCase):
         modeller.addMixture([
             {'topology': component1.topology, 'positions': component1.positions, 'count': 10000},
             {'topology': component2.topology, 'positions': component2.positions, 'count': 100},
-        ], boxVectors=((70, 0, 0), (1, 70, 0), (2, 3, 70)) * angstrom)
+        ], boxVectors=((70, 0, 0), (1, 70, 0), (2, 3, 70))*angstrom)
 
         cell = modeller.topology.getPeriodicBoxVectors().value_in_unit(nanometer)
         self.assertVecAlmostEqual(cell[0], [7, 0, 0])
@@ -704,7 +704,7 @@ class TestModeller(unittest.TestCase):
         modeller.addMixture([
             {'topology': component1.topology, 'positions': component1.positions, 'count': 10000},
             {'topology': component2.topology, 'positions': component2.positions, 'count': 10},
-        ], padding=1 * nanometer)
+        ], padding=1*nanometer)
 
         cell = modeller.topology.getPeriodicBoxVectors().value_in_unit(nanometer)
         self.assertVecAlmostEqual(cell[0], [7.26015523, 0, 0])
