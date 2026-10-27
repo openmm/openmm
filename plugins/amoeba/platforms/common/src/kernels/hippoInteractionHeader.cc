@@ -36,7 +36,7 @@ DEVICE real3 rotateVectorFromQI(real3 v, const real mat[3][3]) {
 }
 
 DEVICE void rotateQuadrupoleToQI(real qXX, real qXY, real qXZ, real qYY, real qYZ, 
-            real* qiQXX, real* qiQXY, real* qiQXZ, real* qiQYY, real* qiQYZ, real* qiQZZ, const real mat[3][3]) {
+            PRIVATE real* qiQXX, PRIVATE real* qiQXY, PRIVATE real* qiQXZ, PRIVATE real* qiQYY, PRIVATE real* qiQYZ, PRIVATE real* qiQZZ, const real mat[3][3]) {
     real qZZ = -qXX-qYY;
     *qiQXX = mat[0][0]*(mat[0][0]*qXX + 2*(mat[0][1]*qXY + mat[0][2]*qXZ)) + mat[0][1]*(mat[0][1]*qYY + 2*mat[0][2]*qYZ) + mat[0][2]*mat[0][2]*qZZ;
     *qiQYY = mat[1][0]*(mat[1][0]*qXX + 2*(mat[1][1]*qXY + mat[1][2]*qXZ)) + mat[1][1]*(mat[1][1]*qYY + 2*mat[1][2]*qYZ) + mat[1][2]*mat[1][2]*qZZ;
@@ -47,9 +47,9 @@ DEVICE void rotateQuadrupoleToQI(real qXX, real qXY, real qXZ, real qYY, real qY
 }
 
 DEVICE void computeOverlapDampingFactors(real alphaI, real alphaJ, real r,
-                                  real* fdampI1, real* fdampI3, real* fdampI5, real* fdampI7, real* fdampI9,
-                                  real* fdampJ1, real* fdampJ3, real* fdampJ5, real* fdampJ7, real* fdampJ9,
-                                  real* fdampIJ1, real* fdampIJ3, real* fdampIJ5, real* fdampIJ7, real* fdampIJ9, real* fdampIJ11) {
+                                  PRIVATE real* fdampI1, PRIVATE real* fdampI3, PRIVATE real* fdampI5, PRIVATE real* fdampI7, PRIVATE real* fdampI9,
+                                  PRIVATE real* fdampJ1, PRIVATE real* fdampJ3, PRIVATE real* fdampJ5, PRIVATE real* fdampJ7, PRIVATE real* fdampJ9,
+                                  PRIVATE real* fdampIJ1, PRIVATE real* fdampIJ3, PRIVATE real* fdampIJ5, PRIVATE real* fdampIJ7, PRIVATE real* fdampIJ9, PRIVATE real* fdampIJ11) {
     real arI = alphaI*r;
     real arI2 = arI*arI;
     real arI3 = arI2*arI;
@@ -128,7 +128,7 @@ DEVICE void computeOverlapDampingFactors(real alphaI, real alphaJ, real r,
     }
 }
 
-DEVICE void computeDispersionDampingFactors(real alphaI, real alphaJ, real r, real* fdamp, real* ddamp) {
+DEVICE void computeDispersionDampingFactors(real alphaI, real alphaJ, real r, PRIVATE real* fdamp, PRIVATE real* ddamp) {
     real arI = alphaI*r;
     real arI2 = arI*arI;
     real arI3 = arI2*arI;
@@ -169,7 +169,7 @@ DEVICE void computeDispersionDampingFactors(real alphaI, real alphaJ, real r, re
 }
 
 DEVICE void computeRepulsionDampingFactors(real pauliAlphaI, real pauliAlphaJ, real r,
-            real* fdamp1, real* fdamp3, real* fdamp5, real* fdamp7, real* fdamp9, real* fdamp11) {
+            PRIVATE real* fdamp1, PRIVATE real* fdamp3, PRIVATE real* fdamp5, PRIVATE real* fdamp7, PRIVATE real* fdamp9, PRIVATE real* fdamp11) {
     real r2 = r*r;
     real r3 = r2*r;
     real r4 = r2*r2;

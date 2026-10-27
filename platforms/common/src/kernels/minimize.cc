@@ -38,12 +38,11 @@ DEVICE void resetLineSearchData(GLOBAL mixed* RESTRICT lineSearchData) {
 }
 
 DEVICE mixed reduceAdd(mixed value, LOCAL_ARG volatile mixed* temp) {
-    const int thread = LOCAL_ID;
     SYNC_THREADS;
 #ifdef WARP_SHUFFLE_DOWN
     const int warpCount = LOCAL_SIZE / WARP_SIZE;
-    const int warp = thread / WARP_SIZE;
-    const int lane = thread % WARP_SIZE;
+    const int warp = LOCAL_ID / WARP_SIZE;
+    const int lane = LOCAL_ID % WARP_SIZE;
     for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
         value += WARP_SHUFFLE_DOWN(value, step);
     }
@@ -62,17 +61,17 @@ DEVICE mixed reduceAdd(mixed value, LOCAL_ARG volatile mixed* temp) {
     }
     SYNC_THREADS;
 #else
-    temp[thread] = value;
+    temp[LOCAL_ID] = value;
     SYNC_THREADS;
     for (int step = 1; step < WARP_SIZE / 2; step <<= 1) {
-        if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread] += temp[thread + step];
+        if (LOCAL_ID + step < LOCAL_SIZE && LOCAL_ID % (2 * step) == 0) {
+            temp[LOCAL_ID] += temp[LOCAL_ID + step];
         }
         SYNC_WARPS;
     }
     for (int step = WARP_SIZE / 2; step < LOCAL_SIZE; step <<= 1) {
-        if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread] += temp[thread + step];
+        if (LOCAL_ID + step < LOCAL_SIZE && LOCAL_ID % (2 * step) == 0) {
+            temp[LOCAL_ID] += temp[LOCAL_ID + step];
         }
         SYNC_THREADS;
     }
@@ -81,12 +80,11 @@ DEVICE mixed reduceAdd(mixed value, LOCAL_ARG volatile mixed* temp) {
 }
 
 DEVICE mixed reduceMax(mixed value, LOCAL_ARG volatile mixed* temp) {
-    const int thread = LOCAL_ID;
     SYNC_THREADS;
 #ifdef WARP_SHUFFLE_DOWN
     const int warpCount = LOCAL_SIZE / WARP_SIZE;
-    const int warp = thread / WARP_SIZE;
-    const int lane = thread % WARP_SIZE;
+    const int warp = LOCAL_ID / WARP_SIZE;
+    const int lane = LOCAL_ID % WARP_SIZE;
     for (int step = WARP_SIZE / 2; step > 0; step >>= 1) {
         value = max(value, WARP_SHUFFLE_DOWN(value, step));
     }
@@ -105,17 +103,17 @@ DEVICE mixed reduceMax(mixed value, LOCAL_ARG volatile mixed* temp) {
     }
     SYNC_THREADS;
 #else
-    temp[thread] = value;
+    temp[LOCAL_ID] = value;
     SYNC_THREADS;
     for (int step = 1; step < WARP_SIZE / 2; step <<= 1) {
-        if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread] = max(temp[thread], temp[thread + step]);
+        if (LOCAL_ID + step < LOCAL_SIZE && LOCAL_ID % (2 * step) == 0) {
+            temp[LOCAL_ID] = max(temp[LOCAL_ID], temp[LOCAL_ID + step]);
         }
         SYNC_WARPS;
     }
     for (int step = WARP_SIZE / 2; step < LOCAL_SIZE; step <<= 1) {
-        if (thread + step < LOCAL_SIZE && thread % (2 * step) == 0) {
-            temp[thread] = max(temp[thread], temp[thread + step]);
+        if (LOCAL_ID + step < LOCAL_SIZE && LOCAL_ID % (2 * step) == 0) {
+            temp[LOCAL_ID] = max(temp[LOCAL_ID], temp[LOCAL_ID + step]);
         }
         SYNC_THREADS;
     }
@@ -152,6 +150,21 @@ DEVICE void atomicAddMixed(GLOBAL mixed* RESTRICT target, const mixed value) {
         check = old;
         old = atomic_cmpxchg((GLOBAL unsigned int*)target, check, as_uint(value + as_float(check)));
     } while(check != old);
+
+    #endif
+#elif defined(__METAL_VERSION__)
+    #if defined(USE_MIXED_PRECISION) || defined(USE_DOUBLE_PRECISION)
+
+    // Metal doesn't have any of the atomic operations needed to compute this correctly.  Instead we just add the upper
+    // and lower parts of the df64 values directly.  This is less accurate than a true double precision add, but still
+    // more accurate than single precision.
+
+    ATOMIC_ADD((GLOBAL float*) target, value.v.x);
+    ATOMIC_ADD(((GLOBAL float*) target)+1, value.v.y);
+
+    #else
+
+    ATOMIC_ADD(target, value);
 
     #endif
 #else
@@ -777,13 +790,13 @@ KERNEL void lineSearchDot(
     // Any restraint energy in returnValue hasn't been downloaded yet to be
     // passed back up in the energy parameter, so add it in here.
 
-    deltaEnergy += *returnValue;
+    mixed totalDeltaEnergy = deltaEnergy + *returnValue;
 
     // The energy may be such that we don't need to do a dot product and can
     // immediately decide to scale the step, so mark this case with LS_SUCCEED.
     // This will be checked in the following kernel.
 
-    if (!(FABS_MIXED(deltaEnergy) < FLT_MAX) || deltaEnergy > lineSearchData[LS_STEP] * LBFGS_FTOL * lineSearchData[LS_DOT_START]) {
+    if (!(FABS_MIXED(totalDeltaEnergy) < FLT_MAX) || totalDeltaEnergy > lineSearchData[LS_STEP] * LBFGS_FTOL * lineSearchData[LS_DOT_START]) {
         if (GLOBAL_ID == 0) {
             *returnFlag = LS_SUCCEED;
         }

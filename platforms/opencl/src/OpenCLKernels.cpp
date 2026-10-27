@@ -23,26 +23,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "OpenCLKernels.h"
-#include "OpenCLForceInfo.h"
-#include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
-#include "openmm/internal/NonbondedForceImpl.h"
-#include "openmm/common/CommonKernelUtilities.h"
-#include "openmm/common/ContextSelector.h"
-#include "CommonKernelSources.h"
-#include "OpenCLBondedUtilities.h"
-#include "OpenCLExpressionUtilities.h"
-#include "OpenCLIntegrationUtilities.h"
-#include "OpenCLNonbondedUtilities.h"
-#include "OpenCLKernelSources.h"
-#include "OpenCLQueue.h"
-#include "SimTKOpenMMRealType.h"
-#include "SimTKOpenMMUtilities.h"
-#include <algorithm>
-#include <assert.h>
-#include <cmath>
-#include <iterator>
-#include <set>
 
 using namespace OpenMM;
 using namespace std;

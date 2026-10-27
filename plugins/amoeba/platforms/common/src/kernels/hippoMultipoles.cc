@@ -169,7 +169,7 @@ KERNEL void recordInducedDipoles(GLOBAL const mm_long* RESTRICT fieldBuffers, GL
 /**
  * Normalize a vector and return what its magnitude was.
  */
-inline DEVICE real normVector(real3* v) {
+inline DEVICE real normVector(PRIVATE real3* v) {
     real n = SQRT(dot(*v, *v));
     *v *= (n > 0 ? RECIP(n) : 0);
     return n;
@@ -198,7 +198,7 @@ KERNEL void mapTorqueToForce(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL cons
     const int Z = 2;
     const int I = 3;
     
-    const real torqueScale = RECIP((double) 0x100000000);
+    const real torqueScale = RECIP((real) 0x100000000);
     
     real3 forces[4];
     real norms[12];

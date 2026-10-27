@@ -30,6 +30,7 @@ __attribute__((overloadable)) unsigned long atom_add(volatile __global unsigned 
 #define LOCAL __local
 #define LOCAL_ARG __local
 #define GLOBAL __global
+#define PRIVATE
 #define RESTRICT restrict
 #define LOCAL_ID get_local_id(0)
 #define LOCAL_SIZE get_local_size(0)
@@ -42,7 +43,13 @@ __attribute__((overloadable)) unsigned long atom_add(volatile __global unsigned 
 #define ATOMIC_ADD(dest, value) atom_add(dest, value)
 
 typedef long mm_long;
+typedef long2 mm_long2;
+typedef long3 mm_long3;
+typedef long4 mm_long4;
 typedef unsigned long mm_ulong;
+typedef ulong2 mm_ulong2;
+typedef ulong3 mm_ulong3;
+typedef ulong4 mm_ulong4;
 
 #define make_short2(x...) ((short2) (x))
 #define make_short3(x...) ((short3) (x))

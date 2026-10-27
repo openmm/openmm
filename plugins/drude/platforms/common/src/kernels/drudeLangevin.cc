@@ -4,7 +4,7 @@
 
 KERNEL void integrateDrudeLangevinPart1(GLOBAL mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force, GLOBAL mixed4* RESTRICT posDelta,
         GLOBAL const int* RESTRICT normalParticles, GLOBAL const int2* RESTRICT pairParticles, GLOBAL const mixed2* RESTRICT dt, mixed vscale, mixed fscale,
-        mixed noisescale, mixed vscaleDrude, mixed fscaleDrude, mixed noisescaleDrude, GLOBAL const float4* RESTRICT random, unsigned int randomIndex) {
+        mixed noisescale, mixed vscaleDrude, mixed fscaleDrude, mixed noisescaleDrude, GLOBAL const float4* RESTRICT random, unsigned int startRandomIndex) {
     mixed stepSize = dt[0].y;
     
     // Update normal particles.
@@ -14,7 +14,7 @@ KERNEL void integrateDrudeLangevinPart1(GLOBAL mixed4* RESTRICT velm, GLOBAL con
         mixed4 velocity = velm[index];
         if (velocity.w != 0) {
             mixed sqrtInvMass = SQRT(velocity.w);
-            float4 rand = random[randomIndex+index];
+            float4 rand = random[startRandomIndex+index];
             velocity.x = vscale*velocity.x + fscale*velocity.w*force[index] + noisescale*sqrtInvMass*rand.x;
             velocity.y = vscale*velocity.y + fscale*velocity.w*force[index+PADDED_NUM_ATOMS] + noisescale*sqrtInvMass*rand.y;
             velocity.z = vscale*velocity.z + fscale*velocity.w*force[index+PADDED_NUM_ATOMS*2] + noisescale*sqrtInvMass*rand.z;
@@ -25,7 +25,7 @@ KERNEL void integrateDrudeLangevinPart1(GLOBAL mixed4* RESTRICT velm, GLOBAL con
     
     // Update Drude particle pairs.
     
-    randomIndex += NUM_NORMAL_PARTICLES;
+    unsigned int randomIndex = startRandomIndex+NUM_NORMAL_PARTICLES;
     for (int i = GLOBAL_ID; i < NUM_PAIRS; i += GLOBAL_SIZE) {
         int2 particles = pairParticles[i];
         mixed4 velocity1 = velm[particles.x];

@@ -21,7 +21,7 @@ IF( NOT PROJECT_NAME )
     PROJECT (OpenMM)
 ENDIF( NOT PROJECT_NAME )
 
-CMAKE_MINIMUM_REQUIRED(VERSION 3.17)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.24)
 CMAKE_POLICY(SET CMP0042 NEW)
 CMAKE_POLICY(SET CMP0003 NEW)
 CMAKE_POLICY(SET CMP0005 NEW)
@@ -89,12 +89,12 @@ ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
-SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs libraries/hilbert libraries/csha1 libraries/pocketfft libraries/vkfft platforms/reference serialization libraries/irrxml)
+SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs libraries/hilbert libraries/csha1 libraries/pocketfft libraries/vkfft libraries/metal-cpp platforms/reference serialization libraries/irrxml)
 IF(X86 OR ARM)
     SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} libraries/vecmath)
 ENDIF()
 
-SET (CMAKE_CXX_STANDARD 11)
+SET (CMAKE_CXX_STANDARD 17)
 
 IF(APPLE)
     # Build 64 bit binaries compatible with OS X 10.7
@@ -118,7 +118,7 @@ IF(APPLE)
     IF (X86)
       SET(EXTRA_COMPILE_FLAGS "-msse2")
     ENDIF()
-    SET(EXTRA_COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -stdlib=libc++")
+    SET(EXTRA_COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -stdlib=libc++ -Wno-deprecated-declarations")
 ELSEIF(MSVC)
     SET(EXTRA_COMPILE_FLAGS)
     # Use warning level 2, not whatever warning level CMake picked.
@@ -357,11 +357,20 @@ IF(OPENMM_BUILD_HIP_LIB)
     ADD_SUBDIRECTORY(platforms/hip)
 ENDIF(OPENMM_BUILD_HIP_LIB)
 
+# Metal platform
+
+IF(APPLE)
+    SET(OPENMM_BUILD_METAL_LIB ON CACHE BOOL "Build OpenMMMetal library for Apple GPUs")
+    IF(OPENMM_BUILD_METAL_LIB)
+        ADD_SUBDIRECTORY(platforms/metal)
+    ENDIF(OPENMM_BUILD_METAL_LIB)
+ENDIF()
+
 # Common compute files
 
 SET(OPENMM_BUILD_COMMON OFF CACHE BOOL "Build common files even if CUDA or OpenCL platforms are not built")
 
-IF(OPENMM_BUILD_CUDA_LIB OR OPENMM_BUILD_OPENCL_LIB OR OPENMM_BUILD_HIP_LIB OR OPENMM_BUILD_COMMON)
+IF(OPENMM_BUILD_CUDA_LIB OR OPENMM_BUILD_OPENCL_LIB OR OPENMM_BUILD_HIP_LIB OR OPENMM_BUILD_METAL_LIB OR OPENMM_BUILD_COMMON)
     ADD_SUBDIRECTORY(platforms/common)
 ENDIF()
 

@@ -383,12 +383,20 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         vector<int> atomConstraintsVec(ccmaAtomConstraints.getSize());
         vector<int> numAtomConstraintsVec(ccmaNumAtomConstraints.getSize());
         vector<int> constraintMatrixColumnVec(ccmaConstraintMatrixColumn.getSize());
-        int elementSize = (context.getUseDoublePrecision() || context.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
-        ccmaDistance.initialize(context, numCCMA, 4*elementSize, "CcmaDistance");
-        ccmaDelta1.initialize(context, numCCMA, elementSize, "CcmaDelta1");
-        ccmaDelta2.initialize(context, numCCMA, elementSize, "CcmaDelta2");
-        ccmaReducedMass.initialize(context, numCCMA, elementSize, "CcmaReducedMass");
-        ccmaConstraintMatrixValue.initialize(context, numCCMA*maxRowElements, elementSize, "ConstraintMatrixValue");
+        if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
+            ccmaDistance.initialize<mm_double4>(context, numCCMA, "CcmaDistance");
+            ccmaDelta1.initialize<double>(context, numCCMA, "CcmaDelta1");
+            ccmaDelta2.initialize<double>(context, numCCMA, "CcmaDelta2");
+            ccmaReducedMass.initialize<double>(context, numCCMA, "CcmaReducedMass");
+            ccmaConstraintMatrixValue.initialize<double>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
+        }
+        else {
+            ccmaDistance.initialize<mm_float4>(context, numCCMA, "CcmaDistance");
+            ccmaDelta1.initialize<float>(context, numCCMA, "CcmaDelta1");
+            ccmaDelta2.initialize<float>(context, numCCMA, "CcmaDelta2");
+            ccmaReducedMass.initialize<float>(context, numCCMA, "CcmaReducedMass");
+            ccmaConstraintMatrixValue.initialize<float>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
+        }
         vector<mm_double4> distanceVec(ccmaDistance.getSize());
         vector<double> reducedMassVec(ccmaReducedMass.getSize());
         vector<double> constraintMatrixValueVec(ccmaConstraintMatrixValue.getSize());
@@ -798,8 +806,10 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
 void IntegrationUtilities::setNextStepSize(double size) {
     if (size != lastStepSize.x || size != lastStepSize.y) {
         lastStepSize = mm_double2(size, size);
-        if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
-            stepSize.upload(&lastStepSize);
+        if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
+            vector<mm_double2> stepSizeVec = {lastStepSize};
+            stepSize.upload(stepSizeVec, true);
+        }
         else {
             mm_float2 lastStepSizeFloat = mm_float2((float) size, (float) size);
             stepSize.upload(&lastStepSizeFloat);
@@ -808,8 +818,11 @@ void IntegrationUtilities::setNextStepSize(double size) {
 }
 
 double IntegrationUtilities::getLastStepSize() {
-    if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
-        stepSize.download(&lastStepSize);
+    if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
+        vector<mm_double2> size;
+        stepSize.download(size, true);
+        lastStepSize = size[0];
+    }
     else {
         mm_float2 lastStepSizeFloat;
         stepSize.download(&lastStepSizeFloat);
@@ -972,9 +985,9 @@ double IntegrationUtilities::computeKineticEnergy(double timeShift) {
     if (timeShift != 0)
         posDelta.copyTo(context.getVelm());
     if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
-        double energy;
-        kineticEnergy.download(&energy);
-        return energy;
+        vector<double> energy;
+        kineticEnergy.download(energy, true);
+        return energy[0];
     }
     else {
         float energy;
@@ -1007,8 +1020,8 @@ void IntegrationUtilities::computeShiftedVelocities(double timeShift, vector<Vec
     
     velocities.resize(numParticles);
     if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
-        auto velm = (mm_double4*)context.getPinnedBuffer();
-        context.getVelm().download(velm);
+        vector<mm_double4> velm;
+        context.getVelm().download(velm, true);
         for (int i = 0; i < numParticles; i++) {
             mm_double4 v = velm[i];
             velocities[i] = Vec3(v.x, v.y, v.z);

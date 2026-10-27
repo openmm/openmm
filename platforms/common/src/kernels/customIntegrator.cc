@@ -1,36 +1,17 @@
-KERNEL void computeFloatSum(GLOBAL const float* RESTRICT sumBuffer, GLOBAL float* result, int bufferSize) {
-    LOCAL float tempBuffer[WORK_GROUP_SIZE];
-    const unsigned int thread = LOCAL_ID;
-    float sum = 0;
-    for (unsigned int index = thread; index < bufferSize; index += LOCAL_SIZE)
+KERNEL void computeSum(GLOBAL const SUM_TYPE* RESTRICT sumBuffer, GLOBAL SUM_TYPE* result, int bufferSize) {
+    LOCAL SUM_TYPE tempBuffer[WORK_GROUP_SIZE];
+    SUM_TYPE sum = 0;
+    for (unsigned int index = LOCAL_ID; index < bufferSize; index += LOCAL_SIZE)
         sum += sumBuffer[index];
-    tempBuffer[thread] = sum;
+    tempBuffer[LOCAL_ID] = sum;
     for (int i = 1; i < WORK_GROUP_SIZE; i *= 2) {
         SYNC_THREADS;
-        if (thread%(i*2) == 0 && thread+i < WORK_GROUP_SIZE)
-            tempBuffer[thread] += tempBuffer[thread+i];
+        if (LOCAL_ID%(i*2) == 0 && LOCAL_ID+i < WORK_GROUP_SIZE)
+            tempBuffer[LOCAL_ID] += tempBuffer[LOCAL_ID+i];
     }
-    if (thread == 0)
+    if (LOCAL_ID == 0)
         *result = tempBuffer[0];
 }
-
-#ifdef SUPPORTS_DOUBLE_PRECISION
-KERNEL void computeDoubleSum(GLOBAL const double* RESTRICT sumBuffer, GLOBAL double* result, int bufferSize) {
-    LOCAL double tempBuffer[WORK_GROUP_SIZE];
-    const unsigned int thread = LOCAL_ID;
-    double sum = 0;
-    for (unsigned int index = thread; index < bufferSize; index += LOCAL_SIZE)
-        sum += sumBuffer[index];
-    tempBuffer[thread] = sum;
-    for (int i = 1; i < WORK_GROUP_SIZE; i *= 2) {
-        SYNC_THREADS;
-        if (thread%(i*2) == 0 && thread+i < WORK_GROUP_SIZE)
-            tempBuffer[thread] += tempBuffer[thread+i];
-    }
-    if (thread == 0)
-        *result = tempBuffer[0];
-}
-#endif
 
 KERNEL void applyPositionDeltas(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTRICT posqCorrection, GLOBAL mixed4* RESTRICT posDelta) {
     for (unsigned int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {

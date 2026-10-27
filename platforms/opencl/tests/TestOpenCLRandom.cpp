@@ -32,7 +32,6 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "OpenCLArray.h"
 #include "OpenCLContext.h"
 #include "OpenCLIntegrationUtilities.h"
 #include "openmm/System.h"
@@ -56,7 +55,7 @@ void testGaussian() {
     OpenCLContext& context = *platformData.contexts[0];
     context.initialize();
     context.getIntegrationUtilities().initRandomNumberGenerator(0);
-    OpenCLArray& random = context.getIntegrationUtilities().getRandom();
+    ArrayInterface& random = context.getIntegrationUtilities().getRandom();
     context.getIntegrationUtilities().prepareRandomNumbers(random.getSize());
     const int numValues = random.getSize()*4;
     vector<mm_float4> values(numValues);

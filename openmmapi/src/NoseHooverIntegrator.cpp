@@ -176,7 +176,7 @@ void NoseHooverIntegrator::initializeThermostats(const System &system) {
 
     // If there is a CMMotionRemover, remove 3 degrees of freedom from the largest thermostat.
     for (int force = 0; force < system.getNumForces(); ++force) {
-        if (dynamic_cast<const CMMotionRemover*>(&system.getForce(force))) {
+        if (noseHooverChains.size() > 0 && dynamic_cast<const CMMotionRemover*>(&system.getForce(force))) {
             int largest = 0;
             int largestSize = noseHooverChains[0].getThermostatedAtoms().size() + noseHooverChains[0].getThermostatedPairs().size();
             for (int chain = 1; chain < noseHooverChains.size(); chain++) {

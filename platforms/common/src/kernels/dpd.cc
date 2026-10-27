@@ -7,7 +7,7 @@ typedef struct {
 /**
  * Generate a random number with PCH-XSH-RR.
  */
-DEVICE unsigned int getRandomInt(RandomState* random) {
+DEVICE unsigned int getRandomInt(PRIVATE RandomState* random) {
     unsigned int xs = ((random->state>>18)^random->state)>>27;
     unsigned int rot = random->state>>59;
     random->state = random->state*6364136223846793005ULL + random->increment;
@@ -17,7 +17,7 @@ DEVICE unsigned int getRandomInt(RandomState* random) {
 /**
  * Generate a normally distributed random number with Box-Muller.
  */
-DEVICE float getRandomNormal(RandomState* random) {
+DEVICE float getRandomNormal(PRIVATE RandomState* random) {
     if (random->nextIsValid) {
         random->nextIsValid = false;
         return random->next;
@@ -67,7 +67,7 @@ inline DEVICE mixed3 loadPos(GLOBAL const real4* RESTRICT posq, GLOBAL const rea
  * Compute the friction and noise for a pair of particles.
  */
 DEVICE void processPair(int i, int j, real3 delta, mixed4 vel1, mixed4 vel2, int type1, int type2, int paddedNumAtoms,
-        GLOBAL mm_ulong* RESTRICT velDelta, mixed dt, float kT, int numTypes, GLOBAL const float2* RESTRICT params, RandomState* random,
+        GLOBAL mm_ulong* RESTRICT velDelta, mixed dt, float kT, int numTypes, GLOBAL const float2* RESTRICT params, PRIVATE RandomState* random,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     if (vel1.w == 0 && vel2.w == 0)
         return;

@@ -34,7 +34,7 @@ inline DEVICE AtomData loadAtomData(int atom, GLOBAL const real4* RESTRICT posq,
 }
 
 #ifdef USE_EWALD
-DEVICE void computeOneInteraction(AtomData* atom1, LOCAL_ARG AtomData* atom2, real3 deltaR, float dScale, float pScale, real3* fields) {
+DEVICE void computeOneInteraction(PRIVATE AtomData* atom1, LOCAL_ARG AtomData* atom2, real3 deltaR, float dScale, float pScale, PRIVATE real3* fields) {
     real r2 = dot(deltaR, deltaR);
     if (r2 <= CUTOFF_SQUARED) {
         // calculate the error function damping terms
@@ -144,7 +144,7 @@ DEVICE void computeOneInteraction(AtomData* atom1, LOCAL_ARG AtomData* atom2, re
     }
 }
 #else
-DEVICE void computeOneInteraction(AtomData* atom1, LOCAL_ARG AtomData* atom2, real3 deltaR, float dScale, float pScale, real3* fields) {
+DEVICE void computeOneInteraction(PRIVATE AtomData* atom1, LOCAL_ARG AtomData* atom2, real3 deltaR, float dScale, float pScale, PRIVATE real3* fields) {
     real rI = RSQRT(dot(deltaR, deltaR));
     real r = RECIP(rI);
     real r2I = rI*rI;
@@ -209,7 +209,7 @@ DEVICE void computeOneInteraction(AtomData* atom1, LOCAL_ARG AtomData* atom2, re
 #endif
 
 #ifdef USE_GK
-DEVICE void computeOneGkInteraction(AtomData* atom1, LOCAL_ARG AtomData* atom2, real3 delta, real3* fields) {
+DEVICE void computeOneGkInteraction(PRIVATE AtomData* atom1, LOCAL_ARG AtomData* atom2, real3 delta, PRIVATE real3* fields) {
     real a[4][4];
     real gc[5];
     real gux[11],guy[11],guz[11];

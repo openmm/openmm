@@ -53,7 +53,7 @@ inline DEVICE AtomData loadAtomData(int atom, GLOBAL const real4* RESTRICT posq,
     return data;
 }
 
-inline DEVICE void zeroAtomData(AtomData* data) {
+inline DEVICE void zeroAtomData(PRIVATE AtomData* data) {
     data->field = make_real3(0);
     data->fieldPolar = make_real3(0);
 #ifdef USE_GK
@@ -146,7 +146,7 @@ inline DEVICE void saveAtomData(int index, AtomData data, GLOBAL mm_ulong* RESTR
 }
 
 #ifdef USE_EWALD
-DEVICE void computeOneInteraction(AtomData* atom1, LOCAL_ARG AtomData* atom2, real3 deltaR, bool isSelfInteraction) {
+DEVICE void computeOneInteraction(PRIVATE AtomData* atom1, LOCAL_ARG AtomData* atom2, real3 deltaR, bool isSelfInteraction) {
     if (isSelfInteraction)
         return;
     real scale1, scale2, scale3;
@@ -258,7 +258,7 @@ DEVICE void computeOneInteraction(AtomData* atom1, LOCAL_ARG AtomData* atom2, re
 #endif
 }
 #elif defined USE_GK
-DEVICE void computeOneInteraction(AtomData* atom1, LOCAL_ARG AtomData* atom2, real3 deltaR, bool isSelfInteraction) {
+DEVICE void computeOneInteraction(PRIVATE AtomData* atom1, LOCAL_ARG AtomData* atom2, real3 deltaR, bool isSelfInteraction) {
     real r2 = dot(deltaR, deltaR);
     real r = SQRT(r2);
     if (!isSelfInteraction) {
@@ -314,7 +314,7 @@ DEVICE void computeOneInteraction(AtomData* atom1, LOCAL_ARG AtomData* atom2, re
     atom2->fieldPolarS += atom1->inducedDipolePolarS.x*gux+atom1->inducedDipolePolarS.y*guy+atom1->inducedDipolePolarS.z*guz;
 }
 #else
-DEVICE void computeOneInteraction(AtomData* atom1, LOCAL_ARG AtomData* atom2, real3 deltaR, bool isSelfInteraction) {
+DEVICE void computeOneInteraction(PRIVATE AtomData* atom1, LOCAL_ARG AtomData* atom2, real3 deltaR, bool isSelfInteraction) {
     if (isSelfInteraction)
         return;
     real rI = RSQRT(dot(deltaR, deltaR));

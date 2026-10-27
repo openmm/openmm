@@ -60,7 +60,7 @@ DEVICE float computePScaleFactor(uint2 covalent, unsigned int polarizationGroup,
     return (x && y ? 0.0f : (x && p ? 0.5f : 1.0f));
 }
 
-DEVICE void computeOneInteraction(AtomData* atom1, LOCAL_ARG AtomData* atom2, bool hasExclusions, float dScale, float pScale, float mScale, float forceFactor, mixed* energy) {
+DEVICE void computeOneInteraction(PRIVATE AtomData* atom1, LOCAL_ARG AtomData* atom2, bool hasExclusions, float dScale, float pScale, float mScale, float forceFactor, PRIVATE mixed* energy) {
     // Compute the displacement.
     
     real3 delta;
@@ -564,7 +564,7 @@ KERNEL void computeElectrostatics(
             localData[LOCAL_ID] = loadAtomData(j, posq, sphericalDipole, sphericalQuadrupole, inducedDipole, inducedDipolePolar, dampingAndThole);
             localData[LOCAL_ID].force = make_real3(0);
             localData[LOCAL_ID].torque = make_real3(0);
-            SYNC_THREADS;
+            SYNC_WARPS;
 
             // Compute forces.
 
@@ -575,7 +575,7 @@ KERNEL void computeElectrostatics(
                     computeOneInteraction(&data, &localData[tbx+tj], false, 1, 1, 1, 1, &energy);
                 }
                 tj = (tj + 1) & (TILE_SIZE - 1);
-                SYNC_THREADS;
+                SYNC_WARPS;
             }
             data.force *= -ENERGY_SCALE_FACTOR;
             data.torque *= ENERGY_SCALE_FACTOR;

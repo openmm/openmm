@@ -51,7 +51,7 @@ HipArray::~HipArray() {
     }
 }
 
-void HipArray::initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name) {
+void HipArray::initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name, const std::type_info* type) {
     if (this->pointer != 0)
         throw OpenMMException("HipArray has already been initialized");
     this->context = &dynamic_cast<HipContext&>(context);

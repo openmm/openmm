@@ -1,0 +1,704 @@
+/**
+ * This file contains functions and classes for emulating double precision using two single precision values.  The
+ * following functions are based on https://andrewthall.org/papers/df64_qf128.pdf.
+ */
+
+namespace DoubleFloat {
+    inline float2 quickTwoSum(float a, float b) {
+        float s = a+b;
+        float e = b-(s-a);
+        return float2(s, e);
+    }
+    inline float2 twoSum(float a, float b) {
+        float s = a+b;
+        float v = s-a;
+        float e = (a-(s-v))+(b-v);
+        return float2(s, e);
+    }
+    inline float2 df64add(float2 a, float2 b) {
+        float2 s = twoSum(a.x, b.x);
+        float2 t = twoSum(a.y, b.y);
+        s.y += t.x;
+        s = quickTwoSum(s.x, s.y);
+        s.y += t.y;
+        return quickTwoSum(s.x, s.y);
+    }
+    inline float2 df64diff(float2 a, float2 b) {
+        float2 s = twoSum(a.x, -b.x);
+        float2 t = twoSum(a.y, -b.y);
+        s.y += t.x;
+        s = quickTwoSum(s.x, s.y);
+        s.y += t.y;
+        return quickTwoSum(s.x, s.y);
+    }
+    inline float2 twoProd(float a, float b) {
+        float x = a*b;
+        float y = metal::fma(a, b, -x);
+        return float2(x, y);
+    }
+    inline float2 df64mult(float2 a, float2 b) {
+        float2 p = twoProd(a.x, b.x);
+        p.y += a.x*b.y;
+        p.y += a.y*b.x;
+        return quickTwoSum(p.x, p.y);
+    }
+    inline float2 df64sqr(float2 a) {
+        float2 p = twoProd(a.x, a.x);
+        p.y += 2*a.x*a.y;
+        return quickTwoSum(p.x, p.y);
+    }
+    inline float2 df64div(float2 b, float2 a) {
+        float xn = 1.0f/a.x;
+        float yn = b.x*xn;
+        float diff = (df64diff(b, df64mult(a, float2(yn, 0)))).x;
+        float2 prod = twoProd(xn, diff);
+        return df64add(float2(yn, 0), prod);
+    }
+    inline float2 df64sqrt(float2 a) {
+        float xn = metal::rsqrt(a.x);
+        float2 yn(a.x*xn, 0);
+        float diff = (df64diff(a, df64sqr(yn))).x;
+        float2 prod = twoProd(xn, diff) / 2;
+        return df64add(yn, prod);
+    }
+    inline bool df64eq(float2 a, float2 b) {
+        return a.x == b.x && a.y == b.y;
+    }
+    inline bool df64neq(float2 a, float2 b) {
+        return a.x != b.x || a.y != b.y;
+    }
+    inline bool df64lt(float2 a, float2 b) {
+        return (a.x < b.x || (a.x == b.x && a.y < b.y));
+    }
+    inline float2 df64exp(float2 a) {
+        // Split the argument into a multiple of log(2) and a value between 0 and log(2).
+
+        const float2 log2(0x1.62E43p-1, -0x1.05C61p-29);
+        const float2 oneOverLog2(0x1.715476p0, 0x1.4AE0Cp-26);
+        int k = (int) metal::floor(df64mult(a, oneOverLog2).x);
+        float scale = metal::ldexp(1.0f, k);
+        float2 ar = df64diff(a, df64mult(log2, float2(k, 0.0f)));
+
+        // Compute exp(ar).
+
+        const float thresh = 1.0e-20f*metal::exp(ar.x);
+        float2 s = df64add(float2(1.0f, 0.0f), ar);
+        float2 p = df64sqr(ar);
+        float m = 2.0f;
+        float2 f = float2(2.0f, 0.0f);
+        float2 t = p/2.0f;
+        while (metal::abs(t.x) > thresh) {
+            s = df64add(s, t);
+            p = df64mult(p, ar);
+            m += 1.0f;
+            f = df64mult(f, float2(m, 0.0f));
+            t = df64div(p, f);
+        }
+        return df64mult(float2(scale, 0.0f), df64add(s, t));
+    }
+    inline float2 df64log(float2 a) {
+        if (a.x <= 0.0f)
+            return float2(NAN, NAN);
+
+        // Split the argument into a power of 2 and a value between 0.5 and 1.
+
+        const float2 log2(0x1.62E43p-1, -0x1.05C61p-29);
+        int exponent;
+        metal::frexp(a.x, exponent);
+        float2 scale(metal::ldexp(1.0f, exponent), 0.0f);
+        float2 ar = df64div(a, scale);
+
+        // Compute log(ar).
+
+        float2 xi = float2(0.0f, 0.0f);
+        if (!df64eq(ar, float2(1.0f, 0.0f))) {
+            if (a.x <= 0.0f)
+                xi = float2(metal::log(ar.x));
+            else {
+                xi.x = metal::log(ar.x);
+                xi = df64add(df64add(xi, df64mult(df64exp(-xi), ar)), float2(-1.0f, 0.0f));
+            }
+        }
+        return df64add(xi, df64mult(log2, float2(exponent, 0.0f)));
+    }
+    inline void df64sincos(float2 a, thread float2& s, thread float2& c, thread int& k) {
+        // Use Cody-Waite range reduction to translate the argument into a value between -pi/4 and pi/4.
+
+        const float2 c1(0x1.921fb6p0, 0.0f);
+        const float2 c2(-0x1.777a5cp-25, -0x1.ee59dap-50);
+        const float2 twoOverPi(0x1.45F306p-1, 0x1.B9391p-26);
+        k = (int) metal::round(df64mult(a, twoOverPi).x);
+        float2 kc1 = df64mult(c1, float2(k, 0.0f));
+        float2 kc2 = df64mult(c2, float2(k, 0.0f));
+        float2 ar = df64diff(df64diff(a, kc1), kc2);
+
+        // Compute sin(ar) with a Taylor series.
+
+        const float2 one(1.0f, 0.0f);
+        const float thresh = 1.0e-20f*metal::abs(ar.x);
+        if (ar.x == 0.0f) {
+            s = float2(0.0f, 0.0f);
+            c = one;
+            k = 0;
+        }
+        else {
+            float2 x = -df64sqr(ar);
+            s = ar;
+            float2 p = ar;
+            float m = 1.0f;
+            float2 f = one;
+            while (true) {
+                p = df64mult(p, x);
+                m += 2.0f;
+                f = df64mult(f, float2(m*(m-1), 0.0f));
+                float2 t = df64div(p, f);
+                s = df64add(s, t);
+                if (metal::abs(t.x) < thresh)
+                    break;
+            }
+            c = df64sqrt(df64diff(one, df64sqr(s)));
+            k = k&3;
+        }
+    }
+}
+
+/**
+ * This class represents a double-float value.  It attempts to act as a drop in replacement for double.  Note, however,
+ * that while its precision is similar to a double, its range is only that of a float.
+ */
+class df64 {
+public:
+    float2 v;
+    df64() = default;
+    df64() threadgroup = default;
+    df64(float f) {
+        v = float2(f, 0.0f);
+    }
+#define DEFINE_CONVERSION(T) \
+    df64(T i) { \
+        float high = (float) i; \
+        float low = (float) (i-(T)high); \
+        v = float2(high, low); \
+    }
+    DEFINE_CONVERSION(int)
+    DEFINE_CONVERSION(unsigned int)
+    DEFINE_CONVERSION(long)
+    DEFINE_CONVERSION(unsigned long)
+#undef DEFIN_CONVERSION
+    explicit df64(float2 f) {
+        v = f;
+    }
+    df64 operator-() constant {
+        return df64(float2(-v.x, -v.y));
+    }
+#define DEFINE_OPERATORS(AS) \
+    template <typename T, typename = metal::enable_if_t<metal::is_same<T, float>::value>> \
+    operator T() const AS { \
+        return v.x; \
+    } \
+    explicit operator long() const AS { \
+        return (long) v.x; \
+    } \
+    df64 operator-() const AS { \
+        return df64(float2(-v.x, -v.y)); \
+    } \
+    AS df64& operator=(const df64 rhs) AS { \
+        v = rhs.v; \
+        return *this; \
+    } \
+    AS df64& operator+=(const df64 rhs) AS { \
+        v = DoubleFloat::df64add(v, rhs.v); \
+        return *this; \
+    } \
+    AS df64& operator-=(const df64 rhs) AS { \
+        v = DoubleFloat::df64diff(v, rhs.v); \
+        return *this; \
+    } \
+    AS df64& operator*=(const df64 rhs) AS { \
+        v = DoubleFloat::df64mult(v, rhs.v); \
+        return *this; \
+    } \
+    AS df64& operator/=(const df64 rhs) AS { \
+        v = DoubleFloat::df64div(v, rhs.v); \
+        return *this; \
+    }
+    DEFINE_OPERATORS(thread)
+    DEFINE_OPERATORS(threadgroup)
+    DEFINE_OPERATORS(volatile threadgroup)
+    DEFINE_OPERATORS(device)
+#undef DEFINE_OPERATORS
+};
+
+/**
+ * Define operators that act on two df64 values.
+ */
+df64 operator+(df64 a, df64 b) {
+    return df64(DoubleFloat::df64add(a.v, b.v));
+}
+df64 operator-(df64 a, df64 b) {
+    return df64(DoubleFloat::df64diff(a.v, b.v));
+}
+df64 operator*(df64 a, df64 b) {
+    return df64(DoubleFloat::df64mult(a.v, b.v));
+}
+df64 operator/(df64 a, df64 b) {
+    return df64(DoubleFloat::df64div(a.v, b.v));
+}
+bool operator==(df64 a, df64 b) {
+    return DoubleFloat::df64eq(a.v, b.v);
+}
+bool operator!=(df64 a, df64 b) {
+    return DoubleFloat::df64neq(a.v, b.v);
+}
+bool operator<(df64 a, df64 b) {
+    return DoubleFloat::df64lt(a.v, b.v);
+}
+bool operator>(df64 a, df64 b) {
+    return b < a;
+}
+bool operator<=(df64 a, df64 b) {
+    return !(a > b);
+}
+bool operator>=(df64 a, df64 b) {
+    return !(a < b);
+}
+
+/**
+ * Define comparison operators that compare a df64 to another value of a different type.
+ */
+#define DEFINE_MIXED_COMPARISONS(OP) \
+template <typename T, typename = metal::enable_if_t<metal::is_arithmetic<T>::value>> \
+inline bool operator OP(df64 a, T b) { \
+    return a OP df64(b); \
+} \
+template <typename T, typename = metal::enable_if_t<metal::is_arithmetic<T>::value>> \
+inline bool operator OP(T a, df64 b) { \
+    return df64(a) OP b; \
+}
+DEFINE_MIXED_COMPARISONS(==)
+DEFINE_MIXED_COMPARISONS(!=)
+DEFINE_MIXED_COMPARISONS(<)
+DEFINE_MIXED_COMPARISONS(>)
+DEFINE_MIXED_COMPARISONS(<=)
+DEFINE_MIXED_COMPARISONS(>=)
+#undef DEFINE_MIXED_COMPARISONS
+
+/**
+ * This is a vector type containing two df64 values.  It attempts to act as a replacement for double2.
+ */
+struct df642 {
+    df64 x, y;
+    df642() = default;
+    df642() threadgroup = default;
+    df642(df64 a, df64 b) : x(a), y(b) {
+    }
+    df642(float2 v) : x(v.x), y(v.y) {
+    }
+    explicit df642(df64 a) : x(a), y(a) {
+    }
+#define DEFINE_OPERATORS2(AS) \
+    operator float2() const AS { \
+        return float2(x, y); \
+    } \
+    df642 operator-() const AS { \
+        return df642(-x, -y); \
+    } \
+    template <class T> \
+    AS df642& operator+=(T rhs) AS { \
+        df64 d(rhs); \
+        x += d; \
+        y += d; \
+        return *this; \
+    } \
+    template <> \
+    AS df642& operator+=(df642 rhs) AS { \
+        x += rhs.x; \
+        y += rhs.y; \
+        return *this; \
+    } \
+    template <class T> \
+    AS df642& operator-=(T rhs) AS { \
+        df64 d(rhs); \
+        x -= d; \
+        y -= d; \
+        return *this; \
+    } \
+    template <> \
+    AS df642& operator-=(df642 rhs) AS { \
+        x -= rhs.x; \
+        y -= rhs.y; \
+        return *this; \
+    } \
+    template <class T> \
+    AS df642& operator*=(T rhs) AS { \
+        df64 d(rhs); \
+        x *= d; \
+        y *= d; \
+        return *this; \
+    } \
+    template <> \
+    AS df642& operator*=(df642 rhs) AS { \
+        x *= rhs.x; \
+        y *= rhs.y; \
+        return *this; \
+    } \
+    template <class T> \
+    AS df642& operator/=(T rhs) AS { \
+        df64 d(rhs); \
+        x /= d; \
+        y /= d; \
+        return *this; \
+    } \
+    template <> \
+    AS df642& operator/=(df642 rhs) AS { \
+        x /= rhs.x; \
+        y /= rhs.y; \
+        return *this; \
+    }
+    DEFINE_OPERATORS2(thread)
+    DEFINE_OPERATORS2(threadgroup)
+    DEFINE_OPERATORS2(device)
+#undef DEFINE_OPERATORS2
+};
+
+/**
+ * This is a vector type containing three df64 values.  It attempts to act as a replacement for double3.
+ */
+struct df643 {
+    df64 x, y, z;
+    df643() = default;
+    df643() threadgroup = default;
+    df643(df64 a, df64 b, df64 c) : x(a), y(b), z(c) {
+    }
+    df643(float3 v) : x(v.x), y(v.y), z(v.z) {
+    }
+    explicit df643(df64 a) : x(a), y(a), z(a) {
+    }
+#define DEFINE_OPERATORS3(AS) \
+    operator float3() const AS { \
+        return float3(x, y, z); \
+    } \
+    df643 operator-() const AS { \
+        return df643(-x, -y, -z); \
+    } \
+    template <class T> \
+    AS df643& operator+=(T rhs) AS { \
+        df64 d(rhs); \
+        x += d; \
+        y += d; \
+        z += d; \
+        return *this; \
+    } \
+    template <> \
+    AS df643& operator+=(df643 rhs) AS { \
+        x += rhs.x; \
+        y += rhs.y; \
+        z += rhs.z; \
+        return *this; \
+    } \
+    template <class T> \
+    AS df643& operator-=(T rhs) AS { \
+        df64 d(rhs); \
+        x -= d; \
+        y -= d; \
+        z -= d; \
+        return *this; \
+    } \
+    template <> \
+    AS df643& operator-=(df643 rhs) AS { \
+        x -= rhs.x; \
+        y -= rhs.y; \
+        z -= rhs.z; \
+        return *this; \
+    } \
+    template <class T> \
+    AS df643& operator*=(T rhs) AS { \
+        df64 d(rhs); \
+        x *= d; \
+        y *= d; \
+        z *= d; \
+        return *this; \
+    } \
+    template <> \
+    AS df643& operator*=(df643 rhs) AS { \
+        x *= rhs.x; \
+        y *= rhs.y; \
+        z *= rhs.z; \
+        return *this; \
+    } \
+    template <class T> \
+    AS df643& operator/=(T rhs) AS { \
+        df64 d(rhs); \
+        x /= d; \
+        y /= d; \
+        z /= d; \
+        return *this; \
+    } \
+    template <> \
+    AS df643& operator/=(df643 rhs) AS { \
+        x /= rhs.x; \
+        y /= rhs.y; \
+        z /= rhs.z; \
+        return *this; \
+    }
+    DEFINE_OPERATORS3(thread)
+    DEFINE_OPERATORS3(threadgroup)
+    DEFINE_OPERATORS3(device)
+#undef DEFINE_OPERATORS3
+};
+
+/**
+ * This is a vector type containing four df64 values.  It attempts to act as a replacement for double4.
+ */
+struct df644 {
+    df64 x, y, z, w;
+    df644() = default;
+    df644() threadgroup = default;
+    df644(df64 a, df64 b, df64 c, df64 d) : x(a), y(b), z(c), w(d) {
+    }
+    df644(float4 v) : x(v.x), y(v.y), z(v.z), w(v.w) {
+    }
+    explicit df644(df64 a) : x(a), y(a), z(a), w(a) {
+    }
+#define DEFINE_OPERATORS4(AS) \
+    operator float4() const AS { \
+        return float4(x, y, z, w); \
+    } \
+    df644 operator-() const AS { \
+        return df644(-x, -y, -z, -w); \
+    } \
+    template <class T> \
+    AS df644& operator+=(T rhs) AS { \
+        df64 d(rhs); \
+        x += d; \
+        y += d; \
+        z += d; \
+        w += d; \
+        return *this; \
+    } \
+    template <> \
+    AS df644& operator+=(df644 rhs) AS { \
+        x += rhs.x; \
+        y += rhs.y; \
+        z += rhs.z; \
+        w += rhs.w; \
+        return *this; \
+    } \
+    template <class T> \
+    AS df644& operator-=(T rhs) AS { \
+        df64 d(rhs); \
+        x -= d; \
+        y -= d; \
+        z -= d; \
+        w -= d; \
+        return *this; \
+    } \
+    template <> \
+    AS df644& operator-=(df644 rhs) AS { \
+        x -= rhs.x; \
+        y -= rhs.y; \
+        z -= rhs.z; \
+        w -= rhs.w; \
+        return *this; \
+    } \
+    template <class T> \
+    AS df644& operator*=(T rhs) AS { \
+        df64 d(rhs); \
+        x *= d; \
+        y *= d; \
+        z *= d; \
+        w *= d; \
+        return *this; \
+    } \
+    template <> \
+    AS df644& operator*=(df644 rhs) AS { \
+        x *= rhs.x; \
+        y *= rhs.y; \
+        z *= rhs.z; \
+        w *= rhs.w; \
+        return *this; \
+    } \
+    template <class T> \
+    AS df644& operator/=(T rhs) AS { \
+        df64 d(rhs); \
+        x /= d; \
+        y /= d; \
+        z /= d; \
+        w /= d; \
+        return *this; \
+    } \
+    template <> \
+    AS df644& operator/=(df644 rhs) AS { \
+        x /= rhs.x; \
+        y /= rhs.y; \
+        z /= rhs.z; \
+        w /= rhs.w; \
+        return *this; \
+    }
+    DEFINE_OPERATORS4(thread)
+    DEFINE_OPERATORS4(threadgroup)
+    DEFINE_OPERATORS4(device)
+#undef DEFINE_OPERATORS4
+};
+
+/**
+ * Define operators that act on two vectors of df64 values.
+ */
+inline df642 operator+(df642 a, df642 b) {
+    return df642(a.x+b.x, a.y+b.y);
+}
+inline df642 operator-(df642 a, df642 b) {
+    return df642(a.x-b.x, a.y-b.y);
+}
+inline df642 operator*(df642 a, df642 b) {
+    return df642(a.x*b.x, a.y*b.y);
+}
+inline df642 operator/(df642 a, df642 b) {
+    return df642(a.x/b.x, a.y/b.y);
+}
+inline df643 operator+(df643 a, df643 b) {
+    return df643(a.x+b.x, a.y+b.y, a.z+b.z);
+}
+inline df643 operator-(df643 a, df643 b) {
+    return df643(a.x-b.x, a.y-b.y, a.z-b.z);
+}
+inline df643 operator*(df643 a, df643 b) {
+    return df643(a.x*b.x, a.y*b.y, a.z*b.z);
+}
+inline df643 operator/(df643 a, df643 b) {
+    return df643(a.x/b.x, a.y/b.y, a.z/b.z);
+}
+inline df644 operator+(df644 a, df644 b) {
+    return df644(a.x+b.x, a.y+b.y, a.z+b.z, a.w+b.w);
+}
+inline df644 operator-(df644 a, df644 b) {
+    return df644(a.x-b.x, a.y-b.y, a.z-b.z, a.w-b.w);
+}
+inline df644 operator*(df644 a, df644 b) {
+    return df644(a.x*b.x, a.y*b.y, a.z*b.z, a.w*b.w);
+}
+inline df644 operator/(df644 a, df644 b) {
+    return df644(a.x/b.x, a.y/b.y, a.z/b.z, a.w/b.w);
+}
+
+/**
+ * Define operators that act on two values, one being a df64 scalar or vector.
+ */
+#define DEFINE_BINARY_OPERATORS(T, U) \
+inline T operator+(T a, U b) { \
+    return a+T(b); \
+} \
+inline T operator+(U a, T b) { \
+    return T(a)+b; \
+} \
+inline T operator-(T a, U b) { \
+    return a-T(b); \
+} \
+inline T operator-(U a, T b) { \
+    return T(a)-b; \
+} \
+inline T operator*(T a, U b) { \
+    return a*T(b); \
+}\
+inline T operator*(U a, T b) { \
+    return T(a)*b; \
+} \
+inline T operator/(T a, U b) { \
+    return a/T(b); \
+} \
+inline T operator/(U a, T b) { \
+    return T(a)/b; \
+} \
+
+DEFINE_BINARY_OPERATORS(df64, float)
+DEFINE_BINARY_OPERATORS(df64, int)
+DEFINE_BINARY_OPERATORS(df64, unsigned int)
+DEFINE_BINARY_OPERATORS(df64, long)
+DEFINE_BINARY_OPERATORS(df642, float)
+DEFINE_BINARY_OPERATORS(df642, int)
+DEFINE_BINARY_OPERATORS(df642, unsigned int)
+DEFINE_BINARY_OPERATORS(df642, long)
+DEFINE_BINARY_OPERATORS(df642, df64)
+DEFINE_BINARY_OPERATORS(df642, float2)
+DEFINE_BINARY_OPERATORS(df643, float)
+DEFINE_BINARY_OPERATORS(df643, int)
+DEFINE_BINARY_OPERATORS(df643, unsigned int)
+DEFINE_BINARY_OPERATORS(df643, long)
+DEFINE_BINARY_OPERATORS(df643, df64)
+DEFINE_BINARY_OPERATORS(df643, float3)
+DEFINE_BINARY_OPERATORS(df644, float)
+DEFINE_BINARY_OPERATORS(df644, int)
+DEFINE_BINARY_OPERATORS(df644, unsigned int)
+DEFINE_BINARY_OPERATORS(df644, long)
+DEFINE_BINARY_OPERATORS(df644, df64)
+DEFINE_BINARY_OPERATORS(df644, float4)
+#undef DEFINE_BINARY_OPERATORS
+
+/**
+ * Math functions that act on df64 values.
+ */
+inline df64 sqrt(df64 a) {
+    return (a.v.x == 0 ? df64(metal::sqrt(a.v.y)) : df64(DoubleFloat::df64sqrt(a.v)));
+}
+inline df64 rsqrt(df64 a) {
+    return df64(1.0f)/df64(DoubleFloat::df64sqrt(a.v));
+}
+inline df64 log(df64 a) {
+    return df64(DoubleFloat::df64log(a.v));
+}
+inline df64 exp(df64 a) {
+    return df64(DoubleFloat::df64exp(a.v));
+}
+inline df64 sin(df64 a) {
+    float2 s, c;
+    int k;
+    DoubleFloat::df64sincos(a.v, s, c, k);
+    return df64(k == 0 ? s : (k == 1 ? c : (k == 2 ? -s : -c)));
+}
+inline df64 cos(df64 a) {
+    float2 s, c;
+    int k;
+    DoubleFloat::df64sincos(a.v, s, c, k);
+    return df64(k == 0 ? c : (k == 1 ? -s : (k == 2 ? -c : s)));
+}
+inline df64 tan(df64 a) {
+    float2 s, c;
+    int k;
+    DoubleFloat::df64sincos(a.v, s, c, k);
+    return (k%2 == 0 ? df64(DoubleFloat::df64div(s,c)) : -df64(DoubleFloat::df64div(c,s)));
+}
+inline df64 fabs(df64 v) {
+    return (v.v.x > 0.0f ? v : -v);
+}
+inline df643 cross(df643 a, df643 b) {
+    return df643(a.y*b.z-a.z*b.y, a.z*b.x-a.x*b.z, a.x*b.y-a.y*b.x);
+}
+inline df644 cross(df644 a, df644 b) {
+    return df644(a.y*b.z-a.z*b.y, a.z*b.x-a.x*b.z, a.x*b.y-a.y*b.x, df64(0.0f));
+}
+inline df643 trimTo3(df644 v) {
+    return df643(v.x, v.y, v.z);
+}
+
+/**
+ * If we're using the fast:: versions of math functions, make sure the df64 versions will still be found.
+ */
+namespace metal {
+    namespace fast {
+        inline df64 sqrt(df64 a) {
+            return ::sqrt(a);
+        }
+        inline df64 rsqrt(df64 a) {
+            return ::rsqrt(a);
+        }
+        inline df64 divide(float a, df64 b) {
+            return a/b;
+        }
+        inline df64 exp(df64 a) {
+            return ::exp(a);
+        }
+        inline df64 log(df64 a) {
+            return ::log(a);
+        }
+    }
+}

@@ -130,12 +130,33 @@ void testTriclinic() {
     verifyNeighborList(neighborList, numParticles, particleList, periodicBoxVectors, cutoff);
 }
 
+void testCoordinateJustBelowZero() {
+    // A coordinate a hair below zero wraps to exactly the box size in floating
+    // point.  The particle must still be found by its neighbors.
+    const double cutoff = 1.0;
+    Vec3 orthorhombic[3] = {Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3)};
+    Vec3 triclinic[3] = {Vec3(3, 0, 0), Vec3(0.5, 3, 0), Vec3(-0.4, -0.7, 3)};
+    for (Vec3* periodicBoxVectors : {orthorhombic, triclinic}) {
+        for (int axis = 0; axis < 3; axis++) {
+            vector<Vec3> particleList(2);
+            particleList[0] = Vec3(0.1, 0.1, 0.1);
+            particleList[0][axis] = -1e-17;
+            particleList[1] = Vec3(0.5, 0.2, 0.3);
+            vector<set<int> > exclusions(2);
+            NeighborList neighborList;
+            computeNeighborListVoxelHash(neighborList, 2, particleList, exclusions, periodicBoxVectors, true, cutoff);
+            verifyNeighborList(neighborList, 2, particleList, periodicBoxVectors, cutoff);
+        }
+    }
+}
+
 int main() 
 {
     try {
         testNeighborList();
         testPeriodic();
         testTriclinic();
+        testCoordinateJustBelowZero();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

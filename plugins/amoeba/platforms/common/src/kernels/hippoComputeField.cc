@@ -1,4 +1,4 @@
-DEVICE void computeDirectFieldDampingFactors(real alpha, real r, real* fdamp3, real* fdamp5, real* fdamp7) {
+DEVICE void computeDirectFieldDampingFactors(real alpha, real r, PRIVATE real* fdamp3, PRIVATE real* fdamp5, PRIVATE real* fdamp7) {
     real ar = alpha*r;
     real ar2 = ar*ar;
     real ar3 = ar2*ar;
@@ -10,7 +10,7 @@ DEVICE void computeDirectFieldDampingFactors(real alpha, real r, real* fdamp3, r
     *fdamp7 = 1 - (1 + ar + ar2*(one/2) + ar3*(one/6) + ar4*(one/30))*expAR;
 }
 
-DEVICE void computeMutualFieldDampingFactors(real alphaI, real alphaJ, real r, real* fdamp3, real* fdamp5) {
+DEVICE void computeMutualFieldDampingFactors(real alphaI, real alphaJ, real r, PRIVATE real* fdamp3, PRIVATE real* fdamp5) {
     real arI = alphaI*r;
     real arI2 = arI*arI;
     real arI3 = arI2*arI;

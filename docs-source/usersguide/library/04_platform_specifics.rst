@@ -112,6 +112,34 @@ HIP Platform
 The HIP Platform recognizes exactly the same Platform-specific properties as
 the CUDA platform.
 
+Metal Platform
+**************
+
+The Metal Platform recognizes the following Platform-specific properties:
+
+* Precision: This selects what numeric precision to use for calculations.
+  The allowed values are “single” and “mixed”.  If it is set to “single”,
+  nearly all calculations are done in single precision.  This is the
+  fastest option but also the least accurate.  If it is set to “mixed”, forces are
+  computed in single precision but integration is done in higher precision.  This
+  gives much better energy conservation with only a moderate decrease in speed.
+  (Apple GPUs do not support double precision.  Mixed precision mode therefore
+  emulates it by using two single precision numbers to represent a single number
+  to higher precision.  This is slightly less accurate than true double precision,
+  but much more accurate than single precision.)
+* UseCpuPme: This selects whether to use the CPU-based PME implementation.
+  The allowed values are “true” or “false”.  Depending on your hardware, this
+  might (or might not) improve performance.
+* DeterministicForces: In some cases, the Metal platform may compute forces
+  in ways that are not fully deterministic (typically differing in what order a
+  set of numbers get added together).  This means that if you compute the forces
+  twice for the same particle positions, there may be tiny differences in the
+  results.  In most cases this is not a problem, but certain algorithms depend
+  on forces being exactly reproducible to the last bit.  If you set this
+  property to "true", it will instead do these calculations in a way that
+  produces fully deterministic results, at the cost of a small decrease in
+  performance.
+
 CPU Platform
 ************
 

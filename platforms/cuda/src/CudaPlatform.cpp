@@ -36,6 +36,7 @@
 #include <sstream>
 #include <cstdio>
 #ifdef _MSC_VER
+    #define WIN32_LEAN_AND_MEAN
     #include <Windows.h>
 #endif
 using namespace OpenMM;

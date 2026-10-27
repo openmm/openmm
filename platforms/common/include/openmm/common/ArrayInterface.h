@@ -27,6 +27,7 @@
 
 #include "openmm/OpenMMException.h"
 #include "openmm/common/windowsExportCommon.h"
+#include <typeinfo>
 #include <vector>
 
 namespace OpenMM {
@@ -48,8 +49,9 @@ public:
      * @param size              the number of elements in the array
      * @param elementSize       the size of each element in bytes
      * @param name              the name of the array
+     * @param type              the type of values the array contains
      */
-    virtual void initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name) = 0;
+    virtual void initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name, const std::type_info* type=nullptr) = 0;
     /**
      * Initialize this object.  The template argument is the data type of each array element.
      *
@@ -59,7 +61,7 @@ public:
      */
     template <class T>
     void initialize(ComputeContext& context, size_t size, const std::string& name) {
-        initialize(context, size, sizeof(T), name);
+        initialize(context, size, sizeof(T), name, &typeid(T));
     }
     /**
      * Recreate the internal storage to have a different size.
@@ -89,73 +91,122 @@ public:
      * Copy the values in a vector to the device memory.
      * 
      * @param data      the data in host memory to copy
-     * @param convert   if true, automatic conversions between single and double
-     *                  precision will be performed as necessary
+     * @param convert   if true, automatic conversions between single and double precision
+     *                  (or df64 on platforms that do not support double) will be performed as necessary
      */
     template <class T>
     void upload(const std::vector<T>& data, bool convert=false) {
-        if (convert && data.size() == getSize() && sizeof(T) != getElementSize()) {
-            if (sizeof(T) == 2*getElementSize()) {
-                // Convert values from double to single precision.
-                const double* d = reinterpret_cast<const double*>(&data[0]);
+        if (convert) {
+            if (containsDF64()) {
                 std::vector<float> v(getElementSize()*getSize()/sizeof(float));
-                for (int i = 0; i < v.size(); i++)
-                    v[i] = (float) d[i];
-                upload(&v[0], true);
+                int numValues = v.size()/2;
+                if (2*sizeof(T) == getElementSize()) {
+                    // Convert values from float to df64.
+                    const float* d = reinterpret_cast<const float*>(data.data());
+                    for (int i = 0; i < numValues; i++) {
+                        v[2*i] = d[i];
+                        v[2*i+1] = 0.0f;
+                    }
+                    upload(v.data(), true);
+                }
+                else {
+                    // Convert values from double to df64.
+                    const double* d = reinterpret_cast<const double*>(data.data());
+                    for (int i = 0; i < numValues; i++) {
+                        float f = (float) d[i];
+                        v[2*i] = f;
+                        v[2*i+1] = (float) (d[i]-f);
+                    }
+                    upload(v.data(), true);
+                }
                 return;
             }
-            if (2*sizeof(T) == getElementSize()) {
-                // Convert values from single to double precision.
-                const float* d = reinterpret_cast<const float*>(&data[0]);
-                std::vector<double> v(getElementSize()*getSize()/sizeof(double));
-                for (int i = 0; i < v.size(); i++)
-                    v[i] = (double) d[i];
-                upload(&v[0], true);
-                return;
+            if (data.size() == getSize() && sizeof(T) != getElementSize()) {
+                if (sizeof(T) == 2*getElementSize()) {
+                    // Convert values from double to single precision.
+                    const double* d = reinterpret_cast<const double*>(data.data());
+                    std::vector<float> v(getElementSize()*getSize()/sizeof(float));
+                    for (int i = 0; i < v.size(); i++)
+                        v[i] = (float) d[i];
+                    upload(v.data(), true);
+                    return;
+                }
+                if (2*sizeof(T) == getElementSize()) {
+                    // Convert values from single to double precision.
+                    const float* d = reinterpret_cast<const float*>(data.data());
+                    std::vector<double> v(getElementSize()*getSize()/sizeof(double));
+                    for (int i = 0; i < v.size(); i++)
+                        v[i] = (double) d[i];
+                    upload(v.data(), true);
+                    return;
+                }
             }
         }
         if (sizeof(T) != getElementSize() || data.size() != getSize())
             throw OpenMMException("Error uploading array "+getName()+": The specified vector does not match the size of the array");
-        upload(&data[0], true);
+        upload(data.data(), true);
     }
     /**
      * Copy the values in the array to a vector.
      * 
      * @param data      the vector to receive the values
-     * @param convert   if true, automatic conversions between single and double
-     *                  precision will be performed as necessary
+     * @param convert   if true, automatic conversions between single and double precision
+     *                  (or df64 on platforms that do not support double) will be performed as necessary
      */
     template <class T>
     void download(std::vector<T>& data, bool convert=false) const {
-        if (convert && sizeof(T) != getElementSize()) {
-            if (sizeof(T) == 2*getElementSize()) {
-                // Convert values from single to double precision.
+        if (convert) {
+            if (containsDF64()) {
+                // Convert values from df64.
                 std::vector<float> v(getElementSize()*getSize()/sizeof(float));
-                download(&v[0], true);
+                download(v.data(), true);
                 if (data.size() != getSize())
                     data.resize(getSize());
-                double* d = reinterpret_cast<double*>(&data[0]);
-                for (int i = 0; i < v.size(); i++)
-                    d[i] = (double) v[i];
+                int numValues = v.size()/2;
+                if (2*sizeof(T) == getElementSize()) {
+                    // Convert to float.
+                    float* d = reinterpret_cast<float*>(data.data());
+                    for (int i = 0; i < numValues; i++)
+                        d[i] = (float) ((double) v[2*i] + (double) v[2*i+1]);
+                }
+                else {
+                    // Convert to double.
+                    double* d = reinterpret_cast<double*>(data.data());
+                    for (int i = 0; i < numValues; i++)
+                        d[i] = (double) v[2*i] + (double) v[2*i+1];
+                }
                 return;
             }
-            if (2*sizeof(T) == getElementSize()) {
-                // Convert values from double to single precision.
-                std::vector<double> v(getElementSize()*getSize()/sizeof(double));
-                download(&v[0], true);
-                if (data.size() != getSize())
-                    data.resize(getSize());
-                float* d = reinterpret_cast<float*>(&data[0]);
-                for (int i = 0; i < v.size(); i++)
-                    d[i] = (float) v[i];
-                return;
+            if (sizeof(T) != getElementSize()) {
+                if (sizeof(T) == 2*getElementSize()) {
+                    // Convert values from single to double precision.
+                    std::vector<float> v(getElementSize()*getSize()/sizeof(float));
+                    download(v.data(), true);
+                    if (data.size() != getSize())
+                        data.resize(getSize());
+                    double* d = reinterpret_cast<double*>(data.data());
+                    for (int i = 0; i < v.size(); i++)
+                        d[i] = (double) v[i];
+                    return;
+                }
+                if (2*sizeof(T) == getElementSize()) {
+                    // Convert values from double to single precision.
+                    std::vector<double> v(getElementSize()*getSize()/sizeof(double));
+                    download(v.data(), true);
+                    if (data.size() != getSize())
+                        data.resize(getSize());
+                    float* d = reinterpret_cast<float*>(data.data());
+                    for (int i = 0; i < v.size(); i++)
+                        d[i] = (float) v[i];
+                    return;
+                }
             }
         }
         if (sizeof(T) != getElementSize())
             throw OpenMMException("Error downloading array "+getName()+": The specified vector has the wrong element size");
         if (data.size() != getSize())
             data.resize(getSize());
-        download(&data[0], true);
+        download(data.data(), true);
     }
     /**
      * Copy the values from host memory to the array.
@@ -192,6 +243,12 @@ public:
      * @param dest     the destination array to copy to
      */
     virtual void copyTo(ArrayInterface& dest) const = 0;
+    /**
+     * Get whether this array contains pseudo-double precision values in df64 format.
+     */
+    virtual bool containsDF64() const {
+        return false;
+    }
 };
 
 } // namespace OpenMM

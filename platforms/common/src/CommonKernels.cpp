@@ -232,8 +232,8 @@ void CommonUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec
     int numParticles = context.getSystem().getNumParticles();
     velocities.resize(numParticles);
     if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
-        mm_double4* velm = (mm_double4*) cc.getPinnedBuffer();
-        cc.getVelm().download(velm);
+        vector<mm_double4> velm;
+        cc.getVelm().download(velm, true);
         for (int i = 0; i < numParticles; ++i) {
             mm_double4 vel = velm[i];
             velocities[order[i]] = Vec3(vel.x, vel.y, vel.z);
@@ -254,14 +254,14 @@ void CommonUpdateStateDataKernel::setVelocities(ContextImpl& context, const vect
     const vector<int>& order = cc.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
-        double* vel = (double*) cc.getPinnedBuffer();
+        vector<double> vel(3*numParticles);
         for (int i = 0; i < numParticles; ++i) {
             const Vec3& p = velocities[order[i]];
             vel[3*i] = p[0];
             vel[3*i+1] = p[1];
             vel[3*i+2] = p[2];
         }
-        doubleBuffer.upload(vel);
+        doubleBuffer.upload(vel, true);
         copyDoubleKernel->setArg(1, cc.getVelm());
         copyDoubleKernel->execute(numParticles);
     }
@@ -306,7 +306,7 @@ void CommonUpdateStateDataKernel::getEnergyParameterDerivatives(ContextImpl& con
     ArrayInterface& derivArray = cc.getEnergyParamDerivBuffer();
     if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
         vector<double> derivBuffers;
-        derivArray.download(derivBuffers);
+        derivArray.download(derivBuffers, true);
         for (int i = numDerivs; i < derivArray.getSize(); i += numDerivs)
             for (int j = 0; j < numDerivs; j++)
                 derivBuffers[j] += derivBuffers[i+j];
@@ -3968,7 +3968,7 @@ void CommonCalcRGForceKernel::initialize(const System& system, const RGForce& fo
     forceKernel->addArg(centerBuffer);
     forceKernel->addArg(rgBuffer);
     forceKernel->addArg(cc.getLongForceBuffer());
-    forceKernel->addArg(cc.getEnergyBuffer());
+    forceKernel->addArg();
 
     // Create the listener for updating the list of particles.
 
@@ -3989,6 +3989,7 @@ double CommonCalcRGForceKernel::execute(ContextImpl& context, bool includeForces
     ContextSelector selector(cc);
     centerKernel->execute(particles.getSize(), blockSize);
     rgKernel->execute(particles.getSize(), blockSize);
+    forceKernel->setArg(6, cc.getEnergyBuffer());
     forceKernel->execute(particles.getSize(), blockSize);
     return 0.0;
 }
@@ -4257,8 +4258,12 @@ void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const
         // The CUDA platform doesn't have a floating point force buffer, so we don't need to copy it.
     }
     energyBuffers.resize(components);
-    for (int i = 0; i < components; i++)
-        energyBuffers[i].initialize(cc, cc.getNumThreadBlocks(), cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? sizeof(double) : sizeof(float), "energyBuffer");
+    for (int i = 0; i < components; i++) {
+        if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision())
+            energyBuffers[i].initialize<double>(cc, cc.getNumThreadBlocks(), "energyBuffer");
+        else
+            energyBuffers[i].initialize<float>(cc, cc.getNumThreadBlocks(), "energyBuffer");
+    }
     vector<float> zeros(energyBuffers[0].getSize(), 0.0f);
     for (int i = 0; i < components; i++)
         energyBuffers[i].upload(zeros, true);
@@ -4376,7 +4381,7 @@ void CommonApplyMonteCarloBarostatKernel::computeKineticEnergy(ContextImpl& cont
         }
         else {
             vector<double> buffer;
-            energyBuffers[j].download(buffer);
+            energyBuffers[j].download(buffer, true);
             for (int i = 0; i < buffer.size(); i++)
                 ke[j] += buffer[i];
         }

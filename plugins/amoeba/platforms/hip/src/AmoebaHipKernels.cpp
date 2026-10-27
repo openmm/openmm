@@ -23,29 +23,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#ifdef WIN32
-  #define _USE_MATH_DEFINES // Needed to get M_PI
-#endif
 #include "AmoebaHipKernels.h"
 #include "openmm/common/ContextSelector.h"
-#include "openmm/internal/ContextImpl.h"
-#include "openmm/internal/AmoebaGeneralizedKirkwoodForceImpl.h"
-#include "openmm/internal/AmoebaMultipoleForceImpl.h"
-#include "openmm/internal/AmoebaWcaDispersionForceImpl.h"
-#include "openmm/internal/AmoebaTorsionTorsionForceImpl.h"
-#include "openmm/internal/AmoebaVdwForceImpl.h"
-#include "openmm/internal/NonbondedForceImpl.h"
-#include "HipBondedUtilities.h"
-#include "HipForceInfo.h"
-#include "HipKernelSources.h"
-#include "SimTKOpenMMRealType.h"
-#include "jama_lu.h"
-
-#include <algorithm>
-#include <cmath>
-#ifdef _MSC_VER
-#include <windows.h>
-#endif
 
 using namespace OpenMM;
 using namespace std;

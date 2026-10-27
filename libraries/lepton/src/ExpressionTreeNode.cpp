@@ -95,10 +95,12 @@ bool ExpressionTreeNode::operator==(const ExpressionTreeNode& node) const {
 }
 
 ExpressionTreeNode& ExpressionTreeNode::operator=(const ExpressionTreeNode& node) {
-    if (operation != NULL)
-        delete operation;
-    operation = node.operation == NULL ? NULL : node.operation->clone();
-    children = node.children;
+    if (&node != this) {
+        if (operation != NULL)
+            delete operation;
+        operation = node.operation == NULL ? NULL : node.operation->clone();
+        children = node.children;
+    }
     return *this;
 }
 
