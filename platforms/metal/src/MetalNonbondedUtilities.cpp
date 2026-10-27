@@ -50,7 +50,7 @@ public:
 };
 
 MetalNonbondedUtilities::MetalNonbondedUtilities(MetalContext& context) : context(context), useCutoff(false), usePeriodic(false), useNeighborList(false), anyExclusions(false), usePadding(true),
-        forceRebuildNeighborList(true), groupFlags(0), canUsePairList(true), tilesAfterReorder(0) {
+        forceRebuildNeighborList(true), groupFlags(0), canUsePairList(true), tilesAfterReorder(0), singlePairsAfterReorder(0) {
     // Decide how many thread blocks to use.
 
     string errorMessage = "Error initializing nonbonded utilities";
@@ -331,9 +331,11 @@ bool MetalNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return false;
     unsigned int* countBuffer = (unsigned int*) interactionCount.getBuffer()->contents();
-    if (context.getStepsSinceReorder() == 0 || tilesAfterReorder == 0)
+    if (context.getStepsSinceReorder() == 0 || tilesAfterReorder == 0) {
         tilesAfterReorder = countBuffer[0];
-    else if (context.getStepsSinceReorder() > 25 && countBuffer[0] > 1.1*tilesAfterReorder)
+		singlePairsAfterReorder = countBuffer[1];
+	}
+    else if (context.getStepsSinceReorder() > 25 && (countBuffer[0] > 1.1*tilesAfterReorder || countBuffer[1] > 2.0*singlePairsAfterReorder))
         context.forceReorder();
     if (countBuffer[0] <= maxTiles && countBuffer[1] <= maxSinglePairs)
         return false;
@@ -366,6 +368,7 @@ bool MetalNonbondedUtilities::updateNeighborListSize() {
     }
     forceRebuildNeighborList = true;
     context.setForcesValid(false);
+    context.reorderAtoms();
     return true;
 }
 

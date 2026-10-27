@@ -330,7 +330,7 @@ private:
     double maxCutoff;
     bool useCutoff, usePeriodic, anyExclusions, usePadding, useNeighborList, forceRebuildNeighborList, canUsePairList, useLargeBlocks, hasInitializedParams;
     int startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags, numBlockSizes, paramStartIndex;
-    unsigned int maxTiles, maxSinglePairs, tilesAfterReorder;
+    unsigned int maxTiles, maxSinglePairs, tilesAfterReorder, singlePairsAfterReorder;
     long long numTiles;
     std::string kernelSource;
 };

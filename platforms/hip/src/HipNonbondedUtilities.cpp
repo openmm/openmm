@@ -59,7 +59,7 @@ public:
 };
 
 HipNonbondedUtilities::HipNonbondedUtilities(HipContext& context) : context(context), useCutoff(false), usePeriodic(false), useNeighborList(false), anyExclusions(false), usePadding(true),
-        pinnedCountBuffer(NULL), forceRebuildNeighborList(true), groupFlags(0), canUsePairList(true), tilesAfterReorder(0) {
+        pinnedCountBuffer(NULL), forceRebuildNeighborList(true), groupFlags(0), canUsePairList(true), tilesAfterReorder(0), singlePairsAfterReorder(0) {
     // Decide how many thread blocks to use.
 
     string errorMessage = "Error initializing nonbonded utilities";
@@ -463,9 +463,11 @@ void HipNonbondedUtilities::computeInteractions(int forceGroups, bool includeFor
 bool HipNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return false;
-    if (context.getStepsSinceReorder() == 0 || tilesAfterReorder == 0)
+    if (context.getStepsSinceReorder() == 0 || tilesAfterReorder == 0) {
         tilesAfterReorder = pinnedCountBuffer[0];
-    else if (context.getStepsSinceReorder() > 25 && pinnedCountBuffer[0] > 1.1*tilesAfterReorder)
+		singlePairsAfterReorder = pinnedCountBuffer[1];
+    }
+    else if (context.getStepsSinceReorder() > 25 && (pinnedCountBuffer[0] > 1.1*tilesAfterReorder || pinnedCountBuffer[1] > 2.0*singlePairsAfterReorder))
         context.forceReorder();
     if (pinnedCountBuffer[0] <= maxTiles && pinnedCountBuffer[1] <= maxSinglePairs)
         return false;
@@ -497,6 +499,7 @@ bool HipNonbondedUtilities::updateNeighborListSize() {
     }
     forceRebuildNeighborList = true;
     context.setForcesValid(false);
+    context.reorderAtoms();
     return true;
 }
 

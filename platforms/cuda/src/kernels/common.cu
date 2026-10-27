@@ -24,11 +24,11 @@
 typedef long long mm_long;
 typedef longlong2 mm_long2;
 typedef longlong3 mm_long3;
-typedef longlong4_16a mm_long4;
+typedef longlong4 mm_long4;
 typedef unsigned long long mm_ulong;
 typedef ulonglong2 mm_ulong2;
 typedef ulonglong3 mm_ulong3;
-typedef ulonglong4_16a mm_ulong4;
+typedef ulonglong4 mm_ulong4;
 
 #define SUPPORTS_64_BIT_ATOMICS 1
 #define SUPPORTS_DOUBLE_PRECISION 1
