@@ -318,7 +318,6 @@ void CommonUpdateStateDataKernel::getEnergyParameterDerivatives(ContextImpl& con
     reduceEnergyParamDerivsKernel->setArg(1, energyParamDerivSum);
     reduceEnergyParamDerivsKernel->setArg(2, (int) derivArray.getSize());
     reduceEnergyParamDerivsKernel->setArg(3, numDerivs);
-    reduceEnergyParamDerivsKernel->setArg(4, workGroupSize);
     reduceEnergyParamDerivsKernel->execute(workGroupSize*numDerivs, workGroupSize);
     vector<double> derivValues;
     energyParamDerivSum.download(derivValues, true);
