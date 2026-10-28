@@ -60,7 +60,7 @@ void CommonUpdateStateDataKernel::initialize(const System& system) {
     ContextSelector selector(cc);
     floatBuffer.initialize<float>(cc, 3*system.getNumParticles(), "floatBuffer");
     map<string, string> defines;
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::copyCoordinateBuffers, defines);
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::copyCoordinateBuffers+CommonKernelSources::reduceEnergyParamDerivs, defines);
     copyFloatKernel = program->createKernel("copyFloatBuffer");
     copyFloatKernel->addArg(floatBuffer);
     copyFloatKernel->addArg();
@@ -72,6 +72,9 @@ void CommonUpdateStateDataKernel::initialize(const System& system) {
         copyDoubleKernel->addArg();
         copyDoubleKernel->addArg(cc.getNumAtoms());
     }
+    reduceEnergyParamDerivsKernel = program->createKernel("reduceEnergyParamDerivs");
+    for (int i = 0; i < 5; i++)
+        reduceEnergyParamDerivsKernel->addArg();
 }
 
 double CommonUpdateStateDataKernel::getTime(const ContextImpl& context) const {
@@ -303,8 +306,22 @@ void CommonUpdateStateDataKernel::getEnergyParameterDerivatives(ContextImpl& con
     if (numDerivs == 0)
         return;
     derivs = cc.getEnergyParamDerivWorkspace();
+    if (!energyParamDerivSum.isInitialized()) {
+        if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision())
+            energyParamDerivSum.initialize<double>(cc, numDerivs, "energyParamDerivSum");
+        else
+            energyParamDerivSum.initialize<float>(cc, numDerivs, "energyParamDerivSum");
+    }
+    ArrayInterface& derivArray = cc.getEnergyParamDerivBuffer();
+    int workGroupSize = min(512, cc.getMaxThreadBlockSize());
+    reduceEnergyParamDerivsKernel->setArg(0, derivArray);
+    reduceEnergyParamDerivsKernel->setArg(1, energyParamDerivSum);
+    reduceEnergyParamDerivsKernel->setArg(2, (int) derivArray.getSize());
+    reduceEnergyParamDerivsKernel->setArg(3, numDerivs);
+    reduceEnergyParamDerivsKernel->setArg(4, workGroupSize);
+    reduceEnergyParamDerivsKernel->execute(workGroupSize*numDerivs, workGroupSize);
     vector<double> derivValues;
-    cc.reduceEnergyParamDerivs(derivValues);
+    energyParamDerivSum.download(derivValues, true);
     for (int i = 0; i < numDerivs; i++)
         derivs[paramDerivNames[i]] += derivValues[i];
 }
