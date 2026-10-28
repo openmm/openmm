@@ -41,6 +41,8 @@ class OPENMM_EXPORT_COMMON ComputeForceInfo {
 public:
     ComputeForceInfo() {
     }
+    virtual ~ComputeForceInfo() {
+    }
     /**
      * Get whether or not two particles have identical force field parameters.
      */
