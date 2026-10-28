@@ -255,72 +255,85 @@ void ReferenceIntegrateDrudeLangevinStepKernel::initialize(const System& system,
 }
 
 void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const DrudeLangevinIntegrator& integrator) {
+    int numParticles = particleInvMass.size();
+    vector<Vec3> xPrime(numParticles);
+    vector<Vec3> oldx(numParticles);
     vector<Vec3>& pos = extractPositions(context);
     vector<Vec3>& vel = extractVelocities(context);
     vector<Vec3>& force = extractForces(context);
-    
-    // Update velocities of ordinary particles.
-    
-    const double vscale = exp(-integrator.getStepSize()*integrator.getFriction());
-    const double fscale = (1-vscale)/integrator.getFriction();
+    const double dt = integrator.getStepSize();
+    const double halfdt = 0.5*dt;
     const double kT = BOLTZ*integrator.getTemperature();
-    const double noisescale = sqrt(2*kT*integrator.getFriction())*sqrt(0.5*(1-vscale*vscale)/integrator.getFriction());
-    for (int index : normalParticles) {
-        double invMass = particleInvMass[index];
-        if (invMass != 0.0) {
-            double sqrtInvMass = sqrt(invMass);
-            for (int j = 0; j < 3; j++)
-                vel[index][j] = vscale*vel[index][j] + fscale*invMass*force[index][j] + noisescale*sqrtInvMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-        }
-    }
-    
-    // Update velocities of Drude particle pairs.
-    
-    const double vscaleDrude = exp(-integrator.getStepSize()*integrator.getDrudeFriction());
-    const double fscaleDrude = (1-vscaleDrude)/integrator.getDrudeFriction();
+    const double friction = integrator.getFriction();
+    const double vscale = exp(-dt*friction);
+    const double noisescale = sqrt(kT*(1-vscale*vscale));
     const double kTDrude = BOLTZ*integrator.getDrudeTemperature();
-    const double noisescaleDrude = sqrt(2*kTDrude*integrator.getDrudeFriction())*sqrt(0.5*(1-vscaleDrude*vscaleDrude)/integrator.getDrudeFriction());
-    for (int i = 0; i < (int) pairParticles.size(); i++) {
-        int p1 = pairParticles[i].first;
-        int p2 = pairParticles[i].second;
-        double mass1fract = pairInvTotalMass[i]/particleInvMass[p1];
-        double mass2fract = pairInvTotalMass[i]/particleInvMass[p2];
-        double sqrtInvTotalMass = sqrt(pairInvTotalMass[i]);
-        double sqrtInvReducedMass = sqrt(pairInvReducedMass[i]);
-        Vec3 cmVel = vel[p1]*mass1fract+vel[p2]*mass2fract;
-        Vec3 relVel = vel[p2]-vel[p1];
-        Vec3 cmForce = force[p1]+force[p2];
-        Vec3 relForce = force[p2]*mass1fract - force[p1]*mass2fract;
-        for (int j = 0; j < 3; j++) {
-            cmVel[j] = vscale*cmVel[j] + fscale*pairInvTotalMass[i]*cmForce[j] + noisescale*sqrtInvTotalMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-            relVel[j] = vscaleDrude*relVel[j] + fscaleDrude*pairInvReducedMass[i]*relForce[j] + noisescaleDrude*sqrtInvReducedMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-        }
-        vel[p1] = cmVel-relVel*mass2fract;
-        vel[p2] = cmVel+relVel*mass1fract;
-    }
+    const double frictionDrude = integrator.getDrudeFriction();
+    const double vscaleDrude = exp(-dt*frictionDrude);
+    const double noisescaleDrude = sqrt(kTDrude*(1-vscaleDrude*vscaleDrude));
 
-    // Update the particle positions.
-    
-    int numParticles = particleInvMass.size();
-    vector<Vec3> xPrime(numParticles);
-    double dt = integrator.getStepSize();
+    // Perform the first part of integration: velocity step.
+
     for (int i = 0; i < numParticles; i++)
         if (particleInvMass[i] != 0.0)
-            xPrime[i] = pos[i]+vel[i]*dt;
-    
-    // Apply constraints.
-    
-    extractConstraints(context).apply(pos, xPrime, particleInvMass, integrator.getConstraintTolerance());
-    
-    // Record the constrained positions and velocities.
-    
-    double dtInv = 1.0/dt;
-    for (int i = 0; i < numParticles; i++) {
+            vel[i] += dt*particleInvMass[i]*force[i];
+
+    // Apply velocity constraints.
+
+    extractConstraints(context).applyToVelocities(pos, vel, particleInvMass, integrator.getConstraintTolerance());
+
+    // Perform the second part of integration: position half step, then interact with heat bath,
+    // then another position half step.
+
+    for (int i = 0; i < numParticles; i++)
+        if (particleInvMass[i] != 0.0)
+            xPrime[i] = pos[i] + vel[i]*halfdt;
+    for (int i : normalParticles) {
         if (particleInvMass[i] != 0.0) {
-            vel[i] = (xPrime[i]-pos[i])*dtInv;
-            pos[i] = xPrime[i];
+            vel[i] = vscale*vel[i] + noisescale*sqrt(particleInvMass[i])*Vec3(
+                    SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
+                    SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
+                    SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
         }
     }
+    for (int i = 0; i < pairParticles.size(); i++) {
+        if (pairInvTotalMass[i] != 0.0) {
+            int p1 = pairParticles[i].first;
+            int p2 = pairParticles[i].second;
+            double mass1fract = pairInvTotalMass[i]/particleInvMass[p1];
+            double mass2fract = pairInvTotalMass[i]/particleInvMass[p2];
+            Vec3 cmVel = vel[p1]*mass1fract+vel[p2]*mass2fract;
+            Vec3 relVel = vel[p2]-vel[p1];
+            cmVel = vscale*cmVel + noisescale*sqrt(pairInvTotalMass[i])*Vec3(
+                    SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
+                    SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
+                    SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+            relVel = vscaleDrude*relVel + noisescaleDrude*sqrt(pairInvReducedMass[i])*Vec3(
+                    SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
+                    SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
+                    SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+            vel[p1] = cmVel-relVel*mass2fract;
+            vel[p2] = cmVel+relVel*mass1fract;
+        }
+    }
+    for (int i = 0; i < numParticles; i++)
+        if (particleInvMass[i] != 0.0) {
+            xPrime[i] += vel[i]*halfdt;
+            oldx[i] = xPrime[i];
+        }
+
+    // Apply position constraints.
+
+    extractConstraints(context).apply(pos, xPrime, particleInvMass, integrator.getConstraintTolerance());
+
+    // Perform the third part of integration: apply constraint forces to velocities, then record
+    // the constrained positions.
+
+    for (int i = 0; i < numParticles; i++)
+        if (particleInvMass[i] != 0.0) {
+            vel[i] += (xPrime[i]-oldx[i])/dt;
+            pos[i] = xPrime[i];
+        }
 
     // Apply hard wall constraints.
 
@@ -378,8 +391,12 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
                     double vBond = hardwallscaleDrude/sqrt(mass1);
                     dotvr1 = -dotvr1*vBond*mass2*invTotalMass/abs(dotvr1);
                     dotvr2 = -dotvr2*vBond*mass1*invTotalMass/abs(dotvr2);
-                    double dr1 = -deltaR*mass2*invTotalMass + deltaT*dotvr1;
-                    double dr2 = deltaR*mass1*invTotalMass + deltaT*dotvr2;
+                    double dr1 = -deltaR*mass2*invTotalMass;
+                    double dr2 = deltaR*mass1*invTotalMass;
+                    if (dotvr1-dotvr2 < 0) {
+                        dr1 += deltaT*dotvr1;
+                        dr2 += deltaT*dotvr2;
+                    }
                     dotvr1 += vbCMass;
                     dotvr2 += vbCMass;
                     pos[p1] += bondDir*dr1;
