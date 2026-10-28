@@ -73,7 +73,7 @@ void CommonUpdateStateDataKernel::initialize(const System& system) {
         copyDoubleKernel->addArg(cc.getNumAtoms());
     }
     reduceEnergyParamDerivsKernel = program->createKernel("reduceEnergyParamDerivs");
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 4; i++)
         reduceEnergyParamDerivsKernel->addArg();
 }
 
