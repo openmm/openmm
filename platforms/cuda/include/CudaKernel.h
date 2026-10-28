@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -76,8 +76,9 @@ protected:
      * 
      * @param value    a pointer to the argument value
      * @param size     the size of the value in bytes
+     * @param type     the type of the value
      */
-    void addPrimitiveArg(const void* value, int size);
+    void addPrimitiveArg(const void* value, int size, const std::type_info& type);
     /**
      * Add a placeholder for an argument without specifying its value.
      */
@@ -93,11 +94,12 @@ protected:
     /**
      * Add an argument to pass the kernel when it is invoked, where the value is a primitive type.
      * 
-     * @param index     the index of the argument to set
+     * @param index    the index of the argument to set
      * @param value    a pointer to the argument value
      * @param size     the size of the value in bytes
+     * @param type     the type of the value
      */
-    void setPrimitiveArg(int index, const void* value, int size);
+    void setPrimitiveArg(int index, const void* value, int size, const std::type_info& type);
 private:
     CudaContext& context;
     CUfunction kernel;

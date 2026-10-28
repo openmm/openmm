@@ -12,11 +12,11 @@ Common Compute
 ##############
 
 Common Compute is not a platform, but it shares many elements of one.  It exists
-to reduce code duplication between the OpenCL and CUDA platforms.  It allows a
-single implementation to be written for most kernels that can be used by both
-platforms.
+to reduce code duplication between the CUDA, HIP, Metal, and OpenCL platforms.
+It allows a single implementation to be written for most classes that can be used
+by all four platforms.
 
-OpenCL and CUDA are very similar to each other.  Their computational models are
+All these frameworks are very similar to each other.  Their computational models are
 nearly identical.  For example, each is based around launching kernels that are
 executed in parallel by many threads.  Each of them groups threads into blocks,
 with more communication and synchronization permitted between the threads
@@ -42,7 +42,7 @@ Here is the corresponding CUDA kernel.
 
     __extern "C" __global__ void addArrays(const float* __restrict__ a,
                                            const float* __restrict__ b,
-                                           _float* __restrict__ c
+                                           float* __restrict__ c
                                            int length) {
         for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < length; i += blockDim.x*gridDim.x)
             c[i] = a[i]+b[i];
@@ -66,8 +66,9 @@ kernel can be compiled equally well either as OpenCL or as CUDA.
 Writing Device Code
 *******************
 
-When compiling kernels with the Common Compute API, the following macros are
-defined.
+When compiling kernels with the Common Compute API, the following macros are defined.
+The definitions in the OpenCL and CUDA platforms are also shown.  HIP and Metal likewise
+define them in appropriate ways.
 
 +-------------------------------+------------------------------------------------------------+--------------------------------------------+
 |Macro                          |OpenCL Definition                                           |CUDA Definition                             |
@@ -81,6 +82,8 @@ defined.
 |:code:`LOCAL_ARG`              |:code:`__local`                                             |                                            |
 +-------------------------------+------------------------------------------------------------+--------------------------------------------+
 |:code:`GLOBAL`                 |:code:`__global`                                            |                                            |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|:code:`PRIVATE`                |                                                            |                                            |
 +-------------------------------+------------------------------------------------------------+--------------------------------------------+
 |:code:`RESTRICT`               |:code:`restrict`                                            |:code:`__restrict__`                        |
 +-------------------------------+------------------------------------------------------------+--------------------------------------------+
@@ -112,27 +115,29 @@ A few other symbols may or may not be defined based on the device you are runnin
 :code:`SUPPORTS_DOUBLE_PRECISION` and :code:`SUPPORTS_64_BIT_ATOMICS`\ .  You
 can use :code:`#ifdef` blocks with these symbols to conditionally compile code
 based on the features supported by the device.  In addition, the CUDA compiler
-defines the symbol :code:`__CUDA_ARCH__`\ , so you can check for this symbol if
-you want to have different code blocks for CUDA and OpenCL.
+defines the symbol :code:`__CUDA_ARCH__`\ , the HIP platform defines the symbol
+:code:`USE_HIP`, the Metal compiler defines the symbol :code:`__METAL_VERSION__`,
+and the OpenCL compiler defines the symbol :code:`__OPENCL_VERSION__`.  You can
+check for these symbols if you want to have different code blocks for different platforms.
 
-Both OpenCL and CUDA define vector types like :code:`int2` and :code:`float4`\ .
+All four frameworks define vector types like :code:`int2` and :code:`float4`\ .
 The types they support are different but overlapping.  When writing common code,
-use only the vector types that are supported by both OpenCL and CUDA: 2, 3, and 4
+use only the vector types that are supported by all of them: 2, 3, and 4
 element vectors of type :code:`short`\ , :code:`int`\ , :code:`float`\ , and
-:code:`double`\ .
+:code:`double`\ .  Also be aware that double precision is not supported on all GPUs.
 
-CUDA uses functions to construct vector values, such as :code:`make_float2(x, y)`\ .
-OpenCL instead uses a typecast like syntax: :code:`(float2) (x, y)`\ .  In common
+CUDA uses functions to construct vector values, such as :code:`make_float2(x, y)`\ ,
+while OpenCL uses a typecast like syntax: :code:`(float2) (x, y)`\ .  In common
 code, use the CUDA style :code:`make_` functions.  OpenMM provides definitions
-of these functions when compiling as OpenCL.
+of these functions on all platforms
 
-In CUDA, vector types are simply data structures.  You can access their elements,
-but not do much more with them.  In contrast, OpenCL's vectors are mathematical
+In CUDA and HIP, vector types are simply data structures.  You can access their elements,
+but not do much more with them.  In contrast, vectors in OpenCL and Metal are mathematical
 types.  All standard math operators are defined for them, as well as geometrical
 functions like :code:`dot()` and :code:`cross()`\ .  When compiling kernels as
-CUDA, OpenMM provides definitions of these operators and functions.
+CUDA or HIP, OpenMM provides definitions of these operators and functions.
 
-OpenCL also supports "swizzle" notation for vectors.  For example, if :code:`f`
+OpenCL and HIP also support "swizzle" notation for vectors.  For example, if :code:`f`
 is a :code:`float4` you can construct a vector of its first three elements
 by writing :code:`f.xyz`\ , or you can swap its first two elements by writing
 :code:`f.xy = f.yx`\ .  Unfortunately, there is no practical way to support this
@@ -141,8 +146,8 @@ the final element from a four component vector is such a common operation, OpenM
 provides a special function for doing it: :code:`trimTo3(f)` is a vector of its
 first three elements.
 
-64 bit integers are another data type that needs special handling.  Both OpenCL
-and CUDA support them, but they use different names for them: :code:`long` in OpenCL,
+64 bit integers are another data type that needs special handling.  All frameworks
+support them, but they use different names for them: :code:`long` in OpenCL,
 :code:`long long` in CUDA.  To work around this inconsistency, OpenMM provides
 the typedefs :code:`mm_long` and :code:`mm_ulong` for signed and unsigned 64 bit
 integers in device code.
@@ -151,19 +156,19 @@ Writing Host Code
 *****************
 
 Host code for Common Compute is very similar to host code for OpenCL or CUDA.
-In fact, most of the classes provided by the OpenCL and CUDA platforms are
+In fact, most of the classes provided by the other platforms are
 subclasses of Common Compute classes.  For example, OpenCLContext and
 CudaContext are both subclasses of ComputeContext.  When writing common code,
 each KernelImpl should expect a ComputeContext to be passed to its constructor.
 By using the common API provided by that abstract class, it can be used for
-either OpenCL or CUDA just based on the particular context passed to it at
+any platform just based on the particular context passed to it at
 runtime.  Similarly, OpenCLNonbondedUtilities and CudaNonbondedUtilities are
 subclasses of the abstract NonbondedUtilities class, and so on.
 
 ArrayInterface is an abstract class defining the interface for arrays stored on
 the device.  OpenCLArray and CudaArray are both subclasses of it.  To simplify
 code that creates and uses arrays, there is also a third subclass called
-ComputeArray.  It acts as a wrapper around an OpenCLArray or CudaArray,
+ComputeArray.  It acts as a wrapper around a platform-specific array class,
 automatically creating an array of the appropriate type for the current
 platform.  In practice, just follow these rules:
 
@@ -175,7 +180,7 @@ platform.  In practice, just follow these rules:
 If you do these two things, all differences between platforms will be handled
 automatically.
 
-OpenCL and CUDA have quite different APIs for compiling and invoking kernels.
+Different frameworks have quite different APIs for compiling and invoking kernels.
 To hide these differences, OpenMM provides a set of abstract classes.  To compile
 device code, pass the source code to :code:`compileProgram()` on the ComputeContext.
 This returns a ComputeProgram.  You can then call its :code:`createKernel()`
@@ -185,14 +190,14 @@ and invoking the kernel.
 Sometimes you need to refer to vector types in host code, such as to set the
 value for a kernel argument or to access the elements of an array.  OpenCL and
 CUDA both define types for them, but they have different names, and in any case
-you want to avoid using OpenCL-specific or CUDA-specific types in common code.
+you want to avoid using framework-specific types in common code.
 OpenMM therefore defines types for vectors in host code.  They have the same
 names as the corresponding types in device code, only with the prefix :code:`mm_`\ ,
 for example :code:`mm_int2` and :code:`mm_float4`\ .
 
 Three component vectors need special care in this context, because the platforms
-define them differently.  In OpenCL, a three component vector is essentially a
-four component vector whose last component is ignored.  For example,
+define them differently.  In OpenCL or Metal, a three component vector is essentially
+a four component vector whose last component is ignored.  For example,
 :code:`sizeof(float3)` is 12 in CUDA but 16 in OpenCL.  Within a kernel this
 distinction can usually be ignored, but when communicating between host and
 device it becomes vitally important.  It is generally best to avoid storing

@@ -313,8 +313,8 @@ void CommonIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
     double hardwallscaleDrude = sqrt(BOLTZ*integrator.getDrudeTemperature());
     if (stepSize != prevStepSize) {
         if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
-            mm_double2 ss = mm_double2(0, stepSize);
-            integration.getStepSize().upload(&ss);
+            vector<mm_double2> ss = {mm_double2(0, stepSize)};
+            integration.getStepSize().upload(ss, true);
         }
         else {
             mm_float2 ss = mm_float2(0, (float) stepSize);
@@ -323,24 +323,24 @@ void CommonIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
         prevStepSize = stepSize;
     }
     if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
-            kernel1->setArg(6, vscale);
-            kernel1->setArg(7, fscale);
-            kernel1->setArg(8, noisescale);
-            kernel1->setArg(9, vscaleDrude);
-            kernel1->setArg(10, fscaleDrude);
-            kernel1->setArg(11, noisescaleDrude);
-            hardwallKernel->setArg(5, maxDrudeDistance);
-            hardwallKernel->setArg(6, hardwallscaleDrude);
+        kernel1->setArg(6, vscale);
+        kernel1->setArg(7, fscale);
+        kernel1->setArg(8, noisescale);
+        kernel1->setArg(9, vscaleDrude);
+        kernel1->setArg(10, fscaleDrude);
+        kernel1->setArg(11, noisescaleDrude);
+        hardwallKernel->setArg(5, maxDrudeDistance);
+        hardwallKernel->setArg(6, hardwallscaleDrude);
     }
     else {
-            kernel1->setArg(6, (float) vscale);
-            kernel1->setArg(7, (float) fscale);
-            kernel1->setArg(8, (float) noisescale);
-            kernel1->setArg(9, (float) vscaleDrude);
-            kernel1->setArg(10, (float) fscaleDrude);
-            kernel1->setArg(11, (float) noisescaleDrude);
-            hardwallKernel->setArg(5, (float) maxDrudeDistance);
-            hardwallKernel->setArg(6, (float) hardwallscaleDrude);
+        kernel1->setArg(6, (float) vscale);
+        kernel1->setArg(7, (float) fscale);
+        kernel1->setArg(8, (float) noisescale);
+        kernel1->setArg(9, (float) vscaleDrude);
+        kernel1->setArg(10, (float) fscaleDrude);
+        kernel1->setArg(11, (float) noisescaleDrude);
+        hardwallKernel->setArg(5, (float) maxDrudeDistance);
+        hardwallKernel->setArg(6, (float) hardwallscaleDrude);
     }
 
     // Call the first integration kernel.
@@ -450,7 +450,7 @@ void CommonIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const Drud
         if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
             vector<mm_double2> stepSizeVec(1);
             stepSizeVec[0] = mm_double2(dt, dt);
-            cc.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
+            cc.getIntegrationUtilities().getStepSize().upload(stepSizeVec, true);
         }
         else {
             vector<mm_float2> stepSizeVec(1);

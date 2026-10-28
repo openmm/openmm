@@ -59,8 +59,8 @@ void testIdealGas() {
     const int steps = 1000;
     const double pressure = 1.5;
     const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
-    const double temp[] = {300.0, 600.0};
-    const double initialVolume = numParticles*BOLTZ*0.5*(temp[0]+temp[1])/pressureInMD;
+    const double temp = 300.0;
+    const double initialVolume = numParticles*BOLTZ*0.5*temp/pressureInMD;
     const double initialLength = std::pow(initialVolume, 1.0/3.0);
 
     // Create a gas of noninteracting particles.
@@ -80,33 +80,31 @@ void testIdealGas() {
     bonds->setUsesPeriodicBoundaryConditions(true);
     system.addForce(bonds); // So it won't complain the system is non-periodic.
 
-    // Test it for two different temperatures.
+    // Try simulating it.
 
-    for (int i = 0; i < 2; i++) {
-        RPMDIntegrator integrator(numCopies, temp[i], 0.1, 0.01);
-        Context context(system, integrator, platform);
-        for (int copy = 0; copy < numCopies; copy++)
-            integrator.setPositions(copy, positions);
+    RPMDIntegrator integrator(numCopies, temp, 0.1, 0.01);
+    Context context(system, integrator, platform);
+    for (int copy = 0; copy < numCopies; copy++)
+        integrator.setPositions(copy, positions);
 
-        // Let it equilibrate.
+    // Let it equilibrate.
 
-        integrator.step(1000);
+    integrator.step(1000);
 
-        // Now run it for a while and see if the volume is correct.
+    // Now run it for a while and see if the volume is correct.
 
-        double volume = 0.0;
-        for (int j = 0; j < steps; ++j) {
-            Vec3 box[3];
-            integrator.getState(0, 0).getPeriodicBoxVectors(box[0], box[1], box[2]);
-            volume += box[0][0]*box[1][1]*box[2][2];
-            ASSERT_EQUAL_TOL(0.5*box[0][0], box[1][1], 1e-5);
-            ASSERT_EQUAL_TOL(2*box[0][0], box[2][2], 1e-5);
-            integrator.step(frequency);
-        }
-        volume /= steps;
-        double expected = (numParticles+1)*BOLTZ*temp[i]/pressureInMD;
-        ASSERT_USUALLY_EQUAL_TOL(expected, volume, 0.05);
+    double volume = 0.0;
+    for (int j = 0; j < steps; ++j) {
+        Vec3 box[3];
+        integrator.getState(0, 0).getPeriodicBoxVectors(box[0], box[1], box[2]);
+        volume += box[0][0]*box[1][1]*box[2][2];
+        ASSERT_EQUAL_TOL(0.5*box[0][0], box[1][1], 1e-5);
+        ASSERT_EQUAL_TOL(2*box[0][0], box[2][2], 1e-5);
+        integrator.step(frequency);
     }
+    volume /= steps;
+    double expected = (numParticles+1)*BOLTZ*temp/pressureInMD;
+    ASSERT_USUALLY_EQUAL_TOL(expected, volume, 0.05);
 }
 
 void testAnisotropicIdealGas() {

@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2026 Stanford University and the Authors.      *
  * Portions copyright (c) 2020 Advanced Micro Devices, Inc.                   *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -65,10 +65,10 @@ void HipKernel::addArrayArg(ArrayInterface& value) {
     setArrayArg(index, value);
 }
 
-void HipKernel::addPrimitiveArg(const void* value, int size) {
+void HipKernel::addPrimitiveArg(const void* value, int size, const type_info& type) {
     int index = arrayArgs.size();
     addEmptyArg();
-    setPrimitiveArg(index, value, size);
+    setPrimitiveArg(index, value, size, type);
 }
 
 void HipKernel::addEmptyArg() {
@@ -81,7 +81,7 @@ void HipKernel::setArrayArg(int index, ArrayInterface& value) {
     arrayArgs[index] = &context.unwrap(value);
 }
 
-void HipKernel::setPrimitiveArg(int index, const void* value, int size) {
+void HipKernel::setPrimitiveArg(int index, const void* value, int size, const type_info& type) {
     ASSERT_VALID_INDEX(index, primitiveArgs);
     if (size > sizeof(double4))
         throw OpenMMException("Unsupported value type for kernel argument");

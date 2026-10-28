@@ -57,8 +57,9 @@ public:
      * @param size              the number of elements in the array
      * @param elementSize       the size of each element in bytes
      * @param name              the name of the array
+     * @param type              the type of values the array contains
      */
-    void initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name);
+    void initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name, const std::type_info* type=nullptr);
     /**
      * Initialize this object.  The template argument is the data type of each array element.
      *
@@ -68,7 +69,7 @@ public:
      */
     template <class T>
     void initialize(ComputeContext& context, size_t size, const std::string& name) {
-        initialize(context, size, sizeof(T), name);
+        initialize(context, size, sizeof(T), name, &typeid(T));
     }
     /**
      * Recreate the internal storage to have a different size.
@@ -116,9 +117,7 @@ public:
      *                 have restrictions on non-blocking copies, such as that the source data must be
      *                 in page-locked memory.
      */
-    void upload(const void* data, bool blocking=true) {
-        uploadSubArray(data, 0, getSize(), blocking);
-    }
+    void upload(const void* data, bool blocking=true);
     /**
      * Copy values from host memory to a subset of the array.
      * 
@@ -145,6 +144,10 @@ public:
      * @param dest     the destination array to copy to
      */
     void copyTo(ArrayInterface& dest) const;
+    /**
+     * Get whether this array contains pseudo-double precision values in df64 format.
+     */
+    bool containsDF64() const;
 private:
     ArrayInterface* impl;
 };

@@ -439,6 +439,7 @@ bool OpenCLNonbondedUtilities::updateNeighborListSize() {
     }
     forceRebuildNeighborList = true;
     context.setForcesValid(false);
+    context.reorderAtoms();
     return true;
 }
 

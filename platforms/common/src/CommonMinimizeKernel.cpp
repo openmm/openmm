@@ -83,16 +83,15 @@ void CommonMinimizeKernel::execute(ContextImpl& context, double tolerance, int m
         // Load system and integrator information.
 
         mixedIsDouble = cc.getUseMixedPrecision() || cc.getUseDoublePrecision();
-        if (mixedIsDouble && !cc.getSupports64BitGlobalAtomics()) {
-            throw OpenMMException("Double precision is not supported on devices that do not support 64 bit atomic operations");
-        }
-        elementSize = mixedIsDouble ? sizeof(double) : sizeof(float);
         threadBlockSize = cc.getMaxThreadBlockSize();
         pinnedMemory = cc.getPinnedBuffer();
 
         // Initialize all device-side arrays and compile kernels.
 
-        setup(context);
+        if (mixedIsDouble)
+            setup<double>(context);
+        else
+            setup<float>(context);
         isSetup = true;
     }
 
@@ -153,28 +152,29 @@ void CommonMinimizeKernel::execute(ContextImpl& context, double tolerance, int m
     }
 }
 
+template <class ELEMENT_TYPE>
 void CommonMinimizeKernel::setup(ContextImpl& context) {
     // Initialize arrays.
 
     if (numConstraints) {
         constraintIndices.initialize<mm_int2>(cc, numConstraints, "constraintIndices");
-        constraintDistances.initialize(cc, numConstraints, elementSize, "constraintDistances");
+        constraintDistances.initialize<ELEMENT_TYPE>(cc, numConstraints, "constraintDistances");
     }
-    xInit.initialize(cc, numVariables, elementSize, "xInit");
-    x.initialize(cc, numVariables, elementSize, "x");
-    xPrev.initialize(cc, numVariables, elementSize, "xPrev");
-    grad.initialize(cc, numVariables, elementSize, "grad");
-    gradPrev.initialize(cc, numVariables, elementSize, "gradPrev");
-    dir.initialize(cc, numVariables, elementSize, "dir");
-    alpha.initialize(cc, numVectors + 1, elementSize, "alpha");
-    scale.initialize(cc, numVectors, elementSize, "scale");
-    xDiff.initialize(cc, numVectors * numVariables, elementSize, "xDiff");
-    gradDiff.initialize(cc, numVectors * numVariables, elementSize, "gradDiff");
+    xInit.initialize<ELEMENT_TYPE>(cc, numVariables, "xInit");
+    x.initialize<ELEMENT_TYPE>(cc, numVariables, "x");
+    xPrev.initialize<ELEMENT_TYPE>(cc, numVariables, "xPrev");
+    grad.initialize<ELEMENT_TYPE>(cc, numVariables, "grad");
+    gradPrev.initialize<ELEMENT_TYPE>(cc, numVariables, "gradPrev");
+    dir.initialize<ELEMENT_TYPE>(cc, numVariables, "dir");
+    alpha.initialize<ELEMENT_TYPE>(cc, numVectors + 1, "alpha");
+    scale.initialize<ELEMENT_TYPE>(cc, numVectors, "scale");
+    xDiff.initialize<ELEMENT_TYPE>(cc, numVectors * numVariables, "xDiff");
+    gradDiff.initialize<ELEMENT_TYPE>(cc, numVectors * numVariables, "gradDiff");
     returnFlag.initialize<int>(cc, 1, "returnFlag");
-    returnValue.initialize(cc, 1, elementSize, "returnValue");
-    gradNorm.initialize(cc, 1, elementSize, "gradNorm");
-    lineSearchData.initialize(cc, 3, elementSize, "lineSearchData");
-    lineSearchDataBackup.initialize(cc, 3, elementSize, "lineSearchDataBackup");
+    returnValue.initialize<ELEMENT_TYPE>(cc, 1, "returnValue");
+    gradNorm.initialize<ELEMENT_TYPE>(cc, 1, "gradNorm");
+    lineSearchData.initialize<ELEMENT_TYPE>(cc, 3, "lineSearchData");
+    lineSearchDataBackup.initialize<ELEMENT_TYPE>(cc, 3, "lineSearchDataBackup");
 
     // Compile kernels and set arguments.
 
@@ -700,6 +700,11 @@ void CommonMinimizeKernel::downloadReturnFlagStart() {
 }
 
 void CommonMinimizeKernel::downloadReturnValueStart() {
+    if (mixedIsDouble && !cc.getSupportsDoublePrecision()) {
+        // The value is represented as df64 on the GPU.  Downloading involves translations, so it can't be done
+        // asynchronously.
+        return;
+    }
     downloadStartEvent->enqueue();
     cc.setCurrentQueue(downloadQueue);
     downloadStartEvent->queueWait(downloadQueue);
@@ -714,6 +719,13 @@ int CommonMinimizeKernel::downloadReturnFlagFinish() {
 }
 
 double CommonMinimizeKernel::downloadReturnValueFinish() {
+    if (mixedIsDouble && !cc.getSupportsDoublePrecision()) {
+        // The value is represented as df64 on the GPU.  Downloading involves translations, so it can't be done
+        // asynchronously.
+        vector<double> value;
+        returnValue.download(value, true);
+        return value[0];
+    }
     downloadFinishEvent->wait();
     if (mixedIsDouble) {
         return *(double*) pinnedMemory;
@@ -725,9 +737,9 @@ double CommonMinimizeKernel::downloadReturnValueFinish() {
 
 double CommonMinimizeKernel::downloadReturnValueSync() {
     if (mixedIsDouble) {
-        double hostReturnValue;
-        returnValue.download(&hostReturnValue);
-        return hostReturnValue;
+        vector<double> hostReturnValue;
+        returnValue.download(hostReturnValue, true);
+        return hostReturnValue[0];
     }
     else {
         float hostReturnValue;
@@ -738,9 +750,9 @@ double CommonMinimizeKernel::downloadReturnValueSync() {
 
 double CommonMinimizeKernel::downloadGradNormSync() {
     if (mixedIsDouble) {
-        double hostGradNorm;
-        gradNorm.download(&hostGradNorm);
-        return hostGradNorm;
+        vector<double> hostGradNorm;
+        gradNorm.download(hostGradNorm, true);
+        return hostGradNorm[0];
     }
     else {
         float hostGradNorm;

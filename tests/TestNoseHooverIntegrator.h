@@ -328,9 +328,6 @@ void testHarmonicOscillator() {
         double kinetic_energy = state.getKineticEnergy();
         double temp = kinetic_energy/(0.5*3*BOLTZ);
         mean_temperature = (i*mean_temperature + temp)/(i+1);
-        double PE = state.getPotentialEnergy();
-        double time = state.getTime();
-        double energy = kinetic_energy + PE + integrator.computeHeatBathEnergy();
     }
     ASSERT_EQUAL_TOL(temperature, mean_temperature, 0.02);
 }

@@ -74,7 +74,7 @@ void MetalUpdateStateDataKernel::setVelocities(ContextImpl& context, const std::
 }
 
 void MetalCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
-    commonInitialize(system, force, false, false, mc.getPlatformData().deterministicForces, mc.getPlatformData().useCpuPme);
+    commonInitialize(system, force, true, false, mc.getPlatformData().deterministicForces, mc.getPlatformData().useCpuPme);
 }
 
 void MetalCalcConstantPotentialForceKernel::initialize(const System& system, const ConstantPotentialForce& force) {
