@@ -189,6 +189,8 @@ class Topology(object):
         Atom
              the newly created Atom
         """
+        if residue.chain.topology is not self:
+            raise ValueError('The residue must belong to this topology')
         if len(residue._atoms) > 0 and self._numAtoms != residue._atoms[-1].index+1:
             raise ValueError('All atoms within a residue must be contiguous')
         if id is None:
