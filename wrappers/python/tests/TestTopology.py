@@ -59,5 +59,28 @@ class TestTopology(unittest.TestCase):
         self.assertEqual(internal_bonds, [ (atom_B1, atom_B2) ])
         self.assertEqual(external_bonds, [ (atom_A1, atom_B1), (atom_B2, atom_C1) ])
 
+    def test_create_standard_bonds_skips_plus_boundary(self):
+        """A + cross-residue definition must be ignored for the final residue."""
+        xml = '<Residues><Residue name="X"><Bond from="+A" to="B"/></Residue></Residues>'
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.xml') as handle:
+            handle.write(xml)
+            handle.flush()
+            Topology._standardBonds.pop('X', None)
+            Topology.loadBondDefinitions(handle.name)
+
+            topology = Topology()
+            chain = topology.addChain()
+            residues = []
+            for _ in range(2):
+                residue = topology.addResidue('X', chain)
+                topology.addAtom('A', elem.carbon, residue)
+                topology.addAtom('B', elem.carbon, residue)
+                residues.append(residue)
+
+            topology.createStandardBonds()
+            bonds = list(topology.bonds())
+            self.assertEqual(len(bonds), 1)
+            self.assertEqual({bonds[0][0], bonds[0][1]}, {residues[0]._atoms[1], residues[1]._atoms[0]})
+
 if __name__ == '__main__':
     unittest.main()

@@ -339,7 +339,7 @@ class Topology(object):
                         if bond[0].startswith('-') and i > 0:
                             fromResidue = i-1
                             fromAtom = bond[0][1:]
-                        elif bond[0].startswith('+') and i <len(chain._residues):
+                        elif bond[0].startswith('+') and i < len(chain._residues)-1:
                             fromResidue = i+1
                             fromAtom = bond[0][1:]
                         else:
@@ -348,7 +348,7 @@ class Topology(object):
                         if bond[1].startswith('-') and i > 0:
                             toResidue = i-1
                             toAtom = bond[1][1:]
-                        elif bond[1].startswith('+') and i <len(chain._residues):
+                        elif bond[1].startswith('+') and i < len(chain._residues)-1:
                             toResidue = i+1
                             toAtom = bond[1][1:]
                         else:
