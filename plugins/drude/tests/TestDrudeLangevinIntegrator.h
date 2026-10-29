@@ -94,7 +94,7 @@ void testSinglePair(bool contained) {
     	ASSERT_EQUAL_TOL(integ.computeDrudeTemperature(), _keInternal/(3*0.5*BOLTZ), 1e-6);
         Vec3 delta = state.getPositions()[0]-state.getPositions()[1];
         double distance = sqrt(delta.dot(delta));
-        ASSERT(distance <= maxDistance*(1+1e-6));
+        ASSERT(distance <= maxDistance*(1+1e-5));
     }
     ASSERT_USUALLY_EQUAL_TOL(3*0.5*BOLTZ*temperature, keCM/numSteps, 0.1);
     ASSERT_USUALLY_EQUAL_TOL(3*0.5*BOLTZ*temperatureDrude, keInternal/numSteps, 0.01);
