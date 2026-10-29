@@ -31,6 +31,7 @@
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/System.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/VirtualSite.h"
 #include <iostream>
 
@@ -109,9 +110,33 @@ void testCreateSystem() {
     }
 }
 
+void testConstraintParticleValidation() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    bool threw = false;
+    try { system.addConstraint(-1, 0, 1.0); }
+    catch (const OpenMMException&) { threw = true; }
+    ASSERT_EQUAL(true, threw);
+    threw = false;
+    try { system.addConstraint(0, 2, 1.0); }
+    catch (const OpenMMException&) { threw = true; }
+    ASSERT_EQUAL(true, threw);
+    threw = false;
+    try { system.addConstraint(0, 0, 1.0); }
+    catch (const OpenMMException&) { threw = true; }
+    ASSERT_EQUAL(true, threw);
+    int constraint = system.addConstraint(0, 1, 1.0);
+    threw = false;
+    try { system.setConstraintParameters(constraint, 1, 1, 1.0); }
+    catch (const OpenMMException&) { threw = true; }
+    ASSERT_EQUAL(true, threw);
+}
+
 int main() {
     try {
         testCreateSystem();
+        testConstraintParticleValidation();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

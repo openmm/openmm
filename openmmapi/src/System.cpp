@@ -74,6 +74,10 @@ const VirtualSite& System::getVirtualSite(int index) const {
 }
 
 int System::addConstraint(int particle1, int particle2, double distance) {
+    if (particle1 < 0 || particle1 >= (int) masses.size() || particle2 < 0 || particle2 >= (int) masses.size())
+        throw OpenMMException("Illegal particle index in constraint");
+    if (particle1 == particle2)
+        throw OpenMMException("A constraint cannot connect a particle to itself");
     constraints.push_back(ConstraintInfo(particle1, particle2, distance));
     return constraints.size()-1;
 }
@@ -87,6 +91,10 @@ void System::getConstraintParameters(int index, int& particle1, int& particle2, 
 
 void System::setConstraintParameters(int index, int particle1, int particle2, double distance) {
     ASSERT_VALID_INDEX(index, constraints);
+    if (particle1 < 0 || particle1 >= (int) masses.size() || particle2 < 0 || particle2 >= (int) masses.size())
+        throw OpenMMException("Illegal particle index in constraint");
+    if (particle1 == particle2)
+        throw OpenMMException("A constraint cannot connect a particle to itself");
     constraints[index].particle1 = particle1;
     constraints[index].particle2 = particle2;
     constraints[index].distance = distance;
