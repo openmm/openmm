@@ -59,5 +59,16 @@ class TestTopology(unittest.TestCase):
         self.assertEqual(internal_bonds, [ (atom_B1, atom_B2) ])
         self.assertEqual(external_bonds, [ (atom_A1, atom_B1), (atom_B2, atom_C1) ])
 
+    def test_add_atom_rejects_noninteger_formal_charge(self):
+        """Atom formal charges must be integer-valued or None."""
+        topology = Topology()
+        chain = topology.addChain()
+        residue = topology.addResidue('X', chain)
+        for charge in (1.5, float('nan'), float('inf'), '1'):
+            with self.assertRaises(TypeError):
+                topology.addAtom('A', element.carbon, residue, formalCharge=charge)
+        atom = topology.addAtom('A', element.carbon, residue, formalCharge=-1)
+        self.assertEqual(atom.formalCharge, -1)
+
 if __name__ == '__main__':
     unittest.main()

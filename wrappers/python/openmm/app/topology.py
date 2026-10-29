@@ -31,6 +31,7 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from collections import namedtuple
+from numbers import Integral
 import os
 import xml.etree.ElementTree as etree
 from openmm.vec3 import Vec3
@@ -189,6 +190,8 @@ class Topology(object):
         Atom
              the newly created Atom
         """
+        if formalCharge is not None and not isinstance(formalCharge, Integral):
+            raise TypeError('formalCharge must be an integer or None')
         if len(residue._atoms) > 0 and self._numAtoms != residue._atoms[-1].index+1:
             raise ValueError('All atoms within a residue must be contiguous')
         if id is None:
