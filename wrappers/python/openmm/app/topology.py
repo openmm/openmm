@@ -359,6 +359,10 @@ class Topology(object):
                             atom2 = atomMaps[toResidue][toAtom]
                             if (atom1, atom2) not in existingBonds and (atom2, atom1) not in existingBonds:
                                 self.addBond(atom1, atom2)
+                                # Keep the set in sync with bonds added during this
+                                # call, so repeated definitions in a custom XML file
+                                # cannot create parallel duplicate bonds.
+                                existingBonds.add((atom1, atom2))
 
     def createDisulfideBonds(self, positions):
         """Identify disulfide bonds based on proximity and add them to the

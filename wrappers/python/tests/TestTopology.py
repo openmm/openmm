@@ -5,6 +5,7 @@ from openmm.app import *
 from openmm import *
 from openmm.unit import *
 import openmm.app.element as elem
+import tempfile
 if sys.version_info >= (3, 0):
     from io import StringIO
 else:
@@ -58,6 +59,26 @@ class TestTopology(unittest.TestCase):
         self.assertEqual(all_bonds, [ (atom_A1, atom_B1), (atom_B1, atom_B2), (atom_B2, atom_C1) ])
         self.assertEqual(internal_bonds, [ (atom_B1, atom_B2) ])
         self.assertEqual(external_bonds, [ (atom_A1, atom_B1), (atom_B2, atom_C1) ])
+
+    def test_create_standard_bonds_deduplicates_custom_definitions(self):
+        """Repeated custom XML bond definitions must not create parallel bonds."""
+        xml = '<Residues><Residue name="DUP"><Bond from="A" to="B"/><Bond from="A" to="B"/><Bond from="B" to="A"/></Residue></Residues>'
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.xml') as handle:
+            handle.write(xml)
+            handle.flush()
+            Topology._standardBonds.pop('DUP', None)
+            Topology.loadBondDefinitions(handle.name)
+
+            topology = Topology()
+            chain = topology.addChain()
+            residue = topology.addResidue('DUP', chain)
+            atom_a = topology.addAtom('A', elem.carbon, residue)
+            atom_b = topology.addAtom('B', elem.carbon, residue)
+            topology.createStandardBonds()
+
+            bonds = list(topology.bonds())
+            self.assertEqual(len(bonds), 1)
+            self.assertEqual(set(bonds[0]), {atom_a, atom_b})
 
 if __name__ == '__main__':
     unittest.main()
