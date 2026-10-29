@@ -56,6 +56,8 @@ double System::getParticleMass(int index) const {
 
 void System::setParticleMass(int index, double mass) {
     ASSERT_VALID_INDEX(index, masses);
+    if (!std::isfinite(mass) || mass < 0)
+        throw OpenMMException("Particle mass must be finite and non-negative");
     masses[index] = mass;
 }
 

@@ -31,6 +31,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "Vec3.h"
+#include "OpenMMException.h"
+#include <cmath>
 #include <vector>
 #include "internal/windowsExport.h"
 
@@ -82,6 +84,8 @@ public:
      * @return the index of the particle that was added
      */
     int addParticle(double mass) {
+        if (!std::isfinite(mass) || mass < 0)
+            throw OpenMMException("Particle mass must be finite and non-negative");
         masses.push_back(mass);
         return masses.size()-1;
     }

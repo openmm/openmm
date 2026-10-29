@@ -109,9 +109,31 @@ void testCreateSystem() {
     }
 }
 
+void testParticleMassValidation() {
+    for (double mass : {-1.0, NAN, INFINITY, -INFINITY}) {
+        System system;
+        bool threw = false;
+        try { system.addParticle(mass); }
+        catch (const OpenMMException&) { threw = true; }
+        ASSERT_EQUAL(true, threw);
+    }
+
+    System system;
+    system.addParticle(1.0);
+    for (double mass : {-1.0, NAN, INFINITY, -INFINITY}) {
+        bool threw = false;
+        try { system.setParticleMass(0, mass); }
+        catch (const OpenMMException&) { threw = true; }
+        ASSERT_EQUAL(true, threw);
+        ASSERT_EQUAL_TOL(1.0, system.getParticleMass(0), 1e-15);
+    }
+    system.addParticle(0.0); // zero remains valid for virtual sites/fixed particles
+}
+
 int main() {
     try {
         testCreateSystem();
+        testParticleMassValidation();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
