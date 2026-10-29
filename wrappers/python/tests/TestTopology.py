@@ -35,6 +35,16 @@ class TestTopology(unittest.TestCase):
         self.assertIs(Aromatic, pickle.loads(pickle.dumps(Aromatic)))
         self.assertIs(Amide, pickle.loads(pickle.dumps(Amide)))
 
+    def test_add_atom_rejects_foreign_residue(self):
+        first = Topology()
+        first_residue = first.addResidue("A", first.addChain())
+        second = Topology()
+        foreign_residue = second.addResidue("B", second.addChain())
+        with self.assertRaises(ValueError):
+            first.addAtom("C", element.carbon, foreign_residue)
+        self.assertEqual(first.getNumAtoms(), 0)
+        self.assertEqual(second.getNumAtoms(), 0)
+
     def test_residue_bonds(self):
         """Test retrieving bonds for a residue produces expected results."""
         # Create a test topology
