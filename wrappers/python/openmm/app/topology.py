@@ -32,6 +32,7 @@ __version__ = "1.0"
 
 from collections import namedtuple
 import os
+import math
 import xml.etree.ElementTree as etree
 from openmm.vec3 import Vec3
 from openmm.app.internal.singleton import Singleton
@@ -253,6 +254,8 @@ class Topology(object):
                     # units into one Quantity holding a plain numeric matrix.
                     vectors = [[component.value_in_unit(nanometers) for component in vector] for vector in vectors]
                 vectors = vectors*nanometers
+            if any(not math.isfinite(vectors[i][j].value_in_unit(nanometers)) for i in range(3) for j in range(3)):
+                raise ValueError("Periodic box vectors must contain only finite values.")
             if vectors[0][1] != 0*nanometers or vectors[0][2] != 0*nanometers:
                 raise ValueError("First periodic box vector must be parallel to x.");
             if vectors[1][2] != 0*nanometers:

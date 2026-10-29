@@ -1,6 +1,7 @@
 import pickle
 import sys
 import unittest
+import math
 from openmm.app import *
 from openmm import *
 from openmm.unit import *
@@ -58,6 +59,13 @@ class TestTopology(unittest.TestCase):
         self.assertEqual(all_bonds, [ (atom_A1, atom_B1), (atom_B1, atom_B2), (atom_B2, atom_C1) ])
         self.assertEqual(internal_bonds, [ (atom_B1, atom_B2) ])
         self.assertEqual(external_bonds, [ (atom_A1, atom_B1), (atom_B2, atom_C1) ])
+
+    def test_periodic_box_vectors_reject_nonfinite_values(self):
+        """Periodic box vectors must not accept NaN or infinity."""
+        topology = Topology()
+        for value in (math.nan, math.inf, -math.inf):
+            with self.assertRaises(ValueError):
+                topology.setPeriodicBoxVectors((Vec3(value, 0, 0), Vec3(0, 1, 0), Vec3(0, 0, 1)))
 
 if __name__ == '__main__':
     unittest.main()
