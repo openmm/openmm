@@ -144,6 +144,23 @@ class TestPdbxFile(unittest.TestCase):
             self.assertEqual(bond1[0].name, bond2[0].name)
             self.assertEqual(bond1[1].name, bond2[1].name)
 
+    def testFormalCharges(self):
+        """Test preserving formal charges through a PDBx round-trip."""
+        topology = Topology()
+        chain = topology.addChain()
+        residue = topology.addResidue('LIG', chain, id='1')
+        topology.addAtom('N', elem.nitrogen, residue, id='1', formalCharge=1)
+        topology.addAtom('O', elem.oxygen, residue, id='2', formalCharge=-1)
+        topology.addAtom('C', elem.carbon, residue, id='3')
+        positions = [(0, 0, 0), (1.2, 0, 0), (2.4, 0, 0)]*angstrom
+
+        output = StringIO()
+        PDBxFile.writeFile(topology, positions, output)
+        input = StringIO(output.getvalue())
+        pdbx = PDBxFile(input)
+
+        self.assertEqual([1, -1, None], [atom.formalCharge for atom in pdbx.topology.atoms()])
+
     def testChemCompBonds(self):
         """Test creating bonds based on chem_comp_bond records."""
         pdb = PDBxFile('systems/6mvz.cif')

@@ -112,6 +112,7 @@ class PDBxFile(object):
         xCol = atomData.getAttributeIndex('Cartn_x')
         yCol = atomData.getAttributeIndex('Cartn_y')
         zCol = atomData.getAttributeIndex('Cartn_z')
+        formalChargeCol = atomData.getAttributeIndex('pdbx_formal_charge')
         lastChainId = None
         lastAltChainId = None
         lastResId = None
@@ -169,7 +170,10 @@ class PDBxFile(object):
                 atomName = row[atomNameCol]
                 if atomName in atomReplacements:
                     atomName = atomReplacements[atomName]
-                atom = top.addAtom(atomName, element, res, row[atomIdCol])
+                formalCharge = None
+                if formalChargeCol != -1 and row[formalChargeCol] not in ('.', '?', ''):
+                    formalCharge = int(row[formalChargeCol])
+                atom = top.addAtom(atomName, element, res, row[atomIdCol], formalCharge=formalCharge)
                 atomTable[atomKey] = atom
                 atomsInResidue.add(atomName)
             else:
@@ -485,8 +489,9 @@ class PDBxFile(object):
                         symbol = atom.element.symbol
                     else:
                         symbol = '?'
-                    line = "%s  %5d %-3s %-4s . %-4s %s ? %5s %s %10.4f %10.4f %10.4f  0.0  0.0  ?  ?  ?  ?  ?  .  %5s %4s %s %4s %5d"
+                    formalCharge = '.' if atom.formalCharge is None else str(atom.formalCharge)
+                    line = "%s  %5d %-3s %-4s . %-4s %s ? %5s %s %10.4f %10.4f %10.4f  0.0  0.0  ?  ?  ?  ?  ?  %s  %5s %4s %s %4s %5d"
                     print(line % (recordName, atomIndex, symbol, atom.name, res.name, chainName, resId, resIC, coords[0], coords[1], coords[2],
-                                  resId, res.name, chainName, atom.name, modelIndex), file=file)
+                                  formalCharge, resId, res.name, chainName, atom.name, modelIndex), file=file)
                     posIndex += 1
                     atomIndex += 1
