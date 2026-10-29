@@ -67,7 +67,7 @@ KERNEL void applyPileThermostat(GLOBAL mixed4* velm, GLOBAL float4* random, unsi
             float4 rand1 = random[randomIndex+k];
             float4 rand2 = (isCenter ? make_float4(0) : random[randomIndex+NUM_COPIES-k]);
             vreal[indexInBlock] = c1*vreal[indexInBlock] + c3*make_mixed3(rand1.x, rand1.y, rand1.z);
-            vimag[indexInBlock] = c1*vimag[indexInBlock] + c3*(indexInBlock < NUM_COPIES/2 ? make_mixed3(rand2.x, rand2.y, rand2.z) : make_mixed3(-rand2.x, -rand2.y, -rand2.z));
+            vimag[indexInBlock] = c1*vimag[indexInBlock] + c3*(indexInBlock <= NUM_COPIES/2 ? make_mixed3(rand2.x, rand2.y, rand2.z) : make_mixed3(-rand2.x, -rand2.y, -rand2.z));
         }
         SYNC_THREADS;
         
@@ -188,7 +188,11 @@ KERNEL void advanceVelocities(GLOBAL mixed4* velm, GLOBAL mm_long* force, mixed 
 /**
  * Copy a set of positions and velocities from the integrator's arrays to the context.
  */
-KERNEL void copyDataToContext(GLOBAL mixed4* srcVel, GLOBAL mixed4* dstVel, GLOBAL mixed4* srcPos, GLOBAL real4* dstPos, GLOBAL int* order, int copy) {
+KERNEL void copyDataToContext(GLOBAL mixed4* srcVel, GLOBAL mixed4* dstVel, GLOBAL mixed4* srcPos, GLOBAL real4* dstPos, GLOBAL int* order, int copy
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL real4* RESTRICT posqCorrection
+#endif
+) {
     const int base = copy*PADDED_NUM_ATOMS;
     for (int particle = GLOBAL_ID; particle < NUM_ATOMS; particle += GLOBAL_SIZE) {
         int index = base+order[particle];
@@ -197,6 +201,9 @@ KERNEL void copyDataToContext(GLOBAL mixed4* srcVel, GLOBAL mixed4* dstVel, GLOB
         dstPos[particle].x = posq.x;
         dstPos[particle].y = posq.y;
         dstPos[particle].z = posq.z;
+#ifdef USE_MIXED_PRECISION
+        posqCorrection[particle] = make_real4(posq.x-(real) posq.x, posq.y-(real) posq.y, posq.z-(real) posq.z, 0);
+#endif
     }
 }
 
@@ -204,7 +211,11 @@ KERNEL void copyDataToContext(GLOBAL mixed4* srcVel, GLOBAL mixed4* dstVel, GLOB
  * Copy a set of positions, velocities, and forces from the context to the integrator's arrays.
  */
 KERNEL void copyDataFromContext(GLOBAL mm_long* srcForce, GLOBAL mm_long* dstForce, GLOBAL mixed4* srcVel, GLOBAL mixed4* dstVel,
-        GLOBAL real4* srcPos, GLOBAL mixed4* dstPos, GLOBAL int* order, int copy) {
+        GLOBAL real4* srcPos, GLOBAL mixed4* dstPos, GLOBAL int* order, int copy
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL const real4* RESTRICT posqCorrection
+#endif
+) {
     const int base = copy*PADDED_NUM_ATOMS;
     for (int particle = GLOBAL_ID; particle < NUM_ATOMS; particle += GLOBAL_SIZE) {
         int index = order[particle];
@@ -213,10 +224,16 @@ KERNEL void copyDataFromContext(GLOBAL mm_long* srcForce, GLOBAL mm_long* dstFor
         dstForce[base*3+index+PADDED_NUM_ATOMS*2] = srcForce[particle+PADDED_NUM_ATOMS*2];
         dstVel[base+index] = srcVel[particle];
         real4 posq = srcPos[particle];
+#ifdef USE_MIXED_PRECISION
+        real4 correction = posqCorrection[particle];
+        dstPos[base+index].x = posq.x + (mixed) correction.x;
+        dstPos[base+index].y = posq.y + (mixed) correction.y;
+        dstPos[base+index].z = posq.z + (mixed) correction.z;
+#else
         dstPos[base+index].x = posq.x;
         dstPos[base+index].y = posq.y;
         dstPos[base+index].z = posq.z;
-
+#endif
     }
 }
 
