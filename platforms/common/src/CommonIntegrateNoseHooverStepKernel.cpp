@@ -535,7 +535,7 @@ std::pair<double, double> CommonIntegrateNoseHooverStepKernel::computeMaskedKine
 
         reduceEnergyKernel->addArg(energyBuffer);
         reduceEnergyKernel->addArg(kineticEnergyBuffer);
-        reduceEnergyKernel->addArg((int) energyBuffer.getSize());
+        reduceEnergyKernel->addArg();
     }
 
     cc.clearBuffer(energyBuffer);
