@@ -213,6 +213,8 @@ class Topology(object):
         order : int=None
             The bond order, or None if it is not specified
         """
+        if atom1.residue.chain.topology is not self or atom2.residue.chain.topology is not self:
+            raise ValueError('Both atoms must belong to this topology')
         self._bonds.append(Bond(atom1, atom2, type, order))
 
     def chains(self):
