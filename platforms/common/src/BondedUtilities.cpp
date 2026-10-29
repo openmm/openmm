@@ -111,15 +111,27 @@ void BondedUtilities::initialize(const System& system) {
         }
     }
     for (int i = 0; i < (int) arguments.size(); i++)
-        s<<", GLOBAL "<<argTypes[i]<<"* customArg"<<(i+1);
+        s<<", GLOBAL const "<<argTypes[i]<<"* RESTRICT customArg"<<(i+1);
     if (energyParameterDerivatives.size() > 0)
         s<<", GLOBAL mixed* RESTRICT energyParamDerivs";
     s<<") {\n";
     s<<"mixed energy = 0;\n";
     for (int i = 0; i < energyParameterDerivatives.size(); i++)
         s<<"mixed energyParamDeriv"<<i<<" = 0;\n";
-    for (int force = 0; force < numForces; force++)
-        s<<createForceSource(force, forceAtoms[force].size(), forceAtoms[force][0].size(), forceGroup[force], forceSource[force]);
+    maxBonds = 0;
+    vector<int> startBond(numForces), endBond(numForces);
+    for (int f = 0; f < numForces; f++) {
+        startBond[f] = maxBonds;
+        maxBonds += (((int) forceAtoms[f].size() + 127) / 128) * 128;
+        endBond[f] = maxBonds;
+    }
+    s<<"for (unsigned int globalIndex = GLOBAL_ID; globalIndex < "<<maxBonds<<"; globalIndex += GLOBAL_SIZE) {\n";
+    for (int force = 0; force < numForces; force++) {
+        s<<(force > 0 ? "else " : "")<<"if (globalIndex < "<<endBond[force]<<") {\n";
+        s<<"    unsigned int index = globalIndex - "<<startBond[force]<<";\n";
+        s<<createForceSource(force, forceAtoms[force].size(), forceAtoms[force][0].size(), forceGroup[force], forceSource[force])<<"}\n";
+    }
+    s<<"}\n";
     s<<"energyBuffer[GLOBAL_ID] += energy;\n";
     const vector<string>& allParamDerivNames = context.getEnergyParamDerivNames();
     int numDerivs = allParamDerivNames.size();
@@ -137,12 +149,10 @@ void BondedUtilities::initialize(const System& system) {
 }
 
 string BondedUtilities::createForceSource(int forceIndex, int numBonds, int numAtoms, int group, const string& computeForce) {
-    maxBonds = max(maxBonds, numBonds);
     string suffix1[] = {""};
     string suffix4[] = {".x", ".y", ".z", ".w"};
     stringstream s;
-    s<<"if ((groups&"<<(1<<group)<<") != 0)\n";
-    s<<"for (unsigned int index = GLOBAL_ID; index < "<<numBonds<<"; index += GLOBAL_SIZE) {\n";
+    s<<"if (index < "<<numBonds<<" && (groups&"<<(1<<group)<<") != 0) {\n";
     int startAtom = 0;
     for (int i = 0; i < (int) atomIndices[forceIndex].size(); i++) {
         int indexWidth = atomIndices[forceIndex][i].getElementSize()/4;
@@ -161,7 +171,7 @@ string BondedUtilities::createForceSource(int forceIndex, int numBonds, int numA
         s<<"    ATOMIC_ADD(&forceBuffer[atom"<<(i+1)<<"], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".x));\n";
         s<<"    ATOMIC_ADD(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".y));\n";
         s<<"    ATOMIC_ADD(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS*2], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".z));\n";
-        s<<"    MEM_FENCE;\n";
+        s<<"#ifndef __CUDA_ARCH__\n    MEM_FENCE;\n#endif\n";
     }
     s<<"}\n";
     return s.str();
@@ -204,5 +214,8 @@ void BondedUtilities::computeInteractions(int groups) {
         kernel->setArg(7, mm_float4((float) b[0], (float) b[1], (float) b[2], 0.0f));
         kernel->setArg(8, mm_float4((float) c[0], (float) c[1], (float) c[2], 0.0f));
     }
-    kernel->execute(maxBonds);
+    int blockSize = min(128, kernel->getMaxBlockSize());
+    if (context.getEnergyBuffer().getSize() < context.getNumThreadBlocks()*blockSize)
+        blockSize = min(blockSize, (int) ComputeContext::ThreadBlockSize);
+    kernel->execute(maxBonds, blockSize);
 }

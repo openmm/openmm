@@ -206,7 +206,7 @@ static void setClearBufferArg(ComputeKernel kernel, int index, ArrayInterface& a
 void ComputeContext::clearBuffer(ArrayInterface& array) {
     int words = array.getSize()*array.getElementSize()/4;
     setClearBufferArg(clearBufferKernel, 0, array);
-    clearBufferKernel->execute(words, 128);
+    clearBufferKernel->execute(max(1, (words+3)/4), 128);
 }
 
 void ComputeContext::addAutoclearBuffer(ArrayInterface& array) {
@@ -217,7 +217,7 @@ static int getClearKernelSize(ArrayInterface** arrays, int count) {
     int size = 128;
     for (int i = 0; i < count; i++) {
         int words = arrays[i]->getSize()*arrays[i]->getElementSize()/4;
-        size = max(size, words);
+        size = max(size, (words+3)/4);
     }
     return size;
 }

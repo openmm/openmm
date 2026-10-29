@@ -447,6 +447,8 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
                 pmeGrid2.initialize(cc, gridElements, 2*elementSize, "pmeGrid2");
                 if (useFixedPointChargeSpreading)
                     cc.addAutoclearBuffer(pmeGrid2);
+                else if (usePmeQueue && hasCoulomb)
+                    cc.clearBuffer(pmeGrid1);
                 else
                     cc.addAutoclearBuffer(pmeGrid1);
                 pmeBsplineModuliX.initialize(cc, gridSizeX, elementSize, "pmeBsplineModuliX");
@@ -462,13 +464,21 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
                 pmeEnergyBuffer.initialize(cc, cc.getNumThreadBlocks()*ComputeContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
                 cc.clearBuffer(pmeEnergyBuffer);
                 sort = cc.createSort(new SortTrait(), cc.getNumAtoms());
+                class PmeSortReorderListener : public ComputeContext::ReorderListener {
+                public:
+                    PmeSortReorderListener(int& stepsToSort) : stepsToSort(stepsToSort) {}
+                    void execute() override { stepsToSort = 0; }
+                private:
+                    int& stepsToSort;
+                };
+                cc.addReorderListener(new PmeSortReorderListener(stepsToSort));
                 fft = cc.createFFT(gridSizeX, gridSizeY, gridSizeZ, true);
                 if (doLJPME)
                     dispersionFft = cc.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
                 this->usePmeQueue = usePmeQueue;
                 if (usePmeQueue) {
                     pmeDefines["USE_PME_STREAM"] = "1";
-                    pmeQueue = cc.createQueue();
+                    pmeQueue = cc.createPriorityQueue();
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
                     if (recipForceGroup < 0)
                         recipForceGroup = force.getForceGroup();
@@ -563,34 +573,121 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
 
     // Add code to subtract off the reciprocal part of excluded interactions.
 
-    if ((nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) && pmeio == NULL) {
-        int numContexts = cc.getNumContexts();
+    bool hasPmeExclusions = (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME);
+    int numContexts = cc.getNumContexts();
+    bool fusePmeExclusions = (hasPmeExclusions && pmeio == NULL && numContexts == 1 && usePosqCharges && !doLJPME &&
+            force.getNumParticleParameterOffsets() == 0 && force.getNumExceptionParameterOffsets() == 0 &&
+            cc.getL2CacheSize() > 0 && (size_t) cc.getPaddedNumAtoms()*40 > (size_t) cc.getL2CacheSize());
+    if (hasPmeExclusions && pmeio == NULL) {
         int startIndex = cc.getContextIndex()*force.getNumExceptions()/numContexts;
         int endIndex = (cc.getContextIndex()+1)*force.getNumExceptions()/numContexts;
         int numExclusions = endIndex-startIndex;
         if (numExclusions > 0) {
-            paramsDefines["HAS_EXCLUSIONS"] = "1";
-            vector<vector<int> > atoms(numExclusions, vector<int>(2));
-            exclusionAtoms.initialize<mm_int2>(cc, numExclusions, "exclusionAtoms");
-            exclusionParams.initialize<mm_float4>(cc, numExclusions, "exclusionParams");
-            vector<mm_int2> exclusionAtomsVec(numExclusions);
-            for (int i = 0; i < numExclusions; i++) {
-                int j = i+startIndex;
-                exclusionAtomsVec[i] = mm_int2(exclusions[j].first, exclusions[j].second);
-                atoms[i][0] = exclusions[j].first;
-                atoms[i][1] = exclusions[j].second;
+            if (fusePmeExclusions) {
+                vector<vector<int> > pureExclusions, pairAtoms, triangleAtoms;
+                vector<vector<pair<int, int> > > atomExcl(force.getNumParticles());
+                for (int i = 0; i < numExclusions; i++) {
+                    int j = i+startIndex;
+                    if (exceptionIndex[j] < 0) {
+                        if (exclusions[j].first == exclusions[j].second) {
+                            pairAtoms.push_back({exclusions[j].first, exclusions[j].second});
+                            continue;
+                        }
+                        int idx = (int) pureExclusions.size();
+                        pureExclusions.push_back({exclusions[j].first, exclusions[j].second});
+                        atomExcl[exclusions[j].first].push_back(make_pair(exclusions[j].second, idx));
+                        atomExcl[exclusions[j].second].push_back(make_pair(exclusions[j].first, idx));
+                    }
+                }
+                vector<bool> usedExcl(pureExclusions.size(), false);
+                for (int a = 0; a < force.getNumParticles(); a++) {
+                    if (atomExcl[a].size() != 2)
+                        continue;
+                    int b = atomExcl[a][0].first;
+                    int idx1 = atomExcl[a][0].second;
+                    int c = atomExcl[a][1].first;
+                    int idx2 = atomExcl[a][1].second;
+                    if (b == c || usedExcl[idx1] || usedExcl[idx2] || atomExcl[b].size() != 2 || atomExcl[c].size() != 2)
+                        continue;
+                    for (auto& p : atomExcl[b])
+                        if (p.first == c && !usedExcl[p.second]) {
+                            usedExcl[idx1] = usedExcl[idx2] = usedExcl[p.second] = true;
+                            triangleAtoms.push_back({a, b, c});
+                            break;
+                        }
+                }
+                for (int i = 0; i < (int) pureExclusions.size(); i++)
+                    if (!usedExcl[i])
+                        pairAtoms.push_back(pureExclusions[i]);
+                map<string, string> replacements;
+                replacements["EWALD_ALPHA"] = cc.doubleToString(alpha);
+                replacements["TWO_OVER_SQRT_PI"] = cc.doubleToString(2.0/sqrt(M_PI));
+                replacements["ONE_4PI_EPS0"] = cc.doubleToString(ONE_4PI_EPS0);
+                replacements["APPLY_PERIODIC"] = force.getExceptionsUsePeriodicBoundaryConditions() ? "APPLY_PERIODIC_TO_DELTA(delta)" : "";
+                string pmeSub =
+                    "#define SUB_PME_PAIR(posA, posB, fA, fB) { \\\n"
+                    "    real3 delta = make_real3(posB.x-posA.x, posB.y-posA.y, posB.z-posA.z); \\\n"
+                    "    APPLY_PERIODIC \\\n"
+                    "    const real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z; \\\n"
+                    "    const real qq = (real) (ONE_4PI_EPS0*posA.w*posB.w); \\\n"
+                    "    const real invR = (r2 > (real) 0) ? RSQRT(r2) : (real) 0; \\\n"
+                    "    const real alphaR = EWALD_ALPHA*r2*invR; \\\n"
+                    "    if (alphaR > 1e-6f) { \\\n"
+                    "        const real erfAlphaR = ERF(alphaR); \\\n"
+                    "        const real prefactor = qq*invR; \\\n"
+                    "        delta *= -prefactor*(erfAlphaR-alphaR*EXP(-alphaR*alphaR)*TWO_OVER_SQRT_PI)*invR*invR; \\\n"
+                    "        fA -= delta; \\\n"
+                    "        fB += delta; \\\n"
+                    "        energy -= prefactor*erfAlphaR; \\\n"
+                    "    } \\\n"
+                    "    else { \\\n"
+                    "        energy -= TWO_OVER_SQRT_PI*EWALD_ALPHA*qq; \\\n"
+                    "    } \\\n"
+                    "}\n";
+                if (!pairAtoms.empty() && force.getIncludeDirectSpace()) {
+                    string pairSrc = pmeSub +
+                        "real3 force1 = make_real3(0);\n"
+                        "real3 force2 = make_real3(0);\n"
+                        "SUB_PME_PAIR(pos1, pos2, force1, force2)\n"
+                        "#undef SUB_PME_PAIR\n";
+                    cc.getBondedUtilities().addInteraction(pairAtoms, cc.replaceStrings(pairSrc, replacements), force.getForceGroup());
+                }
+                if (!triangleAtoms.empty() && force.getIncludeDirectSpace()) {
+                    string triSrc = pmeSub +
+                        "real3 force1 = make_real3(0);\n"
+                        "real3 force2 = make_real3(0);\n"
+                        "real3 force3 = make_real3(0);\n"
+                        "SUB_PME_PAIR(pos1, pos2, force1, force2)\n"
+                        "SUB_PME_PAIR(pos1, pos3, force1, force3)\n"
+                        "SUB_PME_PAIR(pos2, pos3, force2, force3)\n"
+                        "#undef SUB_PME_PAIR\n";
+                    cc.getBondedUtilities().addInteraction(triangleAtoms, cc.replaceStrings(triSrc, replacements), force.getForceGroup());
+                }
             }
-            exclusionAtoms.upload(exclusionAtomsVec);
-            map<string, string> replacements;
-            replacements["PARAMS"] = cc.getBondedUtilities().addArgument(exclusionParams, "float4");
-            replacements["EWALD_ALPHA"] = cc.doubleToString(alpha);
-            replacements["TWO_OVER_SQRT_PI"] = cc.doubleToString(2.0/sqrt(M_PI));
-            replacements["DO_LJPME"] = doLJPME ? "1" : "0";
-            replacements["USE_PERIODIC"] = force.getExceptionsUsePeriodicBoundaryConditions() ? "1" : "0";
-            if (doLJPME)
-                replacements["EWALD_DISPERSION_ALPHA"] = cc.doubleToString(dispersionAlpha);
-            if (force.getIncludeDirectSpace())
-                cc.getBondedUtilities().addInteraction(atoms, cc.replaceStrings(CommonKernelSources::pmeExclusions, replacements), force.getForceGroup());
+            else {
+                paramsDefines["HAS_EXCLUSIONS"] = "1";
+                vector<vector<int> > atoms(numExclusions, vector<int>(2));
+                exclusionAtoms.initialize<mm_int2>(cc, numExclusions, "exclusionAtoms");
+                exclusionParams.initialize<mm_float4>(cc, numExclusions, "exclusionParams");
+                vector<mm_int2> exclusionAtomsVec(numExclusions);
+                for (int i = 0; i < numExclusions; i++) {
+                    int j = i+startIndex;
+                    exclusionAtomsVec[i] = mm_int2(exclusions[j].first, exclusions[j].second);
+                    atoms[i][0] = exclusions[j].first;
+                    atoms[i][1] = exclusions[j].second;
+                }
+                exclusionAtoms.upload(exclusionAtomsVec);
+                map<string, string> replacements;
+                replacements["PARAMS"] = cc.getBondedUtilities().addArgument(exclusionParams, "float4");
+                replacements["EWALD_ALPHA"] = cc.doubleToString(alpha);
+                replacements["TWO_OVER_SQRT_PI"] = cc.doubleToString(2.0/sqrt(M_PI));
+                replacements["DO_LJPME"] = doLJPME ? "1" : "0";
+                replacements["USE_PERIODIC"] = force.getExceptionsUsePeriodicBoundaryConditions() ? "1" : "0";
+                if (doLJPME)
+                    replacements["EWALD_DISPERSION_ALPHA"] = cc.doubleToString(dispersionAlpha);
+                if (force.getIncludeDirectSpace())
+                    cc.getBondedUtilities().addInteraction(atoms, cc.replaceStrings(CommonKernelSources::pmeExclusions, replacements), force.getForceGroup());
+            }
         }
     }
 
@@ -624,7 +721,6 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
 
     // Initialize the exceptions.
 
-    int numContexts = cc.getNumContexts();
     int startIndex = cc.getContextIndex()*exceptions.size()/numContexts;
     int endIndex = (cc.getContextIndex()+1)*exceptions.size()/numContexts;
     int numExceptions = endIndex-startIndex;
@@ -645,6 +741,12 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
         map<string, string> replacements;
         replacements["APPLY_PERIODIC"] = (usePeriodic && force.getExceptionsUsePeriodicBoundaryConditions() ? "1" : "0");
         replacements["PARAMS"] = cc.getBondedUtilities().addArgument(exceptionParams, "float4");
+        replacements["INCLUDE_PME_EXCLUSIONS"] = fusePmeExclusions ? "1" : "0";
+        if (fusePmeExclusions) {
+            replacements["EWALD_ALPHA"] = cc.doubleToString(alpha);
+            replacements["TWO_OVER_SQRT_PI"] = cc.doubleToString(2.0/sqrt(M_PI));
+            replacements["ONE_4PI_EPS0"] = cc.doubleToString(ONE_4PI_EPS0);
+        }
         if (force.getIncludeDirectSpace())
             cc.getBondedUtilities().addInteraction(atoms, cc.replaceStrings(CommonKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
     }
@@ -977,7 +1079,10 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 }
                 pmeGridIndexKernel->execute(cc.getNumAtoms());
                 sort->sort(pmeAtomGridIndex);
-                stepsToSort = (cc.getNumAtoms() > 15000) ? 1 : 3;
+                if (deviceIsCpu || cc.getUseDoublePrecision())
+                    stepsToSort = (cc.getNumAtoms() > 15000) ? 1 : 3;
+                else
+                    stepsToSort = 15;
             }
             else
                 stepsToSort--;
@@ -992,7 +1097,7 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 pmeSpreadChargeKernel->setArg(8, recipBoxVectorsFloat[1]);
                 pmeSpreadChargeKernel->setArg(9, recipBoxVectorsFloat[2]);
             }
-            pmeSpreadChargeKernel->execute(cc.getNumAtoms());
+            pmeSpreadChargeKernel->execute(PmeOrder*cc.getNumAtoms());
             if (useFixedPointChargeSpreading)
                 pmeFinishSpreadChargeKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
             fft->execFFT(pmeGrid1, pmeGrid2, true);
@@ -1014,7 +1119,7 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             }
             if (includeEnergy)
                 pmeEvalEnergyKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
-            pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
+            pmeConvolutionKernel->execute(gridSizeX*gridSizeY*(gridSizeZ/2+1));
             fft->execFFT(pmeGrid2, pmeGrid1, false);
             setPeriodicBoxArgs(cc, pmeInterpolateForceKernel, 3);
             if (cc.getUseDoublePrecision()) {
@@ -1062,7 +1167,7 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 pmeDispersionSpreadChargeKernel->setArg(8, recipBoxVectorsFloat[1]);
                 pmeDispersionSpreadChargeKernel->setArg(9, recipBoxVectorsFloat[2]);
             }
-            pmeDispersionSpreadChargeKernel->execute(cc.getNumAtoms());
+            pmeDispersionSpreadChargeKernel->execute(PmeOrder*cc.getNumAtoms());
             if (useFixedPointChargeSpreading)
                 pmeDispersionFinishSpreadChargeKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
             dispersionFft->execFFT(pmeGrid1, pmeGrid2, true);
@@ -1086,7 +1191,7 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 cc.clearBuffer(pmeEnergyBuffer);
             if (includeEnergy)
                 pmeDispersionEvalEnergyKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
-            pmeDispersionConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
+            pmeDispersionConvolutionKernel->execute(dispersionGridSizeX*dispersionGridSizeY*(dispersionGridSizeZ/2+1));
             dispersionFft->execFFT(pmeGrid2, pmeGrid1, false);
             setPeriodicBoxArgs(cc, pmeDispersionInterpolateForceKernel, 3);
             if (cc.getUseDoublePrecision()) {
@@ -1106,6 +1211,8 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         }
         if (usePmeQueue) {
             pmeSyncEvent->enqueue();
+            if (hasCoulomb && !useFixedPointChargeSpreading)
+                cc.clearBuffer(pmeGrid1);
             cc.restoreDefaultQueue();
         }
     }

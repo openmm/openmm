@@ -278,6 +278,44 @@ void testParallelComputation() {
     ASSERT(fabs(state1.getPotentialEnergy()-state3.getPotentialEnergy()) > 0.1);
 }
 
+void testManyBondsEnergyAndDerivatives() {
+    // Verify energy and parameter-derivative accumulation when the number of bonds exceeds
+    // numThreadBlocks*ThreadBlockSize on a pure bonded system without NonbondedForce.
+    const int numParticles = 512;
+    const int numBonds = 25000;
+    System system;
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        positions[i] = Vec3(0.1*i, 0.03*(i%7), 0.02*(i%11));
+    }
+    CustomBondForce* force = new CustomBondForce("scale*0.5*k*(r-r0)^2");
+    force->addGlobalParameter("scale", 1.5);
+    force->addEnergyParameterDerivative("scale");
+    force->addPerBondParameter("r0");
+    force->addPerBondParameter("k");
+    double expectedDeriv = 0.0;
+    for (int b = 0; b < numBonds; b++) {
+        int p1 = b % numParticles;
+        int p2 = (b*7 + 1 + b/numParticles) % numParticles;
+        if (p1 == p2)
+            p2 = (p2 + 1) % numParticles;
+        double r0 = 0.15 + 0.01*(b%5);
+        double k = 10.0 + (b%3);
+        force->addBond(p1, p2, {r0, k});
+        Vec3 d = positions[p1] - positions[p2];
+        double r = sqrt(d.dot(d));
+        expectedDeriv += 0.5*k*(r-r0)*(r-r0);
+    }
+    system.addForce(force);
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    State state = context.getState(State::Energy | State::ParameterDerivatives);
+    ASSERT_EQUAL_TOL(1.5*expectedDeriv, state.getPotentialEnergy(), 1e-4*expectedDeriv);
+    ASSERT_EQUAL_TOL(expectedDeriv, state.getEnergyParameterDerivatives().at("scale"), 1e-4*expectedDeriv);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -289,6 +327,7 @@ int main(int argc, char* argv[]) {
         testInconsistentParameters();
         testPeriodic();
         testEnergyParameterDerivatives();
+        testManyBondsEnergyAndDerivatives();
         runPlatformTests();
     }
     catch(const exception& e) {

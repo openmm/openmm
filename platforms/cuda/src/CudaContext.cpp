@@ -640,6 +640,19 @@ ComputeQueue CudaContext::createQueue() {
     return shared_ptr<ComputeQueueImpl>(new CudaQueue());
 }
 
+ComputeQueue CudaContext::createPriorityQueue() {
+    ContextSelector selector(*this);
+    int leastPriority = 0, greatestPriority = 0;
+    CUresult result = cuCtxGetStreamPriorityRange(&leastPriority, &greatestPriority);
+    if (result != CUDA_SUCCESS)
+        throw OpenMMException("Error querying CUDA stream priority range: "+getErrorString(result));
+    CUstream stream;
+    result = cuStreamCreateWithPriority(&stream, CU_STREAM_NON_BLOCKING, greatestPriority);
+    if (result != CUDA_SUCCESS)
+        throw OpenMMException("Error creating CUDA stream: "+getErrorString(result));
+    return shared_ptr<ComputeQueueImpl>(new CudaQueue(stream, true));
+}
+
 CUstream CudaContext::getCurrentStream() {
     return dynamic_cast<CudaQueue*>(currentQueue.get())->getStream();
 }
@@ -778,4 +791,10 @@ void CudaContext::ensureCudaInitialized() {
         CHECK_RESULT2(cuInit(0), "Error initializing CUDA");
         hasInitializedCuda = true;
     }
+}
+
+int CudaContext::getL2CacheSize() const {
+    int l2 = 0;
+    cuDeviceGetAttribute(&l2, CU_DEVICE_ATTRIBUTE_L2_CACHE_SIZE, device);
+    return l2;
 }

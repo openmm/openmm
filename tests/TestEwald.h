@@ -39,6 +39,7 @@
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
+#include <map>
 #include <vector>
 
 using namespace OpenMM;
@@ -468,6 +469,99 @@ void testNeutralizingPlasmaCorrection(NonbondedForce::NonbondedMethod method, bo
     ASSERT_EQUAL_TOL(energy3, energy4, 1e-4);
 }
 
+void testWaterAndNeutralPME() {
+    // Exercise coalesced PME charge spreading, separable force interpolation,
+    // priority PME queue overlap, neutral atoms, 1-4 exceptions, and both
+    // floating-point and fixed-point charge spreading against ReferencePlatform.
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(3.2, 0, 0), Vec3(0, 3.3, 0), Vec3(0, 0, 3.4));
+    NonbondedForce* nb = new NonbondedForce();
+    nb->setNonbondedMethod(NonbondedForce::PME);
+    nb->setCutoffDistance(1.0);
+    nb->setEwaldErrorTolerance(1e-5);
+    system.addForce(nb);
+
+    vector<Vec3> positions;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(7, sfmt);
+    vector<pair<int, int> > bonds;
+    for (int w = 0; w < 30; w++) {
+        int base = system.getNumParticles();
+        for (int k = 0; k < 3; k++) {
+            system.addParticle(k == 0 ? 16.0 : 1.0);
+            nb->addParticle(k == 0 ? -0.834 : 0.417, k == 0 ? 0.315 : 0.1, k == 0 ? 0.636 : 0.0);
+        }
+        Vec3 o(0.05 + 0.85*(w%3), 0.05 + 0.85*((w/3)%3), 0.05 + 0.7*(w/9));
+        positions.insert(positions.end(), {o, o + Vec3(0.09572, 0.0, 0.0), o + Vec3(-0.024, 0.0927, 0.0)});
+        bonds.push_back({base, base+1});
+        bonds.push_back({base, base+2});
+    }
+    for (int i = 0; i < 8; i++) {
+        system.addParticle(12.0);
+        nb->addParticle(0.0, 0.34, 0.36);
+        positions.push_back(Vec3(genrand_real2(sfmt)*3.0, genrand_real2(sfmt)*3.0, genrand_real2(sfmt)*3.0));
+    }
+    int chainBase = system.getNumParticles();
+    const double chainCharges[5] = {0.3, -0.2, 0.1, -0.3, 0.1};
+    for (int i = 0; i < 5; i++) {
+        system.addParticle(12.0);
+        nb->addParticle(chainCharges[i], 0.32, 0.25);
+        positions.push_back(Vec3(1.5 + 0.14*i, 1.5 + 0.05*(i%2), 1.5));
+        if (i > 0)
+            bonds.push_back({chainBase+i-1, chainBase+i});
+    }
+    nb->createExceptionsFromBonds(bonds, 0.5, 0.5);
+
+    ReferencePlatform refPlatform;
+    VerletIntegrator intRef(0.0005);
+    VerletIntegrator intPlat(0.0005);
+    Context ctxRef(system, intRef, refPlatform);
+    Context ctxPlat(system, intPlat, platform);
+    ctxRef.setPositions(positions);
+    ctxPlat.setPositions(positions);
+    for (int step = 0; step < 18; step++) {
+        if (step < 5 || step >= 14) {
+            State stateRef = ctxRef.getState(State::Forces | State::Energy);
+            State statePlat = ctxPlat.getState(State::Forces | State::Energy);
+            ASSERT_EQUAL_TOL(stateRef.getPotentialEnergy(), statePlat.getPotentialEnergy(), 1e-3);
+            for (int i = 0; i < system.getNumParticles(); i++)
+                ASSERT_EQUAL_VEC(stateRef.getForces()[i], statePlat.getForces()[i], 1e-2);
+        }
+        intRef.step(1);
+        intPlat.step(1);
+    }
+
+    string detProp;
+    for (const auto& name : platform.getPropertyNames())
+        if (name.find("DeterministicForces") != string::npos)
+            detProp = name;
+    if (!detProp.empty()) {
+        map<string, string> props = {{detProp, "true"}};
+        VerletIntegrator intDetRef(0.0005);
+        VerletIntegrator intDetPlat(0.0005);
+        VerletIntegrator intDetFresh(0.0005);
+        Context ctxDetRef(system, intDetRef, refPlatform);
+        Context ctxDetPlat(system, intDetPlat, platform, props);
+        Context ctxDetFresh(system, intDetFresh, platform, props);
+        ctxDetRef.setPositions(positions);
+        ctxDetPlat.setPositions(positions);
+        intDetRef.step(18);
+        intDetPlat.step(18);
+        State statePlat = ctxDetPlat.getState(State::Positions | State::Forces | State::Energy);
+        ctxDetRef.setPositions(statePlat.getPositions());
+        ctxDetFresh.setPositions(statePlat.getPositions());
+        State stateRef = ctxDetRef.getState(State::Forces | State::Energy);
+        State stateFresh = ctxDetFresh.getState(State::Forces | State::Energy);
+        ASSERT_EQUAL_TOL(stateRef.getPotentialEnergy(), statePlat.getPotentialEnergy(), 1e-3);
+        for (int i = 0; i < system.getNumParticles(); i++) {
+            ASSERT_EQUAL_VEC(stateRef.getForces()[i], statePlat.getForces()[i], 1e-2);
+            ASSERT_EQUAL(stateFresh.getForces()[i][0], statePlat.getForces()[i][0]);
+            ASSERT_EQUAL(stateFresh.getForces()[i][1], statePlat.getForces()[i][1]);
+            ASSERT_EQUAL(stateFresh.getForces()[i][2], statePlat.getForces()[i][2]);
+        }
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -486,6 +580,7 @@ int main(int argc, char* argv[]) {
             testNeutralizingPlasmaCorrection(NonbondedForce::PME, offset);
             testNeutralizingPlasmaCorrection(NonbondedForce::LJPME, offset);
         }
+        testWaterAndNeutralPME();
         runPlatformTests();
     }
     catch(const exception& e) {

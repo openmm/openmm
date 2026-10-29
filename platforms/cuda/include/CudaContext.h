@@ -167,6 +167,10 @@ public:
      */
     ComputeQueue createQueue();
     /**
+     * Create a high-priority ComputeQueue for latency-sensitive work.
+     */
+    ComputeQueue createPriorityQueue();
+    /**
      * Get the stream currently being used for execution.
      */
     CUstream getCurrentStream();
@@ -291,6 +295,10 @@ public:
     int getMaxThreadBlockSize() const {
         return 1024;
     }
+    /**
+     * Get the size of the device's L2 cache in bytes.
+     */
+    int getL2CacheSize() const;
     /**
      * Get whether the device being used is a CPU.  In some cases, different algorithms
      * may be more efficient on CPUs and GPUs.

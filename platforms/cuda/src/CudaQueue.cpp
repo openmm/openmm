@@ -28,7 +28,7 @@
 
 using namespace OpenMM;
 
-CudaQueue::CudaQueue(CUstream stream) : stream(stream), initialized(false) {
+CudaQueue::CudaQueue(CUstream stream, bool initialized) : stream(stream), initialized(initialized) {
 }
 
 CudaQueue::CudaQueue() : initialized(false) {

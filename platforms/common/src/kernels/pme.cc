@@ -48,6 +48,8 @@ KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq,
 #else
         const real charge = (CHARGE)*EPSILON_FACTOR;
 #endif
+        if (charge == 0)
+            continue;
         APPLY_PERIODIC_TO_POS(pos)
         real3 t = make_real3(pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                              pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
@@ -58,8 +60,6 @@ KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq,
         int3 gridIndex = make_int3(((int) t.x) % GRID_SIZE_X,
                                    ((int) t.y) % GRID_SIZE_Y,
                                    ((int) t.z) % GRID_SIZE_Z);
-        if (charge == 0)
-            continue;
 
         // Since we need the full set of thetas, it's faster to compute them here than load them
         // from global memory.
@@ -149,12 +149,14 @@ KERNEL void reciprocalConvolution(GLOBAL real2* RESTRICT pmeGrid, GLOBAL const r
     const real recipScaleFactor = RECIP(M_PI)*recipBoxVecX.x*recipBoxVecY.y*recipBoxVecZ.z;
 #endif
 
-    for (int index = GLOBAL_ID; index < gridSize; index += GLOBAL_SIZE) {
+    const unsigned int yzSize = GRID_SIZE_Y*(GRID_SIZE_Z/2+1);
+    const unsigned int zSize = GRID_SIZE_Z/2+1;
+    for (unsigned int index = GLOBAL_ID; index < gridSize; index += GLOBAL_SIZE) {
         // real indices
-        int kx = index/(GRID_SIZE_Y*(GRID_SIZE_Z/2+1));
-        int remainder = index-kx*GRID_SIZE_Y*(GRID_SIZE_Z/2+1);
-        int ky = remainder/(GRID_SIZE_Z/2+1);
-        int kz = remainder-ky*(GRID_SIZE_Z/2+1);
+        int kx = (int) (index/yzSize);
+        unsigned int remainder = index - (unsigned int) kx*yzSize;
+        int ky = (int) (remainder/zSize);
+        int kz = (int) (remainder - (unsigned int) ky*zSize);
         int mx = (kx < (GRID_SIZE_X+1)/2) ? kx : (kx-GRID_SIZE_X);
         int my = (ky < (GRID_SIZE_Y+1)/2) ? ky : (ky-GRID_SIZE_Y);
         int mz = (kz < (GRID_SIZE_Z+1)/2) ? kz : (kz-GRID_SIZE_Z);
@@ -177,9 +179,9 @@ KERNEL void reciprocalConvolution(GLOBAL real2* RESTRICT pmeGrid, GLOBAL const r
         real eterm = (fac1*erfcterm*m3 + expterm*(fac2 + fac3*m2)) * denom;
         pmeGrid[index] = make_real2(grid.x*eterm, grid.y*eterm);
 #else
-        real denom = m2*bx*by*bz;
-        real eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)/denom;
-        if (kx != 0 || ky != 0 || kz != 0) {
+        if (index != 0) {
+            real denom = m2*bx*by*bz;
+            real eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)*RECIP(denom);
             pmeGrid[index] = make_real2(grid.x*eterm, grid.y*eterm);
         } else {
             pmeGrid[index] = make_real2(0);
@@ -270,8 +272,16 @@ KERNEL void gridInterpolateForce(GLOBAL const real4* RESTRICT posq, GLOBAL mm_ul
 
     for (int i = GLOBAL_ID; i < NUM_ATOMS; i += GLOBAL_SIZE) {
         int atom = pmeAtomGridIndex[i].x;
-        real3 force = make_real3(0);
         real4 pos = posq[atom];
+#ifdef CHARGE_FROM_SIGEPS
+        const float2 sigEps = sigmaEpsilon[atom];
+        real q = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
+#else
+        real q = CHARGE*EPSILON_FACTOR;
+#endif
+        if (q == 0)
+            continue;
+        real3 force = make_real3(0);
         APPLY_PERIODIC_TO_POS(pos)
         real3 t = make_real3(pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                              pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
@@ -282,14 +292,6 @@ KERNEL void gridInterpolateForce(GLOBAL const real4* RESTRICT posq, GLOBAL mm_ul
         int3 gridIndex = make_int3(((int) t.x) % GRID_SIZE_X,
                                    ((int) t.y) % GRID_SIZE_Y,
                                    ((int) t.z) % GRID_SIZE_Z);
-#ifdef CHARGE_FROM_SIGEPS
-        const float2 sigEps = sigmaEpsilon[atom];
-        real q = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
-#else
-        real q = CHARGE*EPSILON_FACTOR;
-#endif
-        if (q == 0)
-            continue;
 
         // Since we need the full set of thetas, it's faster to compute them here than load them
         // from global memory.
@@ -313,32 +315,41 @@ KERNEL void gridInterpolateForce(GLOBAL const real4* RESTRICT posq, GLOBAL mm_ul
             data[PME_ORDER-j-1] = scale*((dr+make_real3(j))*data[PME_ORDER-j-2] + (make_real3(PME_ORDER-j)-dr)*data[PME_ORDER-j-1]);
         data[0] = scale*(make_real3(1)-dr)*data[0];
 
-        // Compute the force on this atom.
+        // Compute the force on this atom using separable B-spline accumulation.
 
+        int yoff[PME_ORDER], zidx[PME_ORDER];
+        for (int k = 0; k < PME_ORDER; k++) {
+            int yk = gridIndex.y+k;
+            yoff[k] = (yk - (yk >= GRID_SIZE_Y ? GRID_SIZE_Y : 0))*GRID_SIZE_Z;
+            int zk = gridIndex.z+k;
+            zidx[k] = zk - (zk >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
+        }
         for (int ix = 0; ix < PME_ORDER; ix++) {
             int xbase = gridIndex.x+ix;
             xbase -= (xbase >= GRID_SIZE_X ? GRID_SIZE_X : 0);
             xbase = xbase*GRID_SIZE_Y*GRID_SIZE_Z;
             real dx = data[ix].x;
             real ddx = ddata[ix].x;
+            real sumY = 0, dsumY = 0, sumdZ = 0;
 
             for (int iy = 0; iy < PME_ORDER; iy++) {
-                int ybase = gridIndex.y+iy;
-                ybase -= (ybase >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
-                ybase = xbase + ybase*GRID_SIZE_Z;
+                int ybase = xbase + yoff[iy];
                 real dy = data[iy].y;
                 real ddy = ddata[iy].y;
+                real sumZ = 0, dsumZ = 0;
 
                 for (int iz = 0; iz < PME_ORDER; iz++) {
-                    int zindex = gridIndex.z+iz;
-                    zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
-                    int index = ybase + zindex;
-                    real gridvalue = pmeGrid[index];
-                    force.x += ddx*dy*data[iz].z*gridvalue;
-                    force.y += dx*ddy*data[iz].z*gridvalue;
-                    force.z += dx*dy*ddata[iz].z*gridvalue;
+                    real gridvalue = pmeGrid[ybase + zidx[iz]];
+                    sumZ += data[iz].z*gridvalue;
+                    dsumZ += ddata[iz].z*gridvalue;
                 }
+                sumY += dy*sumZ;
+                dsumY += ddy*sumZ;
+                sumdZ += dy*dsumZ;
             }
+            force.x += ddx*sumY;
+            force.y += dx*dsumY;
+            force.z += dx*sumdZ;
         }
         real forceX = -q*(force.x*GRID_SIZE_X*recipBoxVecX.x);
         real forceY = -q*(force.x*GRID_SIZE_X*recipBoxVecY.x+force.y*GRID_SIZE_Y*recipBoxVecY.y);

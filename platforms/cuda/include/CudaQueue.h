@@ -39,7 +39,7 @@ public:
     /**
      * Create a CudaQueue that wraps an existing CUstream.
      */
-    CudaQueue(CUstream stream);
+    CudaQueue(CUstream stream, bool initialized = false);
     /**
      * Create a CudaQueue that create a new CUstream.
      */

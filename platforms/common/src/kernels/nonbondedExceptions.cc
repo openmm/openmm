@@ -14,6 +14,19 @@ dEdR += exceptionParams.x*invR;
 dEdR *= invR*invR;
 tempEnergy += exceptionParams.x*invR;
 energy += tempEnergy;
+#if INCLUDE_PME_EXCLUSIONS
+const real alphaR = (r2 > (real) 0) ? EWALD_ALPHA*r2*invR : (real) 0;
+const real qq = (real) (ONE_4PI_EPS0*pos1.w*pos2.w);
+if (alphaR > 1e-6f) {
+    const real erfAlphaR = ERF(alphaR);
+    const real prefactor = qq*invR;
+    dEdR -= prefactor*(erfAlphaR-alphaR*EXP(-alphaR*alphaR)*TWO_OVER_SQRT_PI)*invR*invR;
+    energy -= prefactor*erfAlphaR;
+}
+else {
+    energy -= TWO_OVER_SQRT_PI*EWALD_ALPHA*qq;
+}
+#endif
 delta *= dEdR;
 real3 force1 = -delta;
 real3 force2 = delta;
