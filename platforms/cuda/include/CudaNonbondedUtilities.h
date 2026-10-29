@@ -313,8 +313,6 @@ private:
     CudaArray sortedBlockCenter;
     CudaArray sortedBlockBoundingBox;
     CudaArray blockSizeRange;
-    CudaArray largeBlockCenter;
-    CudaArray largeBlockBoundingBox;
     CudaArray oldPositions;
     CudaArray rebuildNeighborList;
     ComputeSort blockSorter;
@@ -328,9 +326,10 @@ private:
     std::map<int, double> groupCutoff;
     std::map<int, std::string> groupKernelSource;
     double maxCutoff;
+    Vec3 lastBoxVecX, lastBoxVecY, lastBoxVecZ;
     bool useCutoff, usePeriodic, anyExclusions, usePadding, useNeighborList, forceRebuildNeighborList, canUsePairList, useLargeBlocks, hasInitializedParams;
     int startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags, numBlockSizes, paramStartIndex;
-    unsigned int maxTiles, maxSinglePairs, tilesAfterReorder, singlePairsAfterReorder;
+    unsigned int rebuildStep, maxTiles, maxSinglePairs, tilesAfterReorder, singlePairsAfterReorder;
     long long numTiles;
     std::string kernelSource;
 };

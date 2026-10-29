@@ -58,7 +58,7 @@ public:
 };
 
 CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), useCutoff(false), usePeriodic(false), useNeighborList(false), anyExclusions(false), usePadding(true),
-        pinnedCountBuffer(NULL), forceRebuildNeighborList(true), groupFlags(0), canUsePairList(true), tilesAfterReorder(0), singlePairsAfterReorder(0) {
+        pinnedCountBuffer(NULL), forceRebuildNeighborList(true), groupFlags(0), canUsePairList(true), rebuildStep(0), tilesAfterReorder(0), singlePairsAfterReorder(0) {
     // Decide how many thread blocks to use.
 
     string errorMessage = "Error initializing nonbonded utilities";
@@ -262,19 +262,36 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         int elementSize = (context.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
         blockCenter.initialize(context, numAtomBlocks, 4*elementSize, "blockCenter");
         blockBoundingBox.initialize(context, numAtomBlocks, 4*elementSize, "blockBoundingBox");
-        sortedBlocks.initialize<unsigned int>(context, numAtomBlocks, "sortedBlocks");
         sortedBlockCenter.initialize(context, numAtomBlocks+1, 4*elementSize, "sortedBlockCenter");
         sortedBlockBoundingBox.initialize(context, numAtomBlocks+1, 4*elementSize, "sortedBlockBoundingBox");
-        numBlockSizes = min((context.getNumAtomBlocks()+63)/64, context.getNumThreadBlocks());
-        blockSizeRange.initialize(context, numBlockSizes, 2*elementSize, "blockSizeRange");
-        largeBlockCenter.initialize(context, numAtomBlocks, 4*elementSize, "largeBlockCenter");
-        largeBlockBoundingBox.initialize(context, numAtomBlocks, 4*elementSize, "largeBlockBoundingBox");
         oldPositions.initialize(context, numAtoms, 4*elementSize, "oldPositions");
-        rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
-        blockSorter = context.createSort(new BlockSortTrait(), numAtomBlocks, false);
         vector<unsigned int> count(2, 0);
         interactionCount.upload(count);
-        rebuildNeighborList.upload(&count[0]);
+        if (useLargeBlocks) {
+            int numSuperblocks = (numAtomBlocks+31)/32;
+            sortedBlocks.initialize(context, 2*numSuperblocks + (numAtomBlocks+3)/4, 4*elementSize, "sortedBlocks");
+            rebuildNeighborList.initialize<int>(context, 3, "rebuildNeighborList");
+            vector<int> rebuildInit(3, 0);
+            rebuildNeighborList.upload(rebuildInit);
+        }
+        else {
+            sortedBlocks.initialize<unsigned int>(context, numAtomBlocks, "sortedBlocks");
+            numBlockSizes = min((context.getNumAtomBlocks()+63)/64, context.getNumThreadBlocks());
+            blockSizeRange.initialize(context, numBlockSizes, 2*elementSize, "blockSizeRange");
+            rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
+            blockSorter = context.createSort(new BlockSortTrait(), numAtomBlocks, false);
+            rebuildNeighborList.upload(&count[0]);
+        }
+        if (useNeighborList) {
+            class RebuildListener : public ComputeContext::ReorderListener {
+            public:
+                RebuildListener(bool& forceRebuild) : forceRebuild(forceRebuild) {}
+                void execute() override { forceRebuild = true; }
+            private:
+                bool& forceRebuild;
+            };
+            context.getPlatformData().contexts[0]->addReorderListener(new RebuildListener(forceRebuildNeighborList));
+        }
     }
 
     // Record arguments for kernels.
@@ -318,30 +335,40 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         findBlockBoundsArgs.push_back(&blockCenter.getDevicePointer());
         findBlockBoundsArgs.push_back(&blockBoundingBox.getDevicePointer());
         findBlockBoundsArgs.push_back(&rebuildNeighborList.getDevicePointer());
-        findBlockBoundsArgs.push_back(&blockSizeRange.getDevicePointer());
-        computeSortKeysArgs.push_back(&blockBoundingBox.getDevicePointer());
-        computeSortKeysArgs.push_back(&sortedBlocks.getDevicePointer());
-        computeSortKeysArgs.push_back(&blockSizeRange.getDevicePointer());
-        computeSortKeysArgs.push_back(&numBlockSizes);
+        if (useLargeBlocks) {
+            findBlockBoundsArgs.push_back(&oldPositions.getDevicePointer());
+            findBlockBoundsArgs.push_back(&interactionCount.getDevicePointer());
+            findBlockBoundsArgs.push_back(&forceRebuildNeighborList);
+            findBlockBoundsArgs.push_back(&rebuildStep);
+        }
+        else {
+            findBlockBoundsArgs.push_back(&blockSizeRange.getDevicePointer());
+            computeSortKeysArgs.push_back(&blockBoundingBox.getDevicePointer());
+            computeSortKeysArgs.push_back(&sortedBlocks.getDevicePointer());
+            computeSortKeysArgs.push_back(&blockSizeRange.getDevicePointer());
+            computeSortKeysArgs.push_back(&numBlockSizes);
+        }
         sortBoxDataArgs.push_back(&sortedBlocks.getDevicePointer());
         sortBoxDataArgs.push_back(&blockCenter.getDevicePointer());
         sortBoxDataArgs.push_back(&blockBoundingBox.getDevicePointer());
         sortBoxDataArgs.push_back(&sortedBlockCenter.getDevicePointer());
         sortBoxDataArgs.push_back(&sortedBlockBoundingBox.getDevicePointer());
+        sortBoxDataArgs.push_back(&context.unwrap(context.getPosq()).getDevicePointer());
+        sortBoxDataArgs.push_back(&oldPositions.getDevicePointer());
+        sortBoxDataArgs.push_back(&interactionCount.getDevicePointer());
+        sortBoxDataArgs.push_back(&rebuildNeighborList.getDevicePointer());
         if (useLargeBlocks) {
-            sortBoxDataArgs.push_back(&largeBlockCenter.getDevicePointer());
-            sortBoxDataArgs.push_back(&largeBlockBoundingBox.getDevicePointer());
+            sortBoxDataArgs.push_back(&rebuildStep);
+            sortBoxDataArgs.push_back(&numAtoms);
             sortBoxDataArgs.push_back(context.getPeriodicBoxSizePointer());
             sortBoxDataArgs.push_back(context.getInvPeriodicBoxSizePointer());
             sortBoxDataArgs.push_back(context.getPeriodicBoxVecXPointer());
             sortBoxDataArgs.push_back(context.getPeriodicBoxVecYPointer());
             sortBoxDataArgs.push_back(context.getPeriodicBoxVecZPointer());
         }
-        sortBoxDataArgs.push_back(&context.unwrap(context.getPosq()).getDevicePointer());
-        sortBoxDataArgs.push_back(&oldPositions.getDevicePointer());
-        sortBoxDataArgs.push_back(&interactionCount.getDevicePointer());
-        sortBoxDataArgs.push_back(&rebuildNeighborList.getDevicePointer());
-        sortBoxDataArgs.push_back(&forceRebuildNeighborList);
+        else {
+            sortBoxDataArgs.push_back(&forceRebuildNeighborList);
+        }
         findInteractingBlocksArgs.push_back(context.getPeriodicBoxSizePointer());
         findInteractingBlocksArgs.push_back(context.getInvPeriodicBoxSizePointer());
         findInteractingBlocksArgs.push_back(context.getPeriodicBoxVecXPointer());
@@ -359,14 +386,16 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         findInteractingBlocksArgs.push_back(&sortedBlocks.getDevicePointer());
         findInteractingBlocksArgs.push_back(&sortedBlockCenter.getDevicePointer());
         findInteractingBlocksArgs.push_back(&sortedBlockBoundingBox.getDevicePointer());
-        if (useLargeBlocks) {
-            findInteractingBlocksArgs.push_back(&largeBlockCenter.getDevicePointer());
-            findInteractingBlocksArgs.push_back(&largeBlockBoundingBox.getDevicePointer());
-        }
         findInteractingBlocksArgs.push_back(&exclusionIndices.getDevicePointer());
         findInteractingBlocksArgs.push_back(&exclusionRowIndices.getDevicePointer());
-        findInteractingBlocksArgs.push_back(&oldPositions.getDevicePointer());
-        findInteractingBlocksArgs.push_back(&rebuildNeighborList.getDevicePointer());
+        if (useLargeBlocks) {
+            findInteractingBlocksArgs.push_back(&rebuildNeighborList.getDevicePointer());
+            findInteractingBlocksArgs.push_back(&rebuildStep);
+        }
+        else {
+            findInteractingBlocksArgs.push_back(&oldPositions.getDevicePointer());
+            findInteractingBlocksArgs.push_back(&rebuildNeighborList.getDevicePointer());
+        }
     }
 }
 
@@ -401,11 +430,35 @@ void CudaNonbondedUtilities::prepareInteractions(int forceGroups) {
 
     // Compute the neighbor list.
 
-    context.executeKernel(kernels.findBlockBoundsKernel, &findBlockBoundsArgs[0], context.getNumAtomBlocks());
-    context.executeKernel(kernels.computeSortKeysKernel, &computeSortKeysArgs[0], context.getNumAtomBlocks());
-    blockSorter->sort(sortedBlocks);
-    context.executeKernel(kernels.sortBoxDataKernel, &sortBoxDataArgs[0], context.getNumAtoms());
-    context.executeKernel(kernels.findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtoms(), 256);
+    if (usePeriodic) {
+        Vec3 boxX, boxY, boxZ;
+        context.getPeriodicBoxVectors(boxX, boxY, boxZ);
+        if (boxX != lastBoxVecX || boxY != lastBoxVecY || boxZ != lastBoxVecZ) {
+            forceRebuildNeighborList = true;
+            lastBoxVecX = boxX;
+            lastBoxVecY = boxY;
+            lastBoxVecZ = boxZ;
+        }
+    }
+    if (useLargeBlocks) {
+        if (++rebuildStep == 0) {
+            rebuildStep = 1;
+            forceRebuildNeighborList = true;
+        }
+        int maxBoundsThreads = min(context.getPaddedNumAtoms(), context.getNumThreadBlocks() * 256);
+        int maxSortThreads = min(((context.getNumAtomBlocks()+31)/32)*256, context.getNumThreadBlocks() * 256);
+        int findBlocksThreads = min(context.getNumAtoms(), ((context.getNumThreadBlocks() * 2) / 3) * 256);
+        context.executeKernel(kernels.findBlockBoundsKernel, &findBlockBoundsArgs[0], maxBoundsThreads, 256);
+        context.executeKernel(kernels.sortBoxDataKernel, &sortBoxDataArgs[0], maxSortThreads, 256);
+        context.executeKernel(kernels.findInteractingBlocksKernel, &findInteractingBlocksArgs[0], findBlocksThreads, 256);
+    }
+    else {
+        context.executeKernel(kernels.findBlockBoundsKernel, &findBlockBoundsArgs[0], context.getNumAtomBlocks());
+        context.executeKernel(kernels.computeSortKeysKernel, &computeSortKeysArgs[0], context.getNumAtomBlocks());
+        blockSorter->sort(sortedBlocks);
+        context.executeKernel(kernels.sortBoxDataKernel, &sortBoxDataArgs[0], context.getNumAtoms());
+        context.executeKernel(kernels.findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtoms(), 256);
+    }
     forceRebuildNeighborList = false;
     interactionCount.download(pinnedCountBuffer, false);
     cuEventRecord(downloadCountEvent, context.getCurrentStream());
@@ -528,14 +581,16 @@ void CudaNonbondedUtilities::createKernelsForGroups(int groups) {
             defines["USE_LARGE_BLOCKS"] = "1";
         defines["MAX_EXCLUSIONS"] = context.intToString(maxExclusions);
         defines["MAX_BITS_FOR_PAIRS"] = (canUsePairList ? (context.getComputeCapability() < 8.0 ? "2" : "3") : "0");
-        int binShift = 1;
-        while (1<<binShift <= context.getNumAtomBlocks())
-            binShift++;
-        defines["BIN_SHIFT"] = context.intToString(binShift);
-        defines["BLOCK_INDEX_MASK"] = context.intToString((1<<binShift)-1);
+        if (!useLargeBlocks) {
+            int binShift = 1;
+            while (1<<binShift <= context.getNumAtomBlocks())
+                binShift++;
+            defines["BIN_SHIFT"] = context.intToString(binShift);
+            defines["BLOCK_INDEX_MASK"] = context.intToString((1<<binShift)-1);
+        }
         CUmodule interactingBlocksProgram = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::findInteractingBlocks, defines);
         kernels.findBlockBoundsKernel = context.getKernel(interactingBlocksProgram, "findBlockBounds");
-        kernels.computeSortKeysKernel = context.getKernel(interactingBlocksProgram, "computeSortKeys");
+        kernels.computeSortKeysKernel = (useLargeBlocks ? NULL : context.getKernel(interactingBlocksProgram, "computeSortKeys"));
         kernels.sortBoxDataKernel = context.getKernel(interactingBlocksProgram, "sortBoxData");
         kernels.findInteractingBlocksKernel = context.getKernel(interactingBlocksProgram, "findBlocksWithInteractions");
     }
