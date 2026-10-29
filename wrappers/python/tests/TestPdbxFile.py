@@ -144,6 +144,24 @@ class TestPdbxFile(unittest.TestCase):
             self.assertEqual(bond1[0].name, bond2[0].name)
             self.assertEqual(bond1[1].name, bond2[1].name)
 
+    def testGeneratedChainIdsRemainUnique(self):
+        """Generated mmCIF chain IDs must remain unique beyond 26 chains."""
+        topology = Topology()
+        atoms = []
+        for i in range(27):
+            chain = topology.addChain()
+            residue = topology.addResidue('LIG', chain, id='1')
+            atoms.append(topology.addAtom('C', elem.carbon, residue, id=str(i + 1)))
+        topology.addBond(atoms[0], atoms[-1])
+        positions = [(float(i), 0, 0) for i in range(27)]*angstrom
+
+        output = StringIO()
+        PDBxFile.writeFile(topology, positions, output)
+        pdbx = PDBxFile(StringIO(output.getvalue()))
+        bond_indices = [(bond[0].index, bond[1].index) for bond in pdbx.topology.bonds()]
+
+        self.assertEqual([(0, 26)], bond_indices)
+
     def testChemCompBonds(self):
         """Test creating bonds based on chem_comp_bond records."""
         pdb = PDBxFile('systems/6mvz.cif')

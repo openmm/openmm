@@ -43,6 +43,17 @@ from datetime import date
 from collections import defaultdict
 import numpy as np
 
+
+def _generatedChainId(index):
+    """Return a compact unique mmCIF chain identifier for a zero-based index."""
+    result = ''
+    while True:
+        result = chr(ord('A') + index % 26) + result
+        index = index // 26 - 1
+        if index < 0:
+            return result
+
+
 class PDBxFile(object):
     """PDBxFile parses a PDBx/mmCIF file and constructs a Topology and a set of atom positions from it."""
 
@@ -386,7 +397,7 @@ class PDBxFile(object):
                     resIds[res] = res.id
             else:
                 for (chainIndex, chain) in enumerate(topology.chains()):
-                    chainIds[chain] = chr(ord('A')+chainIndex%26)
+                    chainIds[chain] = _generatedChainId(chainIndex)
                     for (resIndex, res) in enumerate(chain.residues()):
                         resIds[res] = resIndex+1
             for i, (atom1, atom2) in enumerate(bonds):
@@ -466,7 +477,7 @@ class PDBxFile(object):
             if keepIds:
                 chainName = chain.id
             else:
-                chainName = chr(ord('A')+chainIndex%26)
+                chainName = _generatedChainId(chainIndex)
             residues = list(chain.residues())
             for (resIndex, res) in enumerate(residues):
                 if keepIds:
