@@ -159,6 +159,8 @@ class Topology(object):
         Residue
              the newly created Residue
         """
+        if chain.topology is not self:
+            raise ValueError('The chain must belong to this topology')
         if len(chain._residues) > 0 and self._numResidues != chain._residues[-1].index+1:
             raise ValueError('All residues within a chain must be contiguous')
         if id is None:
