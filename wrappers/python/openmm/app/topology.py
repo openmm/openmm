@@ -283,6 +283,10 @@ class Topology(object):
         else:
             if is_quantity(dimensions):
                 dimensions = dimensions.value_in_unit(nanometers)
+            elif is_quantity(dimensions[0]):
+                dimensions = [dimension.value_in_unit(nanometers) for dimension in dimensions]
+            if any(dimension <= 0 for dimension in dimensions):
+                raise ValueError("Unit cell dimensions must be positive")
             self._periodicBoxVectors = (Vec3(dimensions[0], 0, 0), Vec3(0, dimensions[1], 0), Vec3(0, 0, dimensions[2]))*nanometers
 
     @staticmethod

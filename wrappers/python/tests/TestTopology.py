@@ -59,5 +59,14 @@ class TestTopology(unittest.TestCase):
         self.assertEqual(internal_bonds, [ (atom_B1, atom_B2) ])
         self.assertEqual(external_bonds, [ (atom_A1, atom_B1), (atom_B2, atom_C1) ])
 
+    def test_set_unit_cell_dimensions_rejects_nonpositive_lengths(self):
+        """Unit cell lengths must be strictly positive."""
+        topology = Topology()
+        for dimensions in ((0, 1, 1), (-1, 1, 1), (1, 0, 1), (1, 1, 0)):
+            with self.assertRaises(ValueError):
+                topology.setUnitCellDimensions(dimensions)
+        topology.setUnitCellDimensions((1, 2, 3))
+        self.assertEqual(topology.getUnitCellDimensions(), Vec3(1, 2, 3) * nanometers)
+
 if __name__ == '__main__':
     unittest.main()
