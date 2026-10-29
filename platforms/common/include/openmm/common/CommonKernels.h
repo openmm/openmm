@@ -946,7 +946,7 @@ private:
 class CommonIntegrateLangevinMiddleStepKernel : public IntegrateLangevinMiddleStepKernel {
 public:
     CommonIntegrateLangevinMiddleStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateLangevinMiddleStepKernel(name, platform), cc(cc),
-            hasInitializedKernels(false) {
+            hasInitializedKernels(false), numUnconstrainedAtoms(0) {
     }
     /**
      * Initialize the kernel, setting up the particle masses.
@@ -973,7 +973,8 @@ private:
     ComputeContext& cc;
     double prevTemp, prevFriction, prevStepSize;
     bool hasInitializedKernels;
-    ComputeArray params, oldDelta;
+    int numUnconstrainedAtoms;
+    ComputeArray params, oldDelta, unconstrainedAtoms;
     ComputeKernel kernel1, kernel2, kernel3;
 };
 

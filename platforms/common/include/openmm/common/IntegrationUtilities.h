@@ -141,6 +141,21 @@ public:
      * @param velocities  the shifted velocities are returned in this
      */
     void computeShiftedVelocities(double timeShift, std::vector<Vec3>& velocities);
+    bool canUseFusedIntegration() const {
+        return !ccmaConstraintAtoms.isInitialized();
+    }
+    ComputeArray& getSettleAtoms() {
+        return settleAtoms;
+    }
+    ComputeArray& getSettleParams() {
+        return settleParams;
+    }
+    ComputeArray& getShakeAtoms() {
+        return shakeAtoms;
+    }
+    ComputeArray& getShakeParams() {
+        return shakeParams;
+    }
 protected:
     virtual void applyConstraintsImpl(bool constrainVelocities, double tol) = 0;
     ComputeContext& context;

@@ -620,7 +620,7 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         defines["HAS_OVERLAPPING_VSITES"] = "1";
     if (numVsiteStages > 1)
         defines["MULTIPLE_VSITE_STAGES"] = "1";
-    ComputeProgram program = context.compileProgram(CommonKernelSources::integrationUtilities, defines);
+    ComputeProgram program = context.compileProgram(CommonKernelSources::constraints+CommonKernelSources::integrationUtilities, defines);
     settlePosKernel = program->createKernel("applySettleToPositions");
     settleVelKernel = program->createKernel("applySettleToVelocities");
     shakePosKernel = program->createKernel("applyShakeToPositions");
@@ -887,7 +887,8 @@ void IntegrationUtilities::initRandomNumberGenerator(unsigned int randomNumberSe
     // Create the random number arrays.
 
     lastSeed = randomNumberSeed;
-    random.initialize<mm_float4>(context, 4*context.getPaddedNumAtoms(), "random");
+    int numRandom = max(4, min(32, (1 << 19) / max(1, context.getPaddedNumAtoms()))) * context.getPaddedNumAtoms();
+    random.initialize<mm_float4>(context, numRandom, "random");
     randomSeed.initialize<mm_int4>(context, context.getNumThreadBlocks()*64, "randomSeed");
     randomPos = random.getSize();
     randomKernel->addArg((int) random.getSize());
