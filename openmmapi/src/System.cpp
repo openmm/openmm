@@ -74,6 +74,8 @@ const VirtualSite& System::getVirtualSite(int index) const {
 }
 
 int System::addConstraint(int particle1, int particle2, double distance) {
+    if (!std::isfinite(distance) || distance < 0)
+        throw OpenMMException("Constraint distance must be finite and non-negative");
     constraints.push_back(ConstraintInfo(particle1, particle2, distance));
     return constraints.size()-1;
 }
@@ -87,6 +89,8 @@ void System::getConstraintParameters(int index, int& particle1, int& particle2, 
 
 void System::setConstraintParameters(int index, int particle1, int particle2, double distance) {
     ASSERT_VALID_INDEX(index, constraints);
+    if (!std::isfinite(distance) || distance < 0)
+        throw OpenMMException("Constraint distance must be finite and non-negative");
     constraints[index].particle1 = particle1;
     constraints[index].particle2 = particle2;
     constraints[index].distance = distance;
