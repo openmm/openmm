@@ -6,6 +6,7 @@ from validateModeller import *
 from openmm.app import *
 from openmm import *
 from openmm.unit import *
+from copy import deepcopy
 
 if sys.version_info >= (3, 0):
     from io import StringIO
@@ -585,6 +586,7 @@ class TestModeller(unittest.TestCase):
         simulation.context.setVelocitiesToTemperature(300)
         simulation.minimizeEnergy()
         simulation.step(1000)
+        self.assertLess(simulation.context.getState(energy=True).getPotentialEnergy().value_in_unit(kilojoule_per_mole), 0)
 
     def test_addMixture(self):
         """ Tests addMixture packing a mixture. """
@@ -594,12 +596,14 @@ class TestModeller(unittest.TestCase):
 
         for useSolute in (False, True):
             if useSolute:
-                modeller = Modeller(self.pdb2.topology, self.pdb2.positions)
+                topology_start = deepcopy(self.pdb3.topology)
+                topology_start.setPeriodicBoxVectors(None)
+                modeller = Modeller(topology_start, self.pdb3.positions)
             else:
                 modeller = Modeller(Topology(), [])
             modeller.addMixture([
-                {'topology': component1.topology, 'positions': component1.positions, 'count': 10000},
-                {'topology': component2.topology, 'positions': component2.positions, 'count': 100},
+                {'topology': component1.topology, 'positions': component1.positions, 'count': 1100},
+                {'topology': component2.topology, 'positions': component2.positions, 'count': 10},
             ])
 
             # Make sure that the topology has the molecules we expect.
@@ -607,18 +611,18 @@ class TestModeller(unittest.TestCase):
             if useSolute:
                 self.assertEqual(len(chains), 3)
                 chain0, chain1, chain2 = chains
-                self.assertSequenceEqual([residue.name for residue in chain0.residues()], [residue.name for residue in self.pdb2.topology.residues()])
-                self.assertSequenceEqual([residue.name for residue in chain1.residues()], ['HOH'] * 10000)
-                self.assertSequenceEqual([residue.name for residue in chain2.residues()], ['ACE', 'ALA', 'NME'] * 100)
-                self.assertEqual(modeller.topology.getNumAtoms(), self.pdb2.topology.getNumAtoms() + 10000 * component1.topology.getNumAtoms() + 100 * component2.topology.getNumAtoms())
-                self.assertEqual(modeller.topology.getNumBonds(), self.pdb2.topology.getNumBonds() + 10000 * component1.topology.getNumBonds() + 100 * component2.topology.getNumBonds())
+                self.assertSequenceEqual([residue.name for residue in chain0.residues()], [residue.name for residue in self.pdb3.topology.residues()])
+                self.assertSequenceEqual([residue.name for residue in chain1.residues()], ['HOH'] * 1100)
+                self.assertSequenceEqual([residue.name for residue in chain2.residues()], ['ACE', 'ALA', 'NME'] * 10)
+                self.assertEqual(modeller.topology.getNumAtoms(), self.pdb3.topology.getNumAtoms() + 1100 * component1.topology.getNumAtoms() + 10 * component2.topology.getNumAtoms())
+                self.assertEqual(modeller.topology.getNumBonds(), self.pdb3.topology.getNumBonds() + 1100 * component1.topology.getNumBonds() + 10 * component2.topology.getNumBonds())
             else:
                 self.assertEqual(len(chains), 2)
                 chain0, chain1 = chains
-                self.assertSequenceEqual([residue.name for residue in chain0.residues()], ['HOH'] * 10000)
-                self.assertSequenceEqual([residue.name for residue in chain1.residues()], ['ACE', 'ALA', 'NME'] * 100)
-                self.assertEqual(modeller.topology.getNumAtoms(), 10000 * component1.topology.getNumAtoms() + 100 * component2.topology.getNumAtoms())
-                self.assertEqual(modeller.topology.getNumBonds(), 10000 * component1.topology.getNumBonds() + 100 * component2.topology.getNumBonds())
+                self.assertSequenceEqual([residue.name for residue in chain0.residues()], ['HOH'] * 1100)
+                self.assertSequenceEqual([residue.name for residue in chain1.residues()], ['ACE', 'ALA', 'NME'] * 10)
+                self.assertEqual(modeller.topology.getNumAtoms(), 1100 * component1.topology.getNumAtoms() + 10 * component2.topology.getNumAtoms())
+                self.assertEqual(modeller.topology.getNumBonds(), 1100 * component1.topology.getNumBonds() + 10 * component2.topology.getNumBonds())
 
             # Make sure the density that was guessed is reasonable.
             mass = sum([0*dalton if atom.element is None else atom.element.mass for atom in modeller.topology.atoms()])
@@ -635,10 +639,12 @@ class TestModeller(unittest.TestCase):
         component1 = PDBFile('systems/tip5p.pdb')
         component2 = PDBFile('systems/alanine-dipeptide-implicit.pdb')
 
-        modeller = Modeller(self.pdb2.topology, self.pdb2.positions)
+        topology_start = deepcopy(self.pdb3.topology)
+        topology_start.setPeriodicBoxVectors(None)
+        modeller = Modeller(topology_start, self.pdb3.positions)
         modeller.addMixture([
-            {'topology': component1.topology, 'positions': component1.positions, 'count': 10000},
-            {'topology': component2.topology, 'positions': component2.positions, 'count': 100},
+            {'topology': component1.topology, 'positions': component1.positions, 'count': 1100},
+            {'topology': component2.topology, 'positions': component2.positions, 'count': 10},
         ], boxShape='dodecahedron')
 
         # Make sure the density that was guessed is reasonable.
@@ -662,16 +668,16 @@ class TestModeller(unittest.TestCase):
         component1 = PDBFile('systems/tip5p.pdb')
         component2 = PDBFile('systems/alanine-dipeptide-implicit.pdb')
 
-        modeller = Modeller(self.pdb2.topology, self.pdb2.positions)
+        modeller = Modeller(self.pdb3.topology, self.pdb3.positions)
         modeller.addMixture([
-            {'topology': component1.topology, 'positions': component1.positions, 'count': 10000},
-            {'topology': component2.topology, 'positions': component2.positions, 'count': 100},
-        ], boxSize=(70, 70, 70)*angstrom)
+            {'topology': component1.topology, 'positions': component1.positions, 'count': 1100},
+            {'topology': component2.topology, 'positions': component2.positions, 'count': 10},
+        ], boxSize=(34, 34, 34)*angstrom)
 
         cell = modeller.topology.getPeriodicBoxVectors().value_in_unit(nanometer)
-        self.assertVecAlmostEqual(cell[0], [7, 0, 0])
-        self.assertVecAlmostEqual(cell[1], [0, 7, 0])
-        self.assertVecAlmostEqual(cell[2], [0, 0, 7])
+        self.assertVecAlmostEqual(cell[0], [3.4, 0, 0])
+        self.assertVecAlmostEqual(cell[1], [0, 3.4, 0])
+        self.assertVecAlmostEqual(cell[2], [0, 0, 3.4])
 
         self.runMixture(modeller)
 
@@ -681,16 +687,16 @@ class TestModeller(unittest.TestCase):
         component1 = PDBFile('systems/tip5p.pdb')
         component2 = PDBFile('systems/alanine-dipeptide-implicit.pdb')
 
-        modeller = Modeller(self.pdb2.topology, self.pdb2.positions)
+        modeller = Modeller(self.pdb3.topology, self.pdb3.positions)
         modeller.addMixture([
-            {'topology': component1.topology, 'positions': component1.positions, 'count': 10000},
-            {'topology': component2.topology, 'positions': component2.positions, 'count': 100},
-        ], boxVectors=((70, 0, 0), (1, 70, 0), (2, 3, 70))*angstrom)
+            {'topology': component1.topology, 'positions': component1.positions, 'count': 1100},
+            {'topology': component2.topology, 'positions': component2.positions, 'count': 10},
+        ], boxVectors=((34, 0, 0), (1, 34, 0), (2, 3, 34))*angstrom)
 
         cell = modeller.topology.getPeriodicBoxVectors().value_in_unit(nanometer)
-        self.assertVecAlmostEqual(cell[0], [7, 0, 0])
-        self.assertVecAlmostEqual(cell[1], [0.1, 7, 0])
-        self.assertVecAlmostEqual(cell[2], [0.2, 0.3, 7])
+        self.assertVecAlmostEqual(cell[0], [3.4, 0, 0])
+        self.assertVecAlmostEqual(cell[1], [0.1, 3.4, 0])
+        self.assertVecAlmostEqual(cell[2], [0.2, 0.3, 3.4])
 
         self.runMixture(modeller)
 
@@ -700,16 +706,17 @@ class TestModeller(unittest.TestCase):
         component1 = PDBFile('systems/tip5p.pdb')
         component2 = PDBFile('systems/alanine-dipeptide-implicit.pdb')
 
-        modeller = Modeller(self.pdb2.topology, self.pdb2.positions)
+        modeller = Modeller(self.pdb3.topology, self.pdb3.positions)
+        modeller.deleteWater()
         modeller.addMixture([
-            {'topology': component1.topology, 'positions': component1.positions, 'count': 10000},
+            {'topology': component1.topology, 'positions': component1.positions, 'count': 1100},
             {'topology': component2.topology, 'positions': component2.positions, 'count': 10},
-        ], padding=1*nanometer)
+        ], padding=0.5*nanometer)
 
         cell = modeller.topology.getPeriodicBoxVectors().value_in_unit(nanometer)
-        self.assertVecAlmostEqual(cell[0], [7.26015523, 0, 0])
-        self.assertVecAlmostEqual(cell[1], [0, 7.26015523, 0])
-        self.assertVecAlmostEqual(cell[2], [0, 0, 7.26015523])
+        self.assertVecAlmostEqual(cell[0], [3.41128847, 0, 0])
+        self.assertVecAlmostEqual(cell[1], [0, 3.41128847, 0])
+        self.assertVecAlmostEqual(cell[2], [0, 0, 3.41128847])
 
         self.runMixture(modeller)
 

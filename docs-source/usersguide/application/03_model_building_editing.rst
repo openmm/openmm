@@ -191,8 +191,6 @@ Because this method also adds solvent, it takes many of the same arguments as
 
 .. _`Orientations of Proteins in Membranes`: http://opm.phar.umich.edu
 
-.. _adding-or-removing-extra-particles:
-
 Adding General Solvent Mixtures
 *******************************
 
@@ -210,8 +208,8 @@ For example:
     component1 = PDBFile("component1.pdb")
     component2 = PDBFile("component2.pdb")
     modeller.addSolvent([
-        {"topology": component1.topology, "positions": component1.positions, "count": 1000},
-        {"topology": component2.topology, "positions": component2.positions, "count": 2000},
+        dict(topology=component1.topology, positions=component1.positions, count=1000),
+        dict(topology=component2.topology, positions=component2.positions, count=2000),
     ])
 
 Each component could correspond to one type of molecule in the desired mixture,
@@ -257,6 +255,8 @@ be used to generate boxes containing only solvent.  Simply create a
 and call :meth:`addMixture` on it with the desired options.
 
 .. _`OpenFF Toolkit`: https://github.com/openforcefield/openff-toolkit
+
+.. _adding-or-removing-extra-particles:
 
 Adding or Removing Extra Particles
 **********************************

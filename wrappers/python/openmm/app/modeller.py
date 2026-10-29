@@ -727,11 +727,118 @@ class Modeller(object):
         padding : distance=None
             the padding distance to use
         boxShape : str='cube'
-            the box shape to use.  Allowed values are 'cube', 'dodecahedron', and 'octahedron'.  If padding is None,
-            and Modeller is not guessing an initial box density, this is ignored.
+            the box shape to use.  Allowed values are 'cube', 'dodecahedron', and 'octahedron'.  If boxSize or
+            boxVectors is specified, this is ignored.
         platform : Platform=None
             the Platform to use for solving the packing problem.  If this is None, the default Platform will be used.
         """
+
+        # Helper functions for addMixture().
+
+        def addCopyToTopology(dstTopology, srcTopology):
+            """Add a copy of the given source topology to a given destination topology."""
+            dstAtoms = []
+            for srcChain in srcTopology.chains():
+                dstChain = dstTopology.addChain()
+                for srcResidue in srcChain.residues():
+                    dstResidue = dstTopology.addResidue(srcResidue.name, dstChain)
+                    for srcAtom in srcResidue.atoms():
+                        dstAtoms.append(dstTopology.addAtom(srcAtom.name, srcAtom.element, dstResidue, srcAtom.id, srcAtom.formalCharge))
+            for srcBond in srcTopology.bonds():
+                dstTopology.addBond(dstAtoms[srcBond.atom1.index], dstAtoms[srcBond.atom2.index], srcBond.type, srcBond.order)
+
+        def addCopyToChain(dstChain, srcTopology):
+            """Add a copy of all residues in the given source topology to a given destination chain."""
+            dstTopology = dstChain.topology
+            dstAtoms = []
+            for srcResidue in srcTopology.residues():
+                dstResidue = dstTopology.addResidue(srcResidue.name, dstChain)
+                for srcAtom in srcResidue.atoms():
+                    dstAtoms.append(dstTopology.addAtom(srcAtom.name, srcAtom.element, dstResidue, srcAtom.id, srcAtom.formalCharge))
+            for srcBond in srcTopology.bonds():
+                dstTopology.addBond(dstAtoms[srcBond.atom1.index], dstAtoms[srcBond.atom2.index], srcBond.type, srcBond.order)
+
+        def processPositions(topology, positions):
+            """Finds suitable reference atoms in a set of positions to constrain."""
+            numAtoms = topology.getNumAtoms()
+
+            # Center the component.
+
+            positions = positions - np.mean(positions, axis=0)
+
+            if numAtoms < 3:
+                # There are no choices for the reference atoms.
+
+                return positions, np.arange(numAtoms)
+
+            # Choose the first reference atom as the one furthest from the center.
+
+            index1 = np.argmax(np.sum(positions * positions, axis=1))
+
+            # Choose the second reference atom as the one furthest from the first.
+
+            delta1x = positions - positions[index1]
+            objective2 = np.linalg.norm(delta1x, axis=1)
+            index2 = np.argmax(objective2)
+
+            # Choose the third reference atom as the one furthest from the line passing through the first two.
+
+            dir12 = positions[index2] - positions[index1]
+            dir12 /= np.linalg.norm(dir12)
+            objective3 = np.linalg.norm(delta1x - dir12 * np.sum(dir12 * delta1x, axis=1, keepdims=True), axis=1)
+            objective3[[index1, index2]] = np.nan
+            index3 = np.nanargmax(objective3)
+
+            # If the molecule is linear or very close to linear, don't return the third reference atom since it will create
+            # a degenerate triangle.  This tolerance is fairly loose to keep the constraint solver from failing, so slightly
+            # non-linear molecules will be inaccurately treated as linear, but this should be good enough for packing.
+
+            if objective3[index3] < 0.01 * objective2[index2]:
+                indices = np.array([index1, index2])
+            else:
+                indices = np.array([index1, index2, index3])
+            return positions, indices
+
+        def placeRandomly(positions, vectors, baseRadii, radii, cells, periodicDistance):
+            """Place positions representing a copy of a component randomly in a periodic box."""
+
+            # Search for a placement such that none of the atoms of the new copy overlap with the Modeller's existing atoms.
+            # We also do not attempt to avoid overlaps between new copies since they will move during the optimization.
+
+            for _ in range(100):
+                # Try to find a reasonable position for the center of the new copy (away from existing atoms).
+
+                centerPos = np.random.uniform(-0.5, 0.5, 3) @ vectors
+                if cells is not None and cells.cellForPosition(*centerPos) in cells.cells:
+                    continue
+
+                # Generate a random rotation matrix: see scipy.stats.ortho_group.rv() and scipy.stats.special_ortho_group.rv().
+
+                q, r = np.linalg.qr(np.random.normal(size=(3, 3)))
+                d = np.diag(r)
+                q *= d / np.abs(d)
+                q[0] /= np.linalg.det(q)
+
+                # Rotate the copy and place it in the box, then check its distances to existing atoms.
+
+                newPositions = centerPos + positions @ q
+                if cells is not None and any(
+                    periodicDistance(newPosition, cells.positions[neighbor]) < baseRadii[neighbor] + radius
+                    for newPosition, radius in zip(newPositions, radii)
+                    for neighbor in cells.neighbors(newPosition)
+                ):
+                    continue
+
+                return newPositions
+
+            raise ValueError("No space found for component; use a larger box size or padding distance")
+
+        def getPackingRadii(topology):
+            """Return van der Waals radii for each atom in a Topology."""
+            return Modeller._PACKING_RADII[[0 if atom.element is None else atom.element.atomic_number for atom in topology.atoms()]]
+
+        # Check input arguments.
+
         if len([x for x in (boxSize, boxVectors, padding) if x is not None]) > 1:
             raise ValueError('At most one of the following arguments may be specified: boxSize, boxVectors, padding')
 
@@ -746,14 +853,16 @@ class Modeller(object):
             if component:
                 raise ValueError(f'Unsupported keys in component dictionary: {list(component.keys())}')
 
-            if not (componentTopology.getNumAtoms() and componentCount):
+            if componentTopology.getNumAtoms() != len(componentPositions):
+                raise ValueError('The number of atoms in the Topology of a component must match the number of position coordinates')
+            if componentTopology.getNumAtoms() == 0 or componentCount == 0:
                 continue
             if is_quantity(componentPositions[0]):
                 componentPositions = [position.value_in_unit(nanometer) for position in componentPositions]
-            componentList.append(Modeller._ComponentData(componentTopology, np.array(componentPositions), componentCount, self._getPackingRadii(componentTopology)))
+            componentList.append(Modeller._ComponentData(componentTopology, np.array(componentPositions), componentCount, getPackingRadii(componentTopology)))
 
         if self.topology.getNumAtoms():
-            baseRadii = self._getPackingRadii(self.topology)
+            baseRadii = getPackingRadii(self.topology)
         else:
             baseRadii = None
 
@@ -804,12 +913,9 @@ class Modeller(object):
         # Add the existing model.  Prepare a cell list to make sure new components are not added inside it.
 
         if self.topology.getNumAtoms():
-            self._addCopyToTopology(topology, self.topology)
+            addCopyToTopology(topology, self.topology)
 
-            basePositions = self.positions
-            if is_quantity(basePositions[0]):
-                basePositions = [position.value_in_unit(nanometer) for position in basePositions]
-            basePositions = np.array(basePositions)
+            basePositions = np.array(self.positions.value_in_unit(nanometer))
             positions.append(basePositions)
 
             for radius in baseRadii:
@@ -827,16 +933,16 @@ class Modeller(object):
         for component in componentList:
             dstChain = topology.addChain()
             for _ in range(component.count):
-                self._addCopyToChain(dstChain, component.topology)
+                addCopyToChain(dstChain, component.topology)
 
             # Get the component positions, and indices of the particles that should be real (not virtual sites).
 
-            refPositions, refIndices = self._processPositions(component.topology, component.positions)
+            refPositions, refIndices = processPositions(component.topology, component.positions)
 
             # Place copies of the component randomly in the box.
 
             for _ in range(component.count):
-                positions.append(self._placeRandomly(refPositions, vectors, baseRadii, component.radii, cells, periodicDistance))
+                positions.append(placeRandomly(refPositions, vectors, baseRadii, component.radii, cells, periodicDistance))
 
             if refIndices.size == 1:
                 for _ in range(component.count):
@@ -912,7 +1018,7 @@ class Modeller(object):
 
         if vectorsGuessed:
             # If the initial box vectors were guesses, we will try to find better ones using a barostat to rescale them.
-            # The barostat pressure is an arbitrary choice but should yield a density of pure water close to 1 g/cm^3.
+            # The barostat pressure is not physically meaningful but was chosen to yield a density of pure water close to 1 g/cm^3.
 
             barostat = MonteCarloBarostat(100, 0, 1)
             system.addForce(barostat)
@@ -959,108 +1065,6 @@ class Modeller(object):
 
         self.topology = topology
         self.positions = context.getState(positions=True).getPositions()
-
-    def _addCopyToTopology(self, dstTopology, srcTopology):
-        """Add a copy of the given source topology to a given destination topology."""
-        dstAtoms = []
-        for srcChain in srcTopology.chains():
-            dstChain = dstTopology.addChain()
-            for srcResidue in srcChain.residues():
-                dstResidue = dstTopology.addResidue(srcResidue.name, dstChain)
-                for srcAtom in srcResidue.atoms():
-                    dstAtoms.append(dstTopology.addAtom(srcAtom.name, srcAtom.element, dstResidue))
-        for srcBond in srcTopology.bonds():
-            dstTopology.addBond(dstAtoms[srcBond.atom1.index], dstAtoms[srcBond.atom2.index])
-
-    def _addCopyToChain(self, dstChain, srcTopology):
-        """Add a copy of all residues in the given source topology to a given destination chain."""
-        dstTopology = dstChain.topology
-        dstAtoms = []
-        for srcResidue in srcTopology.residues():
-            dstResidue = dstTopology.addResidue(srcResidue.name, dstChain)
-            for srcAtom in srcResidue.atoms():
-                dstAtoms.append(dstTopology.addAtom(srcAtom.name, srcAtom.element, dstResidue))
-        for srcBond in srcTopology.bonds():
-            dstTopology.addBond(dstAtoms[srcBond.atom1.index], dstAtoms[srcBond.atom2.index])
-
-    def _processPositions(self, topology, positions):
-        """Finds suitable reference atoms in a set of positions to constrain."""
-        numAtoms = topology.getNumAtoms()
-
-        # Center the component.
-
-        positions = positions - np.mean(positions, axis=0)
-
-        if numAtoms < 3:
-            # There are no choices for the reference atoms.
-
-            return positions, np.arange(numAtoms)
-
-        # Choose the first reference atom as the one furthest from the center.
-
-        index1 = np.argmax(np.sum(positions * positions, axis=1))
-
-        # Choose the second reference atom as the one furthest from the first.
-
-        delta1x = positions - positions[index1]
-        objective2 = np.linalg.norm(delta1x, axis=1)
-        index2 = np.argmax(objective2)
-
-        # Choose the third reference atom as the one furthest from the line passing through the first two.
-
-        dir12 = positions[index2] - positions[index1]
-        dir12 /= np.linalg.norm(dir12)
-        objective3 = np.linalg.norm(delta1x - dir12 * np.sum(dir12 * delta1x, axis=1, keepdims=True), axis=1)
-        objective3[[index1, index2]] = np.nan
-        index3 = np.nanargmax(objective3)
-
-        # If the molecule is linear or very close to linear, don't return the third reference atom since it will create
-        # a degenerate triangle.  This tolerance is fairly loose to keep the constraint solver from failing, so slightly
-        # non-linear molecules will be inaccurately treated as linear, but this should be good enough for packing.
-
-        if objective3[index3] < 0.01 * objective2[index2]:
-            indices = np.array([index1, index2])
-        else:
-            indices = np.array([index1, index2, index3])
-        return positions, indices
-
-    def _placeRandomly(self, positions, vectors, baseRadii, radii, cells, periodicDistance):
-        """Place positions representing a copy of a component randomly in a periodic box."""
-
-        # Search for a placement such that none of the atoms of the new copy overlap with the Modeller's existing atoms.
-        # We also do not attempt to avoid overlaps between new copies since they will move during the optimization.
-
-        for _ in range(100):
-            # Try to find a reasonable position for the center of the new copy (away from existing atoms).
-
-            centerPos = np.random.uniform(-0.5, 0.5, 3) @ vectors
-            if cells is not None and cells.cellForPosition(*centerPos) in cells.cells:
-                continue
-
-            # Generate a random rotation matrix: see scipy.stats.ortho_group.rv() and scipy.stats.special_ortho_group.rv().
-
-            q, r = np.linalg.qr(np.random.normal(size=(3, 3)))
-            d = np.diag(r)
-            q *= d / np.abs(d)
-            q[0] /= np.linalg.det(q)
-
-            # Rotate the copy and place it in the box, then check its distances to existing atoms.
-
-            newPositions = centerPos + positions @ q
-            if cells is not None and any(
-                periodicDistance(newPosition, cells.positions[neighbor]) < baseRadii[neighbor] + radius
-                for newPosition, radius in zip(newPositions, radii)
-                for neighbor in cells.neighbors(newPosition)
-            ):
-                continue
-
-            return newPositions
-
-        raise ValueError("No space found for component; use a larger box size or padding distance")
-
-    def _getPackingRadii(self, topology):
-        """Return van der Waals radii for each atom in a Topology."""
-        return Modeller._PACKING_RADII[[0 if atom.element is None else atom.element.atomic_number for atom in topology.atoms()]]
 
     def _computeBoxWidth(self, padding):
         """Compute the necessary periodic box width for a given padding distance."""
