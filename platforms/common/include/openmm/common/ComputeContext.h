@@ -613,12 +613,12 @@ public:
     bool invalidateMolecules(ComputeForceInfo* force, bool checkAtoms=true, bool checkGroups=true);
     /**
      * Mark that the current molecule definitions from one particular force may be invalid, when
-     * only particles in the range [firstParticle, lastParticle] and particle groups in the range
-     * [firstGroup, lastGroup] have changed.  Only molecules containing one of those particles
-     * are revalidated, since no other molecule can have changed.  An empty range (first > last)
-     * means nothing of that kind changed.
+     * only particles in the range [firstParticle, lastParticle] and the force's particle groups
+     * (such as bonds or exceptions) in the range [firstParticleGroup, lastParticleGroup] have changed.
+     * Only groups of identical molecules containing one of those particles are revalidated.  An empty
+     * range (first > last) means nothing of that kind changed.
      */
-    bool invalidateMolecules(ComputeForceInfo* force, int firstParticle, int lastParticle, int firstGroup, int lastGroup);
+    bool invalidateMolecules(ComputeForceInfo* force, int firstParticle, int lastParticle, int firstParticleGroup, int lastParticleGroup);
     /**
      * Make sure the current atom order is valid, based on the forces.  If not, perform reordering
      * to generate a new valid order.  This method is only needed in very unusual situations.
@@ -657,7 +657,7 @@ protected:
     class VirtualSiteInfo;
     void findMoleculeGroups();
     void resetAtomOrder();
-    bool invalidateMolecules(ComputeForceInfo* force, bool checkAtoms, bool checkGroups, const std::vector<bool>& groupsToCheck);
+    bool checkMoleculeGroups(ComputeForceInfo* force, bool checkAtoms, bool checkGroups, const std::vector<bool>& moleculeGroupsToCheck);
     /**
      * Subclasses should invoke this from their constructors to initialize common kernels.
      */
