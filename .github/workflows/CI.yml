@@ -553,7 +553,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v4
         name: "Prepare base dependencies"
         with:
           python-version: "3.13"
