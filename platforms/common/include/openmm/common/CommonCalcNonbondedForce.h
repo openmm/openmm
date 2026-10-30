@@ -164,7 +164,17 @@ private:
     std::map<std::string, double> paramValues;
     std::vector<int> exceptionIndex, exceptions;
     std::vector<mm_float4> baseParticleParamVec, baseExceptionParamsVec;
+    /**
+     * Add (sign = 1) or remove (sign = -1) one particle's contribution to the fixed point sums used
+     * for the self energy and total charge.
+     */
+    void addSelfEnergyTerms(const mm_float4& params, int sign);
+    /**
+     * Compute the self energy and total charge from the fixed point sums.
+     */
+    void computeSelfEnergyFromSums();
     double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha, totalCharge;
+    long long chargeSquaredSum, chargeSum, dispersionSelfSum;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
     int stepsToSort;
