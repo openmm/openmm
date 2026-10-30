@@ -1,35 +1,42 @@
 /**
- * Perform the first step of Langevin integration.
+ * Perform the second part of integration: position half step, then interact with heat bath,
+ * then another position half step.
  */
 
-KERNEL void integrateDrudeLangevinPart1(GLOBAL mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force, GLOBAL mixed4* RESTRICT posDelta,
-        GLOBAL const int* RESTRICT normalParticles, GLOBAL const int2* RESTRICT pairParticles, GLOBAL const mixed2* RESTRICT dt, mixed vscale, mixed fscale,
-        mixed noisescale, mixed vscaleDrude, mixed fscaleDrude, mixed noisescaleDrude, GLOBAL const float4* RESTRICT random, unsigned int startRandomIndex) {
-    mixed stepSize = dt[0].y;
-    
+KERNEL void integrateDrudeLangevinPart2(int numAtoms, GLOBAL mixed4* RESTRICT velm, GLOBAL mixed4* RESTRICT posDelta,
+        GLOBAL mixed4* RESTRICT oldDelta, mixed vscale, mixed noisescale, mixed vscaleDrude, mixed noisescaleDrude,
+        GLOBAL const int* RESTRICT normalParticles, GLOBAL const int2* RESTRICT pairParticles,
+        GLOBAL const mixed2* RESTRICT dt, GLOBAL const float4* RESTRICT random, unsigned int startRandomIndex) {
+    mixed halfdt = 0.5f*dt[0].y;
+
     // Update normal particles.
 
     for (int i = GLOBAL_ID; i < NUM_NORMAL_PARTICLES; i += GLOBAL_SIZE) {
         int index = normalParticles[i];
+        unsigned int randomIndex = startRandomIndex+i;
         mixed4 velocity = velm[index];
-        if (velocity.w != 0) {
+        if (velocity.w != 0.0) {
+            mixed4 delta = make_mixed4(halfdt*velocity.x, halfdt*velocity.y, halfdt*velocity.z, 0);
             mixed sqrtInvMass = SQRT(velocity.w);
-            float4 rand = random[startRandomIndex+index];
-            velocity.x = vscale*velocity.x + fscale*velocity.w*force[index] + noisescale*sqrtInvMass*rand.x;
-            velocity.y = vscale*velocity.y + fscale*velocity.w*force[index+PADDED_NUM_ATOMS] + noisescale*sqrtInvMass*rand.y;
-            velocity.z = vscale*velocity.z + fscale*velocity.w*force[index+PADDED_NUM_ATOMS*2] + noisescale*sqrtInvMass*rand.z;
+            velocity.x = vscale*velocity.x + noisescale*sqrtInvMass*random[randomIndex].x;
+            velocity.y = vscale*velocity.y + noisescale*sqrtInvMass*random[randomIndex].y;
+            velocity.z = vscale*velocity.z + noisescale*sqrtInvMass*random[randomIndex].z;
             velm[index] = velocity;
-            posDelta[index] = make_mixed4(stepSize*velocity.x, stepSize*velocity.y, stepSize*velocity.z, 0);
+            delta += make_mixed4(halfdt*velocity.x, halfdt*velocity.y, halfdt*velocity.z, 0);
+            posDelta[index] = delta;
+            oldDelta[index] = delta;
         }
     }
-    
+
     // Update Drude particle pairs.
-    
+
     unsigned int randomIndex = startRandomIndex+NUM_NORMAL_PARTICLES;
     for (int i = GLOBAL_ID; i < NUM_PAIRS; i += GLOBAL_SIZE) {
         int2 particles = pairParticles[i];
         mixed4 velocity1 = velm[particles.x];
         mixed4 velocity2 = velm[particles.y];
+        mixed4 delta1 = make_mixed4(halfdt*velocity1.x, halfdt*velocity1.y, halfdt*velocity1.z, 0);
+        mixed4 delta2 = make_mixed4(halfdt*velocity2.x, halfdt*velocity2.y, halfdt*velocity2.z, 0);
         mixed mass1 = RECIP(velocity1.w);
         mixed mass2 = RECIP(velocity2.w);
         mixed invTotalMass = RECIP(mass1+mass2);
@@ -40,18 +47,14 @@ KERNEL void integrateDrudeLangevinPart1(GLOBAL mixed4* RESTRICT velm, GLOBAL con
         mixed sqrtInvReducedMass = SQRT(invReducedMass);
         mixed4 cmVel = velocity1*mass1fract+velocity2*mass2fract;
         mixed4 relVel = velocity2-velocity1;
-        mixed3 force1 = make_mixed3(force[particles.x], force[particles.x+PADDED_NUM_ATOMS], force[particles.x+PADDED_NUM_ATOMS*2]);
-        mixed3 force2 = make_mixed3(force[particles.y], force[particles.y+PADDED_NUM_ATOMS], force[particles.y+PADDED_NUM_ATOMS*2]);
-        mixed3 cmForce = force1+force2;
-        mixed3 relForce = force2*mass1fract - force1*mass2fract;
         float4 rand1 = random[randomIndex+2*i];
         float4 rand2 = random[randomIndex+2*i+1];
-        cmVel.x = vscale*cmVel.x + fscale*invTotalMass*cmForce.x + noisescale*sqrtInvTotalMass*rand1.x;
-        cmVel.y = vscale*cmVel.y + fscale*invTotalMass*cmForce.y + noisescale*sqrtInvTotalMass*rand1.y;
-        cmVel.z = vscale*cmVel.z + fscale*invTotalMass*cmForce.z + noisescale*sqrtInvTotalMass*rand1.z;
-        relVel.x = vscaleDrude*relVel.x + fscaleDrude*invReducedMass*relForce.x + noisescaleDrude*sqrtInvReducedMass*rand2.x;
-        relVel.y = vscaleDrude*relVel.y + fscaleDrude*invReducedMass*relForce.y + noisescaleDrude*sqrtInvReducedMass*rand2.y;
-        relVel.z = vscaleDrude*relVel.z + fscaleDrude*invReducedMass*relForce.z + noisescaleDrude*sqrtInvReducedMass*rand2.z;
+        cmVel.x = vscale*cmVel.x + noisescale*sqrtInvTotalMass*rand1.x;
+        cmVel.y = vscale*cmVel.y + noisescale*sqrtInvTotalMass*rand1.y;
+        cmVel.z = vscale*cmVel.z + noisescale*sqrtInvTotalMass*rand1.z;
+        relVel.x = vscaleDrude*relVel.x + noisescaleDrude*sqrtInvReducedMass*rand2.x;
+        relVel.y = vscaleDrude*relVel.y + noisescaleDrude*sqrtInvReducedMass*rand2.y;
+        relVel.z = vscaleDrude*relVel.z + noisescaleDrude*sqrtInvReducedMass*rand2.z;
         velocity1.x = cmVel.x-relVel.x*mass2fract;
         velocity1.y = cmVel.y-relVel.y*mass2fract;
         velocity1.z = cmVel.z-relVel.z*mass2fract;
@@ -60,48 +63,12 @@ KERNEL void integrateDrudeLangevinPart1(GLOBAL mixed4* RESTRICT velm, GLOBAL con
         velocity2.z = cmVel.z+relVel.z*mass1fract;
         velm[particles.x] = velocity1;
         velm[particles.y] = velocity2;
-        posDelta[particles.x] = make_mixed4(stepSize*velocity1.x, stepSize*velocity1.y, stepSize*velocity1.z, 0);
-        posDelta[particles.y] = make_mixed4(stepSize*velocity2.x, stepSize*velocity2.y, stepSize*velocity2.z, 0);
-    }
-}
-
-/**
- * Perform the second step of Langevin integration.
- */
-
-KERNEL void integrateDrudeLangevinPart2(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTRICT posqCorrection, GLOBAL const mixed4* RESTRICT posDelta, GLOBAL mixed4* RESTRICT velm, GLOBAL const mixed2* RESTRICT dt) {
-#ifdef SUPPORTS_DOUBLE_PRECISION
-    double invStepSize = 1.0/dt[0].y;
-#else
-    float invStepSize = 1.0f/dt[0].y;
-#endif
-    int index = GLOBAL_ID;
-    while (index < NUM_ATOMS) {
-        mixed4 vel = velm[index];
-        if (vel.w != 0) {
-#ifdef USE_MIXED_PRECISION
-            real4 pos1 = posq[index];
-            real4 pos2 = posqCorrection[index];
-            mixed4 pos = make_mixed4(pos1.x+(mixed)pos2.x, pos1.y+(mixed)pos2.y, pos1.z+(mixed)pos2.z, pos1.w);
-#else
-            real4 pos = posq[index];
-#endif
-            mixed4 delta = posDelta[index];
-            pos.x += delta.x;
-            pos.y += delta.y;
-            pos.z += delta.z;
-            vel.x = (mixed) (invStepSize*delta.x);
-            vel.y = (mixed) (invStepSize*delta.y);
-            vel.z = (mixed) (invStepSize*delta.z);
-#ifdef USE_MIXED_PRECISION
-            posq[index] = make_real4((real) pos.x, (real) pos.y, (real) pos.z, (real) pos.w);
-            posqCorrection[index] = make_real4(pos.x-(real) pos.x, pos.y-(real) pos.y, pos.z-(real) pos.z, 0);
-#else
-            posq[index] = pos;
-#endif
-            velm[index] = vel;
-        }
-        index += GLOBAL_SIZE;
+        delta1 += make_mixed4(halfdt*velocity1.x, halfdt*velocity1.y, halfdt*velocity1.z, 0);
+        delta2 += make_mixed4(halfdt*velocity2.x, halfdt*velocity2.y, halfdt*velocity2.z, 0);
+        posDelta[particles.x] = delta1;
+        posDelta[particles.y] = delta2;
+        oldDelta[particles.x] = delta1;
+        oldDelta[particles.y] = delta2;
     }
 }
 
@@ -181,8 +148,12 @@ KERNEL void applyHardWallConstraints(GLOBAL real4* RESTRICT posq, GLOBAL real4* 
                 mixed vBond = hardwallscaleDrude/SQRT(mass1);
                 dotvr1 = -dotvr1*vBond*mass2*invTotalMass/fabs(dotvr1);
                 dotvr2 = -dotvr2*vBond*mass1*invTotalMass/fabs(dotvr2);
-                mixed dr1 = -deltaR*mass2*invTotalMass + deltaT*dotvr1;
-                mixed dr2 = deltaR*mass1*invTotalMass + deltaT*dotvr2;
+                mixed dr1 = -deltaR*mass2*invTotalMass;
+                mixed dr2 = deltaR*mass1*invTotalMass;
+                if (dotvr1-dotvr2 < 0) {
+                    dr1 += deltaT*dotvr1;
+                    dr2 += deltaT*dotvr2;
+                }
                 dotvr1 += vbCMass;
                 dotvr2 += vbCMass;
                 pos1.x += bondDir.x*dr1;

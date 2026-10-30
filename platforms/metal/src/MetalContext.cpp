@@ -503,6 +503,7 @@ ComputeProgram MetalContext::compileProgram(const string source, const map<strin
             throw OpenMMException("Error compiling program: "+errorString);
         return shared_ptr<ComputeProgramImpl>(new MetalProgram(*this, library, packArgs));
     }
+    throw OpenMMException("Internal error: this point should never be reached");
 }
 
 MetalArray& MetalContext::unwrap(ArrayInterface& array) const {

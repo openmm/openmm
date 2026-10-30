@@ -107,9 +107,8 @@ private:
     ComputeContext& cc;
     double prevStepSize;
     bool hasInitializedKernels;
-    ComputeArray normalParticles;
-    ComputeArray pairParticles;
-    ComputeKernel kernel1, kernel2, hardwallKernel;
+    ComputeArray normalParticles, pairParticles, oldDelta;
+    ComputeKernel kernel1, kernel2, kernel3, hardwallKernel;
 };
 
 /**

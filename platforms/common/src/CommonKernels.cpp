@@ -60,7 +60,7 @@ void CommonUpdateStateDataKernel::initialize(const System& system) {
     ContextSelector selector(cc);
     floatBuffer.initialize<float>(cc, 3*system.getNumParticles(), "floatBuffer");
     map<string, string> defines;
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::copyCoordinateBuffers, defines);
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::copyCoordinateBuffers+CommonKernelSources::reduceEnergyParamDerivs, defines);
     copyFloatKernel = program->createKernel("copyFloatBuffer");
     copyFloatKernel->addArg(floatBuffer);
     copyFloatKernel->addArg();
@@ -72,6 +72,9 @@ void CommonUpdateStateDataKernel::initialize(const System& system) {
         copyDoubleKernel->addArg();
         copyDoubleKernel->addArg(cc.getNumAtoms());
     }
+    reduceEnergyParamDerivsKernel = program->createKernel("reduceEnergyParamDerivs");
+    for (int i = 0; i < 4; i++)
+        reduceEnergyParamDerivsKernel->addArg();
 }
 
 double CommonUpdateStateDataKernel::getTime(const ContextImpl& context) const {
@@ -303,25 +306,23 @@ void CommonUpdateStateDataKernel::getEnergyParameterDerivatives(ContextImpl& con
     if (numDerivs == 0)
         return;
     derivs = cc.getEnergyParamDerivWorkspace();
+    if (!energyParamDerivSum.isInitialized()) {
+        if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision())
+            energyParamDerivSum.initialize<double>(cc, numDerivs, "energyParamDerivSum");
+        else
+            energyParamDerivSum.initialize<float>(cc, numDerivs, "energyParamDerivSum");
+    }
     ArrayInterface& derivArray = cc.getEnergyParamDerivBuffer();
-    if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
-        vector<double> derivBuffers;
-        derivArray.download(derivBuffers, true);
-        for (int i = numDerivs; i < derivArray.getSize(); i += numDerivs)
-            for (int j = 0; j < numDerivs; j++)
-                derivBuffers[j] += derivBuffers[i+j];
-        for (int i = 0; i < numDerivs; i++)
-            derivs[paramDerivNames[i]] += derivBuffers[i];
-    }
-    else {
-        vector<float> derivBuffers;
-        derivArray.download(derivBuffers);
-        for (int i = numDerivs; i < derivArray.getSize(); i += numDerivs)
-            for (int j = 0; j < numDerivs; j++)
-                derivBuffers[j] += derivBuffers[i+j];
-        for (int i = 0; i < numDerivs; i++)
-            derivs[paramDerivNames[i]] += derivBuffers[i];
-    }
+    int workGroupSize = min(512, cc.getMaxThreadBlockSize());
+    reduceEnergyParamDerivsKernel->setArg(0, derivArray);
+    reduceEnergyParamDerivsKernel->setArg(1, energyParamDerivSum);
+    reduceEnergyParamDerivsKernel->setArg(2, (int) derivArray.getSize());
+    reduceEnergyParamDerivsKernel->setArg(3, numDerivs);
+    reduceEnergyParamDerivsKernel->execute(workGroupSize*numDerivs, workGroupSize);
+    vector<double> derivValues;
+    energyParamDerivSum.download(derivValues, true);
+    for (int i = 0; i < numDerivs; i++)
+        derivs[paramDerivNames[i]] += derivValues[i];
 }
 
 void CommonUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Vec3& a, Vec3& b, Vec3& c) const {

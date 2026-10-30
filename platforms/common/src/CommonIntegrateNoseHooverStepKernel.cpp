@@ -539,7 +539,7 @@ std::pair<double, double> CommonIntegrateNoseHooverStepKernel::computeMaskedKine
 
         reduceEnergyKernel->addArg(energyBuffer);
         reduceEnergyKernel->addArg(kineticEnergyBuffer);
-        reduceEnergyKernel->addArg((int) energyBuffer.getSize());
+        reduceEnergyKernel->addArg();
     }
 
     cc.clearBuffer(energyBuffer);
@@ -553,6 +553,7 @@ std::pair<double, double> CommonIntegrateNoseHooverStepKernel::computeMaskedKine
         computePairsKineticEnergyKernel->setArg(3, pairlists[chainID]);
         computePairsKineticEnergyKernel->execute(nPairs);
     }
+    reduceEnergyKernel->setArg(2, std::min((int) energyBuffer.getSize(), std::max(nAtoms, nPairs)));
     reduceEnergyKernel->execute(workGroupSize, workGroupSize);
 
     std::pair<double, double> KEs = {0, 0};

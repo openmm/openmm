@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2011-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -75,6 +75,8 @@ void ReferenceIntegrateRPMDStepKernel::initialize(const System& system, const RP
     int maxContractedCopies = 0;
     for (auto& c : contractions) {
         int group = c.first;
+        if (((1<<group) & integrator.getIntegrationForceGroups()) == 0)
+            continue;
         int copies = c.second;
         if (group < 0 || group > 31)
             throw OpenMMException("RPMDIntegrator: Force group must be between 0 and 31");

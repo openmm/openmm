@@ -256,11 +256,16 @@ void CommonIntegrateDrudeLangevinStepKernel::initialize(const System& system, co
     defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
     defines["NUM_NORMAL_PARTICLES"] = cc.intToString(normalParticleVec.size());
     defines["NUM_PAIRS"] = cc.intToString(pairParticleVec.size());
-    map<string, string> replacements;
-    ComputeProgram program = cc.compileProgram(CommonDrudeKernelSources::drudeLangevin, defines);
-    kernel1 = program->createKernel("integrateDrudeLangevinPart1");
-    kernel2 = program->createKernel("integrateDrudeLangevinPart2");
-    hardwallKernel = program->createKernel("applyHardWallConstraints");
+    ComputeProgram program1 = cc.compileProgram(CommonKernelSources::langevinMiddle);
+    kernel1 = program1->createKernel("integrateLangevinMiddlePart1");
+    kernel3 = program1->createKernel("integrateLangevinMiddlePart3");
+    ComputeProgram program2 = cc.compileProgram(CommonDrudeKernelSources::drudeLangevin, defines);
+    kernel2 = program2->createKernel("integrateDrudeLangevinPart2");
+    hardwallKernel = program2->createKernel("applyHardWallConstraints");
+    if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision())
+        oldDelta.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
+    else
+        oldDelta.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
     prevStepSize = -1.0;
 }
 
@@ -268,26 +273,33 @@ void CommonIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
     ContextSelector selector(cc);
     IntegrationUtilities& integration = cc.getIntegrationUtilities();
     int numAtoms = cc.getNumAtoms();
+    int paddedNumAtoms = cc.getPaddedNumAtoms();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
+        kernel1->addArg(numAtoms);
+        kernel1->addArg(paddedNumAtoms);
         kernel1->addArg(cc.getVelm());
         kernel1->addArg(cc.getLongForceBuffer());
-        kernel1->addArg(integration.getPosDelta());
-        kernel1->addArg(normalParticles);
-        kernel1->addArg(pairParticles);
         kernel1->addArg(integration.getStepSize());
-        for (int i = 0; i < 6; i++)
-            kernel1->addArg();
-        kernel1->addArg(integration.getRandom());
-        kernel1->addArg();
-        kernel2->addArg(cc.getPosq());
-        if (cc.getUseMixedPrecision())
-            kernel2->addArg(cc.getPosqCorrection());
-        else
-            kernel2->addArg(nullptr);
-        kernel2->addArg(integration.getPosDelta());
+        kernel2->addArg(numAtoms);
         kernel2->addArg(cc.getVelm());
+        kernel2->addArg(integration.getPosDelta());
+        kernel2->addArg(oldDelta);
+        for (int i = 0; i < 4; i++)
+            kernel2->addArg();
+        kernel2->addArg(normalParticles);
+        kernel2->addArg(pairParticles);
         kernel2->addArg(integration.getStepSize());
+        kernel2->addArg(integration.getRandom());
+        kernel2->addArg();
+        kernel3->addArg(numAtoms);
+        kernel3->addArg(cc.getPosq());
+        kernel3->addArg(cc.getVelm());
+        kernel3->addArg(integration.getPosDelta());
+        kernel3->addArg(oldDelta);
+        kernel3->addArg(integration.getStepSize());
+        if (cc.getUseMixedPrecision())
+            kernel3->addArg(cc.getPosqCorrection());
         hardwallKernel->addArg(cc.getPosq());
         if (cc.getUseMixedPrecision())
             hardwallKernel->addArg(cc.getPosqCorrection());
@@ -303,12 +315,12 @@ void CommonIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
     // Compute integrator coefficients.
     
     double stepSize = integrator.getStepSize();
+    double kT = BOLTZ*integrator.getTemperature();
     double vscale = exp(-stepSize*integrator.getFriction());
-    double fscale = (1-vscale)/integrator.getFriction()/(double) 0x100000000;
-    double noisescale = sqrt(2*BOLTZ*integrator.getTemperature()*integrator.getFriction())*sqrt(0.5*(1-vscale*vscale)/integrator.getFriction());
+    double noisescale = sqrt(kT*(1-vscale*vscale));
+    double kTDrude = BOLTZ*integrator.getDrudeTemperature();
     double vscaleDrude = exp(-stepSize*integrator.getDrudeFriction());
-    double fscaleDrude = (1-vscaleDrude)/integrator.getDrudeFriction()/(double) 0x100000000;
-    double noisescaleDrude = sqrt(2*BOLTZ*integrator.getDrudeTemperature()*integrator.getDrudeFriction())*sqrt(0.5*(1-vscaleDrude*vscaleDrude)/integrator.getDrudeFriction());
+    double noisescaleDrude = sqrt(kTDrude*(1-vscaleDrude*vscaleDrude));
     double maxDrudeDistance = integrator.getMaxDrudeDistance();
     double hardwallscaleDrude = sqrt(BOLTZ*integrator.getDrudeTemperature());
     if (stepSize != prevStepSize) {
@@ -323,39 +335,31 @@ void CommonIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
         prevStepSize = stepSize;
     }
     if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
-        kernel1->setArg(6, vscale);
-        kernel1->setArg(7, fscale);
-        kernel1->setArg(8, noisescale);
-        kernel1->setArg(9, vscaleDrude);
-        kernel1->setArg(10, fscaleDrude);
-        kernel1->setArg(11, noisescaleDrude);
+        kernel2->setArg(4, vscale);
+        kernel2->setArg(5, noisescale);
+        kernel2->setArg(6, vscaleDrude);
+        kernel2->setArg(7, noisescaleDrude);
         hardwallKernel->setArg(5, maxDrudeDistance);
         hardwallKernel->setArg(6, hardwallscaleDrude);
     }
     else {
-        kernel1->setArg(6, (float) vscale);
-        kernel1->setArg(7, (float) fscale);
-        kernel1->setArg(8, (float) noisescale);
-        kernel1->setArg(9, (float) vscaleDrude);
-        kernel1->setArg(10, (float) fscaleDrude);
-        kernel1->setArg(11, (float) noisescaleDrude);
+        kernel2->setArg(4, (float) vscale);
+        kernel2->setArg(5, (float) noisescale);
+        kernel2->setArg(6, (float) vscaleDrude);
+        kernel2->setArg(7, (float) noisescaleDrude);
         hardwallKernel->setArg(5, (float) maxDrudeDistance);
         hardwallKernel->setArg(6, (float) hardwallscaleDrude);
     }
 
-    // Call the first integration kernel.
+    // Perform the integration.
 
-    kernel1->setArg(13, integration.prepareRandomNumbers(normalParticles.getSize()+2*pairParticles.getSize()));
+    kernel2->setArg(12, integration.prepareRandomNumbers(normalParticles.getSize()+2*pairParticles.getSize()));
     kernel1->execute(numAtoms);
-
-    // Apply constraints.
-
-    integration.applyConstraints(integrator.getConstraintTolerance());
-
-    // Call the second integration kernel.
-
+    integration.applyVelocityConstraints(integrator.getConstraintTolerance());
     kernel2->execute(numAtoms);
-    
+    integration.applyConstraints(integrator.getConstraintTolerance());
+    kernel3->execute(numAtoms);
+
     // Apply hard wall constraints.
     
     if (maxDrudeDistance > 0)

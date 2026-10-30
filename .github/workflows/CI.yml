@@ -33,7 +33,6 @@ jobs:
             env: ubuntu-latest
             python-version: "3.13"
             cuda-version: "12.4"
-            OPENCL: false
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_CUDA_TESTS=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
@@ -53,7 +52,6 @@ jobs:
             os: ubuntu-latest
             env: ubuntu-latest
             python-version: "3.13"
-            OPENCL: false
             cuda-version: "11.8"
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_CUDA_TESTS=OFF \
@@ -70,30 +68,10 @@ jobs:
               -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-11.2/include \
               -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.2/ \
 
-          - name: Linux Intel OpenCL
-            os: ubuntu-latest
-            env: ubuntu-latest
-            python-version: "3.13"
-            OPENCL: true
-            cuda-version: ""
-            CMAKE_FLAGS: |
-              -DOPENMM_BUILD_OPENCL_LIB=ON \
-              -DOPENMM_BUILD_OPENCL_TESTS=ON \
-              -DOPENMM_BUILD_STATIC_LIB=OFF \
-              -DOPENMM_BUILD_CPU_LIB=OFF \
-              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
-              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
-              -DOPENMM_BUILD_PME_PLUGIN=OFF \
-              -DOPENMM_BUILD_AMOEBA_PLUGIN=OFF \
-              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
-              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
-              -DOPENMM_BUILD_EXAMPLES=OFF \
-
           - name: Linux HIP
             os: ubuntu-latest
             env: ubuntu-latest-hip
             python-version: "3.13"
-            OPENCL: false
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_HIP_LIB=ON \
               -DOPENMM_BUILD_HIP_TESTS=OFF \
@@ -108,7 +86,6 @@ jobs:
             os: ubuntu-latest
             env: ubuntu-latest
             python-version: "3.13"
-            OPENCL: false
             cuda-version: ""
             CC: $CCACHE/clang
             CXX: $CCACHE/clang++
@@ -121,7 +98,6 @@ jobs:
             python-version: "3.13"
             os: ubuntu-latest
             env: ubuntu-latest
-            OPENCL: false
             cuda-version: ""
             compilers: conda-forge
             CMAKE_FLAGS: |
@@ -132,7 +108,6 @@ jobs:
             python-version: "3.10"
             os: ubuntu-latest
             env: ubuntu-latest
-            OPENCL: false
             cuda-version: ""
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
@@ -142,7 +117,6 @@ jobs:
             python-version: "3.13"
             os: ubuntu-latest
             env: ubuntu-latest
-            OPENCL: false
             cuda-version: ""
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
@@ -152,7 +126,6 @@ jobs:
             python-version: "3.14"
             os: ubuntu-24.04-arm
             env: ubuntu-arm
-            OPENCL: false
             cuda-version: ""
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
@@ -162,7 +135,6 @@ jobs:
             python-version: "3.13"
             os: macos-15-intel
             env: macos
-            OPENCL: false
             cuda-version: ""
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_OPENCL_LIB=ON \
@@ -173,7 +145,6 @@ jobs:
             python-version: "3.13"
             os: macos-latest
             env: macos
-            OPENCL: false
             cuda-version: ""
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_OPENCL_LIB=ON \
@@ -184,7 +155,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: conda-incubator/setup-miniconda@v4
         name: "Prepare base dependencies"
         with:
           python-version: ${{ matrix.python-version }}
@@ -194,21 +165,11 @@ jobs:
           miniforge-variant: Miniforge3
           use-mamba: true
 
-      # See https://github.com/kou/arrow/blob/main/ci/scripts/util_free_space.sh.  We can delete more if we need to.
-      - name: "Free disk space"
-        if: matrix.OPENCL == true && startsWith(matrix.os, 'ubuntu')
-        run: |
-          rm -rf /opt/hostedtoolcache/*
-
       - name: "Install CUDA on Ubuntu (if needed)"
         if: matrix.cuda-version != '' && startsWith(matrix.os, 'ubuntu')
         env:
           CUDA_VERSION: ${{ matrix.cuda-version }}
         run: source devtools/ci/gh-actions/scripts/install_cuda.sh
-
-      - name: "Install OpenCL on Ubuntu (if needed)"
-        if: matrix.OPENCL == true && startsWith(matrix.os, 'ubuntu')
-        run: source devtools/ci/gh-actions/scripts/install_intel_opencl.sh
 
       - name: "Install conda-forge compilers on Ubuntu or M1 (if needed)"
         if: matrix.compilers == 'conda-forge'
@@ -273,9 +234,6 @@ jobs:
         run: |
           set -x
           cd build
-          if [[ ${{ matrix.OPENCL }} == true ]]; then
-            source /opt/intel/oneapi/setvars.sh
-          fi
           python ../devtools/run-ctest.py --parallel 4 --timeout 600 --job-duration 900 --attempts 3
 
           if [[ ${{ matrix.os }} == ubuntu-* ]]; then SHLIB=so; else SHLIB=dylib; fi
@@ -285,8 +243,8 @@ jobs:
           if [[ "${{ matrix.cuda-version }}" != "" ]]; then
             test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCUDA.$SHLIB
           fi
-          # OpenCL should also be there for CUDA and, well, OpenCL
-          if [[ "${{ matrix.cuda-version }}" != "" || ${{ matrix.OPENCL }} == true ]]; then
+          # OpenCL should also be there for CUDA
+          if [[ "${{ matrix.cuda-version }}" != "" ]]; then
             test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMOpenCL.$SHLIB
           # Check for HIP plugin
           elif [[ ${{ matrix.env }} == *hip ]]; then
@@ -341,7 +299,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v4
         name: "Prepare base dependencies"
         with:
           python-version: ${{ matrix.python-version }}
@@ -553,7 +511,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v4
         name: "Prepare base dependencies"
         with:
           python-version: "3.13"
