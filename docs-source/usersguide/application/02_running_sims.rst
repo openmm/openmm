@@ -30,7 +30,7 @@ steps.
                 nonbondedCutoff=1*nanometer, constraints=HBonds)
         integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
         simulation = Simulation(pdb.topology, system, integrator)
-        simulation.context.setPositions(pdb.positions)
+        simulation.setPositions(pdb.positions)
         simulation.minimizeEnergy()
         simulation.reporters.append(DCDReporter('output.dcd', 1000))
         simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
@@ -139,7 +139,7 @@ simulation.  It creates a :class:`Simulation` object and assigns it to a variabl
 involved in running a simulation, such as advancing time and writing output.
 ::
 
-    simulation.context.setPositions(pdb.positions)
+    simulation.setPositions(pdb.positions)
 
 This line specifies the initial atom positions for the simulation: in this case,
 the positions that were loaded from the PDB file.
@@ -208,7 +208,7 @@ found in OpenMM’s :file:`python-examples` folder with the name :file:`simulate
                 constraints=HBonds)
         integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
         simulation = Simulation(prmtop.topology, system, integrator)
-        simulation.context.setPositions(inpcrd.positions)
+        simulation.setPositions(inpcrd.positions)
         simulation.minimizeEnergy()
         simulation.reporters.append(DCDReporter('output.dcd', 1000))
         simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
@@ -266,7 +266,7 @@ directly.
 ::
 
     simulation = Simulation(prmtop.topology, system, integrator)
-    simulation.context.setPositions(inpcrd.positions)
+    simulation.setPositions(inpcrd.positions)
 
 Notice that we now get the topology from the :file:`prmtop` file and the atom positions
 from the :file:`inpcrd` file.  In the previous section, both of these came from a PDB
@@ -298,7 +298,7 @@ with the name :file:`simulateGromacs.py`.
                 constraints=HBonds)
         integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
         simulation = Simulation(top.topology, system, integrator)
-        simulation.context.setPositions(gro.positions)
+        simulation.setPositions(gro.positions)
         simulation.minimizeEnergy()
         simulation.reporters.append(DCDReporter('output.dcd', 1000))
         simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
@@ -356,7 +356,7 @@ on the :class:`CharmmPsfFile`.
                 nonbondedCutoff=1*nanometer, constraints=HBonds)
         integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
         simulation = Simulation(psf.topology, system, integrator)
-        simulation.context.setPositions(pdb.positions)
+        simulation.setPositions(pdb.positions)
         simulation.minimizeEnergy()
         simulation.reporters.append(DCDReporter('output.dcd', 1000))
         simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
@@ -393,7 +393,7 @@ OpenMM’s :file:`python-examples` folder with the name :file:`simulateTinker.py
         system = tinker.createSystem(nonbondedMethod=PME, nonbondedCutoff=0.7*nanometer, vdwCutoff=0.9*nanometer)
         integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.001*picoseconds)
         simulation = Simulation(tinker.topology, system, integrator)
-        simulation.context.setPositions(tinker.positions)
+        simulation.setPositions(tinker.positions)
         simulation.minimizeEnergy()
         simulation.reporters.append(DCDReporter('output.dcd', 1000))
         simulation.reporters.append(StateDataReporter(stdout, 1000, step=True, potentialEnergy=True, temperature=True))

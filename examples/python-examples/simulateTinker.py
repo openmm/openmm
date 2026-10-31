@@ -7,7 +7,7 @@ tinker = TinkerFiles('amoeba_solvated_phenol.xyz', ['amoeba_phenol.prm', 'amoeba
 system = tinker.createSystem(nonbondedMethod=PME, nonbondedCutoff=0.7*nanometer, vdwCutoff=0.9*nanometer)
 integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.001*picoseconds)
 simulation = Simulation(tinker.topology, system, integrator)
-simulation.context.setPositions(tinker.positions)
+simulation.setPositions(tinker.positions)
 simulation.minimizeEnergy()
 simulation.reporters.append(DCDReporter('output.dcd', 1000))
 simulation.reporters.append(StateDataReporter(stdout, 1000, step=True, potentialEnergy=True, temperature=True))

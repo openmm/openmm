@@ -113,6 +113,74 @@ class Simulation(object):
         except Exception: # OpenMM just raises Exception if it's not implemented everywhere
             self._usesPBC = topology.getUnitCellDimensions() is not None
 
+    def setPositions(self, positions):
+        """Set the positions of all particles in the system.
+
+        Parameters
+        ----------
+        positions: list[Vec3] or numpy.ndarray
+            The new positions to set
+        """
+        self.context.setPositions(positions)
+
+    def setVelocities(self, velocities):
+        """Set the velocities of all particles in the system.
+
+        Parameters
+        ----------
+        velocities: list[Vec3] or numpy.ndarray
+            The new velocities to set
+        """
+        self.context.setVelocities(velocities)
+
+    def setVelocitiesToTemperature(self, temperature, randomSeed=None):
+        """Set the velocities of all particles in the System to random values chosen from a Boltzmann distribution at a
+        given temperature.
+
+        Parameters
+        ----------
+        temperature: float
+            the temperature for which to select the velocities
+        randomSeed: int
+            the random number seed to use when selecting velocities.  If None, a unique seed is chosen automatically.
+        """
+        if randomSeed is None:
+            self.context.setVelocitiesToTemperature(temperature)
+        else:
+            self.context.setVelocitiesToTemperature(temperature, randomSeed)
+
+    def getState(self, **kwargs):
+        """Get a State object recording the current state information stored in this simulation's context.
+
+        Parameters
+        ----------
+        positions : bool=False
+            whether to store particle positions in the State
+        velocities : bool=False
+            whether to store particle velocities in the State
+        forces : bool=False
+            whether to store the forces acting on particles in the State
+        energy : bool=False
+            whether to store potential and kinetic energy in the State
+        parameters : bool=False
+            whether to store context parameters in the State
+        parameterDerivatives : bool=False
+            whether to store parameter derivatives in the State
+        integratorParameters : bool=False
+            whether to store integrator parameters in the State
+        enforcePeriodicBox : bool=False
+            if false, the position of each particle will be whatever position
+            is stored in the Context, regardless of periodic boundary conditions.
+            If true, particle positions will be translated so the center of
+            every molecule lies in the same periodic box.
+        groups : set={0,1,2,...,31}
+            a set of indices for which force groups to include when computing
+            forces and energies. The default value includes all groups. groups
+            can also be passed as an unsigned integer interpreted as a bitmask,
+            in which case group i will be included if (groups&(1<<i)) != 0.
+        """
+        return self.context.getState(**kwargs)
+
     @property
     def currentStep(self):
         """The index of the current time step."""
