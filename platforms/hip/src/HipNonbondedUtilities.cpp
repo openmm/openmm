@@ -418,7 +418,7 @@ void HipNonbondedUtilities::prepareInteractions(int forceGroups) {
     }
     if (!useNeighborList)
         return;
-    if (numTiles == 0)
+    if (numBlocks == 0)
         return;
 
     // Compute the neighbor list.
@@ -454,7 +454,7 @@ void HipNonbondedUtilities::computeInteractions(int forceGroups, bool includeFor
             initParamArgs();
         context.executeKernelFlat(kernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
-    if (useNeighborList && numTiles > 0) {
+    if (useNeighborList && numBlocks > 0) {
         hipEventSynchronize(downloadCountEvent);
         updateNeighborListSize();
     }
@@ -515,6 +515,10 @@ void HipNonbondedUtilities::setAtomBlockRange(double startFraction, double endFr
     startTileIndex = (int) (startFraction*totalTiles);
     numTiles = (long long) (endFraction*totalTiles)-startTileIndex;
     forceRebuildNeighborList = true;
+    if (numBlocks == 0 && interactionCount.isInitialized()) {
+        vector<unsigned int> count(2, 0);
+        interactionCount.upload(count);
+    }
 }
 
 void HipNonbondedUtilities::createKernelsForGroups(int groups) {

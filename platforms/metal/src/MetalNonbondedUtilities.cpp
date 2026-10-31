@@ -289,7 +289,7 @@ void MetalNonbondedUtilities::prepareInteractions(int forceGroups) {
     }
     if (!useNeighborList)
         return;
-    if (numTiles == 0)
+    if (numBlocks == 0)
         return;
 
     // Compute the neighbor list.
@@ -305,7 +305,7 @@ void MetalNonbondedUtilities::prepareInteractions(int forceGroups) {
     setPeriodicBoxArgs(context, kernels.findInteractingBlocksKernel, 0);
     kernels.findInteractingBlocksKernel->execute(context.getNumAtoms(), 256);
     forceRebuildNeighborList = false;
-    if (useNeighborList && numTiles > 0)
+    if (useNeighborList && numBlocks > 0)
         event->enqueue();
 }
 
@@ -321,7 +321,7 @@ void MetalNonbondedUtilities::computeInteractions(int forceGroups, bool includeF
             setPeriodicBoxArgs(context, kernel, 9);
         kernel->execute(numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
-    if (useNeighborList && numTiles > 0) {
+    if (useNeighborList && numBlocks > 0) {
         event->wait();
         updateNeighborListSize();
     }
@@ -384,6 +384,10 @@ void MetalNonbondedUtilities::setAtomBlockRange(double startFraction, double end
     startTileIndex = (int) (startFraction*totalTiles);
     numTiles = (long long) (endFraction*totalTiles)-startTileIndex;
     forceRebuildNeighborList = true;
+    if (numBlocks == 0 && interactionCount.isInitialized()) {
+        vector<unsigned int> count(2, 0);
+        interactionCount.upload(count);
+    }
 }
 
 void MetalNonbondedUtilities::createKernelsForGroups(int groups) {
