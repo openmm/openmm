@@ -724,6 +724,67 @@ void testChangingParameters() {
     ASSERT_EQUAL_TOL(state.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
 }
 
+void testManyUpdatesOfOneMolecule() {
+    // Repeatedly change a single molecule's parameters, including making it different from
+    // the identical molecules it was grouped with, and then identical to them again.  The
+    // energy must match a freshly built context every time, which checks both that molecule
+    // reordering is triggered when it must be and that the incrementally updated Ewald self
+    // energy does not drift.
+
+    const int numMolecules = 400;
+    const int numParticles = numMolecules*3;
+    const double cutoff = 1.0;
+    const double boxSize = 5.0;
+    ReferencePlatform reference;
+    System system;
+    NonbondedForce* nonbonded = new NonbondedForce();
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numMolecules; i++) {
+        for (int j = 0; j < 3; j++)
+            system.addParticle(j == 0 ? 16.0 : 1.0);
+        nonbonded->addParticle(-0.8, 0.3, 0.6);
+        nonbonded->addParticle(0.4, 0.1, 0.0);
+        nonbonded->addParticle(0.4, 0.1, 0.0);
+        Vec3 center(0.6*(i%8)+0.2*genrand_real2(sfmt), 0.6*((i/8)%8)+0.2*genrand_real2(sfmt), 0.6*(i/64)+0.2*genrand_real2(sfmt));
+        positions[3*i] = center;
+        positions[3*i+1] = center+Vec3(0.1, 0, 0);
+        positions[3*i+2] = center+Vec3(0, 0.1, 0);
+        system.addConstraint(3*i, 3*i+1, 0.1);
+        system.addConstraint(3*i, 3*i+2, 0.1);
+        nonbonded->addException(3*i, 3*i+1, 0, 1, 0);
+        nonbonded->addException(3*i, 3*i+2, 0, 1, 0);
+        nonbonded->addException(3*i+1, 3*i+2, 0, 1, 0);
+    }
+    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    nonbonded->setCutoffDistance(cutoff);
+    system.addForce(nonbonded);
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    VerletIntegrator integrator1(0.01);
+    VerletIntegrator integrator2(0.01);
+    Context context(system, integrator1, platform);
+    Context referenceContext(system, integrator2, reference);
+    context.setPositions(positions);
+    referenceContext.setPositions(positions);
+    int molecule = numMolecules/2;
+    for (int step = 0; step < 200; step++) {
+        // Cycle through: perturbed, back to identical, perturbed differently, back again.
+
+        double scale = (step%2 == 0 ? 1.0+0.01*(1+step%7) : 1.0);
+        nonbonded->setParticleParameters(3*molecule, -0.8*scale, 0.3, 0.6);
+        nonbonded->setParticleParameters(3*molecule+1, 0.4*scale, 0.1, 0.0);
+        nonbonded->setParticleParameters(3*molecule+2, 0.4*scale, 0.1, 0.0);
+        nonbonded->updateParametersInContext(context);
+        nonbonded->updateParametersInContext(referenceContext);
+        if (step%20 >= 18) {
+            double energy = context.getState(State::Energy).getPotentialEnergy();
+            double referenceEnergy = referenceContext.getState(State::Energy).getPotentialEnergy();
+            ASSERT_EQUAL_TOL(referenceEnergy, energy, 1e-4);
+        }
+    }
+}
+
 void testChangingSubsetOfParameters() {
     const int numMolecules = 600;
     const int numParticles = numMolecules*2;
@@ -813,6 +874,65 @@ void testChangingSubsetOfParameters() {
         thrown = true;
     }
     ASSERT(thrown);
+}
+
+void testSelfEnergyAfterManyUpdates() {
+    // Change the charges of randomly chosen particles many times, then restore them all.  The
+    // reciprocal space energy, which includes the Ewald self energy, must exactly match a newly
+    // created context.  Every particle is its own molecule, so the atom order never changes.
+
+    const int gridSize = 10;
+    const int numParticles = gridSize*gridSize*gridSize;
+    const double boxSize = 4.0;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    nonbonded->setCutoffDistance(1.0);
+    nonbonded->setReciprocalSpaceForceGroup(1);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<double> charges(numParticles);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        charges[i] = 2*genrand_real2(sfmt)-1;
+        system.addParticle(1.0);
+        nonbonded->addParticle(charges[i], 0.3, 0.0);
+        positions[i] = Vec3(i%gridSize+0.5, (i/gridSize)%gridSize+0.5, i/(gridSize*gridSize)+0.5)*(boxSize/gridSize);
+    }
+    system.addForce(nonbonded);
+
+    // Without deterministic forces, PME spreads charges with floating point atomics in single and mixed
+    // precision, so the reciprocal space energy varies between contexts by about as much as the drift.
+
+    map<string, string> properties;
+    bool deterministic = false;
+    for (const string& name : platform.getPropertyNames())
+        if (name == "DeterministicForces") {
+            properties[name] = "true";
+            deterministic = true;
+        }
+    VerletIntegrator integrator1(0.001);
+    Context context1(system, integrator1, platform, properties);
+    context1.setPositions(positions);
+    for (int i = 0; i < 20000; i++) {
+        int particle = (int) (genrand_real2(sfmt)*numParticles);
+        nonbonded->setParticleParameters(particle, 2*genrand_real2(sfmt)-1, 0.3, 0.0);
+        nonbonded->updateParametersInContext(context1);
+    }
+    for (int i = 0; i < numParticles; i++)
+        nonbonded->setParticleParameters(i, charges[i], 0.3, 0.0);
+    nonbonded->updateParametersInContext(context1);
+    VerletIntegrator integrator2(0.001);
+    Context context2(system, integrator2, platform, properties);
+    context2.setPositions(positions);
+    double energy1 = context1.getState(State::Energy, false, 1<<1).getPotentialEnergy();
+    double energy2 = context2.getState(State::Energy, false, 1<<1).getPotentialEnergy();
+    bool singleOrMixed = false;
+    for (const string& name : platform.getPropertyNames())
+        if (name == "Precision" && platform.getPropertyValue(context1, name) != "double")
+            singleOrMixed = true;
+    ASSERT_EQUAL_TOL(energy2, energy1, singleOrMixed && !deterministic ? 1e-6 : 1e-12);
 }
 
 void testChangingParametersWithoutLJ() {
@@ -1260,6 +1380,8 @@ int main(int argc, char* argv[]) {
         testDispersionCorrection();
         testChangingParameters();
         testChangingSubsetOfParameters();
+        testManyUpdatesOfOneMolecule();
+        testSelfEnergyAfterManyUpdates();
         testChangingParametersWithoutLJ();
         testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
         testSwitchingFunction(NonbondedForce::PME);

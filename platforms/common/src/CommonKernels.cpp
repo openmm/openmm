@@ -527,6 +527,7 @@ void CommonCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& con
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
     if (numBonds == 0 || firstBond >= endIndex || lastBond < startIndex || firstBond > lastBond)
         return;
+    int firstChangedBond = firstBond, lastChangedBond = lastBond;
     firstBond = max(firstBond, startIndex);
     lastBond = min(lastBond, endIndex-1);
 
@@ -544,7 +545,7 @@ void CommonCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& con
 
     // Mark that the current reordering may be invalid.
 
-    cc.invalidateMolecules(info, false, true);
+    cc.invalidateMolecules(info, 0, -1, firstChangedBond, lastChangedBond);
 }
 class CommonCalcCustomBondForceKernel::ForceInfo : public ComputeForceInfo {
 public:
@@ -657,6 +658,7 @@ void CommonCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& conte
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
     if (numBonds == 0 || firstBond >= endIndex || lastBond < startIndex || firstBond > lastBond)
         return;
+    int firstChangedBond = firstBond, lastChangedBond = lastBond;
     firstBond = max(firstBond, startIndex);
     lastBond = min(lastBond, endIndex-1);
 
@@ -671,7 +673,7 @@ void CommonCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& conte
 
     // Mark that the current reordering may be invalid.
 
-    cc.invalidateMolecules(info, false, true);
+    cc.invalidateMolecules(info, 0, -1, firstChangedBond, lastChangedBond);
 }
 
 class CommonCalcHarmonicAngleForceKernel::ForceInfo : public ComputeForceInfo {
@@ -741,6 +743,7 @@ void CommonCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& co
         throw OpenMMException("updateParametersInContext: The number of angles has changed");
     if (numAngles == 0 || firstAngle >= endIndex || lastAngle < startIndex || firstAngle > lastAngle)
         return;
+    int firstChangedAngle = firstAngle, lastChangedAngle = lastAngle;
     firstAngle = max(firstAngle, startIndex);
     lastAngle = min(lastAngle, endIndex-1);
 
@@ -758,7 +761,7 @@ void CommonCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& co
 
     // Mark that the current reordering may be invalid.
 
-    cc.invalidateMolecules(info, false, true);
+    cc.invalidateMolecules(info, 0, -1, firstChangedAngle, lastChangedAngle);
 }
 
 class CommonCalcCustomAngleForceKernel::ForceInfo : public ComputeForceInfo {
@@ -958,6 +961,7 @@ void CommonCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& 
         throw OpenMMException("updateParametersInContext: The number of torsions has changed");
     if (numTorsions == 0 || firstTorsion >= endIndex || lastTorsion < startIndex || firstTorsion > lastTorsion)
         return;
+    int firstChangedTorsion = firstTorsion, lastChangedTorsion = lastTorsion;
     firstTorsion = max(firstTorsion, startIndex);
     lastTorsion = min(lastTorsion, endIndex-1);
 
@@ -975,7 +979,7 @@ void CommonCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& 
 
     // Mark that the current reordering may be invalid.
 
-    cc.invalidateMolecules(info, false, true);
+    cc.invalidateMolecules(info, 0, -1, firstChangedTorsion, lastChangedTorsion);
 }
 
 class CommonCalcRBTorsionForceKernel::ForceInfo : public ComputeForceInfo {
