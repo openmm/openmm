@@ -498,20 +498,42 @@ void ComputeContext::findMoleculeGroups() {
         if (isNew) {
             uniqueMolecules.push_back(mol);
             moleculeInstances.push_back(vector<int>());
-            moleculeInstances[moleculeInstances.size()-1].push_back(molIndex);
+            moleculeInstances.back().push_back(molIndex);
             moleculeOffsets.push_back(vector<int>());
-            moleculeOffsets[moleculeOffsets.size()-1].push_back(mol.atoms[0]);
+            moleculeOffsets.back().push_back(mol.atoms[0]);
         }
     }
     moleculeGroups.resize(moleculeInstances.size());
-    for (int i = 0; i < (int) moleculeInstances.size(); i++)
-    {
-        moleculeGroups[i].instances = moleculeInstances[i];
-        moleculeGroups[i].offsets = moleculeOffsets[i];
+    for (int i = 0; i < moleculeInstances.size(); i++) {
+        MoleculeGroup& group = moleculeGroups[i];
+        group.instances = moleculeInstances[i];
+        group.offsets = moleculeOffsets[i];
         vector<int>& atoms = uniqueMolecules[i].atoms;
-        moleculeGroups[i].atoms.resize(atoms.size());
-        for (int j = 0; j < (int) atoms.size(); j++)
-            moleculeGroups[i].atoms[j] = atoms[j]-atoms[0];
+        group.atoms.resize(atoms.size());
+        for (int j = 0; j < atoms.size(); j++)
+            group.atoms[j] = atoms[j]-atoms[0];
+
+        // Record the range of particles and particle groups that appear in this molecule group.
+
+        group.minParticle = INT_MAX;
+        group.maxParticle = -1;
+        group.minParticleGroup.clear();
+        group.maxParticleGroup.clear();
+        group.minParticleGroup.resize(forces.size(), INT_MAX);
+        group.maxParticleGroup.resize(forces.size(), -1);
+        for (int j : moleculeInstances[i]) {
+            Molecule& mol = molecules[j];
+            for (int a : mol.atoms) {
+                group.minParticle = min(group.minParticle, a);
+                group.maxParticle = max(group.maxParticle, a);
+            }
+            for (int k = 0; k < forces.size(); k++) {
+                for (int g : molecules[j].groups[k]) {
+                    group.minParticleGroup[k] = min(group.minParticleGroup[k], g);
+                    group.maxParticleGroup[k] = max(group.maxParticleGroup[k], g);
+                }
+            }
+        }
     }
 }
 
@@ -522,6 +544,17 @@ void ComputeContext::invalidateMolecules() {
 }
 
 bool ComputeContext::invalidateMolecules(ComputeForceInfo* force, bool checkAtoms, bool checkGroups) {
+    int lastParticle = (checkAtoms ? getNumAtoms()-1 : -1);
+    int lastParticleGroup = -1;
+    if (checkGroups) {
+        for (int i = 0; i < forces.size(); i++)
+            if (forces[i] == force)
+                lastParticleGroup = force->getNumParticleGroups()-1;
+    }
+    return invalidateMolecules(force, 0, lastParticle, 0, lastParticleGroup);
+}
+
+bool ComputeContext::invalidateMolecules(ComputeForceInfo* force, int firstParticle, int lastParticle, int firstParticleGroup, int lastParticleGroup) {
     if (numAtoms == 0 || !getNonbondedUtilities().getUseCutoff())
         return false;
     bool valid = true;
@@ -529,6 +562,27 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force, bool checkAtom
     for (int i = 0; i < forces.size(); i++)
         if (forces[i] == force)
             forceIndex = i;
+    if (forceIndex == -1)
+        return false;
+
+    // If the only changes are to unique molecules (which don't get reordered), we can return immediately without waking
+    // the thread pool.  Check for that case.
+
+    bool possibleChange = false;
+    for (MoleculeGroup& mol : moleculeGroups) {
+        if (mol.instances.size() > 1) {
+            if ((mol.minParticleGroup[forceIndex] <= lastParticleGroup && mol.maxParticleGroup[forceIndex] >= firstParticleGroup) ||
+                (mol.minParticle <= lastParticle && mol.maxParticle >= firstParticle)) {
+                possibleChange = true;
+                break;
+            }
+        }
+    }
+    if (!possibleChange)
+        return false;
+
+    // Compare groups of identical molecules to see if they are still identical.
+
     getThreadPool().execute([&] (ThreadPool& threads, int threadIndex) {
         for (int group = 0; valid && group < (int) moleculeGroups.size(); group++) {
             MoleculeGroup& mol = moleculeGroups[group];
@@ -541,21 +595,25 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force, bool checkAtom
             int numThreads = threads.getNumThreads();
             int start = max(1, threadIndex*numMolecules/numThreads);
             int end = (threadIndex+1)*numMolecules/numThreads;
-            for (int j = start; j < end; j++) {
-                // See if the atoms are identical.
 
-                Molecule& m2 = molecules[instances[j]];
-                if (checkAtoms) {
+            // See if the atoms are identical.
+
+            if (mol.minParticle <= lastParticle && mol.maxParticle >= firstParticle) {
+                for (int j = start; j < end && valid; j++) {
+                    Molecule& m2 = molecules[instances[j]];
                     int offset2 = offsets[j];
                     for (int i = 0; i < (int) atoms.size() && valid; i++) {
                         if (!force->areParticlesIdentical(atoms[i]+offset1, atoms[i]+offset2))
                             valid = false;
                     }
                 }
+            }
 
-                // See if the force groups are identical.
+            // See if the particle groups are identical.
 
-                if (valid && forceIndex > -1 && checkGroups) {
+            if (mol.minParticleGroup[forceIndex] <= lastParticleGroup && mol.maxParticleGroup[forceIndex] >= firstParticleGroup) {
+                for (int j = start; j < end && valid; j++) {
+                    Molecule& m2 = molecules[instances[j]];
                     for (int k = 0; k < (int) m1.groups[forceIndex].size() && valid; k++)
                         if (!force->areGroupsIdentical(m1.groups[forceIndex][k], m2.groups[forceIndex][k]))
                             valid = false;
@@ -718,7 +776,6 @@ void ComputeContext::reorderAtomsImpl() {
 
     // Loop over each group of identical molecules and reorder them.
 
-    
     vector<int> originalIndex(numAtoms);
     vector<Real4> newPosq(paddedNumAtoms, Real4(0,0,0,0));
     vector<Real4> newPosqCorrection(paddedNumAtoms, Real4(0,0,0,0));
