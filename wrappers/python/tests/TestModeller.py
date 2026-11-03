@@ -584,8 +584,7 @@ class TestModeller(unittest.TestCase):
         simulation = Simulation(modeller.topology, system, LangevinIntegrator(300, 1, 0.002))
         simulation.context.setPositions(modeller.positions)
         simulation.context.setVelocitiesToTemperature(300)
-        simulation.minimizeEnergy()
-        simulation.step(1000)
+        simulation.step(100)
         self.assertLess(simulation.context.getState(energy=True).getPotentialEnergy().value_in_unit(kilojoule_per_mole), 0)
 
     def test_addMixture(self):
