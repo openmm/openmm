@@ -31,7 +31,7 @@ jobs:
           - name: Linux CUDA 12.4
             os: ubuntu-latest
             env: ubuntu-latest
-            python-version: "3.13"
+            python-version: "3.15"
             cuda-version: "12.4"
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_CUDA_TESTS=OFF \
@@ -51,7 +51,7 @@ jobs:
           - name: Linux CUDA 11.8
             os: ubuntu-latest
             env: ubuntu-latest
-            python-version: "3.13"
+            python-version: "3.15"
             cuda-version: "11.8"
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_CUDA_TESTS=OFF \
@@ -71,7 +71,7 @@ jobs:
           - name: Linux HIP
             os: ubuntu-latest
             env: ubuntu-latest-hip
-            python-version: "3.13"
+            python-version: "3.15"
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_HIP_LIB=ON \
               -DOPENMM_BUILD_HIP_TESTS=OFF \
@@ -82,10 +82,10 @@ jobs:
               -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
               -DOPENMM_BUILD_EXAMPLES=OFF
 
-          - name: Linux CPU Python 3.13 with static lib
+          - name: Linux CPU Python 3.15 with static lib
             os: ubuntu-latest
             env: ubuntu-latest
-            python-version: "3.13"
+            python-version: "3.15"
             cuda-version: ""
             CC: $CCACHE/clang
             CXX: $CCACHE/clang++
@@ -94,8 +94,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: Linux CPU Python 3.13 with condaforge compilers
-            python-version: "3.13"
+          - name: Linux CPU Python 3.15 with condaforge compilers
+            python-version: "3.15"
             os: ubuntu-latest
             env: ubuntu-latest
             cuda-version: ""
@@ -113,8 +113,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: Linux CPU Python 3.13
-            python-version: "3.13"
+          - name: Linux CPU Python 3.15
+            python-version: "3.15"
             os: ubuntu-latest
             env: ubuntu-latest
             cuda-version: ""
@@ -122,8 +122,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: Linux ARM Python 3.14
-            python-version: "3.14"
+          - name: Linux ARM Python 3.15
+            python-version: "3.15"
             os: ubuntu-24.04-arm
             env: ubuntu-arm
             cuda-version: ""
@@ -131,8 +131,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS Intel Python 3.13
-            python-version: "3.13"
+          - name: MacOS Intel Python 3.15
+            python-version: "3.15"
             os: macos-15-intel
             env: macos
             cuda-version: ""
@@ -141,8 +141,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
               -DOPENMM_BUILD_METAL_TESTS=OFF
 
-          - name: MacOS ARM Python 3.13
-            python-version: "3.13"
+          - name: MacOS ARM Python 3.15
+            python-version: "3.15"
             os: macos-latest
             env: macos
             cuda-version: ""
@@ -282,8 +282,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Windows CUDA 11.2 Python 3.13
-            python-version: "3.13"
+          - name: Windows CUDA 11.2 Python 3.15
+            python-version: "3.15"
             cuda-version: "11.2"
             CMAKE_FLAGS: |
               -DCUDA_TOOLKIT_ROOT_DIR="%CUDA_TOOLKIT_ROOT_DIR%" ^
@@ -410,94 +410,6 @@ jobs:
           cd build\python\tests
           python -m pytest -v -n 2
 
-  docker:
-    name: ${{ matrix.name }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: PowerPC CPU/CUDA 11.8 Python 3.13 with condaforge compilers
-            docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda:11.8
-            python-version: "3.13"
-            compilers: compilers
-
-          #- name: PowerPC CPU Python 3.13 devtoolset-7 compilers
-          #  docker-image: quay.io/condaforge/linux-anvil-ppc64le
-          #  python-version: "3.13"
-          #  compilers: devtoolset-7
-
-#          - name: ARM CPU Python 3.13 with condaforge compilers
-#            docker-image: quay.io/condaforge/linux-anvil-aarch64
-#            python-version: "3.13"
-#            compilers: compilers
-
-
-    steps:
-    - uses: actions/checkout@v3
-
-    # Following bits adapted from conda-forge Azure configs.
-    # If it stops working, check any feedstock with ppc64le or aarch64
-    # enabled, and adapt from:
-    #  .azure-pipelines/azure-pipelines-linux.yml
-    #  .scripts/run_docker_build.sh
-    #  .scripts/build_steps.sh
-
-    - name: "Prepare docker"
-      run: |
-        docker run --rm --privileged multiarch/qemu-user-static:register --reset --credential yes
-        ls /proc/sys/fs/binfmt_misc/
-
-        docker info
-
-        # In order for the conda-build process in the container to write to the mounted
-        # volumes, we need to run with the same id as the host machine, which is
-        # normally the owner of the mounted volumes, or at least has write permission
-        export HOST_USER_ID=$(id -u)
-
-        # Check if docker-machine is being used (normally on OSX) and get the uid from
-        # the VM
-        if hash docker-machine 2> /dev/null && docker-machine active > /dev/null; then
-            export HOST_USER_ID=$(docker-machine ssh $(docker-machine active) id -u)
-        fi
-
-        echo "HOST_USER_ID=${HOST_USER_ID}" >> ${GITHUB_ENV}
-
-    - name: "Prepare ccache"
-      id: prepare-ccache
-      shell: bash -l {0}
-      run: |
-        echo "key=$(echo "${{ matrix.name }}" | tr -d ' .')" >> $GITHUB_OUTPUT
-        echo "timestamp=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
-
-    - name: "Restore ccache"
-      uses: actions/cache@v4
-      with:
-        path: .ccache
-        key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
-        restore-keys: |
-          ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
-
-    - name: Run docker
-      env:
-        PYTHON_VER: ${{ matrix.python-version }}
-        DOCKER_IMAGE: ${{ matrix.docker-image }}
-        COMPILERS: ${{ matrix.compilers }}
-      run: |
-        echo "::group::Start docker..."
-        docker run \
-          -v "${GITHUB_WORKSPACE}":/home/conda/workspace:rw,z \
-          -e HOST_USER_ID \
-          -e CPU_COUNT \
-          -e PYTHON_VER \
-          -e COMPILERS \
-          ${DOCKER_IMAGE} \
-          bash \
-          /home/conda/workspace/devtools/ci/gh-actions/scripts/run_steps_inside_docker_image.sh
-
-        test -f docker_steps_run_successfully
-
-
   docs:
     name: Docs
     env:
@@ -514,7 +426,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v4
         name: "Prepare base dependencies"
         with:
-          python-version: "3.13"
+          python-version: "3.15"
           activate-environment: build
           environment-file: devtools/ci/gh-actions/conda-envs/docs.yml
           auto-activate-base: false
@@ -644,7 +556,7 @@ jobs:
       matrix:
         include:
           - name: Linux GPU OpenCL
-            python-version: "3.13"
+            python-version: "3.15"
             env: ubuntu-arm
             OPENCL: true
             CUDA: false
@@ -658,7 +570,7 @@ jobs:
               -DOPENMM_BUILD_EXAMPLES=OFF \
 
           - name: Linux GPU CUDA
-            python-version: "3.13"
+            python-version: "3.15"
             env: ubuntu-arm
             OPENCL: false
             CUDA: true
