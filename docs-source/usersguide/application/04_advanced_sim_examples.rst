@@ -40,7 +40,7 @@ executing 1000 time steps at each temperature:
     ::
 
         ...
-        simulation.context.setPositions(pdb.positions)
+        simulation.setPositions(pdb.positions)
         simulation.minimizeEnergy()
         for i in range(100):
             integrator.setTemperature(3*(100-i)*kelvin)
@@ -204,8 +204,8 @@ the potential energy of each one.  Assume we have already created our :class:`Sy
         import os
         for file in os.listdir('structures'):
             pdb = PDBFile(os.path.join('structures', file))
-            simulation.context.setPositions(pdb.positions)
-            state = simulation.context.getState(energy=True)
+            simulation.setPositions(pdb.positions)
+            state = simulation.getState(energy=True)
             print(file, state.getPotentialEnergy())
 
     .. caption::

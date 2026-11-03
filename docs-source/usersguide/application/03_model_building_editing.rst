@@ -28,7 +28,7 @@ the starting point for your simulation:
         # ... Call some modelling functions here ...
         system = forcefield.createSystem(modeller.topology, nonbondedMethod=PME)
         simulation = Simulation(modeller.topology, system, integrator)
-        simulation.context.setPositions(modeller.positions)
+        simulation.setPositions(modeller.positions)
 
     .. caption::
 
@@ -256,10 +256,10 @@ PDB file.
         system = forcefield.createSystem(modeller.topology, nonbondedMethod=PME)
         integrator = VerletIntegrator(0.001*picoseconds)
         simulation = Simulation(modeller.topology, system, integrator)
-        simulation.context.setPositions(modeller.positions)
+        simulation.setPositions(modeller.positions)
         simulation.minimizeEnergy(maxIterations=100)
         print('Saving...')
-        positions = simulation.context.getState(positions=True).getPositions()
+        positions = simulation.getState(positions=True).getPositions()
         PDBFile.writeFile(simulation.topology, positions, open('output.pdb', 'w'))
         print('Done')
 
