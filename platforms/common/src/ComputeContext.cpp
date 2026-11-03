@@ -31,6 +31,7 @@
 #include "CommonKernelSources.h"
 #include "hilbert.h"
 #include <algorithm>
+#include <climits>
 #include <cmath>
 #include <set>
 #include <sstream>
