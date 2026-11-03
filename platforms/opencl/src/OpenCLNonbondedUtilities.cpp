@@ -344,7 +344,7 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
     }
     if (!useNeighborList)
         return;
-    if (numTiles == 0)
+    if (numBlocks == 0)
         return;
 
     // Compute the neighbor list.
@@ -385,7 +385,7 @@ void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool include
             setPeriodicBoxArgs(context, kernel, 9);
         context.executeKernel(kernel, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
-    if (useNeighborList && numTiles > 0) {
+    if (useNeighborList && numBlocks > 0) {
         #if __APPLE__ && defined(__aarch64__)
         // Ensure cached up work executes while you're waiting.
         if (kernels.hasForces)
@@ -475,6 +475,10 @@ void OpenCLNonbondedUtilities::setAtomBlockRange(double startFraction, double en
             kernels.findInteractingBlocksKernel.setArg<cl_uint>(11, numBlocks);
         }
         forceRebuildNeighborList = true;
+    }
+    if (numBlocks == 0 && interactionCount.isInitialized()) {
+        vector<cl_uint> count(1, 0);
+        interactionCount.upload(count);
     }
 }
 
