@@ -177,6 +177,37 @@ class TestXtcFile(unittest.TestCase):
             )
             self.assertTrue(np.allclose(step, np.arange(0, nframes), atol=1e-5))
 
+    def test_xtc_read_write(self):
+        """Test the XTC code by reading a prepared trajectory with known values and writing it back."""
+
+        # The following file was prepared with MDTraj using this code:
+        #     from mdtraj.formats import XTCTrajectoryFile
+        #     import numpy as np
+        #     with XTCTrajectoryFile('example.xtc', 'w') as file:
+        #         file.write(np.linspace(0, 1, 30).reshape(10, 3), 0.45, 45, [[1.1, 0, 0], [0.4, 1.2, 0], [0.5, 0.6, 1.3]])
+        #         file.write(np.linspace(2, 3, 30).reshape(10, 3), 0.67, 67, [[2.1, 0, 0], [0.7, 2.2, 0], [0.8, 0.9, 2.3]])
+        inPath = 'systems/example.xtc'
+        coords, box, time, step = read_xtc(inPath.encode())
+        self.assertTrue(np.allclose(coords[..., 0], np.linspace(0, 1, 30).reshape(10, 3), atol=1.1e-3))
+        self.assertTrue(np.allclose(coords[..., 1], np.linspace(2, 3, 30).reshape(10, 3), atol=1.1e-3))
+        self.assertTrue(np.allclose(box[..., 0], [[1.1, 0, 0], [0.4, 1.2, 0], [0.5, 0.6, 1.3]]))
+        self.assertTrue(np.allclose(box[..., 1], [[2.1, 0, 0], [0.7, 2.2, 0], [0.8, 0.9, 2.3]]))
+        self.assertTrue(np.allclose(time, [0.45, 0.67]))
+        self.assertTrue(np.all(step == [45, 67]))
+
+        with tempfile.TemporaryDirectory() as temp:
+            top = app.Topology()
+            for _ in range(10):
+                top.addAtom('', None, top.addResidue('', top.addChain()))
+            outPath = os.path.join(temp, 'traj.xtc')
+            xtc = app.XTCFile(outPath, top, 0.01, 45, 67 - 45)
+            top.setPeriodicBoxVectors([mm.Vec3(*vec) for vec in box[..., 0]])
+            xtc.writeModel(coords[..., 0])
+            top.setPeriodicBoxVectors([mm.Vec3(*vec) for vec in box[..., 1]])
+            xtc.writeModel(coords[..., 1])
+            with open(inPath, 'rb') as inFile, open(outPath, 'rb') as outFile:
+                self.assertEqual(inFile.read(), outFile.read())
+
     def testLongTrajectory(self):
         """Test writing a trajectory that has more than 2^31 steps."""
         with tempfile.TemporaryDirectory() as temp:
