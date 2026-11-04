@@ -1025,36 +1025,8 @@ Writing Custom Expressions
 
 The custom forces described in this chapter involve user defined algebraic
 expressions.  These expressions are specified as character strings, and may
-involve a variety of standard operators and mathematical functions.
-
-The following operators are supported: + (add), - (subtract), * (multiply), /
-(divide), and ^ (power).  Parentheses “(“and “)” may be used for grouping.
-
-The following standard functions are supported: sqrt, exp, log, sin, cos, sec,
-csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, min, max, abs,
-floor, ceil, step, delta, select. step(x) = 0 if x < 0, 1 otherwise.
-delta(x) = 1 if x is 0, 0 otherwise.  select(x,y,z) = z if x = 0, y otherwise.
-Some custom forces allow additional functions to be defined from tabulated values.
-
-Numbers may be given in either decimal or exponential form.  All of the
-following are valid numbers: 5, -3.1, 1e6, and 3.12e-2.
-
-The variables that may appear in expressions are specified in the API
-documentation for each force class.  In addition, an expression may be followed
-by definitions for intermediate values that appear in the expression.  A
-semicolon “;” is used as a delimiter between value definitions.  For example,
-the expression
-::
-
-    a^2+a*b+b^2; a=a1+a2; b=b1+b2
-
-is exactly equivalent to
-::
-
-    (a1+a2)^2+(a1+a2)*(b1+b2)+(b1+b2)^2
-
-The definition of an intermediate value may itself involve other intermediate
-values.  All uses of a value must appear *before* that value’s definition.
+involve a variety of standard operators and mathematical functions.  See
+section :numref:`writing-custom-expressions` for details on how to write them.
 
 .. _tabulated-functions:
 

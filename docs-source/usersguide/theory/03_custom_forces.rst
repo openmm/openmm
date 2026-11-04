@@ -446,8 +446,8 @@ The custom forces described in this chapter involve user defined algebraic
 expressions.  These expressions are specified as character strings, and may
 involve a variety of standard operators and mathematical functions.
 
-The following operators are supported: + (add), - (subtract), * (multiply), /
-(divide), and ^ (power).  Parentheses “(“ and “)” may be used for grouping.
+The following arithmetic operators are supported: + (add), - (subtract), * (multiply),
+/ (divide), and ^ (power).  Parentheses “(“ and “)” may be used for grouping.
 
 The following standard functions are supported: sqrt, exp, log, sin, cos, sec,
 csc, tan, cot, asin, acos, atan, atan2, sinh, cosh, tanh, erf, erfc, min, max, abs,
@@ -457,6 +457,14 @@ Some custom forces allow additional functions to be defined from tabulated value
 
 Numbers may be given in either decimal or exponential form.  All of the
 following are valid numbers: 5, -3.1, 1e6, and 3.12e-2.
+
+The comparison operators ==, !=, >, <, >=, and <= evaluate to 1 when the condition
+is satisfied and 0 when it is not.  They are especially useful with the select
+function.  For example,
+::
+
+    select(x<y, x^2, y^2)
+
 
 The variables that may appear in expressions are specified in the API
 documentation for each force class.  In addition, an expression may be followed
