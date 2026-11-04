@@ -895,7 +895,7 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         Vec3 a, b, c;
         cc.getPeriodicBoxVectors(a, b, c);
         double volume = a[0]*b[1]*c[2];
-        energy = ewaldSelfEnergy - totalCharge*totalCharge/(8*EPSILON0*volume*alpha*alpha);
+        energy = (double) ewaldSelfEnergy - totalCharge*totalCharge/(8*EPSILON0*volume*alpha*alpha);
     }
     if (recomputeParams || hasOffsets) {
         computeParamsKernel->setArg(1, (int) (includeEnergy && includeReciprocal));
@@ -1179,26 +1179,28 @@ void CommonCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
 
     if (firstParticle <= lastParticle) {
         for (int i = firstParticle; i <= lastParticle; i++) {
+            // Subtract the old contribution to self energy.  Because they are accumulated in fixed point, this is exact.
+
+            mm_float4& params = baseParticleParamVec[i];
+            ewaldSelfEnergy += params.x*params.x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+            totalCharge -= params.x;
+            if (doLJPME)
+                ewaldSelfEnergy -= params.z*pow(params.y*dispersionAlpha, 6)/3.0;
+
+            // Update the parameters.
+
             double charge, sigma, epsilon;
             force.getParticleParameters(i, charge, sigma, epsilon);
-            baseParticleParamVec[i] = mm_float4(charge, sigma, epsilon, 0);
+            params = mm_float4(charge, sigma, epsilon, 0);
+
+            // Add in the new contribution to self energy.
+
+            ewaldSelfEnergy -= params.x*params.x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+            totalCharge += params.x;
+            if (doLJPME)
+                ewaldSelfEnergy += params.z*pow(params.y*dispersionAlpha, 6)/3.0;
         }
         baseParticleParams.uploadSubArray(&baseParticleParamVec[firstParticle], firstParticle, lastParticle-firstParticle+1);
-
-        // Compute the self energy.
-
-        ewaldSelfEnergy = 0.0;
-        totalCharge = 0.0;
-        if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
-            if (cc.getContextIndex() == 0) {
-                for (int i = 0; i < force.getNumParticles(); i++) {
-                    ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
-                    totalCharge += baseParticleParamVec[i].x;
-                    if (doLJPME)
-                        ewaldSelfEnergy += baseParticleParamVec[i].z*pow(baseParticleParamVec[i].y*dispersionAlpha, 6)/3.0;
-                }
-            }
-        }
     }
 
     // Record parameter offsets.
@@ -1250,8 +1252,11 @@ void CommonCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
 
     if (force.getUseDispersionCorrection() && cc.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
-    cc.invalidateMolecules(info, firstParticle <= lastParticle || force.getNumParticleParameterOffsets() > 0,
-                           firstException <= lastException || force.getNumExceptionParameterOffsets() > 0);
+    if (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0)
+        cc.invalidateMolecules(info, firstParticle <= lastParticle || force.getNumParticleParameterOffsets() > 0,
+                               firstException <= lastException || force.getNumExceptionParameterOffsets() > 0);
+    else
+        cc.invalidateMolecules(info, firstParticle, lastParticle, firstException, lastException);
     recomputeParams = true;
 }
 

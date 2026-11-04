@@ -32,6 +32,7 @@
 #include "openmm/common/ComputeQueue.h"
 #include "openmm/common/ComputeSort.h"
 #include "openmm/common/FFT3D.h"
+#include "openmm/internal/Fixed.h"
 #include <map>
 #include <string>
 #include <utility>
@@ -164,7 +165,8 @@ private:
     std::map<std::string, double> paramValues;
     std::vector<int> exceptionIndex, exceptions;
     std::vector<mm_float4> baseParticleParamVec, baseExceptionParamsVec;
-    double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha, totalCharge;
+    double dispersionCoefficient, alpha, dispersionAlpha;
+    Fixed<30> ewaldSelfEnergy, totalCharge;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
     int stepsToSort;

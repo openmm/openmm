@@ -184,7 +184,7 @@ public:
     DEFINE_CONVERSION(unsigned int)
     DEFINE_CONVERSION(long)
     DEFINE_CONVERSION(unsigned long)
-#undef DEFIN_CONVERSION
+#undef DEFINE_CONVERSION
     explicit df64(float2 f) {
         v = f;
     }
