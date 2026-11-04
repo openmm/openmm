@@ -42,10 +42,10 @@ class Fixed {
 public:
     Fixed() : value(0) {
     }
-    Fixed(double d) : value((int64_t) (d*(1L<<BITS))) {
+    Fixed(double d) : value((int64_t) (d*(1LL<<BITS))) {
     }
     operator double() const {
-        return value/(double) (1L<<BITS);
+        return value/(double) (1LL<<BITS);
     }
     Fixed<BITS> operator+(Fixed<BITS> v) {
         return Fixed<BITS>(value+v.value);

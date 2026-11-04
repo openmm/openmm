@@ -1452,7 +1452,7 @@ void CommonCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& c
 
     // Mark that the current reordering may be invalid.
 
-    cc.invalidateMolecules(info, firstParticle, lastParticle, -1, -1);
+    cc.invalidateMolecules(info, true, false);
 }
 
 class CommonCalcCustomCompoundBondForceKernel::ForceInfo : public ComputeForceInfo {

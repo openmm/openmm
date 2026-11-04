@@ -166,7 +166,7 @@ private:
     std::vector<int> exceptionIndex, exceptions;
     std::vector<mm_float4> baseParticleParamVec, baseExceptionParamsVec;
     double dispersionCoefficient, alpha, dispersionAlpha;
-    Fixed<32> ewaldSelfEnergy, totalCharge;
+    Fixed<30> ewaldSelfEnergy, totalCharge;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
     int stepsToSort;
