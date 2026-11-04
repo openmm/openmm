@@ -393,6 +393,7 @@ void ComputeContext::findMoleculeGroups() {
         for (auto force : forces) {
             vector<int> particles;
             for (int j = 0; j < force->getNumParticleGroups(); j++) {
+                particles.clear();
                 force->getParticlesInGroup(j, particles);
                 for (int k = 1; k < (int) particles.size(); k++) {
                     atomBondSets[particles[k]].insert(particles[k-1]);
@@ -429,6 +430,7 @@ void ComputeContext::findMoleculeGroups() {
         for (int i = 0; i < (int) forces.size(); i++) {
             vector<int> particles;
             for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
+                particles.clear();
                 forces[i]->getParticlesInGroup(j, particles);
                 if (particles.size() > 0)
                     molecules[atomMolecule[particles[0]]].groups[i].push_back(j);
@@ -482,9 +484,13 @@ void ComputeContext::findMoleculeGroups() {
                 for (int k = 0; k < (int) mol.groups[i].size() && identical; k++) {
                     if (!forces[i]->areGroupsIdentical(mol.groups[i][k], mol2.groups[i][k]))
                         identical = false;
+                    p1.clear();
+                    p2.clear();
                     forces[i]->getParticlesInGroup(mol.groups[i][k], p1);
                     forces[i]->getParticlesInGroup(mol2.groups[i][k], p2);
-                    for (int m = 0; m < p1.size(); m++)
+                    if (p1.size() != p2.size())
+                        identical = false;
+                    for (int m = 0; m < (int) p1.size() && identical; m++)
                         if (p1[m] != p2[m]-atomOffset)
                             identical = false;
                 }
@@ -745,7 +751,7 @@ void ComputeContext::reorderAtomsImpl() {
             molPos[i].x *= invNumAtoms;
             molPos[i].y *= invNumAtoms;
             molPos[i].z *= invNumAtoms;
-            if (molPos[i].x != molPos[i].x)
+            if (molPos[i].x != molPos[i].x || molPos[i].y != molPos[i].y || molPos[i].z != molPos[i].z)
                 throw OpenMMException("Particle coordinate is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan");
         }
         if (getNonbondedUtilities().getUsePeriodic()) {
