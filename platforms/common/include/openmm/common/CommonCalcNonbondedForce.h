@@ -46,7 +46,8 @@ namespace OpenMM {
 class CommonCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     CommonCalcNonbondedForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcNonbondedForceKernel(name, platform),
-            hasInitializedKernel(false), cc(cc), pmeio(NULL), stepsToSort(0) {
+            hasInitializedKernel(false), cc(cc), pmeio(NULL), stepsToSort(0), useSplitLJPMEStream(false),
+            dispersionSyncQueue(NULL) {
     }
     ~CommonCalcNonbondedForceKernel();
     /**
@@ -134,6 +135,8 @@ private:
     ComputeArray cosSinSums;
     ComputeArray pmeGrid1;
     ComputeArray pmeGrid2;
+    ComputeArray pmeDispersionGrid1;
+    ComputeArray pmeDispersionGrid2;
     ComputeArray pmeBsplineModuliX;
     ComputeArray pmeBsplineModuliY;
     ComputeArray pmeBsplineModuliZ;
@@ -141,15 +144,20 @@ private:
     ComputeArray pmeDispersionBsplineModuliY;
     ComputeArray pmeDispersionBsplineModuliZ;
     ComputeArray pmeAtomGridIndex;
+    ComputeArray pmeDispersionAtomGridIndex;
     ComputeArray pmeEnergyBuffer;
+    ComputeArray pmeDispersionEnergyBuffer;
     ComputeArray chargeBuffer;
     ComputeSort sort;
+    ComputeSort pmeDispersionSort;
     ComputeQueue pmeQueue;
-    ComputeEvent pmeSyncEvent, paramsSyncEvent;
+    ComputeQueue pmeDispersionQueue;
+    ComputeEvent pmeSyncEvent, pmeDispersionSyncEvent, paramsSyncEvent;
     FFT3D fft, dispersionFft;
     Kernel cpuPme;
     PmeIO* pmeio;
     SyncQueuePostComputation* syncQueue;
+    SyncQueuePostComputation* dispersionSyncQueue;
     ComputeKernel computeParamsKernel, computeExclusionParamsKernel, computePlasmaCorrectionKernel;
     ComputeKernel ewaldSumsKernel, ewaldForcesKernel;
     ComputeKernel pmeGridIndexKernel, pmeDispersionGridIndexKernel;
@@ -171,6 +179,7 @@ private:
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
     int stepsToSort;
     bool usePmeQueue, deviceIsCpu, useFixedPointChargeSpreading, useCpuPme;
+    bool useSplitLJPMEStream;
     bool hasCoulomb, hasLJ, doLJPME, usePosqCharges, recomputeParams, hasOffsets;
     NonbondedMethod nonbondedMethod;
     static const int PmeOrder = 5;
