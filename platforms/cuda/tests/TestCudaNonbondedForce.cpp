@@ -29,8 +29,66 @@
 
 #include "CudaTests.h"
 #include "TestNonbondedForce.h"
+#include "openmm/CustomNonbondedForce.h"
 #include <cuda.h>
 #include <string>
+
+void testSubtileWarpEvaluation() {
+    // Exercise >3,000-atom neighbor-list evaluation, 4/8/16/32 sub-tile compaction, dynamic
+    // work-stealing across multiple MD steps, half-diagonal exclusion tiles, single pairs,
+    // energy-only kernels, and high-parameter CustomNonbondedForce launch bounds.
+    const int numParticles = 3456;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(12.0, 0, 0), Vec3(0, 12.0, 0), Vec3(0, 0, 12.0));
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nonbonded->setCutoffDistance(1.0);
+    CustomNonbondedForce* custom = new CustomNonbondedForce("(a1+a2)*(b1+b2)*(c1+c2)*(d1+d2)*(e1+e2)/(r^2+0.2)");
+    custom->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    custom->setCutoffDistance(1.0);
+    for (const char* name : {"a", "b", "c", "d", "e"})
+        custom->addPerParticleParameter(name);
+    system.addForce(nonbonded);
+    system.addForce(custom);
+    vector<Vec3> positions(numParticles), velocities(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(42, sfmt);
+    vector<pair<int, int> > bonds;
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(12.0);
+        nonbonded->addParticle((i%2 == 0 ? 0.25 : -0.25), 0.20, 0.12);
+        custom->addParticle({0.1 + 0.01*(i%5), 0.2, 0.15, 0.05*(1 + i%3), 0.1});
+        int ix = i / 288, iy = (i / 24) % 12, iz = i % 24;
+        positions[i] = Vec3(0.95*ix + 0.2*genrand_real2(sfmt), 0.95*iy + 0.2*genrand_real2(sfmt), 0.48*iz + 0.2*genrand_real2(sfmt));
+        velocities[i] = Vec3(0.3*(genrand_real2(sfmt)-0.5), 0.3*(genrand_real2(sfmt)-0.5), 0.3*(genrand_real2(sfmt)-0.5));
+        if (i%4 != 0) {
+            bonds.push_back({i-1, i});
+            for (int d = 1; d <= i%4; d++)
+                custom->addExclusion(i-d, i);
+        }
+    }
+    nonbonded->createExceptionsFromBonds(bonds, 0.5, 0.5);
+    VerletIntegrator intCuda(0.002), intRef(0.002);
+    ReferencePlatform refPlatform;
+    Context ctxCuda(system, intCuda, platform), ctxRef(system, intRef, refPlatform);
+    ctxCuda.setPositions(positions);
+    ctxCuda.setVelocities(velocities);
+    ctxRef.setPositions(positions);
+    State fullRef = ctxRef.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(fullRef.getPotentialEnergy(), ctxCuda.getState(State::Energy).getPotentialEnergy(), 1e-3);
+    State fullCuda = ctxCuda.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(fullRef.getPotentialEnergy(), fullCuda.getPotentialEnergy(), 1e-3);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(fullRef.getForces()[i], fullCuda.getForces()[i], 1e-3);
+
+    intCuda.step(5);
+    State stepCuda = ctxCuda.getState(State::Positions | State::Forces | State::Energy);
+    ctxRef.setPositions(stepCuda.getPositions());
+    State stepRef = ctxRef.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(stepRef.getPotentialEnergy(), stepCuda.getPotentialEnergy(), 1e-3);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(stepRef.getForces()[i], stepCuda.getForces()[i], 1e-3);
+}
 
 void testDeterministicForces() {
     // Check that the CudaDeterministicForces property works correctly.
@@ -94,6 +152,7 @@ void runPlatformTests() {
     testParallelComputation(NonbondedForce::LJPME);
     testReordering();
     testDeterministicForces();
+    testSubtileWarpEvaluation();
     if (canRunHugeTest())
         testHugeSystem();
 }

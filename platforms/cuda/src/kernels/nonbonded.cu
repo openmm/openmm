@@ -101,20 +101,22 @@ __device__ void saveSingleForce(int atom, real3 force, unsigned long long* force
  * [in]interactingAtoms - a list of interactions within a given tile     
  *
  */
-extern "C" __global__ void computeNonbonded(
+extern "C" __global__ NONBONDED_LAUNCH_BOUNDS void computeNonbonded(
         unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const tileflags* __restrict__ exclusions,
         const int2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned long long numTileIndices
 #ifdef USE_CUTOFF
         , const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
         const real4* __restrict__ blockSize, const unsigned int* __restrict__ interactingAtoms, unsigned int maxSinglePairs,
-        const int2* __restrict__ singlePairs
+        const int2* __restrict__ singlePairs, unsigned int* __restrict__ workUnitCount
 #endif
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
     const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE; // global warpIndex
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1); // index within the warp
+#if !defined(USE_SYMMETRIC) || !defined(USE_EXCLUSIONS) || !defined(USE_NEIGHBOR_LIST)
     const unsigned int tbx = threadIdx.x - tgx;           // block warpIndex
+#endif
     mixed energy = 0;
     INIT_DERIVATIVES
 
@@ -122,18 +124,115 @@ extern "C" __global__ void computeNonbonded(
 
     const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
     const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
-    for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
-        const int2 tileIndices = exclusionTiles[pos];
-        const unsigned int x = tileIndices.x;
-        const unsigned int y = tileIndices.y;
-        real3 force = make_real3(0);
-        unsigned int atom1 = x*TILE_SIZE + tgx;
-        real4 posq1 = posq[atom1];
-        LOAD_ATOM1_PARAMETERS
-#ifdef USE_EXCLUSIONS
-        tileflags excl = exclusions[pos*TILE_SIZE+tgx];
+    if (firstExclusionTile < lastExclusionTile) {
+        int pos = firstExclusionTile;
+        int2 tileIndices = exclusionTiles[pos];
+        while (pos < lastExclusionTile) {
+            const unsigned int x = tileIndices.x;
+#ifdef INCLUDE_FORCES
+            real3 force = make_real3(0);
 #endif
-        const bool hasExclusions = true;
+            unsigned int atom1 = x*TILE_SIZE + tgx;
+            real4 posq1 = posq[atom1];
+            LOAD_ATOM1_PARAMETERS
+            const bool hasExclusions = true;
+            while (true) {
+                const unsigned int y = tileIndices.y;
+#ifdef USE_EXCLUSIONS
+                tileflags excl = exclusions[pos*TILE_SIZE+tgx];
+#endif
+#if defined(USE_SYMMETRIC) && defined(USE_EXCLUSIONS)
+                unsigned int j = y*TILE_SIZE + tgx;
+                real4 shflPosq;
+                real3 shflForce = make_real3(0);
+                DECLARE_LOCAL_PARAMETERS
+                unsigned int tj, diagIters;
+#ifdef USE_PERIODIC
+                bool singlePeriodicCopy = false;
+#endif
+                if (x == y) {
+#if defined(USE_NEIGHBOR_LIST) && defined(USE_PERIODIC)
+                    if (numTileIndices > 0) {
+                        const real4 blockCenterX = blockCenter[x], blockSizeX = blockSize[x];
+                        singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= MAX_CUTOFF && 0.5f*periodicBoxSize.y-blockSizeX.y >= MAX_CUTOFF && 0.5f*periodicBoxSize.z-blockSizeX.z >= MAX_CUTOFF);
+                        if (singlePeriodicCopy)
+                            APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
+                    }
+#endif
+                    shflPosq = posq1;
+                    COPY_ATOM1_TO_LOCAL_PARAMETERS
+                    excl = __funnelshift_r(excl, excl, tgx + 1);
+                    if (tgx >= TILE_SIZE/2)
+                        excl &= ~(1u << (TILE_SIZE/2 - 1));
+                    SHUFFLE_WARP_DATA
+                    tj = (tgx + 1) & (TILE_SIZE - 1);
+                    diagIters = TILE_SIZE/2;
+                }
+                else {
+                    shflPosq = posq[j];
+                    LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
+                    excl = __funnelshift_r(excl, excl, tgx);
+                    tj = tgx;
+                    diagIters = TILE_SIZE;
+                }
+                #pragma unroll 4
+                for (j = 0; j < diagIters; j++) {
+                    real3 delta = make_real3(shflPosq.x-posq1.x, shflPosq.y-posq1.y, shflPosq.z-posq1.z);
+#ifdef USE_PERIODIC
+                    if (!singlePeriodicCopy) {
+                        APPLY_PERIODIC_TO_DELTA(delta)
+                    }
+#endif
+                    real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                    int actualAtom2 = y*TILE_SIZE+tj;
+                    bool isExcluded = (atom1 >= NUM_ATOMS || actualAtom2 >= NUM_ATOMS || !(excl & 0x1));
+#ifdef NEED_ATOM2_INDEX
+                    const bool withinCutoff = (!(x == y && j == TILE_SIZE/2 - 1 && tgx >= TILE_SIZE/2) && atom1 < NUM_ATOMS && actualAtom2 < NUM_ATOMS
+#else
+                    const bool withinCutoff = (!isExcluded
+#endif
+#ifdef USE_CUTOFF
+                        && r2 < MAX_CUTOFF_SQUARED);
+#else
+                        );
+#endif
+                    if (withinCutoff) {
+                        real4 posq2 = shflPosq;
+                        real invR = RSQRT(r2);
+                        real r = r2*invR;
+                        LOAD_ATOM2_PARAMETERS
+#ifdef NEED_ATOM2_INDEX
+                        int atom2 = actualAtom2;
+#endif
+                        real dEdR = 0.0f;
+                        real tempEnergy = 0.0f;
+                        const real interactionScale = 1.0f;
+                        COMPUTE_INTERACTION
+                        energy += tempEnergy;
+#ifdef INCLUDE_FORCES
+                        delta *= dEdR;
+                        force.x -= delta.x; force.y -= delta.y; force.z -= delta.z;
+                        shflForce.x += delta.x; shflForce.y += delta.y; shflForce.z += delta.z;
+#endif
+                    }
+                    SHUFFLE_WARP_DATA
+                    excl >>= 1;
+                    tj = (tj + 1) & (TILE_SIZE - 1);
+                }
+#ifdef INCLUDE_FORCES
+                if (x == y) {
+                    force.x += real_shfl(shflForce.x, tgx + TILE_SIZE/2 - 1);
+                    force.y += real_shfl(shflForce.y, tgx + TILE_SIZE/2 - 1);
+                    force.z += real_shfl(shflForce.z, tgx + TILE_SIZE/2 - 1);
+                }
+                else if (shflForce.x != 0.0f || shflForce.y != 0.0f || shflForce.z != 0.0f) {
+                    const unsigned int offset = y*TILE_SIZE + tgx;
+                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>(realToFixedPoint(shflForce.x)));
+                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(shflForce.y)));
+                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(shflForce.z)));
+                }
+#endif
+#else
         if (x == y) {
             // This tile is on the diagonal.
             real4 shflPosq = posq1;
@@ -255,6 +354,14 @@ extern "C" __global__ void computeNonbonded(
             atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(shflForce.z)));
 #endif
         }
+#endif
+                pos++;
+                if (pos >= lastExclusionTile)
+                    break;
+                tileIndices = exclusionTiles[pos];
+                if (tileIndices.x != x)
+                    break;
+            }
         // Write results for on and off diagonal tiles
 #ifdef INCLUDE_FORCES
         const unsigned int offset = x*TILE_SIZE + tgx;
@@ -262,17 +369,242 @@ extern "C" __global__ void computeNonbonded(
         atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(force.y)));
         atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(force.z)));
 #endif
+        }
     }
 
     // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
     // of them (no cutoff).
 
 #ifdef USE_NEIGHBOR_LIST
-    const unsigned int numTiles = interactionCount[0];
+    const unsigned int numTiles = (numTileIndices > 0 ? interactionCount[0] : 0);
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (warp*(long long)numTiles/totalWarps);
-    int end = (int) ((warp+1)*(long long)numTiles/totalWarps);
+    const unsigned int initChunk = 2u;
+    const unsigned int tileChunk = 4u;
+    int pos = (int) (warp * initChunk);
+    int end = min(pos + (int) initChunk, (int) numTiles);
+    while (pos < (int) numTiles) {
+        int nextTileX = tiles[pos];
+        while (pos < end) {
+            const bool hasExclusions = false;
+#ifdef INCLUDE_FORCES
+            unsigned long long fxAcc = 0ULL, fyAcc = 0ULL, fzAcc = 0ULL;
+#endif
+            int x = nextTileX;
+            unsigned int atom1 = x*TILE_SIZE + tgx;
+            real4 posq1 = posq[atom1];
+            LOAD_ATOM1_PARAMETERS
+#ifdef USE_PERIODIC
+            const real4 blockCenterX = blockCenter[x];
+            const real4 blockSizeX = blockSize[x];
+            const bool singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= MAX_CUTOFF && 0.5f*periodicBoxSize.y-blockSizeX.y >= MAX_CUTOFF && 0.5f*periodicBoxSize.z-blockSizeX.z >= MAX_CUTOFF);
+            if (singlePeriodicCopy) {
+                APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
+                if (atom1 >= NUM_ATOMS)
+                    posq1 = make_real4(1e10f, 1e10f, 1e10f, 0);
+            }
+#endif
+            do {
+#ifdef INCLUDE_FORCES
+                real3 force = make_real3(0);
+#endif
+                unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
+                unsigned int myAtom2 = j;
+                DECLARE_LOCAL_PARAMETERS
+                real4 shflPosq;
+                real3 shflForce = make_real3(0);
+#ifdef USE_PERIODIC
+                if (singlePeriodicCopy) {
+                    bool atom2InBox = false;
+                    if (j < NUM_ATOMS) {
+                        shflPosq = posq[j];
+                        LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
+                        real origW = shflPosq.w;
+                        APPLY_PERIODIC_TO_POS_WITH_CENTER(shflPosq, blockCenterX)
+                        shflPosq.w = origW;
+                        real dxB = max((real) 0.0f, fabs(shflPosq.x - blockCenterX.x) - blockSizeX.x);
+                        real dyB = max((real) 0.0f, fabs(shflPosq.y - blockCenterX.y) - blockSizeX.y);
+                        real dzB = max((real) 0.0f, fabs(shflPosq.z - blockCenterX.z) - blockSizeX.z);
+                        atom2InBox = (dxB*dxB + dyB*dyB + dzB*dzB < MAX_CUTOFF_SQUARED);
+                    }
+                    else {
+                        shflPosq = make_real4(0, 0, 0, 0);
+                        CLEAR_LOCAL_PARAMETERS
+                    }
+                    const unsigned int validMask = __ballot_sync(0xffffffff, atom2InBox);
+                    if (validMask != 0u) {
+                        const unsigned int numValid = __popc(validMask);
+                        const unsigned int tileIters = (numValid <= 4u ? 4u : (numValid <= 8u ? 8u : (numValid <= 16u ? 16u : (unsigned int)TILE_SIZE)));
+                        if (tileIters < TILE_SIZE) {
+                            const unsigned int targetSlot = tgx & (tileIters - 1u);
+                            unsigned int srcLane;
+#if __CUDA_ARCH__ >= 700
+                            asm("fns.b32 %0, %1, 0, %2;" : "=r"(srcLane) : "r"(validMask), "r"(targetSlot + 1u));
+#else
+                            if (targetSlot < numValid) {
+                                unsigned int m = validMask;
+                                for (unsigned int k = 0; k < targetSlot; k++)
+                                    m &= m - 1u;
+                                srcLane = __ffs(m) - 1;
+                            }
+                            else
+                                srcLane = 0u;
+#endif
+                            j = __shfl_sync(0xffffffff, myAtom2, srcLane);
+                            shflPosq.x = real_shfl(shflPosq.x, srcLane);
+                            shflPosq.y = real_shfl(shflPosq.y, srcLane);
+                            shflPosq.z = real_shfl(shflPosq.z, srcLane);
+                            shflPosq.w = real_shfl(shflPosq.w, srcLane);
+                            SHUFFLE_LOCAL_PARAMETERS_FROM_SRCLANE
+                            if (targetSlot >= numValid) {
+                                shflPosq = make_real4(-1e10f, -1e10f, -1e10f, 0);
+                                CLEAR_LOCAL_PARAMETERS
+                            }
+                            myAtom2 = (tgx < numValid ? j : NUM_ATOMS);
+                        }
+                        else if (!atom2InBox) {
+                            shflPosq = make_real4(-1e10f, -1e10f, -1e10f, 0);
+                            CLEAR_LOCAL_PARAMETERS
+                            myAtom2 = NUM_ATOMS;
+                        }
+                        #pragma unroll 4
+                        for (j = 0; j < tileIters; j++) {
+#ifdef NEED_ATOM2_INDEX
+                            int atom2 = __shfl_sync(0xffffffff, (int)myAtom2, (tgx + j) & (tileIters - 1u));
+#endif
+                            real3 delta = make_real3(shflPosq.x-posq1.x, shflPosq.y-posq1.y, shflPosq.z-posq1.z);
+                            real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                            if (r2 < MAX_CUTOFF_SQUARED) {
+                                real4 posq2 = shflPosq;
+                                real invR = RSQRT(r2);
+                                real r = r2*invR;
+                                LOAD_ATOM2_PARAMETERS
+#ifdef USE_SYMMETRIC
+                                real dEdR = 0.0f;
+#else
+                                real3 dEdR1 = make_real3(0);
+                                real3 dEdR2 = make_real3(0);
+#endif
+                                bool isExcluded = false;
+                                real tempEnergy = 0.0f;
+                                const real interactionScale = 1.0f;
+                                COMPUTE_INTERACTION
+                                energy += tempEnergy;
+#ifdef INCLUDE_FORCES
+#ifdef USE_SYMMETRIC
+                                delta *= dEdR;
+                                force.x -= delta.x; force.y -= delta.y; force.z -= delta.z;
+                                shflForce.x += delta.x; shflForce.y += delta.y; shflForce.z += delta.z;
+#else
+                                force.x -= dEdR1.x; force.y -= dEdR1.y; force.z -= dEdR1.z;
+                                shflForce.x += dEdR2.x; shflForce.y += dEdR2.y; shflForce.z += dEdR2.z;
+#endif
+#endif
+                            }
+                            SHUFFLE_WARP_DATA
+                        }
+#ifdef INCLUDE_FORCES
+                        if (j == 4) {
+                            shflForce.x += __shfl_xor_sync(0xffffffff, shflForce.x, 4);
+                            shflForce.y += __shfl_xor_sync(0xffffffff, shflForce.y, 4);
+                            shflForce.z += __shfl_xor_sync(0xffffffff, shflForce.z, 4);
+                        }
+                        if (j <= 8) {
+                            shflForce.x += __shfl_xor_sync(0xffffffff, shflForce.x, 8);
+                            shflForce.y += __shfl_xor_sync(0xffffffff, shflForce.y, 8);
+                            shflForce.z += __shfl_xor_sync(0xffffffff, shflForce.z, 8);
+                        }
+                        if (j <= 16) {
+                            shflForce.x += __shfl_xor_sync(0xffffffff, shflForce.x, 16);
+                            shflForce.y += __shfl_xor_sync(0xffffffff, shflForce.y, 16);
+                            shflForce.z += __shfl_xor_sync(0xffffffff, shflForce.z, 16);
+                        }
+#endif
+                    }
+                    else {
+                        myAtom2 = NUM_ATOMS;
+                    }
+                }
+                else
+#endif
+                {
+                    if (j < NUM_ATOMS) {
+                        shflPosq = posq[j];
+                        LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
+                    }
+                    else {
+                        shflPosq = make_real4(0, 0, 0, 0);
+                        CLEAR_LOCAL_PARAMETERS
+                    }
+                    unsigned int tj = tgx;
+                    for (j = 0; j < TILE_SIZE; j++) {
+                        int atom2 = __shfl_sync(0xffffffff, (int)myAtom2, tj);
+                        real3 delta = make_real3(shflPosq.x-posq1.x, shflPosq.y-posq1.y, shflPosq.z-posq1.z);
+#ifdef USE_PERIODIC
+                        APPLY_PERIODIC_TO_DELTA(delta)
+#endif
+                        real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                        if (r2 < MAX_CUTOFF_SQUARED) {
+                            real4 posq2 = shflPosq;
+                            real invR = RSQRT(r2);
+                            real r = r2*invR;
+                            LOAD_ATOM2_PARAMETERS
+#ifdef USE_SYMMETRIC
+                            real dEdR = 0.0f;
+#else
+                            real3 dEdR1 = make_real3(0);
+                            real3 dEdR2 = make_real3(0);
+#endif
+                            bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
+                            real tempEnergy = 0.0f;
+                            const real interactionScale = 1.0f;
+                            COMPUTE_INTERACTION
+                            energy += tempEnergy;
+#ifdef INCLUDE_FORCES
+#ifdef USE_SYMMETRIC
+                            delta *= dEdR;
+                            force.x -= delta.x; force.y -= delta.y; force.z -= delta.z;
+                            shflForce.x += delta.x; shflForce.y += delta.y; shflForce.z += delta.z;
+#else
+                            force.x -= dEdR1.x; force.y -= dEdR1.y; force.z -= dEdR1.z;
+                            shflForce.x += dEdR2.x; shflForce.y += dEdR2.y; shflForce.z += dEdR2.z;
+#endif
+#endif
+                        }
+                        SHUFFLE_WARP_DATA
+                        tj = (tj + 1) & (TILE_SIZE - 1);
+                    }
+                }
+#ifdef INCLUDE_FORCES
+                if (myAtom2 < NUM_ATOMS && (shflForce.x != 0.0f || shflForce.y != 0.0f || shflForce.z != 0.0f)) {
+                    atomicAdd(&forceBuffers[myAtom2], static_cast<unsigned long long>(realToFixedPoint(shflForce.x)));
+                    atomicAdd(&forceBuffers[myAtom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(shflForce.y)));
+                    atomicAdd(&forceBuffers[myAtom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(shflForce.z)));
+                }
+                fxAcc += static_cast<unsigned long long>(realToFixedPoint(force.x));
+                fyAcc += static_cast<unsigned long long>(realToFixedPoint(force.y));
+                fzAcc += static_cast<unsigned long long>(realToFixedPoint(force.z));
+#endif
+                pos++;
+                if (pos >= end)
+                    break;
+                nextTileX = tiles[pos];
+            } while (nextTileX == x);
+#ifdef INCLUDE_FORCES
+            if (atom1 < NUM_ATOMS && (fxAcc != 0ULL || fyAcc != 0ULL || fzAcc != 0ULL)) {
+                atomicAdd(&forceBuffers[atom1], fxAcc);
+                atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], fyAcc);
+                atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], fzAcc);
+            }
+#endif
+        }
+        if (totalWarps * initChunk >= numTiles)
+            break;
+        if (tgx == 0)
+            pos = (int) (totalWarps * initChunk + atomicAdd(workUnitCount, tileChunk));
+        pos = __shfl_sync(0xffffffff, pos, 0);
+        end = min(pos + (int) tileChunk, (int) numTiles);
+    }
 #else
     int pos = (int) (startTileIndex+warp*numTileIndices/totalWarps);
     int end = (int) (startTileIndex+(warp+1)*numTileIndices/totalWarps);
@@ -280,7 +612,6 @@ extern "C" __global__ void computeNonbonded(
     int currentSkipIndex = tbx;
     __shared__ volatile int skipTiles[THREAD_BLOCK_SIZE];
     skipTiles[threadIdx.x] = -1;
-#endif
     // atomIndices can probably be shuffled as well
     // but it probably wouldn't make things any faster
     __shared__ int atomIndices[THREAD_BLOCK_SIZE];
@@ -473,11 +804,12 @@ extern "C" __global__ void computeNonbonded(
         }
         pos++;
     }
+#endif
     
     // Third loop: single pairs that aren't part of a tile.
     
 #if USE_NEIGHBOR_LIST
-    const unsigned int numPairs = interactionCount[1];
+    const unsigned int numPairs = (numTileIndices > 0 ? interactionCount[1] : 0);
     if (numPairs > maxSinglePairs)
         return; // There wasn't enough memory for the neighbor list.
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < numPairs; i += blockDim.x*gridDim.x) {
@@ -486,35 +818,37 @@ extern "C" __global__ void computeNonbonded(
         int atom2 = pair.y;
         real4 posq1 = posq[atom1];
         real4 posq2 = posq[atom2];
-        LOAD_ATOM1_PARAMETERS
-        LOAD_ATOM2_PARAMETERS_FROM_GLOBAL
         real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
 #ifdef USE_PERIODIC
         APPLY_PERIODIC_TO_DELTA(delta)
 #endif
         real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-        real invR = RSQRT(r2);
-        real r = r2*invR;
+        if (r2 < MAX_CUTOFF_SQUARED) {
+            LOAD_ATOM1_PARAMETERS
+            LOAD_ATOM2_PARAMETERS_FROM_GLOBAL
+            real invR = RSQRT(r2);
+            real r = r2*invR;
 #ifdef USE_SYMMETRIC
-        real dEdR = 0.0f;
+            real dEdR = 0.0f;
 #else
-        real3 dEdR1 = make_real3(0);
-        real3 dEdR2 = make_real3(0);
+            real3 dEdR1 = make_real3(0);
+            real3 dEdR2 = make_real3(0);
 #endif
-        bool hasExclusions = false;
-        bool isExcluded = false;
-        real tempEnergy = 0.0f;
-        const real interactionScale = 1.0f;
-        COMPUTE_INTERACTION
-        energy += tempEnergy;
+            bool hasExclusions = false;
+            bool isExcluded = false;
+            real tempEnergy = 0.0f;
+            const real interactionScale = 1.0f;
+            COMPUTE_INTERACTION
+            energy += tempEnergy;
 #ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
-        real3 dEdR1 = delta*dEdR;
-        real3 dEdR2 = -dEdR1;
+            real3 dEdR1 = delta*dEdR;
+            real3 dEdR2 = -dEdR1;
 #endif
-        saveSingleForce(atom1, -dEdR1, forceBuffers);
-        saveSingleForce(atom2, -dEdR2, forceBuffers);
+            saveSingleForce(atom1, -dEdR1, forceBuffers);
+            saveSingleForce(atom2, -dEdR2, forceBuffers);
 #endif
+        }
     }
 #endif
 #ifdef INCLUDE_ENERGY

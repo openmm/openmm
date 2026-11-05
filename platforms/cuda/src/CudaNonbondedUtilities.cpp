@@ -239,6 +239,12 @@ void CudaNonbondedUtilities::initialize(const System& system) {
             }
         }
     }
+    for (int i = 0; i < (int) exclusionTilesVec.size(); i++) {
+        int validY = max(0, numAtoms - exclusionTilesVec[i].y * CudaContext::TileSize);
+        tileflags validYMask = (validY < CudaContext::TileSize ? ((tileflags) 1 << validY) - 1 : allFlags);
+        for (int o = 0; o < CudaContext::TileSize; o++)
+            exclusionVec[i * CudaContext::TileSize + o] = (exclusionTilesVec[i].x * CudaContext::TileSize + o >= numAtoms) ? 0 : exclusionVec[i * CudaContext::TileSize + o] & validYMask;
+    }
     atomExclusions.clear(); // We won't use this again, so free the memory it used
     exclusions.upload(exclusionVec);
 
@@ -300,6 +306,12 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         forceArgs.push_back(&interactingAtoms.getDevicePointer());
         forceArgs.push_back(&maxSinglePairs);
         forceArgs.push_back(&singlePairs.getDevicePointer());
+        if (kernelSource.find("workUnitCount") != string::npos) {
+            workUnitCount.initialize<unsigned int>(context, 1, "workUnitCount");
+            context.clearBuffer(workUnitCount);
+            context.addAutoclearBuffer(workUnitCount);
+            forceArgs.push_back(&workUnitCount.getDevicePointer());
+        }
     }
     hasInitializedParams = false;
     paramStartIndex = forceArgs.size();
@@ -609,10 +621,20 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     replacements["BROADCAST_WARP_DATA"] = broadcastWarpData.str();
     
     // Part 2. Defines for off-diagonal exclusions, and neighborlist tiles. 
-    stringstream declareLocal2;
-    for (const ComputeParameterInfo& param : params)
+    stringstream declareLocal2, copy1ToLocal2, shflSrcLane;
+    for (const ComputeParameterInfo& param : params) {
         declareLocal2<<param.getType()<<" shfl"<<param.getName()<<";\n";
+        copy1ToLocal2<<"shfl"<<param.getName()<<" = "<<param.getName()<<"1;\n";
+        if (param.getNumComponents() == 1)
+            shflSrcLane<<"shfl"<<param.getName()<<" = real_shfl(shfl"<<param.getName()<<", srcLane);\n";
+        else {
+            for (int j = 0; j < param.getNumComponents(); j++)
+                shflSrcLane<<"shfl"<<param.getName()<<"."<<suffixes[j]<<" = real_shfl(shfl"<<param.getName()<<"."<<suffixes[j]<<", srcLane);\n";
+        }
+    }
     replacements["DECLARE_LOCAL_PARAMETERS"] = declareLocal2.str();
+    replacements["COPY_ATOM1_TO_LOCAL_PARAMETERS"] = copy1ToLocal2.str();
+    replacements["SHUFFLE_LOCAL_PARAMETERS_FROM_SRCLANE"] = shflSrcLane.str();
 
     stringstream loadLocal2;
     for (const ComputeParameterInfo& param : params)
@@ -691,6 +713,8 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         defines["INCLUDE_FORCES"] = "1";
     if (includeEnergy)
         defines["INCLUDE_ENERGY"] = "1";
+    if (source.find("atom2") != string::npos)
+        defines["NEED_ATOM2_INDEX"] = "1";
     defines["THREAD_BLOCK_SIZE"] = context.intToString(forceThreadBlockSize);
     double maxCutoff = 0.0;
     for (int i = 0; i < 32; i++) {
@@ -702,10 +726,13 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         }
     }
     defines["MAX_CUTOFF"] = context.doubleToString(maxCutoff);
+    defines["MAX_CUTOFF_SQUARED"] = context.doubleToString(maxCutoff*maxCutoff);
     defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
     defines["TILE_SIZE"] = context.intToString(CudaContext::TileSize);
+    defines["NONBONDED_LAUNCH_BOUNDS"] = (!context.getUseDoublePrecision() && params.size()+arguments.size() <= 4
+        ? "__launch_bounds__(THREAD_BLOCK_SIZE, 4)" : "__launch_bounds__(THREAD_BLOCK_SIZE)");
     int numExclusionTiles = exclusionTiles.getSize();
     defines["NUM_TILES_WITH_EXCLUSIONS"] = context.intToString(numExclusionTiles);
     int numContexts = context.getPlatformData().contexts.size();
