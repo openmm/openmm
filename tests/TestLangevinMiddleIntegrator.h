@@ -30,6 +30,7 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "openmm/CustomExternalForce.h"
+#include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
@@ -37,6 +38,8 @@
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
+#include <map>
+#include <sstream>
 #include <vector>
 
 using namespace OpenMM;
@@ -313,6 +316,149 @@ void testForceGroups() {
     ASSERT(pos[2] == 0);
 }
 
+void testFusedConstraintsAndReordering() {
+    // Exercise fused LangevinMiddleIntegrator across SETTLE waters, 2/3/4-atom SHAKE clusters,
+    // unconstrained ions, a massless particle, 260-step reordering, checkpoint reload, and CCMA fallback.
+    System system;
+    const double boxSize = 3.5;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nonbonded->setCutoffDistance(1.0);
+    system.addForce(nonbonded);
+    vector<Vec3> positions;
+
+    const double dOH = 0.09572, dHH = 0.15139, dXH = 0.109;
+    const double hX = 0.5*dHH;
+    const double hY = sqrt(dOH*dOH - hX*hX);
+    for (int w = 0; w < 8; w++) {
+        int base = system.getNumParticles();
+        for (int k = 0; k < 3; k++) {
+            system.addParticle(k == 0 ? 16.0 : 1.008);
+            nonbonded->addParticle(k == 0 ? -0.834 : 0.417, k == 0 ? 0.315 : 0.04, k == 0 ? 0.636 : 0.0);
+        }
+        system.addConstraint(base, base+1, dOH);
+        system.addConstraint(base, base+2, dOH);
+        system.addConstraint(base+1, base+2, dHH);
+        nonbonded->addException(base, base+1, 0.0, 1.0, 0.0);
+        nonbonded->addException(base, base+2, 0.0, 1.0, 0.0);
+        nonbonded->addException(base+1, base+2, 0.0, 1.0, 0.0);
+        Vec3 origin(0.5 + 1.1*(w%2), 0.5 + 1.1*((w/2)%2), 0.5 + 1.1*(w/4));
+        positions.insert(positions.end(), {origin, origin + Vec3(hX, hY, 0.0), origin + Vec3(-hX, hY, 0.0)});
+    }
+    const Vec3 dirs[3] = {Vec3(1, 0, 0), Vec3(0, 1, 0), Vec3(0, 0, 1)};
+    for (int numH = 1; numH <= 3; numH++) {
+        int central = system.getNumParticles();
+        system.addParticle(12.0);
+        nonbonded->addParticle(-0.1*numH, 0.34, 0.45);
+        Vec3 origin(0.6 + 0.9*(numH-1), 2.8, 0.8);
+        positions.push_back(origin);
+        for (int h = 0; h < numH; h++) {
+            int idx = system.getNumParticles();
+            system.addParticle(1.008);
+            nonbonded->addParticle(0.1, 0.25, 0.06);
+            system.addConstraint(central, idx, dXH);
+            nonbonded->addException(central, idx, 0.0, 1.0, 0.0);
+            positions.push_back(origin + dirs[h]*dXH);
+        }
+        for (int a = 0; a < numH; a++)
+            for (int b = a+1; b < numH; b++)
+                nonbonded->addException(central+1+a, central+1+b, 0.0, 1.0, 0.0);
+    }
+    for (int i = 0; i < 4; i++) {
+        system.addParticle(i%2 == 0 ? 22.99 : 35.45);
+        nonbonded->addParticle(i%2 == 0 ? 0.5 : -0.5, 0.30, 0.40);
+        positions.push_back(Vec3(0.7 + 0.6*i, 2.8, 2.6));
+    }
+    int masslessIdx = system.getNumParticles();
+    Vec3 masslessPos(2.9, 2.9, 2.9);
+    system.addParticle(0.0);
+    nonbonded->addParticle(0.0, 0.30, 0.10);
+    positions.push_back(masslessPos);
+
+    auto checkConstraints = [&](const System& sys, const State& state) {
+        for (int c = 0; c < sys.getNumConstraints(); c++) {
+            int p1, p2;
+            double target;
+            sys.getConstraintParameters(c, p1, p2, target);
+            Vec3 delta = state.getPositions()[p1] - state.getPositions()[p2];
+            ASSERT_EQUAL_TOL(target, sqrt(delta.dot(delta)), 2e-4);
+        }
+    };
+
+    const double targetTemp = 300.0;
+    LangevinMiddleIntegrator integrator(targetTemp, 10.0, 0.002);
+    integrator.setConstraintTolerance(1e-5);
+    integrator.setRandomNumberSeed(42);
+    map<string, string> props;
+    for (const auto& name : platform.getPropertyNames()) {
+        if (name.find("DeterministicForces") != string::npos)
+            props[name] = "true";
+        if (name == "Threads")
+            props[name] = "1";
+    }
+    Context context(system, integrator, platform, props);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(targetTemp, 42);
+    integrator.step(1000);
+    stringstream checkpoint(ios_base::out | ios_base::in | ios_base::binary);
+    context.createCheckpoint(checkpoint);
+    integrator.step(40);
+    State stateAfter = context.getState(State::Positions | State::Velocities);
+    checkConstraints(system, stateAfter);
+    ASSERT_EQUAL_VEC(masslessPos, stateAfter.getPositions()[masslessIdx], 1e-6);
+    ASSERT_EQUAL_VEC(Vec3(0, 0, 0), stateAfter.getVelocities()[masslessIdx], 1e-6);
+
+    context.loadCheckpoint(checkpoint);
+    integrator.step(40);
+    State stateReloaded = context.getState(State::Positions | State::Velocities);
+    checkConstraints(system, stateReloaded);
+    if (platform.getName() != "OpenCL") {
+        for (int i = 0; i < system.getNumParticles(); i++)
+            ASSERT_EQUAL_VEC(stateAfter.getPositions()[i], stateReloaded.getPositions()[i], 1e-5);
+    }
+
+    int numDof = -system.getNumConstraints();
+    for (int i = 0; i < system.getNumParticles(); i++)
+        if (system.getParticleMass(i) != 0.0)
+            numDof += 3;
+    const int numSamples = 1500;
+    double meanKE = 0.0;
+    for (int i = 0; i < numSamples; i++) {
+        integrator.step(5);
+        meanKE += context.getState(State::Energy).getKineticEnergy();
+    }
+    meanKE /= numSamples;
+    double measuredTemp = meanKE / (0.5 * numDof * BOLTZ);
+    ASSERT_USUALLY_EQUAL_TOL(targetTemp, measuredTemp, 0.05);
+
+    System ccmaSystem;
+    HarmonicAngleForce* angles = new HarmonicAngleForce();
+    ccmaSystem.addForce(angles);
+    for (double m : {1.008, 16.0, 16.0, 1.008, 16.0, 1.008, 1.008})
+        ccmaSystem.addParticle(m);
+    ccmaSystem.addConstraint(0, 1, 0.097);
+    ccmaSystem.addConstraint(1, 2, 0.148);
+    ccmaSystem.addConstraint(2, 3, 0.097);
+    angles->addAngle(0, 1, 2, 1.74, 400.0);
+    angles->addAngle(1, 2, 3, 1.74, 400.0);
+    ccmaSystem.addConstraint(4, 5, dOH);
+    ccmaSystem.addConstraint(4, 6, dOH);
+    ccmaSystem.addConstraint(5, 6, dHH);
+    vector<Vec3> ccmaPos = {
+        Vec3(0.0, 0.097, 0.0), Vec3(0.0, 0.0, 0.0), Vec3(0.148, 0.0, 0.0), Vec3(0.148, -0.097, 0.0),
+        Vec3(1.0, 0.0, 0.0), Vec3(1.0 + hX, hY, 0.0), Vec3(1.0 - hX, hY, 0.0)
+    };
+    LangevinMiddleIntegrator ccmaInt(300.0, 5.0, 0.002);
+    ccmaInt.setConstraintTolerance(1e-5);
+    ccmaInt.setRandomNumberSeed(7);
+    Context ccmaCtx(ccmaSystem, ccmaInt, platform);
+    ccmaCtx.setPositions(ccmaPos);
+    ccmaCtx.setVelocitiesToTemperature(300.0, 7);
+    ccmaInt.step(50);
+    checkConstraints(ccmaSystem, ccmaCtx.getState(State::Positions));
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -325,6 +471,7 @@ int main(int argc, char* argv[]) {
         testRandomSeed();
         testInitialTemperature();
         testForceGroups();
+        testFusedConstraintsAndReordering();
         runPlatformTests();
     }
     catch(const exception& e) {

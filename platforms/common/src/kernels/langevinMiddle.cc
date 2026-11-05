@@ -141,3 +141,130 @@ KERNEL void selectLangevinStepSize(int numAtoms, int paddedNumAtoms, mixed maxSt
     if (LOCAL_ID < MaxParams)
         paramBuffer[LOCAL_ID] = params[LOCAL_ID];
 }
+
+#ifdef ENABLE_FUSED_INTEGRATION
+
+inline DEVICE mixed4 integrateForceStep(mixed4 velocity, int atom, int paddedNumAtoms, mixed fscale, GLOBAL const mm_long* RESTRICT force) {
+    if (velocity.w != 0.0) {
+        velocity.x += fscale*velocity.w*force[atom];
+        velocity.y += fscale*velocity.w*force[atom+paddedNumAtoms];
+        velocity.z += fscale*velocity.w*force[atom+paddedNumAtoms*2];
+    }
+    return velocity;
+}
+
+inline DEVICE mixed4 integrateMiddleStep(PRIVATE mixed4* velocityPtr, float4 rand, mixed halfdt, mixed vscale, mixed noisescale) {
+    mixed4 velocity = *velocityPtr;
+    mixed4 delta = make_mixed4(halfdt*velocity.x, halfdt*velocity.y, halfdt*velocity.z, 0);
+    mixed sqrtInvMass = SQRT(velocity.w);
+    velocity.x = vscale*velocity.x + noisescale*sqrtInvMass*rand.x;
+    velocity.y = vscale*velocity.y + noisescale*sqrtInvMass*rand.y;
+    velocity.z = vscale*velocity.z + noisescale*sqrtInvMass*rand.z;
+    *velocityPtr = velocity;
+    return delta + make_mixed4(halfdt*velocity.x, halfdt*velocity.y, halfdt*velocity.z, 0);
+}
+
+inline DEVICE void commitConstrainedAtom(int atom, mixed4 velocity, mixed4 pos, mixed4 delta, mixed4 oldDelta, mixed invDt,
+        GLOBAL mixed4* RESTRICT velm, GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTRICT posqCorrection) {
+    velocity.x += (delta.x-oldDelta.x)*invDt;
+    velocity.y += (delta.y-oldDelta.y)*invDt;
+    velocity.z += (delta.z-oldDelta.z)*invDt;
+    velm[atom] = velocity;
+    pos.x += delta.x;
+    pos.y += delta.y;
+    pos.z += delta.z;
+    storePos(posq, posqCorrection, atom, pos);
+}
+
+/**
+ * Perform a complete BAOAB step for SETTLE clusters, SHAKE clusters, and unconstrained atoms in a single kernel launch.
+ */
+
+KERNEL void integrateLangevinMiddleFused(int numUnconstrained, int paddedNumAtoms, int numSettle, int numShake, mixed tol,
+        GLOBAL mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force, GLOBAL real4* RESTRICT posq,
+        GLOBAL const mixed* RESTRICT paramBuffer, GLOBAL const mixed2* RESTRICT dt,
+        GLOBAL const float4* RESTRICT random, unsigned int startRandomIndex,
+        GLOBAL const int* RESTRICT unconstrainedAtoms, GLOBAL const int4* RESTRICT settleAtoms,
+        GLOBAL const float2* RESTRICT settleParams, GLOBAL const int4* RESTRICT shakeAtoms,
+        GLOBAL const float4* RESTRICT shakeParams
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL real4* RESTRICT posqCorrection
+#endif
+        ) {
+#ifndef USE_MIXED_PRECISION
+    GLOBAL real4* posqCorrection = 0;
+#endif
+    mixed dtVal = dt[0].y;
+    mixed fscale = dtVal/(mixed) 0x100000000;
+    mixed vscale = paramBuffer[VelScale];
+    mixed noisescale = paramBuffer[NoiseScale];
+    mixed halfdt = 0.5f*dtVal;
+    mixed invDt = 1/dtVal;
+    int totalClusters = numSettle + numShake;
+
+    for (int index = GLOBAL_ID; index < totalClusters; index += GLOBAL_SIZE) {
+        if (index < numSettle) {
+            int4 atoms = settleAtoms[index];
+            float2 params = settleParams[index];
+            mixed4 apos0 = loadPos(posq, posqCorrection, atoms.x);
+            mixed4 apos1 = loadPos(posq, posqCorrection, atoms.y);
+            mixed4 apos2 = loadPos(posq, posqCorrection, atoms.z);
+            mixed4 v0 = integrateForceStep(velm[atoms.x], atoms.x, paddedNumAtoms, fscale, force);
+            mixed4 v1 = integrateForceStep(velm[atoms.y], atoms.y, paddedNumAtoms, fscale, force);
+            mixed4 v2 = integrateForceStep(velm[atoms.z], atoms.z, paddedNumAtoms, fscale, force);
+            applySettleToVelocitiesCluster(apos0, apos1, apos2, &v0, &v1, &v2);
+            mixed4 xp0 = integrateMiddleStep(&v0, random[startRandomIndex+atoms.x], halfdt, vscale, noisescale);
+            mixed4 xp1 = integrateMiddleStep(&v1, random[startRandomIndex+atoms.y], halfdt, vscale, noisescale);
+            mixed4 xp2 = integrateMiddleStep(&v2, random[startRandomIndex+atoms.z], halfdt, vscale, noisescale);
+            mixed4 oldXp0 = xp0, oldXp1 = xp1, oldXp2 = xp2;
+            applySettleToPositionsCluster(params, apos0, apos1, apos2, 1/v0.w, 1/v1.w, 1/v2.w, &xp0, &xp1, &xp2);
+            commitConstrainedAtom(atoms.x, v0, apos0, xp0, oldXp0, invDt, velm, posq, posqCorrection);
+            commitConstrainedAtom(atoms.y, v1, apos1, xp1, oldXp1, invDt, velm, posq, posqCorrection);
+            commitConstrainedAtom(atoms.z, v2, apos2, xp2, oldXp2, invDt, velm, posq, posqCorrection);
+        }
+#ifdef HAS_SHAKE_CLUSTERS
+        else {
+            int shakeIndex = index - numSettle;
+            int4 atoms = shakeAtoms[shakeIndex];
+            float4 params = shakeParams[shakeIndex];
+            mixed4 apos0 = loadPos(posq, posqCorrection, atoms.x);
+            mixed4 apos1 = loadPos(posq, posqCorrection, atoms.y);
+            mixed4 apos2 = (atoms.z != -1 ? loadPos(posq, posqCorrection, atoms.z) : make_mixed4(0));
+            mixed4 apos3 = (atoms.w != -1 ? loadPos(posq, posqCorrection, atoms.w) : make_mixed4(0));
+            mixed4 v0 = integrateForceStep(velm[atoms.x], atoms.x, paddedNumAtoms, fscale, force);
+            mixed4 v1 = integrateForceStep(velm[atoms.y], atoms.y, paddedNumAtoms, fscale, force);
+            mixed4 v2 = (atoms.z != -1 ? integrateForceStep(velm[atoms.z], atoms.z, paddedNumAtoms, fscale, force) : make_mixed4(0));
+            mixed4 v3 = (atoms.w != -1 ? integrateForceStep(velm[atoms.w], atoms.w, paddedNumAtoms, fscale, force) : make_mixed4(0));
+            applyShakeToVelocitiesCluster(atoms, params, tol, apos0, apos1, apos2, apos3, &v0, &v1, &v2, &v3);
+            mixed4 xp0 = integrateMiddleStep(&v0, random[startRandomIndex+atoms.x], halfdt, vscale, noisescale);
+            mixed4 xp1 = integrateMiddleStep(&v1, random[startRandomIndex+atoms.y], halfdt, vscale, noisescale);
+            mixed4 xp2 = (atoms.z != -1 ? integrateMiddleStep(&v2, random[startRandomIndex+atoms.z], halfdt, vscale, noisescale) : make_mixed4(0));
+            mixed4 xp3 = (atoms.w != -1 ? integrateMiddleStep(&v3, random[startRandomIndex+atoms.w], halfdt, vscale, noisescale) : make_mixed4(0));
+            mixed4 oldXp0 = xp0, oldXp1 = xp1, oldXp2 = xp2, oldXp3 = xp3;
+            applyShakeToPositionsCluster(atoms, params, tol, apos0, apos1, apos2, apos3, &xp0, &xp1, &xp2, &xp3);
+            commitConstrainedAtom(atoms.x, v0, apos0, xp0, oldXp0, invDt, velm, posq, posqCorrection);
+            commitConstrainedAtom(atoms.y, v1, apos1, xp1, oldXp1, invDt, velm, posq, posqCorrection);
+            if (atoms.z != -1)
+                commitConstrainedAtom(atoms.z, v2, apos2, xp2, oldXp2, invDt, velm, posq, posqCorrection);
+            if (atoms.w != -1)
+                commitConstrainedAtom(atoms.w, v3, apos3, xp3, oldXp3, invDt, velm, posq, posqCorrection);
+        }
+#endif
+    }
+    for (int i = GLOBAL_ID; i < numUnconstrained; i += GLOBAL_SIZE) {
+        int atom = (totalClusters == 0 ? i : unconstrainedAtoms[i]);
+        mixed4 velocity = velm[atom];
+        if (velocity.w != 0.0) {
+            velocity = integrateForceStep(velocity, atom, paddedNumAtoms, fscale, force);
+            mixed4 delta = integrateMiddleStep(&velocity, random[startRandomIndex+atom], halfdt, vscale, noisescale);
+            velm[atom] = velocity;
+            mixed4 pos = loadPos(posq, posqCorrection, atom);
+            pos.x += delta.x;
+            pos.y += delta.y;
+            pos.z += delta.z;
+            storePos(posq, posqCorrection, atom, pos);
+        }
+    }
+}
+
+#endif
