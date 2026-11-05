@@ -4,7 +4,7 @@
  * This is part of the Lepton expression parser.                              *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,9 +40,9 @@ using namespace Lepton;
 using namespace std;
 
 static const string Digits = "0123456789";
-static const string Operators = "+-*/^";
-static const bool LeftAssociative[] = {true, true, true, true, false};
-static const int Precedence[] = {0, 0, 1, 1, 3};
+static const vector<string> Operators = {"+", "-", "*", "/", "^", "==", "!=", "<=", ">=", "<", ">"};
+static const bool LeftAssociative[] = {true, true, true, true, false, true, true, true, true, true, true};
+static const int Precedence[] = {0, 0, 1, 1, 3, 4, 4, 4, 4, 4, 4};
 static const Operation::Id OperationId[] = {Operation::ADD, Operation::SUBTRACT, Operation::MULTIPLY, Operation::DIVIDE, Operation::POWER};
 
 class Lepton::ParseToken {
@@ -83,8 +83,9 @@ ParseToken Parser::getNextToken(const string& expression, int start) {
         return ParseToken(")", ParseToken::RightParen);
     if (c == ',')
         return ParseToken(",", ParseToken::Comma);
-    if (Operators.find(c) != string::npos)
-        return ParseToken(string(1, c), ParseToken::Operator);
+    int opIndex = getOperatorIndex(expression, start);
+    if (opIndex > -1)
+        return ParseToken(Operators[opIndex], ParseToken::Operator);
     if (isspace(c)) {
         // White space
 
@@ -125,7 +126,7 @@ ParseToken Parser::getNextToken(const string& expression, int start) {
         c = expression[pos];
         if (c == '(')
             return ParseToken(expression.substr(start, pos-start+1), ParseToken::Function);
-        if (Operators.find(c) != string::npos || c == ',' || c == ')' || isspace(c))
+        if (getOperatorIndex(expression, pos) > -1 || c == ',' || c == ')' || isspace(c))
             return ParseToken(expression.substr(start, pos-start), ParseToken::Variable);
     }
     return ParseToken(expression.substr(start, string::npos), ParseToken::Variable);
@@ -260,12 +261,39 @@ ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int
 
     while (pos < (int) tokens.size() && tokens[pos].getType() == ParseToken::Operator) {
         token = tokens[pos];
-        int opIndex = (int) Operators.find(token.getText());
+        int opIndex = getOperatorIndex(token.getText());
         int opPrecedence = Precedence[opIndex];
         if (opPrecedence < precedence)
             return result;
         pos++;
         ExpressionTreeNode arg = parsePrecedence(tokens, pos, customFunctions, subexpressionDefs, LeftAssociative[opIndex] ? opPrecedence+1 : opPrecedence);
+
+        // Comparison operators need to be converted to the appropriate equivalent expressions.
+
+        if (token.getText() == "==")
+            return ExpressionTreeNode(new Operation::Delta(),
+                                      ExpressionTreeNode(new Operation::Subtract(), result, arg));
+        if (token.getText() == "!=")
+            return ExpressionTreeNode(new Operation::Subtract(),
+                                      ExpressionTreeNode(new Operation::Constant(1.0)),
+                                      ExpressionTreeNode(new Operation::Delta(), ExpressionTreeNode(new Operation::Subtract(), result, arg)));
+        if (token.getText() == "<=")
+            return ExpressionTreeNode(new Operation::Step(),
+                                      ExpressionTreeNode(new Operation::Subtract(), arg, result));
+        if (token.getText() == ">=")
+            return ExpressionTreeNode(new Operation::Step(),
+                                      ExpressionTreeNode(new Operation::Subtract(), result, arg));
+        if (token.getText() == "<")
+            return ExpressionTreeNode(new Operation::Subtract(),
+                                      ExpressionTreeNode(new Operation::Constant(1.0)),
+                                      ExpressionTreeNode(new Operation::Step(), ExpressionTreeNode(new Operation::Subtract(), result, arg)));
+        if (token.getText() == ">")
+            return ExpressionTreeNode(new Operation::Subtract(),
+                                      ExpressionTreeNode(new Operation::Constant(1.0)),
+                                      ExpressionTreeNode(new Operation::Step(), ExpressionTreeNode(new Operation::Subtract(), arg, result)));
+
+        // Other operators.
+
         Operation* op = getOperatorOperation(token.getText());
         try {
             result = ExpressionTreeNode(op, result, arg);
@@ -278,8 +306,17 @@ ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int
     return result;
 }
 
+int Parser::getOperatorIndex(const std::string& expression, int start) {
+    for (int i = 0; i < Operators.size(); i++) {
+        const string& op = Operators[i];
+        if (expression.compare(start, op.size(), op) == 0)
+            return i;
+    }
+    return -1;
+}
+
 Operation* Parser::getOperatorOperation(const std::string& name) {
-    switch (OperationId[Operators.find(name)]) {
+    switch (OperationId[getOperatorIndex(name)]) {
         case Operation::ADD:
             return new Operation::Add();
         case Operation::SUBTRACT:

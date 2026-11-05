@@ -7,7 +7,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -161,10 +161,9 @@ namespace OpenMM {
  * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be
  * computed.  You can then query its value in a Context by calling getState() on it.
  *
- * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, atan2, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
- * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
- * select(x,y,z) = z if x = 0, y otherwise.  The names of per-particle parameters have the suffix "1" or "2" appended to them to indicate the values for the
+ * For details on how to write expressions, see [the User Guide](https://docs.openmm.org/latest/userguide/theory/03_custom_forces.html#writing-custom-expressions).
+ *
+ * The names of per-particle parameters have the suffix "1" or "2" appended to them to indicate the values for the
  * two interacting particles.  As seen in the above example, the expression may also involve intermediate quantities that are defined following the main expression,
  * using ";" as a separator.
  *

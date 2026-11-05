@@ -81,6 +81,8 @@ def getNodeText(node):
             s = "%s%s\n\n" % (s, getNodeText(n))
         elif n.tag == "ref":
             s = "%s%s" % (s, getNodeText(n))
+        elif n.tag == "ulink":
+            s = "%s`%s <%s>`_" % (s, getNodeText(n), n.attrib['url'])
         elif n.tag == "xrefsect":
             title = n.find("xreftitle")
             description = n.find("xrefdescription")
