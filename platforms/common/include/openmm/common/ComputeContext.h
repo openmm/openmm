@@ -609,8 +609,27 @@ public:
      * Mark that the current molecule definitions from one particular force (and hence the atom order)
      * may be invalid.  This should be called whenever force field parameters change.  It will cause the
      * definitions and order to be revalidated.
+     *
+     * If you know the specific range of particles or groups that has changed, calling the alternate form that
+     * takes ranges is more efficient.
+     *
+     * @param force        the force that has changed
+     * @param checkAtoms   whether particle parameters have changed
+     * @param checkGroups  whether particle groups have changed
      */
     bool invalidateMolecules(ComputeForceInfo* force, bool checkAtoms=true, bool checkGroups=true);
+    /**
+     * Mark that the current molecule definitions from one particular force (and hence the atom order)
+     * may be invalid.  This should be called whenever force field parameters change.  It will cause the
+     * definitions and order to be revalidated.
+     *
+     * @param force               the force that has changed
+     * @param firstParticle       the index of the first particle whose parameters may have changed
+     * @param lastParticle        the index of the last particle whose parameters may have changed
+     * @param firstParticleGroup  the index of the first particle group whose parameters may have changed
+     * @param lastParticleGroup   the index of the last particle group whose parameters may have changed
+     */
+    bool invalidateMolecules(ComputeForceInfo* force, int firstParticle, int lastParticle, int firstParticleGroup, int lastParticleGroup);
     /**
      * Make sure the current atom order is valid, based on the forces.  If not, perform reordering
      * to generate a new valid order.  This method is only needed in very unusual situations.
@@ -699,6 +718,8 @@ struct ComputeContext::MoleculeGroup {
     std::vector<int> atoms;
     std::vector<int> instances;
     std::vector<int> offsets;
+    int minParticle, maxParticle;
+    std::vector<int> minParticleGroup, maxParticleGroup;
 };
 
 /**

@@ -23,7 +23,7 @@ params = CharmmParameterSet('charmm22.rtf', 'charmm22.par')
 system = psf.createSystem(params, nonbondedMethod=NoCutoff, constraints=HBonds)
 integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
 simulation = Simulation(psf.topology, system, integrator)
-simulation.context.setPositions(pdb.getPositions())
+simulation.setPositions(pdb.getPositions())
 simulation.minimizeEnergy()
 simulation.reporters.append(DCDReporter('output.dcd', 1000))
 simulation.reporters.append(

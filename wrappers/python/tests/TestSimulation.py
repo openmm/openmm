@@ -5,6 +5,7 @@ from io import BytesIO, StringIO
 from openmm import *
 from openmm.app import *
 from openmm.unit import *
+import numpy as np
 
 class TestSimulation(unittest.TestCase):
     """Test the Simulation class"""
@@ -320,6 +321,26 @@ class TestSimulation(unittest.TestCase):
                 for k in range(j):
                     assert devices[j] != devices[k]
 
+    def testPositionsAndVelocities(self):
+        """Test setting and querying positions and velocities."""
+        pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
+        ff = ForceField('amber99sb.xml', 'tip3p.xml')
+        system = ff.createSystem(pdb.topology, nonbondedMethod=CutoffPeriodic, constraints=HBonds)
+        integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+        simulation = Simulation(pdb.topology, system, integrator)
+        simulation.setPositions(pdb.positions)
+        velocities = np.random.rand(system.getNumParticles(), 3)
+        simulation.setVelocities(velocities)
+        state = simulation.getState(positions=True, velocities=True)
+        assert np.allclose(pdb.positions.value_in_unit(nanometers), state.getPositions(asNumpy=True).value_in_unit(nanometers))
+        assert np.allclose(velocities, state.getVelocities(asNumpy=True).value_in_unit(nanometers/picosecond))
+        simulation.setVelocitiesToTemperature(300*kelvin)
+        state = simulation.getState(velocities=True)
+        mass = [[system.getParticleMass(i).value_in_unit(amu)] for i in range(system.getNumParticles())]
+        ke = 0.5*np.sum(mass*state.getVelocities(asNumpy=True).value_in_unit(nanometers/picosecond)**2)
+        dof = 3*system.getNumParticles()-system.getNumConstraints()-3
+        expected = (0.5*MOLAR_GAS_CONSTANT_R*300*kelvin*dof).value_in_unit(kilojoules_per_mole)
+        assert np.allclose(expected, ke, rtol=0.1)
 
 if __name__ == '__main__':
     unittest.main()

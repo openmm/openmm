@@ -396,7 +396,7 @@ void CudaNonbondedUtilities::prepareInteractions(int forceGroups) {
     }
     if (!useNeighborList)
         return;
-    if (numTiles == 0)
+    if (numBlocks == 0)
         return;
 
     // Compute the neighbor list.
@@ -432,7 +432,7 @@ void CudaNonbondedUtilities::computeInteractions(int forceGroups, bool includeFo
             initParamArgs();
         context.executeKernel(kernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
-    if (useNeighborList && numTiles > 0) {
+    if (useNeighborList && numBlocks > 0) {
         cuEventSynchronize(downloadCountEvent);
         updateNeighborListSize();
     }
@@ -493,6 +493,10 @@ void CudaNonbondedUtilities::setAtomBlockRange(double startFraction, double endF
     startTileIndex = (int) (startFraction*totalTiles);
     numTiles = (long long) (endFraction*totalTiles)-startTileIndex;
     forceRebuildNeighborList = true;
+    if (numBlocks == 0 && interactionCount.isInitialized()) {
+        vector<unsigned int> count(2, 0);
+        interactionCount.upload(count);
+    }
 }
 
 void CudaNonbondedUtilities::createKernelsForGroups(int groups) {
