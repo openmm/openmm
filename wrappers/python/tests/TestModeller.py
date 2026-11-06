@@ -584,6 +584,8 @@ class TestModeller(unittest.TestCase):
         system = ff.createSystem(modeller.topology, nonbondedMethod=PME, constraints=HBonds)
         system.addForce(MonteCarloBarostat(1, 300))
         simulation = Simulation(modeller.topology, system, LangevinIntegrator(300, 1, 0.002))
+        print(simulation.context.getPlatform().getName())
+        print(*((name, simulation.context.getPlatform().getPropertyValue(simulation.context, name)) for name in simulation.context.getPlatform().getPropertyNames()))
         simulation.context.setPositions(modeller.positions)
         simulation.context.setVelocitiesToTemperature(300)
         t2 = time.perf_counter()

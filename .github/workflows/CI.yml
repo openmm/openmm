@@ -263,7 +263,7 @@ jobs:
           python -m openmm.testInstallation
           python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build/python/tests
-          python -m pytest -v -n 2 --durations=0 -rA
+          OPENMM_CPU_THREADS=2 python -m pytest -v -n 2 --durations=0 -rA
 
   windows:
     runs-on: windows-latest
@@ -408,6 +408,7 @@ jobs:
           python -m openmm.testInstallation
           python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build\python\tests
+          set OPENMM_CPU_THREADS=2
           python -m pytest -v -n 2 --durations=0 -rA
 
   docs:
