@@ -166,6 +166,23 @@ namespace OpenMM {
             PyObject *pythonBytes = PyBytes_FromStringAndSize(pickledFunction.data(), pickledFunction.size());
             PyObject *function = PyObject_CallMethodOneArg(pickle, loads, pythonBytes);
             Py_XDECREF(pythonBytes);
+            if (function == NULL) {
+                // pickle.loads raised an exception.  Convert it to an OpenMMException.
+
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 12
+                PyObject *type;
+                PyObject *exception;
+                PyObject *traceback;
+                PyErr_Fetch(&type, &exception, &traceback);
+#else
+                PyObject *exception = PyErr_GetRaisedException();
+#endif
+                PyObject *message = PyObject_Str(exception);
+                std::string *ptr;
+                SWIG_AsPtr_std_string(message, &ptr);
+                Py_XDECREF(message);
+                throw OpenMMException(*ptr);
+            }
             const SerializationNode& paramsNode = node.getChildNode("GlobalParameters");
             std::map<std::string, double> params;
             for (auto& parameter : paramsNode.getChildren())
