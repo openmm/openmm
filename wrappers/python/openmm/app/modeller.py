@@ -733,9 +733,6 @@ class Modeller(object):
             the Platform to use for solving the packing problem.  If this is None, the default Platform will be used.
         """
 
-        import time
-        t1 = time.perf_counter()
-
         # Helper functions for addMixture().
 
         def addCopyToTopology(dstTopology, srcTopology):
@@ -1052,12 +1049,9 @@ class Modeller(object):
         print(*((name, context.getPlatform().getPropertyValue(context, name)) for name in context.getPlatform().getPropertyNames()))
 
         minimizeTol = 0.01
-        t2 = time.perf_counter()
         LocalEnergyMinimizer.minimize(context, tolerance=minimizeTol)
         context.setParameter("lambda", 1)
-        t3 = time.perf_counter()
         LocalEnergyMinimizer.minimize(context, tolerance=minimizeTol)
-        t4 = time.perf_counter()
 
         if vectorsGuessed:
             currentVol = context.getState().getPeriodicBoxVolume().value_in_unit(nanometer**3)
@@ -1073,13 +1067,6 @@ class Modeller(object):
 
         self.topology = topology
         self.positions = context.getState(positions=True).getPositions()
-        t5 = time.perf_counter()
-
-        print("addMixture timings")
-        print("Setup", t2 - t1)
-        print("Min 1", t3 - t2)
-        print("Min 2", t4 - t3)
-        print("Relax", t5 - t4)
 
     def _computeBoxWidth(self, padding):
         """Compute the necessary periodic box width for a given padding distance."""
