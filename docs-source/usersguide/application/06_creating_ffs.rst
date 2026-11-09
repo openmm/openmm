@@ -399,6 +399,24 @@ specified parameters.  Otherwise, it ignores that set and continues.
 :code:`angle` is the equilibrium angle in radians, and :code:`k` is the
 spring constant in kJ/mol/radian\ :sup:`2`\ .
 
+To implement the Urey-Bradley potential, which adds a harmonic vibration term
+between the outer atoms of a harmonic angle, include a tag like this in
+addition to the :code:`<HarmonicAngleForce>` tag:
+
+.. code-block:: xml
+
+    <AmoebaUreyBradleyForce>
+     <UreyBradley class1="C" class2="C" class3="O" k="1000.0" d="0.20"/>
+     <UreyBradley class1="C" class2="C" class3="OH" k="1000.0" d="0.20"/>
+     <UreyBradley class1="CA" class2="C" class3="CA" k="1000.0" d="0.20"/>
+     ...
+    </AmoebaUreyBradleyForce>
+
+The atom identification is the same as for :code:`<HarmonicAngleForce>`.
+:code:`k` is the spring constant in kJ/mol/nm\ :sup:`2`\ and :code:`d` is
+the equilibrium distance in nm for the harmonic vibration term between the
+outer atoms.
+
 <PeriodicTorsionForce>
 ======================
 
