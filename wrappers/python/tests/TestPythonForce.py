@@ -13,6 +13,15 @@ def compute(state):
     force = -0.5*k*pos
     return energy*kilojoules_per_mole, force*kilojoules_per_mole/nanometer
 
+class ComputeNotUnpickleable:
+    """This is a computation function that can be pickled but not unpickled."""
+    def __call__(self, state):
+        return compute(state)
+    def __getstate__(self):
+        return 0
+    def __setstate__(self, pickleState):
+        raise ValueError('This should fail')
+
 class TestPythonForce(unittest.TestCase):
     """Test the PythonForce class"""
 
@@ -200,6 +209,15 @@ class TestPythonForce(unittest.TestCase):
         """Test retrieving the bytes of the pickled callable."""
         force = PythonForce(compute)
         self.assertEqual(force.getPickledFunction(), pickle.dumps(compute))
+
+    def testUnpickleException(self):
+        """Test that an exception raised during unpickling is handled correctly."""
+
+        force = PythonForce(ComputeNotUnpickleable())
+        serialized = XmlSerializer.serialize(force)
+        with self.assertRaises(OpenMMException) as raised:
+            XmlSerializer.deserialize(serialized)
+        self.assertEqual('This should fail', str(raised.exception))
 
 if __name__ == '__main__':
     unittest.main()
