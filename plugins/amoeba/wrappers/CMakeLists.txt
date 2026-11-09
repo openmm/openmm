@@ -20,7 +20,7 @@ add_custom_command(
 
 # Step 3 - Generate the wrappers
 ADD_CUSTOM_COMMAND(OUTPUT AmoebaOpenMMCWrapper.h AmoebaOpenMMCWrapper.cpp AmoebaOpenMMFortranModule.f90 AmoebaOpenMMFortranWrapper.cpp
-     COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/generateAmoebaWrappers.py" "${WRAPPER_DOXYGEN_DIR}/xml" "${CMAKE_CURRENT_BINARY_DIR}"
+     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/generateAmoebaWrappers.py" "${WRAPPER_DOXYGEN_DIR}/xml" "${CMAKE_CURRENT_BINARY_DIR}"
      DEPENDS "${WRAPPER_DOXYGEN_DIR}/xml/index.xml" "${CMAKE_CURRENT_SOURCE_DIR}/generateAmoebaWrappers.py")
 
 ADD_CUSTOM_TARGET(AmoebaApiWrappers DEPENDS AmoebaOpenMMCWrapper.h AmoebaOpenMMCWrapper.cpp AmoebaOpenMMFortranModule.f90 AmoebaOpenMMFortranWrapper.cpp)

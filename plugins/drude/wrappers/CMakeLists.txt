@@ -20,7 +20,7 @@ add_custom_command(
 
 # Step 3 - Generate the wrappers
 ADD_CUSTOM_COMMAND(OUTPUT DrudeOpenMMCWrapper.h DrudeOpenMMCWrapper.cpp DrudeOpenMMFortranModule.f90 DrudeOpenMMFortranWrapper.cpp
-     COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/generateDrudeWrappers.py" "${WRAPPER_DOXYGEN_DIR}/xml" "${CMAKE_CURRENT_BINARY_DIR}"
+     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/generateDrudeWrappers.py" "${WRAPPER_DOXYGEN_DIR}/xml" "${CMAKE_CURRENT_BINARY_DIR}"
      DEPENDS "${WRAPPER_DOXYGEN_DIR}/xml/index.xml" "${CMAKE_CURRENT_SOURCE_DIR}/generateDrudeWrappers.py")
 
 ADD_CUSTOM_TARGET(DrudeApiWrappers DEPENDS DrudeOpenMMCWrapper.h DrudeOpenMMCWrapper.cpp DrudeOpenMMFortranModule.f90 DrudeOpenMMFortranWrapper.cpp)
