@@ -16,7 +16,7 @@ def compute(state):
 class ComputeNotUnpickleable:
     """This is a computation function that can be pickled but not unpickled."""
     def __call__(self, state):
-        compute(state)
+        return compute(state)
     def __getstate__(self):
         return 0
     def __setstate__(self, pickleState):
