@@ -1045,8 +1045,6 @@ class Modeller(object):
         else:
             context = Context(system, integrator, platform)
         context.setPositions(np.concatenate(positions))
-        print(context.getPlatform().getName())
-        print(*((name, context.getPlatform().getPropertyValue(context, name)) for name in context.getPlatform().getPropertyNames()))
 
         minimizeTol = 0.01
         LocalEnergyMinimizer.minimize(context, tolerance=minimizeTol)
