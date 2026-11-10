@@ -295,6 +295,7 @@ public:
 private:
     class KernelSet;
     class BlockSortTrait;
+    class ReorderListener;
     void initParamArgs();
     CudaContext& context;
     std::map<int, KernelSet> groupKernels;
@@ -327,10 +328,11 @@ private:
     std::vector<std::string> energyParameterDerivatives;
     std::map<int, double> groupCutoff;
     std::map<int, std::string> groupKernelSource;
+    Vec3 lastBoxVectors[3];
     double maxCutoff;
     bool useCutoff, usePeriodic, anyExclusions, usePadding, useNeighborList, forceRebuildNeighborList, canUsePairList, useLargeBlocks, hasInitializedParams;
     int startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags, numBlockSizes, paramStartIndex;
-    unsigned int maxTiles, maxSinglePairs, tilesAfterReorder, singlePairsAfterReorder;
+    unsigned int neighborListStep, maxTiles, maxSinglePairs, tilesAfterReorder, singlePairsAfterReorder;
     long long numTiles;
     std::string kernelSource;
 };
