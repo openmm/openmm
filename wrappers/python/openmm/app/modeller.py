@@ -36,7 +36,8 @@ from openmm.app import Topology, PDBFile, ForceField
 from openmm.app.forcefield import AllBonds, CutoffNonPeriodic, CutoffPeriodic, DrudeGenerator, _getDataDirectories
 from openmm.app.internal import compiled
 from openmm.vec3 import Vec3
-from openmm import System, Context, NonbondedForce, AmoebaVdwForce, AmoebaMultipoleForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LangevinIntegrator, LocalEnergyMinimizer
+from openmm import System, Context, NonbondedForce, AmoebaVdwForce, AmoebaMultipoleForce, CustomNonbondedForce, HarmonicBondForce, CustomBondForce, HarmonicAngleForce, \
+    VerletIntegrator, LangevinIntegrator, CustomIntegrator, MonteCarloBarostat, LocalEnergyMinimizer, TwoParticleAverageSite, OutOfPlaneSite
 from openmm.unit import nanometer, molar, elementary_charge, degree, acos, is_quantity, dot, norm, kilojoules_per_mole
 import openmm.unit as unit
 from . import element as elem
@@ -61,6 +62,24 @@ class Modeller(object):
 
     _residueHydrogens = {}
     _hasLoadedStandardHydrogens = False
+
+    # From Alvarez, Dalton Trans. 42, 8617 (2023).  All values are in nm.  Elements for which no data are available are
+    # given a default radius of 0.2 nm.  When no element is specified for an atom, index 0 will be accessed; this is
+    # given a radius of 0.05 nm so virtual sites don't take up much volume.
+    _PACKING_RADII = np.array([
+        0.05 , 0.12 , 0.143, 0.212, 0.198, 0.191, 0.177, 0.166, 0.15 , 0.146,
+        0.158, 0.25 , 0.251, 0.225, 0.219, 0.19 , 0.189, 0.182, 0.183, 0.273,
+        0.262, 0.258, 0.246, 0.242, 0.245, 0.245, 0.244, 0.24 , 0.24 , 0.238,
+        0.239, 0.232, 0.229, 0.188, 0.182, 0.186, 0.225, 0.321, 0.284, 0.275,
+        0.252, 0.256, 0.245, 0.244, 0.246, 0.244, 0.215, 0.253, 0.249, 0.243,
+        0.242, 0.247, 0.199, 0.204, 0.206, 0.348, 0.303, 0.298, 0.288, 0.292,
+        0.295, 0.2  , 0.29 , 0.287, 0.283, 0.279, 0.287, 0.281, 0.283, 0.279,
+        0.28 , 0.274, 0.263, 0.253, 0.257, 0.249, 0.248, 0.241, 0.229, 0.232,
+        0.245, 0.247, 0.26 , 0.254, 0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.28 ,
+        0.293, 0.288, 0.271, 0.282, 0.281, 0.283, 0.305, 0.34 , 0.305, 0.27 ,
+        0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.2  ,
+        0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.2  , 0.2  ,
+    ])
 
     def __init__(self, topology, positions):
         """Create a new Modeller object
@@ -501,17 +520,7 @@ class Modeller(object):
             box = Vec3(boxSize[0], boxSize[1], boxSize[2])
             vectors = (Vec3(boxSize[0], 0, 0), Vec3(0, boxSize[1], 0), Vec3(0, 0, boxSize[2]))
         elif padding is not None:
-            if is_quantity(padding):
-                padding = padding.value_in_unit(nanometer)
-            if len(self.positions) == 0:
-                radius = 0
-            else:
-                positions = self.positions.value_in_unit(nanometer)
-                minRange = Vec3(*(min((pos[i] for pos in positions)) for i in range(3)))
-                maxRange = Vec3(*(max((pos[i] for pos in positions)) for i in range(3)))
-                center = 0.5*(minRange+maxRange)
-                radius = max(unit.norm(center-pos) for pos in positions)
-            width = max(2*radius+padding, 2*padding)
+            width = self._computeBoxWidth(padding)
             vectors = self._computeBoxVectors(width, boxShape)
             box = Vec3(vectors[0][0], vectors[1][1], vectors[2][2])
         else:
@@ -569,7 +578,7 @@ class Modeller(object):
             positions = []
         else:
             positions = deepcopy(self.positions.value_in_unit(nanometer))
-        cells = _CellList(positions, maxCutoff, vectors, True)
+        cells = compiled.CellList(positions, maxCutoff, vectors, True)
 
         # Create a function to compute the distance between two points, taking periodic boundary conditions into account.
 
@@ -628,7 +637,7 @@ class Modeller(object):
             filteredWaters = []
             cells.cells = {}
             for i in range(len(lowerSkinPositions)):
-                cell = cells.cellForPosition(lowerSkinPositions[i])
+                cell = cells.cellForPosition(*lowerSkinPositions[i])
                 if cell in cells.cells:
                     cells.cells[cell].append(i)
                 else:
@@ -669,6 +678,407 @@ class Modeller(object):
 
         # Add ions to neutralize the system.
         self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize, residueTemplates=newResidueTemplates)
+
+    class _ComponentData:
+        """Inner class used to encapsulate data about a mixture component."""
+        def __init__(self, topology, positions, count, radii):
+            self.topology = topology
+            self.positions = positions
+            self.count = count
+            self.radii = radii
+
+    def addMixture(self, components, boxSize=None, boxVectors=None, padding=None, boxShape='cube', platform=None):
+        """Adds copies of one or more components to the model to fill a periodic box.  The requested number of copies of
+        each component will be added to the box.  Next, positions and orientations of each copy (treated as a rigid
+        body) will be optimized to reduce overlaps between all of the existing and newly added atoms.  The method used
+        is similar to that described in Martínez and Martínez, J. Comput. Chem. 24, 819 (2003), and Martínez et al.,
+        J. Comput. Chem. 30, 2157 (2009), along with some heuristics for choosing a box size if none is specified.
+
+        The box size can be specified in any of several ways:
+
+        1. You can explicitly give the vectors defining the periodic box to use.
+        2. Alternatively, for a rectangular box you can simply give the dimensions of the unit cell.
+        3. You can give a padding distance.  A bounding sphere containing the solute is determined, and the box size is
+           set to (sphere diameter)+(padding).  This guarantees no atom in the solute will come closer than the padding
+           distance to any atom of another periodic copy.  If the sphere diameter is less than the padding distance,
+           the box size is set to 2*(padding) to ensure no atom is closer than the padding distance to two periodic
+           copies of any other atom.
+        4. If none of the above options are specified, and the starting Topology has box vectors, they will be used.
+        5. Otherwise, Modeller will try to guess a reasonable initial density and calculate box vectors based on it.
+
+        When specifying a padding distance, you can specify a shape for the periodic box:
+        cubic, rhombic dodecahedron, or truncated octahedron.  Using a non-rectangular box allows the same distance
+        between periodic copies to be achieved with a smaller box.  The most compact option is a rhombic dodecahedron,
+        for which the box volume is 70.7% the volume of a cubic box with the same amount of padding.
+
+        This method can also be used to pack boxes of mixtures and pure components without a solute.  Simply start from
+        a Modeller with an empty Topology and no positions.
+
+        Parameters
+        ----------
+        components : list
+            the components to add.  Each component must be provided as a dictionary, with the required keys 'topology'
+            holding a Topology for the component, 'positions' holding positions to use for instances of the component,
+            and 'count' specifying the number of copies of the component to add.
+        boxSize : Vec3=None
+            the size of the box to fill
+        boxVectors : tuple of Vec3=None
+            the vectors defining the periodic box to fill
+        padding : distance=None
+            the padding distance to use
+        boxShape : str='cube'
+            the box shape to use.  Allowed values are 'cube', 'dodecahedron', and 'octahedron'.  If boxSize or
+            boxVectors is specified, this is ignored.
+        platform : Platform=None
+            the Platform to use for solving the packing problem.  If this is None, the default Platform will be used.
+        """
+
+        # Helper functions for addMixture().
+
+        def addCopyToTopology(dstTopology, srcTopology):
+            """Add a copy of the given source topology to a given destination topology."""
+            dstAtoms = []
+            for srcChain in srcTopology.chains():
+                dstChain = dstTopology.addChain()
+                for srcResidue in srcChain.residues():
+                    dstResidue = dstTopology.addResidue(srcResidue.name, dstChain)
+                    for srcAtom in srcResidue.atoms():
+                        dstAtoms.append(dstTopology.addAtom(srcAtom.name, srcAtom.element, dstResidue, srcAtom.id, srcAtom.formalCharge))
+            for srcBond in srcTopology.bonds():
+                dstTopology.addBond(dstAtoms[srcBond.atom1.index], dstAtoms[srcBond.atom2.index], srcBond.type, srcBond.order)
+
+        def addCopyToChain(dstChain, srcTopology):
+            """Add a copy of all residues in the given source topology to a given destination chain."""
+            dstTopology = dstChain.topology
+            dstAtoms = []
+            for srcResidue in srcTopology.residues():
+                dstResidue = dstTopology.addResidue(srcResidue.name, dstChain)
+                for srcAtom in srcResidue.atoms():
+                    dstAtoms.append(dstTopology.addAtom(srcAtom.name, srcAtom.element, dstResidue, srcAtom.id, srcAtom.formalCharge))
+            for srcBond in srcTopology.bonds():
+                dstTopology.addBond(dstAtoms[srcBond.atom1.index], dstAtoms[srcBond.atom2.index], srcBond.type, srcBond.order)
+
+        def processPositions(topology, positions):
+            """Finds suitable reference atoms in a set of positions to constrain."""
+            numAtoms = topology.getNumAtoms()
+
+            # Center the component.
+
+            positions = positions - np.mean(positions, axis=0)
+
+            if numAtoms < 3:
+                # There are no choices for the reference atoms.
+
+                return positions, np.arange(numAtoms)
+
+            # Choose the first reference atom as the one furthest from the center.
+
+            index1 = np.argmax(np.sum(positions * positions, axis=1))
+
+            # Choose the second reference atom as the one furthest from the first.
+
+            delta1x = positions - positions[index1]
+            objective2 = np.linalg.norm(delta1x, axis=1)
+            index2 = np.argmax(objective2)
+
+            # Choose the third reference atom as the one furthest from the line passing through the first two.
+
+            dir12 = positions[index2] - positions[index1]
+            dir12 /= np.linalg.norm(dir12)
+            objective3 = np.linalg.norm(delta1x - dir12 * np.sum(dir12 * delta1x, axis=1, keepdims=True), axis=1)
+            objective3[[index1, index2]] = np.nan
+            index3 = np.nanargmax(objective3)
+
+            # If the molecule is linear or very close to linear, don't return the third reference atom since it will create
+            # a degenerate triangle.  This tolerance is fairly loose to keep the constraint solver from failing, so slightly
+            # non-linear molecules will be inaccurately treated as linear, but this should be good enough for packing.
+
+            if objective3[index3] < 0.01 * objective2[index2]:
+                indices = np.array([index1, index2])
+            else:
+                indices = np.array([index1, index2, index3])
+            return positions, indices
+
+        def placeRandomly(positions, vectors, baseRadii, radii, cells, periodicDistance):
+            """Place positions representing a copy of a component randomly in a periodic box."""
+
+            # Search for a placement such that none of the atoms of the new copy overlap with the Modeller's existing atoms.
+            # We also do not attempt to avoid overlaps between new copies since they will move during the optimization.
+
+            for _ in range(100):
+                # Try to find a reasonable position for the center of the new copy (away from existing atoms).
+
+                centerPos = np.random.uniform(-0.5, 0.5, 3) @ vectors
+                if cells is not None and cells.cellForPosition(*centerPos) in cells.cells:
+                    continue
+
+                # Generate a random rotation matrix: see scipy.stats.ortho_group.rv() and scipy.stats.special_ortho_group.rv().
+
+                q, r = np.linalg.qr(np.random.normal(size=(3, 3)))
+                d = np.diag(r)
+                q *= d / np.abs(d)
+                q[0] /= np.linalg.det(q)
+
+                # Rotate the copy and place it in the box, then check its distances to existing atoms.
+
+                newPositions = centerPos + positions @ q
+                if cells is not None and any(
+                    periodicDistance(newPosition, cells.positions[neighbor]) < baseRadii[neighbor] + radius
+                    for newPosition, radius in zip(newPositions, radii)
+                    for neighbor in cells.neighbors(newPosition)
+                ):
+                    continue
+
+                return newPositions
+
+            raise ValueError("No space found for component; use a larger box size or padding distance")
+
+        def getPackingRadii(topology):
+            """Return van der Waals radii for each atom in a Topology."""
+            return Modeller._PACKING_RADII[[0 if atom.element is None else atom.element.atomic_number for atom in topology.atoms()]]
+
+        # Check input arguments.
+
+        if len([x for x in (boxSize, boxVectors, padding) if x is not None]) > 1:
+            raise ValueError('At most one of the following arguments may be specified: boxSize, boxVectors, padding')
+
+        # Process components.
+
+        componentList = []
+        for component in components:
+            component = dict(component)
+            componentTopology = component.pop('topology')
+            componentPositions = component.pop('positions')
+            componentCount = component.pop('count')
+            if component:
+                raise ValueError(f'Unsupported keys in component dictionary: {list(component.keys())}')
+
+            if componentTopology.getNumAtoms() != len(componentPositions):
+                raise ValueError('The number of atoms in the Topology of a component must match the number of position coordinates')
+            if componentTopology.getNumAtoms() == 0 or componentCount == 0:
+                continue
+            if is_quantity(componentPositions[0]):
+                componentPositions = [position.value_in_unit(nanometer) for position in componentPositions]
+            componentList.append(Modeller._ComponentData(componentTopology, np.array(componentPositions), componentCount, getPackingRadii(componentTopology)))
+
+        if self.topology.getNumAtoms():
+            baseRadii = getPackingRadii(self.topology)
+        else:
+            baseRadii = None
+
+        # Determine what box vectors to use for packing.
+
+        vectorsGuessed = False
+        if boxVectors is not None:
+            if is_quantity(boxVectors[0]):
+                boxVectors = (boxVectors[0].value_in_unit(nanometer), boxVectors[1].value_in_unit(nanometer), boxVectors[2].value_in_unit(nanometer))
+            vectors = np.array(boxVectors)
+        elif boxSize is not None:
+            if is_quantity(boxSize):
+                boxSize = boxSize.value_in_unit(nanometer)
+            vectors = np.diag(boxSize)
+        elif padding is not None:
+            width = self._computeBoxWidth(padding)
+            vectors = np.array(self._computeBoxVectors(width, boxShape))
+        elif self.topology.getPeriodicBoxVectors() is not None:
+            vectors = np.array(self.topology.getPeriodicBoxVectors().value_in_unit(nanometer))
+        else:
+            # Make a rough estimate of the initial density to be refined later.
+
+            guessVol = sum(component.count * np.sum(component.radii ** 3) for component in componentList)
+            if baseRadii is not None:
+                guessVol += np.sum(baseRadii ** 3)
+            vectors = np.array(self._computeBoxVectors(1.0, boxShape))
+
+            # This constant is chosen to make the density of pure water come to 1 g/cm^3 exactly.
+
+            vectors *= np.cbrt(4.37932210654291 * guessVol / np.linalg.det(vectors))
+            vectorsGuessed = True
+
+        # Set up a Topology, positions, and System for solving the packing problem.
+
+        topology = Topology()
+        positions = []
+        system = System()
+
+        force = CustomNonbondedForce("p^2/(1-lambda*p)^6; p=max(1-r/(radius1+radius2),0)")
+        force.addGlobalParameter("lambda", 0)
+        force.setNonbondedMethod(CustomNonbondedForce.CutoffPeriodic)
+        force.addPerParticleParameter("radius")
+        system.addForce(force)
+
+        topology.setPeriodicBoxVectors(vectors)
+        system.setDefaultPeriodicBoxVectors(*vectors)
+
+        # Add the existing model.  Prepare a cell list to make sure new components are not added inside it.
+
+        if self.topology.getNumAtoms():
+            addCopyToTopology(topology, self.topology)
+
+            basePositions = np.array(self.positions.value_in_unit(nanometer))
+            positions.append(basePositions)
+
+            for radius in baseRadii:
+                system.addParticle(0)
+                force.addParticle([radius])
+
+            cells = compiled.CellList(basePositions, np.amax(baseRadii), vectors, True)
+            periodicDistance = compiled.periodicDistance(vectors)
+        else:
+            cells = None
+            periodicDistance = None
+
+        # Add new components.
+
+        for component in componentList:
+            dstChain = topology.addChain()
+            for _ in range(component.count):
+                addCopyToChain(dstChain, component.topology)
+
+            # Get the component positions, and indices of the particles that should be real (not virtual sites).
+
+            refPositions, refIndices = processPositions(component.topology, component.positions)
+
+            # Place copies of the component randomly in the box.
+
+            for _ in range(component.count):
+                positions.append(placeRandomly(refPositions, vectors, baseRadii, component.radii, cells, periodicDistance))
+
+            if refIndices.size == 1:
+                for _ in range(component.count):
+                    system.addParticle(1)
+
+                    force.addParticle([component.radii[0]])
+
+            elif refIndices.size == 2:
+                # The component is linear; constrain two atoms and use virtual sites for all other atoms.
+
+                refPos1, refPos2 = refPositions[refIndices]
+                refVec = refPos2 - refPos1
+                refDist = np.linalg.norm(refVec)
+
+                refWeights = (refPositions - refPos1) @ refVec / (refDist * refDist)
+
+                for _ in range(component.count):
+                    offset = system.getNumParticles()
+                    index1, index2 = offset + refIndices
+
+                    for index, weight in enumerate(refWeights):
+                        if index in refIndices:
+                            system.addParticle(1)
+                        else:
+                            system.setVirtualSite(system.addParticle(0), TwoParticleAverageSite(index1, index2, 1 - weight, weight))
+
+                        force.addParticle([component.radii[index]])
+
+                    system.addConstraint(index1, index2, refDist)
+
+            else:
+                # The component has three or more atoms that are not all collinear; constrain a triangle and use virtual
+                # sites for all other atoms.
+
+                refPos1, refPos2, refPos3 = refPositions[refIndices]
+                refVec1 = refPos2 - refPos1
+                refVec2 = refPos3 - refPos1
+
+                refWeights = np.linalg.solve(np.stack([refVec1, refVec2, np.cross(refVec1, refVec2)]).T, (refPositions - refPos1).T).T
+
+                dist12 = np.linalg.norm(refVec1)
+                dist13 = np.linalg.norm(refVec2)
+                dist23 = np.linalg.norm(refPos3 - refPos2)
+
+                # OpenMM can use SETTLE instead of CCMA for constraint triangles if two distances are exactly equal,
+                # which speeds up context setup.  Try to make a pair of distances exactly equal if they are close.
+
+                if abs(dist12 - dist13) <= 0.001:
+                    dist12 = dist13 = (dist12 + dist13) / 2
+                elif abs(dist12 - dist23) <= 0.001:
+                    dist12 = dist23 = (dist12 + dist23) / 2
+                elif abs(dist13 - dist23) <= 0.001:
+                    dist13 = dist23 = (dist13 + dist23) / 2
+
+                for _ in range(component.count):
+                    offset = system.getNumParticles()
+                    index1, index2, index3 = offset + refIndices
+
+                    for index, (weight12, weight13, weightCross) in enumerate(refWeights):
+                        if index in refIndices:
+                            system.addParticle(1)
+                        else:
+                            system.setVirtualSite(system.addParticle(0), OutOfPlaneSite(index1, index2, index3, weight12, weight13, weightCross))
+
+                        force.addParticle([component.radii[index]])
+
+                    system.addConstraint(index1, index2, dist12)
+                    system.addConstraint(index1, index3, dist13)
+                    system.addConstraint(index2, index3, dist23)
+
+        if not system.getNumParticles():
+            return
+
+        if vectorsGuessed:
+            # If the initial box vectors were guesses, we will try to find better ones using a barostat to rescale them.
+            # The barostat pressure is not physically meaningful but was chosen to yield a density of pure water close to 1 g/cm^3.
+
+            barostat = MonteCarloBarostat(100, 0, 1)
+            system.addForce(barostat)
+            integrator = CustomIntegrator(0)
+            integrator.addUpdateContextState()
+            integrator.addConstrainPositions()
+
+            # Add a dummy force to make the barostat treat any fixed atoms as a molecule so they won't be rescaled.
+
+            if self.topology.getNumAtoms() > 1:
+                bondForce = CustomBondForce("0")
+                for index in range(1, self.topology.getNumAtoms()):
+                    bondForce.addBond(0, index)
+                system.addForce(bondForce)
+
+        else:
+            integrator = VerletIntegrator(0)
+
+        # Solve the packing problem and update the Modeller with the output.
+
+        force.setCutoffDistance(2 * max(force.getParticleParameters(index)[0] for index in range(force.getNumParticles())))
+        if platform is None:
+            context = Context(system, integrator)
+        else:
+            context = Context(system, integrator, platform)
+        context.setPositions(np.concatenate(positions))
+
+        minimizeTol = 0.01
+        LocalEnergyMinimizer.minimize(context, tolerance=minimizeTol)
+        context.setParameter("lambda", 1)
+        LocalEnergyMinimizer.minimize(context, tolerance=minimizeTol)
+
+        if vectorsGuessed:
+            currentVol = context.getState().getPeriodicBoxVolume().value_in_unit(nanometer**3)
+            for _ in range(100):
+                integrator.step(100)
+                LocalEnergyMinimizer.minimize(context, tolerance=minimizeTol)
+                newVol = context.getState().getPeriodicBoxVolume().value_in_unit(nanometer**3)
+                if abs(newVol - currentVol) <= 0.001 * currentVol:
+                    break
+                currentVol = newVol
+
+            topology.setPeriodicBoxVectors(context.getState().getPeriodicBoxVectors())
+
+        self.topology = topology
+        self.positions = context.getState(positions=True).getPositions()
+
+    def _computeBoxWidth(self, padding):
+        """Compute the necessary periodic box width for a given padding distance."""
+        if is_quantity(padding):
+            padding = padding.value_in_unit(nanometer)
+        if len(self.positions) == 0:
+            radius = 0
+        else:
+            positions = self.positions.value_in_unit(nanometer)
+            minRange = Vec3(*(min((pos[i] for pos in positions)) for i in range(3)))
+            maxRange = Vec3(*(max((pos[i] for pos in positions)) for i in range(3)))
+            center = 0.5*(minRange+maxRange)
+            radius = max(unit.norm(center-pos) for pos in positions)
+        return max(2*radius+padding, 2*padding)
 
     def _computeBoxVectors(self, width, boxShape):
         """Compute the periodic box vectors given a box width and shape."""
@@ -882,7 +1292,7 @@ class Modeller(object):
         acceptors = [atom for atom in self.topology.atoms() if atom.element in (elem.oxygen, elem.nitrogen)]
         positions = self.positions.value_in_unit(nanometer)
         acceptorPositions = [positions[a.index] for a in acceptors]
-        cells = _CellList(acceptorPositions, 0.35, None, False)
+        cells = compiled.CellList(acceptorPositions, 0.35, None, False)
         for chain in self.topology.chains():
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
@@ -1483,8 +1893,8 @@ class Modeller(object):
         addedLipids = []
         removedFromLeaf = [0, 0]
         vectors = membraneTopology.getPeriodicBoxVectors().value_in_unit(nanometer)
-        proteinCells = _CellList(proteinPos, overlapCutoff, vectors, False)
-        scaledProteinCells = _CellList(scaledProteinPos, overlapCutoff, vectors, False)
+        proteinCells = compiled.CellList(proteinPos, overlapCutoff, vectors, False)
+        scaledProteinCells = compiled.CellList(scaledProteinPos, overlapCutoff, vectors, False)
         for x in range(nx):
             for y in range(ny):
                 offset = proteinCenterPos - patchCenterPos + Vec3((x-0.5*(nx-1))*patchSize[0], (y-0.5*(ny-1))*patchSize[1], 0)
@@ -1706,56 +2116,3 @@ class Modeller(object):
                 del waterPos[wRes]
 
         self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize, residueTemplates=newResidueTemplates)
-
-
-class _CellList(object):
-    """This class organizes atom positions into cells, so the neighbors of a point can be quickly retrieved"""
-
-    def __init__(self, positions, maxCutoff, vectors, periodic):
-        if vectors is None:
-            if len(positions) == 0:
-                vectors = (Vec3(maxCutoff, 0, 0), Vec3(0, maxCutoff, 0), Vec3(0, 0, maxCutoff))
-            else:
-                minPos = [min((pos[i] for pos in positions)) for i in range(3)]
-                maxPos = [max((pos[i] for pos in positions)) for i in range(3)]
-                width = [max(maxPos[i]-minPos[i], maxCutoff) for i in range(3)]
-                vectors = (Vec3(width[0], 0, 0), Vec3(0, width[1], 0), Vec3(0, 0, width[2]))
-        self.positions = deepcopy(positions)
-        self.cells = {}
-        self.numCells = tuple([max(1, int(floor(vectors[i][i]/maxCutoff))) for i in range(3)])
-        self.cellSize = tuple([vectors[i][i]/self.numCells[i] for i in range(3)])
-        self.vectors = vectors
-        self.periodic = periodic
-        invBox = Vec3(1.0/vectors[0][0], 1.0/vectors[1][1], 1.0/vectors[2][2])
-        for i in range(len(self.positions)):
-            pos = self.positions[i]
-            if periodic:
-                pos = pos - floor(pos[2]*invBox[2])*vectors[2]
-                pos -= floor(pos[1]*invBox[1])*vectors[1]
-                pos -= floor(pos[0]*invBox[0])*vectors[0]
-                self.positions[i] = pos
-            cell = self.cellForPosition(pos)
-            if cell in self.cells:
-                self.cells[cell].append(i)
-            else:
-                self.cells[cell] = [i]
-
-    def cellForPosition(self, pos):
-        if self.periodic:
-            invBox = Vec3(1.0/self.vectors[0][0], 1.0/self.vectors[1][1], 1.0/self.vectors[2][2])
-            pos = pos-floor(pos[2]*invBox[2])*self.vectors[2]
-            pos -= floor(pos[1]*invBox[1])*self.vectors[1]
-            pos -= floor(pos[0]*invBox[0])*self.vectors[0]
-        return tuple([int(floor(pos[j]/self.cellSize[j]))%self.numCells[j] for j in range(3)])
-
-    def neighbors(self, pos):
-        processedCells = set()
-        offsets = (-1, 0, 1)
-        for i in offsets:
-            for j in offsets:
-                for k in offsets:
-                    cell = self.cellForPosition(Vec3(pos[0]+i*self.cellSize[0], pos[1]+j*self.cellSize[1], pos[2]+k*self.cellSize[2]))
-                    if cell in self.cells and cell not in processedCells:
-                        processedCells.add(cell)
-                        for atom in self.cells[cell]:
-                            yield atom
