@@ -1683,6 +1683,22 @@ class TestForceField(unittest.TestCase):
         expected_torsions = set([(0,3,1,2), (0,1,2,3), (0,2,3,1)])
         self.assertEqual(expected_torsions, created_torsions)
 
+    def test_ImpropersOrdering_amber(self):
+        """Tests that improper ordering in 'amber' mode that depends on the
+        relative ordering of template atom indices does not depend on the order
+        of atoms in a topology.
+        """
+
+        top = PDBFile('systems/phe_phe.pdb').topology
+        system = ForceField('amber14-all.xml').createSystem(top)
+        atoms = list(top.atoms())
+
+        torsion, = (force for force in system.getForces() if isinstance(force, PeriodicTorsionForce))
+        for index in range(torsion.getNumTorsions()):
+            names = [atoms[i].name for i in torsion.getTorsionParameters(index)[:4]]
+            if sorted(names) == ["CD2", "CE2", "CZ", "HE2"]:
+                self.assertEqual(names, ["CZ", "CD2", "CE2", "HE2"])
+
     def test_Disulfides(self):
         """Test that various force fields handle disulfides correctly."""
         pdb = PDBFile('systems/bpti.pdb')
