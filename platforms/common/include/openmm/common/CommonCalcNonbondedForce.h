@@ -117,6 +117,7 @@ private:
     class PmePostComputation;
     class SyncQueuePreComputation;
     class SyncQueuePostComputation;
+    class ReorderListener;
     ComputeContext& cc;
     ForceInfo* info;
     bool hasInitializedKernel;
@@ -165,6 +166,7 @@ private:
     std::map<std::string, double> paramValues;
     std::vector<int> exceptionIndex, exceptions;
     std::vector<mm_float4> baseParticleParamVec, baseExceptionParamsVec;
+    Vec3 lastBoxVectors[3];
     double dispersionCoefficient, alpha, dispersionAlpha;
     Fixed<30> ewaldSelfEnergy, totalCharge;
     int gridSizeX, gridSizeY, gridSizeZ;

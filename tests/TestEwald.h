@@ -468,6 +468,62 @@ void testNeutralizingPlasmaCorrection(NonbondedForce::NonbondedMethod method, bo
     ASSERT_EQUAL_TOL(energy3, energy4, 1e-4);
 }
 
+void testPMESortInterval() {
+    // Verify PME forces and energy across the 16-step sort interval, box vector changes, and position updates.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(3.2, 0, 0), Vec3(0, 3.3, 0), Vec3(0, 0, 3.4));
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    nonbonded->setCutoffDistance(1.0);
+    nonbonded->setEwaldErrorTolerance(1e-5);
+    system.addForce(nonbonded);
+
+    vector<Vec3> positions;
+    vector<pair<int, int> > bonds;
+    for (int water = 0; water < 24; water++) {
+        int firstAtom = system.getNumParticles();
+        for (int k = 0; k < 3; k++) {
+            system.addParticle(k == 0 ? 16.0 : 1.0);
+            nonbonded->addParticle(k == 0 ? -0.834 : 0.417, k == 0 ? 0.315 : 0.1, k == 0 ? 0.636 : 0.0);
+        }
+        Vec3 oxygenPos(0.1 + 0.9*(water%3), 0.1 + 0.9*((water/3)%3), 0.1 + 0.9*(water/9));
+        positions.insert(positions.end(), {oxygenPos, oxygenPos + Vec3(0.09572, 0.0, 0.0), oxygenPos + Vec3(-0.024, 0.0927, 0.0)});
+        bonds.insert(bonds.end(), {{firstAtom, firstAtom+1}, {firstAtom, firstAtom+2}});
+    }
+    nonbonded->createExceptionsFromBonds(bonds, 0.5, 0.5);
+
+    // Compare against the Reference platform before and after the sort boundary, a box resize, and a position reset.
+
+    ReferencePlatform refPlatform;
+    VerletIntegrator refIntegrator(0.0005), platformIntegrator(0.0005);
+    Context refContext(system, refIntegrator, refPlatform);
+    Context platformContext(system, platformIntegrator, platform);
+    refContext.setPositions(positions);
+    platformContext.setPositions(positions);
+    for (int step = 0; step <= 21; step++) {
+        if (step == 0 || step == 15 || step == 16 || step == 18 || step == 21) {
+            State refState = refContext.getState(State::Forces | State::Energy);
+            State platformState = platformContext.getState(State::Forces | State::Energy);
+            ASSERT_EQUAL_TOL(refState.getPotentialEnergy(), platformState.getPotentialEnergy(), 1e-3);
+            for (int i = 0; i < system.getNumParticles(); i++)
+                ASSERT_EQUAL_VEC(refState.getForces()[i], platformState.getForces()[i], 1e-2);
+        }
+        if (step == 17) {
+            refContext.setPeriodicBoxVectors(Vec3(3.25, 0, 0), Vec3(0, 3.35, 0), Vec3(0, 0, 3.45));
+            platformContext.setPeriodicBoxVectors(Vec3(3.25, 0, 0), Vec3(0, 3.35, 0), Vec3(0, 0, 3.45));
+        }
+        if (step == 20) {
+            refContext.setPositions(positions);
+            platformContext.setPositions(positions);
+        }
+        if (step < 21) {
+            refIntegrator.step(1);
+            platformIntegrator.step(1);
+        }
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -486,6 +542,7 @@ int main(int argc, char* argv[]) {
             testNeutralizingPlasmaCorrection(NonbondedForce::PME, offset);
             testNeutralizingPlasmaCorrection(NonbondedForce::LJPME, offset);
         }
+        testPMESortInterval();
         runPlatformTests();
     }
     catch(const exception& e) {

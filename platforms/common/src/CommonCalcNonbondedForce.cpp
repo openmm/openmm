@@ -208,6 +208,20 @@ private:
     int forceGroup;
 };
 
+/**
+ * This class forces a PME atom re-sort when atoms are reordered.
+ */
+class CommonCalcNonbondedForceKernel::ReorderListener : public ComputeContext::ReorderListener {
+public:
+    ReorderListener(int& stepsToSort) : stepsToSort(stepsToSort) {
+    }
+    void execute() {
+        stepsToSort = 0;
+    }
+private:
+    int& stepsToSort;
+};
+
 CommonCalcNonbondedForceKernel::~CommonCalcNonbondedForceKernel() {
     ContextSelector selector(cc);
     if (pmeio != NULL)
@@ -462,6 +476,7 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
                 pmeEnergyBuffer.initialize(cc, cc.getNumThreadBlocks()*ComputeContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
                 cc.clearBuffer(pmeEnergyBuffer);
                 sort = cc.createSort(new SortTrait(), cc.getNumAtoms());
+                cc.addReorderListener(new ReorderListener(stepsToSort));
                 fft = cc.createFFT(gridSizeX, gridSizeY, gridSizeZ, true);
                 if (doLJPME)
                     dispersionFft = cc.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
@@ -950,6 +965,12 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
 
         Vec3 boxVectors[3];
         cc.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        if (boxVectors[0] != lastBoxVectors[0] || boxVectors[1] != lastBoxVectors[1] || boxVectors[2] != lastBoxVectors[2]) {
+            stepsToSort = 0;
+            lastBoxVectors[0] = boxVectors[0];
+            lastBoxVectors[1] = boxVectors[1];
+            lastBoxVectors[2] = boxVectors[2];
+        }
         double determinant = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
         double scale = 1.0/determinant;
         mm_double4 recipBoxVectors[3];
@@ -977,7 +998,13 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 }
                 pmeGridIndexKernel->execute(cc.getNumAtoms());
                 sort->sort(pmeAtomGridIndex);
-                stepsToSort = (cc.getNumAtoms() > 15000) ? 1 : 3;
+
+                // Reuse the spatial sort for 16 steps on GPU in single or mixed precision.
+
+                if (deviceIsCpu || cc.getUseDoublePrecision())
+                    stepsToSort = (cc.getNumAtoms() > 15000) ? 1 : 3;
+                else
+                    stepsToSort = 15;
             }
             else
                 stepsToSort--;
