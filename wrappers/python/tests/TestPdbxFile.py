@@ -212,51 +212,11 @@ class TestPdbxFile(unittest.TestCase):
 
     def testWaterAltLoc(self):
         """Waters that carry label_alt_id must not be dropped (GH#5521)."""
-        cif = StringIO("""
-data_REPRO
-#
-loop_
-_atom_site.group_PDB
-_atom_site.id
-_atom_site.type_symbol
-_atom_site.label_atom_id
-_atom_site.label_alt_id
-_atom_site.label_comp_id
-_atom_site.label_asym_id
-_atom_site.label_entity_id
-_atom_site.label_seq_id
-_atom_site.pdbx_PDB_ins_code
-_atom_site.Cartn_x
-_atom_site.Cartn_y
-_atom_site.Cartn_z
-_atom_site.occupancy
-_atom_site.B_iso_or_equiv
-_atom_site.auth_seq_id
-_atom_site.auth_comp_id
-_atom_site.auth_asym_id
-_atom_site.auth_atom_id
-_atom_site.pdbx_PDB_model_num
-ATOM   1 N N   . GLY A 1 1 ? 0.000 0.000 0.000 1.00 10.0 1   GLY A N   1
-ATOM   2 C CA  . GLY A 1 1 ? 1.450 0.000 0.000 1.00 10.0 1   GLY A CA  1
-ATOM   3 C C   . GLY A 1 1 ? 2.000 1.420 0.000 1.00 10.0 1   GLY A C   1
-ATOM   4 O O   . GLY A 1 1 ? 1.250 2.390 0.000 1.00 10.0 1   GLY A O   1
-HETATM 5 O O   . HOH B 2 . ? 5.000 0.000 0.000 1.00 20.0 101 HOH A O   1
-HETATM 6 O O   A HOH B 2 . ? 0.000 5.000 0.000 0.60 20.0 102 HOH A O   1
-HETATM 7 O O   B HOH B 2 . ? 0.000 6.000 0.000 0.40 20.0 102 HOH A O   1
-HETATM 8 O O   A HOH B 2 . ? 0.000 0.000 5.000 1.00 20.0 103 HOH A O   1
-#
-""")
-        pdbx = PDBxFile(cif)
+        pdbx = PDBxFile('systems/water_altlocs.cif')
         residues = [(res.name, res.id) for res in pdbx.topology.residues()]
         self.assertEqual([('GLY', '1'), ('HOH', '101'), ('HOH', '102'), ('HOH', '103')], residues)
         self.assertEqual(7, len(list(pdbx.topology.atoms())))
-        # Dual-alt water 102 keeps the first location (0, 5, 0) Å.
-        atoms = list(pdbx.topology.atoms())
-        hoh102 = [atom for atom in atoms if atom.residue.id == '102'][0]
-        pos = pdbx.positions[hoh102.index].value_in_unit(nanometers)
-        self.assertAlmostEqual(0.0, pos[0], places=6)
-        self.assertAlmostEqual(0.5, pos[1], places=6)
-        self.assertAlmostEqual(0.0, pos[2], places=6)
+        self.assertVecAlmostEqual(Vec3(0.0, 0.5, 0.0)*nanometers, pdbx.positions[5])
 
 if __name__ == '__main__':
     unittest.main()
