@@ -101,7 +101,7 @@ class PDBFile(object):
                 resName = residue.get_name()
                 if resName in PDBFile._residueNameReplacements:
                     resName = PDBFile._residueNameReplacements[resName]
-                r = top.addResidue(resName, c, str(residue.number), residue.insertion_code)
+                r = top.addResidue(resName, c, str(residue.number), residue.insertion_code.strip())
                 if resName in PDBFile._atomNameReplacements:
                     atomReplacements = PDBFile._atomNameReplacements[resName]
                 else:
