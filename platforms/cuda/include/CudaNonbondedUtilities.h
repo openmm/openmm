@@ -305,6 +305,7 @@ private:
     CudaArray interactingTiles;
     CudaArray interactingAtoms;
     CudaArray interactionCount;
+    CudaArray workUnitCount;
     CudaArray singlePairs;
     CudaArray singlePairCount;
     CudaArray blockCenter;
