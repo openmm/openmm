@@ -153,6 +153,14 @@ public:
      */
     virtual ComputeQueue createQueue() = 0;
     /**
+     * Create a high-priority ComputeQueue for latency-sensitive work that overlaps with
+     * long-running kernels on the default queue.  Platforms that do not support queue
+     * priorities fall back to createQueue().
+     */
+    virtual ComputeQueue createPriorityQueue() {
+        return createQueue();
+    }
+    /**
      * Get the ComputeQueue currently being used for execution.
      */
     ComputeQueue getCurrentQueue();
