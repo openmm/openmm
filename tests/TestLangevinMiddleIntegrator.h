@@ -33,6 +33,7 @@
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
+#include "openmm/VirtualSite.h"
 #include "openmm/LangevinMiddleIntegrator.h"
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
@@ -313,6 +314,95 @@ void testForceGroups() {
     ASSERT(pos[2] == 0);
 }
 
+void testFusedIntegration() {
+    // Build a system with SETTLE waters, 2/3/4-atom SHAKE clusters, a virtual site, unconstrained ions, and a massless particle.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nonbonded->setCutoffDistance(1.0);
+    system.addForce(nonbonded);
+    vector<Vec3> positions;
+    auto addParticle = [&](double mass, double charge, Vec3 pos) {
+        nonbonded->addParticle(charge, 0.08, charge == 0.0 ? 0.0 : 0.1);
+        positions.push_back(pos);
+        return system.addParticle(mass);
+    };
+    const double ohDistance = 0.09572, hhDistance = 0.15139, xhDistance = 0.109;
+    const double hydrogenX = 0.5*hhDistance, hydrogenY = sqrt(ohDistance*ohDistance - hydrogenX*hydrogenX);
+    for (int water = 0; water < 2; water++) {
+        Vec3 origin(2.5 - 1.5*water, 0.5, 0.5);
+        int oxygen = addParticle(16.0, -0.2, origin);
+        int hydrogen1 = addParticle(1.008, 0.1, origin + Vec3(hydrogenX, hydrogenY, 0));
+        int hydrogen2 = addParticle(1.008, 0.1, origin + Vec3(-hydrogenX, hydrogenY, 0));
+        system.addConstraint(oxygen, hydrogen1, ohDistance);
+        system.addConstraint(oxygen, hydrogen2, ohDistance);
+        system.addConstraint(hydrogen1, hydrogen2, hhDistance);
+    }
+    const Vec3 axes[3] = {Vec3(1, 0, 0), Vec3(0, 1, 0), Vec3(0, 0, 1)};
+    for (int numH = 1; numH <= 3; numH++) {
+        Vec3 origin(0.6 + 1.1*(numH-1), 2.0, 0.8);
+        int central = addParticle(12.0, -0.1*numH, origin);
+        for (int h = 0; h < numH; h++) {
+            int hydrogen = addParticle(1.008, 0.1, origin + axes[h]*xhDistance);
+            system.addConstraint(central, hydrogen, xhDistance);
+        }
+    }
+    int vsiteAtom = addParticle(0.0, -0.05, positions[6]*0.8 + positions[7]*0.2);
+    system.setVirtualSite(vsiteAtom, new TwoParticleAverageSite(6, 7, 0.8, 0.2));
+    nonbonded->addException(vsiteAtom, 6, 0.0, 1.0, 0.0);
+    nonbonded->addException(vsiteAtom, 7, 0.0, 1.0, 0.0);
+    addParticle(22.99, 0.2, Vec3(2.5, 3.0, 2.2));
+    addParticle(22.99, 0.2, Vec3(0.5, 3.0, 2.2));
+    addParticle(35.45, -0.4, Vec3(1.5, 3.0, 2.2));
+    int masslessAtom = addParticle(0.0, 0.0, Vec3(3.2, 3.2, 3.2));
+    int ccmaStart = system.getNumParticles();
+    for (int k = 0; k < 4; k++)
+        addParticle(14.0, 0.0, Vec3(0.5 + 0.14*k, 3.2, 0.5));
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> velocities(system.getNumParticles(), Vec3(0, 0, 0));
+    for (int i = 0; i < ccmaStart; i++)
+        if (system.getParticleMass(i) > 0.0)
+            velocities[i] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
+
+    // Compare single-step trajectories against the unfused CCMA fallback path and verify reordering across 260 steps.
+
+    auto runTrial = [&](int extraSteps, State& step1Out) {
+        LangevinMiddleIntegrator integrator(300.0, 10.0, 0.002);
+        integrator.setConstraintTolerance(1e-6);
+        integrator.setRandomNumberSeed(42);
+        Context context(system, integrator, platform);
+        context.setPositions(positions);
+        context.setVelocities(velocities);
+        integrator.step(1);
+        step1Out = context.getState(State::Positions | State::Velocities);
+        integrator.step(extraSteps);
+        State finalState = context.getState(State::Positions | State::Velocities);
+        for (int constraintIndex = 0; constraintIndex < system.getNumConstraints(); constraintIndex++) {
+            int particle1, particle2;
+            double distance;
+            system.getConstraintParameters(constraintIndex, particle1, particle2, distance);
+            Vec3 delta = finalState.getPositions()[particle1] - finalState.getPositions()[particle2];
+            ASSERT_EQUAL_TOL(distance, sqrt(delta.dot(delta)), 1e-4);
+        }
+        return finalState;
+    };
+    State fusedStep1, unfusedStep1;
+    State fusedFinal = runTrial(260, fusedStep1);
+    ASSERT_EQUAL_VEC(fusedFinal.getPositions()[6]*0.8 + fusedFinal.getPositions()[7]*0.2, fusedFinal.getPositions()[vsiteAtom], TOL);
+    ASSERT_EQUAL_VEC(positions[masslessAtom], fusedFinal.getPositions()[masslessAtom], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, 0, 0), fusedFinal.getVelocities()[masslessAtom], TOL);
+    for (int k = 0; k < 3; k++)
+        system.addConstraint(ccmaStart+k, ccmaStart+k+1, 0.14);
+    runTrial(50, unfusedStep1);
+    for (int i = 0; i < ccmaStart; i++) {
+        ASSERT_EQUAL_VEC(unfusedStep1.getPositions()[i], fusedStep1.getPositions()[i], TOL);
+        ASSERT_EQUAL_VEC(unfusedStep1.getVelocities()[i], fusedStep1.getVelocities()[i], TOL);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -325,6 +415,7 @@ int main(int argc, char* argv[]) {
         testRandomSeed();
         testInitialTemperature();
         testForceGroups();
+        testFusedIntegration();
         runPlatformTests();
     }
     catch(const exception& e) {
