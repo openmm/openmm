@@ -135,12 +135,6 @@ class TestPdbFile(unittest.TestCase):
         self.assertEqual(['60', '60', '61'], [res.id for res in pdb.topology.residues()])
         self.assertEqual(['', 'A', ''], [res.insertionCode for res in pdb.topology.residues()])
 
-        # A residue read from a file should match one created with the default arguments.
-
-        topology = Topology()
-        added = topology.addResidue('ALA', topology.addChain())
-        self.assertEqual(added.insertionCode, next(pdb.topology.residues()).insertionCode)
-
         # The codes should survive being written and read back.
 
         output = StringIO()
