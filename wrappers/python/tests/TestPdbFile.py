@@ -126,6 +126,23 @@ class TestPdbFile(unittest.TestCase):
             self.assertEqual(19, len(pdb.positions))
             self.assertEqual('ILE', list(pdb.topology.residues())[0].name)
 
+    def test_InsertionCodes(self):
+        """Test that a missing insertion code is read as an empty string."""
+        line = 'ATOM  %5d  CA  ALA A%4d%1s   %8.3f%8.3f%8.3f  1.00  0.00           C'
+        residues = [(60, ' '), (60, 'A'), (61, ' ')]
+        text = '\n'.join(line % (i+1, id, code, i, 0, 0) for i, (id, code) in enumerate(residues))
+        pdb = PDBFile(StringIO(text))
+        self.assertEqual(['60', '60', '61'], [res.id for res in pdb.topology.residues()])
+        self.assertEqual(['', 'A', ''], [res.insertionCode for res in pdb.topology.residues()])
+
+        # The codes should survive being written and read back.
+
+        output = StringIO()
+        PDBFile.writeFile(pdb.topology, pdb.positions, output, keepIds=True)
+        pdb2 = PDBFile(StringIO(output.getvalue()))
+        self.assertEqual(['60', '60', '61'], [res.id for res in pdb2.topology.residues()])
+        self.assertEqual(['', 'A', ''], [res.insertionCode for res in pdb2.topology.residues()])
+
     def test_FormalCharges(self):
         """Test reading, and writing and re-reading of a file containing formal charges."""
         pdb = PDBFile('systems/formal-charges.pdb')
