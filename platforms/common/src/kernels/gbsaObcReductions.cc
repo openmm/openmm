@@ -11,7 +11,7 @@ KERNEL void reduceBornSum(float alpha, float beta, float gamma,
     for (unsigned int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
         // Get summed Born data
 
-        real sum = RECIP((real) 0x100000000)*bornSum[index];
+        real sum = (1/(real) 0x100000000)*bornSum[index];
 
         // Now calculate Born radius and OBC term.
 
@@ -40,7 +40,7 @@ KERNEL void reduceBornForce(
     for (unsigned int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
         // Get summed Born force
 
-        real force = RECIP((real) 0x100000000)*bornForce[index];
+        real force = (1/(real) 0x100000000)*bornForce[index];
 
         // Now calculate the actual force
 

@@ -12,7 +12,7 @@ KERNEL void reduceBornSum(GLOBAL const mm_long* RESTRICT bornSum, GLOBAL const f
 
     for (unsigned int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
         // Get summed Born data
-        real sum = RECIP((real) 0x100000000)*bornSum[index];
+        real sum = (1/(real) 0x100000000)*bornSum[index];
         sum = sum * PI4_3;
 
         real radius = params[index].x;

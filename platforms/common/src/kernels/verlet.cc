@@ -96,7 +96,7 @@ KERNEL void selectVerletStepSize(int numAtoms, int paddedNumAtoms, mixed maxStep
 
     LOCAL mixed error[256];
     mixed err = 0;
-    const mixed scale = RECIP((mixed) 0x100000000);
+    const mixed scale = 1/(mixed) 0x100000000;
     for (int index = LOCAL_ID; index < numAtoms; index += LOCAL_SIZE) {
         mixed3 f = make_mixed3(scale*force[index], scale*force[index+paddedNumAtoms], scale*force[index+paddedNumAtoms*2]);
         mixed invMass = velm[index].w;
