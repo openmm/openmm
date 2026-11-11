@@ -352,7 +352,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
             string variableName = "dValuedParam_0_"+cc.intToString(i);
             extraArgs << ", GLOBAL const mm_long* RESTRICT dValue0dParam" << i;
-            deriv0 << "real " << variableName << " = RECIP((real) 0x100000000)*dValue0dParam" << i << "[index];\n";
+            deriv0 << "real " << variableName << " = (1/(real) 0x100000000)*dValue0dParam" << i << "[index];\n";
             for (int j = 0; j < dValuedParam[i]->getParameterInfos().size(); j++)
                 extraArgs << ", GLOBAL real* RESTRICT global_dValuedParam_" << j << "_" << i;
             deriv0 << "global_dValuedParam_0_" << i << "[index] = dValuedParam_0_" << i << ";\n";
@@ -570,7 +570,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         extraArgs << ", GLOBAL const mm_long* RESTRICT derivBuffersIn";
         for (int i = 0; i < energyDerivs->getNumParameters(); ++i)
             reduce << "derivBuffers" << energyDerivs->getParameterSuffix(i, "[index]") <<
-                    " = RECIP((real) 0x100000000)*derivBuffersIn[index+PADDED_NUM_ATOMS*" << cc.intToString(i) << "];\n";
+                    " = (1/(real) 0x100000000)*derivBuffersIn[index+PADDED_NUM_ATOMS*" << cc.intToString(i) << "];\n";
         if (needEnergyParamDerivs) {
             extraArgs << ", GLOBAL mixed* RESTRICT energyParamDerivs";
             const vector<string>& allParamDerivNames = cc.getEnergyParamDerivNames();

@@ -54,7 +54,7 @@ KERNEL void computePerDof(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTRICT po
         PARAMETER_ARGUMENTS) {
     TempType3 stepSize = make_TempType3(dt[0].y);
     int index = GLOBAL_ID;
-    const TempType forceScale = RECIP((TempType) 0x100000000);
+    const TempType forceScale = 1/(TempType) 0x100000000;
     while (index < NUM_ATOMS) {
 #ifdef LOAD_POS_AS_DELTA
         TempType4 position = loadPos(posq, posqCorrection, index) + convertToTempType4(posDelta[index]);
