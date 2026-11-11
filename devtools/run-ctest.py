@@ -63,7 +63,7 @@ def main():
 
     status = execute_tests(args, raw_args)
     attempts = 0
-    if status != 0 and attempts < args.attempts:
+    while status != 0 and attempts < args.attempts:
         status = execute_failed_tests(args, raw_args)
         attempts += 1
     return status
