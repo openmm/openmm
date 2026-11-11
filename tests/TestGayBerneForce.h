@@ -196,6 +196,56 @@ void testEnergyConservation() {
     }
 }
 
+void testForcesMatchEnergy() {
+    // Two ellipsoids at unrelated orientations, close enough that the torques matter.  Moving every particle a
+    // short way along its force must lower the energy by the force norm times the distance, which checks the
+    // forces the torques put on the x and y particles too.
+
+    System system;
+    GayBerneForce* gb = new GayBerneForce();
+    system.addForce(gb);
+    vector<Vec3> positions;
+    Vec3 xdirs[] = {Vec3(1.0, 2.0, 0.5), Vec3(-0.5, 1.0, 1.5)};
+    Vec3 others[] = {Vec3(0, 0, 1), Vec3(1, 0, 0)};
+    for (int i = 0; i < 2; i++) {
+        int first = system.getNumParticles();
+        system.addParticle(10.0);
+        system.addParticle(1.0);
+        system.addParticle(1.0);
+        gb->addParticle(0.2, 10.0, first+1, first+2, 0.2, 0.25, 0.3, 0.9, 1.0, 1.1);
+        gb->addParticle(1.0, 0.0, -1, -1, 1, 1, 1, 1, 1, 1);
+        gb->addParticle(1.0, 0.0, -1, -1, 1, 1, 1, 1, 1, 1);
+        Vec3 center(0.4*i, 0.05*i, 0.0);
+        Vec3 xdir = xdirs[i]/sqrt(xdirs[i].dot(xdirs[i]));
+        Vec3 ydir = xdir.cross(others[i]);
+        ydir /= sqrt(ydir.dot(ydir));
+        positions.push_back(center);
+        positions.push_back(center+xdir*0.1);
+        positions.push_back(center+ydir*0.1);
+    }
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    double norm = 0.0;
+    for (Vec3 f : state.getForces())
+        norm += f.dot(f);
+    norm = sqrt(norm);
+    const double stepSize = 1e-3;
+    double step = 0.5*stepSize/norm;
+    vector<Vec3> positions2(positions.size()), positions3(positions.size());
+    for (int i = 0; i < positions.size(); i++) {
+        Vec3 f = state.getForces()[i];
+        positions2[i] = positions[i]-f*step;
+        positions3[i] = positions[i]+f*step;
+    }
+    context.setPositions(positions2);
+    double energy2 = context.getState(State::Energy).getPotentialEnergy();
+    context.setPositions(positions3);
+    double energy3 = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(norm, (energy2-energy3)/stepSize, 1e-3);
+}
+
 void testExceptions() {
     // Create two Lennard-Jones particles for which the energy scale factors vary,
     // then override their interaction with an exception.
@@ -250,6 +300,7 @@ int main(int argc, char* argv[]) {
         testPointParticles();
         testEnergyScales();
         testEnergyConservation();
+        testForcesMatchEnergy();
         testExceptions();
         runPlatformTests();
     }
