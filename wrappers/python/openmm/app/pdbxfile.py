@@ -203,8 +203,13 @@ class PDBxFile(object):
 
         connectData = block.getObj('struct_conn')
         if connectData is not None:
-            res1Col = connectData.getAttributeIndex('ptnr1_label_seq_id')
-            res2Col = connectData.getAttributeIndex('ptnr2_label_seq_id')
+            # Match atomKey: prefer auth_seq_id when present (GH#5521).
+            res1Col = connectData.getAttributeIndex('ptnr1_auth_seq_id')
+            if res1Col == -1:
+                res1Col = connectData.getAttributeIndex('ptnr1_label_seq_id')
+            res2Col = connectData.getAttributeIndex('ptnr2_auth_seq_id')
+            if res2Col == -1:
+                res2Col = connectData.getAttributeIndex('ptnr2_label_seq_id')
             atom1Col = connectData.getAttributeIndex('ptnr1_label_atom_id')
             atom2Col = connectData.getAttributeIndex('ptnr2_label_atom_id')
             asym1Col = connectData.getAttributeIndex('ptnr1_label_asym_id')
