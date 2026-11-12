@@ -120,7 +120,9 @@ class PDBxFile(object):
         atomsInResidue = set()
         models = []
         for row in atomData.getRowList():
-            atomKey = ((row[resIdCol], row[chainIdCol], row[atomNameCol]))
+            # auth_seq_id when present. Waters share label_seq_id '.', so they
+            # would otherwise collapse onto one atom (GH#5521).
+            atomKey = ((row[resNumCol], row[chainIdCol], row[atomNameCol]))
             model = ('1' if modelCol == -1 else row[modelCol])
             if model not in models:
                 models.append(model)
@@ -201,8 +203,13 @@ class PDBxFile(object):
 
         connectData = block.getObj('struct_conn')
         if connectData is not None:
-            res1Col = connectData.getAttributeIndex('ptnr1_label_seq_id')
-            res2Col = connectData.getAttributeIndex('ptnr2_label_seq_id')
+            # Match atomKey: prefer auth_seq_id when present (GH#5521).
+            res1Col = connectData.getAttributeIndex('ptnr1_auth_seq_id')
+            if res1Col == -1:
+                res1Col = connectData.getAttributeIndex('ptnr1_label_seq_id')
+            res2Col = connectData.getAttributeIndex('ptnr2_auth_seq_id')
+            if res2Col == -1:
+                res2Col = connectData.getAttributeIndex('ptnr2_label_seq_id')
             atom1Col = connectData.getAttributeIndex('ptnr1_label_atom_id')
             atom2Col = connectData.getAttributeIndex('ptnr2_label_atom_id')
             asym1Col = connectData.getAttributeIndex('ptnr1_label_asym_id')

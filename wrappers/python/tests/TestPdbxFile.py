@@ -210,5 +210,22 @@ class TestPdbxFile(unittest.TestCase):
             self.assertEqual(id, res.id)
             self.assertEqual(code, res.insertionCode)
 
+    def testWaterAltLoc(self):
+        """Waters that carry label_alt_id must not be dropped (GH#5521)."""
+        pdbx = PDBxFile('systems/water_altlocs.cif')
+        residues = [(res.name, res.id) for res in pdbx.topology.residues()]
+        self.assertEqual([('GLY', '1'), ('HOH', '101'), ('HOH', '102'), ('HOH', '103')], residues)
+        self.assertEqual(7, len(list(pdbx.topology.atoms())))
+        self.assertVecAlmostEqual(Vec3(0.0, 0.5, 0.0)*nanometers, pdbx.positions[5])
+
+    def testStructConnAuthSeqId(self):
+        """struct_conn must use auth_seq_id when present so bonds match atomKey."""
+        pdbx = PDBxFile('systems/auth_seq_bond.cif')
+        residues = [(res.name, res.id) for res in pdbx.topology.residues()]
+        self.assertEqual([('CYS', '100'), ('CYS', '200')], residues)
+        bonds = [(bond[0].name, bond[0].residue.id, bond[1].name, bond[1].residue.id)
+                 for bond in pdbx.topology.bonds()]
+        self.assertIn(('SG', '100', 'SG', '200'), bonds)
+
 if __name__ == '__main__':
     unittest.main()
