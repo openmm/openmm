@@ -992,7 +992,7 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 pmeSpreadChargeKernel->setArg(8, recipBoxVectorsFloat[1]);
                 pmeSpreadChargeKernel->setArg(9, recipBoxVectorsFloat[2]);
             }
-            pmeSpreadChargeKernel->execute(cc.getNumAtoms());
+            pmeSpreadChargeKernel->execute(PmeOrder*cc.getNumAtoms());
             if (useFixedPointChargeSpreading)
                 pmeFinishSpreadChargeKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
             fft->execFFT(pmeGrid1, pmeGrid2, true);
@@ -1014,7 +1014,7 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             }
             if (includeEnergy)
                 pmeEvalEnergyKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
-            pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
+            pmeConvolutionKernel->execute(gridSizeX*gridSizeY*(gridSizeZ/2+1));
             fft->execFFT(pmeGrid2, pmeGrid1, false);
             setPeriodicBoxArgs(cc, pmeInterpolateForceKernel, 3);
             if (cc.getUseDoublePrecision()) {
@@ -1062,7 +1062,7 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 pmeDispersionSpreadChargeKernel->setArg(8, recipBoxVectorsFloat[1]);
                 pmeDispersionSpreadChargeKernel->setArg(9, recipBoxVectorsFloat[2]);
             }
-            pmeDispersionSpreadChargeKernel->execute(cc.getNumAtoms());
+            pmeDispersionSpreadChargeKernel->execute(PmeOrder*cc.getNumAtoms());
             if (useFixedPointChargeSpreading)
                 pmeDispersionFinishSpreadChargeKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
             dispersionFft->execFFT(pmeGrid1, pmeGrid2, true);
@@ -1086,7 +1086,7 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 cc.clearBuffer(pmeEnergyBuffer);
             if (includeEnergy)
                 pmeDispersionEvalEnergyKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
-            pmeDispersionConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
+            pmeDispersionConvolutionKernel->execute(dispersionGridSizeX*dispersionGridSizeY*(dispersionGridSizeZ/2+1));
             dispersionFft->execFFT(pmeGrid2, pmeGrid1, false);
             setPeriodicBoxArgs(cc, pmeDispersionInterpolateForceKernel, 3);
             if (cc.getUseDoublePrecision()) {
