@@ -112,13 +112,23 @@ void ReferenceVariableVerletDynamics::update(const OpenMM::System& system, vecto
     }
 
     double error = 0.0;
+    int numMassiveParticles = 0;
     for (int i = 0; i < numberOfAtoms; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            double xerror = inverseMasses[i]*forces[i][j];
-            error += xerror*xerror;
+        if (inverseMasses[i] != 0.0) {
+            numMassiveParticles++;
+            for (int j = 0; j < 3; ++j) {
+                double xerror = inverseMasses[i]*forces[i][j];
+                error += xerror*xerror;
+            }
         }
     }
-    error = sqrt(error/(numberOfAtoms*3));
+    // Only particles with mass contribute to the error, so only count them
+    // in the denominator.  Massless particles (e.g. virtual sites) would
+    // otherwise dilute the error and lead to too large a step size.
+    if (numMassiveParticles > 0)
+        error = sqrt(error/(numMassiveParticles*3));
+    else
+        error = 0.0;
     double newStepSize = sqrt(getAccuracy()/error);
     if (getDeltaT() > 0.0f)
         newStepSize = std::min(newStepSize, getDeltaT()*2.0f); // For safety, limit how quickly dt can increase.
