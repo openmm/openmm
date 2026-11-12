@@ -141,6 +141,36 @@ public:
      * @param velocities  the shifted velocities are returned in this
      */
     void computeShiftedVelocities(double timeShift, std::vector<Vec3>& velocities);
+    /**
+     * Get whether all constraints can be enforced within a fused integration kernel (i.e. no CCMA constraints exist).
+     */
+    bool canUseFusedIntegration() const {
+        return !ccmaConstraintAtoms.isInitialized();
+    }
+    /**
+     * Get the array of atom indices for SETTLE clusters.
+     */
+    ComputeArray& getSettleAtoms() {
+        return settleAtoms;
+    }
+    /**
+     * Get the array of parameters for SETTLE clusters.
+     */
+    ComputeArray& getSettleParams() {
+        return settleParams;
+    }
+    /**
+     * Get the array of atom indices for SHAKE clusters.
+     */
+    ComputeArray& getShakeAtoms() {
+        return shakeAtoms;
+    }
+    /**
+     * Get the array of parameters for SHAKE clusters.
+     */
+    ComputeArray& getShakeParams() {
+        return shakeParams;
+    }
 protected:
     virtual void applyConstraintsImpl(bool constrainVelocities, double tol) = 0;
     ComputeContext& context;

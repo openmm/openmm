@@ -3121,18 +3121,65 @@ double CommonIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& contex
 void CommonIntegrateLangevinMiddleStepKernel::initialize(const System& system, const LangevinMiddleIntegrator& integrator) {
     cc.initializeContexts();
     ContextSelector selector(cc);
-    cc.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::langevinMiddle);
-    kernel1 = program->createKernel("integrateLangevinMiddlePart1");
-    kernel2 = program->createKernel("integrateLangevinMiddlePart2");
-    kernel3 = program->createKernel("integrateLangevinMiddlePart3");
-    if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
+    IntegrationUtilities& integration = cc.getIntegrationUtilities();
+    integration.initRandomNumberGenerator(integrator.getRandomNumberSeed());
+    if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision())
         params.initialize<double>(cc, 2, "langevinMiddleParams");
-        oldDelta.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
+    else
+        params.initialize<float>(cc, 2, "langevinMiddleParams");
+    if (integration.canUseFusedIntegration()) {
+        map<string, string> defines;
+        defines["ENABLE_FUSED_INTEGRATION"] = "1";
+        if (integration.getShakeAtoms().isInitialized())
+            defines["HAS_SHAKE_CLUSTERS"] = "1";
+        ComputeProgram program = cc.compileProgram(CommonKernelSources::constraints+CommonKernelSources::langevinMiddle, defines);
+        fusedKernel = program->createKernel("integrateLangevinMiddleFused");
+        int numSettle = (integration.getSettleAtoms().isInitialized() ? integration.getSettleAtoms().getSize() : 0);
+        int numShake = (integration.getShakeAtoms().isInitialized() ? integration.getShakeAtoms().getSize() : 0);
+        if (numSettle + numShake == 0) {
+            numUnconstrainedAtoms = cc.getNumAtoms();
+        }
+        else {
+            // Build the list of unconstrained mobile atoms so the fused kernel can integrate them separately.
+
+            vector<bool> isConstrained(cc.getNumAtoms(), false);
+            if (numSettle > 0) {
+                vector<mm_int4> clusterAtoms;
+                integration.getSettleAtoms().download(clusterAtoms);
+                for (const mm_int4& atoms : clusterAtoms)
+                    isConstrained[atoms.x] = isConstrained[atoms.y] = isConstrained[atoms.z] = true;
+            }
+            if (numShake > 0) {
+                vector<mm_int4> clusterAtoms;
+                integration.getShakeAtoms().download(clusterAtoms);
+                for (const mm_int4& atoms : clusterAtoms) {
+                    isConstrained[atoms.x] = isConstrained[atoms.y] = true;
+                    if (atoms.z != -1)
+                        isConstrained[atoms.z] = true;
+                    if (atoms.w != -1)
+                        isConstrained[atoms.w] = true;
+                }
+            }
+            vector<int> unconstrainedIndices;
+            for (int i = 0; i < cc.getNumAtoms(); i++)
+                if (!isConstrained[i] && system.getParticleMass(i) != 0.0)
+                    unconstrainedIndices.push_back(i);
+            numUnconstrainedAtoms = unconstrainedIndices.size();
+            if (numUnconstrainedAtoms > 0) {
+                unconstrainedAtoms.initialize<int>(cc, numUnconstrainedAtoms, "unconstrainedAtoms");
+                unconstrainedAtoms.upload(unconstrainedIndices);
+            }
+        }
     }
     else {
-        params.initialize<float>(cc, 2, "langevinMiddleParams");
-        oldDelta.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
+        ComputeProgram program = cc.compileProgram(CommonKernelSources::langevinMiddle);
+        kernel1 = program->createKernel("integrateLangevinMiddlePart1");
+        kernel2 = program->createKernel("integrateLangevinMiddlePart2");
+        kernel3 = program->createKernel("integrateLangevinMiddlePart3");
+        if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision())
+            oldDelta.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
+        else
+            oldDelta.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
     }
     prevStepSize = -1.0;
 }
@@ -3142,29 +3189,55 @@ void CommonIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, cons
     IntegrationUtilities& integration = cc.getIntegrationUtilities();
     int numAtoms = cc.getNumAtoms();
     int paddedNumAtoms = cc.getPaddedNumAtoms();
+    int numSettle = (integration.getSettleAtoms().isInitialized() ? integration.getSettleAtoms().getSize() : 0);
+    int numShake = (integration.getShakeAtoms().isInitialized() ? integration.getShakeAtoms().getSize() : 0);
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
-        kernel1->addArg(numAtoms);
-        kernel1->addArg(paddedNumAtoms);
-        kernel1->addArg(cc.getVelm());
-        kernel1->addArg(cc.getLongForceBuffer());
-        kernel1->addArg(integration.getStepSize());
-        kernel2->addArg(numAtoms);
-        kernel2->addArg(cc.getVelm());
-        kernel2->addArg(integration.getPosDelta());
-        kernel2->addArg(oldDelta);
-        kernel2->addArg(params);
-        kernel2->addArg(integration.getStepSize());
-        kernel2->addArg(integration.getRandom());
-        kernel2->addArg(); // Random index will be set just before it is executed.
-        kernel3->addArg(numAtoms);
-        kernel3->addArg(cc.getPosq());
-        kernel3->addArg(cc.getVelm());
-        kernel3->addArg(integration.getPosDelta());
-        kernel3->addArg(oldDelta);
-        kernel3->addArg(integration.getStepSize());
-        if (cc.getUseMixedPrecision())
-            kernel3->addArg(cc.getPosqCorrection());
+        if (integration.canUseFusedIntegration()) {
+            fusedKernel->addArg(numUnconstrainedAtoms);
+            fusedKernel->addArg(paddedNumAtoms);
+            fusedKernel->addArg(numSettle);
+            fusedKernel->addArg(numShake);
+            fusedKernel->addArg(); // Constraint tolerance will be set just before it is executed.
+            fusedKernel->addArg(cc.getVelm());
+            fusedKernel->addArg(cc.getLongForceBuffer());
+            fusedKernel->addArg(cc.getPosq());
+            fusedKernel->addArg(params);
+            fusedKernel->addArg(integration.getStepSize());
+            fusedKernel->addArg(integration.getRandom());
+            fusedKernel->addArg(); // Random index will be set just before it is executed.
+            fusedKernel->addArg(unconstrainedAtoms.isInitialized() ? unconstrainedAtoms : params);
+            fusedKernel->addArg(numSettle > 0 ? integration.getSettleAtoms() : params);
+            fusedKernel->addArg(numSettle > 0 ? integration.getSettleParams() : params);
+            fusedKernel->addArg(numShake > 0 ? integration.getShakeAtoms() : params);
+            fusedKernel->addArg(numShake > 0 ? integration.getShakeParams() : params);
+            if (cc.getUseMixedPrecision())
+                fusedKernel->addArg(cc.getPosqCorrection());
+            fusedBlockSize = min(128, fusedKernel->getMaxBlockSize());
+        }
+        else {
+            kernel1->addArg(numAtoms);
+            kernel1->addArg(paddedNumAtoms);
+            kernel1->addArg(cc.getVelm());
+            kernel1->addArg(cc.getLongForceBuffer());
+            kernel1->addArg(integration.getStepSize());
+            kernel2->addArg(numAtoms);
+            kernel2->addArg(cc.getVelm());
+            kernel2->addArg(integration.getPosDelta());
+            kernel2->addArg(oldDelta);
+            kernel2->addArg(params);
+            kernel2->addArg(integration.getStepSize());
+            kernel2->addArg(integration.getRandom());
+            kernel2->addArg(); // Random index will be set just before it is executed.
+            kernel3->addArg(numAtoms);
+            kernel3->addArg(cc.getPosq());
+            kernel3->addArg(cc.getVelm());
+            kernel3->addArg(integration.getPosDelta());
+            kernel3->addArg(oldDelta);
+            kernel3->addArg(integration.getStepSize());
+            if (cc.getUseMixedPrecision())
+                kernel3->addArg(cc.getPosqCorrection());
+        }
     }
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
@@ -3187,12 +3260,26 @@ void CommonIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, cons
 
     // Perform the integration.
 
-    kernel2->setArg(7, integration.prepareRandomNumbers(cc.getPaddedNumAtoms()));
-    kernel1->execute(numAtoms);
-    integration.applyVelocityConstraints(integrator.getConstraintTolerance());
-    kernel2->execute(numAtoms);
-    integration.applyConstraints(integrator.getConstraintTolerance());
-    kernel3->execute(numAtoms);
+    int randomIndex = integration.prepareRandomNumbers(cc.getPaddedNumAtoms());
+    if (integration.canUseFusedIntegration()) {
+        int numThreads = max(numSettle + numShake, numUnconstrainedAtoms);
+        if (numThreads > 0) {
+            if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision())
+                fusedKernel->setArg(4, integrator.getConstraintTolerance());
+            else
+                fusedKernel->setArg(4, (float) integrator.getConstraintTolerance());
+            fusedKernel->setArg(11, randomIndex);
+            fusedKernel->execute(numThreads, fusedBlockSize);
+        }
+    }
+    else {
+        kernel2->setArg(7, randomIndex);
+        kernel1->execute(numAtoms);
+        integration.applyVelocityConstraints(integrator.getConstraintTolerance());
+        kernel2->execute(numAtoms);
+        integration.applyConstraints(integrator.getConstraintTolerance());
+        kernel3->execute(numAtoms);
+    }
     integration.computeVirtualSites();
 
     // Update the time and step count.
