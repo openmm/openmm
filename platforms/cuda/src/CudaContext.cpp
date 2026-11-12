@@ -640,6 +640,19 @@ ComputeQueue CudaContext::createQueue() {
     return shared_ptr<ComputeQueueImpl>(new CudaQueue());
 }
 
+ComputeQueue CudaContext::createPriorityQueue() {
+    ContextSelector selector(*this);
+    int leastPriority = 0, greatestPriority = 0;
+    CUresult result = cuCtxGetStreamPriorityRange(&leastPriority, &greatestPriority);
+    if (result != CUDA_SUCCESS)
+        throw OpenMMException("Error querying CUDA stream priority range: "+getErrorString(result));
+    CUstream stream;
+    result = cuStreamCreateWithPriority(&stream, CU_STREAM_NON_BLOCKING, greatestPriority);
+    if (result != CUDA_SUCCESS)
+        throw OpenMMException("Error creating CUDA stream: "+getErrorString(result));
+    return std::make_shared<CudaQueue>(stream, /*takeOwnership=*/true);
+}
+
 CUstream CudaContext::getCurrentStream() {
     return dynamic_cast<CudaQueue*>(currentQueue.get())->getStream();
 }
