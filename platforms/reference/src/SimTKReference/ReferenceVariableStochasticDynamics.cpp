@@ -100,13 +100,23 @@ double ReferenceVariableStochasticDynamics::getFriction() const {
 void ReferenceVariableStochasticDynamics::updatePart1(int numberOfAtoms, vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& inverseMasses, double maxStepSize) {
    // Select the step size to use
     double error = 0;
+    int numMassiveParticles = 0;
     for (int i = 0; i < numberOfAtoms; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            double xerror = inverseMasses[i]*forces[i][j];
-            error += xerror*xerror;
+        if (inverseMasses[i] != 0.0) {
+            numMassiveParticles++;
+            for (int j = 0; j < 3; ++j) {
+                double xerror = inverseMasses[i]*forces[i][j];
+                error += xerror*xerror;
+            }
         }
     }
-    error = sqrt(error/(numberOfAtoms*3));
+    // Only particles with mass contribute to the error, so only count them
+    // in the denominator.  Massless particles (e.g. virtual sites) would
+    // otherwise dilute the error and lead to too large a step size.
+    if (numMassiveParticles > 0)
+        error = sqrt(error/(numMassiveParticles*3));
+    else
+        error = 0.0;
     double dt = sqrt(getAccuracy()/error);
     if (getDeltaT() > 0.0f)
         dt = std::min(dt, getDeltaT()*2.0f); // For safety, limit how quickly dt can increase.
