@@ -28,6 +28,29 @@ static __inline__ __device__ long long real_shfl(long long var, int srcLane) {
 }
 
 /**
+ * Shuffle a 3-component vector across lanes in a warp.
+ */
+inline __device__ real3 real_shfl3(const real3& var, int srcLane) {
+    real3 result;
+    result.x = real_shfl(var.x, srcLane);
+    result.y = real_shfl(var.y, srcLane);
+    result.z = real_shfl(var.z, srcLane);
+    return result;
+}
+
+/**
+ * Shuffle a 4-component vector across lanes in a warp.
+ */
+inline __device__ real4 real_shfl4(const real4& var, int srcLane) {
+    real4 result;
+    result.x = real_shfl(var.x, srcLane);
+    result.y = real_shfl(var.y, srcLane);
+    result.z = real_shfl(var.z, srcLane);
+    result.w = real_shfl(var.w, srcLane);
+    return result;
+}
+
+/**
  * Save the force on a single atom.
  */
 __device__ void saveSingleForce(int atom, real3 force, unsigned long long* forceBuffers) {
@@ -37,6 +60,48 @@ __device__ void saveSingleForce(int atom, real3 force, unsigned long long* force
         atomicAdd(&forceBuffers[atom+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(force.y)));
     if (force.z != 0)
         atomicAdd(&forceBuffers[atom+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(force.z)));
+}
+
+/**
+ * Rotate a lane's 32-bit diagonal-tile exclusion mask right by tgx + 1 bits so bit 0
+ * corresponds to initial partner lane (tgx + 1) & (TILE_SIZE - 1).
+ */
+inline __device__ tileflags alignDiagonalExclusions(tileflags excl, unsigned int tgx) {
+    return __funnelshift_r(excl, excl, tgx + 1);
+}
+
+/**
+ * Return whether the current diagonal-tile shift evaluates a non-duplicate pair within the cutoff.
+ * On the final shift (j == TILE_SIZE/2 - 1), lane tgx is paired with (tgx + TILE_SIZE/2) & (TILE_SIZE - 1),
+ * so only the lower half-warp evaluates the pair.
+ */
+inline __device__ bool isActiveDiagonalPair(unsigned int j, unsigned int tgx, real r2) {
+    bool includePair = !(j == TILE_SIZE/2 - 1 && tgx >= TILE_SIZE/2);
+#ifdef USE_CUTOFF
+    includePair &= (r2 < MAX_CUTOFF_SQUARED);
+#endif
+    return includePair;
+}
+
+/**
+ * Accumulate equal and opposite pair forces delta * dEdR onto atom1 (force) and atom2 (shflForce).
+ */
+inline __device__ void accumulateSymmetricPairForce(real3 delta, real dEdR, real3& force, real3& shflForce) {
+    delta *= dEdR;
+    force.x -= delta.x;
+    force.y -= delta.y;
+    force.z -= delta.z;
+    shflForce.x += delta.x;
+    shflForce.y += delta.y;
+    shflForce.z += delta.z;
+}
+
+/**
+ * Fold the partner reaction forces back onto force after the initial shift plus TILE_SIZE/2 loop
+ * shifts (1 + TILE_SIZE/2 shifts total, which leaves lane tgx's accumulator in lane tgx + TILE_SIZE/2 - 1).
+ */
+inline __device__ real3 addDiagonalPartnerForce(const real3& force, const real3& shflForce, unsigned int tgx) {
+    return force + real_shfl3(shflForce, tgx + TILE_SIZE/2 - 1);
 }
 
 /**
@@ -136,6 +201,48 @@ extern "C" __global__ void computeNonbonded(
         const bool hasExclusions = true;
         if (x == y) {
             // This tile is on the diagonal.
+#if defined(USE_SYMMETRIC) && defined(USE_EXCLUSIONS)
+            real4 shflPosq = posq1;
+            real3 shflForce = make_real3(0);
+            DECLARE_LOCAL_PARAMETERS
+            COPY_ATOM1_TO_LOCAL_PARAMETERS
+            excl = alignDiagonalExclusions(excl, tgx);
+            SHUFFLE_WARP_DATA
+
+            // Evaluate all TILE_SIZE*(TILE_SIZE - 1)/2 = 496 unordered pairs across TILE_SIZE/2 = 16 shifts:
+            // shifts 0..14 evaluate 15*32 = 480 distinct pairs across all 32 lanes, and shift 15 pairs lane tgx
+            // with (tgx + 16) & 31 so restricting evaluation to tgx < 16 covers the remaining 16 pairs once.
+
+            #pragma unroll 4
+            for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
+                int atom2 = y*TILE_SIZE + ((tgx+j+1) & (TILE_SIZE-1));
+                real4 posq2 = shflPosq;
+                real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
+#ifdef USE_PERIODIC
+                APPLY_PERIODIC_TO_DELTA(delta)
+#endif
+                real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && isActiveDiagonalPair(j, tgx, r2)) {
+                    real invR = RSQRT(r2);
+                    real r = r2*invR;
+                    LOAD_ATOM2_PARAMETERS
+                    real dEdR = 0.0f;
+                    bool isExcluded = !(excl & 0x1);
+                    real tempEnergy = 0.0f;
+                    const real interactionScale = 1.0f;
+                    COMPUTE_INTERACTION
+                    energy += tempEnergy;
+#ifdef INCLUDE_FORCES
+                    accumulateSymmetricPairForce(delta, dEdR, force, shflForce);
+#endif
+                }
+                SHUFFLE_WARP_DATA
+                excl >>= 1;
+            }
+#ifdef INCLUDE_FORCES
+            force = addDiagonalPartnerForce(force, shflForce, tgx);
+#endif
+#else
             real4 shflPosq = posq1;
 
             // we do not need to fetch parameters from global since this is a symmetric tile
@@ -181,6 +288,7 @@ extern "C" __global__ void computeNonbonded(
                 excl >>= 1;
 #endif
             }
+#endif
         }
         else {
             // This is an off-diagonal tile.
