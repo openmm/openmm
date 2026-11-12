@@ -205,7 +205,7 @@ static void setClearBufferArg(ComputeKernel kernel, int index, ArrayInterface& a
 }
 
 void ComputeContext::clearBuffer(ArrayInterface& array) {
-    // Each thread in clearSingleBuffer writes one int4 (4 words).
+    // Each thread in clearSingleBuffer clears one int4 (4 words) at a time.
 
     int words = array.getSize()*array.getElementSize()/4;
     setClearBufferArg(clearBufferKernel, 0, array);
