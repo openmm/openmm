@@ -620,7 +620,7 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         defines["HAS_OVERLAPPING_VSITES"] = "1";
     if (numVsiteStages > 1)
         defines["MULTIPLE_VSITE_STAGES"] = "1";
-    ComputeProgram program = context.compileProgram(CommonKernelSources::integrationUtilities, defines);
+    ComputeProgram program = context.compileProgram(CommonKernelSources::constraints+CommonKernelSources::integrationUtilities, defines);
     settlePosKernel = program->createKernel("applySettleToPositions");
     settleVelKernel = program->createKernel("applySettleToVelocities");
     shakePosKernel = program->createKernel("applyShakeToPositions");
