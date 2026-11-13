@@ -3740,8 +3740,13 @@ class AmoebaAngleGenerator(object):
     """An AmoebaAngleGenerator constructs a AmoebaAngleForce."""
 
     def __init__(self, forceField, cubic, quartic, pentic, sextic):
-        self.angleBuilder = amoebaforces.AmoebaAngleForceBuilder(float(cubic), float(quartic), float(pentic), float(sextic))
-        self.inPlaneAngleBuilder = amoebaforces.AmoebaInPlaneAngleForceBuilder(float(cubic), float(quartic), float(pentic), float(sextic))
+        self.cubic = float(cubic)
+        self.quartic = float(quartic)
+        self.pentic = float(pentic)
+        self.sextic = float(sextic)
+
+        self.angleBuilder = amoebaforces.AmoebaAngleForceBuilder(self.cubic, self.quartic, self.pentic, self.sextic)
+        self.inPlaneAngleBuilder = amoebaforces.AmoebaInPlaneAngleForceBuilder(self.cubic, self.quartic, self.pentic, self.sextic)
         self.forceField = forceField
         self.angleParams = {}
 
