@@ -3760,7 +3760,7 @@ class AmoebaAngleGenerator(object):
             forceField.registerGenerator(generator)
         else:
             generator = existing[0]
-            if tuple(element.attrib[x] for x in ('angle-cubic', 'angle-quartic', 'angle-pentic', 'angle-sextic')) != (generator.cubic, generator.quartic, generator.pentic, generator.sextic):
+            if tuple(float(element.attrib[x]) for x in ('angle-cubic', 'angle-quartic', 'angle-pentic', 'angle-sextic')) != (generator.cubic, generator.quartic, generator.pentic, generator.sextic):
                 raise ValueError('All <AmoebaAngleForce> tags must use identical scale factors')
         for angle in element.findall('Angle'):
             try:
