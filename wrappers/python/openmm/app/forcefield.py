@@ -3864,7 +3864,13 @@ class AmoebaOutOfPlaneBendGenerator(object):
 
     def __init__(self, forceField, type, cubic, quartic, pentic, sextic):
         self.forceField = forceField
-        self.builder = amoebaforces.AmoebaOutOfPlaneBendForceBuilder(float(cubic), float(quartic), float(pentic), float(sextic))
+        self.type = type
+        self.cubic = float(cubic)
+        self.quartic = float(quartic)
+        self.pentic = float(pentic)
+        self.sextic = float(sextic)
+
+        self.builder = amoebaforces.AmoebaOutOfPlaneBendForceBuilder(self.cubic, self.quartic, self.pentic, self.sextic)
 
     @staticmethod
     def parseElement(element, forceField):
