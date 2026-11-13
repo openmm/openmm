@@ -4269,14 +4269,23 @@ class AmoebaVdwGenerator(object):
     """An AmoebaVdwGenerator constructs a AmoebaVdwForce."""
 
     def __init__(self, type, radiusrule, radiustype, radiussize, epsilonrule, vdw13Scale, vdw14Scale, vdw15Scale):
-        self.builder = amoebaforces.AmoebaVdwForceBuilder(str(type), 
-                                                          str(radiusrule), 
-                                                          str(radiustype), 
-                                                          str(radiussize), 
-                                                          str(epsilonrule), 
-                                                          float(vdw13Scale), 
-                                                          float(vdw14Scale), 
-                                                          float(vdw15Scale))
+        self.type = str(type)
+        self.radiusrule = str(radiusrule)
+        self.radiustype = str(radiustype)
+        self.radiussize = str(radiussize)
+        self.epsilonrule = str(epsilonrule)
+        self.vdw13Scale = float(vdw13Scale)
+        self.vdw14Scale = float(vdw14Scale)
+        self.vdw15Scale = float(vdw15Scale)
+
+        self.builder = amoebaforces.AmoebaVdwForceBuilder(self.type, 
+                                                          self.radiusrule, 
+                                                          self.radiustype, 
+                                                          self.radiussize, 
+                                                          self.epsilonrule, 
+                                                          self.vdw13Scale, 
+                                                          self.vdw14Scale, 
+                                                          self.vdw15Scale)
 
     @staticmethod
     def parseElement(element, forceField):
