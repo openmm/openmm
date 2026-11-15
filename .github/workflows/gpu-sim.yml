@@ -1,0 +1,104 @@
+name: "GPU Simulator"
+
+# Optional, non-required check. The "Linux HIP" job in CI.yml builds the HIP
+# platform with OPENMM_BUILD_HIP_TESTS=OFF, because the hosted runners have no
+# GPU. This job builds the HIP tests and runs a subset of the double precision
+# variants on a simulated AMD Instinct MI300X
+# (https://github.com/pantheongpu/pantheonsim). Kernels are compiled at run
+# time with hipRTC, as on a real GPU. A simulator cannot reproduce
+# hardware-specific behavior or timing, so it complements real-GPU testing and
+# does not replace it.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "openmmapi/**"
+      - "olla/**"
+      - "platforms/common/**"
+      - "platforms/hip/**"
+      - "platforms/reference/**"
+      - "libraries/**"
+      - "tests/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/gpu-sim.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  hip-tests:
+    name: "HIP double precision tests (ROCm 7.1 and simulated MI300X)"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up the simulated GPU and ROCm
+        uses: pantheongpu/setup-pantheonsim@a1b9d4237411f9b2b0e0bb895b4d83377f336a7b # v0.1.9
+        with:
+          gpu: amd/mi300x
+          cuda-toolkit: none
+          rocm: "7.1"
+
+      # find_package(hip) needs the comgr and HSA runtime CMake packages, and
+      # the HIP platform links hipRTC. The action installs only the compiler
+      # side of ROCm. libhiprtc ships in hip-runtime-amd, which also contains
+      # the HIP runtime library that the simulator replaces, so only the
+      # hipRTC files are copied out of that package.
+      - name: Install comgr, the HSA runtime and hipRTC
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y comgr hsa-rocr
+          tmp=$(mktemp -d)
+          (cd "$tmp" && apt-get download hip-runtime-amd && dpkg-deb -x hip-runtime-amd_*.deb root)
+          sudo cp -a "$tmp"/root/opt/rocm-*/lib/libhiprtc* /opt/rocm/lib/
+          rm -rf "$tmp"
+
+      # The HIP platform is host code; its kernels are compiled at run time
+      # for the GPU it finds (gfx942 here), so no HIP architecture is set.
+      - name: Configure
+        run: cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_PREFIX_PATH=/opt/rocm
+          -DOPENMM_BUILD_HIP_LIB=ON
+          -DOPENMM_BUILD_HIP_TESTS=ON
+          -DOPENMM_BUILD_CUDA_LIB=OFF
+          -DOPENMM_BUILD_OPENCL_LIB=OFF
+          -DOPENMM_BUILD_CPU_LIB=OFF
+          -DOPENMM_BUILD_AMOEBA_PLUGIN=OFF
+          -DOPENMM_BUILD_RPMD_PLUGIN=OFF
+          -DOPENMM_BUILD_DRUDE_PLUGIN=OFF
+          -DOPENMM_BUILD_PME_PLUGIN=OFF
+          -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF
+          -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
+          -DOPENMM_BUILD_REFERENCE_TESTS=OFF
+          -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF
+          -DOPENMM_BUILD_EXAMPLES=OFF
+
+      - name: Build
+        run: cmake --build build -j3
+
+      # All 53 TestHip*Double programs take about 3 hours on the simulator, so
+      # this runs 21 of them (about 20 minutes): the bonded forces, nonbonded
+      # with cutoffs, Ewald and PME, GBSA, virtual sites, SETTLE, FFT, sort,
+      # random numbers, checkpoints and the Verlet integrator. The kernel
+      # cache (OPENMM_CACHE_DIR) is shared between the tests.
+      - name: Run tests
+        working-directory: build
+        env:
+          OPENMM_CACHE_DIR: ${{ runner.temp }}/openmm-kernels
+        run: |
+          mkdir -p "$OPENMM_CACHE_DIR"
+          tests='HarmonicBondForce|HarmonicAngleForce|PeriodicTorsionForce|RBTorsionForce|CMAPTorsionForce'
+          tests="$tests|CustomBondForce|CustomCompoundBondForce|ATMForce|NonbondedForce|Ewald|DispersionPME"
+          tests="$tests|CustomGBForce|GBSAOBCForce|VirtualSites|Settle|FFT3D|Sort|Random|Checkpoints"
+          tests="$tests|CompoundIntegrator|VerletIntegrator"
+          vgpu run ctest -R "^TestHip($tests)Double\$" --output-on-failure --timeout 1800 --no-tests=error
