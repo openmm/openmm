@@ -167,6 +167,10 @@ public:
      */
     ComputeQueue createQueue();
     /**
+     * Create a high-priority ComputeQueue for latency-sensitive work.
+     */
+    ComputeQueue createPriorityQueue();
+    /**
      * Get the stream currently being used for execution.
      */
     CUstream getCurrentStream();
