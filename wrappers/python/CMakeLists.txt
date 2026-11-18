@@ -171,7 +171,7 @@ set(SWIG_INPUT_FILES2
 # Create input files for swig
 add_custom_command(
     OUTPUT ${SWIG_INPUT_FILES_REF}
-    COMMAND ${PYTHON_EXECUTABLE} "${SWIG_OPENMM_DIR}/swigInputBuilder.py"
+    COMMAND ${Python3_EXECUTABLE} "${SWIG_OPENMM_DIR}/swigInputBuilder.py"
         -i "${CMAKE_CURRENT_BINARY_DIR}/src/swig_doxygen/doxygen/xml"
         -c swigInputConfig.py
         -d OpenMM_docstring.i
