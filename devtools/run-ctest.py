@@ -62,10 +62,8 @@ def main():
     args, raw_args = parser.parse_known_args()
 
     status = execute_tests(args, raw_args)
-    attempts = 0
-    if status != 0 and attempts < args.attempts:
+    if status != 0 and args.attempts > 0:
         status = execute_failed_tests(args, raw_args)
-        attempts += 1
     return status
 
 
@@ -115,6 +113,7 @@ def execute_failed_tests(options, raw_options):
                  '--output-on-failure',
                  '--parallel', str(options.parallel),
                  '-R', '|'.join(failed_tests),
+                 '--repeat', 'until-pass:%d' % options.attempts,
                  '--timeout', options.timeout,
                  '--stop-time', stop_time.strftime('%H:%M:%S')] +
                  (['--schedule-random'] if options.in_order else []))
