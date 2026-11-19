@@ -313,32 +313,42 @@ KERNEL void gridInterpolateForce(GLOBAL const real4* RESTRICT posq, GLOBAL mm_ul
             data[PME_ORDER-j-1] = scale*((dr+make_real3(j))*data[PME_ORDER-j-2] + (make_real3(PME_ORDER-j)-dr)*data[PME_ORDER-j-1]);
         data[0] = scale*(make_real3(1)-dr)*data[0];
 
-        // Compute the force on this atom.
+        // Avoid full 3D product on each point and instead separate out the X, Y, and Z contributions using tensor contraction.
 
+        int yGridOffset[PME_ORDER];
+        int zGridIndex[PME_ORDER];
+        for (int k = 0; k < PME_ORDER; k++) {
+            int yIndex = gridIndex.y+k;
+            yGridOffset[k] = (yIndex - (yIndex >= GRID_SIZE_Y ? GRID_SIZE_Y : 0))*GRID_SIZE_Z;
+            int zIndex = gridIndex.z+k;
+            zGridIndex[k] = zIndex - (zIndex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
+        }
         for (int ix = 0; ix < PME_ORDER; ix++) {
             int xbase = gridIndex.x+ix;
             xbase -= (xbase >= GRID_SIZE_X ? GRID_SIZE_X : 0);
             xbase = xbase*GRID_SIZE_Y*GRID_SIZE_Z;
             real dx = data[ix].x;
             real ddx = ddata[ix].x;
+            real yzValue = 0, yzDerivY = 0, yzDerivZ = 0;
 
             for (int iy = 0; iy < PME_ORDER; iy++) {
-                int ybase = gridIndex.y+iy;
-                ybase -= (ybase >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
-                ybase = xbase + ybase*GRID_SIZE_Z;
+                int ybase = xbase + yGridOffset[iy];
                 real dy = data[iy].y;
                 real ddy = ddata[iy].y;
+                real zValue = 0, zDeriv = 0;
 
                 for (int iz = 0; iz < PME_ORDER; iz++) {
-                    int zindex = gridIndex.z+iz;
-                    zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
-                    int index = ybase + zindex;
-                    real gridvalue = pmeGrid[index];
-                    force.x += ddx*dy*data[iz].z*gridvalue;
-                    force.y += dx*ddy*data[iz].z*gridvalue;
-                    force.z += dx*dy*ddata[iz].z*gridvalue;
+                    real gridValue = pmeGrid[ybase + zGridIndex[iz]];
+                    zValue += data[iz].z*gridValue;
+                    zDeriv += ddata[iz].z*gridValue;
                 }
+                yzValue += dy*zValue;
+                yzDerivY += ddy*zValue;
+                yzDerivZ += dy*zDeriv;
             }
+            force.x += ddx*yzValue;
+            force.y += dx*yzDerivY;
+            force.z += dx*yzDerivZ;
         }
         real forceX = -q*(force.x*GRID_SIZE_X*recipBoxVecX.x);
         real forceY = -q*(force.x*GRID_SIZE_X*recipBoxVecY.x+force.y*GRID_SIZE_Y*recipBoxVecY.y);
