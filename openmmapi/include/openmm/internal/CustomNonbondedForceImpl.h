@@ -37,6 +37,7 @@
 #include "lepton/CompiledExpression.h"
 #include "lepton/CompiledVectorExpression.h"
 #include <utility>
+#include <functional>
 #include <map>
 #include <string>
 
@@ -70,12 +71,24 @@ public:
      */
     static LongRangeCorrectionData prepareLongRangeCorrection(const CustomNonbondedForce& force, int numThreads);
     /**
+     * Update a LongRangeCorrectionData to reflect changed per-particle parameters.  This
+     * recomputes the particle classes and interaction counts, but reuses the compiled
+     * expressions, which cannot be changed by updateParametersInContext().  It falls back
+     * to prepareLongRangeCorrection() if the data has not been prepared yet, or if a
+     * tabulated function has changed.
+     */
+    static void updateLongRangeCorrection(const CustomNonbondedForce& force, LongRangeCorrectionData& data, int numThreads);
+    /**
      * Compute the coefficient which, when divided by the periodic box volume, gives the
      * long range correction to the energy.  If the Force computes parameter derivatives,
      * also compute the corresponding derivatives of the correction.
      */
     static void calcLongRangeCorrection(LongRangeCorrectionData& data, const Context& context, double& coefficient, std::vector<double>& derivatives, ThreadPool& threads);
 private:
+    static double sumIntegrals(const std::function<Lepton::CompiledVectorExpression&(int)>& getExpression,
+            const std::vector<int>& oldIndex, int numOldClasses, const std::vector<double>& oldIntegrals,
+            std::vector<double>& newIntegrals, bool remember, LongRangeCorrectionData& data,
+            const std::vector<std::vector<double> >& computedValues, const Context& context, ThreadPool& threads);
     static double integrateInteraction(Lepton::CompiledVectorExpression& expression, const std::vector<double>& params1, const std::vector<double>& params2,
             const std::vector<double>& computedValues1, const std::vector<double>& computedValues2, const LongRangeCorrectionData& data, const Context& context);
     const CustomNonbondedForce& owner;
@@ -84,15 +97,29 @@ private:
 
 class CustomNonbondedForceImpl::LongRangeCorrectionData {
 public:
-    CustomNonbondedForce::NonbondedMethod method;
+    CustomNonbondedForce::NonbondedMethod method = CustomNonbondedForce::NoCutoff;
     double cutoffDistance, switchingDistance;
     bool useSwitchingFunction;
     std::vector<std::vector<double> > classes;
     std::vector<std::string> globalParameterNames, perParticleParameterNames, paramNames, computedValueNames;
-    std::map<std::pair<int, int>, long long int> interactionCount;
+    /**
+     * The number of particle pairs for each pair of classes, stored as a
+     * packed upper triangle of a numClasses x numClasses table.
+     */
+    std::vector<long long int> interactionCount;
     std::vector<Lepton::CompiledVectorExpression> energyExpression;
     std::vector<std::vector<Lepton::CompiledVectorExpression> > derivExpressions;
     std::vector<Lepton::CompiledExpression> computedValueExpressions;
+    std::vector<int> tabulatedFunctionUpdateCount;
+    /**
+     * The classes, global parameter values and integrals from the previous call, so that
+     * the integrals for pairs of classes that have not changed can be reused.  The
+     * integrals are stored as a packed upper triangle of a numClasses x numClasses table.
+     */
+    std::vector<std::vector<double> > cachedClasses;
+    std::vector<double> cachedGlobalValues;
+    std::vector<double> cachedIntegrals;
+    std::vector<std::vector<double> > cachedDerivIntegrals;
 };
 
 } // namespace OpenMM
