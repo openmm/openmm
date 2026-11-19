@@ -278,6 +278,50 @@ void testParallelComputation() {
     ASSERT(fabs(state1.getPotentialEnergy()-state3.getPotentialEnergy()) > 0.1);
 }
 
+void testManyBondsEnergyAndDerivatives() {
+    // Verify energy and parameter derivatives across two bond forces when bond count exceeds the energy buffer size.
+
+    const int numParticles = 50000;
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    CustomBondForce* bonds1 = new CustomBondForce("0.5*k1*(r-r0)^2");
+    bonds1->addGlobalParameter("k1", 120.0);
+    bonds1->addEnergyParameterDerivative("k1");
+    bonds1->addPerBondParameter("r0");
+    CustomBondForce* bonds2 = new CustomBondForce("0.5*k2*(r-r0)^2");
+    bonds2->addGlobalParameter("k2", 80.0);
+    bonds2->addEnergyParameterDerivative("k2");
+    bonds2->addPerBondParameter("r0");
+    vector<Vec3> positions(numParticles);
+    double expectedEnergy = 0.0, expectedDeriv1 = 0.0, expectedDeriv2 = 0.0;
+    for (int i = 0; i < numParticles; i++)
+        positions[i] = Vec3(0.15*i + 0.01*(i%7), 0.02*(i%5), 0.03*(i%3));
+    for (int i = 0; i < numParticles-1; i++) {
+        Vec3 delta1 = positions[i+1]-positions[i];
+        double dr1 = sqrt(delta1.dot(delta1)) - 0.14;
+        bonds1->addBond(i, i+1, {0.14});
+        expectedEnergy += 0.5*120.0*dr1*dr1;
+        expectedDeriv1 += 0.5*dr1*dr1;
+        if (i < numParticles-2) {
+            Vec3 delta2 = positions[i+2]-positions[i];
+            double dr2 = sqrt(delta2.dot(delta2)) - 0.29;
+            bonds2->addBond(i, i+2, {0.29});
+            expectedEnergy += 0.5*80.0*dr2*dr2;
+            expectedDeriv2 += 0.5*dr2*dr2;
+        }
+    }
+    system.addForce(bonds1);
+    system.addForce(bonds2);
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    State state = context.getState(State::Energy | State::Forces | State::ParameterDerivatives);
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-4*expectedEnergy);
+    ASSERT_EQUAL_TOL(expectedDeriv1, state.getEnergyParameterDerivatives().at("k1"), 1e-4*expectedDeriv1);
+    ASSERT_EQUAL_TOL(expectedDeriv2, state.getEnergyParameterDerivatives().at("k2"), 1e-4*expectedDeriv2);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -289,6 +333,7 @@ int main(int argc, char* argv[]) {
         testInconsistentParameters();
         testPeriodic();
         testEnergyParameterDerivatives();
+        testManyBondsEnergyAndDerivatives();
         runPlatformTests();
     }
     catch(const exception& e) {

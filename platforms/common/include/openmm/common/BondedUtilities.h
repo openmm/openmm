@@ -141,7 +141,7 @@ private:
     std::vector<std::vector<ComputeArray> > atomIndices;
     std::vector<std::string> prefixCode;
     std::vector<std::string> energyParameterDerivatives;
-    int numForceBuffers, maxBonds, allGroups;
+    int numForceBuffers, maxBonds, allGroups, blockSize;
     bool hasInitializedKernels, hasInteractions;
 };
 
