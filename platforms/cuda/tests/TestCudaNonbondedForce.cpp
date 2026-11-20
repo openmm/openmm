@@ -29,8 +29,56 @@
 
 #include "CudaTests.h"
 #include "TestNonbondedForce.h"
+#include "openmm/CustomNonbondedForce.h"
 #include <cuda.h>
 #include <string>
+
+void testExclusionTiles() {
+    // Verify half-diagonal exclusion tile evaluation, partial atom blocks,
+    // cross-block exclusions, and energy parameter derivatives.
+
+    const int numParticles = 100;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(5, 0, 0), Vec3(0, 5, 0), Vec3(0, 0, 5));
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nonbonded->setCutoffDistance(1.5);
+    CustomNonbondedForce* custom = new CustomNonbondedForce("scale*(a1+a2)/(r^2+0.2)");
+    custom->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    custom->setCutoffDistance(1.5);
+    custom->addPerParticleParameter("a");
+    custom->addGlobalParameter("scale", 1.5);
+    custom->addEnergyParameterDerivative("scale");
+    system.addForce(nonbonded);
+    system.addForce(custom);
+    vector<Vec3> positions(numParticles);
+    vector<pair<int, int> > bonds;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(12.0);
+        nonbonded->addParticle(i%2 == 0 ? 0.3 : -0.3, 0.2, 0.15);
+        custom->addParticle({0.1 + 0.02*(i%5)});
+        positions[i] = Vec3(1.0*(i/20) + 0.1*genrand_real2(sfmt), 1.0*((i/4)%5) + 0.1*genrand_real2(sfmt), 1.2*(i%4) + 0.1*genrand_real2(sfmt));
+        if (i > 0 && i%3 != 0)
+            bonds.push_back({i-1, i});
+    }
+    nonbonded->createExceptionsFromBonds(bonds, 0.5, 0.5);
+    custom->createExclusionsFromBonds(bonds, 3);
+    VerletIntegrator cudaIntegrator(0.001), referenceIntegrator(0.001);
+    ReferencePlatform referencePlatform;
+    Context cudaContext(system, cudaIntegrator, platform);
+    Context referenceContext(system, referenceIntegrator, referencePlatform);
+    cudaContext.setPositions(positions);
+    referenceContext.setPositions(positions);
+    int infoMask = State::Forces | State::Energy | State::ParameterDerivatives;
+    State cudaState = cudaContext.getState(infoMask);
+    State referenceState = referenceContext.getState(infoMask);
+    ASSERT_EQUAL_TOL(referenceState.getPotentialEnergy(), cudaState.getPotentialEnergy(), 1e-4);
+    ASSERT_EQUAL_TOL(referenceState.getEnergyParameterDerivatives().at("scale"), cudaState.getEnergyParameterDerivatives().at("scale"), 1e-4);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(referenceState.getForces()[i], cudaState.getForces()[i], 1e-4);
+}
 
 void testDeterministicForces() {
     // Check that the CudaDeterministicForces property works correctly.
@@ -88,6 +136,7 @@ bool canRunHugeTest() {
 }
 
 void runPlatformTests() {
+    testExclusionTiles();
     testParallelComputation(NonbondedForce::NoCutoff);
     testParallelComputation(NonbondedForce::Ewald);
     testParallelComputation(NonbondedForce::PME);
