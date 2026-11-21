@@ -90,22 +90,47 @@ KERNEL void integrateLangevinMiddlePart3(int numAtoms, GLOBAL real4* RESTRICT po
 }
 
 /**
+ * Compute the error for each thread block.  These partial sums are added up by selectLangevinStepSize().
+ */
+
+KERNEL void computeLangevinStepError(int numAtoms, int paddedNumAtoms, GLOBAL const mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force, GLOBAL mixed* RESTRICT errorBuffer) {
+    // Calculate the error.
+
+    LOCAL mixed error[256];
+    mixed err = 0;
+    const mixed scale = 1/(mixed) 0x100000000;
+    for (int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SIZE) {
+        mixed3 f = make_mixed3(scale*force[index], scale*force[index+paddedNumAtoms], scale*force[index+paddedNumAtoms*2]);
+        mixed invMass = velm[index].w;
+        err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass*invMass;
+    }
+    error[LOCAL_ID] = err;
+    SYNC_THREADS;
+
+    // Sum the errors from all threads.
+
+    for (unsigned int offset = 1; offset < LOCAL_SIZE; offset *= 2) {
+        if (LOCAL_ID+offset < LOCAL_SIZE && (LOCAL_ID&(2*offset-1)) == 0)
+            error[LOCAL_ID] += error[LOCAL_ID+offset];
+        SYNC_THREADS;
+    }
+    if (LOCAL_ID == 0)
+        errorBuffer[GROUP_ID] = error[0];
+}
+
+/**
  * Select the step size to use for the next step.
  */
 
-KERNEL void selectLangevinStepSize(int numAtoms, int paddedNumAtoms, mixed maxStepSize, mixed errorTol, mixed friction, mixed kT, GLOBAL mixed2* RESTRICT dt,
-        GLOBAL const mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force, GLOBAL mixed* RESTRICT paramBuffer) {
+KERNEL void selectLangevinStepSize(int numAtoms, int numErrorBlocks, mixed maxStepSize, mixed errorTol, mixed friction, mixed kT, GLOBAL mixed2* RESTRICT dt,
+        GLOBAL const mixed* RESTRICT errorBuffer, GLOBAL mixed* RESTRICT paramBuffer) {
     // Calculate the error.
 
     LOCAL mixed error[256];
     LOCAL mixed params[MaxParams];
     mixed err = 0;
-    const mixed scale = 1/(mixed) 0x100000000;
-    for (int index = LOCAL_ID; index < numAtoms; index += LOCAL_SIZE) {
-        mixed3 f = make_mixed3(scale*force[index], scale*force[index+paddedNumAtoms], scale*force[index+paddedNumAtoms*2]);
-        mixed invMass = velm[index].w;
-        err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass*invMass;
-    }
+    for (int index = LOCAL_ID; index < numErrorBlocks; index += LOCAL_SIZE)
+        err += errorBuffer[index];
     error[LOCAL_ID] = err;
     SYNC_THREADS;
 
