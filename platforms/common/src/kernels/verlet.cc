@@ -115,6 +115,7 @@ KERNEL void computeVerletStepError(int numAtoms, int paddedNumAtoms, GLOBAL cons
     if (LOCAL_ID == 0)
         errorBuffer[GROUP_ID] = error[0];
 }
+
 /**
  * Select the step size to use for the next step.
  */
