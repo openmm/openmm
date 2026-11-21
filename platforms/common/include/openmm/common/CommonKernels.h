@@ -1047,8 +1047,9 @@ public:
 private:
     ComputeContext& cc;
     bool hasInitializedKernels;
-    int blockSize;
-    ComputeKernel kernel1, kernel2, selectSizeKernel;
+    int blockSize, numErrorBlocks, errorBlockSize;
+    ComputeArray errorBuffer;
+    ComputeKernel kernel1, kernel2, selectSizeKernel, errorKernel;
 };
 
 /**
