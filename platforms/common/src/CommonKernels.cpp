@@ -3300,7 +3300,12 @@ void CommonIntegrateVariableVerletStepKernel::initialize(const System& system, c
     kernel1 = program->createKernel("integrateVerletPart1");
     kernel2 = program->createKernel("integrateVerletPart2");
     selectSizeKernel = program->createKernel("selectVerletStepSize");
+    errorKernel = program->createKernel("computeVerletStepError");
     blockSize = min(256, system.getNumParticles());
+    errorBlockSize = min(256, cc.getMaxThreadBlockSize());
+    numErrorBlocks = min(cc.getNumThreadBlocks(), (system.getNumParticles()+errorBlockSize-1)/errorBlockSize);
+    bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
+    errorBuffer.initialize(cc, numErrorBlocks, useDouble ? sizeof(double) : sizeof(float), "errorBuffer");
 }
 
 double CommonIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
@@ -3326,13 +3331,17 @@ double CommonIntegrateVariableVerletStepKernel::execute(ContextImpl& context, co
         kernel2->addArg(integration.getPosDelta());
         if (cc.getUseMixedPrecision())
             kernel2->addArg(cc.getPosqCorrection());
+        errorKernel->addArg(numAtoms);
+        errorKernel->addArg(paddedNumAtoms);
+        errorKernel->addArg(cc.getVelm());
+        errorKernel->addArg(cc.getLongForceBuffer());
+        errorKernel->addArg(errorBuffer);
         selectSizeKernel->addArg(numAtoms);
-        selectSizeKernel->addArg(paddedNumAtoms);
+        selectSizeKernel->addArg(numErrorBlocks);
         selectSizeKernel->addArg();
         selectSizeKernel->addArg();
         selectSizeKernel->addArg(cc.getIntegrationUtilities().getStepSize());
-        selectSizeKernel->addArg(cc.getVelm());
-        selectSizeKernel->addArg(cc.getLongForceBuffer());
+        selectSizeKernel->addArg(errorBuffer);
     }
 
     // Select the step size to use.
@@ -3350,6 +3359,7 @@ double CommonIntegrateVariableVerletStepKernel::execute(ContextImpl& context, co
         selectSizeKernel->setArg(2, maxStepSizeFloat);
         selectSizeKernel->setArg(3, (float) integrator.getErrorTolerance());
     }
+    errorKernel->execute(numErrorBlocks*errorBlockSize, errorBlockSize);
     selectSizeKernel->execute(blockSize, blockSize);
 
     // Call the first integration kernel.
