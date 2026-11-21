@@ -3409,7 +3409,8 @@ void CommonIntegrateVariableLangevinStepKernel::initialize(const System& system,
     kernel1 = program->createKernel("integrateLangevinMiddlePart1");
     kernel2 = program->createKernel("integrateLangevinMiddlePart2");
     kernel3 = program->createKernel("integrateLangevinMiddlePart3");
-    if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
+    bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
+    if (useDouble) {
         params.initialize<double>(cc, 3, "langevinMiddleParams");
         oldDelta.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
     }
@@ -3418,8 +3419,12 @@ void CommonIntegrateVariableLangevinStepKernel::initialize(const System& system,
         oldDelta.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
     }
     selectSizeKernel = program->createKernel("selectLangevinStepSize");
+    errorKernel = program->createKernel("computeLangevinStepError");
     blockSize = min(256, system.getNumParticles());
     blockSize = max(blockSize, (int) params.getSize());
+    errorBlockSize = min(256, cc.getMaxThreadBlockSize());
+    numErrorBlocks = min(cc.getNumThreadBlocks(), (system.getNumParticles()+errorBlockSize-1)/errorBlockSize);
+    errorBuffer.initialize(cc, numErrorBlocks, useDouble ? sizeof(double) : sizeof(float), "errorBuffer");
 }
 
 double CommonIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
@@ -3451,13 +3456,17 @@ double CommonIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
         kernel3->addArg(integration.getStepSize());
         if (cc.getUseMixedPrecision())
             kernel3->addArg(cc.getPosqCorrection());
+        errorKernel->addArg(numAtoms);
+        errorKernel->addArg(paddedNumAtoms);
+        errorKernel->addArg(cc.getVelm());
+        errorKernel->addArg(cc.getLongForceBuffer());
+        errorKernel->addArg(errorBuffer);
         selectSizeKernel->addArg(numAtoms);
-        selectSizeKernel->addArg(paddedNumAtoms);
+        selectSizeKernel->addArg(numErrorBlocks);
         for (int i = 0; i < 4; i++)
             selectSizeKernel->addArg();
         selectSizeKernel->addArg(integration.getStepSize());
-        selectSizeKernel->addArg(cc.getVelm());
-        selectSizeKernel->addArg(cc.getLongForceBuffer());
+        selectSizeKernel->addArg(errorBuffer);
         selectSizeKernel->addArg(params);
     }
 
@@ -3479,6 +3488,7 @@ double CommonIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
         selectSizeKernel->setArg(4, (float) integrator.getFriction());
         selectSizeKernel->setArg(5, (float) (BOLTZ*integrator.getTemperature()));
     }
+    errorKernel->execute(numErrorBlocks*errorBlockSize, errorBlockSize);
     selectSizeKernel->execute(blockSize, blockSize);
 
     // Perform the integration.
