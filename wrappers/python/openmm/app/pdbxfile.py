@@ -217,7 +217,7 @@ class PDBxFile(object):
             typeCol = connectData.getAttributeIndex('conn_type_id')
             connectBonds = []
             for row in connectData.getRowList():
-                type = row[typeCol][:6]
+                type = row[typeCol][:6].lower()
                 if type in ('covale', 'disulf', 'modres'):
                     key1 = (row[res1Col], row[asym1Col], row[atom1Col])
                     key2 = (row[res2Col], row[asym2Col], row[atom2Col])
@@ -243,7 +243,7 @@ class PDBxFile(object):
             bondOrderCol = bondData.getAttributeIndex('value_order')
             resBonds = defaultdict(list)
             for row in bondData.getRowList():
-                bondOrder = None if bondOrderCol == -1 else row[bondOrderCol]
+                bondOrder = None if bondOrderCol == -1 else row[bondOrderCol].lower()
                 resBonds[row[resNameCol]].append((row[atom1Col], row[atom2Col], bondOrder))
 
             # Create the bonds.
