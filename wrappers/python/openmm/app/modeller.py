@@ -1164,6 +1164,35 @@ class Modeller(object):
             Modeller.loadHydrogenDefinitions(os.path.join(os.path.dirname(__file__), 'data', 'hydrogens.xml'))
             Modeller._hasLoadedStandardHydrogens = True
 
+    @staticmethod
+    def _getVariantAtPH(spec, pH):
+        """Identify which variant of a residue matches the hydrogens that addHydrogens() adds at a given pH.
+
+        Parameters
+        ----------
+        spec : _ResidueData
+            the hydrogen definitions for the residue type
+        pH : float
+            the pH at which hydrogens are being added
+
+        Returns
+        -------
+        string
+            the name of the variant, or None if the residue defines fewer than two variants or if
+            no single variant corresponds to the hydrogens selected at this pH
+        """
+        if len(spec.variants) < 2:
+            return None
+        selected = set(h.name for h in spec.hydrogens if pH <= h.maxph)
+        matches = []
+        for variant in spec.variants:
+            names = set(h.name for h in spec.hydrogens if (h.variants is None and pH <= h.maxph) or (h.variants is not None and variant in h.variants))
+            if names == selected:
+                matches.append(variant)
+        if len(matches) == 1:
+            return matches[0]
+        return None
+
     def addHydrogens(self, forcefield=None, pH=7.0, variants=None, platform=None, residueTemplates=dict()):
         """Add missing hydrogens to the model.
 
@@ -1245,7 +1274,9 @@ class Modeller(object):
         -------
         list
              a list of what variant was actually selected for each residue,
-             in the same format as the variants parameter
+             in the same format as the variants parameter.  This includes variants that were
+             chosen automatically based on the pH, such as ASH, GLH, or LYN.  An element is None
+             for residues that have no variants.
         """
         # Check the list of variants.
 
@@ -1379,6 +1410,9 @@ class Modeller(object):
                         if variant is not None and variant not in spec.variants:
                             raise ValueError('Illegal variant for %s residue: %s' % (residue.name, variant))
                     actualVariants[residue.index] = variant
+                    if variant is None:
+                        # The variant was chosen based on the pH.  Report which one it was.
+                        actualVariants[residue.index] = Modeller._getVariantAtPH(spec, pH)
                     removeExtraHydrogens = (variants[residue.index] is not None)
 
                     # Make a list of hydrogens that should be present in the residue.

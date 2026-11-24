@@ -1118,6 +1118,42 @@ class TestModeller(unittest.TestCase):
 
         validate_equivalence(self, topology_LYN, topology_after)
 
+    def test_addHydrogensReturnedVariants(self):
+        """ Test that addHydrogens() reports the variant it selected based on the pH. """
+
+        # use the T4-lysozyme-L99A pdb file
+        topology_start = self.topology_start2
+        positions = self.positions2
+        residues = [residue for residue in topology_start.residues()]
+
+        # The variant expected for each titratable residue type at each pH.
+        expected = {2.0: {'ASP': 'ASH', 'GLU': 'GLH', 'LYS': 'LYS'},
+                    7.0: {'ASP': 'ASP', 'GLU': 'GLU', 'LYS': 'LYS'},
+                    11.0: {'ASP': 'ASP', 'GLU': 'GLU', 'LYS': 'LYN'}}
+        for pH, variantNames in expected.items():
+            modeller = Modeller(topology_start, positions)
+            toDelete = [atom for atom in topology_start.atoms() if atom.element==Element.getBySymbol('H')]
+            modeller.delete(toDelete)
+            variants = modeller.addHydrogens(pH=pH)
+            self.assertEqual(len(residues), len(variants))
+            for residue, variant in zip(residues, variants):
+                if residue.name in variantNames:
+                    self.assertEqual(variantNames[residue.name], variant)
+                elif residue.name == 'HIS':
+                    self.assertTrue(variant in ('HID', 'HIE', 'HIP'))
+                elif residue.name in ('ALA', 'ARG', 'GLY', 'TYR'):
+                    # These residues have no variants.
+                    self.assertEqual(None, variant)
+
+            # Passing the reported variants back in should add exactly the same hydrogens.
+
+            modeller2 = Modeller(topology_start, positions)
+            modeller2.delete([atom for atom in topology_start.atoms() if atom.element==Element.getBySymbol('H')])
+            modeller2.addHydrogens(variants=variants, pH=pH)
+            names1 = [atom.name for atom in modeller.getTopology().atoms()]
+            names2 = [atom.name for atom in modeller2.getTopology().atoms()]
+            self.assertEqual(names1, names2)
+
     def test_addHydrogensGlycam(self):
         """Test adding hydrogens for GLYCAM."""
         pdb = PDBFile('systems/glycopeptide.pdb')
