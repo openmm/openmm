@@ -124,7 +124,7 @@ KERNEL void computeLangevinStepError(int numAtoms, int paddedNumAtoms, GLOBAL co
 
 KERNEL void selectLangevinStepSize(int numAtoms, int numErrorBlocks, mixed maxStepSize, mixed errorTol, mixed friction, mixed kT, GLOBAL mixed2* RESTRICT dt,
         GLOBAL const mixed* RESTRICT errorBuffer, GLOBAL mixed* RESTRICT paramBuffer) {
-    // Calculate the error.
+    // Load the errors calculated by computeLangevinStepError().
 
     LOCAL mixed error[256];
     LOCAL mixed params[MaxParams];

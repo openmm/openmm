@@ -121,7 +121,7 @@ KERNEL void computeVerletStepError(int numAtoms, int paddedNumAtoms, GLOBAL cons
  */
 
 KERNEL void selectVerletStepSize(int numAtoms, int numErrorBlocks, mixed maxStepSize, mixed errorTol, GLOBAL mixed2* RESTRICT dt, GLOBAL const mixed* RESTRICT errorBuffer) {
-    // Calculate the error.
+    // Load the errors calculated by computeVerletStepError().
 
     LOCAL mixed error[256];
     mixed err = 0;
