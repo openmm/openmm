@@ -227,5 +227,54 @@ class TestPdbxFile(unittest.TestCase):
                  for bond in pdbx.topology.bonds()]
         self.assertIn(('SG', '100', 'SG', '200'), bonds)
 
+    def testStructConnTypeCase(self):
+        """struct_conn.conn_type_id is case insensitive, so COVALE must create the bond just as covale does."""
+        with open('systems/auth_seq_bond.cif') as file:
+            text = file.read()
+        self.assertIn(' covale ', text)
+        pdbx = PDBxFile(StringIO(text.replace(' covale ', ' COVALE ')))
+        bonds = [(bond[0].name, bond[0].residue.id, bond[1].name, bond[1].residue.id)
+                 for bond in pdbx.topology.bonds()]
+        self.assertIn(('SG', '100', 'SG', '200'), bonds)
+
+    def testChemCompBondOrderCase(self):
+        """chem_comp_bond.value_order is case insensitive, so SING and sing must give the same bond."""
+        template = """data_test
+loop_
+_chem_comp_bond.comp_id
+_chem_comp_bond.atom_id_1
+_chem_comp_bond.atom_id_2
+_chem_comp_bond.value_order
+LIG C1 C2 {single}
+LIG C2 O1 {double}
+LIG C2 N1 {triple}
+LIG C2 C3 {aromatic}
+loop_
+_atom_site.group_PDB
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.label_atom_id
+_atom_site.label_alt_id
+_atom_site.label_comp_id
+_atom_site.label_asym_id
+_atom_site.label_seq_id
+_atom_site.Cartn_x
+_atom_site.Cartn_y
+_atom_site.Cartn_z
+_atom_site.pdbx_PDB_model_num
+HETATM 1 C C1 . LIG A 1 0.0 0.0 0.0 1
+HETATM 2 C C2 . LIG A 1 1.5 0.0 0.0 1
+HETATM 3 O O1 . LIG A 1 2.1 1.1 0.0 1
+HETATM 4 N N1 . LIG A 1 2.1 -1.1 0.0 1
+HETATM 5 C C3 . LIG A 1 1.5 0.0 1.5 1
+"""
+        expected = [('C1', 'C2', topology.Single, 1), ('C2', 'O1', topology.Double, 2),
+                    ('C2', 'N1', topology.Triple, 3), ('C2', 'C3', topology.Aromatic, None)]
+        for values in (('sing', 'doub', 'trip', 'arom'), ('SING', 'DOUB', 'TRIP', 'AROM')):
+            text = template.format(single=values[0], double=values[1], triple=values[2], aromatic=values[3])
+            pdbx = PDBxFile(StringIO(text))
+            bonds = [(bond[0].name, bond[1].name, bond.type, bond.order) for bond in pdbx.topology.bonds()]
+            self.assertEqual(expected, bonds)
+
 if __name__ == '__main__':
     unittest.main()
