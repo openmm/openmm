@@ -392,6 +392,38 @@ void testMassless() {
     ASSERT_EQUAL_TOL(1.0, dt1/dt2, 1e-6);
 }
 
+void testLargeSystemStepSize() {
+    // Check the step size selected for a system large enough to need many thread blocks.
+
+    const int numParticles = 100000;
+    const double k = 10.0;
+    const double errorTol = 1e-3;
+    System system;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    CustomExternalForce* force = new CustomExternalForce("0.5*k*(x^2+y^2+z^2)");
+    force->addGlobalParameter("k", k);
+    system.addForce(force);
+    vector<Vec3> positions(numParticles);
+    double errorSum = 0;
+    for (int i = 0; i < numParticles; i++) {
+        double mass = 1.0+i%5;
+        system.addParticle(mass);
+        force->addParticle(i);
+        positions[i] = Vec3(2*genrand_real2(sfmt)-1, 2*genrand_real2(sfmt)-1, 2*genrand_real2(sfmt)-1);
+        errorSum += k*k*positions[i].dot(positions[i])/(mass*mass);
+    }
+    double expectedStepSize = sqrt(errorTol/sqrt(errorSum/(3*numParticles)));
+
+    // The initial step size is 0, so the first step is not limited by the growth cap.
+
+    VariableVerletIntegrator integrator(errorTol);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    integrator.step(1);
+    ASSERT_EQUAL_TOL(1.0, integrator.getStepSize()/expectedStepSize, 1e-6);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -405,6 +437,7 @@ int main(int argc, char* argv[]) {
         testInitialTemperature();
         testForceGroups();
         testMassless();
+        testLargeSystemStepSize();
         runPlatformTests();
     }
     catch(const exception& e) {
