@@ -98,28 +98,35 @@ KERNEL void selectLangevinStepSize(int numAtoms, int paddedNumAtoms, mixed maxSt
     // Calculate the error.
 
     LOCAL mixed error[256];
+    LOCAL int massive[256];
     LOCAL mixed params[MaxParams];
     mixed err = 0;
     const mixed scale = 1/(mixed) 0x100000000;
+    int massiveParticles = 0;
     for (int index = LOCAL_ID; index < numAtoms; index += LOCAL_SIZE) {
         mixed3 f = make_mixed3(scale*force[index], scale*force[index+paddedNumAtoms], scale*force[index+paddedNumAtoms*2]);
         mixed invMass = velm[index].w;
         err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass*invMass;
+        if (invMass != 0)
+            massiveParticles++;
     }
     error[LOCAL_ID] = err;
+    massive[LOCAL_ID] = massiveParticles;
     SYNC_THREADS;
 
     // Sum the errors from all threads.
 
     for (unsigned int offset = 1; offset < LOCAL_SIZE; offset *= 2) {
-        if (LOCAL_ID+offset < LOCAL_SIZE && (LOCAL_ID&(2*offset-1)) == 0)
+        if (LOCAL_ID+offset < LOCAL_SIZE && (LOCAL_ID&(2*offset-1)) == 0) {
             error[LOCAL_ID] += error[LOCAL_ID+offset];
+            massive[LOCAL_ID] += massive[LOCAL_ID+offset];
+        }
         SYNC_THREADS;
     }
     if (GLOBAL_ID == 0) {
         // Select the new step size.
 
-        mixed totalError = SQRT(error[0]/(numAtoms*3));
+        mixed totalError = SQRT(error[0]/(massive[0]*3));
         mixed newStepSize = SQRT(errorTol/totalError);
         mixed oldStepSize = dt[0].y;
         if (oldStepSize > 0.0f)

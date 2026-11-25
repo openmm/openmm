@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2006-2024 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2026 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -100,13 +100,16 @@ double ReferenceVariableStochasticDynamics::getFriction() const {
 void ReferenceVariableStochasticDynamics::updatePart1(int numberOfAtoms, vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& inverseMasses, double maxStepSize) {
    // Select the step size to use
     double error = 0;
+    int massiveParticles = 0;
     for (int i = 0; i < numberOfAtoms; ++i) {
         for (int j = 0; j < 3; ++j) {
             double xerror = inverseMasses[i]*forces[i][j];
             error += xerror*xerror;
         }
+        if (inverseMasses[i] != 0.0)
+            massiveParticles++;
     }
-    error = sqrt(error/(numberOfAtoms*3));
+    error = sqrt(error/(massiveParticles*3));
     double dt = sqrt(getAccuracy()/error);
     if (getDeltaT() > 0.0f)
         dt = std::min(dt, getDeltaT()*2.0f); // For safety, limit how quickly dt can increase.

@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2033 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2026 Stanford University and Simbios.
  * Contributors: Peter Eastman, Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -112,13 +112,16 @@ void ReferenceVariableVerletDynamics::update(const OpenMM::System& system, vecto
     }
 
     double error = 0.0;
+    int massiveParticles = 0;
     for (int i = 0; i < numberOfAtoms; ++i) {
         for (int j = 0; j < 3; ++j) {
             double xerror = inverseMasses[i]*forces[i][j];
             error += xerror*xerror;
         }
+        if (masses[i] != 0.0)
+            massiveParticles++;
     }
-    error = sqrt(error/(numberOfAtoms*3));
+    error = sqrt(error/(massiveParticles*3));
     double newStepSize = sqrt(getAccuracy()/error);
     if (getDeltaT() > 0.0f)
         newStepSize = std::min(newStepSize, getDeltaT()*2.0f); // For safety, limit how quickly dt can increase.
