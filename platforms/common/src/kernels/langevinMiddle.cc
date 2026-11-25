@@ -122,7 +122,7 @@ KERNEL void computeLangevinStepError(int numAtoms, int paddedNumAtoms, GLOBAL co
  * Select the step size to use for the next step.
  */
 
-KERNEL void selectLangevinStepSize(int numAtoms, int numErrorBlocks, mixed maxStepSize, mixed errorTol, mixed friction, mixed kT, GLOBAL mixed2* RESTRICT dt,
+KERNEL void selectLangevinStepSize(int numAtoms, int massiveParticles, int numErrorBlocks, mixed maxStepSize, mixed errorTol, mixed friction, mixed kT, GLOBAL mixed2* RESTRICT dt,
         GLOBAL const mixed* RESTRICT errorBuffer, GLOBAL mixed* RESTRICT paramBuffer) {
     // Load the errors calculated by computeLangevinStepError().
 
@@ -144,7 +144,7 @@ KERNEL void selectLangevinStepSize(int numAtoms, int numErrorBlocks, mixed maxSt
     if (GLOBAL_ID == 0) {
         // Select the new step size.
 
-        mixed totalError = SQRT(error[0]/(numAtoms*3));
+        mixed totalError = SQRT(error[0]/(massiveParticles*3));
         mixed newStepSize = SQRT(errorTol/totalError);
         mixed oldStepSize = dt[0].y;
         if (oldStepSize > 0.0f)

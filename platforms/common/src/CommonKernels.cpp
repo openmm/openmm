@@ -3315,6 +3315,11 @@ double CommonIntegrateVariableVerletStepKernel::execute(ContextImpl& context, co
     int paddedNumAtoms = cc.getPaddedNumAtoms();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
+        const System& system = context.getSystem();
+        int massiveParticles = 0;
+        for (int i = 0; i < system.getNumParticles(); i++)
+            if (system.getParticleMass(i) != 0.0)
+                massiveParticles++;
         kernel1->addArg(numAtoms);
         kernel1->addArg(paddedNumAtoms);
         kernel1->addArg(integration.getStepSize());
@@ -3337,6 +3342,7 @@ double CommonIntegrateVariableVerletStepKernel::execute(ContextImpl& context, co
         errorKernel->addArg(cc.getLongForceBuffer());
         errorKernel->addArg(errorBuffer);
         selectSizeKernel->addArg(numAtoms);
+        selectSizeKernel->addArg(massiveParticles);
         selectSizeKernel->addArg(numErrorBlocks);
         selectSizeKernel->addArg();
         selectSizeKernel->addArg();
@@ -3352,12 +3358,12 @@ double CommonIntegrateVariableVerletStepKernel::execute(ContextImpl& context, co
         maxStepSize = min(integrator.getMaximumStepSize(), maxStepSize);
     float maxStepSizeFloat = (float) maxStepSize;
     if (useDouble) {
-        selectSizeKernel->setArg(2, maxStepSize);
-        selectSizeKernel->setArg(3, integrator.getErrorTolerance());
+        selectSizeKernel->setArg(3, maxStepSize);
+        selectSizeKernel->setArg(4, integrator.getErrorTolerance());
     }
     else {
-        selectSizeKernel->setArg(2, maxStepSizeFloat);
-        selectSizeKernel->setArg(3, (float) integrator.getErrorTolerance());
+        selectSizeKernel->setArg(3, maxStepSizeFloat);
+        selectSizeKernel->setArg(4, (float) integrator.getErrorTolerance());
     }
     errorKernel->execute(numErrorBlocks*errorBlockSize, errorBlockSize);
     selectSizeKernel->execute(blockSize, blockSize);
@@ -3435,6 +3441,11 @@ double CommonIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
     bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
+        const System& system = context.getSystem();
+        int massiveParticles = 0;
+        for (int i = 0; i < system.getNumParticles(); i++)
+            if (system.getParticleMass(i) != 0.0)
+                massiveParticles++;
         kernel1->addArg(numAtoms);
         kernel1->addArg(paddedNumAtoms);
         kernel1->addArg(cc.getVelm());
@@ -3462,6 +3473,7 @@ double CommonIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
         errorKernel->addArg(cc.getLongForceBuffer());
         errorKernel->addArg(errorBuffer);
         selectSizeKernel->addArg(numAtoms);
+        selectSizeKernel->addArg(massiveParticles);
         selectSizeKernel->addArg(numErrorBlocks);
         for (int i = 0; i < 4; i++)
             selectSizeKernel->addArg();
@@ -3477,16 +3489,16 @@ double CommonIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
         maxStepSize = min(integrator.getMaximumStepSize(), maxStepSize);
     float maxStepSizeFloat = (float) maxStepSize;
     if (useDouble) {
-        selectSizeKernel->setArg(2, maxStepSize);
-        selectSizeKernel->setArg(3, integrator.getErrorTolerance());
-        selectSizeKernel->setArg(4, integrator.getFriction());
-        selectSizeKernel->setArg(5, BOLTZ*integrator.getTemperature());
+        selectSizeKernel->setArg(3, maxStepSize);
+        selectSizeKernel->setArg(4, integrator.getErrorTolerance());
+        selectSizeKernel->setArg(5, integrator.getFriction());
+        selectSizeKernel->setArg(6, BOLTZ*integrator.getTemperature());
     }
     else {
-        selectSizeKernel->setArg(2, maxStepSizeFloat);
-        selectSizeKernel->setArg(3, (float) integrator.getErrorTolerance());
-        selectSizeKernel->setArg(4, (float) integrator.getFriction());
-        selectSizeKernel->setArg(5, (float) (BOLTZ*integrator.getTemperature()));
+        selectSizeKernel->setArg(3, maxStepSizeFloat);
+        selectSizeKernel->setArg(4, (float) integrator.getErrorTolerance());
+        selectSizeKernel->setArg(5, (float) integrator.getFriction());
+        selectSizeKernel->setArg(6, (float) (BOLTZ*integrator.getTemperature()));
     }
     errorKernel->execute(numErrorBlocks*errorBlockSize, errorBlockSize);
     selectSizeKernel->execute(blockSize, blockSize);

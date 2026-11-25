@@ -4,7 +4,7 @@
  * This is part of the OpenMM molecular simulation toolkit.                   *
  * See https://openmm.org/development.                                        *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2026 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -361,6 +361,37 @@ void testForceGroups() {
     ASSERT(pos[2] == 0);
 }
 
+void testMassless() {
+    // Create a system with two identical particles.
+
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    CustomExternalForce* force = new CustomExternalForce("1000*x^2");
+    force->addParticle(0);
+    force->addParticle(1);
+    system.addForce(force);
+    vector<Vec3> positions = {Vec3(10, 0, 0), Vec3(-10, 0, 0)};
+
+    // See what step size it selects.
+
+    VariableVerletIntegrator integrator1(0.001);
+    Context context1(system, integrator1, platform);
+    context1.setPositions(positions);
+    integrator1.step(1);
+    double dt1 = integrator1.getStepSize();
+
+    // Make one of the particles massless and confirm that the step size remains the same.
+
+    system.setParticleMass(0, 0.0);
+    VariableVerletIntegrator integrator2(0.001);
+    Context context2(system, integrator2, platform);
+    context2.setPositions(positions);
+    integrator2.step(1);
+    double dt2 = integrator2.getStepSize();
+    ASSERT_EQUAL_TOL(1.0, dt1/dt2, 1e-6);
+}
+
 void testLargeSystemStepSize() {
     // Check the step size selected for a system large enough to need many thread blocks.
 
@@ -405,6 +436,7 @@ int main(int argc, char* argv[]) {
         testArgonBox();
         testInitialTemperature();
         testForceGroups();
+        testMassless();
         testLargeSystemStepSize();
         runPlatformTests();
     }

@@ -120,7 +120,7 @@ KERNEL void computeVerletStepError(int numAtoms, int paddedNumAtoms, GLOBAL cons
  * Select the step size to use for the next step.
  */
 
-KERNEL void selectVerletStepSize(int numAtoms, int numErrorBlocks, mixed maxStepSize, mixed errorTol, GLOBAL mixed2* RESTRICT dt, GLOBAL const mixed* RESTRICT errorBuffer) {
+KERNEL void selectVerletStepSize(int numAtoms, int massiveParticles, int numErrorBlocks, mixed maxStepSize, mixed errorTol, GLOBAL mixed2* RESTRICT dt, GLOBAL const mixed* RESTRICT errorBuffer) {
     // Load the errors calculated by computeVerletStepError().
 
     LOCAL mixed error[256];
@@ -138,7 +138,7 @@ KERNEL void selectVerletStepSize(int numAtoms, int numErrorBlocks, mixed maxStep
         SYNC_THREADS;
     }
     if (LOCAL_ID == 0) {
-        mixed totalError = SQRT(error[0]/(numAtoms*3));
+        mixed totalError = SQRT(error[0]/(massiveParticles*3));
         mixed newStepSize = SQRT(errorTol/totalError);
         mixed oldStepSize = dt[0].y;
         if (oldStepSize > 0.0f)
