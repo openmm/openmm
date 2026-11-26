@@ -66,6 +66,64 @@ void testDeterministicForces() {
     }
 }
 
+void testLargeBlockNeighborList() {
+    // Create a >90,000-atom triclinic system with swapped endpoints so both compact superblocks and dispersed blocks are exercised.
+
+    const int gridX = 46, gridY = 45, gridZ = 44, numParticles = gridX*gridY*gridZ;
+    Vec3 boxX(18.4, 0, 0), boxY(2.0, 18.0, 0), boxZ(-1.5, 1.5, 17.6);
+    System system;
+    system.setDefaultPeriodicBoxVectors(boxX, boxY, boxZ);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nonbonded->setCutoffDistance(0.9);
+    nonbonded->setReactionFieldDielectric(1e6);
+    nonbonded->setUseSwitchingFunction(true);
+    nonbonded->setSwitchingDistance(0.75);
+    system.addForce(nonbonded);
+    vector<Vec3> positions(numParticles), velocities(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(10.0);
+        nonbonded->addParticle(i%2 == 0 ? 0.2 : -0.2, 0.15, 0.2);
+        positions[i] = boxX*((i/(gridY*gridZ)+0.1*genrand_real2(sfmt))/gridX) + boxY*(((i/gridZ)%gridY+0.1*genrand_real2(sfmt))/gridY) + boxZ*((i%gridZ+0.1*genrand_real2(sfmt))/gridZ);
+        velocities[i] = Vec3(2.0*(genrand_real2(sfmt)-0.5), 2.0*(genrand_real2(sfmt)-0.5), 2.0*(genrand_real2(sfmt)-0.5));
+    }
+    for (int i = 0; i < 16; i++)
+        swap(positions[i], positions[numParticles-1-i]);
+    for (int i = 0; i+1 < numParticles; i += 3)
+        nonbonded->addException(i, i+1, 0.0, 0.15, 0.0);
+
+    // Compare forces and energies against the Reference platform across reuse steps, box changes, and parameter updates.
+
+    ReferencePlatform reference;
+    VerletIntegrator integrator(0.002), referenceIntegrator(0.002);
+    Context context(system, integrator, platform), referenceContext(system, referenceIntegrator, reference);
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    auto verifyAgainstReference = [&]() {
+        State cudaState = context.getState(State::Positions | State::Forces | State::Energy);
+        referenceContext.setPositions(cudaState.getPositions());
+        State referenceState = referenceContext.getState(State::Forces | State::Energy);
+        ASSERT_EQUAL_TOL(referenceState.getPotentialEnergy(), cudaState.getPotentialEnergy(), 1e-3);
+        for (int i = 0; i < numParticles; i++)
+            ASSERT_EQUAL_VEC(referenceState.getForces()[i], cudaState.getForces()[i], 1e-3);
+    };
+    verifyAgainstReference();
+    integrator.step(5);
+    verifyAgainstReference();
+    context.setPeriodicBoxVectors(boxX*1.01, boxY*1.01, boxZ*1.01);
+    referenceContext.setPeriodicBoxVectors(boxX*1.01, boxY*1.01, boxZ*1.01);
+    verifyAgainstReference();
+    integrator.step(25);
+    verifyAgainstReference();
+    for (int i = 0; i < numParticles; i += 7)
+        nonbonded->setParticleParameters(i, i%2 == 0 ? 0.15 : -0.15, 0.15, 0.25);
+    nonbonded->updateParametersInContext(context);
+    nonbonded->updateParametersInContext(referenceContext);
+    verifyAgainstReference();
+}
+
 bool canRunHugeTest() {
     // Create a minimal context just to see which device is being used.
 
@@ -96,4 +154,5 @@ void runPlatformTests() {
     testDeterministicForces();
     if (canRunHugeTest())
         testHugeSystem();
+    testLargeBlockNeighborList();
 }
