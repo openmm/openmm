@@ -37,9 +37,10 @@ namespace OpenMM {
 class CudaQueue : public ComputeQueueImpl {
 public:
     /**
-     * Create a CudaQueue that wraps an existing CUstream.
+     * Create a CudaQueue that wraps an existing CUstream.  If takeOwnership is true,
+     * the CudaQueue destroys the stream when it is deleted.
      */
-    CudaQueue(CUstream stream);
+    CudaQueue(CUstream stream, bool takeOwnership = false);
     /**
      * Create a CudaQueue that create a new CUstream.
      */

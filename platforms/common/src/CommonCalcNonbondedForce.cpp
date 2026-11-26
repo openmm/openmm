@@ -468,7 +468,7 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
                 this->usePmeQueue = usePmeQueue;
                 if (usePmeQueue) {
                     pmeDefines["USE_PME_STREAM"] = "1";
-                    pmeQueue = cc.createQueue();
+                    pmeQueue = cc.createPriorityQueue();
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
                     if (recipForceGroup < 0)
                         recipForceGroup = force.getForceGroup();
