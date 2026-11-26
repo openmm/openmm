@@ -609,10 +609,13 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     replacements["BROADCAST_WARP_DATA"] = broadcastWarpData.str();
     
     // Part 2. Defines for off-diagonal exclusions, and neighborlist tiles. 
-    stringstream declareLocal2;
-    for (const ComputeParameterInfo& param : params)
+    stringstream declareLocal2, copyAtom1ToLocal2;
+    for (const ComputeParameterInfo& param : params) {
         declareLocal2<<param.getType()<<" shfl"<<param.getName()<<";\n";
+        copyAtom1ToLocal2<<"shfl"<<param.getName()<<" = "<<param.getName()<<"1;\n";
+    }
     replacements["DECLARE_LOCAL_PARAMETERS"] = declareLocal2.str();
+    replacements["COPY_ATOM1_TO_LOCAL_PARAMETERS"] = copyAtom1ToLocal2.str();
 
     stringstream loadLocal2;
     for (const ComputeParameterInfo& param : params)
@@ -653,13 +656,8 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     replacements["SAVE_DERIVATIVES"] = saveDerivs.str();
 
     stringstream shuffleWarpData;
-    shuffleWarpData << "shflPosq.x = real_shfl(shflPosq.x, tgx+1);\n";
-    shuffleWarpData << "shflPosq.y = real_shfl(shflPosq.y, tgx+1);\n";
-    shuffleWarpData << "shflPosq.z = real_shfl(shflPosq.z, tgx+1);\n";
-    shuffleWarpData << "shflPosq.w = real_shfl(shflPosq.w, tgx+1);\n";
-    shuffleWarpData << "shflForce.x = real_shfl(shflForce.x, tgx+1);\n";
-    shuffleWarpData << "shflForce.y = real_shfl(shflForce.y, tgx+1);\n";
-    shuffleWarpData << "shflForce.z = real_shfl(shflForce.z, tgx+1);\n";
+    shuffleWarpData << "shflPosq = real_shfl4(shflPosq, tgx+1);\n";
+    shuffleWarpData << "shflForce = real_shfl3(shflForce, tgx+1);\n";
     for (const ComputeParameterInfo& param : params) {
         if (param.getNumComponents() == 1)
             shuffleWarpData<<"shfl"<<param.getName()<<"=real_shfl(shfl"<<param.getName()<<", tgx+1);\n";
@@ -702,6 +700,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         }
     }
     defines["MAX_CUTOFF"] = context.doubleToString(maxCutoff);
+    defines["MAX_CUTOFF_SQUARED"] = context.doubleToString(maxCutoff*maxCutoff);
     defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
