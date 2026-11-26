@@ -3740,8 +3740,13 @@ class AmoebaAngleGenerator(object):
     """An AmoebaAngleGenerator constructs a AmoebaAngleForce."""
 
     def __init__(self, forceField, cubic, quartic, pentic, sextic):
-        self.angleBuilder = amoebaforces.AmoebaAngleForceBuilder(float(cubic), float(quartic), float(pentic), float(sextic))
-        self.inPlaneAngleBuilder = amoebaforces.AmoebaInPlaneAngleForceBuilder(float(cubic), float(quartic), float(pentic), float(sextic))
+        self.cubic = float(cubic)
+        self.quartic = float(quartic)
+        self.pentic = float(pentic)
+        self.sextic = float(sextic)
+
+        self.angleBuilder = amoebaforces.AmoebaAngleForceBuilder(self.cubic, self.quartic, self.pentic, self.sextic)
+        self.inPlaneAngleBuilder = amoebaforces.AmoebaInPlaneAngleForceBuilder(self.cubic, self.quartic, self.pentic, self.sextic)
         self.forceField = forceField
         self.angleParams = {}
 
@@ -3755,7 +3760,7 @@ class AmoebaAngleGenerator(object):
             forceField.registerGenerator(generator)
         else:
             generator = existing[0]
-            if tuple(element.attrib[x] for x in ('angle-cubic', 'angle-quartic', 'angle-pentic', 'angle-sextic')) != (generator.cubic, generator.quartic, generator.pentic, generator.sextic):
+            if tuple(float(element.attrib[x]) for x in ('angle-cubic', 'angle-quartic', 'angle-pentic', 'angle-sextic')) != (generator.cubic, generator.quartic, generator.pentic, generator.sextic):
                 raise ValueError('All <AmoebaAngleForce> tags must use identical scale factors')
         for angle in element.findall('Angle'):
             try:
@@ -3859,7 +3864,13 @@ class AmoebaOutOfPlaneBendGenerator(object):
 
     def __init__(self, forceField, type, cubic, quartic, pentic, sextic):
         self.forceField = forceField
-        self.builder = amoebaforces.AmoebaOutOfPlaneBendForceBuilder(float(cubic), float(quartic), float(pentic), float(sextic))
+        self.type = type
+        self.cubic = float(cubic)
+        self.quartic = float(quartic)
+        self.pentic = float(pentic)
+        self.sextic = float(sextic)
+
+        self.builder = amoebaforces.AmoebaOutOfPlaneBendForceBuilder(self.cubic, self.quartic, self.pentic, self.sextic)
 
     @staticmethod
     def parseElement(element, forceField):
@@ -3875,7 +3886,7 @@ class AmoebaOutOfPlaneBendGenerator(object):
             forceField.registerGenerator(generator)
         else:
             generator = existing[0]
-            if tuple(element.attrib[x] for x in ('type', 'opbend-cubic', 'opbend-quartic', 'opbend-pentic', 'opbend-sextic')) != (generator.type, generator.cubic, generator.quartic, generator.pentic, generator.sextic):
+            if tuple(float(element.attrib[x]) for x in ('opbend-cubic', 'opbend-quartic', 'opbend-pentic', 'opbend-sextic')) != (generator.cubic, generator.quartic, generator.pentic, generator.sextic) or element.attrib['type'] != generator.type:
                 raise ValueError('All <AmoebaOutOfPlaneBendForce> tags must use identical scale factors')
 
         for angle in element.findall('Angle'):
@@ -4269,14 +4280,23 @@ class AmoebaVdwGenerator(object):
     """An AmoebaVdwGenerator constructs a AmoebaVdwForce."""
 
     def __init__(self, type, radiusrule, radiustype, radiussize, epsilonrule, vdw13Scale, vdw14Scale, vdw15Scale):
-        self.builder = amoebaforces.AmoebaVdwForceBuilder(str(type), 
-                                                          str(radiusrule), 
-                                                          str(radiustype), 
-                                                          str(radiussize), 
-                                                          str(epsilonrule), 
-                                                          float(vdw13Scale), 
-                                                          float(vdw14Scale), 
-                                                          float(vdw15Scale))
+        self.type = str(type)
+        self.radiusrule = str(radiusrule)
+        self.radiustype = str(radiustype)
+        self.radiussize = str(radiussize)
+        self.epsilonrule = str(epsilonrule)
+        self.vdw13Scale = float(vdw13Scale)
+        self.vdw14Scale = float(vdw14Scale)
+        self.vdw15Scale = float(vdw15Scale)
+
+        self.builder = amoebaforces.AmoebaVdwForceBuilder(self.type, 
+                                                          self.radiusrule, 
+                                                          self.radiustype, 
+                                                          self.radiussize, 
+                                                          self.epsilonrule, 
+                                                          self.vdw13Scale, 
+                                                          self.vdw14Scale, 
+                                                          self.vdw15Scale)
 
     @staticmethod
     def parseElement(element, forceField):
