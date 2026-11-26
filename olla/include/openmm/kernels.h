@@ -92,6 +92,7 @@ public:
     }
     CalcForcesAndEnergyKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcForcesAndEnergyKernel();
     /**
      * Initialize the kernel.
      * 
@@ -136,6 +137,7 @@ public:
     }
     UpdateStateDataKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~UpdateStateDataKernel();
     /**
      * Initialize the kernel.
      *
@@ -255,6 +257,7 @@ public:
     }
     ApplyConstraintsKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~ApplyConstraintsKernel();
     /**
      * Initialize the kernel.
      *
@@ -287,6 +290,7 @@ public:
     }
     VirtualSitesKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~VirtualSitesKernel();
     /**
      * Initialize the kernel.
      *
@@ -311,6 +315,7 @@ public:
     }
     MinimizeKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~MinimizeKernel();
     /**
      * Initialize the kernel.
      *
@@ -338,6 +343,7 @@ public:
     }
     CalcHarmonicBondForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcHarmonicBondForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -375,6 +381,7 @@ public:
     }
     CalcCustomBondForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcCustomBondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -412,6 +419,7 @@ public:
     }
     CalcHarmonicAngleForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcHarmonicAngleForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -449,6 +457,7 @@ public:
     }
     CalcCustomAngleForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcCustomAngleForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -486,6 +495,7 @@ public:
     }
     CalcPeriodicTorsionForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcPeriodicTorsionForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -523,6 +533,7 @@ public:
     }
     CalcRBTorsionForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcRBTorsionForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -558,6 +569,7 @@ public:
     }
     CalcCMAPTorsionForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcCMAPTorsionForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -593,6 +605,7 @@ public:
     }
     CalcCustomTorsionForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcCustomTorsionForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -638,6 +651,7 @@ public:
     }
     CalcNonbondedForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcNonbondedForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -697,6 +711,7 @@ public:
     }
     CalcConstantPotentialForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcConstantPotentialForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -760,6 +775,7 @@ public:
     }
     CalcCustomNonbondedForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcCustomNonbondedForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -797,6 +813,7 @@ public:
     }
     CalcGBSAOBCForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcGBSAOBCForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -837,6 +854,7 @@ public:
     }
     CalcCustomGBForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcCustomGBForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -872,6 +890,7 @@ public:
     }
     CalcCustomExternalForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcCustomExternalForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -914,6 +933,7 @@ public:
     }
     CalcCustomHbondForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcCustomHbondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -949,6 +969,7 @@ public:
     }
     CalcCustomCentroidBondForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcCustomCentroidBondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -984,6 +1005,7 @@ public:
     }
     CalcCustomCompoundBondForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcCustomCompoundBondForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -1024,6 +1046,7 @@ public:
     }
     CalcCustomManyParticleForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcCustomManyParticleForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -1059,6 +1082,7 @@ public:
     }
     CalcGayBerneForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcGayBerneForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -1094,6 +1118,7 @@ public:
     }
     CalcLCPOForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcLCPOForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -1129,6 +1154,7 @@ public:
     }
     CalcCustomCVForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcCustomCVForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -1173,6 +1199,7 @@ public:
     }
     CalcRMSDForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcRMSDForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -1208,6 +1235,7 @@ public:
     }
     CalcRGForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcRGForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -1236,6 +1264,7 @@ public:
     }
     CalcOrientationRestraintForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcOrientationRestraintForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -1271,6 +1300,7 @@ public:
     }
     IntegrateVerletStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~IntegrateVerletStepKernel();
     /**
      * Initialize the kernel.
      * 
@@ -1304,6 +1334,7 @@ public:
     }
     IntegrateNoseHooverStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~IntegrateNoseHooverStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -1396,6 +1427,7 @@ public:
     }
     IntegrateLangevinMiddleStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~IntegrateLangevinMiddleStepKernel();
     /**
      * Initialize the kernel.
      * 
@@ -1429,6 +1461,7 @@ public:
     }
     IntegrateBrownianStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~IntegrateBrownianStepKernel();
     /**
      * Initialize the kernel.
      * 
@@ -1462,6 +1495,7 @@ public:
     }
     IntegrateVariableLangevinStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~IntegrateVariableLangevinStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -1497,6 +1531,7 @@ public:
     }
     IntegrateVariableVerletStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~IntegrateVariableVerletStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -1532,6 +1567,7 @@ public:
     }
     IntegrateCustomStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~IntegrateCustomStepKernel();
     /**
      * Initialize the kernel.
      * 
@@ -1603,6 +1639,7 @@ public:
     }
     IntegrateDPDStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~IntegrateDPDStepKernel();
     /**
      * Initialize the kernel.
      * 
@@ -1636,6 +1673,7 @@ public:
     }
     IntegrateQTBStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~IntegrateQTBStepKernel();
     /**
      * Initialize the kernel.
      * 
@@ -1702,6 +1740,7 @@ public:
     }
     ApplyAndersenThermostatKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~ApplyAndersenThermostatKernel();
     /**
      * Initialize the kernel.
      * 
@@ -1727,6 +1766,7 @@ public:
     }
     ApplyMonteCarloBarostatKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~ApplyMonteCarloBarostatKernel();
     /**
      * Initialize the kernel.
      *
@@ -1797,6 +1837,7 @@ public:
     }
     RemoveCMMotionKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~RemoveCMMotionKernel();
     /**
      * Initialize the kernel.
      * 
@@ -1827,6 +1868,7 @@ public:
     }
     CalcPmeReciprocalForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcPmeReciprocalForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -1909,6 +1951,7 @@ public:
     }
     CalcDispersionPmeReciprocalForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcDispersionPmeReciprocalForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -1956,6 +1999,7 @@ public:
     }
     CalcATMForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcATMForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -2002,6 +2046,7 @@ public:
     }
     CalcCustomCPPForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcCustomCPPForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -2030,6 +2075,7 @@ public:
     }
     CalcPythonForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
+    virtual ~CalcPythonForceKernel();
     /**
      * Initialize the kernel.
      *
